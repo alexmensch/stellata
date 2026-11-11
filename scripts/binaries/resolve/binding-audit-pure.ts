@@ -126,24 +126,35 @@ function tokensRelated(x: string, y: string, blendPairs: readonly (readonly [str
   return relatedHier(x, y) || compoundContains(x, y) || arePairMates(x, y, blendPairs);
 }
 
+/** Breadth-first from `start` over shortest-hop chains of pair rows, each
+ *  token's value fixed where the walk first reaches it. `token` order visits
+ *  neighbours sorted, so the result never depends on insertion order. */
+export function walk<E, V>(
+  adj: ReadonlyMap<string, ReadonlyMap<string, E>>, start: string, origin: V, step: (at: V, edge: E) => V,
+  order: 'insertion' | 'token' = 'insertion',
+): Map<string, V> {
+  const out = new Map<string, V>([[start, origin]]);
+  const queue = [start];
+  for (let head = 0; head < queue.length; head++) {
+    const tok = queue[head];
+    const nbrs = [...(adj.get(tok) ?? [])];
+    if (order === 'token') nbrs.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    for (const [nbr, edge] of nbrs) {
+      if (out.has(nbr)) continue;
+      out.set(nbr, step(out.get(tok)!, edge));
+      queue.push(nbr);
+    }
+  }
+  return out;
+}
+
 /** The tangent-plane offset along the shortest-hop chain of pair rows, with
  *  the epoch of the edge reaching `goal`; null when no chain connects them. */
 export function bfsOffset(adj: SystemContext['adj'], start: string, goal: string): Edge | null {
-  if (start === goal) return { eastArcsec: 0, northArcsec: 0, epoch: null };
-  const visited = new Set([start]);
-  const queue: [string, number, number][] = [[start, 0, 0]];
-  for (let head = 0; head < queue.length; head++) {
-    const [tok, e, n] = queue[head];
-    for (const [nbr, edge] of adj.get(tok) ?? []) {
-      if (visited.has(nbr)) continue;
-      const ne = e + edge.eastArcsec;
-      const nn = n + edge.northArcsec;
-      if (nbr === goal) return { eastArcsec: ne, northArcsec: nn, epoch: edge.epoch };
-      visited.add(nbr);
-      queue.push([nbr, ne, nn]);
-    }
-  }
-  return null;
+  const origin: Edge = { eastArcsec: 0, northArcsec: 0, epoch: null };
+  return walk(adj, start, origin, (at, edge: Edge) => ({
+    eastArcsec: at.eastArcsec + edge.eastArcsec, northArcsec: at.northArcsec + edge.northArcsec, epoch: edge.epoch,
+  })).get(goal) ?? null;
 }
 
 function sourceOffset(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, epoch: number | null): TangentOffset {

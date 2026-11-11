@@ -8,7 +8,7 @@ import {
 import type { MscLookup } from '../load/msc-pure';
 import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from '../optical/optical-tiers-pure';
 import { pyMod, pySum } from '../python-float-pure';
-import { addEdge, addNewestEdge, pairVector, type Edge } from '../resolve/binding-audit-pure';
+import { addEdge, addNewestEdge, pairVector, walk, type Edge } from '../resolve/binding-audit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import type { TangentOffset } from '../sky-geometry-pure';
 import type { WdsPair } from '../../wds/wds-pure';
@@ -58,48 +58,20 @@ function mergedAdj(base: GeomAdj, overlay: GeomAdj): GeomAdj {
   return out;
 }
 
-/** The composed (E, N) offset of every token reachable from `start`, over shortest-hop chains. */
-function bfsAllOffsets(adj: GeomAdj, start: string): Map<string, TangentOffset> {
-  const out = new Map<string, TangentOffset>([[start, { eastArcsec: 0, northArcsec: 0 }]]);
-  const queue = [start];
-  for (let head = 0; head < queue.length; head++) {
-    const tok = queue[head];
-    const at = out.get(tok)!;
-    for (const [nbr, edge] of adj.get(tok) ?? []) {
-      if (out.has(nbr)) continue;
-      out.set(nbr, { eastArcsec: at.eastArcsec + edge.eastArcsec, northArcsec: at.northArcsec + edge.northArcsec });
-      queue.push(nbr);
-    }
-  }
-  return out;
-}
+const ORIGIN: TangentOffset = { eastArcsec: 0, northArcsec: 0 };
 
-/** Breadth-first from `start`, neighbours in token order, so the walk never depends on insertion order. */
-function walk<V>(adj: SiblingAdj, start: string, origin: V, step: (at: V, edge: SiblingEdge) => V): Map<string, V> {
-  const out = new Map<string, V>([[start, origin]]);
-  const queue = [start];
-  for (let head = 0; head < queue.length; head++) {
-    const tok = queue[head];
-    const nbrs = [...(adj.get(tok) ?? [])].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    for (const [nbr, edge] of nbrs) {
-      if (out.has(nbr)) continue;
-      out.set(nbr, step(out.get(tok)!, edge));
-      queue.push(nbr);
-    }
-  }
-  return out;
+function addOffset(at: TangentOffset, e: TangentOffset): TangentOffset {
+  return { eastArcsec: at.eastArcsec + e.eastArcsec, northArcsec: at.northArcsec + e.northArcsec };
 }
 
 /** Each sibling's (E, N) offset to the parent letter's photocentre: ../README.md#stage-6--multiplestsv-emit */
 export function photocentreOffsets(adj: SiblingAdj): Map<string, TangentOffset> {
   const ref = mostCanonical(adj.keys());
-  const pos = walk(adj, ref, { eastArcsec: 0, northArcsec: 0 }, (p, e) => ({
-    eastArcsec: p.eastArcsec + e.eastArcsec, northArcsec: p.northArcsec + e.northArcsec,
-  }));
+  const pos = walk(adj, ref, ORIGIN, addOffset, 'token');
   const measured: SiblingAdj = new Map(
     [...adj].map(([t, nbrs]) => [t, new Map([...nbrs].filter(([, e]) => e.dmag !== null))]),
   );
-  const weights = walk(measured, ref, 1.0, (f, e) => f * 10.0 ** (-0.4 * e.dmag!));
+  const weights = walk(measured, ref, 1.0, (f, e) => f * 10.0 ** (-0.4 * e.dmag!), 'token');
   const total = pySum(weights.values());
   const pcE = pySum([...weights].map(([t, w]) => w * pos.get(t)!.eastArcsec)) / total;
   const pcN = pySum([...weights].map(([t, w]) => w * pos.get(t)!.northArcsec)) / total;
@@ -198,7 +170,7 @@ export function computeAnchorOffsets(
       }
     };
     for (const graph of [g0, g1]) accumulate(graph.get(anchor) ?? []);
-    for (const graph of [g0, g1, g2]) accumulate(bfsAllOffsets(graph, anchor));
+    for (const graph of [g0, g1, g2]) accumulate(walk(graph, anchor, ORIGIN, addOffset));
     for (const t of reachedAtZero) if (!offsets.has(t)) offsets.set(t, { eastArcsec: 0, northArcsec: 0 });
     for (const [t, { eastArcsec: e, northArcsec: n }] of offsets) {
       out.set(componentKey(wdsId, t), { sepArcsec: Math.hypot(e, n), paDeg: pyMod(Math.atan2(e, n) * RAD_TO_DEG, 360) });
