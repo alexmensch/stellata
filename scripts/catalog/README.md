@@ -189,9 +189,9 @@ scripts/catalog/
                                   The file is staged
                                   (../util/counts/README.md#the-staged-snapshot):
                                   BuildCounts is FiledCounts plus each
-                                  composed stage's count block
-                                  (brightness-colour's and coherence's so
-                                  far); CATALOG_COUNT_STAGE files each
+                                  composed stage's count block, typed and
+                                  owned by the stage that tallies it;
+                                  CATALOG_COUNT_STAGE files each
                                   filed count under the step that computes
                                   it, typed over every FiledCounts key, so
                                   a new one without a stage fails to

@@ -1,6 +1,5 @@
 // Loaders for every reference table readStars consumes. See README.md.
 
-import type { BuildCounts } from '../build-counts';
 import type { DirectionSources } from '../distance/direction-cascade';
 import type { DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { DUST_GRID } from '../distance/dust/dust-grid-source';
@@ -30,28 +29,61 @@ import {
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
 
-/** Upstream table sizes — the `BuildCounts` fields this loader owns, so a
- *  consumer folds them in wholesale rather than field by field. */
-export type ReadStarsInputSizes = Pick<
-  BuildCounts,
-  | 'bjEntries'
-  | 'apsisEntries'
-  | 'gspcEntries'
-  | 'simbadSptypeEntries'
-  | 'simbadValuesEntries'
-  | 'gaiaAstrometryEntries'
-  | 'hip2Entries'
-  | 'hipVMagEntries'
-  | 'hipBvEntries'
-  | 'nssSourceIdEntries'
-  | 'tycho2Entries'
-  | 'cns5AstrometryEntries'
-  | 'glieseEntries'
-  | 'pairMemberParallaxEntries'
-  | 'pairMemberSiblingNoParallax'
-  | 'pairMemberSiblingNotAnchorGrade'
-  | 'pairMemberSiblingBelowSnFloor'
->;
+/** The inputs stage's count block: the size of each upstream table loaded. */
+export type InputsCounts = {
+  /** Total entries in the Bailer-Jones 2021
+   *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
+   *  size). */
+  bjEntries: number;
+  /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
+  apsisEntries: number;
+  /** Total entries in the Gaia DR3 synthetic-photometry TSV carrying both
+   *  bands (parsed map size) — the ci cascade's synthetic-tier reach. */
+  gspcEntries: number;
+  /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
+  simbadSptypeEntries: number;
+  /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
+  simbadValuesEntries: number;
+  /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
+   *  (parsed map size) — direction-cascade tier 1 coverage. */
+  gaiaAstrometryEntries: number;
+  /** Total entries in the HIP2 van Leeuwen 2007
+   *  (/data/papers/index.md#vanleeuwen2007) TSV (parsed map size) —
+   *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
+   *  in the parallax cascade. */
+  hip2Entries: number;
+  /** Total entries in the printed-V slice of I/239/hip_main (parsed map
+   *  size) — the V cascade's bright-tier coverage. */
+  hipVMagEntries: number;
+  /** Total printed B−V entries in the same slice — the ci cascade's
+   *  printed-tier coverage. Lower than `hipVMagEntries` by the Hipparcos rows
+   *  carrying a V with no colour. */
+  hipBvEntries: number;
+  /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
+   *  input to the gaia_nss_systemic routing tag. */
+  nssSourceIdEntries: number;
+  /** Distinct TYCs across the two committed Tycho-2 tables (main wins on
+   *  the identifiers both carry) — the direction / PM / V tier's reach. */
+  tycho2Entries: number;
+  /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
+   *  their own GJ — the direction cascade's CNS5 tier reach. */
+  cns5AstrometryEntries: number;
+  /** Rows in the committed Gliese 1991
+   *  (/data/papers/index.md#gliese1991) V/70A slice — the V cascade's bottom
+   *  tier's reach. */
+  glieseEntries: number;
+  /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
+   *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
+  pairMemberParallaxEntries: number;
+  /** Why the rest of those pair-row sources are not candidates. These three
+   *  plus `pairMemberParallaxEntries` are every source the index's per-root
+   *  dedup admits, since a source the pull lacks fails the build, so the
+   *  tier's reach is a partition rather than prose
+   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
+  pairMemberSiblingNoParallax: number;
+  pairMemberSiblingNotAnchorGrade: number;
+  pairMemberSiblingBelowSnFloor: number;
+};
 
 /** The loaded form of `ReadStarsOptions`: every table present, none optional,
  *  so passing this bundle to `readStars` cannot omit one. Extends the walk's
@@ -59,7 +91,7 @@ export type ReadStarsInputSizes = Pick<
  *  compile error here until this loader supplies it. */
 export interface ReadStarsInputs extends Required<ReadStarsOptions> {
   dustGrid: DustGrid;
-  sizes: ReadStarsInputSizes;
+  counts: InputsCounts;
 }
 
 function timer(label: string): (summary: string) => void {
@@ -145,7 +177,7 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
     () => 'built the region grid',
   );
 
-  const sizes: ReadStarsInputSizes = {
+  const counts: InputsCounts = {
     bjEntries: bailerJones.distPc.size,
     apsisEntries: apsisMap.size,
     gspcEntries: gspcMap.size,
@@ -168,6 +200,6 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   return {
     curatedRecords: CURATED_RECORDS,
     bailerJones, apsisMap, gspcMap, simbadSpectral, sptypeOverrides, simbadValues, directions,
-    hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, sizes,
+    hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, counts,
   };
 }

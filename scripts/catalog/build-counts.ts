@@ -11,6 +11,7 @@ import type { RvErrorBandPartition } from './distance/radial-velocity/radial-vel
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
+import type { InputsCounts } from './parse/read-stars-inputs.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -23,7 +24,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & BrightnessColourCounts & CoherenceCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -85,10 +86,6 @@ export interface FiledCounts {
    *  multiples.tsv member row — multiplicityStatus =
    *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
   multiplicityUnresolved: number;
-  /** Total entries in the Bailer-Jones 2021
-   *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
-   *  size). */
-  bjEntries: number;
   /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
    *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
    *  (the Gaia inverse-parallax population the posterior is the principled
@@ -167,11 +164,6 @@ export interface FiledCounts {
    *  no-Gaia residual; a sharp drop here means the builder lost the
    *  plumbing, since nothing re-derives the binding. */
   gaiaSourceIdResolved: number;
-  /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
-  apsisEntries: number;
-  /** Total entries in the Gaia DR3 synthetic-photometry TSV carrying both
-   *  bands (parsed map size) — the ci cascade's synthetic-tier reach. */
-  gspcEntries: number;
   /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
    *  upper bound on per-record Apsis coverage. */
   apsisMatched: number;
@@ -179,10 +171,6 @@ export interface FiledCounts {
    *  population the downstream Tier 2 colour-LUT re-routing can use as
    *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
   apsisTeffEither: number;
-  /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
-  simbadSptypeEntries: number;
-  /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
-  simbadValuesEntries: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -378,45 +366,6 @@ export interface FiledCounts {
    *  renderer should qualify away (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
-  /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
-   *  (parsed map size) — direction-cascade tier 1 coverage. */
-  gaiaAstrometryEntries: number;
-  /** Total entries in the HIP2 van Leeuwen 2007
-   *  (/data/papers/index.md#vanleeuwen2007) TSV (parsed map size) —
-   *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
-   *  in the parallax cascade. */
-  hip2Entries: number;
-  /** Total entries in the printed-V slice of I/239/hip_main (parsed map
-   *  size) — the V cascade's bright-tier coverage. */
-  hipVMagEntries: number;
-  /** Total printed B−V entries in the same slice — the ci cascade's
-   *  printed-tier coverage. Lower than `hipVMagEntries` by the Hipparcos rows
-   *  carrying a V with no colour. */
-  hipBvEntries: number;
-  /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
-   *  input to the gaia_nss_systemic routing tag. */
-  nssSourceIdEntries: number;
-  /** Distinct TYCs across the two committed Tycho-2 tables (main wins on
-   *  the identifiers both carry) — the direction / PM / V tier's reach. */
-  tycho2Entries: number;
-  /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
-   *  their own GJ — the direction cascade's CNS5 tier reach. */
-  cns5AstrometryEntries: number;
-  /** Rows in the committed Gliese 1991
-   *  (/data/papers/index.md#gliese1991) V/70A slice — the V cascade's bottom
-   *  tier's reach. */
-  glieseEntries: number;
-  /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
-   *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
-  pairMemberParallaxEntries: number;
-  /** Why the rest of those pair-row sources are not candidates. These three
-   *  plus `pairMemberParallaxEntries` are every source the index's per-root
-   *  dedup admits, since a source the pull lacks fails the build, so the
-   *  tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
-  pairMemberSiblingNoParallax: number;
-  pairMemberSiblingNotAnchorGrade: number;
-  pairMemberSiblingBelowSnFloor: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
    *  records no owned parallax reaches, which do not ship. */
@@ -596,23 +545,6 @@ export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
 /** The stage each filed count sits under in the snapshot: the step that computes it. */
 export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
-  bjEntries: 'inputs',
-  apsisEntries: 'inputs',
-  gspcEntries: 'inputs',
-  simbadSptypeEntries: 'inputs',
-  simbadValuesEntries: 'inputs',
-  gaiaAstrometryEntries: 'inputs',
-  hip2Entries: 'inputs',
-  hipVMagEntries: 'inputs',
-  hipBvEntries: 'inputs',
-  nssSourceIdEntries: 'inputs',
-  tycho2Entries: 'inputs',
-  cns5AstrometryEntries: 'inputs',
-  glieseEntries: 'inputs',
-  pairMemberParallaxEntries: 'inputs',
-  pairMemberSiblingNoParallax: 'inputs',
-  pairMemberSiblingNotAnchorGrade: 'inputs',
-  pairMemberSiblingBelowSnFloor: 'inputs',
   bjEligible: 'placement',
   bjOverridden: 'placement',
   lmcCandidates: 'placement',

@@ -361,7 +361,6 @@ export async function main() {
     namingDuplicateRecords: 0,
     desigConFromCrossIndex: 0,
     crossIndexUnknownCst: 0,
-    bjEntries: 0,
     bjEligible: 0,
     bjOverridden: 0,
     apsisSourcesUnpulled: 0,
@@ -382,12 +381,8 @@ export async function main() {
     figureCount: 0,
     figureConstellations: 0,
     gaiaSourceIdResolved: 0,
-    apsisEntries: 0,
-    gspcEntries: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
-    simbadSptypeEntries: 0,
-    simbadValuesEntries: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -421,18 +416,6 @@ export async function main() {
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     companionExistingViaSameasBridge: 0,
-    gaiaAstrometryEntries: 0,
-    hip2Entries: 0,
-    hipVMagEntries: 0,
-    hipBvEntries: 0,
-    nssSourceIdEntries: 0,
-    tycho2Entries: 0,
-    cns5AstrometryEntries: 0,
-    glieseEntries: 0,
-    pairMemberParallaxEntries: 0,
-    pairMemberSiblingNoParallax: 0,
-    pairMemberSiblingNotAnchorGrade: 0,
-    pairMemberSiblingBelowSnFloor: 0,
     distBailerJones: 0,
     distLmcKinematic: 0,
     distGaiaDr3Inversion: 0,
@@ -487,9 +470,8 @@ export async function main() {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
-    dustGrid, conAssignment, sizes,
+    dustGrid, conAssignment,
   } = inputs;
-  Object.assign(counts, sizes);
 
   console.log(`Reading ${MEMBERSHIP_MANIFEST.file}...`);
   const t0 = Date.now();
@@ -1270,6 +1252,7 @@ export async function main() {
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
+        { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
       ]), distanceOutliersCheck(stars),
