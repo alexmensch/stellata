@@ -139,11 +139,12 @@ Display resolution order, first hit wins:
    Bayer ran out of Greek and carried on into lowercase Latin and then
    uppercase, and the two halves are read differently: nobody writes `50 UMa`
    for α UMa, while atlases and observing lists print `15 UMa` rather than
-   `f UMa`. Splitting the tier moves the 550 Latin-letter records off tier 3:
-   **313** take a Flamsteed number back and **237** keep their letter, having
-   none to lose to (the `bayer-latin` name codes; the Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,232<!-- /count -->
-   displaying their own letter, are untouched, and `build-catalog-expected.json` is authoritative for all
-   three). Below Flamsteed rather than out of the ladder, because Flamsteed
+   `f UMa`. Splitting the tier moves the Latin-letter records off tier 3:
+   those with a Flamsteed number take it back, and <!-- count:build-catalog/naming.name.own.bayer-latin -->201<!-- /count --> keep their own
+   letter, having none to lose to (`naming.name.own.bayer-latin`; borrowed
+   Latin-letter labels count under the borrowed `bayer-latin` codes). The
+   Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,232<!-- /count --> displaying their own letter, are untouched.
+   Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
    southern `p Eri` / `f Pup` series with nothing above it. Both forms stay
    typeable either way; only the card, chart label and hover line move.
