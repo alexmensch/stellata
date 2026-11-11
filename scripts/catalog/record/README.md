@@ -16,6 +16,11 @@ scripts/catalog/record/
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
                                   source (#curated-records).
+  search-index-pure.ts (+ test)   buildSearchIndex — one wire entry per
+                                  record a user can type an identifier for
+                                  (buildSearchEntry owns the wire shape),
+                                  with SearchCounts, the snapshot's search
+                                  count block. Pure.
 ```
 
 ## Curated records

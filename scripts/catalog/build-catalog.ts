@@ -27,8 +27,6 @@ import {
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
-  buildSearchEntry,
-  type SearchEntry,
   type CatalogManifest,
   DIST_VIA_VALUES,
 } from '../../src/catalog-format/record/catalog-pure';
@@ -36,6 +34,7 @@ import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-
 import { buildHipToIndex, inferBinaries } from './multiplicity/binary-flags-pure';
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, solRecordIndex } from './record/record-order-pure';
+import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -373,8 +372,6 @@ export async function main() {
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     nameTableEntries: 0,
     variableCount: 0,
-    searchEntries: 0,
-    designationConMismatch: 0,
     gcvsDesignationCon: 0,
     gaiaSourceIdResolved: 0,
     apsisMatched: 0,
@@ -1115,14 +1112,8 @@ export async function main() {
   const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
   console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
-  // Search index — one entry per star with at least one identifier the
-  // user might type. buildSearchEntry owns the wire shape (catalog-pure.ts).
-  const searchEntries: SearchEntry[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const entry = buildSearchEntry(stars[i], i, componentDesignations.get(i));
-    if (entry) searchEntries.push(entry);
-  }
-  const searchJson = JSON.stringify(searchEntries) + '\n';
+  const search = buildSearchIndex(stars, componentDesignations);
+  const searchJson = JSON.stringify(search.entries) + '\n';
 
   const rowIndexMapJson = serializeCatalogRowIndexSidecar(
     handedFileHash(inputHashesAtStart, MULTIPLES_TSV.file), rowIndexMap,
@@ -1142,15 +1133,12 @@ export async function main() {
   console.log(
     `Built ${CATALOG_OUTPUTS.files.constellations} (${CONSTELLATIONS.length} constellations, ${figuresSummary(figures)})`,
   );
-  const searchMb = (Buffer.byteLength(searchJson) / 1024 / 1024).toFixed(2);
-  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchEntries.length} searchable entries, ${searchMb} MB)`);
+  console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchIndexSummary(search.counts, Buffer.byteLength(searchJson))})`);
   console.log(
     `Sol at record index ${solIndex} (absmag=${stars[solIndex].absmag}, R=${stars[solIndex].physicalRadius.toFixed(3)} R☉)`,
   );
 
   counts.variableCount = variableCount;
-  counts.searchEntries = searchEntries.length;
-  counts.designationConMismatch = searchEntries.filter((e) => e.dc !== undefined).length;
   counts.gaiaSourceIdResolved = gaiaSourceIdResolved;
   counts.apsisMatched = apsisMatched;
   counts.apsisTeffEither = apsisTeffEither;
@@ -1229,6 +1217,7 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },

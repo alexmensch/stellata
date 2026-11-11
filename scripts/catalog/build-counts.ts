@@ -14,6 +14,7 @@ import type { BrightnessColourCounts } from './photometry/brightness-colour-line
 import type { InputsCounts } from './parse/read-stars-inputs.ts';
 import type { FiguresCounts } from './parse/constellations/constellations.ts';
 import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts';
+import type { SearchCounts } from './record/search-index-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -26,7 +27,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -123,14 +124,6 @@ export interface FiledCounts {
   /** Stars with both nonzero amplitude and period after quantisation —
    *  drives the shader's "is variable" sentinel. */
   variableCount: number;
-  /** Entries in search-index.json (stars with at least one searchable
-   *  identifier). */
-  searchEntries: number;
-  /** Search entries carrying `dc` — a designation constellation that
-   *  differs from the record's positional one, so its Bayer / Flamsteed /
-   *  GCVS aliases are built against the designation's constellation instead
-   *  (ρ Aql / 67 Aql). */
-  designationConMismatch: number;
   /** Stars whose designation constellation came from their own GCVS
    *  designation — the only nomenclature source the build has left, since the
    *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
@@ -674,8 +667,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   gaiaSourceIdResolved: 'records',
   apsisMatched: 'records',
   apsisTeffEither: 'records',
-  searchEntries: 'search',
-  designationConMismatch: 'search',
 };
 
 export type CountDiff =
