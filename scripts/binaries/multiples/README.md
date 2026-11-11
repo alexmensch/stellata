@@ -81,9 +81,9 @@ committed snapshot.
 
 ## Byte identity with the Python stage
 
-The records encode byte-identical to the committed `multiples.tsv`. Three
-places do Python's float arithmetic rather than JavaScript's
-(`../python-float-pure.ts`): the photocentre's weighted sums are `pySum`,
-Python 3.12+'s compensated `sum()`; the anchor position angle wraps through
-`pyMod`; and the photocentre walk visits neighbours in token order, as the
-Python sorts them.
+The records encode byte-identical to the committed `multiples.tsv`, which
+`../build-binaries.test.ts` holds byte for byte. Three places follow Python's
+semantics where JavaScript's differ: the photocentre's weighted sums are
+`pySum`, Python 3.12+'s compensated `sum()`; the anchor position angle wraps
+through `pyMod` (both in `../python-float-pure.ts`); and the photocentre walk
+visits neighbours in token order, as the Python sorts them.
