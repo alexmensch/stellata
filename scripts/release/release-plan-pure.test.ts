@@ -16,8 +16,8 @@ const minor: CommitRelease = { kind: 'release', level: 'minor' };
 const major: CommitRelease = { kind: 'release', level: 'major' };
 const none: CommitRelease = { kind: 'none' };
 
-function commit(sha: string, release: CommitRelease, pr: number | null): RangeCommit {
-  return { sha, release, subject: pr === null ? `Some change` : `Some change (#${pr})` };
+function commit(sha: string, release: CommitRelease, pr: number | null, title = 'Some change'): RangeCommit {
+  return { sha, release, subject: pr === null ? title : `${title} (#${pr})` };
 }
 
 describe('declarationOf', () => {
@@ -106,6 +106,22 @@ describe('planReleases', () => {
       .toThrow(/^bbb7654 \(PR #2\): no release level declared/);
     expect(() => planReleases('3.9.0', [commit('ccc7654321', { kind: 'undeclared' }, null)]))
       .toThrow(/^ccc7654 \(no PR in its subject\)/);
+  });
+});
+
+describe('planReleases over a gh stack merge --squash landing', () => {
+  const stack768: ReadonlyArray<readonly [string, number, string]> = [
+    ['Binaries to TS, slice 1: Stage 1 load and a wiring-only shell, unwired (ticket-16)', 761, 'skip-version-bump'],
+    ['Binaries Stage 2 (resolve) in TypeScript, unwired (ticket-17.1)', 762, 'skip-version-bump'],
+    ['refresh:simbad-wds-xids on the TypeScript pull runtime; WDS reader to scripts/wds/ (ticket-29.12)', 765, 'skip-version-bump'],
+    ['Binaries Stage 3 (astrometry) and NSS inner-pair synthesis ported to TypeScript, unwired (ticket-17.2)', 769, 'skip-version-bump'],
+    ['Binaries Stage 4 (orbits) ported to TypeScript, unwired (ticket-17.3)', 771, 'release:patch'],
+  ];
+
+  it('maps every member to its PR and releases only the release:patch one', () => {
+    const landed = stack768.map(([title, pr, label], i) => commit(`${i + 1}`.repeat(40), declarationOf([label]), pr, title));
+    const plan = planReleases('7.1.16', landed);
+    expect(plan).toEqual([{ sha: '5'.repeat(40), tag: 'v7.1.17', version: '7.1.17', prNumber: 771 }]);
   });
 });
 
