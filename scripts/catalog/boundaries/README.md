@@ -3,7 +3,9 @@
 `build-boundaries-artifact.ts` sweeps the shipped star population for fade
 samples and renders `public/constellation-boundaries.json`. Called from
 `../build-catalog.ts`, which hands it the lookup ([Cost](#cost)) and writes
-the result with its other outputs. The wire shape, the quantisation and the
+the result with its other outputs. Its report carries `BoundariesCounts`, the
+snapshot's boundaries count block, and `boundaryArtifactSummary` is the build
+log's line over it (`+ test`). The wire shape, the quantisation and the
 fade statistics it fills are the artifact's contract with the viewer:
 [`/src/catalog-format/boundaries/`](/src/catalog-format/boundaries/README.md).
 `boundaries-region-grid.test.ts` round-trips the real region grid —
@@ -12,9 +14,9 @@ that contract's run-length codec.
 
 ## Cost
 
-The sweep is one nearest-wall query per shipped record — ~390k against <!-- count:build-catalog/boundarySegments -->781<!-- /count -->
-arcs. The linear scan (`angularDistanceToNearestEdgeDeg`) would be a
-quarter-billion arc evaluations and minutes of build time, so
+The sweep is one nearest-wall query per shipped record — <!-- count:build-catalog/recordCount k2 -->980k<!-- /count --> against <!-- count:build-catalog/boundarySegments -->781<!-- /count -->
+arcs. The linear scan (`angularDistanceToNearestEdgeDeg`) would be
+three-quarters of a billion arc evaluations and minutes of build time, so
 `createIauConstellationLookup` routes through `createNearestEdgeIndex`,
 which prunes on a declination-band lower bound. Exact, not approximate,
 and pinned against the linear scan across a sphere-wide sampling grid.

@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   applySystemCoherence,
   COHERENCE_RADIAL_SIGMA,
-  systemCoherenceStats,
   systemCoherenceVerdicts,
   type CoherenceSources,
 } from './system-coherence';
+import { COHERENCE_CODES, coherenceFigures, coherenceLineageLines } from './coherence-lineage-pure';
+import { foldStageLines } from '../lineage/lineage-row-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar } from '../parse/star-fixture';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
@@ -20,8 +21,9 @@ import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 
 function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources) {
   const verdicts = systemCoherenceVerdicts(rows, stars, src);
+  const counts = foldStageLines(COHERENCE_CODES, coherenceLineageLines(verdicts, stars));
   applySystemCoherence(stars, verdicts);
-  return systemCoherenceStats(verdicts);
+  return coherenceFigures(counts);
 }
 
 function star(overrides: Partial<Star>): Star {
@@ -98,8 +100,8 @@ describe('system distance coherence', () => {
   it('snaps an insignificant radial gap to the anchor distance (Acrux)', () => {
     const { primary, member, stars, rows, src } = acruxFixture();
     const stats = coherence(rows, stars, src);
-    expect(stats.systemsProcessed).toBe(1);
-    expect(stats.membersRepositioned).toBe(1);
+    expect(stats.systems).toBe(1);
+    expect(stats.repositioned).toBe(1);
     expect(stats.memberAnchorWins).toBe(0);
     expect(member.x).toBeCloseTo(98.72, 6);
     expect(primary.x).toBeCloseTo(98.72, 6);
@@ -141,8 +143,8 @@ describe('system distance coherence', () => {
       ]),
     });
     const stats = coherence(rows, [primary, member], src);
-    expect(stats.significantDepthKept).toBe(1);
-    expect(stats.membersRepositioned).toBe(0);
+    expect(stats.depthKept).toBe(1);
+    expect(stats.repositioned).toBe(0);
     expect(member.x).toBeCloseTo(1.3013, 9);
   });
 
@@ -208,7 +210,7 @@ describe('system distance coherence', () => {
       }),
     ];
     const stats = coherence(rows, [a, b, c], sources());
-    expect(stats.systemsProcessed).toBe(0);
+    expect(stats.systems).toBe(0);
     expect(b.x).toBe(300);
     expect(c.x).toBe(55);
   });
@@ -227,7 +229,7 @@ describe('system distance coherence', () => {
       hip2: new Map([[100, hip2Row({ plxMas: 20, plxErrorMas: 0.5 })]]),
     });
     const stats = coherence(rows, [primary, member], src);
-    expect(stats.membersRepositioned).toBe(1);
+    expect(stats.repositioned).toBe(1);
     expect(member.x).toBeCloseTo(50, 6);
     expect(COHERENCE_RADIAL_SIGMA).toBe(3.0);
   });
@@ -255,8 +257,8 @@ describe('system distance coherence', () => {
       ]),
     });
     const stats = coherence(rows, [primary, member], src);
-    expect(stats.anchorPlacementInconsistent).toBe(1);
-    expect(stats.membersRepositioned).toBe(0);
+    expect(stats.anchorInconsistent).toBe(1);
+    expect(stats.repositioned).toBe(0);
     expect(member.x).toBeCloseTo(176.6, 6);
     expect(primary.x).toBeCloseTo(1685.7, 6);
   });
@@ -275,8 +277,8 @@ describe('system distance coherence', () => {
       hip2: new Map([[100, hip2Row({ plxMas: 0.59, plxErrorMas: 0.4 })]]),
     });
     const stats = coherence(rows, [primary, member], src);
-    expect(stats.membersRepositioned).toBe(0);
-    expect(stats.significantDepthKept).toBe(1);
+    expect(stats.repositioned).toBe(0);
+    expect(stats.depthKept).toBe(1);
     expect(member.x).toBeCloseTo(176.6, 6);
   });
 });
@@ -311,7 +313,7 @@ describe('member-anchor precision veto', () => {
       { plxMas: 7.54, plxErrorMas: 0.11 },
     );
     expect(stats.memberAnchorWins).toBe(1);
-    expect(stats.memberAnchorPrecisionVetoed).toBe(0);
+    expect(stats.precisionVetoed).toBe(0);
     expect(primary.x).toBeCloseTo(137.233, 6);
   });
 
@@ -321,7 +323,7 @@ describe('member-anchor precision veto', () => {
       { plxMas: 7.54, plxErrorMas: 0.11 },
     );
     expect(stats.memberAnchorWins).toBe(0);
-    expect(stats.memberAnchorPrecisionVetoed).toBe(1);
+    expect(stats.precisionVetoed).toBe(1);
     expect(primary.x).toBeCloseTo(132.626, 6);
     expect(member.x).toBeCloseTo(132.626, 6);
   });
@@ -351,7 +353,7 @@ describe('member-anchor precision veto', () => {
     });
     const stats = coherence(rows, [primary, member], src);
     expect(stats.memberAnchorWins).toBe(1);
-    expect(stats.memberAnchorPrecisionVetoed).toBe(0);
+    expect(stats.precisionVetoed).toBe(0);
     expect(primary.x).toBeCloseTo(50.2, 6);
   });
 
@@ -380,7 +382,7 @@ describe('member-anchor precision veto', () => {
       ]),
     });
     const stats = coherence(rows, [a, b, c], src);
-    expect(stats.membersRepositioned).toBe(2);
+    expect(stats.repositioned).toBe(2);
     expect(a.x).toBeCloseTo(340.1, 6);
     expect(b.x).toBeCloseTo(340.1, 6);
     expect(c.x).toBeCloseTo(340.1, 6);
@@ -411,7 +413,7 @@ describe('member-anchor precision veto', () => {
     });
     const stats = coherence(rows, [a, b, f], src);
     expect(stats.memberAnchorWins).toBe(0);
-    expect(stats.significantDepthKept).toBe(1);
+    expect(stats.depthKept).toBe(1);
     expect(b.x).toBeCloseTo(11.521, 6);
     expect(f.x).toBeCloseTo(11.503, 6);
   });

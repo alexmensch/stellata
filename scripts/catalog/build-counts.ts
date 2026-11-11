@@ -5,10 +5,19 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
-import { flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
+import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
 import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
+import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
+import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
+import type { InputsCounts } from './parse/read-stars-inputs.ts';
+import type { FiguresCounts } from './parse/constellations/constellations.ts';
+import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts';
+import type { SearchCounts } from './record/search-index-pure.ts';
+import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
+import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.ts';
+import type { RecordsCounts } from './record/records-stage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -20,69 +29,11 @@ export function committedBuildCounts(): BuildCounts {
   return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
-export interface BuildCounts {
-  /** Records written to catalog.bin after filtering and sort. */
-  recordCount: number;
-  /** `inferBinaries` companion assignments. */
-  binaryPairs: number;
-  /** Pairs where both stars chose each other (sets FLAG_BINARY_PRIMARY). */
-  binaryMutualPairs: number;
-  /** Entries in the GCVS main table at source. */
-  gcvsEntries: number;
-  /** GCVS cross-reference Hipparcos lookups. */
-  gcvsHipXrefs: number;
-  /** GCVS cross-reference Henry Draper lookups. */
-  gcvsHdXrefs: number;
-  /** GCVS xrefs bridged from byHip via gaia_dr3_hip_xmatch.tsv onto
-   *  gaia_source_id as primary key. */
-  gcvsGaiaXrefs: number;
-  /** Variables matched into the catalog after cross-reference resolution. */
-  gcvsMatched: number;
-  /** gcvsMatched component resolved via xref.byGaia (gaia_source_id). */
-  gcvsMatchedByGaia: number;
-  /** gcvsMatched component resolved via xref.byHip (HIP fallback). */
-  gcvsMatchedByHip: number;
-  /** gcvsMatched component resolved via xref.byHd (HD fallback). */
-  gcvsMatchedByHd: number;
-  /** Stars given a searchable GCVS designation (`gcvsName`) — superset of
-   *  gcvsMatched: aperiodic variables (flare/RCB/irregular/nova) are named
-   *  for search but carry no renderable period. */
-  gcvsNamed: number;
-  /** Total CCDM systems in the source TSV. */
-  ccdmGroups: number;
-  /** CCDM systems resolved against catalog records. */
-  ccdmResolved: number;
-  /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
-   *  already set by `inferBinaries`). */
-  ccdmFlagged: number;
-  /** Records the first transport chunk carries — what first paint draws
-   *  (`/src/catalog-format/record/README.md#on-disk-transport-chunking`). */
-  recordsInFirstChunk: number;
-  /** CCDM primaries the optical-double gate vetoed: nearest same-group
-   *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
-   *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */
-  ccdmSuppressedOptical: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
-   *  varType == ECLIPSING records not already flagged by the geometric
-   *  or CCDM passes. */
-  eclipsingWinged: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the renderable-companion pass:
-   *  physical systems whose primary/secondary resolve to distinct catalog
-   *  records (a promoted companion or a binaries.bin orbit) but which the
-   *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
-   *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
-  renderableCompanionWinged: number;
-  /** Records backed by a resolved multiples.tsv member row —
-   *  multiplicityStatus = MULTIPLICITY_RESOLVED. */
-  multiplicityResolved: number;
-  /** Records SIMBAD flags as multiple (otype '**') with no resolved
-   *  multiples.tsv member row — multiplicityStatus =
-   *  MULTIPLICITY_UNRESOLVED (spectroscopic binaries, 64 Vir class). */
-  multiplicityUnresolved: number;
-  /** Total entries in the Bailer-Jones 2021
-   *  (/data/papers/index.md#bailerjones2021) DR3 distance TSV (parsed map
-   *  size). */
-  bjEntries: number;
+/** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+
+/** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
+export interface FiledCounts {
   /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
    *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
    *  (the Gaia inverse-parallax population the posterior is the principled
@@ -93,12 +44,6 @@ export interface BuildCounts {
   /** bjEligible rows whose source_id was also in the B-J catalogue —
    *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
   bjOverridden: number;
-  /** Records carrying a source_id the committed Apsis / GSPC pull holds no row
-   *  for. Pinned at the reviewed residual rather than zero: Gaia genuinely
-   *  publishes no parameters for part of the catalogue, so what is gated is the
-   *  shortfall MOVING (../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator). */
-  apsisSourcesUnpulled: number;
-  gspcSourcesUnpulled: number;
   /** Rows whose resolved direction falls inside the LMC sky cone — the
    *  population the LMC kinematic PM gate is evaluated against. */
   lmcCandidates: number;
@@ -115,129 +60,6 @@ export interface BuildCounts {
   lmcOverriddenByDistVia: Record<DistVia, number>;
   /** Stars with a proper name written into the name table. */
   nameTableEntries: number;
-  /** Stars with both nonzero amplitude and period after quantisation —
-   *  drives the shader's "is variable" sentinel. */
-  variableCount: number;
-  /** Entries in search-index.json (stars with at least one searchable
-   *  identifier). */
-  searchEntries: number;
-  /** Boundary arcs in public/constellation-boundaries.json — one per IAU
-   *  edge record, so a drift means the edge set changed. */
-  boundarySegments: number;
-  /** Precessed ICRS sample directions across all boundary arcs. Set by the
-   *  subdivision step, and the artifact's whole wire cost. */
-  boundaryDirections: number;
-  /** RA runs the resolved cell grid collapses to, band-major. The wire cost
-   *  of the runtime membership lookup, and the one dimension of that grid no
-   *  other pin covers — the 89 regions and their areas are pinned in
-   *  src/client/constellation-boundaries/. */
-  boundaryRegionRuns: number;
-  /** public/constellation-boundaries.json size, rounded to KiB. Pinned
-   *  because the direction quantisation is a wire-size choice with no other
-   *  visible signal — dropping `DIRECTION_DECIMALS` by one moves ~30k values
-   *  a character each, ~30 KiB. Rounded rather than exact: the file is 30k
-   *  decimal-formatted floats, so a last-bit difference in one trig call
-   *  (V8 differs across Node versions and architectures — CI is Node 24
-   *  x64) changes its byte length while changing nothing that matters. */
-  boundaryArtifactKb: number;
-  /** Search entries carrying `dc` — a designation constellation that
-   *  differs from the record's positional one, so its Bayer / Flamsteed /
-   *  GCVS aliases are built against the designation's constellation instead
-   *  (ρ Aql / 67 Aql). */
-  designationConMismatch: number;
-  /** Stars whose designation constellation came from their own GCVS
-   *  designation — the only nomenclature source the build has left, since the
-   *  manifest carries no editorial `con` cell. See `parse/constellations/README.md#positional-constellation-membership`.
-   * */
-  gcvsDesignationCon: number;
-  /** Record index of Sol after sort; a build without exactly one Sol throws. */
-  solIndex: number;
-  /** Total stick-figure polylines across all constellations. */
-  figureCount: number;
-  /** Constellations that carry at least one stick-figure polyline. */
-  figureConstellations: number;
-  /** Records emitted with a non-zero Gaia DR3 source_id at
-   *  RECORD_LAYOUT.gaiaSourceId. The manifest carries one on all but its
-   *  no-Gaia residual; a sharp drop here means the builder lost the
-   *  plumbing, since nothing re-derives the binding. */
-  gaiaSourceIdResolved: number;
-  /** Total entries in the Gaia DR3 Apsis TSV (parsed map size). */
-  apsisEntries: number;
-  /** Total entries in the Gaia DR3 synthetic-photometry TSV carrying both
-   *  bands (parsed map size) — the ci cascade's synthetic-tier reach. */
-  gspcEntries: number;
-  /** Catalog records whose `gaia_source_id` resolves to an ApsisRow —
-   *  upper bound on per-record Apsis coverage. */
-  apsisMatched: number;
-  /** Records with a non-null Teff in either gspphot OR gspspec — the
-   *  population the downstream Tier 2 colour-LUT re-routing can use as
-   *  Apsis-direct Teff. Pinned against the 84.8% probe figure. */
-  apsisTeffEither: number;
-  /** Total entries in the SIMBAD sp_type TSV (parsed map size). */
-  simbadSptypeEntries: number;
-  /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
-  simbadValuesEntries: number;
-  /** Records the spectral resolver's curated tier classified (spectral/README.md#the-resolver). */
-  spectralByCurated: number;
-  /** Records whose spectral classification came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
-  spectralBySimbad: number;
-  /** The four SIMBAD tiers split by the namespace that found the row, summing
-   *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
-   *  merely asserted here. The split is over which namespace WON, so the
-   *  ladder's order decides it: GJ is walked before TYC, and a record both
-   *  reach credits GJ. `spectralSimbadByTyc` is the only one reaching an
-   *  object SIMBAD holds no Gaia id and no HIP for. */
-  spectralSimbadBySourceId: number;
-  spectralSimbadByHip: number;
-  spectralSimbadByTyc: number;
-  spectralSimbadByGj: number;
-  /** Records that fell through to Gaia DR3 GSP-Spec's
-   *  `spectraltype_esphs` enum — second-tier letter-only classification. */
-  spectralByGspspec: number;
-  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — the
-   *  `unknown` class. */
-  spectralFallback: number;
-  /** Records whose `ci` came from the Gaia BP−RP relation. */
-  ciGaiaRelation: number;
-  /** Records taking Gaia's synthetic B−V — past the relation's colour bound,
-   *  inside the measured one, and with no printed colour above it. */
-  ciGspc: number;
-  /** The `ciGspc` subset the archive's own flag calls inside the JKC
-   *  standardisation's validated range — **zero**, and pinned there as a
-   *  tripwire rather than as a coverage figure. The flag's region and this
-   *  tier's window do not intersect on any row of this catalogue (measured,
-   *  `../../data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range`), so a
-   *  nonzero value means the flag moved upstream, not that coverage
-   *  improved. */
-  ciGspcValidatedRange: number;
-  /** Records falling through to printed `I/239` B−V keyed on their own HIP. */
-  ciPrintedHipBv: number;
-  /** No-Apsis-Teff records whose `ci` is baked from the parsed spectral class
-   *  instead of the solar fallback — the population that would otherwise
-   *  render solar-yellow. */
-  ciSpectralDerived: number;
-  /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
-  ciSolarFallback: number;
-  /** WDS systems with ≥2 distinct own-record members walked by the
-   *  intra-system radial-coherence pass (system-coherence.ts). */
-  systemCoherenceSystems: number;
-  /** Own-record members moved to their system's anchor distance along
-   *  their own direction (radial gap not a ≥3σ measurement). */
-  systemCoherenceRepositioned: number;
-  /** Systems whose distance anchor was a non-primary member (a clean
-   *  unsaturated Gaia 5p member outranking a saturated primary). */
-  systemCoherenceMemberAnchorWins: number;
-  /** Members whose radial gap IS a ≥3σ measurement — genuinely measured
-   *  depth kept (α Cen–Proxima, 61 Cyg A/B). */
-  systemCoherenceSignificantDepthKept: number;
-  /** Systems skipped because the anchor's rendered catalog distance
-   *  contradicts its own parallax evidence (μ¹ Sco's B-J placement of
-   *  a RUWE-corrupted source at 1.7 kpc) — members keep their own. */
-  systemCoherenceAnchorInconsistent: number;
-  /** Member-anchor wins vetoed because the member displacing the pair
-   *  primary carries no trusted fit as precise as the primary's — tier
-   *  ranks provenance, and the placement moved is the primary's. */
-  systemCoherenceMemberAnchorPrecisionVetoed: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -364,11 +186,6 @@ export interface BuildCounts {
    *  a Gaia source the catalogue already holds — without it one physical star
    *  ships twice. Ratchets DOWN. */
   companionExistingViaSameasBridge: number;
-  /** Catalog records carrying a multiples.tsv component designation
-   *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus
-   *  the letter, which both the display-name composer and the
-   *  "<system> <letter>" search aliases build from. */
-  componentDesignations: number;
 
   // ---- Naming ladder (docs/star-naming.md, naming/README.md) ----------
   /** Records the IAU WGSN names, and how many of those the identifier join
@@ -433,45 +250,6 @@ export interface BuildCounts {
    *  renderer should qualify away (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change). */
   namingDuplicateLabels: number;
   namingDuplicateRecords: number;
-  /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
-   *  (parsed map size) — direction-cascade tier 1 coverage. */
-  gaiaAstrometryEntries: number;
-  /** Total entries in the HIP2 van Leeuwen 2007
-   *  (/data/papers/index.md#vanleeuwen2007) TSV (parsed map size) —
-   *  direction-cascade tier 2 coverage, and the `hip2_parallax` tier's reach
-   *  in the parallax cascade. */
-  hip2Entries: number;
-  /** Total entries in the printed-V slice of I/239/hip_main (parsed map
-   *  size) — the V cascade's bright-tier coverage. */
-  hipVMagEntries: number;
-  /** Total printed B−V entries in the same slice — the ci cascade's
-   *  printed-tier coverage. Lower than `hipVMagEntries` by the Hipparcos rows
-   *  carrying a V with no colour. */
-  hipBvEntries: number;
-  /** Distinct Gaia DR3 source_ids carrying an NSS two-body orbit —
-   *  input to the gaia_nss_systemic routing tag. */
-  nssSourceIdEntries: number;
-  /** Distinct TYCs across the two committed Tycho-2 tables (main wins on
-   *  the identifiers both carry) — the direction / PM / V tier's reach. */
-  tycho2Entries: number;
-  /** CNS5 rows carrying a position AND the epoch to state it at, keyed on
-   *  their own GJ — the direction cascade's CNS5 tier reach. */
-  cns5AstrometryEntries: number;
-  /** Rows in the committed Gliese 1991
-   *  (/data/papers/index.md#gliese1991) V/70A slice — the V cascade's bottom
-   *  tier's reach. */
-  glieseEntries: number;
-  /** Anchor-grade sibling parallaxes indexed off the kept-physical pair rows
-   *  of multiples.tsv — the `pair_member_parallax` tier's reach. */
-  pairMemberParallaxEntries: number;
-  /** Why the rest of those pair-row sources are not candidates. These three
-   *  plus `pairMemberParallaxEntries` are every source the index's per-root
-   *  dedup admits, since a source the pull lacks fails the build, so the
-   *  tier's reach is a partition rather than prose
-   *  (`distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request`). */
-  pairMemberSiblingNoParallax: number;
-  pairMemberSiblingNotAnchorGrade: number;
-  pairMemberSiblingBelowSnFloor: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
    *  records no owned parallax reaches, which do not ship. */
@@ -551,37 +329,6 @@ export interface BuildCounts {
   /** Direction cascade: Sol, whose curated tier exists because it carries no
    *  identifier any tier above can key on. Pinned at 1. */
   directionCurated: number;
-  /** V cascade: rows whose Johnson V came from the Riello 2021
-   *  (/data/papers/index.md#riello2021) G,BP−RP transform — unsaturated Gaia
-   *  photometry inside the relation's validity range. See
-   *  scripts/catalog/photometry/README.md. */
-  vGaiaRiello: number;
-  /** V cascade: the bright rescue tier. Rows whose Gaia photometry is
-   *  saturated (G < 4), incomplete, or outside the transform's colour
-   *  range, resolved against printed I/239 Vmag instead. */
-  vPrintedHip: number;
-  /** V cascade: rows with no Gaia photometry and no printed HIP V, taking
-   *  Tycho-2's `VT` reduced to Johnson V by the ESA 1997
-   *  (/data/papers/index.md#esa1997) SP-1200 relation. */
-  vTycho2: number;
-  /** The `vTycho2` subset whose `BT−VT` sits outside [−0.25, 2.0], wider
-   *  than the −0.2 < BT−VT < 1.8 ESA 1997 (/data/papers/index.md#esa1997)
-   *  SP-1200 publishes that relation over.
-   *  Counted, not gated: none of these rows carries a `gl`, so gating would
-   *  cost each its only V and hence its record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
-  vTycho2OutsideBtVtRange: number;
-  /** V cascade: the GJ-only cohort, taking Gliese 1991
-   *  (/data/papers/index.md#gliese1991) V/70A's printed `Vmag`.
-   *  The tier below Tycho-2 and the last one: SIMBAD publishes no V flux at
-   *  all for the rows that reach here. */
-  vGliese: number;
-  /** V cascade: Sol, curated for the same reason its direction is. Pinned
-   *  at 1. */
-  vCurated: number;
-  /** V cascade: rows no tier supplied a V for, and so no absmag either —
-   *  readStars drops them. Pinned at 0, which is the assertion that the
-   *  absmag-cell membership gate still implies a usable magnitude. */
-  vNone: number;
   /** Space-motion velocity: rows whose tangential velocity came from
    *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
    *  directionGaiaNssSystemic). */
@@ -673,51 +420,21 @@ export interface BuildCounts {
   crossIndexUnknownCst: number;
 }
 
+/** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'desigCon', 'naming', 'coherence', 'promotion',
-  'multiplicity', 'gcvs', 'records', 'search', 'boundaries', 'figures',
+  'inputs', 'placement', 'brightness-colour', 'desigCon', 'coherence', 'promotion',
+  'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
-/** The stage each count is filed under in the snapshot: the step that computes it. */
-export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCountStage>> = {
-  bjEntries: 'inputs',
-  apsisEntries: 'inputs',
-  gspcEntries: 'inputs',
-  simbadSptypeEntries: 'inputs',
-  simbadValuesEntries: 'inputs',
-  gaiaAstrometryEntries: 'inputs',
-  hip2Entries: 'inputs',
-  hipVMagEntries: 'inputs',
-  hipBvEntries: 'inputs',
-  nssSourceIdEntries: 'inputs',
-  tycho2Entries: 'inputs',
-  cns5AstrometryEntries: 'inputs',
-  glieseEntries: 'inputs',
-  pairMemberParallaxEntries: 'inputs',
-  pairMemberSiblingNoParallax: 'inputs',
-  pairMemberSiblingNotAnchorGrade: 'inputs',
-  pairMemberSiblingBelowSnFloor: 'inputs',
+/** The stage each filed count sits under in the snapshot: the step that computes it. */
+export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
   bjEligible: 'placement',
   bjOverridden: 'placement',
   lmcCandidates: 'placement',
   lmcOverridden: 'placement',
   lmcParallaxRefusedByDistVia: 'placement',
   lmcOverriddenByDistVia: 'placement',
-  spectralByCurated: 'placement',
-  spectralBySimbad: 'placement',
-  spectralSimbadBySourceId: 'placement',
-  spectralSimbadByHip: 'placement',
-  spectralSimbadByTyc: 'placement',
-  spectralSimbadByGj: 'placement',
-  spectralByGspspec: 'placement',
-  spectralFallback: 'placement',
-  ciGaiaRelation: 'placement',
-  ciPrintedHipBv: 'placement',
-  ciGspc: 'placement',
-  ciGspcValidatedRange: 'placement',
-  ciSpectralDerived: 'placement',
-  ciSolarFallback: 'placement',
   distBailerJones: 'placement',
   distLmcKinematic: 'placement',
   distGaiaDr3Inversion: 'placement',
@@ -745,13 +462,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
   directionCns5: 'placement',
   directionSimbad: 'placement',
   directionCurated: 'placement',
-  vGaiaRiello: 'placement',
-  vPrintedHip: 'placement',
-  vTycho2: 'placement',
-  vTycho2OutsideBtVtRange: 'placement',
-  vGliese: 'placement',
-  vCurated: 'placement',
-  vNone: 'placement',
   velocityGaiaPm: 'placement',
   velocityHip2Pm: 'placement',
   velocityTycho2Pm: 'placement',
@@ -806,12 +516,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
   namingDuplicateLabels: 'naming',
   namingDuplicateRecords: 'naming',
   nameTableEntries: 'naming',
-  systemCoherenceSystems: 'coherence',
-  systemCoherenceRepositioned: 'coherence',
-  systemCoherenceMemberAnchorWins: 'coherence',
-  systemCoherenceSignificantDepthKept: 'coherence',
-  systemCoherenceAnchorInconsistent: 'coherence',
-  systemCoherenceMemberAnchorPrecisionVetoed: 'coherence',
   companionRowsScanned: 'promotion',
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',
@@ -845,44 +549,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
   companionExistingDesigConFromAnchor: 'promotion',
   companionExistingMemberRecurated: 'promotion',
   companionExistingViaSameasBridge: 'promotion',
-  binaryPairs: 'multiplicity',
-  binaryMutualPairs: 'multiplicity',
-  ccdmGroups: 'multiplicity',
-  ccdmResolved: 'multiplicity',
-  ccdmFlagged: 'multiplicity',
-  ccdmSuppressedOptical: 'multiplicity',
-  eclipsingWinged: 'multiplicity',
-  renderableCompanionWinged: 'multiplicity',
-  multiplicityResolved: 'multiplicity',
-  multiplicityUnresolved: 'multiplicity',
-  componentDesignations: 'multiplicity',
-  gcvsEntries: 'gcvs',
-  gcvsHipXrefs: 'gcvs',
-  gcvsHdXrefs: 'gcvs',
-  gcvsGaiaXrefs: 'gcvs',
-  gcvsMatched: 'gcvs',
-  gcvsMatchedByGaia: 'gcvs',
-  gcvsMatchedByHip: 'gcvs',
-  gcvsMatchedByHd: 'gcvs',
-  gcvsNamed: 'gcvs',
-  gcvsDesignationCon: 'gcvs',
-  recordCount: 'records',
-  recordsInFirstChunk: 'records',
-  apsisSourcesUnpulled: 'records',
-  gspcSourcesUnpulled: 'records',
-  variableCount: 'records',
-  solIndex: 'records',
-  gaiaSourceIdResolved: 'records',
-  apsisMatched: 'records',
-  apsisTeffEither: 'records',
-  searchEntries: 'search',
-  designationConMismatch: 'search',
-  boundarySegments: 'boundaries',
-  boundaryDirections: 'boundaries',
-  boundaryRegionRuns: 'boundaries',
-  boundaryArtifactKb: 'boundaries',
-  figureCount: 'figures',
-  figureConstellations: 'figures',
 };
 
 export type CountDiff =
@@ -890,7 +556,9 @@ export type CountDiff =
   | { key: string; status: 'mismatch'; expected: number; actual: number }
   | { key: string; status: 'moved'; value: number; from: string; to: string }
   | { key: string; status: 'absent-from-snapshot'; actual: number }
-  | { key: string; status: 'absent-from-build'; expected: number };
+  | { key: string; status: 'absent-from-build'; expected: number }
+  /** A stage one side records as absent (its input was missing) and the other counted; `key` is the stage. */
+  | { key: string; status: 'absent-input'; side: 'build' | 'snapshot' };
 
 /** Staged snapshots: ../util/counts/README.md.
  *  Partition-valued entries (a `Record<tier, number>`) expand to one
@@ -910,19 +578,25 @@ export function compareBuildCounts<T extends object>(
   const a = flattenCounts(actual);
   const eStage = stageOfCounts(expected);
   const aStage = stageOfCounts(actual);
+  const eAbsent = absentStages(expected);
+  const aAbsent = absentStages(actual);
   const diff: CountDiff[] = [];
   for (const [key, { n: av, count }] of a) {
     const ev = e.get(key)?.n;
     const from = eStage?.get(count);
     const to = aStage?.get(count);
+    if (ev === undefined && to !== undefined && eAbsent.has(to)) continue;
     if (ev === undefined) diff.push({ key, status: 'absent-from-snapshot', actual: av });
     else if (ev !== av) diff.push({ key, status: 'mismatch', expected: ev, actual: av });
     else if (from !== undefined && to !== undefined && from !== to) diff.push({ key, status: 'moved', value: av, from, to });
     else diff.push({ key, status: 'match', value: av });
   }
-  for (const [key, { n: ev }] of e) {
-    if (!a.has(key)) diff.push({ key, status: 'absent-from-build', expected: ev });
+  for (const [key, { n: ev, count }] of e) {
+    const from = eStage?.get(count);
+    if (!a.has(key) && !(from !== undefined && aAbsent.has(from))) diff.push({ key, status: 'absent-from-build', expected: ev });
   }
+  for (const stage of aAbsent) if (!eAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'build' });
+  for (const stage of eAbsent) if (!aAbsent.has(stage)) diff.push({ key: stage, status: 'absent-input', side: 'snapshot' });
   return diff;
 }
 
@@ -975,6 +649,9 @@ export function formatCountDiff(diff: CountDiff[]): string {
       case 'moved':
         lines.push(`${label} ${d.value} moved from stage ${d.from} to ${d.to}`);
         break;
+      case 'absent-input':
+        lines.push(`${label} stage's input is absent from the ${d.side}, counted in the ${d.side === 'build' ? 'snapshot' : 'build'}`);
+        break;
       case 'mismatch': {
         const delta = d.actual - d.expected;
         const sign = delta > 0 ? '+' : '';
@@ -996,21 +673,4 @@ export function compareCountSnapshot<T extends object>(
     drifted: driftedRows(diff).length > 0,
     report: formatCountDiff(diff),
   };
-}
-
-/** The SIMBAD namespace tallies must exhaust the SIMBAD tier: every record the
- *  resolver credits to SIMBAD reports exactly one namespace that found it, so a
- *  shortfall means a tier returned a row without naming its key and the
- *  per-namespace figures understate silently. Returns the message to fail the
- *  build with, or null when the partition holds. */
-export function spectralSimbadPartitionError(
-  counts: Pick<BuildCounts, 'spectralBySimbad' | `spectralSimbadBy${'SourceId' | 'Hip' | 'Tyc' | 'Gj'}`>,
-): string | null {
-  const sum = counts.spectralSimbadBySourceId + counts.spectralSimbadByHip
-    + counts.spectralSimbadByTyc + counts.spectralSimbadByGj;
-  if (sum === counts.spectralBySimbad) return null;
-  return 'spectralSimbad namespace partition does not exhaust the SIMBAD tier: '
-    + `source_id ${counts.spectralSimbadBySourceId} + hip ${counts.spectralSimbadByHip} `
-    + `+ tyc ${counts.spectralSimbadByTyc} + gj ${counts.spectralSimbadByGj} `
-    + `= ${sum}, but spectralBySimbad is ${counts.spectralBySimbad}`;
 }

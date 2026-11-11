@@ -61,7 +61,20 @@ L/L☉    = 10^((4.74 − Mbol) / 2.5)
 R/R☉    = sqrt(L/L☉) × (T_sun/T)²
 ```
 
-`resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window);
+`physicalRadius` returns a `RadiusResolution`, the radius with the route
+that produced it, so no caller infers the method after the fact:
+`white-dwarf`, `apsis-teff` or `class-teff` (each Stefan–Boltzmann route
+carrying the absmag it used, the Teff, how the tables read the class index —
+`stated`, `default` for a subclass the source did not state, or the
+`unknown-class` neutral row — and which bound clamped it), or
+`non-finite-luminosity`, which ships the 1 R☉ stand-in. It takes the measured
+Teff as an `ApsisTeff` (kelvin and solution): the `apsis-teff` route carries
+the one it used, and a white dwarf or Wolf-Rayet, whose own treatment
+overrides it, carries it back as `refusedTeff`. The size lineage
+stage serialises it ([Size lineage](/scripts/catalog/spectral/README.md#size-lineage)).
+
+`resolveApsisTeff` supplies the measured Teff (2–60 kK sanity window), naming
+the solution it took and each one it refused as out of window;
 R ∝ T⁻², so the class-table fallback misized ESP-ELS-tier stars
 (letter-only, no subclass stated) by up to ~36% and unknown-class
 stars by up to ~2×. Tables are main-sequence values — cooler for

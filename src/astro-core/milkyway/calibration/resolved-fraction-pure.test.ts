@@ -110,13 +110,13 @@ describe('the shipped table', () => {
   // Over the 4.9e-4 round-to-nearest bound because three's converter
   // truncates. Taken on the voxels the texture stores, not the table they
   // are sampled from. What it is worth on a sightline: ../../../../tests/integration/milkyway.test.ts.
-  it('quantises to half-float inside 9.6e-4 relative', () => {
+  it('quantises to half-float inside 6.9e-4 relative', () => {
     let worst = 0;
     for (const v of unresolvedHoleVoxels()) {
       const back = DataUtils.fromHalfFloat(DataUtils.toHalfFloat(v));
       if (v > 0) worst = Math.max(worst, Math.abs(back - v) / v);
     }
-    expect(worst).toBeCloseTo(9.604e-4, 7);
+    expect(worst).toBeCloseTo(6.8584e-4, 7);
   });
 });
 

@@ -1423,7 +1423,7 @@ function recurateExistingMember(
   } else if (dOld > 0 && dNew > 0) {
     member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
   }
-  member.physicalRadius = physicalRadius(member.absmag, spectral);
+  member.physicalRadius = physicalRadius(member.absmag, spectral).rSun;
   state.recuratedMembers.set(memberIdx, brightness);
   return brightness;
 }
@@ -1673,7 +1673,7 @@ function promoteRow(
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
     absmag, ci,
     spectral: spectral.info,
-    physicalRadius: physicalRadius(absmag, spectral.info),
+    physicalRadius: physicalRadius(absmag, spectral.info).rSun,
     conIndex,
     desigCon,
     flags,
@@ -2129,7 +2129,7 @@ export function promoteCompanions(
     const splitMag = 2.5 * Math.log10(bucket.length);
     for (const { star, spectral } of bucket) {
       star.absmag += splitMag;
-      star.physicalRadius = physicalRadius(star.absmag, spectral);
+      star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
       post.blendSplitRecords++;
     }
   }
@@ -2315,11 +2315,11 @@ export function promoteCompanions(
       cand.member.absmag = anchor.absmag + delta;
       cand.member.physicalRadius = physicalRadius(
         cand.member.absmag, cand.memberSpectral,
-      );
+      ).rSun;
     }
     anchor.physicalRadius = physicalRadius(
       anchor.absmag, recordSpectralInfo(anchor),
-    );
+    ).rSun;
     post.blendDimmedAnchors++;
   }
   const rows = multiplesRows.map((row) => {

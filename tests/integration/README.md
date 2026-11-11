@@ -24,3 +24,11 @@ that describe those pins point here by path.
   and their `lg-catalog-fixture.ts` (the shipped Local Group assembled from
   `data/` by the build's own code), `sol-object-sids` and
   `shell-object-sids` (runtime SID pins against the ledger).
+
+`milkyway-sightlines-expected.json` holds every figure `milkyway.test.ts`
+measures that the Milky Way calibration docs quote: the test pins it
+through `figurePins`, the docs through doc-figure markers
+([Measured figures](/scripts/doc-figures/README.md#measured-figures--a-tests-pins-as-a-snapshot)).
+A re-measure that moves one fails the suite until
+`UPDATE_SNAPSHOTS=1 pnpm vitest run tests/integration/milkyway.test.ts`
+and `pnpm run docs:figures` regenerate both.

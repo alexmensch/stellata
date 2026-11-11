@@ -665,6 +665,33 @@ the deploy finds each commit's PR. GitHub's merge queue is unavailable: it
 is offered only on organization-owned repositories, and
 `alexmensch/stellata` is user-owned.
 
+**A GitHub stack lands through `gh stack merge <stack> --squash`**, never
+`gh pr merge` (refused on a stack member) and with no auto-merge. How it
+pushes is observed on stacks landed before versions were derived; that a
+deploy run tags, builds and publishes several releasing commits in one
+range follows from [What the deploy workflow does](#what-the-deploy-workflow-does)
+(every planned tag is made before the build, which reads the newest) and
+is first exercised by stack #768's landing:
+
+- **One squash commit per member**, bottom first, each subject
+  `<PR title> (#N)` (the repo's squash title is `PR_TITLE`), signed by
+  GitHub, all within a few seconds.
+- **One push, so one deploy run**, at the top member's commit: a single
+  `deploy` and a single push-triggered `test` run per landing. The plan
+  walks the whole range from the last release, so each releasing member
+  gets its own version, tag and release page in stack order, and
+  `skip-version-bump` members ship none; pinned in
+  `scripts/release/release-plan-pure.test.ts`.
+- **The guards judge a stacked PR whose base is a stack branch.** Their
+  `pull_request: branches: [main]` filter resolves against the stack's
+  trunk, so `version-guard` and `release-notes-guard` run on every member.
+  They run only on an event that fires while the PR is in the stack: a PR
+  opened with `--base <parent>` and linked afterwards has none on its
+  first head, and reads `BLOCKED` until its next push or a label toggle.
+  Before `gh stack merge`, read each member's head for both guard check
+  runs (`gh api repos/alexmensch/stellata/commits/<head>/check-runs`); a
+  member without them needs a push first.
+
 **Ruleset settings** (ruleset 15843287; branch rules are the owner's to
 change, by `gh api --method PUT` as above, preserving every rule):
 

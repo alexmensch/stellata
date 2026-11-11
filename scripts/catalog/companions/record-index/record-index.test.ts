@@ -86,7 +86,7 @@ describe('buildCatalogRowIndexMap', () => {
 
 describe('wingRenderablePrimaries', () => {
   const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).winged;
+    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).renderableCompanionWinged;
   const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {
@@ -265,7 +265,7 @@ describe('renderableOrbitRelations', () => {
 
 describe('buildComponentDesignations', () => {
   const designate = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars));
+    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars)).designations;
 
   it('maps every component (including the primary) to the primary as base', () => {
     // α Cen shape: A (the Bayer-bearing primary) + B resolve by HIP, C by
