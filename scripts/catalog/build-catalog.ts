@@ -47,7 +47,8 @@ import {
   compareCountSnapshot,
   formatPartition,
   spectralSimbadPartitionError,
-  type BuildCounts,
+  type CatalogCountStage,
+  type FiledCounts,
 } from './build-counts';
 import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
 import {
@@ -82,7 +83,9 @@ import {
   lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
-import { stageLineage, upstreamLineage, type LineageBudget } from './lineage/stage-lineage';
+import {
+  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageRun,
+} from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import { BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines } from './photometry/brightness-colour-lineage-pure';
 import { SIZE_CODES, SIZE_LINEAGE_BUDGET, sizeLineageLines } from './spectral/size-lineage-pure';
@@ -95,10 +98,10 @@ import {
 import { serializeCatalogRowIndexSidecar } from './companions/record-index/catalog-row-index-map-pure';
 import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import {
-  applySystemCoherence, systemCoherenceStats, systemCoherenceVerdicts, type SystemVerdict,
+  applySystemCoherence, systemCoherenceVerdicts, type SystemVerdict,
 } from './multiplicity/system-coherence';
 import {
-  COHERENCE_CODES, COHERENCE_LINEAGE_BUDGET, coherenceLineageLines,
+  COHERENCE_CODES, COHERENCE_LINEAGE_BUDGET, coherenceLineageLines, coherenceSummary,
 } from './multiplicity/coherence-lineage-pure';
 import {
   bridgeGcvsByGaia,
@@ -148,7 +151,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
-import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
+import { nestByStage, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -181,11 +184,11 @@ const EXPECTED_OUTLIERS = resolve(
 );
 
 /** A build:catalog stage whose lineage is one file named for the stage. */
-function catalogStageLineage<S extends string>(
+function catalogStageRun<S extends string>(
   spec: StageLineageSpec<S, S>, codes: StageCodes<string, NoInfer<S>>, lines: () => readonly LineageLine[],
   budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
-) {
-  return stageLineage({
+): StageLineageRun<S, S> {
+  return {
     layout: LINEAGE_LAYOUT,
     spec,
     inputs: stepInputs,
@@ -197,7 +200,11 @@ function catalogStageLineage<S extends string>(
     invariants,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
-  });
+  };
+}
+
+function catalogStageLineage<S extends string>(...run: Parameters<typeof catalogStageRun<S>>) {
+  return stageLineage(catalogStageRun(...run));
 }
 
 // A function of its own so the walk's lines are unreachable once it returns:
@@ -248,10 +255,10 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // A function of its own so its line per record is unreachable once it returns:
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogStageLineage(
+  return countedStageLineage(catalogStageRun(
     COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
     stepInputs,
-  );
+  ), COHERENCE_CODES);
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
@@ -292,7 +299,7 @@ export async function main() {
   // build. Every field has a default so a code path that legitimately
   // skips a section (missing GCVS files) doesn't leave the
   // field undefined.
-  const counts: Omit<BuildCounts, 'solIndex'> = {
+  const counts: Omit<FiledCounts, 'solIndex'> = {
     recordCount: 0,
     binaryPairs: 0,
     binaryMutualPairs: 0,
@@ -387,12 +394,6 @@ export async function main() {
     ciGspcValidatedRange: 0,
     ciSpectralDerived: 0,
     ciSolarFallback: 0,
-    systemCoherenceSystems: 0,
-    systemCoherenceRepositioned: 0,
-    systemCoherenceMemberAnchorWins: 0,
-    systemCoherenceSignificantDepthKept: 0,
-    systemCoherenceAnchorInconsistent: 0,
-    systemCoherenceMemberAnchorPrecisionVetoed: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -738,23 +739,7 @@ export async function main() {
   });
   const coherenceEmission = coherenceLineage(coherenceVerdicts, stars, inputHashesAtStart);
   applySystemCoherence(stars, coherenceVerdicts);
-  const coherence = systemCoherenceStats(coherenceVerdicts);
-  console.log(
-    `  system distance coherence: ${coherence.membersRepositioned} ` +
-      `members repositioned across ${coherence.systemsProcessed} systems ` +
-      `(${coherence.memberAnchorWins} member-anchor wins, ` +
-      `${coherence.memberAnchorPrecisionVetoed} vetoed on precision, ` +
-      `${coherence.significantDepthKept} significant depths kept)`,
-  );
-  counts.systemCoherenceRepositioned = coherence.membersRepositioned;
-  counts.systemCoherenceSystems = coherence.systemsProcessed;
-  counts.systemCoherenceMemberAnchorWins = coherence.memberAnchorWins;
-  counts.systemCoherenceSignificantDepthKept =
-    coherence.significantDepthKept;
-  counts.systemCoherenceAnchorInconsistent =
-    coherence.anchorPlacementInconsistent;
-  counts.systemCoherenceMemberAnchorPrecisionVetoed =
-    coherence.memberAnchorPrecisionVetoed;
+  console.log(coherenceSummary(coherenceEmission.counts));
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
   const { newStars, stats: ps, rows: promotedRows } = promoteCompanions(multiplesRows, stars, {
@@ -1345,16 +1330,18 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck({ ...counts, solIndex }), distanceOutliersCheck(stars),
+      buildCountsCheck({ ...counts, solIndex }, [
+        { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
+      ]), distanceOutliersCheck(stars),
       heap.check(),
     ],
   });
 }
 
-function buildCountsCheck(counts: BuildCounts): Check {
+function buildCountsCheck(counts: FiledCounts, blocks: readonly StageBlock<CatalogCountStage>[]): Check {
   return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }),
+    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }, blocks),
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',

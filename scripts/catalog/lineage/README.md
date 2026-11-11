@@ -14,8 +14,7 @@ its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's
-counters fold from its verdicts, still under their `systemCoherence*` keys
-until those keys become its codes (stellata-hhaw.45.23). Naming's display
+snapshot keys are its codes, folded from its lines. Naming's display
 counters fold from its outcomes the same way, under their `naming*` keys
 (stellata-hhaw.45.23). The record walk's placement and brightness-colour
 counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still

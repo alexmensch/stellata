@@ -3,7 +3,7 @@
 import {
   evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
@@ -12,9 +12,23 @@ import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
 
 
+const RETIRED_7_1_16 = { kind: 'retired', retiredIn: '7.1.16' } as const satisfies CodeStatus;
+
+const ANCHOR = 'The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance';
+const INCONSISTENT = 'The record wins its system\'s anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped';
+const MEMBER_WON = ': a non-primary member that outranks the pair primary.';
+const ANCHOR_WON = ': the pair primary, outranked by no member.';
+const PRECISION_VETOED = ': the pair primary, kept because its parallax is more precise than the member that outranks it.';
+
 export const COHERENCE_CODES = stageCodes(COHERENCE_LINEAGE.stage, {
-  anchor: outcomeCode('The record is its WDS system\'s distance anchor, the best-tier member, and the system\'s snapped members move onto its distance.'),
-  'anchor.inconsistent': outcomeCode('The record wins its system\'s anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.'),
+  anchor: outcomeCode(`${ANCHOR}.`, 'none', RETIRED_7_1_16),
+  'anchor.member-won': outcomeCode(`${ANCHOR}${MEMBER_WON}`),
+  'anchor.anchor-won': outcomeCode(`${ANCHOR}${ANCHOR_WON}`),
+  'anchor.precision-vetoed': outcomeCode(`${ANCHOR}${PRECISION_VETOED}`),
+  'anchor.inconsistent': outcomeCode(`${INCONSISTENT}.`, 'none', RETIRED_7_1_16),
+  'anchor.inconsistent.member-won': outcomeCode(`${INCONSISTENT}${MEMBER_WON}`),
+  'anchor.inconsistent.anchor-won': outcomeCode(`${INCONSISTENT}${ANCHOR_WON}`),
+  'anchor.inconsistent.precision-vetoed': outcomeCode(`${INCONSISTENT}${PRECISION_VETOED}`),
   'anchor.unplaced': outcomeCode('The record wins its system\'s anchor pick but has no positive finite distance, so the system is skipped.'),
   snapped: outcomeCode('The record moves radially onto its system anchor\'s distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor\'s.'),
   'unmoved.at-anchor-distance': outcomeCode('The record already sits at its system anchor\'s distance.'),
@@ -28,15 +42,46 @@ export const COHERENCE_CODES = stageCodes(COHERENCE_LINEAGE.stage, {
 
 type Branch = Parameters<typeof COHERENCE_CODES.code>[0];
 
+type LiveCode = (typeof COHERENCE_CODES.live)[number];
+
+/** Coherence's count block: its lines folded per live code. */
+export type CoherenceCounts = Readonly<Record<LiveCode, number>>;
+
+/** The pass's headline figures, each a sum of the block's codes. */
+export function coherenceFigures(counts: CoherenceCounts) {
+  const n = (...codes: LiveCode[]): number => codes.reduce((sum, code) => sum + counts[code], 0);
+  const inconsistent = n(
+    'coherence.anchor.inconsistent.member-won', 'coherence.anchor.inconsistent.anchor-won',
+    'coherence.anchor.inconsistent.precision-vetoed',
+  );
+  return {
+    systems: inconsistent
+      + n('coherence.anchor.member-won', 'coherence.anchor.anchor-won', 'coherence.anchor.precision-vetoed', 'coherence.anchor.unplaced'),
+    repositioned: n('coherence.snapped'),
+    memberAnchorWins: n('coherence.anchor.member-won', 'coherence.anchor.inconsistent.member-won'),
+    precisionVetoed: n('coherence.anchor.precision-vetoed', 'coherence.anchor.inconsistent.precision-vetoed'),
+    depthKept: n('coherence.kept.significant-depth', 'coherence.kept.wide-gap'),
+    anchorInconsistent: inconsistent,
+  };
+}
+
+export function coherenceSummary(counts: CoherenceCounts): string {
+  const f = coherenceFigures(counts);
+  return `  system distance coherence: ${f.repositioned} members repositioned across ${f.systems} systems `
+    + `(${f.memberAnchorWins} member-anchor wins, ${f.precisionVetoed} vetoed on precision, `
+    + `${f.depthKept} significant depths kept)`;
+}
+
 type Flag = 'true' | 'false';
-type AnchorParams = { root: string; tier: AnchorTier; member_won: Flag; precision_vetoed: Flag };
+type AnchorParams = { root: string; tier: AnchorTier };
+type AnchorPick = 'member-won' | 'anchor-won' | 'precision-vetoed';
 type MemberParams = { root: string; anchor: string; anchor_tier: AnchorTier };
 
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
-  B extends 'anchor' ? AnchorParams & { anchor_pc: string }
-  : B extends 'anchor.inconsistent' ? AnchorParams & { anchor_pc: string; parallax_pc: string; sigma_pc: string }
-  : B extends 'anchor.unplaced' ? AnchorParams
+  B extends `anchor.inconsistent.${AnchorPick}` ? AnchorParams & { anchor_pc: string; parallax_pc: string; sigma_pc: string }
+  : B extends `anchor.${AnchorPick}` ? AnchorParams & { anchor_pc: string }
+  : B extends 'anchor.unplaced' ? AnchorParams & { member_won: Flag; precision_vetoed: Flag }
   : B extends 'snapped' ? MemberParams & { from_pc: string; to_pc: string }
   : B extends 'kept.significant-depth' ? MemberParams & { gap_pc: string; sigma_pc: string }
   : B extends 'kept.wide-gap' ? MemberParams & { gap_pc: string }
@@ -44,6 +89,12 @@ type ParamsOf<B extends Branch> =
   : MemberParams;
 
 const flag = (b: boolean): Flag => (b ? 'true' : 'false');
+
+/** A veto forces `memberWon` false, so the three are exclusive. */
+function anchorPick(a: CoherenceAnchor): AnchorPick {
+  if (a.precisionVetoed) return 'precision-vetoed';
+  return a.memberWon ? 'member-won' : 'anchor-won';
+}
 const pc = (n: number): string => String(n);
 
 /** Every record's rows: each system verdict's anchor and member rows, and
@@ -69,23 +120,24 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
 
   for (const v of verdicts) {
     const a = v.anchor;
-    const anchorParams: AnchorParams = {
-      root: v.root, tier: a.tier, member_won: flag(a.memberWon), precision_vetoed: flag(a.precisionVetoed),
-    };
+    const anchorParams: AnchorParams = { root: v.root, tier: a.tier };
+    const pick = anchorPick(a);
     const member: MemberParams = { root: v.root, anchor: stars[a.idx].originKey, anchor_tier: a.tier };
     switch (v.kind) {
       case 'coherent':
-        push(a.idx, 'anchor', { ...anchorParams, anchor_pc: pc(v.anchorPc) }, a);
+        push(a.idx, `anchor.${pick}`, { ...anchorParams, anchor_pc: pc(v.anchorPc) }, a);
         for (const m of v.members) memberRow(m, member, a);
         break;
       case 'anchor-inconsistent':
-        push(a.idx, 'anchor.inconsistent', {
+        push(a.idx, `anchor.inconsistent.${pick}`, {
           ...anchorParams, anchor_pc: pc(v.anchorPc), parallax_pc: pc(v.parallaxPc), sigma_pc: pc(v.sigmaPc),
         }, a);
         for (const idx of v.members) push(idx, 'kept.anchor-inconsistent', member, a);
         break;
       case 'anchor-unplaced':
-        push(a.idx, 'anchor.unplaced', anchorParams, a);
+        push(a.idx, 'anchor.unplaced', {
+          ...anchorParams, member_won: flag(a.memberWon), precision_vetoed: flag(a.precisionVetoed),
+        }, a);
         for (const idx of v.members) push(idx, 'kept.anchor-unplaced', member, a);
         break;
       default: {

@@ -9,6 +9,7 @@ import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count
 import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
+import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -20,7 +21,11 @@ export function committedBuildCounts(): BuildCounts {
   return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
-export interface BuildCounts {
+/** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
+export type BuildCounts = FiledCounts & CoherenceCounts;
+
+/** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
+export interface FiledCounts {
   /** Records written to catalog.bin after filtering and sort. */
   recordCount: number;
   /** `inferBinaries` companion assignments. */
@@ -218,26 +223,6 @@ export interface BuildCounts {
   ciSpectralDerived: number;
   /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
   ciSolarFallback: number;
-  /** WDS systems with ≥2 distinct own-record members walked by the
-   *  intra-system radial-coherence pass (system-coherence.ts). */
-  systemCoherenceSystems: number;
-  /** Own-record members moved to their system's anchor distance along
-   *  their own direction (radial gap not a ≥3σ measurement). */
-  systemCoherenceRepositioned: number;
-  /** Systems whose distance anchor was a non-primary member (a clean
-   *  unsaturated Gaia 5p member outranking a saturated primary). */
-  systemCoherenceMemberAnchorWins: number;
-  /** Members whose radial gap IS a ≥3σ measurement — genuinely measured
-   *  depth kept (α Cen–Proxima, 61 Cyg A/B). */
-  systemCoherenceSignificantDepthKept: number;
-  /** Systems skipped because the anchor's rendered catalog distance
-   *  contradicts its own parallax evidence (μ¹ Sco's B-J placement of
-   *  a RUWE-corrupted source at 1.7 kpc) — members keep their own. */
-  systemCoherenceAnchorInconsistent: number;
-  /** Member-anchor wins vetoed because the member displacing the pair
-   *  primary carries no trusted fit as precise as the primary's — tier
-   *  ranks provenance, and the placement moved is the primary's. */
-  systemCoherenceMemberAnchorPrecisionVetoed: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -680,8 +665,8 @@ export const CATALOG_COUNT_STAGES = [
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
-/** The stage each count is filed under in the snapshot: the step that computes it. */
-export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCountStage>> = {
+/** The stage each filed count sits under in the snapshot: the step that computes it. */
+export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
   bjEntries: 'inputs',
   apsisEntries: 'inputs',
   gspcEntries: 'inputs',
@@ -807,12 +792,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof BuildCounts, CatalogCoun
   namingDuplicateLabels: 'naming',
   namingDuplicateRecords: 'naming',
   nameTableEntries: 'naming',
-  systemCoherenceSystems: 'coherence',
-  systemCoherenceRepositioned: 'coherence',
-  systemCoherenceMemberAnchorWins: 'coherence',
-  systemCoherenceSignificantDepthKept: 'coherence',
-  systemCoherenceAnchorInconsistent: 'coherence',
-  systemCoherenceMemberAnchorPrecisionVetoed: 'coherence',
   companionRowsScanned: 'promotion',
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',
