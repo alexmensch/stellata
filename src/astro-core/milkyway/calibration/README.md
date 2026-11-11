@@ -240,7 +240,7 @@ amplified some fiftyfold on the way out. Read the centre row as a
 sanity check that the sign and order are right, never as a tolerance.
 A single ray against a 10° cap is the other reason it cannot be one. **What it does on screen is a fainter
 diffuse band with the same stars in it**: the dusty column toward the
-centre is the nearest two kiloparsecs, so it dims 0.66 mag; the anticentre
+centre is the nearest two kiloparsecs, so it dims 0.65 mag; the anticentre
 0.63, b = 30 0.58, the pole 0.83, b = 5 — where the column reaches through
 the plane — 0.19.
 
@@ -283,8 +283,8 @@ give 0.009.
 
 **0.044 mag is the price of the 64-cube**, measured against the shipped
 table over the 32-step log march, emissivity-weighted and dust-free, worst
-of eight sightlines and concentrated at the poles. Against the 4.4e-4 mag
-half-float budget that is four hundred times larger; against the 0.378 mag a
+of eight sightlines and concentrated at the poles. Against the 4.7e-4 mag
+half-float budget that is some ninety times larger; against the 0.378 mag a
 single scalar rescale would cost, nine times smaller. It is a field in
 galactocentric space, so it is right from every vantage, not just Sol's.
 
@@ -328,8 +328,8 @@ hole in the model column.
 
 | check | published | model | model is |
 | --- | --- | --- | --- |
-| NGP diffuse residual | 25.44 | 24.13 | **1.310 mag brighter** |
-| Galactic centre vs [Leinert 1998](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | 22.54 | **0.389 mag brighter** |
+| NGP diffuse residual | 25.44 | 24.13 | **1.307 mag brighter** |
+| Galactic centre vs [Leinert 1998](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | 22.53 | **0.390 mag brighter** |
 
 The second row grades a b = 0 sightline against a b = 30° value, not like
 for like; what to grade it against is an open decision (`stellata-uadc.69.10`).
@@ -339,14 +339,14 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | [Leinert 1998](/data/papers/index.md#leinert1998) Table 24, NGP — **total** starlight | 23.83 |
-| The <!-- count:build-catalog/recordCount -->979,634<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.110 |
+| The <!-- count:build-catalog/recordCount -->979,634<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.111 |
 | Residual left for the diffuse band | **25.44** |
 
 **The catalogue rows are measured by the `measure:band-resolved` bake, into
 `resolved-hole-table.ts` beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
 with them. The 388k catalogue before the floor read 24.271 at the pole over
 1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
-to 24.110 over 2,763 and the centre to 22.191 over 16,869, so the star field's
+to 24.111 over 2,762 and the centre to 22.191 over 16,870, so the star field's
 share of [Leinert 1998](/data/papers/index.md#leinert1998)'s pole total goes from two thirds to **77 %**. **A record
 has to land INSIDE a 10° cap to move a row**, so a re-run the build demands
 can leave both rows where they were; when to re-run is the build's stop, not
@@ -388,11 +388,11 @@ pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.6 |
-| l = 0, b = 0 (GC) | 22.54 | 0.54 under | 21.5 |
-| anticentre | 22.69 | 0.69 under | 15.5 |
+| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.7 |
+| l = 0, b = 0 (GC) | 22.53 | 0.53 under | 21.7 |
+| anticentre | 22.69 | 0.69 under | 15.7 |
 | b = 30 | 23.10 | 1.10 under | 3.6 |
-| NGP | 24.24 | 2.24 under | 0.0 |
+| NGP | 24.23 | 2.23 under | 0.0 |
 
 Plane-to-pole contrast **1.70 mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
