@@ -247,19 +247,19 @@ astronomer-relevant summary:
    from Gaia NSS / SB2 spectroscopy where present, with per-class
    mass-table backfill (the same tables) for visual orbits without
    spectroscopy.
-7. **Assert against snapshots.** Per-stage counts gate
-   `build-binaries-expected.json`; per-strategy rates gate
-   `build-binaries-rates-expected.json`. A regression in either
-   surfaces in the build log as a per-key diff and refuses to
-   advance. Refreshes are explicit (`UPDATE_SNAPSHOTS=1`); silent
+7. **Assert against the snapshot.** Per-stage counts are pinned in
+   `build-binaries-expected.json`; a regression surfaces in the build
+   log as a per-key diff and nothing is written. The per-strategy rates
+   (resolve, HIP2 fallback, NSS orbit, optical rejection) are ratios of
+   those counts, so they print in the build log rather than carry a gate
+   of their own. Refreshes are explicit (`--update-snapshots`); silent
    drift is impossible.
 
-**Layer 4 — validation harness.** Three tiers covered in
-`scripts/binaries/README.md`: a hand-curated Tier A known-stars corpus
-(`scripts/catalog/validate/known-stars.tsv`) the binary catalogue must
+**Layer 4 — validation harness.** Three tiers: a hand-curated Tier A
+known-stars corpus (`scripts/catalog/validate/known-stars.tsv`,
+`scripts/catalog/validate/README.md`) the binary catalogue must
 reproduce; population-statistic Tier B snapshots
-(`build-binaries-expected.json` +
-`build-binaries-rates-expected.json`); a stratified random 10k SIMBAD sample
+(`build-binaries-expected.json`, `scripts/binaries/counts/README.md`); a stratified random 10k SIMBAD sample
 Tier C cross-checker (`validate-simbad-sample.ts` + the
 `distance-regression-check.ts` build-time subset that surfaces in
 `build-distance-outliers-expected.json` with hand-edited reasons).

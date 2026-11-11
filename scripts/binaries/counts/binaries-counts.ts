@@ -1,12 +1,12 @@
-// Stage 7: every stage's counts and rates, filed under the stage of the snapshot that pins them. See README.md.
+// Stage 7: every stage's counts, filed under the stage of the snapshot that pins them. See README.md.
 
 import type { StagedCounts } from '../../util/counts/count-stages-pure';
-import { stage3Counts, stage3Rates } from '../astrometry/attach-astrometry';
+import { stage3Counts } from '../astrometry/attach-astrometry';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
-import { stage5Counts, stage5Rates } from '../optical/attach-optical';
-import { stage4Counts, stage4Rates } from '../orbits/attach-orbits';
+import { stage5Counts } from '../optical/attach-optical';
+import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {
@@ -45,18 +45,6 @@ export function binariesCounts(r: StageResults): StagedCounts<number> {
       orbits: stage4Counts(r.orbits),
       optical: stage5Counts(r.optical),
       multiples: stage6Counts(r.multiples),
-    },
-  };
-}
-
-export function binariesRates(r: StageResults): StagedCounts<number> {
-  const { gaia_resolve_rate, hip2_fallback_rate } = stage3Rates(stage3Counts(r.reference, r.resolved, r.astrometry));
-  return {
-    stages: {
-      resolve: { gaia_resolve_rate },
-      astrometry: { hip2_fallback_rate },
-      orbits: stage4Rates(stage4Counts(r.orbits)),
-      optical: stage5Rates(stage5Counts(r.optical)),
     },
   };
 }

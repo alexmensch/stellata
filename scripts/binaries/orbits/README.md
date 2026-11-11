@@ -58,8 +58,8 @@ refresh carrying one outside the window stops the build at Stage 4.
 `stage4Counts` returns the `orbit_*` keys, one per route, folded through the
 one tally helper; `stage4Rates` derives `nss_orbit_rate`, the NSS share of
 the pairs with elements, through the tally module's `share`, which throws
-when no pair has any. `../build-binaries.test.ts` holds both to the
-committed snapshots, as it does Stage 3's
+when no pair has any; `stage4Report` logs it. The keys are held to the
+committed count snapshot, as Stage 3's are
 ([Counts](../astrometry/README.md#counts)).
 
 ## Conventions the outputs rest on

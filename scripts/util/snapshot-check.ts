@@ -19,10 +19,9 @@ export interface SnapshotCheckSpec<T> {
   snapshotPath: string;
   actual: T;
   compare: (expected: T, actual: T) => { drifted: boolean; report: string };
-  /** The snapshot a refresh writes, from the committed one (null when there
-   *  is none) and the actual: curated `reason` strings and tolerances survive
-   *  a regenerate. */
-  refreshTransform?: (expected: T | null, actual: T) => T;
+  /** Merges hand-authored fields of the old snapshot into the new one on
+   *  refresh (curated `reason` strings survive a regenerate). */
+  refreshTransform?: (expected: T, actual: T) => T;
   failureLabel: string;
   /** The `package.json` script the refresh message names. */
   script: string;
@@ -35,7 +34,9 @@ export function snapshotCheck<T>(opts: SnapshotCheckSpec<T>): Check {
     : null;
 
   if (process.env[UPDATE_SNAPSHOTS_ENV] === '1') {
-    const toWrite = opts.refreshTransform ? opts.refreshTransform(expected, opts.actual) : opts.actual;
+    const toWrite = expected !== null && opts.refreshTransform
+      ? opts.refreshTransform(expected, opts.actual)
+      : opts.actual;
     return { kind: 'refresh', path: opts.snapshotPath, text: JSON.stringify(toWrite, null, 2) + '\n' };
   }
 

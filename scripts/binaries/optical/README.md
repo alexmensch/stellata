@@ -49,9 +49,9 @@ motion therefore does not reach the escape-velocity gate; whether it should is
 
 `stage5Counts` returns the twelve `optical_*` keys, one per tag, folded
 through the one tally helper; `stage5Rates` derives `optical_rejected_rate`,
-the rejecting tags over every classified pair, through `share`. The parent
-folder's `build-binaries.test.ts` holds both to the committed snapshots, as it
-does Stage 4's ([Counts](../orbits/README.md#counts)).
+the rejecting tags over every classified pair, through `share`, which
+`stage5Report` logs. The keys are held to the committed count snapshot, as
+Stage 4's are ([Counts](../orbits/README.md#counts)).
 
 ## Choices the outputs rest on
 

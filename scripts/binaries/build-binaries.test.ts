@@ -11,7 +11,6 @@ import { ATHYG_CLASSIC_IDS } from '../catalog/spine/athyg-classic-ids-source';
 import { SIMBAD_WDS_XIDS } from '../catalog/membership/binding/simbad-wds-xids-source';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
-import { refreshedRates, rateEntries } from '../util/counts/rate-snapshot-pure';
 import { isReadable } from '../util/sources/source';
 import { componentKey } from './component-tokens-pure';
 import { BINARIES_ASTROMETRY } from './load/binaries-astrometry-source';
@@ -20,7 +19,7 @@ import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages, type StageResults } from './build-binaries';
 import { stage3Counts, type Stage3Result } from './astrometry/attach-astrometry';
-import { binariesCounts, binariesRates } from './counts/binaries-counts';
+import { binariesCounts } from './counts/binaries-counts';
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
 import { stage4Counts, type Stage4Result } from './orbits/attach-orbits';
 import { stage5Counts, type Stage5Result } from './optical/attach-optical';
@@ -150,10 +149,5 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     ].flatMap((counts) => Object.keys(counts));
     const filed = Object.values(binariesCounts(results).stages).flatMap((block) => Object.keys(block));
     expect([...filed].sort()).toEqual([...new Set(stageKeys)].sort());
-  });
-
-  it('rates the committed rates snapshot, byte for byte as a refresh writes it', () => {
-    const committed = JSON.parse(snapshotText('build-binaries-rates-expected.json'));
-    expect(asWritten(refreshedRates(committed, rateEntries(binariesRates(results))))).toBe(snapshotText('build-binaries-rates-expected.json'));
   });
 });

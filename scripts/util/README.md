@@ -337,13 +337,10 @@ same thing — single-use helpers stay with their consumer.
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
-  overlay, membership and WGSN builds, `build:binaries`' counts and rates
+  overlay, membership and WGSN builds, `build:binaries`' counts
   (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
   snapshots all pass `compareCountSnapshot` (`catalog/build-counts.ts`) as
-  the compare, the rates snapshot `counts/rate-snapshot-pure.ts`'s
-  `compareRateSnapshot`. A `refreshTransform` shapes what a refresh writes
-  from the committed snapshot, null when there is none.
-  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
+  the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; `presentFiles`, the names

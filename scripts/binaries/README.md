@@ -46,10 +46,10 @@ why:
    masses its escape-velocity gate reads are [`masses/`](masses/README.md).
 6. [`multiples/`](multiples/README.md) — the `multiples.tsv` records
    ([What each column carries](multiples/README.md#what-each-column-carries)).
-7. [`counts/`](counts/README.md) — the count and rates snapshots that gate
-   the write.
+7. [`counts/`](counts/README.md) — the count snapshot that gates the
+   write.
 
-`multiples.tsv` and the two snapshots are pinned byte for byte, so each
+`multiples.tsv` and the counts are pinned exactly, so each
 stage's README lists the choices its outputs rest on; changing one moves
 rows and is a correctness change, never a refactor.
 
@@ -62,12 +62,12 @@ scripts/binaries/
                                   multiples.tsv, the Gaia astrometry
                                   request and the binding verdicts to
                                   emitArtifacts behind the row bands and
-                                  Stage 7's two snapshot checks. The test
+                                  Stage 7's count snapshot check. The test
                                   runs the stages over the committed
                                   inputs, holds the records to the
                                   committed multiples.tsv and Stage 7's
-                                  counts and rates to both snapshots,
-                                  byte for byte, and runs the spot-check
+                                  counts to the count snapshot, byte for
+                                  byte, and runs the spot-check
                                   (pnpm run test:spotcheck,
                                   resolve/README.md#the-spot-check).
   binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
@@ -170,16 +170,14 @@ scripts/binaries/
   golden/                         binaries.bin golden test: the writer on a
                                   committed non-LFS fixture, byte for byte.
                                   Own README.
-  *-expected.json                 Snapshot pins refreshed with
+  *-expected.json                 Count snapshots refreshed with
                                   --update-snapshots, staged by pipeline
                                   stage (../util/counts/count-stages-pure.ts;
                                   build-runtime-binaries' one stage is
                                   `encode`): build-binaries
                                   (per-strategy / per-tier counts),
-                                  build-binaries-rates (per-strategy rates —
-                                  catches population-mix shifts that don't move
-                                  absolute counts), build-runtime-binaries
-                                  (pair-emission counts).
+                                  build-runtime-binaries (pair-emission
+                                  counts).
 ```
 
 Inputs and outputs live in their own folders, each with its own README
@@ -202,7 +200,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    (`data/gaia/gaia_astrometry_source_id_request.tsv`) and the
    binding-integrity verdicts (`build/binding-integrity-verdicts.tsv`, a
    gitignored review surface). All three land through `emitArtifacts`
-   only once the input row bands and both snapshot checks pass, so a
+   only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads the membership manifest + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /

@@ -1,16 +1,15 @@
-// build:binaries: Stages 1-6 in order, then Stage 7's snapshot checks gate multiples.tsv, the astrometry request and the verdicts. See README.md#pipeline-at-a-glance.
+// build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the astrometry request and the verdicts. See README.md#pipeline-at-a-glance.
 
 import { resolve } from 'node:path';
 
 import { compareCountSnapshot } from '../catalog/build-counts';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
-import { compareRateSnapshot, rateEntries, refreshedRates, type RateSnapshot } from '../util/counts/rate-snapshot-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { snapshotCheck } from '../util/snapshot-check';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
-import { binariesCounts, binariesRates } from './counts/binaries-counts';
+import { binariesCounts } from './counts/binaries-counts';
 import { MULTIPLES_TSV } from './multiples-tsv';
 import { BINDING_VERDICTS_TSV, bindingVerdictRow } from './resolve/binding-verdicts-tsv';
 import { attachStage3, type Stage3Result } from './astrometry/attach-astrometry';
@@ -42,7 +41,7 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
   const resolved = resolveStage2(reference);
   for (const line of stage2Report(resolved)) log(line);
   const astrometry = attachStage3(resolved, reference);
-  for (const line of stage3Report(astrometry)) log(line);
+  for (const line of stage3Report(reference, resolved, astrometry)) log(line);
   const orbits = attachStage4(astrometry, reference);
   for (const line of stage4Report(orbits)) log(line);
   const masses = pairMasses(astrometry.pairs, reference.indices);
@@ -53,9 +52,7 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
   return { reference, resolved, astrometry, orbits, optical, multiples };
 }
 
-const SNAPSHOT_SCRIPT = 'build:binaries';
 const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-binaries-expected.json');
-const EXPECTED_RATES = resolve(REPO_ROOT, 'scripts/binaries/build-binaries-rates-expected.json');
 
 const log = (line: string): void => console.log(`[build-binaries] ${line}`);
 
@@ -76,15 +73,7 @@ export async function main(): Promise<void> {
         actual: binariesCounts(results),
         compare: compareCountSnapshot,
         failureLabel: 'build-binaries count',
-        script: SNAPSHOT_SCRIPT,
-      }),
-      snapshotCheck<RateSnapshot>({
-        snapshotPath: EXPECTED_RATES,
-        actual: rateEntries(binariesRates(results)),
-        compare: compareRateSnapshot,
-        refreshTransform: refreshedRates,
-        failureLabel: 'build-binaries rates',
-        script: SNAPSHOT_SCRIPT,
+        script: 'build:binaries',
       }),
     ],
   });
