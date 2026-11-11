@@ -143,13 +143,11 @@ export function pairBeyondSeparationLimit(
 }
 
 /** Both parallaxes positive: their depth gap plus its 2σ falls inside the tidal limit. */
-function positivelyCollocated(p: GaiaAstrometryRow, s: GaiaAstrometryRow): boolean {
-  const pPlx = p.parallaxMas!;
-  const sPlx = s.parallaxMas!;
-  const dP = 1000.0 / pPlx;
-  const dS = 1000.0 / sPlx;
-  const sigmaP = (1000.0 * (p.parallaxErrorMas ?? 0.0)) / pPlx ** 2;
-  const sigmaS = (1000.0 * (s.parallaxErrorMas ?? 0.0)) / sPlx ** 2;
+function positivelyCollocated(p: Parallax, s: Parallax): boolean {
+  const dP = 1000.0 / p.parallaxMas;
+  const dS = 1000.0 / s.parallaxMas;
+  const sigmaP = (1000.0 * (p.parallaxErrorMas ?? 0.0)) / p.parallaxMas ** 2;
+  const sigmaS = (1000.0 * (s.parallaxErrorMas ?? 0.0)) / s.parallaxMas ** 2;
   return Math.abs(dP - dS) + ESCAPE_GATE_BUDGET_COLLOCATION_SIGMA * Math.hypot(sigmaP, sigmaS) < SEPARATION_LIMIT_PC;
 }
 
@@ -170,7 +168,7 @@ export function bothGaiaVerdict(
   const dPc = 2000.0 / (p.parallaxMas + s.parallaxMas);
   const vEscape = escapeVelocityKmS(totalMassMsun, separationAu(pPar, sPar, rhoArcsec));
   if (vEscape === null) return 'kept';
-  const budget = orbitalPmBudgetKmS > 0.0 && positivelyCollocated(p, s) ? orbitalPmBudgetKmS : 0.0;
+  const budget = orbitalPmBudgetKmS > 0.0 && positivelyCollocated(pPar, sPar) ? orbitalPmBudgetKmS : 0.0;
   return transverseVelocityKmS(dpm, dPc) > ESCAPE_VELOCITY_SAFETY_FACTOR * vEscape + budget ? 'rejected' : 'kept';
 }
 
