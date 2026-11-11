@@ -65,10 +65,12 @@ scripts/binaries/
   orbits/                         Stage 4 in TypeScript: each pair's
                                   orbit from ORB6, Gaia NSS or the MSC,
                                   keyed by its DecomposedPair. Own README.
+  components/                     What one component reads about itself:
+                                  its AT-HYG row, its spectral type and
+                                  spect_via. Own README.
   masses/                         A component's mass from its spectral
-                                  type, the spectral-type cascade, and
-                                  each pair's total mass, which Stage 5
-                                  reads. Own README.
+                                  type, and each pair's total mass, which
+                                  Stage 5 reads. Own README.
   optical/                        Stage 5 in TypeScript: each pair
                                   physical or optical, tagged with the
                                   deciding tier, keyed by its

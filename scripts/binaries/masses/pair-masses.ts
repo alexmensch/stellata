@@ -2,7 +2,7 @@
 
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
-import { athygRowFor, resolveSpect } from './component-spect-pure';
+import { athygRowFor, resolveSpect } from '../components/component-spect-pure';
 import { massFromSpectralClass } from './mass-estimate-pure';
 
 /** Deliberately generous: an unknown type must raise Stage 5's escape velocity, never lower it. */
