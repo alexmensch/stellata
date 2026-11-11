@@ -4,7 +4,7 @@ import { hip2AstrometryRow } from '../../catalog/sources/hip2-fixture';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type MeasuredAstrometry } from '../astrometry/routes-pure';
-import type { ParallaxAnchor } from '../astrometry/system-anchors-pure';
+import type { Parallax } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import { UNKNOWN_COMPONENT_MASS_MSUN } from '../masses/pair-masses';
@@ -20,7 +20,7 @@ import {
 import { orbitalPmBudgetKmS } from './pm-budget-pure';
 
 const DEFAULT_TOTAL_MASS = 2 * UNKNOWN_COMPONENT_MASS_MSUN;
-const plx = (parallaxMas: number, parallaxErrorMas: number | null): ParallaxAnchor => ({ parallaxMas, parallaxErrorMas });
+const plx = (parallaxMas: number, parallaxErrorMas: number | null): Parallax => ({ parallaxMas, parallaxErrorMas });
 const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryRow>): GaiaAstrometryRow => gaiaAstrometryRow({ sourceId, ...over });
 const measured = (over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry => ({
   astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05, pmraMasyr: 4100, pmdecMasyr: -3200, refEpoch: 2016,
@@ -40,7 +40,7 @@ interface Case {
   orbitVia?: OrbitVia;
   rhoLast?: number | null;
   pair?: WdsPair;
-  systemParallax?: ParallaxAnchor | null;
+  systemParallax?: Parallax | null;
   totalMassMsun?: number;
   budget?: number;
   primaryAst?: ComponentAstrometry;
@@ -231,7 +231,7 @@ describe('cpmBaselineVerdict (61 Cyg: 5.2″/yr over a century)', () => {
 
 describe('pairBeyondSeparationLimit', () => {
   const ANCHOR = plx(96.5, 0.3);
-  const run = (rows: readonly GaiaAstrometryRow[], p: string | null, s: string | null, anchor: ParallaxAnchor | null, rho: number) => {
+  const run = (rows: readonly GaiaAstrometryRow[], p: string | null, s: string | null, anchor: Parallax | null, rho: number) => {
     const pair = decomposed(wdsPair(), { primary: { gaiaSourceId: p, resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: s, resolveVia: 'orb6_hip' } });
     return pairBeyondSeparationLimit(pair.primary, pair.secondary, anchor, rho, indices({ srcToAstrometry: new Map(rows.map((r) => [r.sourceId, r])) }));
   };

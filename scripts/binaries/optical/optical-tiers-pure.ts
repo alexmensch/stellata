@@ -4,7 +4,7 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { WdsPair } from '../../wds/wds-pure';
 import { AU_PER_PC, DEG_TO_RAD, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-constants';
 import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-pure';
-import type { ParallaxAnchor, PmAnchor } from '../astrometry/system-anchors-pure';
+import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-tsv';
@@ -58,9 +58,6 @@ export const MAG_GAP_HEURISTIC_THRESHOLD = 5.0;
 const INHERITED_SECONDARY_ASTROMETRY_VIAS: ReadonlySet<ComponentAstrometry['astrometryVia']> = new Set(['unresolved', 'athyg_position']);
 
 type TierVerdict = 'kept' | 'rejected' | null;
-
-/** A parallax in mas and its error, null where the catalogue states none. */
-type Parallax = ParallaxAnchor;
 
 function polarToTangent(rhoArcsec: number, thetaDeg: number): readonly [number, number] {
   const th = thetaDeg * DEG_TO_RAD;
