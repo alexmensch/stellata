@@ -44,7 +44,7 @@ Each has its own README.
 - `astronomy-constants.ts` (+ test) — `AU_PER_PC` / `AU_PC` / `AU_KM` /
   `KM_PC` / `R_SUN_PC` / `SUN_ABSMAG_V` / `MIN_PHYSICAL_RADIUS_R_SUN` /
   `DEG_TO_RAD` / `ARCSEC_PER_DEG` / `ARCSEC_TO_RAD` / `MAS_TO_RAD` / `J2000_JD` / `J2000_OBLIQUITY_RAD` /
-  `HIPPARCOS_EPOCH_JYEAR` / `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `LIGHT_TIME_PER_AU_S` /
+  `HIPPARCOS_EPOCH_JYEAR` / `DAYS_PER_JULIAN_YEAR` / `SECONDS_PER_DAY` / `KM_S_PER_AU_YR` / `LIGHT_TIME_PER_AU_S` /
   `RA_HOURS_TO_DEG`.
   Canonical values, one definition each, so client / build-script /
   shader consumers can't drift on precision — import from here rather
