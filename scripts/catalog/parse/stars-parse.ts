@@ -548,7 +548,9 @@ export function rowResolver({
     );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     const apsisTeff = resolveApsisTeff(apsis?.value);
-    const citedApsisTeff = apsis === null || apsisTeff === null ? null : { value: apsisTeff, ref: apsis.ref };
+    const citedApsisTeff = apsis === null || apsisTeff.teff === null
+      ? null
+      : { value: apsisTeff.teff.kelvin, ref: apsis.ref };
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class, else solar. Printed above synthetic
@@ -583,7 +585,7 @@ export function rowResolver({
       dust = { av, ciDereddened };
     }
 
-    const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
+    const radius = physicalRadius(absmag, spectInfo, apsisTeff.teff?.kelvin ?? null);
 
     // Byte 34 is positional: the IAU boundaries partition the whole sphere,
     // so it resolves for any direction, catalogued or not.
@@ -603,7 +605,7 @@ export function rowResolver({
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
       spectral: spectInfo,
-      physicalRadius: physRadius,
+      physicalRadius: radius.rSun,
       conIndex,
       // Left unset here: three later passes fill it, and everything else
       // reads `conIndex`.

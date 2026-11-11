@@ -153,43 +153,104 @@ const MBOL_SUN = 4.74;
 export const APSIS_TEFF_MIN_K = 2000;
 export const APSIS_TEFF_MAX_K = 60000;
 
-/** Pick the measured Gaia DR3 Apsis Teff for the radius chain:
- *  gspphot first, gspspec fallback (the same preference the runtime
- *  colour routing uses), gated to the physical sanity window. Returns
- *  null when neither solution carries a usable value. */
-export function resolveApsisTeff(apsis: ApsisRow | null | undefined): number | null {
-  if (!apsis) return null;
-  for (const t of [apsis.teffGspphot, apsis.teffGspspec]) {
-    if (t !== null && t > APSIS_TEFF_MIN_K && t < APSIS_TEFF_MAX_K) return t;
-  }
-  return null;
+export type ApsisSolution = 'gspphot' | 'gspspec';
+
+export interface ApsisTeff {
+  readonly kelvin: number;
+  readonly solution: ApsisSolution;
 }
 
-// `teffOverride` (a measured Apsis Teff via
-// resolveApsisTeff) replaces the class-table Teff when present; BC stays
+/** The measured Teff the radius chain sizes from, and each solution weighed
+ *  before it whose value fell outside the sanity window. */
+export interface ApsisTeffResolution {
+  readonly teff: ApsisTeff | null;
+  readonly outOfWindow: readonly ApsisSolution[];
+}
+
+/** Pick the measured Gaia DR3 Apsis Teff for the radius chain:
+ *  gspphot first, gspspec fallback (the same preference the runtime
+ *  colour routing uses), gated to the physical sanity window. */
+export function resolveApsisTeff(apsis: ApsisRow | null | undefined): ApsisTeffResolution {
+  const outOfWindow: ApsisSolution[] = [];
+  if (!apsis) return { teff: null, outOfWindow };
+  const solutions = [['gspphot', apsis.teffGspphot], ['gspspec', apsis.teffGspspec]] as const;
+  for (const [solution, kelvin] of solutions) {
+    if (kelvin === null) continue;
+    if (kelvin > APSIS_TEFF_MIN_K && kelvin < APSIS_TEFF_MAX_K) return { teff: { kelvin, solution }, outOfWindow };
+    outOfWindow.push(solution);
+  }
+  return { teff: null, outOfWindow };
+}
+
+export const WHITE_DWARF_RADIUS_R_SUN = 0.013;
+export const RADIUS_FLOOR_R_SUN = 0.08;
+export const RADIUS_CEILING_R_SUN = 2500;
+export const NON_FINITE_LUMINOSITY_RADIUS_R_SUN = 1.0;
+
+export type ClassIndex = 'stated' | 'default' | 'unknown-class';
+
+export type RadiusClamp = 'floor' | 'ceiling';
+
+/** The radius pass's answer: the radius and the route that produced it. See README.md#the-radius-chain. */
+export type RadiusResolution =
+  | {
+    readonly route: 'white-dwarf';
+    readonly rSun: number;
+    readonly teffRefused: 'white-dwarf' | null;
+  }
+  | {
+    readonly route: 'apsis-teff' | 'class-teff';
+    readonly rSun: number;
+    readonly absmag: number;
+    readonly teffK: number;
+    readonly classIndex: ClassIndex;
+    readonly clamp: RadiusClamp | null;
+    readonly teffRefused: 'wolf-rayet' | null;
+  }
+  | {
+    readonly route: 'non-finite-luminosity';
+    readonly rSun: number;
+    readonly absmag: number;
+  };
+
+function classIndex(info: Exclude<SpectralInfo, { kind: 'white-dwarf' }>): ClassIndex {
+  return info.kind === 'unknown' ? 'unknown-class' : info.subclass === null ? 'default' : 'stated';
+}
+
+// A measured Teff replaces the class-table Teff when present; BC stays
 // class-table (class-table BC against a measured T still beats class-table
 // both). White dwarfs and Wolf-Rayets keep their dedicated treatments —
 // gspphot doesn't model either atmosphere, so a published value there is
 // the companion's or a misfit.
 export function physicalRadius(
   absmag: number, info: SpectralInfo, teffOverride: number | null = null,
-): number {
+): RadiusResolution {
   if (info.kind === 'white-dwarf') {
     // White dwarfs cluster tightly around 0.01 R☉; absmag doesn't translate
     // reliably into a radius for them.
-    return 0.013;
+    return { route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, teffRefused: teffOverride === null ? null : 'white-dwarf' };
   }
-  const T = teffOverride !== null && info.kind !== 'wolf-rayet'
-    ? teffOverride
-    : tempKelvin(info);
+  const measured = teffOverride !== null && info.kind !== 'wolf-rayet';
+  const T = measured ? teffOverride : tempKelvin(info);
   const BC = boloCorr(info);
   const Mbol = absmag + BC;
   const L = Math.pow(10, (MBOL_SUN - Mbol) / 2.5); // L/L☉
-  if (!Number.isFinite(L) || L <= 0) return 1.0;
+  if (!Number.isFinite(L) || L <= 0) {
+    return { route: 'non-finite-luminosity', rSun: NON_FINITE_LUMINOSITY_RADIUS_R_SUN, absmag };
+  }
   const R = Math.sqrt(L) * (T_SUN / T) * (T_SUN / T);
   // Empirical stellar range: red dwarfs bottom around 0.08 R☉, extreme
   // supergiants top around ~2000 R☉. Beyond these is bad catalog data.
-  return Math.max(0.08, Math.min(2500, R));
+  const clamp: RadiusClamp | null = R < RADIUS_FLOOR_R_SUN ? 'floor' : R > RADIUS_CEILING_R_SUN ? 'ceiling' : null;
+  return {
+    route: measured ? 'apsis-teff' : 'class-teff',
+    rSun: clamp === 'floor' ? RADIUS_FLOOR_R_SUN : clamp === 'ceiling' ? RADIUS_CEILING_R_SUN : R,
+    absmag,
+    teffK: T,
+    classIndex: classIndex(info),
+    clamp,
+    teffRefused: teffOverride !== null && !measured ? 'wolf-rayet' : null,
+  };
 }
 
 // Absolute visual magnitude M_V by spectral class + subclass, calibrated
