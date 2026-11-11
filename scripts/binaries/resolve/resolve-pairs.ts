@@ -66,7 +66,7 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
   });
 }
 
-/** Refused and weighed sources stay in: ../README.md#binding-integrity-audit-enforced */
+/** Refused and weighed sources stay in: README.md#binding-integrity-audit-enforced */
 export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIndices): Set<string> {
   const ids = new Set<string>();
   for (const p of result.pairs) {

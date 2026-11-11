@@ -38,7 +38,7 @@ function orb6SemimajorAu(entry: Orb6Entry, plxMas: number | null): number | null
   return Object.hasOwn(ORB6_A_MAS, entry.aUnit) ? ORB6_A_MAS[entry.aUnit](entry.aVal) / plxMas : null;
 }
 
-/** `d` truncated JD, `m` MJD, `y` a year (../README.md#year-form-epochs) — or, when that reading is
+/** `d` truncated JD, `m` MJD, `y` a year (README.md#year-form-epochs) — or, when that reading is
  *  implausible, a truncated JD ORB6 mislabelled `y`. Any other flag is null. */
 export function orb6T0Jd(entry: Orb6Entry): number | null {
   const val = entry.t0Val;

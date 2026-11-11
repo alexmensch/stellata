@@ -1,15 +1,15 @@
 # Catalogue cross-match — binary-system pipeline
 
-Developer walk-through of `scripts/binaries/build-binaries.py` — how
-WDS pairs cross-match against ORB6 + AT-HYG + GCVS + CCDM + HIP2 +
-Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD
+`build:binaries`: how WDS pairs cross-match against ORB6 + AT-HYG + CCDM +
+HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD
 per-component spectra + Tokovinin's Multiple Star Catalog (MSC) to produce
-`data/binaries/multiples.tsv`. The
-science of *why* the choices below are made (Gaia DR3 parallax bias,
-NSS detectability regimes, HIP2 long-baseline corrections) is in
-`SCIENCE.md` and its `docs/science-*.md` splits (multiple-star pipeline,
-catalog ingestion); this file is the engineering side — layered strategies,
-numeric thresholds, provenance fields.
+`data/binaries/multiples.tsv`, and how `build:binaries-runtime` turns that
+into `public/binaries.bin`. The science of *why* the choices are made (Gaia
+DR3 parallax bias, NSS detectability regimes, HIP2 long-baseline
+corrections) is in `SCIENCE.md` and its `docs/science-*.md` splits
+(multiple-star pipeline, catalog ingestion); this folder is the engineering
+side — layered strategies, numeric thresholds, provenance fields — with each
+stage's in its own subfolder's README.
 
 ## When to read this
 
@@ -21,28 +21,42 @@ numeric thresholds, provenance fields.
 - You're debugging why a specific star doesn't render at its expected
   position, distance, or spectral colour. Start at
   `scripts/catalog/validate/README.md` — the harness localises which
-  stage produced the wrong value before you read any stage below.
+  stage produced the wrong value before you read any stage.
 - You're extending the multi-star pipeline — adding a new astrometry
   route, a new optical-pair filter tier, or a new SIMBAD-anchored
   cross-ID side-file.
 
+## The stages
+
+Seven stages in a strictly linear chain — stage N consumes every earlier
+one — each a subfolder with its README carrying what its tiers decide and
+why:
+
+1. [`load/`](load/README.md) — every reference catalogue read, the
+   magnitude gate, the blank-components rescue and the synthesized ORB6
+   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)).
+2. [`resolve/`](resolve/README.md) — each WDS component bound to a Gaia DR3
+   source and / or a HIP ([What each tier decides](resolve/README.md#what-each-tier-decides)),
+   then the binding-integrity audit.
+3. [`astrometry/`](astrometry/README.md) — each component's astrometry
+   route, and the Gaia NSS inner pairs.
+4. [`orbits/`](orbits/README.md) — each pair's orbit from ORB6, Gaia NSS or
+   the MSC.
+5. [`optical/`](optical/README.md) — each pair physical or optical; the
+   masses its escape-velocity gate reads are [`masses/`](masses/README.md).
+6. [`multiples/`](multiples/README.md) — the `multiples.tsv` records
+   ([What each column carries](multiples/README.md#what-each-column-carries)).
+7. [`counts/`](counts/README.md) — the count and rates snapshots that gate
+   the write.
+
+`multiples.tsv` and the two snapshots are pinned byte for byte, so each
+stage's README lists the choices its outputs rest on; changing one moves
+rows and is a correctness change, never a refactor.
+
 ## Files in this area
-
-`scripts/binaries/` is the orchestration shell + per-stage modules, and
-an importable Python package (`from scripts.binaries import parsers,
-stage4_orbits, …`): stage modules import their siblings relatively
-(`from .parsers import …`), while the hyphenated entry script
-`build-binaries.py` runs as `__main__`, so it bootstraps the repo root
-onto `sys.path` and uses absolute `scripts.*` imports.
-
-The seven stages form a strictly linear chain — stage N consumes every
-earlier stage — which is why they share one folder rather than splitting
-into per-stage subfolders.
 
 ```
 scripts/binaries/
-  build-binaries.py               Orchestration shell for Stages 1-7 →
-                                  data/binaries/multiples.tsv.
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
                                   multiples.tsv, the Gaia astrometry
@@ -50,73 +64,23 @@ scripts/binaries/
                                   emitArtifacts behind the row bands and
                                   Stage 7's two snapshot checks. The test
                                   runs the stages over the committed
-                                  inputs and holds Stage 7's counts and
-                                  rates to both snapshots byte for byte.
+                                  inputs, holds the records to the
+                                  committed multiples.tsv and Stage 7's
+                                  counts and rates to both snapshots,
+                                  byte for byte, and runs the spot-check
+                                  (pnpm run test:spotcheck,
+                                  resolve/README.md#the-spot-check).
   binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
-  load/                           Stage 1 in TypeScript: every reference
-                                  catalogue read through its declaration,
-                                  then the Stage 1 passes, as a frozen
-                                  ReferenceCatalogs. Own README.
-  resolve/                        Stage 2 in TypeScript: the cascade, the
-                                  identity propagations and the binding
-                                  audit, as frozen DecomposedPairs; the
-                                  spot-check's port. Own README.
-  astrometry/                     Stage 3 in TypeScript: each component's
-                                  astrometry route, keyed by its
-                                  DecomposedPair. Own README.
-  orbits/                         Stage 4 in TypeScript: each pair's
-                                  orbit from ORB6, Gaia NSS or the MSC,
-                                  keyed by its DecomposedPair. Own README.
+  load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
+  orbits/ optical/ multiples/
+  counts/
   components/                     What one component reads about itself:
                                   its AT-HYG row, its spectral type and
                                   spect_via. Own README.
   masses/                         A component's mass from its spectral
                                   type, and each pair's total mass, which
                                   Stage 5 reads. Own README.
-  optical/                        Stage 5 in TypeScript: each pair
-                                  physical or optical, tagged with the
-                                  deciding tier, keyed by its
-                                  DecomposedPair. Own README.
-  multiples/                      Stage 6 in TypeScript: the
-                                  multiples.tsv records, kept pairs then
-                                  standalone components, with the anchor
-                                  offsets and the Gaia photometry. Own
-                                  README.
-  counts/                         Stage 7 in TypeScript: every stage's
-                                  counts and rates, filed under the
-                                  snapshot's stages. Own README.
-  parsers.py                      Row dataclasses + parse functions for every
-                                  reference catalogue (Stage 1).
-  indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
-                                  src_id → astrometry / NSS / AT-HYG, HIP →
-                                  HIP2 / CCDM, CCDM → HIP-list). Built once at
-                                  Stage 1; every Stage 2-7 lookup is O(1).
-  component_tokens.py             WDS component-letter token helpers
-                                  (truncated-form expansion, parent / child
-                                  tokens).
-  msc_map.py                      MSC hierarchy-label → WDS token
-                                  mapping + the MscLookup tables Stages 2/4/6
-                                  consume. Label convention: data/msc/README.md.
-  subdivide.py                    Synthesized sub-pair injection — ORB6 orphans
-                                  + curated overrides, MSC inner pairs, binding
-                                  seeds, Gaia-NSS inner pairs. See README.md#sub-pair-synthesis-subdividepy.
-  stage2_resolve.py               WDS component → Gaia DR3 source_id cascade,
-                                  with same-letter + Aa→A propagation. Also
-                                  hosts the binding-integrity audit.
-  stage3_astrometry.py            Per-component astrometry routing (gaia_5p /
-                                  gaia_nss_systemic / hip2_long_baseline /
-                                  unresolved). HIP2 is the Gaia-saturated
-                                  bright-primary fallback.
-  stage4_orbits.py                Per-pair orbital-element selection, with the
-                                  inline Thiele-Innes → Campbell algebra.
-  stage5_optical.py               Tiered physical-vs-optical classification.
-                                  Boundness gates reuse Stage 4's Kepler /
-                                  parallax-anchor helpers.
-  stage6_multiples.py             Emit multiples.tsv — per-component provenance
-                                  columns + per-pair WDS sep/PA/epoch/Δmag +
-                                  system-anchor inheritance for tight inner
-                                  binaries + SIMBAD standalone augmentation.
-  multiples-tsv.ts (+ test)       MULTIPLES_TSV: the TypeScript codec for
+  multiples-tsv.ts (+ test)       MULTIPLES_TSV: the codec for
                                   multiples.tsv — column roster, closed
                                   value sets and the properties a set's
                                   members carry (which resolve tiers
@@ -125,15 +89,12 @@ scripts/binaries/
                                   Stage 6 estimates), per-column
                                   decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
-                                  the only parse of the file on the TS
-                                  side. Its test round-trips the committed
-                                  file byte for byte, which is what holds it
-                                  to the Python writer until the switch
-                                  (README.md#porting-to-typescript--one-stack-one-switch).
-                                  Its rowKey cites a row by
+                                  the only parse of the file. Its test
+                                  round-trips the committed file byte for
+                                  byte. Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
-  component-tokens-pure.ts        The TypeScript side of component_tokens.py:
+  component-tokens-pure.ts        WDS component-letter tokens:
     (+ test)                      wdsRootOf (a system_id's WDS id, the one
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
                                   key promotion mints and every resolver
@@ -159,8 +120,7 @@ scripts/binaries/
                                   (wds_id, token), discovererKey
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
-  sky-geometry-pure.ts (+ test)   The geometry the stages share, in the
-                                  Python stages' own arithmetic:
+  sky-geometry-pure.ts (+ test)   The geometry the stages share:
                                   propagatePosition (linear in RA/Dec
                                   degrees, cos δ floored at 1e-3),
                                   tangentOffset, polarToTangent (a WDS
@@ -172,45 +132,26 @@ scripts/binaries/
                                   offset), and the AT-HYG / WDS
                                   reference epochs. Not the catalogue's
                                   tangent-basis propagation
-                                  (../catalog/distance/direction-cascade.ts):
-                                  the switch proves byte identity first.
-  python-float-pure.ts (+ test)   Python's float arithmetic where
-                                  JavaScript's differs: pyMod, `%` with
-                                  the divisor's sign; pySum, the
-                                  compensated `sum()`.
+                                  (../catalog/distance/direction-cascade.ts);
+                                  one formula for both is
+                                  stellata-hhaw.45.17.8.
+  python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
+                                  where JavaScript's default differs: pyMod,
+                                  `%` with the divisor's sign; pySum, a
+                                  compensated sum.
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window
                                   (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
-                                  every TS stage's report; and
+                                  every stage's report; and
                                   droppedPairSample, the capped sample of
                                   a gate's dropped pairs.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
                                   reaches the codec.
-  anchor_offsets.py               compute_anchor_offsets: each component's
-                                  offset from its system's anchor letter,
-                                  with the sub-letter photocentre link.
-                                  See Stage 6 below.
-  wds_pair_photometry.py          A pair row's magnitudes (WDS, else MSC)
-                                  and their Δmag.
-  stage7_counts.py                Build-counts + build-rates snapshots,
-                                  asserted / refreshed through
-                                  scripts/util/snapshot_assert.py.
-                                  build_binaries_counts / _rates build each
-                                  key inside the block of the stage module
-                                  that counts it (ingest, subdivide,
-                                  resolve, astrometry, orbits, optical,
-                                  multiples).
-  mass_estimate.py                Spectral-class-aware mass-ratio q backfill
-                                  (Cox 2000
-                                  (/data/papers/index.md#cox2000) Sect. 15.2; dwarf
-                                  anchors disagree with the online table of
-                                  Mamajek 2022
-                                  (/data/papers/index.md#mamajek2022)).
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
                                   the catalogue row-index map →
                                   public/binaries.bin through emitArtifacts,
@@ -229,26 +170,6 @@ scripts/binaries/
   golden/                         binaries.bin golden test: the writer on a
                                   committed non-LFS fixture, byte for byte.
                                   Own README.
-  build-binaries-spotcheck.py     pnpm run test:spotcheck — runs Stage 1+2 and
-                                  asserts the strongest-priority resolution per
-                                  (wds_id, component) against
-                                  data/binaries/spot_check_ground_truth.tsv.
-                                  Its own CI check; also run locally before
-                                  merging any Stage 2-7 change (~20 s).
-                                  build-binaries.test.ts runs the same
-                                  check over the TS Stages 1-2
-                                  (resolve/README.md#the-spot-check).
-  probe-blank-components-tail.py  Read-only instrumentation for the blank→AB
-                                  ingest decision. Touches nothing.
-  <module>.test.py                stdlib unittest pins co-located per source
-                                  module. Each imports its subject module's
-                                  symbols directly — no orchestration-shell
-                                  load. Run directly: python3 <module>.test.py.
-  pipeline_test_fixtures.py       Shared unittest fixture builders + committed-
-                                  data path constants imported by the
-                                  .test.py siblings, so no fixture logic
-                                  duplicates across them.
-  __init__.py                     Package marker (see above).
   *-expected.json                 Snapshot pins refreshed with
                                   --update-snapshots, staged by pipeline
                                   stage (../util/counts/count-stages-pure.ts;
@@ -263,22 +184,26 @@ scripts/binaries/
 
 Inputs and outputs live in their own folders, each with its own README
 this file does not restate: `data/wds/` (WDS summary / notes / refs +
-ORB6 orbits), `data/msc/` (MSC hierarchy / orbit / component
-tables), `data/binaries/` (the `multiples.tsv` output plus the curated
-`component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
+ORB6 orbits, read through `../wds/`), `data/msc/` (MSC hierarchy / orbit /
+component tables), `data/binaries/` (the `multiples.tsv` output plus the
+curated `component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
 `build/catalog-row-index-map.json` as hand-offs:
 
-1. **Binary-system pipeline** (`build-binaries.py`). Reads WDS + ORB6 +
-   AT-HYG + GCVS + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) +
-   SIMBAD WDS cross-IDs + SIMBAD per-component spectra + the MSC
-   (`data/msc/`, mapped through `msc_map.py`). Emits
+1. **Binary-system pipeline** (`build-binaries.ts`). Reads WDS + ORB6 +
+   AT-HYG + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS
+   cross-IDs + SIMBAD per-component spectra + the MSC. Emits
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
-   reach. Seven stages, one module per stage. `pnpm run build:binaries`.
+   reach — with the Gaia astrometry request
+   (`data/gaia/gaia_astrometry_source_id_request.tsv`) and the
+   binding-integrity verdicts (`build/binding-integrity-verdicts.tsv`, a
+   gitignored review surface). All three land through `emitArtifacts`
+   only once the input row bands and both snapshot checks pass, so a
+   drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
    Reads the membership manifest + multiples.tsv + the SIMBAD sp_type / Gaia Apsis /
    [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) / Gaia
@@ -318,340 +243,12 @@ The Tier A validation harness
 directly for per-component sanity checks (SIMBAD spectral type,
 absmag-from-Δmag).
 
-Build-time statistics for every phase land in snapshot JSONs, each
-gating the next build via an `UPDATE_SNAPSHOTS=1` refresh.
+Build-time statistics for every step land in snapshot JSONs, each
+gating the step's emission; `--update-snapshots` refreshes them.
 
-## Porting to TypeScript — one stack, one switch
+## Shared slots and duplicate relations
 
-The port of this step to TypeScript (Stage 1 and the shell, then Stages
-2–7) lands as one stack of PRs merged together. Each slice adds its TS
-stage and the vitest ports of its `*.test.py` cases **beside** the
-Python, called only from tests: the step table keeps running
-`build-binaries.py`, so every PR in the stack builds and `multiples.tsv`
-cannot move. The last slice is the switch: `build:binaries` becomes a TS
-step on the shell, `multiples.tsv` lands only through `emitArtifacts`
-after the count checks, every Python module here is deleted, and
-`pnpm run identity:snapshot` / `identity:diff`
-([Proving a restructuring byte-identical](/scripts/util/README.md#proving-a-restructuring-byte-identical))
-proves byte identity once.
-
-Each slice before the switch also carries one vitest case that runs TS
-Stages 1..N over the committed inputs and asserts the keys its own
-ported code counts in the committed `build-binaries-expected.json` (and
-`build-binaries-rates-expected.json` where it has keys there). A key
-belongs to the slice whose code produces it, not to the stage the
-snapshot files it under: `subdivide`'s orphan and MSC inner-pair counts
-are Stage 1's, its NSS inner-pair count Stage 3's. The Python writes those snapshots
-until the switch; the test reads them and never restates a count, so a
-count divergence fails in the slice that introduces it. From Stage 6 on,
-the same case also encodes the TS records with `MULTIPLES_TSV` and holds
-them to the committed `multiples.tsv` byte for byte, so a row the counts
-do not see fails before the switch too.
-
-Values never cross between the languages. The runner records a step's
-inputs from either the TS import closure or the Python run record, and a
-subprocess in the other language is invisible to both
-([The step table](/scripts/pipeline/step-table/README.md#the-step-table--stepsts)), so a
-half-TS, half-Python step would miss inputs. Until the switch lands, a
-behaviour change to this step waits for it and is written once, in TS.
-
-
-## Stage 2 — WDS component → Gaia DR3 source_id
-
-Every WDS pair row decomposes into a primary and a secondary letter
-(`AB` → `A`+`B`, `Aa,Ab` → `Aa`+`Ab`); each letter resolves through a
-strict-priority cascade in `scripts/binaries/stage2_resolve.py`. The
-canonical tag set is `RESOLVE_VIA_VALUES`:
-
-| Tag | When it fires |
-| --- | --- |
-| `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated — but gated on a WDS-coordinate sanity check (`_orb6_hip_matches_pair_coord`): ORB6 occasionally carries a typo'd HIP that points at an unrelated star tens of degrees away (ε Equ STF2737 lists HIP 103579 for the true HIP 103569), so a HIP whose known position sits >5′ from the pair's WDS precise coord is dropped entirely and the component falls through to the coordinate-validated tiers below. |
-| `athyg_gaia_native` | HIP-mediated: ORB6's HIP, an AT-HYG row's HIP, or a CCDM sibling's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). Also reused for the position-match pass below, which lands on the same AT-HYG-native field by a different path. |
-| `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
-| `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
-| `position_pm` / `position_nopm` | Reserved placeholders in `RESOLVE_VIA_VALUES` for a future PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`. Not yet wired. |
-| `unresolved` | All strategies missed. The component still binds a HIP whenever any tier surfaced one — Stage 3's HIP2 long-baseline fallback can attach astrometry to a Gaia-source-less Sirius A or α Cen B from the bare HIP. |
-
-Before any tier runs, Stage 1's `build_indices` applies a one-sided
-**magnitude-consistency gate** to every HIP-anchored Gaia binding —
-both Gaia's `hipparcos2_best_neighbour` xwalk rows and AT-HYG's own
-`gaia` cells (which ingest the same xwalk). The xwalk has no magnitude
-check, so a HIP too saturated for a DR3 source best-matches whatever
-source IS nearby: the resolvable companion (Castor A → B's source) or
-a faint background star (α Cen B → a G=20.9 source). A bound source
-with `G − V > 1.0` (`GAIA_BINDING_G_MINUS_V_REJECT_MAG`) cannot carry
-the light the HIP names — the physical ceiling is ~+0.1 for the bluest
-stars plus ~+0.75 of equal-blend headroom; red stars run G *brighter*
-so the gate never fires on them — and is unbound at the ingest
-boundary (AT-HYG cells scrubbed to `None`, xwalk rows dropped from
-`hip_to_gaia` / `src_to_hip`). The bare HIP survives for Stage 3's
-HIP2 fallback. Unverifiable bindings (no V, source outside the
-astrometry pull, no G) are trusted. Counted `xwalk_hip_mag_rejected` /
-`athyg_gaia_mag_rejected` in the Stage-7 snapshot.
-
-The position-match pass deserves its own note. AT-HYG's stored
-ra/dec is documented as J2000 but HIP-sourced rows are empirically at
-J1991.25 (the HIP1 native epoch), while GJ / Tycho-sourced rows are
-closer to J2000. Stage 2 and Stage 3 share `iter_pair_athyg_matches`
-to walk the pair-iteration cascade (primary match against the WDS
-precise_coord, then predicted-secondary match with primary-row
-exclusion, with the wide-pair short-circuit at the WDS overflow
-sentinel `999.9″` — `parse_wds_sep_pa` collapses that ρ to None, and
-the predicted-secondary match skips a None ρ). The default matcher,
-`match_athyg_position_either_epoch`, tries the row PM-propagated
-J1991.25→J2000 first, then the unpropagated stored coord — propagated
-wins on tie, the unpropagated retry covers high-PM GJ-anchored rows
-(ξ UMa at -425/-581 mas/yr drifts ~5″ off under propagation, beyond
-the 2″ tolerance).
-
-The position-match cascade carries the same sibling-identity guard:
-a matched AT-HYG row whose HIP is already bound to a hierarchy-disjoint,
-non-partner letter of the same system is dropped (WDS stamps some pair
-rows with the SYSTEM coordinate — Rigel's BC row carries A's coord, so
-B's primary match landed on A's row at ~0″ and wore A's photometry).
-The gate lives in `iter_pair_athyg_matches`, so Stage 2's identifier
-binding and Stage 3's astrometry fallback both honour it; the
-blend-inherit branch (a secondary riding its pair partner's row) is
-exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
-(both stages summed).
-
-The two stages compose:
-
-- **Stage 2** binds identifiers — sets `c.athyg_row` always on match,
-  and surfaces `gaia` / `hip` from the row when the row carries them
-  (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
-  Opts OUT of secondary blend-inheritance because copying the
-  primary's AT-HYG row to the secondary slot would also propagate the
-  primary's Gaia source onto the secondary.
-- **Stage 3** synthesizes astrometry — `attach_athyg_position_fallback`
-  routes any remaining `unresolved` component through the same
-  cascade, opting INTO blend-inheritance so Hipparcos-unresolved
-  pairs (A, B sharing one AT-HYG row at sub-AU separation) both
-  emit `astrometry_via=athyg_position`.
-
-After the cascade, `propagate_within_system` (same file) smears each
-letter binding across every WDS pair row in the same system that
-references the same letter — η Cas A is the same physical star whether
-it appears in the AB, AC, AD, …, AH rows. The bare letter `A` also
-inherits from a resolved sub-letter `Aa` because Gaia rarely separates
-the spectroscopic sub-components; the brighter `Aa` carries the system
-flux and is the single Gaia source the renderer ever sees.
-
-ρ = 0 sub-resolution pairs get two special rules. Every positional
-match (CCDM sibling pick, predicted-secondary AT-HYG match) is
-SKIPPED for them — the (ρ, θ) prediction degenerates onto the
-primary's own coordinate, so a nearest-neighbour pick can only
-coin-flip onto a sibling component's identity (1 Equ Ab once bound
-B's HIP 103569 and B's AT-HYG photometry this way). Instead,
-`propagate_blend_identity` gives a secondary that bound nothing of
-its own the primary's gaia / hip / AT-HYG row — the WDS blend
-convention (Castor CIA 29 lists HIP 36850 on both sides of Aa,Ab) —
-and `propagate_within_system` re-runs so the blend binding reaches
-the letter's other pair rows. Secondaries carrying ANY binding of
-their own are left untouched.
-
-### Binding-integrity audit (enforced)
-
-After every binding pass, `audit_binding_integrity` groups bindings
-per WDS system and detects two contradiction shapes the cascade +
-propagation can leave behind: (a) one Gaia source bound to disjoint
-letters (not ancestor/descendant, not compound-contained, not
-sub-resolution blend-mates), and (b) one letter bound to different
-sources on different rows. A source cannot be two stars, and two
-letters at a measured ρ > 0 cannot be one source — so the blend-mate
-exemption applies only to ρ = 0 sub-resolution pairs, not to measured
-ones. Each contradiction is arbitrated geometrically: predicted
-tangent-plane offsets (E = ρ·sin θ, N = ρ·cos θ) composed over a BFS
-chain of pair rows from an uncontested astrometric reference letter,
-versus the contested source's actual Gaia offset (min error over
-J2016.0 and the PM-propagated WDS edge epoch). The winner is decisive
-when its error clears a flat `2″` floor (no separation-scaling — a
-wide pair's chain accumulates measurement error, so scaling the
-tolerance up with ρ would rubber-stamp a source sitting arcseconds
-off the winner) and beats the runner-up by ≥2×, or — for a
-disconnected system graph — when geometry refutes every reachable
-candidate and leaves exactly one unreachable home.
-
-**Photocentre blends.** A source bound to *both sides of a measured
-(ρ > 0) pair* is a genuine Gaia blend — one photocentre for two
-components Gaia could not resolve (Castor A/B, saturated at ~5″).
-Enforcement unbinds a blend loser only when geometry lands the source
-essentially ON one component (winner error within a tight `1″` floor,
-i.e. a crosswalk error masquerading as a blend, e.g. σ CrB's C/E
-collapse); a larger error means the source is the blend centroid
-sitting *between* the components, so the conflict is `skipped` and the
-blended-away member is left for the downstream slot-minting machinery
-(the Acrux/Castor shape). Before skipping, an **identity refutation**
-gets one shot: when SIMBAD's per-component cross-IDs give exactly one
-side ownership of the contested source and the other side a different
-source of its own (directly, or through its HIP), the "blend" is a
-crosswalk mis-match — a component with its own resolved identity is
-not inside a photocentre — so the loser rebinds to its own source and
-the owner keeps the contested one (`identity_refuted`; 36 Oph, μ Dra,
-HD 70492: Gaia's HIP best-neighbour put the primary on the secondary's
-source while SIMBAD carries both components distinctly). Chain
-geometry through a wide reference is too noisy for the 1″ floor in
-exactly these systems, which is why identity gets to overrule it. A
-letter_sources conflict on a letter that is itself part of a skipped
-blend is skipped for the same reason; one an identity refutation
-rebound is fully resolved and emits no second verdict. All other
-ambiguous conflicts unbind every contested binding conservatively.
-
-Enforcement (`apply=True`) is live: losers unbind (gaia → None; hip →
-None when it cross-walks to the contested source or is a HIP the
-winning component also carries — the shared blend-HIP), then the
-propagation passes re-run and sub-letters orphaned *within an enforced
-system* inherit their bound parent token (20312's Aa/Ab follow A, not
-sibling BC). Verdicts are counted (Stage-7 `binding_conflicts_*` /
-`arbitrated_geometric` / `arbitrated_unbound_ambiguous` /
-`arbitration_skipped_no_reference` / `arbitration_skipped_photocentre_blend`)
-and written to `build/binding-integrity-verdicts.tsv` (gitignored
-audit surface). Every source the audit weighed stays in the Gaia
-astrometry request (`binding_audit_source_ids`), kept or unbound: the
-audit can only unbind a source whose astrometry is in the pull, so
-dropping its losers from the request re-binds them on the next refresh.
-This is what re-homes the ~7 duplicate-relation
-mis-associations the writer previously collapsed; a source cannot be
-two stars at measured different separations.
-
-**Worked examples** (per-letter resolve_via):
-
-- **Sirius A** → no Gaia source (saturated), HIP 32349 bound via
-  `simbad_xid` / `ccdm_hip`; `resolve_via=unresolved`. Stage 3's HIP2
-  long-baseline fallback engages.
-- **Sirius B** → `simbad_xid` (the SIMBAD WDS xids side-file). Without
-  this tier B would resolve via position-match onto A's source.
-- **α Cen A** → no Gaia source; SIMBAD has the HIP, no DR3 source_id;
-  `resolve_via=unresolved` + HIP bound. HIP2 long-baseline path.
-- **α Cen B** → same shape as α Cen A.
-- **Proxima** → `athyg_gaia_native` via the AT-HYG row's `gaia` cell
-  (HIP-mediated lookup through HIP 70890).
-- **Castor STF1110 A** → inherits from CIA 29 Aa via the sub-letter
-  hierarchy pass; tagged with Aa's `resolve_via` value.
-- **40 Eri B/C** (a tight inner binary inside the BC pair) → both
-  components resolve to Gaia source_ids but their per-component 5p
-  astrometry is blended; Stage 6's system-anchor inheritance
-  backstops them (see below).
-
-### Blank-components rescue (Stage 1/2 boundary)
-
-73% of WDS_SUMM rows leave the `components` field blank — WDS's
-convention for a system with exactly one pair (implied `A,B`), NOT a
-system-level duplicate. `split_components('')` returns `None`, so these
-never decompose and were dropped end-to-end (Antares, with an ORB6
-orbit, and Deneb both vanished). `rescue_blank_components_pairs`
-(`stage2_resolve.py`, run just before `resolve_all_pairs`) rewrites the
-`components` field to `AB` in place for the high-confidence subset — a
-blank row anchored by an ORB6 orbit for the same `wds_id` (Antares) or a
-SIMBAD WDS xid for the system — and aligns a matching blank-components
-ORB6 row to `AB` so the strict `(wds_id, components)` orbit lookup
-reaches the rescued pair. The far larger position-anchored population
-(primary merely position-matches a catalog star — mostly wide optical
-doubles surviving only on the Stage 5 mag-gap backstop) is deferred to
-the full blank→AB ingest (`stellata-dch.83.9`). Rows already consumed as
-ORB6-orphan donors are skipped; and because the implied `AB` pair is
-identified by `wds_id` alone (`dedup_wds_pair_rows` keys on discoverer
-and runs upstream, so it can't collapse two of them), at most one `AB`
-row is promoted per system — a system any discoverer already enumerates
-as `AB`, or that the pass already rescued, is skipped so nothing
-double-emits. Counted `blank_components_rescued` /
-`blank_components_deferred` in the Stage-7 snapshot.
-
-## Stage 3 — Per-component astrometry routing
-
-Once a component has a Gaia source_id (or a bare HIP), Stage 3
-(`scripts/binaries/stage3_astrometry.py`) picks the most trustworthy
-astrometric measurement for it. Routes in `ASTROMETRY_VIA_VALUES`:
-
-| Route | Gate |
-| --- | --- |
-| `gaia_nss_systemic` | The source_id has an `nss_two_body_orbit` row AND its Gaia 5p solution is flagged unreliable (`ruwe > 1.4` OR `ipd_frac_multi_peak > 2%`). Gaia DR3's `gaia_source` table refits these stars to the centre of mass, so the same row's values surface with the NSS provenance tag, telling Stage 4 to prefer NSS orbital elements over ORB6. |
-| `hip2_long_baseline` (orbit-corrupted PM) | The system has any pair with min ρ ≤ 5″ AND `|pmRA_gaia − pmRA_hip2| > 50 mas/yr` OR same on Dec. Hipparcos averages a different window of the orbit than Gaia's 2014–2017 mission baseline; for bright close binaries with both available, HIP2 is closer to the systemic motion. |
-| `gaia_5p` | Default. The 5p row is clean and no orbit-correction signal fires. |
-| `hip2_long_baseline` (Gaia-saturated) | The component has no usable Gaia parallax — either no Gaia source resolved at all (Sirius A, α Cen, Algol, Procyon) or the Gaia row exists with ra/dec but `parallax=NULL` because Gaia couldn't fit a 5p solution (Castor STF1110 AB). HIP is known and HIP2 covers it; HIP2 is the only parallax source available. |
-| `athyg_position` | Post-pass after the Gaia / HIP2 cascade. For components still `unresolved`, the WDS precise_coord position-matches an AT-HYG row (dual-epoch: PM-propagated J1991.25→J2000 then unpropagated for GJ-anchored rows that store ra/dec at J2000). Position comes from the row's stored ra/dec; parallax = 1000/dist_pc. Canonical case: ξ UMa — Gaia source absent from `gaia_dr3_astrometry.tsv` (G≈4.3 saturated), HIP 55203 absent from the committed HIP2 TSV, but AT-HYG carries the GJ-anchored distance 10.42 pc. |
-| `unresolved` | None of Gaia 5p, HIP2, or the AT-HYG position-match reach the component. |
-
-The HIP2-discrepancy 5″ gate runs against the **minimum** WDS ρ across
-every pair row a source_id participates in. A primary that's in both a
-tight AB pair and a wide AC pair always takes the tight ρ, so the same
-physical star routes through HIP2 consistently across every pair row of
-its system, never differently per row.
-
-Stage 3 reports per-route counts in build log order. `astrometry_via` is
-also written to every `multiples.tsv` row in Stage 6 (with a Stage-6-owned
-extra value, `system_inherited`, for components that inherit a
-system-anchor position because their own row resolved to `unresolved`).
-The `athyg_position` route also surfaces the matched AT-HYG row reference
-on `ResolvedComponent.athyg_row`; Stage 6's photometry / proper-name
-lookup consults that reference first, ahead of the gaia / HIP indexes,
-so AT-HYG-HD-only rows still surface their absmag / spect / proper name.
-
-## Sub-pair synthesis (`subdivide.py`)
-
-Some orbits have no WDS pair row to live on — every downstream stage
-walks WDS pairs, so those orbits were unreachable. Four passes at
-four points in the pipeline:
-
-- **ORB6 component overrides (Stage 1).**
-  `data/binaries/orb6_component_overrides.tsv` stamps curated WDS
-  component letters onto ORB6 rows whose fixed-width components field
-  is blank because the catalog names the pair only by its
-  variable-star designation (YY Gem = Castor Ca,Cb). Keyed on
-  `(wds_id, discoverer)`; curation wins over the parsed field.
-- **ORB6 orphan pairs (pre-Stage-2).** One synthesized `WdsPair` per
-  ORB6 `(wds_id, components)` key that names a clean sub-pair (both
-  sides single-component tokens after WDS truncated-form expansion —
-  the fixed-width misalignment garbage `"95"` / `"a,Ab"` is filtered)
-  with no WDS row — ~<!-- count:build-binaries/synthesized_orb6_orphan_pairs -->33<!-- /count --> pairs, 64 Psc Aa,Ab and Castor Ca,Cb among
-  them. A blank-components WDS row under the same `(wds_id,
-  discoverer)` is the same physical pair and donates its ρ/θ/mags/
-  date/notes; otherwise the pair is sub-resolution (ρ = 0.0, no
-  photometry) and the precise coord falls back to ORB6's own
-  coordinate prefix. The synthesized components then ride the normal
-  Stage 2 cascade (orb6_hip fires for primaries — the ORB6 entry key
-  matches by construction), and
-  `seed_synthesized_component_bindings` backstops what the cascade
-  missed: an unresolved primary inherits the in-system parent-token
-  component's binding (Ca ← C), an unresolved secondary inherits the
-  pair primary's (the blend convention).
-- **MSC inner pairs (pre-Stage-2, after the blank-components
-  rescue).** One synthesized `WdsPair` per WDS-token-mapped MSC orbit
-  whose pair WDS never enumerates — the spectroscopic subsystems ORB6
-  and Gaia NSS both miss (AR Cas Aa,Ab; ν Sco Aa1,Aa2). Gates mirror
-  the NSS pass: both sides clean single-component tokens, at least one
-  renderable-element orbit row, the token pair absent from the
-  system's existing pairs, and the pair anchored to the existing
-  system (each token's parent present) — unanchored MSC-only systems
-  are skipped rather than minting unreachable orphans. Synthesized
-  pairs are sub-resolution (ρ = 0, `discoverer=MSC`) and ride the
-  normal Stage 2 cascade + synthesized-binding seeds. Counted
-  `synthesized_msc_inner_pairs` with per-gate skip counts in the
-  build log.
-- **Gaia-NSS inner pairs (post-Stage-3).** A component whose own
-  source has an `nss_two_body_orbit` row while its pair partner is a
-  DIFFERENT resolved source hosts an unresolved companion of its own
-  — the orbit is interior to that component, not the pair's (Stage
-  4's distinct-source gate stops the misattribution). One synthesized
-  inner pair per `(wds_id, source_id)`, named one hierarchy level
-  down from the deepest carrier token (`A` → `Aa,Ab`, `Aa` →
-  `Aa1,Aa2`) — ~<!-- count:build-binaries/synthesized_nss_inner_pairs -->442<!-- /count --> pairs. Skipped when the carrier token has no
-  deeper WDS convention (compound / digit-bearing), the child tokens
-  already exist in the system, the NSS row is outside the
-  detectability regime, or the elements can never render (missing
-  P/T/e, or missing ω on a non-circular fit). Children inherit the
-  carrier's identifiers and astrometry; the pair is sub-resolution by
-  construction (ρ = 0.0, `discoverer=GNSS`).
-
-Synthesized pairs then flow through Stages 4-7 like any WDS pair:
-Stage 4 attaches the orbit through its normal routes, Stage 5 keeps
-them (both-Gaia tier for blended children, orbit-on-file otherwise),
-Stage 6 emits them with system-anchor positions, and
-`build:binaries-runtime` nests them under their outer pair via the
-component-letter hierarchy. Build counters:
-`synthesized_orb6_orphan_pairs`, `synthesized_nss_inner_pairs`.
-
-**Shared-slot re-homing (blended siblings).** An inner pair's primary
+An inner pair's primary
 must resolve to its parent component's catalog slot — the shared-slot
 invariant the runtime walk + focal-frame ride depend on (see
 [Hierarchical walk](/src/client/binaries/README.md#hierarchical-walk)). When a sibling
@@ -681,381 +278,3 @@ two DISTINCT stars collapsed onto one record; those are counted
 `pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
 missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
 Ba/Bb sub-letter blend the inner-pair hierarchy owns).
-
-## Stage 4 — Orbital element selection per pair
-
-Picks the most-trustworthy set of orbital elements per pair, then
-converts to a canonical (P, T, e, a, i, ω, Ω, q, distance) tuple. Routes
-in `ORBIT_VIA_VALUES`, in priority order:
-
-| Route | When |
-| --- | --- |
-| `orb6` | ORB6 visual orbit with grade ∈ {1, 2, 3, 4, 5} (definitive → indeterminate). Best grade wins; ref-year secondary tiebreak. ORB6's `a` is the genuine relative A–B orbit, so this route outranks `gaia_nss`, where no solution type yields a relative semi-major axis (see the photocentre note below — Stage 6 estimates one for the non-visual routes). |
-| `gaia_nss` | A component has an `nss_two_body_orbit` row, its pair partner is NOT a different resolved source (a distinct-source partner means the orbit is interior to the carrying component — subdivide.py re-homes it on a synthesized inner pair), the orbit is in Gaia's astrometric-detectability regime: `period < 3 yr` (`NSS_PERIOD_THRESHOLD_DAYS = 1095.75`) OR apparent photocentre semi-major axis `a0 < 1″` (`NSS_SEPARATION_THRESHOLD_MAS = 1000`), AND the pair's WDS separation isn't far too wide to be that orbit (`_nss_separation_consistent`). 95.8% of DR3 NSS rows pass the period gate; the few longer-period rows are picked up by the sub-arcsec branch. |
-| `orb6_spectroscopic` | ORB6 grade ∈ {7, 8, 9} — non-visual fits: 8 = interferometric-visibilities-only, 9 = astrometric / spectroscopic per orb6text.html; grade 7 is undocumented there but the file's grade-7 rows are photometric / eclipsing orbits (YY Gem, EQ Tau, BX And) with real fitted elements. |
-| `msc` | MSC compiled orbit, **sub-resolution pairs only** (WDS ρ = 0 or unmeasured). MSC compiles from the same primary sources the routes above curate, so it ranks below all of them; the sub-resolution gate keeps measured WDS placements from acquiring a compiled orbit that would widen the baked-vs-R(epoch) ratchet in `/tests/integration/multi-star-regression.test.ts`, and makes the route safe for Stage 6's Kepler a-estimation (an estimate can only add motion). The spectroscopic-subsystem rows the route exists for (AR Cas Aa,Ab, ν Sco Aa1,Aa2) live on subdivide.py-synthesized pairs, ρ = 0 by construction. MSC `t0` is a Besselian year when the period unit is years and JD−2400000 when it is days (Tokovinin 2018, /data/papers/index.md#tokovinin2018); `msc_T0_jd` disambiguates by magnitude instead of reading the period unit, same window validation as `_orb6_T0_jd`. Maps to `regime` 3. |
-| `none` | Visual-only pair with no orbital information on file. |
-
-An NSS orbit is keyed to a Gaia **source**, not a WDS pair, so it can
-leak onto the wrong pair when a saturated / blended primary shares its
-source across several visual companions. The distinct-source gate stops
-the leak only when the partner is a *different* resolved source; a
-partner that shares the blended source or resolved to nothing slips
-through. `_nss_separation_consistent` is the backstop: it projects the
-pair's WDS ρ to AU at the system distance and rejects the orbit when that
-exceeds `NSS_SEPARATION_SANITY_RATIO` × a Kepler upper-bound relative
-semi-major axis (at `NSS_MAX_SYSTEM_MASS_MSUN`) for the NSS period — a
-bound orbit's projected separation can't outrun its apastron. Sub-
-resolution / synthesized inner pairs carry ρ = 0 and are exempt (the
-orbit's true home). Canonical failure: υ⁴ Eri, where the 0.97-day inner
-orbit was attaching to the 5.5″ and 49″ visual companions.
-
-The Thiele-Innes → Campbell algebra for NSS TI-derived solution types
-(`Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
-`AstroSpectroSB1`) is inlined in `_thiele_innes_to_campbell`
-([Heintz 1978](/data/papers/index.md#heintz1978) / [Halbwachs 2023](/data/papers/index.md#halbwachs2023)
-Appendix A). The ESA NSSTools package isn't a dependency — the closed form is ~10 lines and NSSTools has been
-unmaintained since 2022.
-
-The TI constants describe the **photocentre's** orbit around the
-system barycentre, not the relative A–B orbit ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)): the
-recovered semi-major axis is `a0 = |q − β|·a_rel`, where
-`q = M₂/(M₁+M₂)` is the secondary's mass fraction (the same q the
-pipeline stores per pair) and `β = F₂/(F₁+F₂)` its flux fraction — so
-a0 → 0 for near-equal-brightness pairs. Reconstructing `a_rel` needs a
-mass ratio AND a flux ratio we don't reliably have per pair, so `a_AU`
-is left `None` here; Stage 6's `finalize_renderable_elements`
-estimates it from Kepler's third law for the non-visual routes
-([Stage 6](#stage-6--multiplestsv-emit)). The plane angles `i` /
-`Ω` are shared between the photocentre and relative orbits and
-populate as-is; `ω` is the photocentre's, which sits π away from the
-secondary's relative-orbit ω whenever the primary carries most of the
-flux.
-
-Eclipsing solution types
-(`EclipsingBinary`, `EclipsingSpectro`) read inclination and
-arg_periastron directly from the catalogue columns; `a` and Ω are not
-recoverable from eclipse photometry alone and remain `None`.
-Spectroscopic solution types (`SB1`, `SB2`, `SB1C`, `SB2C`) populate
-arg_periastron only when stored.
-
-ORB6's `P_unit` column carries the period unit (`y` = year, `d` = day,
-`c` = century, `h` = hour, `m` = minute). The `a_unit` column carries
-arcseconds (`a`) or milliarcseconds (`m`, with `M` accepted as a known
-typo). Unknown unit codes are skipped — Stage 4 prefers `None` over a
-guessed conversion that would silently land on the wrong scale.
-
-The periastron epoch `T0` needs the same care, with a twist. Per
-`orb6format.txt` its `T0_unit` code is `d` = truncated JD (the file
-stores JD − 2,400,000, **not** a full JD — Algol Aa1,Aa2 carries
-`41771.353` = HJD 2441771.353), `m` = MJD (JD − 2,400,000.5), or `y` =
-fractional Besselian year. <a id="year-form-epochs"></a>**A year-form epoch — ORB6's `y` and
-the MSC's year-valued `t0` — is read on the Julian formula**
-(J2000 + (y − 2000) × 365.25 d, `jdOfJulianYear`), not the Besselian one
-(`besselianEpochToJd`): −0.31 d at 1900, +0.47 d at 2000, +0.70 d at
-2030, a fixed phase offset of that fraction of the period at every date
-on the clock. The twist: ORB6 mislabels ~50 truncated-JD
-epochs with the `y` flag (e.g. WDS 04227+1503 Aa,Ab stores
-`59501.496 y` for a 4-day pair), and the year formula throws those out
-past JD 2e7. `_orb6_T0_jd` therefore validates a `y` conversion against
-a physically-possible epoch window (years 1700–2600, read the same way) and
-retries the truncated-JD reading when it falls outside; unrecoverable
-rows (and the non-conforming `c` / blank flags) get a `None` epoch and
-place statically at the WDS observation epoch. `select_orbits_all`
-asserts every emitted `T_jd` stays inside the window — and since the `d` /
-`m` flags and NSS epochs are taken as stated, a refresh carrying one outside
-it stops the build there. A wrong epoch
-isn't visible in a rendered orbit — baseline cancellation at
-`sep_pa_epoch_jd` hides it — but it shifts the pair's configuration at
-any *other* date, so conjunction / eclipse timing (Algol's minima
-included) would miss published ephemerides without this normalisation.
-
-The mass-ratio `q` rides through this stage when present. Only Gaia NSS
-`EclipsingSpectro` solutions publish `mass_ratio` (Gaia's M_S/M_P ratio,
-converted here to the `q = M₂/(M₁+M₂)` fraction the rest of the pipeline
-stores); everything else gets `q = None` here and falls through to Stage
-6's spectral-class mass-ratio backfill below.
-
-The same `q` also feeds **systemic-velocity composition** for
-proper-motion propagation. catalog.bin bakes a per-star space-motion
-velocity ([Current-epoch star positions](/docs/science-catalog-ingestion.md#current-epoch-star-positions--space-motion-propagation-to-t));
-a bound pair's
-members must share one systemic velocity or the runtime epoch-advance
-shears a static (Tier-3) pair. `scripts/catalog/companions/companion-promotion.ts`
-uses this `q` for the barycentric blend `v_sys = (1−q)·v_p + q·v_s` on a
-lone renderable-orbit pair, and a promoted companion with no own PM
-inherits its primary's velocity. **Full** systemic coherence for every
-`binaries.bin` pair — keyed on the authoritative resolved pairing,
-`planRecords` in `runtime-binaries-pure.ts` — is deferred to
-`stellata-zau1`; v1 ships the promoted-companion + lone-pair subset.
-
-## Stage 5 — Optical-pair filter cascade
-
-`scripts/binaries/stage5_optical.py` classifies each pair as physical or
-optical and tags the decision with the tier that decided
-(`OPTICAL_VIA_VALUES`):
-
-| Tier | Tag | Rule |
-| --- | --- | --- |
-| 1 | `wds_notes_kept` / `_rejected` | WDS Notes flag chars: `{T, V, Z}` keep, `{S, U, X, Y}` reject. Other chars silent — tier falls through. |
-| 2 | `orbit_kept` | Stage 4 selected real orbital elements — every `ORBIT_VIA_VALUES` member but `none` (gaia_nss, orb6, orb6_spectroscopic, msc). An empirical orbit fit is the strongest evidence of physical association and wins over every gate below, including the separation limit — a close pair's Gaia parallaxes are routinely blend-corrupted, so a few-pc parallax split does not beat a tracked relative orbit, and NSS orbits that could leak onto a genuinely wide (unbound) companion are already blocked upstream by Stage 4's separation-sanity gate. Needed for Sirius A-B (grade-2 ORB6 orbit past a 9.9-mag WD gap) and the nearby CPM pairs (η Cas, 61 Cyg, Struve 2398) whose orbital PM split would otherwise trip the velocity gate. |
-| 3 | `sep_limit_rejected` | The pair's two components sit more than the physical bound-pair limit apart in 3D (`SEPARATION_LIMIT_PC = 1.0`) — a line-of-sight optical double. Each component's distance is its own parallax (Gaia or HIP2), or the system parallax anchor when it has none; the on-sky term is the WDS ρ at the reference distance, the radial term the parallax-derived depth gap counted only when significant (`RADIAL_SEPARATION_SIGMA = 3.0` of the combined error). Fires off a well-measured own parallax (`SEPARATION_POE_MIN = 5.0`). Pollux F: own ~297 pc vs its partner's inherited ~10.4 pc. |
-| 4 | `gaia_kept` / `_rejected` | Both components carry a Gaia 5p row. A 3σ parallax disagreement on combined error (`BOTH_GAIA_PLX_GATE_SIGMA = 3.0`) rejects only when the implied 3D separation also exceeds the physical limit — the same guard as tier 5, so a close visual pair's blend-corrupted Gaia parallaxes can't split a within-limit pair. A within-limit disagreement (and an agreement) falls to the escape-velocity sub-gate, which rejects a transverse velocity too large to be bound — `v_transverse > ESCAPE_VELOCITY_SAFETY_FACTOR (2.5) × sqrt(2·G·M/r)`. `v_transverse` is from the PM difference (a lower bound on v_rel, so the gate can only reject); `M` is the pair's spectral-table mass (`compute_pair_masses`, generous default when unknown); `r` is the same projected+radial separation. Replaces the old 5 mas/yr per-axis PM cut, which mistook a nearby bound pair's real orbital PM split for optical contamination. A component hosting a tighter resolved sub-pair carries orbital motion in its catalog PM, so the reject threshold is raised by an **orbital-PM budget** — Σ v_circ(M_sub, r_sub) over the tighter pairs either component participates in (r from the sub-pair's elements `a_AU`, else measured ρ×d, else a 10 AU floor cap; sub-pairs with P under ~2× the Gaia baseline contribute nothing — the 5p fit averages their wobble). The budget applies ONLY when the pair's parallaxes POSITIVELY establish 3D collocation (Δd + 2σ inside the tidal limit): 22039-2451 AC at 47 pc qualifies and re-keeps; AR Cas AF/AG at 203 pc have pc-scale depth uncertainty, get no budget, and their correct unbound-association rejections stand. |
-| 5 | `asymm_kept` / `_rejected` | Exactly one component has a Gaia 5p row; the other has a HIP2 parallax anchor (Gaia-saturated bright primary). Gaia parallax vs HIP2 anchor at 3σ combined error (`ASYMM_PLX_GATE_SIGMA = 3.0`), rejecting only when the implied 3D separation also exceeds the physical limit — a HIP2-vs-Gaia zero-point offset can't split a bound pair. Backstop for a poe < 5 Gaia parallax; the well-measured Sirius A-C/D/E/F-shaped splits (anchor 378 mas vs Gaia <1 mas → a ~kpc split) reject upstream at tier 3, so this tier rejects nothing in the current corpus. |
-| 6a | `cpm_baseline_kept` / `_rejected` | WDS epoch-baseline common-proper-motion test, only for pairs whose secondary carries no independent parallax (`astrometry_via` ∈ {`unresolved`, `athyg_position`} at Stage 5) — the population tiers 3–5 never cross-checked in 3D. A bound companion shares the primary's space motion, so its relative sep/PA is near-stable from `date_first` to `date_last`; a background star is sky-static and drifts by ≈ \|PM_primary\| × Δt. Rejects when the observed tangent-plane drift ≥ `CPM_DRIFT_REJECT_FRACTION (0.5)` × predicted slip; keeps when within the `CPM_DRIFT_KEEP_FLOOR_ARCSEC (2.0)` measurement floor; in between falls through. Gated on predicted slip ≥ `CPM_SLIP_MIN_ARCSEC (10.0)` so low-PM primaries — and the ~10k legitimate faint wide companions the `athyg_position` route exists to render — fall through unchanged. A primary with no own PM (an identity-less letter riding the Stage-6 system anchor) borrows the system PM anchor (`compute_system_pm_anchors`) — the pair's membership claim places it at the anchor, so the anchor's motion is the slip a background secondary would show. Canonical reject: 61 Cyg AH, a historical background star the system's 5.2″/yr PM slid past. |
-| 6 | `mag_heuristic_kept` / `_rejected` | Backstop. `|Δmag| ≤ 5` keep, otherwise reject. Used only when no other tier fired (typically Tycho-only systems where neither component has Gaia astrometry). Pairs with no usable mags either are kept on the absence-of-evidence-is-not-evidence-of-optical principle. |
-
-Two physical-boundness criteria underpin tiers 3–4, both mechanical:
-
-- **Separation limit (tier 3).** Bound stellar pairs can't exceed the
-  Galactic tidal-disruption limit for field binaries (~1 pc); a wider 3D
-  separation is a line-of-sight optical double. The gate compares the
-  pair's own two components against each other (not a cross-pair anchor),
-  so a real inner binary of an optically-projected member — both
-  components at the same true distance — is kept. Radial separation is
-  counted only when the parallax difference clears the combined-error
-  threshold, which keeps a HIP2-vs-Gaia systematic (AU Mic B/C's 0.89 pc
-  apparent gap) from splitting a bound pair.
-- **Escape velocity (tier 4/5).** A bound pair needs `v_rel < sqrt(2·G·M/r)`.
-  Only the transverse component is measurable (Δpm × distance), so the
-  gate is a lower bound and can only reject. Masses come from
-  `mass_estimate.py` spectral estimates (~2× uncertain ⇒ ~1.4× on
-  v_escape), so the 2.5× safety factor keeps genuine orbital motion
-  (v_transverse < v_escape) from tripping it — η Cas AB: v_transverse
-  ≈ 2.9 km/s vs v_escape ≈ 8 km/s, kept.
-
-The separation and CPM tiers read each system's first measured parallax
-and proper motion, the same first-resolved-per-system anchors Stage 4's NSS
-separation gate reads
-([System anchors](astrometry/README.md#system-anchors)). The escape-velocity
-gate's pair masses are computed once before the stage (`masses/`).
-
-The cascade short-circuits — once a tier produces a verdict the lower
-tiers don't run. Stage 6 drops pairs classified as optical entirely; the
-multiples.tsv emit never sees them. (The exception is the standalone
-augmentation pass, which can still emit a SIMBAD-known component whose
-parent pair was dropped — see Stage 6.) The separation-limit and
-escape-velocity gates depend on the full Gaia DR3 astrometry pull being
-current — see [`data/gaia/README.md`](../../data/gaia/README.md) for the
-refresh ordering (`build:binaries` regenerates the request list, then
-`refresh:gaia-astrometry` re-pulls before the next build).
-
-## Stage 6 — multiples.tsv emit
-
-`scripts/binaries/stage6_multiples.py` projects every Stage 2–5 output
-into per-component rows. Canonical column order is
-`MULTIPLES_TSV_COLUMNS`:
-
-```
-system_id, comp, hip, gaia_source_id, hd,
-x_pc, y_pc, z_pc, absmag, ci, spect, name,
-source, regime,
-resolve_via, astrometry_via, orbit_via, spect_via,
-photometry_via, a_via,
-orbit_role,
-P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
-sep_arcsec, pa_deg, sep_pa_epoch_jd, dmag,
-anchor_sep_arcsec, anchor_pa_deg, anchor_comp, mag_pri, mag_sec
-```
-
-`x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
-`_position_pc` PM-propagates each component's direction from its native
-epoch (`ComponentAstrometry.ref_epoch` — Gaia J2016.0, HIP2 J1991.25,
-AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
-cascade in `scripts/catalog/distance/direction-cascade.ts`. This keeps a promoted
-secondary's baked xyz on the same epoch as its primary so the static
-relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
-(epoch gap × systemic PM). See [Reference epoch](/data/README.md#reference-epoch-and-proper-motion).
-
-`hd` carries the component's own HD number, with the pair primary
-falling back to the coord-validated ORB6 entry's HD (stashed on the
-Stage-2 `ResolvedComponent`); counted `multiples_hd_populated`. It is
-this pipeline's own designation record for the pair — a record's HD is
-the membership manifest's cell, which the catalog build reads there and
-amends from nothing ([The identifier columns are read, never re-derived](/scripts/catalog/membership/README.md#the-identifier-columns-are-read-never-re-derived)).
-Two other Stage-6 accounting
-mechanisms guard silent drops: WDS summary rows duplicated on
-(wds_id, discoverer, components) are collapsed at the parse boundary
-(`dedup_wds_pair_rows`, most-observed row wins — Pismis 24 CD carried
-two contradictory geometries; counted
-`wds_duplicate_pair_rows_dropped`), and Stage-5-kept pairs with no
-astrometry and no system anchor — which never reach the TSV — are
-counted `multiples_pairs_dropped_no_position` with a capped
-`log_dropped_pair_sample` build-log sample, mirroring the Stage-5
-separation-limit audit line.
-
-The last four columns carry WDS pair geometry — populated on both
-component rows of a decomposing pair (standalone rows leave them
-empty). `parse_wds_sep_pa` translates two WDS sentinels to None at the
-parse boundary so neither reaches downstream consumers. -1 is the
-no-measurement sentinel (spectroscopic / interferometric inner pairs
-given only at the orbital-element level, Spica) written in both ρ and
-θ, so `sep_arcsec` and `pa_deg` both empty. 999.9 is the field-width
-overflow marker (ultra-wide pairs whose ρ can't localise the secondary);
-only the ρ field overflows, so `sep_arcsec` empties while `pa_deg` keeps
-its real angle. Left unhandled the 999.9 ρ baked Alsephina F at
-999.9″ × 24.7 pc ≈ 24,695 AU. They feed
-companion-promotion's tangent-plane projection for the Tier-3
-(no-orbit) path and the runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
-WDS observation year (`date_last`) converted to JD via
-`wds_year_to_jd`; the runtime `BinaryOrbitField` baselines orbital
-animation at this epoch (ΔR(t) = R(t) − R(sep_pa_epoch_jd)) so the
-stored placement is reproduced exactly at its measurement date.
-`dmag` is the published apparent Δmag
-(`mag_sec - mag_pri`) used to impute the companion's absmag when
-the secondary row inherits its parent's AT-HYG photometry.
-`mag_pri` / `mag_sec` carry the pair row's WDS apparent magnitudes
-themselves (both rows; a row's OWN mag is `mag_pri` when it is the
-pair primary) — promotion's `wds_mag` absmag path anchors a minted
-member's brightness on its own WDS magnitude at the system distance
-when neither Δmag path applies.
-
-`anchor_sep_arcsec` / `anchor_pa_deg` carry each component's best WDS
-offset from the SYSTEM ANCHOR letter, which `anchor_comp` names on every
-row of the system (blank only where the system has no kept pair). The
-letter is the most canonical kept-pair primary token, in the same order
-companion promotion ranks its WDS-root anchor — but promotion ranks only
-primaries it resolves to a catalogue record, so where the top-ranked
-primary has no identifier the two anchors differ, and promotion re-bases
-every offset onto its own anchor through `anchor_comp`. The offsets are
-composed by `compute_anchor_offsets` over a BFS of the system's pair
-geometry. A direct measured anchor→component edge
-(kept, then Stage-5-rejected) wins over any composed chain — a
-blended member sits within measurement error of the anchor, so a
-chain through a distant third star cancels to ~zero (Acrux: AC ∘ CB
-≡ 0 vs the honest rejected-AB 3.5″); chains then fill in tier order
-kept → +rejected → +compound-photocentre-proxy. Rejected rows
-contribute geometry only — the pair itself stays dropped; a sep+PA
-measurement is real astrometry regardless of boundness
-classification. Every tier also links a sub-letter anchor to each
-ancestor letter (Aa1 → Aa → A) at the siblings' **photocentre** — the
-flux-weighted mean of the sibling positions, weights composed from
-each sibling row's own Δm along rows that measured one, starting at
-the most canonical sibling, so walk order never changes the weights — because a row naming the parent was
-measured off the blend's light centre. So a root anchored on Aa still
-reaches everything hung off A (15 Mon J, 31 Cyg H, Matar H). Only the
-anchor's chain links: a sub-letter elsewhere (Ca under C) stays
-unreached, since where C is a record carrying the blend, an offset for
-Ca would let promotion place it beside its own light. A sibling
-whose light no row measured weighs nothing, so a missing Ab magnitude
-puts A on Aa; an unmeasured sibling separation (ρ = 0 / none) is zero.
-Measured against Gaia DR3 over the inner pairs wider than 1″, WDS
-outer rows split between the photocentre and Aa itself, at most 0.97″
-apart; the photocentre is the one rule for every separation. Blank
-only when no chain reaches the component; one reached solely at zero
-offset (an unresolved sibling, or A on Aa when Ab's light is unmeasured)
-is written `0.000` / `0.00`, so a reader can tell "same place" from "no
-measurement". Consumed
-by companion promotion's pair-row-primary escape (see
-[Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
-
-Three system-level mechanisms run at emit time:
-
-- **System-anchor inheritance.** Tight inner binaries (40 Eri B/C inside
-  the BC pair, Castor C/D, σ Ori's trapezium components) blend in Gaia
-  DR3 and never get per-component 5p fits. `compute_system_anchors`
-  picks one (x, y, z, dist) tuple per `wds_id` from the first component
-  with real astrometry (primary preferred); any component whose own row
-  is `unresolved` inherits that anchor and gets `astrometry_via =
-  system_inherited`. At parsec scales the offset between inner-binary
-  components and the system primary is sub-AU — below any measurable
-  effect.
-- **Standalone augmentation.** After the pair walk, any
-  `(wds_id, component)` SIMBAD has a cross-ID for that isn't already
-  emitted gets a standalone row with `orbit_role = standalone` and
-  `system_id` prefixed `-_<comp>`. Captures SIMBAD-known components
-  WDS doesn't enumerate as a side of any decomposing pair.
-- **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
-  no `q` (visual ORB6 with no spectroscopic counterpart),
-  `mass_ratio_from_components` in `scripts/binaries/mass_estimate.py`
-  parses both components' spectral strings (SIMBAD per-component
-  preferred, AT-HYG inherited fallback) into class / subclass / lum
-  class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I
-  ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
-  main-sequence anchors, checked against the online table of
-  [Mamajek 2022](/data/papers/index.md#mamajek2022) (v2022.04.16), disagree
-  with it — A0V 2.9 against 2.18 M☉, K5V 0.65 against 0.70 — and which
-  source to adopt is an open decision, `stellata-uadc.69.28`;
-  [Pecaut 2013](/data/papers/index.md#pecaut2013) tabulate no masses).
-  White dwarfs default to 0.6 M☉; carbon / S / WR
-  default to 3.0 M☉; unparseable rows return `None` and `q` stays
-  blank.
-- **Renderable-element finalization.** After the q backfill,
-  `finalize_renderable_elements` backstops the quantities the runtime's
-  `has_orbit` contract requires, for the NON-VISUAL orbit routes only
-  (`ESTIMATED_ELEMENT_ORBIT_VIAS` = gaia_nss + orb6_spectroscopic + msc —
-  those pairs are sub-resolution, so an estimate can only add motion,
-  never contradict a measured WDS placement; estimating for visual
-  pairs would widen the baked-vs-R(epoch) disagreement ratchet in
-  `/tests/integration/multi-star-regression.test.ts`): `q` ←
-  `UNKNOWN_COMPANION_MASS_RATIO_Q` (⅓ — companion at half the
-  primary's mass) when no catalog value and no spectral estimate
-  exists; `ω` ← π/2 (`CIRCULAR_ORBIT_OMEGA_RAD`) when the fit is
-  exactly circular and publishes none — degenerate, not missing, and
-  π/2 puts conjunction at T₀ per the eclipser minimum-epoch
-  convention; `a_AU` ← Kepler `a³ = M_total·P²` with
-  `M_total = M₁/(1−q)` from the primary's spectral-table mass when the
-  orbit source published no relative semi-major axis (every NSS
-  solution type; ORB6 rows whose a″→AU conversion lacked a parallax).
-  The `a_via` column carries the provenance: `catalog` (orbit source
-  published it), `kepler_mass_estimate`, or `none`.
-  [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
-  carries the error analysis (a ∝ M^⅓).
-
-The `spect` column resolves through a four-tier cascade with
-provenance in `spect_via`: `curated` →
-`data/binaries/component_sptype_overrides.tsv`, hand-curated
-literature types for components no machine source carries (SIMBAD's
-WDS cross-IDs never enumerate Algol's Aa2, so its K0IV can only come
-from here); `simbad` → SIMBAD's per-component sp_type
-(`data/simbad/simbad_wds_sptype.tsv`, joined to the WDS cross-IDs on
-`simbad_oid`), which beats
-AT-HYG because AT-HYG inherits the same system-level spectral string
-across all components (incorrect for mixed-class pairs like Sirius
-A0V + DA1.9); `msc` → the MSC's pair-side types, covering the
-spectroscopic subsystem members neither SIMBAD nor AT-HYG enumerate
-(AR Cas Ab's A6); `athyg` → the inherited per-system string; `none`.
-The mass-ratio q backfill reads the resolved `spect`, so a curated or
-MSC companion type also improves q for its pair.
-
-`mag_pri` / `mag_sec` (and the derived `dmag`) fall back to the MSC's
-pair-side V magnitudes when the WDS row carries none — the
-sub-resolution pairs WDS publishes without photometry. Filled pairs
-are listed in the build log; counted `msc_pair_mags_filled`.
-
-The `absmag` / `ci` columns resolve with provenance in `photometry_via`:
-`athyg_own` (the component's own AT-HYG row); `athyg_system_inherited`
-(the AT-HYG row is the system primary's, shared via a single HIP entry —
-promotion switches to Δmag imputation); `gaia_photometry` (no AT-HYG
-row, but the component's own Gaia 5p source carries G + BP/RP + parallax,
-so `gaia_photometry_absmag_ci` derives `M_V` from `M_G − (G−V)` and `ci`
-from `BP−RP → T_eff → B−V`); `none` (no photometry source). The
-`gaia_photometry` path is gated on `astrometry_via = gaia_5p` over the
-post-exclusion Gaia astrometry map, plus a partner-share check: when
-Stage 2's blend-identity propagation put the partner's source on this
-component (both rows carry one source) AND the partner is AT-HYG-backed,
-the derivation is suppressed — the partner already carries the system
-light, so deriving here would mint a twin. A symmetric blend (neither
-component in AT-HYG) still derives the source's COMBINED magnitude;
-companion promotion's blend-split post-pass divides it across the
-collocated records the source backs (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
-It recovers the ~3.5k own-DR3 companions that
-would otherwise drop at promotion for a blank absmag; see
-[Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
-(companion promotion) for the transforms and source citations.
-
-## Stage 7 — Build-counts and rates snapshots
-
-`scripts/binaries/stage7_counts.py` writes two snapshot JSONs the build
-asserts against on every run:
-
-- **`build-binaries-expected.json`** pins absolute per-stage counts
-  (resolution-tier counts, astrometry-route counts, orbit-source
-  counts, optical-classification counts, per-`spect_via` counts).
-- **`build-binaries-rates-expected.json`** pins per-strategy rates as
-  fractions (resolve rate, NSS-vs-ORB6 ratio, optical rejection rate,
-  HIP2 fallback share, …). Catches a regression that shifts the
-  population mix without shifting absolute count totals.
-
-Refresh both via `pnpm run build:binaries --update-snapshots`.

@@ -20,7 +20,7 @@ export function plausibleTruncatedJd(t0: number): number | null {
   return isPlausibleT0Jd(jd) ? jd : null;
 }
 
-/** The year reading of `t0` (README.md#year-form-epochs) when plausible, else
+/** The year reading of `t0` (orbits/README.md#year-form-epochs) when plausible, else
  *  its plausible truncated-JD reading, else null. */
 export function yearElseTruncatedJd(t0: number): number | null {
   const yearJd = jdOfJulianYear(t0);

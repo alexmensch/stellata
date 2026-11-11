@@ -1,4 +1,4 @@
-// Each component's WDS offset from its system's anchor letter, composed over the system's pair geometry. See ../README.md#stage-6--multiplestsv-emit.
+// Each component's WDS offset from its system's anchor letter, composed over the system's pair geometry. See README.md#what-each-column-carries.
 
 import { RAD_TO_DEG } from '../../../src/astro-core/astronomy-constants';
 import {
@@ -64,7 +64,7 @@ function addOffset(at: TangentOffset, e: TangentOffset): TangentOffset {
   return { eastArcsec: at.eastArcsec + e.eastArcsec, northArcsec: at.northArcsec + e.northArcsec };
 }
 
-/** Each sibling's (E, N) offset to the parent letter's photocentre: ../README.md#stage-6--multiplestsv-emit */
+/** Each sibling's (E, N) offset to the parent letter's photocentre: README.md#what-each-column-carries */
 export function photocentreOffsets(adj: SiblingAdj): Map<string, TangentOffset> {
   const ref = mostCanonical(adj.keys());
   const pos = walk(adj, ref, ORIGIN, addOffset, 'token');
@@ -110,7 +110,7 @@ function getOrSet<K, V>(map: Map<K, V>, key: K, make: () => V): V {
   return v;
 }
 
-/** ../README.md#stage-6--multiplestsv-emit */
+/** README.md#what-each-column-carries */
 export function computeAnchorOffsets(
   pairs: readonly DecomposedPair[], optical: ReadonlyMap<DecomposedPair, OpticalVia>, msc: MscLookup,
 ): AnchorOffsets {

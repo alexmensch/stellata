@@ -370,7 +370,7 @@ the xyz column matches no single (source, epoch) pair we tested. It
 is a merge artifact without recoverable provenance. Corroborating:
 the multiple-star pipeline independently found AT-HYG's printed
 ra/dec to be mixed-epoch (HIP-sourced rows empirically at J1991.25,
-Tycho/GJ rows near J2000 — [Stage 2](/scripts/binaries/README.md#stage-2--wds-component--gaia-dr3-source_id)).
+Tycho/GJ rows near J2000 — [Stage 2](/scripts/binaries/resolve/README.md#what-each-tier-decides)).
 
 **Finding 3 — the current build splits the catalogue into two
 position regimes, and the bright famous stars are in the worse one.**

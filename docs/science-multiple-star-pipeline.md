@@ -274,7 +274,7 @@ sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 73% of WDS rows (114,933) leave the `components` field blank (an
 implied single A,B pair). The rescue tier ingests the high-confidence
 subset (an ORB6 orbit or a SIMBAD xid anchors the system —
-[Blank-components rescue](/scripts/binaries/README.md#blank-components-rescue-stage-12-boundary)); the remaining
+[Blank-components rescue](/scripts/binaries/load/README.md#blank-components-rescue)); the remaining
 ~<!-- count:build-binaries/blank_components_deferred k4 -->112.8k<!-- /count -->-row tail was instrumented before deciding whether to ingest it
 wholesale:
 

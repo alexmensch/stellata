@@ -93,7 +93,7 @@ function rowCampbell(row: NssOrbitRow): Campbell | null {
 
 const degToRad = (deg: number | null): number | null => (deg === null ? null : deg * DEG_TO_RAD);
 
-/** README.md#conventions-the-port-keeps */
+/** README.md#conventions-the-outputs-rest-on */
 export function nssToCanonicalElements(row: NssOrbitRow, plxMas: number | null): OrbitElements | null {
   const kind = NSS_SOLUTION_KINDS.get(row.solutionType);
   if (kind === undefined) return null;

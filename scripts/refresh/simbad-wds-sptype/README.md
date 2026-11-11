@@ -17,7 +17,7 @@ TypeScript pull on the [pull runtime](../pull/README.md).
 ## Why it is its own pull
 
 `build:binaries` reads only these rows, joined on `simbad_oid`
-([Stage 6](../../binaries/README.md#stage-6--multiplestsv-emit)). While they
+([Stage 6](../../binaries/multiples/README.md#what-each-column-carries)). While they
 shared `simbad_sptype.tsv` with the manifest-keyed rows, binaries read a file
 whose request derives from the membership manifest, which itself reads
 `multiples.tsv`: a loop through committed files

@@ -252,7 +252,7 @@ enough to see it.
   refresh via `scripts/refresh/refresh-msc.py`. Because MSC compiles
   from the same primary literature the other orbit sources curate, its
   orbit route ranks below ORB6 and Gaia NSS and fires for
-  sub-resolution pairs only ([Stage 4](scripts/binaries/README.md#stage-4--orbital-element-selection-per-pair)).
+  sub-resolution pairs only ([Stage 4](scripts/binaries/orbits/README.md#what-each-route-decides)).
   Retrieved 2026-07-11. CDS/VizieR standard academic use; cite
   [Tokovinin 2018](/data/papers/index.md#tokovinin2018).
 - **SIMBAD WDS↔Gaia DR3 cross-identifications** (CDS Strasbourg).

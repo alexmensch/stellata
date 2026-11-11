@@ -21,7 +21,7 @@ export interface MscSystemRow {
 }
 
 /** One MSC orbit. `t0` carries no unit flag: a Besselian year (read as
- *  Julian, ../README.md#year-form-epochs) for visual
+ *  Julian, ../orbits/README.md#year-form-epochs) for visual
  *  orbits, JD − 2,400,000 for spectroscopic ones (`mscT0Jd` tells them apart). */
 export interface MscOrbitRow {
   readonly wdsId: string;

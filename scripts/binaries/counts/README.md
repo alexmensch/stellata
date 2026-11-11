@@ -33,4 +33,5 @@ refresh rewrites the file unchanged; a key a stage returns that it does not
 place fails the real-data case.
 
 A rate's denominator is never empty on real data; `share` throws if it is
-(`stellata-hhaw.45.17.19`).
+(`stellata-hhaw.45.17.19`). `pnpm run build:binaries --update-snapshots`
+refreshes both snapshots.

@@ -33,7 +33,7 @@ export function keplerSemimajorAxisAu(pDays: number, mTotalMsun: number): number
 }
 
 /** False only when ρ, the parallax and the period are all known and ρ outruns
- *  the bound: ../README.md#stage-4--orbital-element-selection-per-pair */
+ *  the bound: README.md#what-each-route-decides */
 export function nssSeparationConsistent(row: NssOrbitRow, rhoArcsec: number | null, plxMas: number | null): boolean {
   if (rhoArcsec === null || rhoArcsec <= 0) return true;
   if (plxMas === null || plxMas <= 0) return true;
@@ -76,7 +76,7 @@ function nssRoute(
 
 const subResolution = (rho: number | null): boolean => rho === null || rho <= 0;
 
-/** ../README.md#stage-4--orbital-element-selection-per-pair. Throws on an
+/** README.md#what-each-route-decides. Throws on an
  *  emitted epoch outside the plausible window: README.md#the-shape-of-a-result */
 export function selectOrbit(
   p: DecomposedPair, astrometry: PairAstrometry, candidates: OrbitCandidates, srcToNss: ReadonlyMap<string, NssOrbitRow>,

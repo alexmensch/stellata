@@ -8,7 +8,7 @@ stays in one place.
 multiples.tsv                   build:binaries output. Two rows per
                                 kept physical WDS pair (incl. sub-pairs
                                 synthesized from ORB6 / Gaia NSS — see
-                                /scripts/binaries/README.md#sub-pair-synthesis-subdividepy),
+                                /scripts/binaries/load/README.md#sub-pair-synthesis),
                                 plus standalone rows for
                                 SIMBAD-known components the pair walk
                                 didn't reach. ~7 MB, LFS.
@@ -52,7 +52,7 @@ spot_check_ground_truth.tsv     SIMBAD-verified expected Stage 2
 
 Canonical column order is `MULTIPLES_COLUMNS` in
 `scripts/binaries/multiples-tsv.ts`, the one owner; each column is
-described in [Stage 6](../../scripts/binaries/README.md#stage-6--multiplestsv-emit).
+described in [Stage 6](../../scripts/binaries/multiples/README.md#what-each-column-carries).
 
 Per-component provenance columns (`resolve_via`, `astrometry_via`,
 `orbit_via`, `spect_via`, `photometry_via`, `a_via`) name which
