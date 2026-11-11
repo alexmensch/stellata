@@ -391,7 +391,6 @@ export async function main() {
     ciGaiaRelation: 0,
     ciPrintedHipBv: 0,
     ciGspc: 0,
-    ciGspcValidatedRange: 0,
     ciSpectralDerived: 0,
     ciSolarFallback: 0,
     companionRowsScanned: 0,
@@ -552,8 +551,7 @@ export async function main() {
   const cv = stats.ciVia;
   console.log(
     `  ci cascade: gaia_relation ${cv.gaia_relation}, ` +
-      `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc} ` +
-      `(${stats.ciGspcValidatedRange} flagged in-range), ` +
+      `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc}, ` +
       `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.none}`,
   );
   const vv = stats.velocityVia;
@@ -673,7 +671,6 @@ export async function main() {
   counts.ciGaiaRelation = stats.ciVia.gaia_relation;
   counts.ciPrintedHipBv = stats.ciVia.printed_hip_bv;
   counts.ciGspc = stats.ciVia.gspc;
-  counts.ciGspcValidatedRange = stats.ciGspcValidatedRange;
   counts.ciSpectralDerived = stats.ciVia.spectral_derived;
   counts.ciSolarFallback = stats.ciVia.none;
 

@@ -50,7 +50,6 @@ const FACTS: ShippedFacts = {
   inLmcCone: false,
   tycho2Direction: null,
   vTycho2OutsideBtVtRange: false,
-  ciGspcValidatedRange: false,
   distPc: 100,
   fastKmS: null,
 };

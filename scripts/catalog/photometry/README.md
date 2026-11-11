@@ -190,7 +190,9 @@ it would leave the tier serving **zero** rows: the flag's region and this
 tier's window do not intersect anywhere in this catalogue, which is bright
 enough that 96% of it sits below the flag's own bright bound
 ([The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range) has the measured
-region). `ciGspcValidatedRange` pins that zero as a tripwire.
+region). `gspcBMinusV` holds that as a tripwire: a flagged row the tier
+would serve fails the build, naming the row, since it means the flag moved
+upstream.
 
 Ignoring a published validity bound is what [Where the colour bound comes
 from](#where-the-colour-bound-comes-from) refuses to do for the Table-5.9 relation, so the difference matters:

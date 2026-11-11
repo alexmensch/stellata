@@ -77,7 +77,6 @@ function baseCounts(): FiledCounts {
     ciGaiaRelation: 280000,
     ciPrintedHipBv: 3400,
     ciGspc: 16000,
-    ciGspcValidatedRange: 0,
     ciSpectralDerived: 1200,
     ciSolarFallback: 3000,
     companionRowsScanned: 13000,

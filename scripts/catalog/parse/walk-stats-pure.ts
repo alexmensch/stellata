@@ -71,7 +71,6 @@ export interface WalkStats {
   spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders as SPECTRAL_UNKNOWN
   spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
   ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
-  ciGspcValidatedRange: number;  // gspc-tier rows the archive calls in-range
 }
 
 /** Counted against the SHIPPED tier, not the resolved parallax: where
@@ -122,7 +121,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     spectralVia: emptyTallyPartition(SPECTRAL_VIA_VALUES),
     spectralSimbadKey: emptyTallyPartition(SIMBAD_NAMESPACE_VALUES),
     ciVia: emptyTallyPartition(CI_VIA_VALUES),
-    ciGspcValidatedRange: 0,
   };
 
   const addRv = ({ resolution, gaiaError }: RowOutcome['rv']): void => {
@@ -179,7 +177,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     stats.spectralVia[b.spectral.via]++;
     if (b.spectral.via === 'simbad') stats.spectralSimbadKey[b.spectral.value.namespace]++;
     stats.ciVia[b.ci.via]++;
-    if (f.ciGspcValidatedRange) stats.ciGspcValidatedRange++;
   };
 
   return {

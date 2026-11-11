@@ -232,7 +232,6 @@ export interface ShippedFacts {
   /** The space velocity before any clamp, wherever it exceeded the Galactic
    *  escape velocity — clamped or not, as the placement says. */
   readonly fastKmS: number | null;
-  readonly ciGspcValidatedRange: boolean;
 }
 
 /** One manifest row resolved: parked, or a record with the provenance of each
@@ -673,7 +672,6 @@ export function rowResolver({
         vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && vRes.value.outsideRange,
         distPc: dist,
         fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
-        ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
       },
     };
   };

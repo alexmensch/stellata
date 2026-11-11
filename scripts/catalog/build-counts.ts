@@ -207,14 +207,6 @@ export interface FiledCounts {
   /** Records taking Gaia's synthetic B−V — past the relation's colour bound,
    *  inside the measured one, and with no printed colour above it. */
   ciGspc: number;
-  /** The `ciGspc` subset the archive's own flag calls inside the JKC
-   *  standardisation's validated range — **zero**, and pinned there as a
-   *  tripwire rather than as a coverage figure. The flag's region and this
-   *  tier's window do not intersect on any row of this catalogue (measured,
-   *  `../../data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range`), so a
-   *  nonzero value means the flag moved upstream, not that coverage
-   *  improved. */
-  ciGspcValidatedRange: number;
   /** Records falling through to printed `I/239` B−V keyed on their own HIP. */
   ciPrintedHipBv: number;
   /** No-Apsis-Teff records whose `ci` is baked from the parsed spectral class
@@ -701,7 +693,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   ciGaiaRelation: 'placement',
   ciPrintedHipBv: 'placement',
   ciGspc: 'placement',
-  ciGspcValidatedRange: 'placement',
   ciSpectralDerived: 'placement',
   ciSolarFallback: 'placement',
   distBailerJones: 'placement',

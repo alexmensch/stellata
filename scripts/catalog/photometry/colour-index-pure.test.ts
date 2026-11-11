@@ -126,9 +126,10 @@ describe('gspcBMinusV', () => {
     expect(gspcBMinusV(atColour(3.01), synthetic(2.1))).toEqual(OUT_OF_RANGE);
   });
 
-  it('ignores the archive flag in both directions', () => {
+  it('never gates on the archive flag, and fails the build where the flag claims a row it serves', () => {
     expect(gspcBMinusV(atColour(2.0), synthetic(1.6, false))).toEqual(value(1.6));
     expect(gspcBMinusV(atColour(3.5), synthetic(1.6, true))).toEqual(OUT_OF_RANGE);
+    expect(() => gspcBMinusV(atColour(2.0), synthetic(1.6, true))).toThrow(/flag moved upstream/);
   });
 
   it('keeps a colour blue of the flag box, which is bounded on one side only', () => {

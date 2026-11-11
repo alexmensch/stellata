@@ -12,7 +12,7 @@ import type { CascadeResult, CascadeRefusal, CitedValue, UniformValues } from '.
 import type { GspcColour } from './gspc-parse';
 import type { PrintedHipValue } from './hip-photometry-parse-pure';
 import { RIELLO_BP_RP_MIN, rielloGMinusV, type CitedPhotometry } from './v-magnitude-pure';
-import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
+import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** Gaia DR3 documentation, Carrasco 2022 (/data/papers/index.md#gaiadr3doc) Sect. 5.5.1
  *  Table 5.9 — `G − B` as a quartic in `BP − RP`, ascending powers; a DR3-era
@@ -91,6 +91,13 @@ export function gspcBMinusV(
   if (calibrated === null) return { kind: 'refused', reason: 'uncalibrated' };
   if (calibrated.bpMinusRp > GSPC_BP_RP_MAX) {
     return { kind: 'refused', reason: 'colour_out_of_range' };
+  }
+  if (gspc.inValidatedRange) {
+    throw new Error(
+      `gspcBMinusV: ${sourceRowRefText(gspc.ref)} is inside the archive's validated range on a row this tier serves; `
+      + 'the flag\'s region and the tier\'s window no longer miss each other, so the flag moved upstream '
+      + '(photometry/README.md#why-the-gspc-tier-does-not-gate-on-the-flag).',
+    );
   }
   return { kind: 'value', value: gspc.bMinusV };
 }
