@@ -1,7 +1,8 @@
 # Counts — the one tally and the staged count snapshot
 
 How a build step counts its outcomes, and the shape its committed count
-snapshot takes. Both modules are pure leaves: they import nothing. The
+and rates snapshots take. The modules are pure: the tally and the staged
+snapshot import nothing, the rates snapshot only the staged one. The
 snapshot checks that read the files are the parent folder's
 `snapshot-check.ts` and `snapshot_assert.py`
 ([Util](../README.md)); the comparator is
@@ -14,6 +15,8 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 share, a rate that throws on an empty whole.
 count-stages-pure.ts (+ test)   The staged snapshot: nestByStage,
                                 flattenStages, isStaged, stageOfCounts.
+rate-snapshot-pure.ts (+ test)  The staged rates snapshot: rateEntries,
+                                refreshedRates, compareRateSnapshot.
 ```
 
 ## The tally
@@ -45,3 +48,16 @@ first. The stage still counts as drift: when both sides are staged, a count
 filed under another stage than the snapshot's is `moved`
 (`stageOfCounts`), in that comparator and in `../snapshot_assert.py`'s,
 whose `flatten_stages` is this module's Python twin.
+
+## The rates snapshot
+
+A rate is a share, so it drifts by a tolerance, not exactly: each entry is
+`{value, tolerance}`, and a build's rate matches when
+`|actual − value| / max(|value|, 1e-9) ≤ tolerance`, the committed entry's
+tolerance. The compare reads the unrounded rate; a refresh
+(`refreshedRates`, `snapshotCheck`'s `refreshTransform`) writes each value
+rounded to `RATE_SNAPSHOT_DECIMALS` and keeps each committed tolerance, so a
+hand-edited one survives, a new rate taking `DEFAULT_RATE_TOLERANCE`. The
+rows are the count compare's: a rate either side lacks drifts, and so does
+one filed under another stage. `build:binaries` is the one rates snapshot
+([Stage 7](../../binaries/counts/README.md)).
