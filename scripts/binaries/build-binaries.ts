@@ -4,6 +4,9 @@ import { attachStage3, type Stage3Result } from './astrometry/attach-astrometry'
 import { stage3Report } from './astrometry/stage3-report-pure';
 import { loadReferenceCatalogs, type ReferenceCatalogs } from './load/reference-catalogs';
 import { stage1Report } from './load/stage1-report-pure';
+import { pairMasses } from './masses/pair-masses';
+import { attachStage5, type Stage5Result } from './optical/attach-optical';
+import { stage5Report } from './optical/stage5-report-pure';
 import { resolveStage2, type Stage2Result } from './resolve/resolve-pairs';
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
@@ -14,6 +17,7 @@ export interface StageResults {
   readonly resolved: Stage2Result;
   readonly astrometry: Stage3Result;
   readonly orbits: Stage4Result;
+  readonly optical: Stage5Result;
 }
 
 export async function runStages(log: (line: string) => void): Promise<StageResults> {
@@ -25,5 +29,8 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
   for (const line of stage3Report(astrometry)) log(line);
   const orbits = attachStage4(astrometry, reference);
   for (const line of stage4Report(orbits)) log(line);
-  return { reference, resolved, astrometry, orbits };
+  const masses = pairMasses(astrometry.pairs, reference.indices);
+  const optical = attachStage5(astrometry, orbits, masses, reference.indices);
+  for (const line of stage5Report(optical)) log(line);
+  return { reference, resolved, astrometry, orbits, optical };
 }

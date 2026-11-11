@@ -69,6 +69,10 @@ scripts/binaries/
                                   type, the spectral-type cascade, and
                                   each pair's total mass, which Stage 5
                                   reads. Own README.
+  optical/                        Stage 5 in TypeScript: each pair
+                                  physical or optical, tagged with the
+                                  deciding tier, keyed by its
+                                  DecomposedPair. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -159,7 +163,9 @@ scripts/binaries/
                                   (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
-                                  every TS stage's report.
+                                  every TS stage's report; and
+                                  droppedPairSample, the capped sample of
+                                  a gate's dropped pairs.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
@@ -795,10 +801,11 @@ Two physical-boundness criteria underpin tiers 3–4, both mechanical:
   (v_transverse < v_escape) from tripping it — η Cas AB: v_transverse
   ≈ 2.9 km/s vs v_escape ≈ 8 km/s, kept.
 
-The gates reuse Stage 4's Kepler / parallax-anchor helpers
-(`kepler_semimajor_axis_au`, `compute_system_parallax_anchors`,
-`first_astrometry_field_per_system`) so the boundness logic stays DRY
-with the NSS separation-sanity gate.
+The separation and CPM tiers read each system's first measured parallax
+and proper motion, the same first-resolved-per-system anchors Stage 4's NSS
+separation gate reads
+([System anchors](astrometry/README.md#system-anchors)). The escape-velocity
+gate's pair masses are computed once before the stage (`masses/`).
 
 The cascade short-circuits — once a tier produces a verdict the lower
 tiers don't run. Stage 6 drops pairs classified as optical entirely; the
