@@ -94,10 +94,7 @@ import {
   tonemapWhitePoint,
 } from '../../src/astro-core/tonemap/tonemap-pure';
 
-const figures = figurePins(
-  fileURLToPath(new URL('./milkyway-sightlines-expected.json', import.meta.url)),
-  (actual, expected, digits) => expect(actual).toBeCloseTo(expected, digits),
-);
+const figures = figurePins(fileURLToPath(new URL('./milkyway-sightlines-expected.json', import.meta.url)));
 afterAll(() => figures.write());
 const pin = figures.pin;
 
@@ -339,14 +336,13 @@ describe('MilkyWay luminosity solve', () => {
             dustEnabled: false,
           }),
         );
-    pin('ngpResidualOverModel', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree, 4);
-    pin('ngpDustFreeModel', dustFree, 3);
-    pin('ngpResidual', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2, 4);
+    pin('ngpResidualOverModel', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2 - dustFree);
+    pin('ngpDustFreeModel', dustFree);
+    pin('ngpResidual', NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2);
     pin(
       'catalogueShareOfPoleTotalPct',
       (fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole) /
         fluxNumber(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole)) * 100,
-      2,
     );
   });
 
@@ -358,7 +354,7 @@ describe('MilkyWay luminosity solve', () => {
   // Same species of disagreement as the pole, which is what says it is a
   // scale difference between two published sources and not a shape error.
   it('states the Galactic-centre sightline against Leinert’s total', () => {
-    pin('gcUnderLeinertTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre - GC_SIGHTLINE_MAG_ARCSEC2, 3);
+    pin('gcUnderLeinertTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.galacticCentre - GC_SIGHTLINE_MAG_ARCSEC2);
   });
 
   // Light moved, none made or lost, to the 0.017 mag the grid's resampling
@@ -373,11 +369,11 @@ describe('MilkyWay luminosity solve', () => {
       { resolvedHole: null },
     );
     const doubleCounted = -2.5 * Math.log10(fluxNumber(bandWithoutHole) + catalogue);
-    pin('poleBandPlusCatalogue', sky, 3);
-    pin('poleBandPlusCatalogueOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky, 4);
+    pin('poleBandPlusCatalogue', sky);
+    pin('poleBandPlusCatalogueOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - sky);
     expect(sky - bandWithoutHole).toBeCloseTo(0.017, 3);
-    pin('poleDoubleCountedOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted, 3);
-    pin('poleDoubleCount', sky - doubleCounted, 3);
+    pin('poleDoubleCountedOverTotal', LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole - doubleCounted);
+    pin('poleDoubleCount', sky - doubleCounted);
   });
 
   // The cross-layer symptom the epic opened on: the Galaxy seen from M31
@@ -393,12 +389,12 @@ describe('MilkyWay luminosity solve', () => {
     }
     const m31DistancePc = row.distanceKpc * 1000;
     const m31ApparentV = row.mV;
-    pin('m31FromSol', m31ApparentV, 6);
+    pin('m31FromSol', m31ApparentV);
 
     const galaxyFromM31 =
       modelAbsMagV +
       5 * Math.log10(m31DistancePc / ABSOLUTE_MAGNITUDE_DISTANCE_PC);
-    pin('galaxyFromM31', galaxyFromM31, 3);
+    pin('galaxyFromM31', galaxyFromM31);
     expect(galaxyFromM31).toBeLessThan(m31ApparentV);
     expect(m31ApparentV - galaxyFromM31).toBeCloseTo(0.361, 3);
 
@@ -409,10 +405,10 @@ describe('MilkyWay luminosity solve', () => {
     const holeShare =
       cells.reduce((s, c) => s + holeLight(c, SHIPPED_RESOLVED_HOLE), 0) /
       cells.reduce((s, c) => s + c.model, 0);
-    pin('holeShareOfModelPct', holeShare * 100, 3);
+    pin('holeShareOfModelPct', holeShare * 100);
     const bandFromM31 = galaxyFromM31 - 2.5 * Math.log10(1 - holeShare);
     expect(bandFromM31).toBeCloseTo(3.083, 3);
-    pin('holeDimsBandFromM31', bandFromM31 - galaxyFromM31, 4);
+    pin('holeDimsBandFromM31', bandFromM31 - galaxyFromM31);
     expect(bandFromM31).toBeLessThan(m31ApparentV);
   });
 
@@ -438,20 +434,20 @@ describe('MilkyWay luminosity solve', () => {
       return componentLuminanceShare(BULGE_COMPONENT, originPc, toCentre);
     };
 
-    pin('faceOnCentreBulgePct', centrePixelBulgeShare([0, 0, 100_000]) * 100, 1);
+    pin('faceOnCentreBulgePct', centrePixelBulgeShare([0, 0, 100_000]) * 100);
     expect(centrePixelBulgeShare([-100_000, 0, 0])).toBeCloseTo(5.6538e-5, 8);
 
     // The integrated ratio the density0 split sets, which the face-on
     // number above is the marched consequence of. Under the mass B/T it
     // was 0.176 and the face-on centre pixel read 0.480 bulge.
-    pin('bulgeToDiscLight', (BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) / (DISC_DENSITY0 * DISC_VOLUME_INTEGRAL), 4);
+    pin('bulgeToDiscLight', (BULGE_DENSITY0 * BULGE_VOLUME_INTEGRAL) / (DISC_DENSITY0 * DISC_VOLUME_INTEGRAL));
   });
 
   it('pins how little of the Sol sightlines the bulge carries', () => {
     const share = (bDeg: number) =>
       componentLuminanceShare(BULGE_COMPONENT, SOL_GALACTOCENTRIC_PC, galacticDirection(0, bDeg));
-    pin('bulgeShareGcColumnPct', share(0) * 100, 3);
-    pin('bulgeShareB5ColumnPct', share(5) * 100, 1);
+    pin('bulgeShareGcColumnPct', share(0) * 100);
+    pin('bulgeShareB5ColumnPct', share(5) * 100);
   });
 });
 
@@ -551,7 +547,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // are what catch a profile / quadrature change.
   it('derives the GC column and the surface brightness it implies', () => {
     expect(GC_SIGHTLINE_COLUMN).toBeCloseTo(41.373, 3);
-    pin('sbGc', GC_SIGHTLINE_MAG_ARCSEC2, 3);
+    pin('sbGc', GC_SIGHTLINE_MAG_ARCSEC2);
   });
 
   // The mirror marches the exact voxels, so this is the one place the
@@ -566,7 +562,7 @@ describe('MilkyWay surface-brightness calibration', () => {
         sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir, { resolvedHole: quantised })
         - sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, dir)));
     }
-    pin('halfFloatLossMag', worst, 6);
+    pin('halfFloatLossMag', worst);
   });
 
   it('gives the resolved stars’ share of the column back', () => {
@@ -584,7 +580,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       const whole = sightlineSurfaceBrightness(SB_ZERO_POINT, SOL_GALACTOCENTRIC_PC, galacticDirection(l, b), {
         resolvedHole: null,
       });
-      pin(`holeDims${key}`, sbAt(l, b) - whole, 3);
+      pin(`holeDims${key}`, sbAt(l, b) - whole);
     }
   });
 
@@ -597,11 +593,11 @@ describe('MilkyWay surface-brightness calibration', () => {
       const band = sightlineColumn(SOL_GALACTOCENTRIC_PC, dir, { dustEnabled: false });
       return { removed: SB_ZERO_POINT - 2.5 * Math.log10(whole - band), dims: -2.5 * Math.log10(band / whole) };
     };
-    pin('holeColumnNgp', removed(90).removed, 3);
-    pin('holeColumnGc', removed(0).removed, 3);
-    pin('gcDustFreeHoleDims', removed(0).dims, 4);
-    pin('capNgp', RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole, 4);
-    pin('capGc', RESOLVED_CATALOGUE_MAG_ARCSEC2.galacticCentre, 4);
+    pin('holeColumnNgp', removed(90).removed);
+    pin('holeColumnGc', removed(0).removed);
+    pin('gcDustFreeHoleDims', removed(0).dims);
+    pin('capNgp', RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole);
+    pin('capGc', RESOLVED_CATALOGUE_MAG_ARCSEC2.galacticCentre);
   });
 
   // The emissivity is solved against a luminosity, not a sightline, so the
@@ -622,7 +618,7 @@ describe('MilkyWay surface-brightness calibration', () => {
       { dustEnabled: false },
     );
     expect(s(0, 90) - dustFree).toBeCloseTo(0.1056, 4);
-    pin('sbAnticentre', s(180, 0), 3);
+    pin('sbAnticentre', s(180, 0));
     expect(s(0, 0)).toBeCloseTo(GC_SIGHTLINE_MAG_ARCSEC2, 6);
   });
 
@@ -637,7 +633,7 @@ describe('MilkyWay surface-brightness calibration', () => {
         galacticDirection(0, bDeg),
       );
     expect(s(5)).toBeLessThan(s(0));
-    pin('sbB5', s(5), 3);
+    pin('sbB5', s(5));
     expect(s(0)).toBe(GC_SIGHTLINE_MAG_ARCSEC2);
   });
 
@@ -672,14 +668,14 @@ describe('MilkyWay surface-brightness calibration', () => {
         SOL_GALACTOCENTRIC_PC,
         galacticDirection(lDeg, bDeg),
       );
-    pin('planeToPoleContrast', s(0, 90) - s(0, 0), 3);
-    pin('sbB30', s(0, 30), 3);
-    pin('sbNgp', s(0, 90), 3);
+    pin('planeToPoleContrast', s(0, 90) - s(0, 0));
+    pin('sbB30', s(0, 30));
+    pin('sbNgp', s(0, 90));
   });
 
   it('under-counts the GC column at the shipped step count', () => {
     const column = (steps: number) => sightlineColumn(SOL_GALACTOCENTRIC_PC, galacticDirection(0, 0), { steps });
-    pin('gcMarchUnderCountPct', (1 - column(STEPS) / column(4096)) * 100, 2);
+    pin('gcMarchUnderCountPct', (1 - column(STEPS) / column(4096)) * 100);
   });
 
   // The whole band, in 8-bit display levels at the base epoch with no EV
@@ -689,13 +685,13 @@ describe('MilkyWay surface-brightness calibration', () => {
   // over 1.5 mag under — sits on the dither floor because a patch the modelled
   // eye cannot detect must not read plainly visible (/src/astro-core/milkyway/calibration/README.md).
   it('pins the band against a threshold star at the base epoch', () => {
-    pin('levelThreshold', displayLevel(L_THRESH) * 255, 2);
+    pin('levelThreshold', displayLevel(L_THRESH) * 255);
 
-    pin('levelB5', bandDisplayLevel(sbAt(0, 5)) * 255, 2);
-    pin('levelGc', bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255, 3);
-    pin('levelAnticentre', bandDisplayLevel(sbAt(180, 0)) * 255, 2);
-    pin('levelB30', bandDisplayLevel(sbAt(0, 30)) * 255, 2);
-    pin('levelNgp', bandDisplayLevel(sbAt(0, 90)) * 255, 3);
+    pin('levelB5', bandDisplayLevel(sbAt(0, 5)) * 255);
+    pin('levelGc', bandDisplayLevel(GC_SIGHTLINE_MAG_ARCSEC2) * 255);
+    pin('levelAnticentre', bandDisplayLevel(sbAt(180, 0)) * 255);
+    pin('levelB30', bandDisplayLevel(sbAt(0, 30)) * 255);
+    pin('levelNgp', bandDisplayLevel(sbAt(0, 90)) * 255);
   });
 
   // How far under threshold each sightline sits, which is the photometric
@@ -708,11 +704,11 @@ describe('MilkyWay surface-brightness calibration', () => {
     const sLim = extendedThresholdSbFor(DEFAULT_INSTRUMENT);
     expect(sLim).toBe(22);
 
-    pin('gapB5', sbAt(0, 5) - sLim, 3);
-    pin('gapGc', GC_SIGHTLINE_MAG_ARCSEC2 - sLim, 3);
-    pin('gapAnticentre', sbAt(180, 0) - sLim, 3);
-    pin('gapB30', sbAt(0, 30) - sLim, 3);
-    pin('gapNgp', sbAt(0, 90) - sLim, 3);
+    pin('gapB5', sbAt(0, 5) - sLim);
+    pin('gapGc', GC_SIGHTLINE_MAG_ARCSEC2 - sLim);
+    pin('gapAnticentre', sbAt(180, 0) - sLim);
+    pin('gapB30', sbAt(0, 30) - sLim);
+    pin('gapNgp', sbAt(0, 90) - sLim);
 
     // Negative is OVER threshold. Nothing pins the band to it any more —
     // the solve is against a luminosity, and where the plane lands against
@@ -779,7 +775,7 @@ describe('MilkyWay surface-brightness calibration', () => {
     }
     // Pinned rather than bounded: the figure the READMEs quote is this one,
     // and a two-place tolerance would have let 0.005 through.
-    pin('footprintWorstMag', worst, 5);
+    pin('footprintWorstMag', worst);
   });
 
   // What the concession is worth at the reference viewport, stated as the

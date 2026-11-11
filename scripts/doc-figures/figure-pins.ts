@@ -2,12 +2,13 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 
-export type AssertClose = (actual: number, expected: number, digits: number) => void;
+/** Far tighter than any doc quotes a figure, so a re-measure that could move a quoted digit always fails. */
+export const FIGURE_PIN_RELATIVE_TOLERANCE = 1e-9;
 
 export interface FigurePins {
   readonly updating: boolean;
-  /** Asserts `actual` against the snapshot's value to `digits` places, or records it when updating. */
-  pin(key: string, actual: number, digits: number): void;
+  /** Throws unless `actual` matches the snapshot's value; records it instead when updating. */
+  pin(key: string, actual: number): void;
   /** Snapshot keys no `pin` has reached; empty after a whole run of the suite. */
   unpinned(): string[];
   /** Writes every recorded figure when updating; a no-op otherwise. */
@@ -16,7 +17,6 @@ export interface FigurePins {
 
 export function figurePins(
   snapshotPath: string,
-  assertClose: AssertClose,
   updating = process.env[UPDATE_SNAPSHOTS_ENV] === '1',
 ): FigurePins {
   const expected: Record<string, number> = existsSync(snapshotPath)
@@ -27,14 +27,17 @@ export function figurePins(
 
   return {
     updating,
-    pin(key, actual, digits) {
+    pin(key, actual) {
       if (recorded.has(key)) throw new Error(`figure ${key} is pinned twice`);
       recorded.set(key, actual);
       if (updating) return;
       if (!Object.hasOwn(expected, key)) {
         throw new Error(`${snapshotPath} has no figure ${key}. To write it: ${refresh}`);
       }
-      assertClose(actual, expected[key], digits);
+      const want = expected[key];
+      if (Math.abs(actual - want) > FIGURE_PIN_RELATIVE_TOLERANCE * Math.abs(want)) {
+        throw new Error(`figure ${key} measures ${actual}, ${snapshotPath} holds ${want}. If the move is intended: ${refresh}`);
+      }
     },
     unpinned: () => Object.keys(expected).filter((k) => !recorded.has(k)),
     write() {

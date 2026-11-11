@@ -40,7 +40,7 @@ check-staged-figures.ts    The commit-time copy check (below): prints each
 figure-pins.ts             figurePins: a test's measured figures asserted
                            against its snapshot, or recorded and written
                            under UPDATE_SNAPSHOTS=1 (below).
-figure-pins.test.ts        Assert, missing key, double pin, unpinned keys,
+figure-pins.test.ts        Tolerance, missing key, double pin, unpinned keys,
                            update-mode write.
 rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
                            place; a file with a problem is left unwritten and
@@ -107,11 +107,14 @@ output, and is the point to add a millions format.
 A figure a test computes from the shipped model (a sightline's surface
 brightness, a calibration check's disagreement) moves whenever an input it
 reads is re-measured. Written as a literal in both the test and the doc, it
-has two owners and the doc copy goes stale silently. `figurePins(path,
-assertClose)` makes the snapshot the one owner:
+has two owners and the doc copy goes stale silently. `figurePins(path)`
+makes the snapshot the one owner:
 
-- `pin(key, actual, digits)` asserts `actual` against the snapshot's value to
-  `digits` decimal places; a key the snapshot lacks fails, naming the refresh.
+- `pin(key, actual)` throws unless `actual` matches the snapshot's value to
+  `FIGURE_PIN_RELATIVE_TOLERANCE` (1e-9 relative), far inside any digit a
+  marker quotes, so no re-measure can move a quoted figure and pass; a key the
+  snapshot lacks fails, naming the refresh. Rounding lives only in the
+  marker's format.
 - Under `UPDATE_SNAPSHOTS=1` it records instead, and `write()` (the suite's
   `afterAll`) rewrites the snapshot, keys sorted, full precision.
 - The suite ends with a case asserting `unpinned()` is empty, so a pin
