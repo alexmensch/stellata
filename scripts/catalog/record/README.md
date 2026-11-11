@@ -10,12 +10,24 @@ scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
-                                  records on — and `solRecordIndex`, Sol's
-                                  index once sorted, throwing unless exactly
-                                  one record carries FLAG_IS_SOL. Pure.
+                                  records on — and `assertSolFirst`, throwing
+                                  unless exactly one record carries
+                                  FLAG_IS_SOL and it sorted to
+                                  SOL_RECORD_INDEX (record 0, stated in
+                                  catalog-pure.ts). Pure.
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
                                   source (#curated-records).
+  search-index-pure.ts (+ test)   buildSearchIndex — one wire entry per
+                                  record a user can type an identifier for
+                                  (buildSearchEntry owns the wire shape),
+                                  with SearchCounts, the snapshot's search
+                                  count block. Pure.
+  records-stage-pure.ts (+ test)  recordsCounts — RecordsCounts, the
+                                  snapshot's records count block, over the
+                                  sorted records — and variabilityUnits,
+                                  the quantised period and amplitude each
+                                  record writes. Pure.
 ```
 
 ## Curated records

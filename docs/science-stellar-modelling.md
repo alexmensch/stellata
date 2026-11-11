@@ -217,7 +217,7 @@ first match wins:
    (`src/catalog-format/spectral/physical-radius.ts`)
    bakes `Ballesteros(tempKelvin(class))` into `iCi` — the intrinsic
    class colour, so a class star renders its true hue rather than
-   solar-yellow. Counted `ciSpectralDerived`.
+   solar-yellow. Counted `brightness-colour.ci.spectral-derived`.
 5. **White-dwarf [Sion 1983](/data/papers/index.md#sion) Teff** — `50400 / wd_subclass`, baked into `iCi`
    through the same `spectralClassCi` path.
 6. **Solar fallback** — `SOLAR_BV_FALLBACK` (0.65 ≈ 5778 K) baked into

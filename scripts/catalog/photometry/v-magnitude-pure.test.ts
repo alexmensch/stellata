@@ -117,14 +117,14 @@ describe('resolveVMagnitude cascade', () => {
   it('transforms Gaia photometry when the relation applies', () => {
     const r = resolve(photometry({ gMag: 10, bpMag: 10.5, rpMag: 9.7 }), PRINTED_HIP);
     expect(r.via).toBe('gaia_riello');
-    expect(r.via === 'none' ? null : r.value).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
+    expect(r.via === 'none' ? null : r.value.vMag).toBeCloseTo(10 - rielloGMinusV(0.8), 12);
   });
 
   // The bright rescue tier: Gaia saturates, so the printed V wins even though a
   // full photometry row exists — and the result names the refused transform.
   it('falls to the printed V when Gaia saturates the source', () => {
     expect(resolve(photometry({ gMag: 2.1 }), PRINTED_HIP)).toEqual({
-      via: 'printed_hip', value: 2.5, evidence: [HIP_REF],
+      via: 'printed_hip', value: { vMag: 2.5 }, evidence: [HIP_REF],
       refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated', ref: PHOTOMETRY_REF }],
     });
   });
@@ -133,15 +133,21 @@ describe('resolveVMagnitude cascade', () => {
     const glieseRef = sourceRowRef(GLIESE, '914');
     expect(resolve(photometry({ bpMag: null }), { vVia: 'gliese', vMag: 11.7, key: '914', ref: glieseRef }))
       .toEqual({
-        via: 'gliese', value: 11.7, evidence: [glieseRef],
+        via: 'gliese', value: { vMag: 11.7 }, evidence: [glieseRef],
         refusals: [{ tier: 'gaia_riello', reason: 'uncalibrated', ref: PHOTOMETRY_REF }],
       });
   });
 
+  it('carries the Tycho-2 reduction\'s colour-range verdict on its answer', () => {
+    const tycRef = sourceRowRef(TYCHO2, '1-2-1');
+    expect(resolve(null, { vVia: 'tycho2', vMag: 9.1, key: '1-2-1', ref: tycRef, outsideRange: true }))
+      .toEqual({ via: 'tycho2', value: { vMag: 9.1, outsideRange: true }, evidence: [tycRef], refusals: [] });
+  });
+
   it('takes the curated value only where nothing else answers', () => {
-    expect(resolve(null, null, -26.74)).toEqual({ via: 'curated', value: -26.74, evidence: [], refusals: [] });
+    expect(resolve(null, null, -26.74)).toEqual({ via: 'curated', value: { vMag: -26.74 }, evidence: [], refusals: [] });
     expect(resolve(null, PRINTED_HIP, -26.74))
-      .toEqual({ via: 'printed_hip', value: 2.5, evidence: [HIP_REF], refusals: [] });
+      .toEqual({ via: 'printed_hip', value: { vMag: 2.5 }, evidence: [HIP_REF], refusals: [] });
   });
 
   it('reports no tier when every source is absent', () => {

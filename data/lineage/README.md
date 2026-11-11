@@ -8,7 +8,8 @@ folder holds only the list every row's `code` must be on.
 
 ```
 reason-codes.tsv   Regular git. One row per code: code, stage, effect
-                   (retire · park · merge · none), status (live · retired ·
+                   (retire · park · merge · none), role (outcome ·
+                   refused), status (live · retired ·
                    historical), retired_in, first_version — the release
                    current when the code was added, so 7.1.6 reads "added
                    after 7.1.6 shipped" — and the one-line description
@@ -17,5 +18,5 @@ reason-codes.tsv   Regular git. One row per code: code, stage, effect
 
 Two suites in `scripts/catalog/lineage/reason-codes/reason-codes.test.ts` hold it: it
 equals what the declarations generate, and against its merge-base copy no
-code is removed, renamed, or has its stage, effect, description or first
-version changed; a status moves only live → retired.
+code is removed, renamed, or has its stage, effect, role, description or
+first version changed; a status moves only live → retired.

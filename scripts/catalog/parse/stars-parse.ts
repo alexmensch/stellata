@@ -67,6 +67,7 @@ import {
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import type { BrightnessColour, DustStep, ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
+import type { Size } from '../spectral/size-lineage-pure';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
@@ -225,13 +226,11 @@ export interface ShippedFacts {
   /** Inside the LMC sky cone, whatever the PM gate made of the row. */
   readonly inLmcCone: boolean;
   readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
-  readonly vTycho2OutsideBtVtRange: boolean;
   /** The distance the override stack settled on. */
   readonly distPc: number;
   /** The space velocity before any clamp, wherever it exceeded the Galactic
    *  escape velocity — clamped or not, as the placement says. */
   readonly fastKmS: number | null;
-  readonly ciGspcValidatedRange: boolean;
 }
 
 /** One manifest row resolved: parked, or a record with the provenance of each
@@ -247,6 +246,7 @@ export type RowOutcome =
     readonly kind: 'shipped';
     readonly placement: PlacedPlacement;
     readonly brightness: ShippedBrightness;
+    readonly size: Size;
     readonly rv: RvRouting;
     readonly star: Star;
     readonly facts: ShippedFacts;
@@ -510,7 +510,7 @@ export function rowResolver({
     // settled on.
     let absmag = origin !== null
       ? origin.absoluteVMagnitude
-      : absoluteMagnitude(vRes.value, dist);
+      : absoluteMagnitude(vRes.value.vMag, dist);
 
     // Must follow the PM rescue: the position advances on the motion the row
     // ends up carrying, which is the rescue's wherever the tier states none.
@@ -548,7 +548,9 @@ export function rowResolver({
     );
     const spectInfo = spectral.via === 'none' ? SPECTRAL_UNKNOWN : spectral.value.info;
     const apsisTeff = resolveApsisTeff(apsis?.value);
-    const citedApsisTeff = apsis === null || apsisTeff === null ? null : { value: apsisTeff, ref: apsis.ref };
+    const citedApsisTeff = apsis === null || apsisTeff.teff === null
+      ? null
+      : { value: apsisTeff.teff.kelvin, ref: apsis.ref };
 
     // B−V through the Gaia relation → printed I/239 B−V → synthetic
     // photometry → intrinsic spectral class, else solar. Printed above synthetic
@@ -583,7 +585,7 @@ export function rowResolver({
       dust = { av, ciDereddened };
     }
 
-    const physRadius = physicalRadius(absmag, spectInfo, apsisTeff);
+    const radius = physicalRadius(absmag, spectInfo, apsisTeff.teff);
 
     // Byte 34 is positional: the IAU boundaries partition the whole sphere,
     // so it resolves for any direction, catalogued or not.
@@ -603,7 +605,7 @@ export function rowResolver({
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
       spectral: spectInfo,
-      physicalRadius: physRadius,
+      physicalRadius: radius.rSun,
       conIndex,
       // Left unset here: three later passes fill it, and everything else
       // reads `conIndex`.
@@ -652,6 +654,12 @@ export function rowResolver({
         velocityClamped,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
+      size: {
+        key,
+        radius,
+        apsis: apsis === null ? null : { ref: apsis.ref, outOfWindow: apsisTeff.outOfWindow },
+        classEvidence: spectral.via === 'none' ? [] : spectral.evidence,
+      },
       rv,
       star,
       facts: {
@@ -660,10 +668,8 @@ export function rowResolver({
         tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,
-        vTycho2OutsideBtVtRange: vRes.via === 'tycho2' && printed?.vVia === 'tycho2' && printed.outsideRange,
         distPc: dist,
         fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
-        ciGspcValidatedRange: ciRes.via === 'gspc' && gspc?.inValidatedRange === true,
       },
     };
   };
