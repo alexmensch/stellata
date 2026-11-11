@@ -56,11 +56,10 @@ interface Placement {
 }
 
 /** The component's own position, else its system's: README.md#system-inherited-positions */
-function place(a: ComponentAstrometry | null, systemAnchor: ScenePosition | null): Placement {
-  const own = a === null ? null : positionPc(a);
-  if (own !== null) return { position: own, astrometryVia: a!.astrometryVia };
+function place(own: ScenePosition | null, ownVia: AstrometryVia, systemAnchor: ScenePosition | null): Placement {
+  if (own !== null) return { position: own, astrometryVia: ownVia };
   if (systemAnchor !== null) return { position: systemAnchor, astrometryVia: 'system_inherited' };
-  return { position: null, astrometryVia: a?.astrometryVia ?? 'unresolved' };
+  return { position: null, astrometryVia: ownVia };
 }
 
 function positionFields(p: ScenePosition | null): Pick<MultiplesRecord, 'x_pc' | 'y_pc' | 'z_pc' | 'distPc'> {
@@ -73,22 +72,30 @@ interface Partner {
   readonly hasAthyg: boolean;
 }
 
-interface ComponentRow {
+/** One side of a pair, its lookups made once. */
+interface PairSide {
+  readonly c: ResolvedComponent;
+  readonly astrometry: ComponentAstrometry;
+  readonly own: ScenePosition | null;
   readonly athyg: AthygRow | null;
-  readonly fields: Pick<
-    MultiplesRecord,
-    'comp' | 'hip' | 'gaiaSourceId' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
-    | 'source' | 'resolveVia' | 'astrometryVia' | 'spectVia' | 'photometryVia'
-  >;
 }
 
+function pairSide(c: ResolvedComponent, astrometry: ComponentAstrometry, indices: IdentifierIndices): PairSide {
+  return { c, astrometry, own: positionPc(astrometry), athyg: athygRowFor(c, indices) };
+}
+
+type ComponentFields = Pick<
+  MultiplesRecord,
+  'comp' | 'hip' | 'gaiaSourceId' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
+  | 'source' | 'resolveVia' | 'astrometryVia' | 'spectVia' | 'photometryVia'
+>;
+
 /** `primaryAthyg` is null on the primary's own row. */
-function componentRow(
-  wdsId: string, c: ResolvedComponent, a: ComponentAstrometry, systemAnchor: ScenePosition | null,
+function componentFields(
+  wdsId: string, { c, astrometry, own, athyg }: PairSide, systemAnchor: ScenePosition | null,
   primaryAthyg: AthygRow | null, isPrimary: boolean, partner: Partner, indices: IdentifierIndices,
-): ComponentRow {
-  const athyg = athygRowFor(c, indices);
-  const { position, astrometryVia } = place(a, systemAnchor);
+): ComponentFields {
+  const { position, astrometryVia } = place(own, astrometry.astrometryVia, systemAnchor);
   const { spect, spectVia } = resolveSpect(wdsId, c.component, athyg, indices);
   let absmag = athyg?.absmag ?? null;
   let ci = athyg?.ci ?? null;
@@ -104,12 +111,9 @@ function componentRow(
     }
   }
   return {
-    athyg,
-    fields: {
-      comp: c.component, hip: c.hip, gaiaSourceId: c.gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
-      absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
-      resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
-    },
+    comp: c.component, hip: c.hip, gaiaSourceId: c.gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
+    absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
+    resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
   };
 }
 
@@ -177,16 +181,16 @@ export interface PairRows {
 export function pairRows(
   p: DecomposedPair, astrometry: PairAstrometry, orbit: PairOrbit, systemAnchor: ScenePosition | null, ctx: PairRowsContext,
 ): PairRows | null {
-  if (systemAnchor === null && positionPc(astrometry.primary) === null && positionPc(astrometry.secondary) === null) return null;
   const { indices, anchors } = ctx;
+  const ps = pairSide(p.primary, astrometry.primary, indices);
+  const ss = pairSide(p.secondary, astrometry.secondary, indices);
+  if (systemAnchor === null && ps.own === null && ss.own === null) return null;
   const { wdsId } = p.pair;
-  const primaryAthyg = athygRowFor(p.primary, indices);
-  const secondaryAthyg = athygRowFor(p.secondary, indices);
-  const pri = componentRow(wdsId, p.primary, astrometry.primary, systemAnchor, null, true, {
-    gaiaSourceId: p.secondary.gaiaSourceId, hasAthyg: secondaryAthyg !== null,
+  const pri = componentFields(wdsId, ps, systemAnchor, null, true, {
+    gaiaSourceId: p.secondary.gaiaSourceId, hasAthyg: ss.athyg !== null,
   }, indices);
-  const sec = componentRow(wdsId, p.secondary, astrometry.secondary, systemAnchor, primaryAthyg, false, {
-    gaiaSourceId: p.primary.gaiaSourceId, hasAthyg: primaryAthyg !== null,
+  const sec = componentFields(wdsId, ss, systemAnchor, ps.athyg, false, {
+    gaiaSourceId: p.primary.gaiaSourceId, hasAthyg: ps.athyg !== null,
   }, indices);
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);
@@ -194,13 +198,13 @@ export function pairRows(
     systemId: `${wdsId}-${p.pair.components}`,
     regime: ORBIT_VIA_PROPERTIES[orbit.orbitVia].regime,
     orbitVia: orbit.orbitVia,
-    ...orbitFields(orbit, pri.fields.spect, sec.fields.spect),
+    ...orbitFields(orbit, pri.spect, sec.spect),
     ...geometryFields(p, mags),
   };
   return {
     rows: [
-      { ...shared, ...pri.fields, orbitRole: 'primary', ...anchorFields(wdsId, p.primary.component, anchors) },
-      { ...shared, ...sec.fields, orbitRole: 'secondary', ...anchorFields(wdsId, sTok, anchors) },
+      { ...shared, ...pri, orbitRole: 'primary', ...anchorFields(wdsId, p.primary.component, anchors) },
+      { ...shared, ...sec, orbitRole: 'secondary', ...anchorFields(wdsId, sTok, anchors) },
     ],
     mscMags: mags.source === 'msc',
   };
@@ -211,7 +215,8 @@ export function standaloneRow(
   xid: SimbadWdsXid, systemAnchor: ScenePosition | null, indices: IdentifierIndices, anchors: AnchorOffsets,
 ): MultiplesRecord {
   const gaia = xid.gaiaSourceId === null ? undefined : indices.srcToAstrometry.get(xid.gaiaSourceId);
-  const { position, astrometryVia } = place(gaia === undefined ? null : fromGaia(gaia, 'gaia_5p'), systemAnchor);
+  const own = gaia === undefined ? null : positionPc(fromGaia(gaia, 'gaia_5p'));
+  const { position, astrometryVia } = place(own, gaia === undefined ? 'unresolved' : 'gaia_5p', systemAnchor);
   const { spect, spectVia } = resolveSpect(xid.wdsId, xid.component, null, indices);
   return {
     systemId: `${xid.wdsId}-_${xid.component}`, comp: xid.component, hip: xid.hip, gaiaSourceId: xid.gaiaSourceId, hd: null,
