@@ -9,6 +9,10 @@ import {
   type SpectralInfo,
 } from './spectral-classify';
 import {
+  NON_FINITE_LUMINOSITY_RADIUS_R_SUN,
+  RADIUS_CEILING_R_SUN,
+  RADIUS_FLOOR_R_SUN,
+  WHITE_DWARF_RADIUS_R_SUN,
   absmagFromSpectral,
   boloCorr,
   physicalRadius,
@@ -97,57 +101,66 @@ describe('tempKelvin', () => {
   });
 });
 
+const rSun = (...args: Parameters<typeof physicalRadius>): number => physicalRadius(...args).rSun;
+
 describe('physicalRadius', () => {
 
   it('returns ~1 R☉ for the Sun (G2V, absmag=4.83)', () => {
     // Sun is the calibration point of the whole magnitude system. Within
     // ~10% of 1.0 R☉ is the contract — the table-based BC introduces some
     // play but the answer must round-trip near unity.
-    const R = physicalRadius(4.83, info(4, 2));
+    const R = rSun(4.83, info(4, 2));
     expect(R).toBeGreaterThan(0.9);
     expect(R).toBeLessThan(1.2);
   });
 
-  it('returns a tiny radius for white dwarfs (~0.013 R☉, hardcoded)', () => {
+  it('sizes a white dwarf at the fixed typical radius, whatever its absmag', () => {
     const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
-    // WDs ignore absmag and return a fixed small radius — the catalog's
-    // absmag for WDs doesn't translate reliably into physical radius via
-    // Stefan-Boltzmann.
-    expect(physicalRadius(11, wd)).toBeCloseTo(0.013, 5);
-    expect(physicalRadius(0, wd)).toBeCloseTo(0.013, 5);
+    expect(physicalRadius(11, wd)).toEqual({ route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, refusedTeff: null });
+    expect(rSun(0, wd)).toBe(WHITE_DWARF_RADIUS_R_SUN);
   });
 
   it('produces a much larger radius for a supergiant than for the Sun', () => {
     // Betelgeuse-ish: M2 supergiant, absmag ≈ -5.85. Stefan-Boltzmann gives
     // the very large radius the chart-mode disc relies on.
-    const big = physicalRadius(-5.85, info(6, 2, 7));
-    const sun = physicalRadius(4.83, info(4, 2));
+    const big = rSun(-5.85, info(6, 2, 7));
+    const sun = rSun(4.83, info(4, 2));
     expect(big).toBeGreaterThan(sun * 100);
   });
 
-  it('clamps absurdly bright catalog rows to the upper bound', () => {
-    // absmag=-30 is unphysical (pre-cap luminosity ≈ 10^14 L☉). The clamp
-    // should saturate at 2500 R☉ rather than letting the ratio explode.
-    const R = physicalRadius(-30, info(0, 0));
-    expect(R).toBeLessThanOrEqual(2500);
+  it('clamps absurdly bright catalog rows to the ceiling and says so', () => {
+    // absmag=-30 is unphysical (pre-cap luminosity ≈ 10^14 L☉).
+    const r = physicalRadius(-30, info(0, 0));
+    expect(r).toMatchObject({ route: 'class-teff', rSun: RADIUS_CEILING_R_SUN, clamp: 'ceiling' });
   });
 
-  it('clamps absurdly dim catalog rows to the lower bound', () => {
-    // absmag=+30 makes L tiny; without the floor, R would underflow toward 0.
-    // Lower clamp keeps red-dwarf-ish minimum so renderable.
-    const R = physicalRadius(30, info(6, 9));
-    expect(R).toBeGreaterThanOrEqual(0.08);
+  it('clamps absurdly dim catalog rows to the floor and says so', () => {
+    const r = physicalRadius(30, info(6, 9));
+    expect(r).toMatchObject({ route: 'class-teff', rSun: RADIUS_FLOOR_R_SUN, clamp: 'floor' });
+  });
+
+  it('names a luminosity no float can hold, and ships the 1 R☉ stand-in', () => {
+    expect(physicalRadius(-2000, info(4, 2))).toEqual({
+      route: 'non-finite-luminosity', rSun: NON_FINITE_LUMINOSITY_RADIUS_R_SUN, absmag: -2000,
+    });
+  });
+
+  it('reports how the tables read the class index', () => {
+    const route = (i: SpectralInfo) => physicalRadius(4.83, i);
+    expect(route(info(4, 2))).toMatchObject({ route: 'class-teff', classIndex: 'stated', clamp: null, absmag: 4.83 });
+    expect(route(classifyFromGspspec('K')!)).toMatchObject({ classIndex: 'default', teffK: 4410 });
+    expect(route(SPECTRAL_UNKNOWN)).toMatchObject({ classIndex: 'unknown-class', teffK: 5000 });
   });
 
   it('sizes γ² Vel at combined-light order, not the 2077 R☉ carbon artefact', () => {
     // WC8+O7.5III-V at the corpus absmag −6.001 → the O giant's ~19 R☉
     // (published: WC8 ~6 R☉ + O7.5 ~17 R☉).
-    const R = physicalRadius(-6.001, classifyFromSimbad('WC8+O7.5III-V')!);
+    const R = rSun(-6.001, classifyFromSimbad('WC8+O7.5III-V')!);
     expect(R).toBeCloseTo(19.15, 2);
   });
 
   it('sizes a single WN5 as a compact hot star', () => {
-    const R = physicalRadius(-4.0, classifyFromSimbad('WN5')!);
+    const R = rSun(-4.0, classifyFromSimbad('WN5')!);
     expect(R).toBeCloseTo(2.1, 1);
   });
 
@@ -156,16 +169,21 @@ describe('physicalRadius', () => {
     // (T_TABLE 4410 K); its measured Teff 5150 K must win. R ∝ T⁻² so
     // the ratio is exact for a fixed absmag + BC.
     const gspspecK = classifyFromGspspec('K')!;
-    const tableR = physicalRadius(5.9, gspspecK);
-    const apsisR = physicalRadius(5.9, gspspecK, 5150);
-    expect(apsisR).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
+    const tableR = rSun(5.9, gspspecK);
+    const teff = { kelvin: 5150, solution: 'gspphot' } as const;
+    const apsis = physicalRadius(5.9, gspspecK, teff);
+    expect(apsis).toMatchObject({ route: 'apsis-teff', teff, classIndex: 'default' });
+    expect(apsis.rSun).toBeCloseTo(tableR * (4410 / 5150) ** 2, 6);
   });
 
-  it('ignores the Teff override for white dwarfs and Wolf-Rayets', () => {
+  it('refuses the measured Teff for white dwarfs and Wolf-Rayets, carrying it on the route', () => {
+    const teff = { kelvin: 5000, solution: 'gspspec' } as const;
     const wd: SpectralInfo = { kind: 'white-dwarf', wdSubclass: 2 };
-    expect(physicalRadius(11, wd, 5000)).toBeCloseTo(0.013, 5);
+    expect(physicalRadius(11, wd, teff)).toEqual({ route: 'white-dwarf', rSun: WHITE_DWARF_RADIUS_R_SUN, refusedTeff: teff });
     const wr = classifyFromSimbad('WN5')!;
-    expect(physicalRadius(-4.0, wr, 5000)).toBeCloseTo(physicalRadius(-4.0, wr), 9);
+    const refused = physicalRadius(-4.0, wr, teff);
+    expect(refused).toMatchObject({ route: 'class-teff', refusedTeff: teff });
+    expect(refused.rSun).toBeCloseTo(rSun(-4.0, wr), 9);
   });
 });
 
@@ -176,17 +194,19 @@ describe('resolveApsisTeff', () => {
   };
 
   it('prefers gspphot, falls back to gspspec', () => {
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 5150, teffGspspec: 4900 })).toBe(5150);
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspspec: 4900 })).toBe(4900);
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 5150, teffGspspec: 4900 }))
+      .toEqual({ teff: { kelvin: 5150, solution: 'gspphot' }, outOfWindow: [] });
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspspec: 4900 }))
+      .toEqual({ teff: { kelvin: 4900, solution: 'gspspec' }, outOfWindow: [] });
   });
 
-  it('rejects out-of-window values per solution, absent rows, and null', () => {
-    // gspphot outside the window falls through to a valid gspspec.
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 1500, teffGspspec: 3400 })).toBe(3400);
-    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 70000 })).toBeNull();
-    expect(resolveApsisTeff(APSIS_NONE)).toBeNull();
-    expect(resolveApsisTeff(null)).toBeNull();
-    expect(resolveApsisTeff(undefined)).toBeNull();
+  it('names each solution it refused as out of window, and absent rows', () => {
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 1500, teffGspspec: 3400 }))
+      .toEqual({ teff: { kelvin: 3400, solution: 'gspspec' }, outOfWindow: ['gspphot'] });
+    expect(resolveApsisTeff({ ...APSIS_NONE, teffGspphot: 70000 })).toEqual({ teff: null, outOfWindow: ['gspphot'] });
+    expect(resolveApsisTeff(APSIS_NONE)).toEqual({ teff: null, outOfWindow: [] });
+    expect(resolveApsisTeff(null)).toEqual({ teff: null, outOfWindow: [] });
+    expect(resolveApsisTeff(undefined)).toEqual({ teff: null, outOfWindow: [] });
   });
 });
 

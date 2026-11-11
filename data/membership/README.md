@@ -2,7 +2,7 @@
 
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`; `parked-ledger.tsv`
-by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
+and `simbad_sourced_distances.tsv` by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
 the two files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
@@ -33,6 +33,18 @@ parked-ledger.tsv        Regular git. The /docs/catalog-driver.md#61-record-pari
                          the record walk. The parity gate subtracts exactly these
                          rows and no more, so a park that is not on this list
                          fails the build rather than vanishing.
+simbad_sourced_distances.tsv
+                         Regular git. Not a membership decision: the records
+                         whose shipped distance came from the parallax
+                         cascade's SIMBAD tier, by gaia_source_id and hip,
+                         which validate-simbad-sample excludes from its
+                         SIMBAD check of the same field
+                         (/scripts/catalog/distance/parallax/README.md).
+                         It sits beside parked-ledger.tsv because both are
+                         views of the record walk's placement. One row per
+                         record, <!-- count:build-catalog/distSimbadPlx -->404<!-- /count -->; a row
+                         carrying neither cell addresses no record
+                         (`stellata-hooj.15`).
 binding-review.tsv       Regular git. The 375 spine rows the derivation
                          cannot settle alone or a review already settled —
                          contested · collision · disposed — with every

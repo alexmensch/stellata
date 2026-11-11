@@ -12,7 +12,7 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BRIGHTNESS_COLOUR_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, stageFile,
+  BRIGHTNESS_COLOUR_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
@@ -61,8 +61,14 @@ const BRIGHTNESS_COLOUR = [
   'brightness-colour\tspine:3\trefused\tbrightness-colour.v.refused.uncalibrated\t{"tier":"gaia_riello"}\tgaia-dr3-astrometry:222',
 ].join('\n') + '\n';
 
+const SIZE = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'size\tspine:3\toutcome\tsize.apsis-teff\t{"absmag":"1.2345","solution":"gspspec","class_index":"stated"}\tgaia-dr3-apsis:222|simbad-sptype:42',
+  'size\tspine:3\trefused\tsize.refused.apsis-teff-out-of-window\t{"solution":"gspphot"}\tgaia-dr3-apsis:222',
+].join('\n') + '\n';
+
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
-const stages = [{ stage: 'membership', rows: [...lineageRows(MEMBERSHIP, 'fixture/membership.tsv')] }];
+const stages = [{ stage: 'membership', rows: () => lineageRows(MEMBERSHIP, 'fixture/membership.tsv') }];
 /** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
  *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
  *  and 4 both display "54 Leo". */
@@ -168,7 +174,7 @@ const PROMOTION_IDENTITY = [
 
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
-    ...stages, { stage: 'promotion', rows: [...lineageRows(PROMOTION, 'fixture/promotion.tsv')] },
+    ...stages, { stage: 'promotion', rows: () => lineageRows(PROMOTION, 'fixture/promotion.tsv') },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
   const traceSystem = (query: string) => traceRecords(
@@ -197,7 +203,7 @@ const ALLOCATION = [
 ].join('\n') + '\n';
 
 describe('traceRecords through allocation', () => {
-  const withAllocation = [...stages, { stage: 'allocation', rows: [...lineageRows(ALLOCATION, 'fixture/allocation.tsv')] }];
+  const withAllocation = [...stages, { stage: 'allocation', rows: () => lineageRows(ALLOCATION, 'fixture/allocation.tsv') }];
   const traceSid = (query: string) => traceRecords(
     queryTerms(parseTraceQuery(query), LOOKUPS), identity, [{ key: 'spine:3', sid: 7 }], withAllocation,
   );
@@ -231,6 +237,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
   writeFileSync(stageFile(dir, BRIGHTNESS_COLOUR_LINEAGE.stage), gzipText(BRIGHTNESS_COLOUR));
+  writeFileSync(stageFile(dir, SIZE_LINEAGE.stage), gzipText(SIZE));
   writeFileSync(stageFile(dir, 'promotion'), gzipText(PROMOTION));
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -259,6 +266,13 @@ describe('pnpm run trace', () => {
     expect(out).toMatch(/refused  brightness-colour\.spectral\.refused\.gaia-id-contradicts/);
     expect(out).toMatch(/brightness-colour\.ci\.printed-hip-bv/);
     expect(out).toMatch(/brightness-colour\.dust\.edenhofer2024\.absmag-and-ci/);
+  });
+
+  it('prints how a record\'s radius was derived after its colour, the refused Apsis solution included', () => {
+    const out = run('hd:5');
+    expect(out).toMatch(/brightness-colour\.v\.printed-hip[\s\S]*size\.apsis-teff/);
+    expect(out).toMatch(/size\.apsis-teff +\{"absmag":"1\.2345","solution":"gspspec","class_index":"stated"\}/);
+    expect(out).toMatch(/refused  size\.refused\.apsis-teff-out-of-window/);
   });
 
   it('reads the promotion stage and its identity file', () => {

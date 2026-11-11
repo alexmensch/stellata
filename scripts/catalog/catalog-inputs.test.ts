@@ -42,7 +42,7 @@ describe('stepInputPaths(build:catalog)', () => {
 
   it('leaves out the outputs it writes and the files it never reads', () => {
     expect(inputs).not.toContain(abs('data/membership/parked-ledger.tsv'));
-    expect(inputs).not.toContain(abs('data/athyg/simbad_sourced_distances.tsv'));
+    expect(inputs).not.toContain(abs('data/membership/simbad_sourced_distances.tsv'));
     expect(inputs).not.toContain(abs('data/gaia/gaia_dr3_tyc_xmatch.tsv'));
     expect(inputs).not.toContain(abs('data/sid/ledger-head.json'));
   });

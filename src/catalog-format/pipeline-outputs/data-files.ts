@@ -24,7 +24,7 @@ export const DATA_FILES = {
   gaiaMagnitudePull: 'data/gaia/gaia_dr3_magnitude_pull.tsv',
   gaiaApsis: 'data/gaia/gaia_dr3_apsis.tsv',
   bailerJones: 'data/bailer-jones/bailer-jones-dr3.tsv',
-  simbadSourcedDistances: 'data/athyg/simbad_sourced_distances.tsv',
+  simbadSourcedDistances: 'data/membership/simbad_sourced_distances.tsv',
   simbadWdsXids: 'data/simbad/simbad_wds_xids.tsv',
   simbadWdsSptype: 'data/simbad/simbad_wds_sptype.tsv',
   simbadSample: 'data/simbad/simbad_sample.tsv',

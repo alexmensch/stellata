@@ -249,7 +249,7 @@ same thing — single-use helpers stay with their consumer.
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `counts/` — the one tally (`fold`) and the staged count snapshot
-  (`nestByStage`, `flattenStages`). Own README.
+  (`nestByStage` over flat keys and count blocks, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
@@ -357,8 +357,10 @@ same thing — single-use helpers stay with their consumer.
   writes one. Returns a bool where the TS sibling returns an `emitArtifacts` check, since the Python
   drivers own their exit. Every snapshot it writes is staged: a caller
   hands it `Staged` counts (stage → count, each count built inside its
-  stage's block, stages in pipeline order), and it compares both sides
-  through `flatten_stages`, `counts/count-stages-pure.ts`'s twin.
+  stage's block, stages in pipeline order, `ABSENT_STAGE` for a stage whose
+  input is missing), and it compares both sides through `flatten_stages`,
+  `counts/count-stages-pure.ts`'s twin, a stage absent on one side and
+  counted on the other reported as one row.
   Pinned by `snapshot_assert.test.py`.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan

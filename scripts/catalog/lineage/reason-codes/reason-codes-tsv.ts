@@ -1,16 +1,17 @@
 // REASON_CODES, the committed reason-code list's codec. See README.md.
 
 import { byText, defineArtifact } from '../../../util/tsv/artifact-pure';
-import { CODE_STATUSES, type ReasonCodeEntry } from './reason-code-list-pure';
+import { readTable, type TableRow } from '../../../util/tsv/table-pure';
+import { LINEAGE_ROLES } from '../lineage-row-pure';
+import { CODE_STATUSES, type ListedCode, type ReasonCodeEntry } from './reason-code-list-pure';
 import { CODE_EFFECTS } from './reason-codes-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
-export const REASON_CODES = defineArtifact({
-  file: DATA_FILES.reasonCodes,
-  columns: ['code', 'stage', 'effect', 'status', 'retired_in', 'first_version', 'description'] as const,
-  hint: 'Re-run `pnpm run lineage:codes`.',
-  order: byText((e: ReasonCodeEntry) => e.code),
-  decode: (row): ReasonCodeEntry => ({
+const COLUMNS = ['code', 'stage', 'effect', 'role', 'status', 'retired_in', 'first_version', 'description'] as const;
+type Column = (typeof COLUMNS)[number];
+
+function listedCode(row: TableRow<Column>): Omit<ReasonCodeEntry, 'role'> {
+  return {
     code: row.raw('code'),
     stage: row.raw('stage'),
     effect: row.oneOf('effect', CODE_EFFECTS),
@@ -18,14 +19,31 @@ export const REASON_CODES = defineArtifact({
     retiredIn: row.raw('retired_in'),
     firstVersion: row.raw('first_version'),
     description: row.raw('description'),
-  }),
+  };
+}
+
+export const REASON_CODES = defineArtifact({
+  file: DATA_FILES.reasonCodes,
+  columns: COLUMNS,
+  hint: 'Re-run `pnpm run lineage:codes`.',
+  order: byText((e: ReasonCodeEntry) => e.code),
+  decode: (row): ReasonCodeEntry => ({ ...listedCode(row), role: row.oneOf('role', LINEAGE_ROLES) }),
   encode: (e) => ({
     code: e.code,
     stage: e.stage,
     effect: e.effect,
+    role: e.role,
     status: e.status,
     retired_in: e.retiredIn,
     first_version: e.firstVersion,
     description: e.description,
   }),
 });
+
+/** An older copy of the list, read by its own header: one that predates the role column holds no role. */
+export function parseListedCodes(text: string): ListedCode[] {
+  const header = text.slice(0, text.indexOf('\n')).split('\t');
+  if (header.includes('role')) return REASON_CODES.parse(text);
+  const columns = COLUMNS.filter((c) => c !== 'role');
+  return [...readTable<Column>({ file: REASON_CODES.file, columns, hint: REASON_CODES.hint }, text)].map(listedCode);
+}

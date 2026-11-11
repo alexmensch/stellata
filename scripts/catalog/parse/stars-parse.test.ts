@@ -7,6 +7,8 @@ import {
   SOLAR_BV_FALLBACK,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
@@ -35,9 +37,10 @@ import {
 } from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import type { Placement } from '../distance/placement-lineage-pure';
-import { MAX_DIST_PC, readStars } from './stars-parse';
+import { shippedVelocityVia, type Placement } from '../distance/placement-lineage-pure';
+import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
+import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
@@ -285,12 +288,65 @@ describe('readStars manifest labels', () => {
       Object.values(p).reduce((a, b) => a + b, 0);
     expect(sum(stats.parkedVia)).toBe(stats.parked.length);
     expect(sum(stats.distVia)).toBe(stars.length);
-    expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
+    // The rv cascade answers before any park, so its partition runs over rows.
+    expect(sum(stats.rvVia)).toBe(stats.total);
     expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
     expect(placements).toHaveLength(stats.total);
     // Both rows reached V, so both carry the V cascade's outcome; neither got further.
     expect(brightness.map((b) => (b?.kind === 'v-only' ? b.v.via : b?.kind))).toEqual(['none', 'printed_hip']);
+  });
+
+  it('resolves one row to the record readStars ships, its placement and brightness beside it', () => {
+    const options = {
+      conAssignment: CON_ASSIGNMENT,
+      directions: AT_ORIGIN_DIRECTIONS(),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+    };
+    const [row] = manifestRows([AT_ORIGIN_SIGHTLINE]);
+    const outcome = rowResolver(options)(row);
+    expect(outcome.kind).toBe('shipped');
+    if (outcome.kind !== 'shipped') return;
+    expect(outcome.star).toEqual(readStarsDiscarding([row], options).stars[0]);
+    expect(outcome.placement.kind).toBe('placed');
+    expect(outcome.brightness.v.via).toBe('tycho2');
+    expect(shippedVelocityVia(outcome.placement)).toBe('tycho2_pm');
+    expect(outcome.size).toMatchObject({ key: row.originKey, apsis: null, classEvidence: [] });
+    expect(outcome.size.radius.rSun).toBe(outcome.star.physicalRadius);
+  });
+
+  it('hands on the radius route its Apsis Teff took, the solution it refused, and the class\'s rows', () => {
+    const sourceId = '4000000000000000042';
+    const apsisRow: ApsisRow = {
+      teffGspphot: 1500, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
+      teffGspspec: 5150, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: 'K',
+    };
+    const [row] = manifestRows([{ ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId }]);
+    const outcome = rowResolver({
+      conAssignment: CON_ASSIGNMENT,
+      directions: AT_ORIGIN_DIRECTIONS(),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+      apsisMap: new Map([[sourceId, apsisRow]]),
+    })(row);
+    if (outcome.kind !== 'shipped') throw new Error(`expected a shipped row, got ${outcome.kind}`);
+    const apsisRef = sourceRowRef(GAIA_APSIS, sourceId);
+    expect(outcome.size.radius).toMatchObject({ route: 'apsis-teff', teff: { kelvin: 5150, solution: 'gspspec' } });
+    expect(outcome.size.radius.rSun).toBe(outcome.star.physicalRadius);
+    expect(outcome.size.apsis).toEqual({ ref: apsisRef, outOfWindow: ['gspphot'] });
+    expect(outcome.brightness.spectral.via).toBe('gspspec');
+    expect(outcome.size.classEvidence).toEqual([apsisRef]);
+  });
+
+  it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
+    const { stats } = readStarsDiscarding(manifestRows([AT_ORIGIN_SIGHTLINE]), {
+      conAssignment: CON_ASSIGNMENT,
+      directions: tycho2Sources([{
+        tyc: ORIGIN_TYC, raDeg: LMC_CENTRE_RA_HOURS * 15, decDeg: LMC_CENTRE_DEC_DEG, vMag: 10,
+      }]),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+    });
+    expect(stats.lmcCandidates).toBe(1);
+    expect(stats.lmcOverridden).toBe(0);
   });
 
   it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
@@ -365,8 +421,7 @@ describe('readStars constellation assignment', () => {
     });
     expect(stars[0].flags & FLAG_IS_SOL).toBe(FLAG_IS_SOL);
     expect(stats).toMatchObject({
-      directionVia: { curated: 1 }, vVia: { curated: 1 }, distVia: { curated: 1 },
-      spectralVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
+      directionVia: { curated: 1 }, distVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
     });
     expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
   });

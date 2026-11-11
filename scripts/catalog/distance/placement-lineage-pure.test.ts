@@ -12,8 +12,9 @@ import type { DirectionSolution } from './direction-cascade';
 import type { ParkedLedgerEntry } from './parallax/parked-ledger-pure';
 import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  PLACEMENT_CODES, PLACEMENT_INVARIANTS, parkedLedgerView, placementLineageLines, placementLineageRows,
-  type BailerJonesStep, type Placement,
+  PLACEMENT_CODES, PLACEMENT_INVARIANTS, distViaBeforeLmc, parkedLedgerView, placementLineageLines,
+  placementLineageRows, radialVelocityApplied, shippedDistVia, shippedVelocityVia,
+  type BailerJonesStep, type Placement, type PlacedPlacement,
 } from './placement-lineage-pure';
 
 const SOURCE = '2000000000000000001';
@@ -217,5 +218,40 @@ describe('PLACEMENT_INVARIANTS', () => {
     const check = invariantCheck(bj);
     expect(check.kind).toBe('fail');
     expect(check.kind === 'fail' && check.message).toContain('spine:5\tplacement.distance.bailer-jones-absent');
+  });
+});
+
+describe('the shipped tiers read off a placed row', () => {
+  const placed: PlacedPlacement = {
+    kind: 'placed',
+    key: 'spine:5',
+    parallax: { via: 'gaia_dr3_inversion', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+    direction: { via: 'gaia_2p', value: { ...SOLUTION, velVia: 'zero' }, evidence: [GAIA], refusals: [] },
+    pmRescue: { via: 'tycho2', value: { pmRaMasyr: 1, pmDecMasyr: 1 }, evidence: [], refusals: [] },
+    bailerJones: { kind: 'override', ref: BJ },
+    lmc: 'not_member',
+    rv: {
+      kind: 'kept',
+      rv: { via: 'simbad', value: { kmS: 12, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] },
+    },
+    velocityClamped: false,
+  };
+
+  it('takes the distance from the last layer that moved it', () => {
+    expect(distViaBeforeLmc(placed)).toBe('bailer_jones');
+    expect(shippedDistVia(placed)).toBe('bailer_jones');
+    expect(shippedDistVia({ ...placed, lmc: 'snap' })).toBe('lmc_kinematic');
+    expect(distViaBeforeLmc({ ...placed, lmc: 'snap' })).toBe('bailer_jones');
+    expect(shippedDistVia({ ...placed, bailerJones: { kind: 'absent' } })).toBe('gaia_dr3_inversion');
+  });
+
+  it('credits the rescue for the motion, and nothing once the velocity is zeroed', () => {
+    expect(shippedVelocityVia(placed)).toBe('tycho2_pm');
+    expect(shippedVelocityVia({ ...placed, pmRescue: null, direction: { ...placed.direction, value: SOLUTION } }))
+      .toBe('gaia_pm');
+    expect(shippedVelocityVia({ ...placed, velocityClamped: true })).toBe('zero');
+    expect(radialVelocityApplied(placed)).toBe(true);
+    expect(radialVelocityApplied({ ...placed, velocityClamped: true })).toBe(false);
+    expect(radialVelocityApplied({ ...placed, rv: { kind: 'kept', rv: { via: 'none', refusals: [] } } })).toBe(false);
   });
 });

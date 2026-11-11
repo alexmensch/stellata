@@ -323,9 +323,10 @@ across the model.
 **Brightness and colour index.** A star's visual (Johnson V) magnitude is
 transformed from Gaia's own broadband measurements through a published
 relation ([Riello 2021](/data/papers/index.md#riello2021)), which covers
-<!-- count:build-catalog/vGaiaRiello -->963,505<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
-those fall back to Hipparcos's printed V (<!-- count:build-catalog/vPrintedHip -->1,242<!-- /count -->), then Tycho-2 (<!-- count:build-catalog/vTycho2 -->190<!-- /count -->)
-and the Gliese catalogue (<!-- count:build-catalog/vGliese -->20<!-- /count -->). The B−V colour index follows a similar
+<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,505<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
+those fall back to Hipparcos's printed V (<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,243<!-- /count -->), then Tycho-2
+(<!-- count:build-catalog/brightness-colour.v.tycho2.inside-bt-vt-range -->184<!-- /count --> inside its colour range, <!-- count:build-catalog/brightness-colour.v.tycho2.outside-bt-vt-range -->6<!-- /count --> outside)
+and the Gliese catalogue (<!-- count:build-catalog/brightness-colour.v.gliese -->20<!-- /count -->). The B−V colour index follows a similar
 ladder: a published Gaia colour relation, then Hipparcos's printed B−V,
 then Gaia's synthetic photometry, then the colour implied by the
 spectral class. Intrinsic brightness is always *derived* from the

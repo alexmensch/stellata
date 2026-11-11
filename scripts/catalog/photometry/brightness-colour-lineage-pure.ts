@@ -1,15 +1,18 @@
 // Brightness and colour as a lineage stage: its reason codes and the one serialiser over each walked record's V, spectral class, B−V and de-extinction. See README.md#brightness-colour-lineage.
 
 import {
-  evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRole, type LineageRow,
+  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { LIVE, stageCodes, type CodeDeclaration } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, stageCodes, retired, type StageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
 import type { PhotometryRefusal } from './gaia-photometry-pure';
-import type { VMagnitudeResolution, VVia } from './v-magnitude-pure';
+import {
+  TYCHO2_BT_MINUS_VT_MAX, TYCHO2_BT_MINUS_VT_MIN, type VMagnitudeResolution, type VVia,
+} from './v-magnitude-pure';
 import type { SpectralRefusal, SpectralResolution, SpectralVia } from '../spectral/spectral-resolve';
+import { SIMBAD_NAMESPACE_VALUES, type SimbadNamespace } from '../simbad/simbad-namespace-ladder-pure';
 import { BRIGHTNESS_COLOUR_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs: 60_000 };
@@ -17,16 +20,22 @@ export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs
 /** Decimal places of `params.av`: 0.1 mmag, far below any V tier's own error. */
 export const AV_PARAM_DECIMALS = 4;
 
-const live = (description: string): CodeDeclaration => ({ description, effect: 'none', status: LIVE });
+const RETIRED_7_1_16 = retired('7.1.16');
 
 const V_BRANCHES = {
   gaia_riello: 'v.gaia-riello',
   printed_hip: 'v.printed-hip',
-  tycho2: 'v.tycho2',
   gliese: 'v.gliese',
   curated: 'v.curated',
   none: 'v.none',
-} as const satisfies Record<VVia, string>;
+} as const satisfies Record<Exclude<VVia, 'tycho2'>, string>;
+
+const TYCHO2_RANGE_SIDES = ['inside', 'outside'] as const;
+
+const V_TYCHO2_BRANCHES = {
+  inside: 'v.tycho2.inside-bt-vt-range',
+  outside: 'v.tycho2.outside-bt-vt-range',
+} as const satisfies Record<(typeof TYCHO2_RANGE_SIDES)[number], string>;
 
 const PHOTOMETRY_REFUSAL_BRANCHES = {
   v: {
@@ -55,10 +64,20 @@ const CI_REFUSAL_BRANCHES = {
 
 const SPECTRAL_BRANCHES = {
   curated: 'spectral.curated',
-  simbad: 'spectral.simbad',
   gspspec: 'spectral.gspspec',
   none: 'spectral.none',
-} as const satisfies Record<SpectralVia, string>;
+} as const satisfies Record<Exclude<SpectralVia, 'simbad'>, string>;
+
+const SPECTRAL_SIMBAD_BRANCHES = {
+  source_id: 'spectral.simbad.source-id',
+  hip: 'spectral.simbad.hip',
+  gj: 'spectral.simbad.gj',
+  tyc: 'spectral.simbad.tyc',
+} as const satisfies Record<SimbadNamespace, string>;
+
+const TYCHO2_RANGE = `[${TYCHO2_BT_MINUS_VT_MIN.toFixed(2)}, ${TYCHO2_BT_MINUS_VT_MAX.toFixed(2)}]`;
+const TYCHO2 = 'Johnson V reduced from the record\'s own Tycho-2 BT and VT, where no tier above answers';
+const SIMBAD = 'SIMBAD\'s MK sp_type, on the first namespace of the ladder that reaches a typed row for the record';
 
 const SPECTRAL_REFUSAL_BRANCHES = {
   gaia_id_contradicts: 'spectral.refused.gaia-id-contradicts',
@@ -66,38 +85,69 @@ const SPECTRAL_REFUSAL_BRANCHES = {
 } as const satisfies Record<SpectralRefusal['reason'], string>;
 
 export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stage, {
-  'v.gaia-riello': live('Johnson V transformed from the record\'s own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.'),
-  'v.printed-hip': live('The printed Hipparcos V of the record\'s own HIP (I/239), where the Gaia relation does not apply.'),
-  'v.tycho2': live('Johnson V reduced from the record\'s own Tycho-2 BT and VT, where no tier above answers.'),
-  'v.gliese': live('The printed V/70A V of the record\'s own GJ, where no tier above answers.'),
-  'v.curated': live('Sol: the curated record\'s V.'),
-  'v.none': live('No V tier lights the record.'),
-  'v.refused.uncalibrated': live('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.'),
-  'v.refused.colour-out-of-range': live('The record\'s Gaia BP−RP lies outside the range the Riello relation is published over.'),
-  'ci.gaia-relation': live('B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record\'s own photometry.'),
-  'ci.printed-hip-bv': live('The printed Hipparcos B−V of the record\'s own HIP (I/239).'),
-  'ci.gspc': live('B−V from Gaia DR3 synthetic photometry of the record\'s own source, inside its measured colour bound.'),
-  'ci.spectral-derived': live('The intrinsic colour of the record\'s spectral class, for a record with no Apsis Teff.'),
-  'ci.none': live('No tier colours the record, so it bakes the solar B−V.'),
-  'ci.refused.uncalibrated': live('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.'),
-  'ci.refused.colour-out-of-range': live('The record\'s Gaia BP−RP lies outside the range the colour tier holds over.'),
-  'ci.refused.non-finite': live('The printed Hipparcos B−V is not a finite number.'),
-  'ci.refused.apsis-teff-renders': live('The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.'),
-  'spectral.curated': live('The curated MK type: the record\'s own (Sol) or the hand-curated override for its HIP.'),
-  'spectral.simbad': live('SIMBAD\'s MK sp_type, on the first namespace of the ladder that reaches a typed row for the record.'),
-  'spectral.gspspec': live('The Gaia DR3 ESP-ELS spectral letter for the record\'s own source, where no SIMBAD row classifies it.'),
-  'spectral.none': live('No tier classifies the record, so it renders as spectral type unknown.'),
-  'spectral.refused.gaia-id-contradicts': live('A SIMBAD row states a Gaia DR3 id other than the record\'s own, so it describes another star.'),
-  'spectral.refused.unclassifiable': live('A typed row\'s spectral string does not parse as a Morgan-Keenan class.'),
-  'dust.edenhofer2024.absmag-and-ci': live('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.'),
-  'dust.edenhofer2024.absmag-only': live('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.'),
+  'v.gaia-riello': outcomeCode('Johnson V transformed from the record\'s own Gaia DR3 photometry through the Riello 2021 (/data/papers/index.md#riello2021) relation.'),
+  'v.printed-hip': outcomeCode('The printed Hipparcos V of the record\'s own HIP (I/239), where the Gaia relation does not apply.'),
+  'v.tycho2': outcomeCode(`${TYCHO2}.`, 'none', RETIRED_7_1_16),
+  'v.tycho2.inside-bt-vt-range': outcomeCode(`${TYCHO2}; BT−VT lies inside the ${TYCHO2_RANGE} range the reduction is counted against.`),
+  'v.tycho2.outside-bt-vt-range': outcomeCode(`${TYCHO2}; BT−VT lies outside the ${TYCHO2_RANGE} range the reduction is counted against, and the reduction runs anyway since no tier below serves the record.`),
+  'v.gliese': outcomeCode('The printed V/70A V of the record\'s own GJ, where no tier above answers.'),
+  'v.curated': outcomeCode('Sol: the curated record\'s V.'),
+  'v.none': outcomeCode('No V tier lights the record.'),
+  'v.refused.uncalibrated': refusalCode('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so the Riello relation does not apply.'),
+  'v.refused.colour-out-of-range': refusalCode('The record\'s Gaia BP−RP lies outside the range the Riello relation is published over.'),
+  'ci.gaia-relation': outcomeCode('B−V as the difference of the Gaia DR3 Table 5.9 G−V and G−B relations on the record\'s own photometry.'),
+  'ci.printed-hip-bv': outcomeCode('The printed Hipparcos B−V of the record\'s own HIP (I/239).'),
+  'ci.gspc': outcomeCode('B−V from Gaia DR3 synthetic photometry of the record\'s own source, inside its measured colour bound.'),
+  'ci.spectral-derived': outcomeCode('The intrinsic colour of the record\'s spectral class, for a record with no Apsis Teff.'),
+  'ci.none': outcomeCode('No tier colours the record, so it bakes the solar B−V.'),
+  'ci.refused.uncalibrated': refusalCode('The record\'s Gaia photometry has a band missing or non-finite, or G is brighter than the saturation bound, so a Gaia colour does not apply.'),
+  'ci.refused.colour-out-of-range': refusalCode('The record\'s Gaia BP−RP lies outside the range the colour tier holds over.'),
+  'ci.refused.non-finite': refusalCode('The printed Hipparcos B−V is not a finite number.'),
+  'ci.refused.apsis-teff-renders': refusalCode('The spectral-class colour stands down: the shader colours the record from its Apsis Teff instead.'),
+  'spectral.curated': outcomeCode('The curated MK type: the record\'s own (Sol) or the hand-curated override for its HIP.'),
+  'spectral.simbad': outcomeCode(`${SIMBAD}.`, 'none', RETIRED_7_1_16),
+  'spectral.simbad.source-id': outcomeCode(`${SIMBAD}: its Gaia DR3 source_id.`),
+  'spectral.simbad.hip': outcomeCode(`${SIMBAD}: its HIP.`),
+  'spectral.simbad.gj': outcomeCode(`${SIMBAD}: its GJ.`),
+  'spectral.simbad.tyc': outcomeCode(`${SIMBAD}: its TYC.`),
+  'spectral.gspspec': outcomeCode('The Gaia DR3 ESP-ELS spectral letter for the record\'s own source, where no SIMBAD row classifies it.'),
+  'spectral.none': outcomeCode('No tier classifies the record, so it renders as spectral type unknown.'),
+  'spectral.refused.gaia-id-contradicts': refusalCode('A SIMBAD row states a Gaia DR3 id other than the record\'s own, so it describes another star.'),
+  'spectral.refused.unclassifiable': refusalCode('A typed row\'s spectral string does not parse as a Morgan-Keenan class.'),
+  'dust.edenhofer2024.absmag-and-ci': outcomeCode('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag, and A_V/R_V from the observed B−V.'),
+  'dust.edenhofer2024.absmag-only': outcomeCode('The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid is subtracted from absmag; the B−V is intrinsic, so it is left as it is.'),
 });
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 
+/** Brightness-colour's count block: its lines folded per live code. */
+export type BrightnessColourCounts = Readonly<Record<(typeof BRIGHTNESS_COLOUR_CODES.live)[number], number>>;
+
+type LiveBranch = typeof BRIGHTNESS_COLOUR_CODES extends StageCodes<string, string, infer L> ? L : never;
+
+export function brightnessColourSummary(counts: BrightnessColourCounts): string {
+  const n = (branch: LiveBranch): number => counts[`${BRIGHTNESS_COLOUR_CODES.stage}.${branch}`];
+  const simbad = (ns: SimbadNamespace): number => n(SPECTRAL_SIMBAD_BRANCHES[ns]);
+  const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
+  const tycho2Total = TYCHO2_RANGE_SIDES.reduce((sum, side) => sum + n(V_TYCHO2_BRANCHES[side]), 0);
+  const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
+  const pct = (k: number): string => `${((k / records) * 100).toFixed(1)}%`;
+  return [
+    `  V cascade: gaia_riello ${n('v.gaia-riello')}, printed_hip ${n('v.printed-hip')}, `
+      + `tycho2 ${tycho2Total} `
+      + `(${n(V_TYCHO2_BRANCHES.outside)} outside the counted BT−VT range), gliese ${n('v.gliese')}, `
+      + `curated ${n('v.curated')}, none ${n('v.none')}`,
+    `  ci cascade: gaia_relation ${n('ci.gaia-relation')}, printed_hip_bv ${n('ci.printed-hip-bv')}, `
+      + `gspc ${n('ci.gspc')}, spectral_derived ${n('ci.spectral-derived')}, solar_fallback ${n('ci.none')}`,
+    `  spectral classification: curated ${n('spectral.curated')}, SIMBAD ${simbadTotal} (${pct(simbadTotal)}; `
+      + `by source_id ${simbad('source_id')}, HIP ${simbad('hip')}, TYC ${simbad('tyc')}, GJ ${simbad('gj')}), `
+      + `GSP-Spec ${n('spectral.gspspec')} (${pct(n('spectral.gspspec'))}), `
+      + `unknown ${n('spectral.none')} (${pct(n('spectral.none'))})`,
+  ].join('\n');
+}
+
 type ParamsOf<B extends Branch> =
-  B extends 'spectral.simbad' ? { namespace: string }
-  : B extends `dust.${string}` ? { av: string }
+  B extends `dust.${string}` ? { av: string }
   : Record<string, never>;
 
 /** The Sol-to-star extinction a walked record was de-extincted by. */
@@ -124,26 +174,24 @@ export type BrightnessColour =
     readonly dust: DustStep | null;
   };
 
+export type ShippedBrightness = Extract<BrightnessColour, { kind: 'shipped' }>;
+
 /** Every row one record's BrightnessColour serialises to; the `switch` is
  *  exhaustive, so a new variant without rows fails typecheck. */
 export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const { key } = b;
   const out: LineageRow[] = [];
-  const push = (role: LineageRole, branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
-    out.push({
-      stage: BRIGHTNESS_COLOUR_LINEAGE.stage, key, role, code: BRIGHTNESS_COLOUR_CODES.code(branch),
-      params: paramsText(params),
-      evidence: evidenceTexts(key, refs.map(sourceRowRefText)),
-    });
+  const push = (branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
+    out.push(stageRow(BRIGHTNESS_COLOUR_CODES, key, branch, params, evidenceTexts(key, refs.map(sourceRowRefText))));
   };
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
-    push('outcome', branch, params, refs);
+    push(branch, params, refs);
   };
   const refused = <R extends CascadeRefusal<string, string> & Readonly<Record<Exclude<keyof R, 'ref'>, string>>>(
     refusals: readonly R[], branches: Readonly<Record<R['reason'], Branch>>,
   ): void => {
     for (const { reason, ref, ...params } of refusals) {
-      push('refused', branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
+      push(branches[reason as R['reason']], params as unknown as LineageParams, [ref]);
     }
   };
   const none = {} as Record<string, never>;
@@ -153,7 +201,11 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
 
   const v = (res: VMagnitudeResolution): void => {
     refused(res.refusals, PHOTOMETRY_REFUSAL_BRANCHES.v);
-    row(V_BRANCHES[res.via], none, answered(res));
+    if (res.via === 'tycho2') {
+      row(V_TYCHO2_BRANCHES[res.value.outsideRange ? 'outside' : 'inside'], none, res.evidence);
+    } else {
+      row(V_BRANCHES[res.via], none, answered(res));
+    }
   };
 
   switch (b.kind) {
@@ -165,7 +217,7 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
       const { spectral, ci, dust } = b;
       refused(spectral.refusals, SPECTRAL_REFUSAL_BRANCHES);
       if (spectral.via === 'simbad') {
-        row('spectral.simbad', { namespace: spectral.value.namespace }, spectral.evidence);
+        row(SPECTRAL_SIMBAD_BRANCHES[spectral.value.namespace], none, spectral.evidence);
       } else {
         row(SPECTRAL_BRANCHES[spectral.via], none, answered(spectral));
       }

@@ -16,7 +16,9 @@ scripts/catalog/parse/gcvs/
                            classifyGcvsVarType and isPlanetaryTransitOnly,
                            bridgeGcvsByGaia, and
                            applyVariability — the post-sort walk that
-                           attaches names and pulsation.
+                           attaches names and pulsation, returning
+                           GcvsCounts, the snapshot's gcvs count block
+                           (gcvsSummary is its log line).
 ```
 
 `parseGcvsMain` + `parseGcvsCrossref` in `build-catalog.ts` read two
@@ -65,7 +67,8 @@ own output, and it is not a stellar multiple, so it earns neither an
 intrinsic-variable ring/pulse nor multi-star wings and renders as an
 ordinary star. `EP+DSCT` and the like keep the pulsator's ring.
 Eclipsing binaries are extrinsically variable, so after the CCDM pass a
-sweep ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
+sweep (`wingEclipsingBinaries`, `../../multiplicity/binary-flags-pure.ts`)
+ORs `FLAG_BINARY_PRIMARY` (the chart-mode wings bit) onto
 every `VAR_TYPE_ECLIPSING` record not already flagged
 (`eclipsingWinged` in build-counts); the runtime also suppresses their
 cosmetic pulsation by this byte alone. They surface as multi-star
