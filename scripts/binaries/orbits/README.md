@@ -65,7 +65,6 @@ when no pair has any. `../build-binaries.test.ts` holds both to the
 committed snapshots, as it does Stage 3's
 ([Counts](../astrometry/README.md#counts)).
 
-
 ## Conventions the port keeps
 
 - **Ω is folded into [0, π)**, ω turned by π with it: the algebra cannot tell

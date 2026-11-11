@@ -114,11 +114,10 @@ Each has its own README.
     `besselianEpochToJd` supplies `B1875_JD`, the equinox the IAU
     constellation boundaries are drawn at — the θ sign and the epoch are
     both silent-failure modes, documented in
-    [B1875](/src/astro-core/iau-geometry/README.md#b1875). Its Julian
-    sibling `jdOfJulianYear` is the one spelling of a Julian epoch year as
-    a JD. Cubic
+    [B1875](/src/astro-core/iau-geometry/README.md#b1875). Cubic
     polynomials: right for the 125 years back to B1875, arcminutes off at
-    the model clock's bounds.
+    the model clock's bounds. `besselianEpochToJd`'s Julian sibling,
+    `jdOfJulianYear`, is the one spelling of a Julian epoch year as a JD.
   - **[Vondrák 2011](/data/papers/index.md#vondrak2011)** — `longTermEclipticPole` /
     `longTermEquatorPole` / `longTermEquinox` and the two frames they
     build (`longTermEclipticRotationFromJ2000`,
