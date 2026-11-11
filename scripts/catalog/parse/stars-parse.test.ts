@@ -7,6 +7,8 @@ import {
   SOLAR_BV_FALLBACK,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
+import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
+import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import {
@@ -310,6 +312,30 @@ describe('readStars manifest labels', () => {
     expect(outcome.placement.kind).toBe('placed');
     expect(outcome.brightness.v.via).toBe('tycho2');
     expect(shippedVelocityVia(outcome.placement)).toBe('tycho2_pm');
+    expect(outcome.size).toMatchObject({ key: row.originKey, apsis: null, classEvidence: [] });
+    expect(outcome.size.radius.rSun).toBe(outcome.star.physicalRadius);
+  });
+
+  it('hands on the radius route its Apsis Teff took, the solution it refused, and the class\'s rows', () => {
+    const sourceId = '4000000000000000042';
+    const apsisRow: ApsisRow = {
+      teffGspphot: 1500, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
+      teffGspspec: 5150, loggGspspec: null, mhGspspec: null, spectraltypeEsphs: 'K',
+    };
+    const [row] = manifestRows([{ ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId }]);
+    const outcome = rowResolver({
+      conAssignment: CON_ASSIGNMENT,
+      directions: AT_ORIGIN_DIRECTIONS(),
+      gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
+      apsisMap: new Map([[sourceId, apsisRow]]),
+    })(row);
+    if (outcome.kind !== 'shipped') throw new Error(`expected a shipped row, got ${outcome.kind}`);
+    const apsisRef = sourceRowRef(GAIA_APSIS, sourceId);
+    expect(outcome.size.radius).toMatchObject({ route: 'apsis-teff', teff: { kelvin: 5150, solution: 'gspspec' } });
+    expect(outcome.size.radius.rSun).toBe(outcome.star.physicalRadius);
+    expect(outcome.size.apsis).toEqual({ ref: apsisRef, outOfWindow: ['gspphot'] });
+    expect(outcome.brightness.spectral.via).toBe('gspspec');
+    expect(outcome.size.classEvidence).toEqual([apsisRef]);
   });
 
   it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
