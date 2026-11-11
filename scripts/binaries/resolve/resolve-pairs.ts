@@ -82,7 +82,7 @@ export function siblingRejectionTally(result: Stage2Result): Record<SiblingRejec
 }
 
 /** The count-snapshot keys Stage 2's code alone produces. */
-export function stage2Counts(result: Stage2Result): Record<string, number> {
+export function stage2Counts(result: Stage2Result) {
   return {
     ccdm_sibling_owned_rejected: siblingRejectionTally(result).ccdm_sibling_owned,
     ...bindingIntegrityCounts(result.verdicts),
