@@ -20,7 +20,7 @@ export interface PmAnchor {
 }
 
 /** README.md#system-anchors */
-function firstPerSystem<T>(
+export function firstPerSystem<T>(
   pairs: readonly DecomposedPair[],
   astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>,
   extract: (a: MeasuredAstrometry) => T | null,

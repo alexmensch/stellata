@@ -164,6 +164,9 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  python-float-pure.ts (+ test)   Python's float arithmetic where
+                                  JavaScript's differs: pyMod, `%` with
+                                  the divisor's sign.
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window

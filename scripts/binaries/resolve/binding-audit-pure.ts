@@ -54,6 +54,16 @@ export function addNewestEdge<E>(
   }
 }
 
+/** A measured offset both ways, the newest kept: `addNewestEdge` over `Edge`. */
+export function addEdge(adj: Map<string, Map<string, Edge>>, a: string, b: string, v: TangentOffset, epoch: number | null): void {
+  addNewestEdge(
+    adj, a, b,
+    { eastArcsec: v.eastArcsec, northArcsec: v.northArcsec, epoch },
+    { eastArcsec: -v.eastArcsec, northArcsec: -v.northArcsec, epoch },
+    epoch, (e) => e.epoch,
+  );
+}
+
 /** The secondary's (E, N) offset, or null without a measured ρ > 0 and θ. */
 export function pairVector(pair: WdsPair): TangentOffset | null {
   const offset = measuredOffset(pair);
@@ -101,15 +111,7 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
       if (mag !== null && mag < (ctx.tokenMag.get(tok) ?? Infinity)) ctx.tokenMag.set(tok, mag);
     }
     const v = pairVector(pair);
-    if (v !== null) {
-      const epoch = pair.dateLast;
-      addNewestEdge(
-        ctx.adj, pTok, sTok,
-        { eastArcsec: v.eastArcsec, northArcsec: v.northArcsec, epoch },
-        { eastArcsec: -v.eastArcsec, northArcsec: -v.northArcsec, epoch },
-        epoch, (e) => e.epoch,
-      );
-    }
+    if (v !== null) addEdge(ctx.adj, pTok, sTok, v, pair.dateLast);
   });
   return systems;
 }

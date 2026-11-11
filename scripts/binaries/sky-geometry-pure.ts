@@ -3,6 +3,7 @@
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
+import { pyMod } from './python-float-pure';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
@@ -20,15 +21,6 @@ export const COS_DEC_FLOOR = 1e-3;
 export interface ProperMotion {
   pmRaMasyr: number | null;
   pmDecMasyr: number | null;
-}
-
-/** `x mod m` with the sign of `m`, as Python's `%` computes it — including
- *  its rounding up to `m` for a tiny negative `x`, which `((x % m) + m) % m`
- *  would wrap to 0. The Python stages' outputs are the byte-identity target. */
-function pyMod(x: number, m: number): number {
-  const r = x % m;
-  if (r === 0) return 0;
-  return (r < 0) !== (m < 0) ? r + m : r;
 }
 
 /** Linear propagation in RA/Dec degrees from `refEpoch` to `targetEpoch`. A
