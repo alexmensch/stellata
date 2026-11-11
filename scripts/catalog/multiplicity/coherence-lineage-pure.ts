@@ -4,6 +4,7 @@ import {
   evidenceTexts, paramsText, stageLineageLine, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, type CodeStatus } from '../lineage/reason-codes/reason-codes-pure';
+import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
@@ -50,26 +51,35 @@ type LiveCode = (typeof COHERENCE_CODES.live)[number];
 /** Coherence's count block: its lines folded per live code. */
 export type CoherenceCounts = Readonly<Record<LiveCode, number>>;
 
-/** The pass's headline figures, each a sum of the block's codes. */
-export function coherenceFigures(counts: CoherenceCounts) {
-  const n = (...codes: LiveCode[]): number => codes.reduce((sum, code) => sum + counts[code], 0);
-  const inconsistent = n(
-    'coherence.anchor.inconsistent.member-won', 'coherence.anchor.inconsistent.anchor-won',
-    'coherence.anchor.inconsistent.precision-vetoed',
-  );
-  return {
-    systems: inconsistent
-      + n('coherence.anchor.member-won', 'coherence.anchor.anchor-won', 'coherence.anchor.precision-vetoed')
-      + n('coherence.anchor.unplaced.member-won', 'coherence.anchor.unplaced.anchor-won', 'coherence.anchor.unplaced.precision-vetoed'),
-    repositioned: n('coherence.snapped'),
-    memberAnchorWins: n('coherence.anchor.member-won', 'coherence.anchor.inconsistent.member-won'),
-    precisionVetoed: n(
-      'coherence.anchor.precision-vetoed', 'coherence.anchor.inconsistent.precision-vetoed',
-      'coherence.anchor.unplaced.precision-vetoed',
-    ),
-    depthKept: n('coherence.kept.significant-depth', 'coherence.kept.wide-gap'),
-    anchorInconsistent: inconsistent,
-  };
+const FIGURES = ['systems', 'repositioned', 'memberAnchorWins', 'precisionVetoed', 'depthKept', 'anchorInconsistent'] as const;
+type Figure = (typeof FIGURES)[number];
+
+const FIGURES_OF = {
+  'coherence.anchor.member-won': ['systems', 'memberAnchorWins'],
+  'coherence.anchor.anchor-won': ['systems'],
+  'coherence.anchor.precision-vetoed': ['systems', 'precisionVetoed'],
+  'coherence.anchor.inconsistent.member-won': ['systems', 'anchorInconsistent', 'memberAnchorWins'],
+  'coherence.anchor.inconsistent.anchor-won': ['systems', 'anchorInconsistent'],
+  'coherence.anchor.inconsistent.precision-vetoed': ['systems', 'anchorInconsistent', 'precisionVetoed'],
+  'coherence.anchor.unplaced.member-won': ['systems'],
+  'coherence.anchor.unplaced.anchor-won': ['systems'],
+  'coherence.anchor.unplaced.precision-vetoed': ['systems', 'precisionVetoed'],
+  'coherence.snapped': ['repositioned'],
+  'coherence.unmoved.at-anchor-distance': [],
+  'coherence.kept.significant-depth': ['depthKept'],
+  'coherence.kept.wide-gap': ['depthKept'],
+  'coherence.kept.member-unplaced': [],
+  'coherence.kept.anchor-inconsistent': [],
+  'coherence.kept.anchor-unplaced': [],
+  'coherence.not-applicable': [],
+} as const satisfies Record<LiveCode, readonly Figure[]>;
+
+export function coherenceFigures(counts: CoherenceCounts): Record<Figure, number> {
+  const figures = emptyTallyPartition(FIGURES);
+  for (const [code, of] of Object.entries(FIGURES_OF) as [LiveCode, readonly Figure[]][]) {
+    for (const figure of of) figures[figure] += counts[code];
+  }
+  return figures;
 }
 
 export function coherenceSummary(counts: CoherenceCounts): string {
