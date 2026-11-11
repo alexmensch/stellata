@@ -41,12 +41,6 @@ function firstPerSystem<T>(
   return out;
 }
 
-export function systemParallaxes(
-  pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>,
-): ReadonlyMap<string, number> {
-  return firstPerSystem(pairs, astrometry, positiveParallaxMas);
-}
-
 export function systemParallaxAnchors(
   pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>,
 ): ReadonlyMap<string, ParallaxAnchor> {

@@ -28,8 +28,8 @@ scripts/binaries/astrometry/
                                partner is a different source hosts that
                                orbit on a new sub-pair, one outcome per
                                carrier.
-  system-anchors-pure.ts       Each WDS system's first measured parallax,
-    (+ test)                   parallax with its error, and proper motion.
+  system-anchors-pure.ts       Each WDS system's first measured parallax
+    (+ test)                   (with its error) and proper motion.
 ```
 
 ## The shape of a result
@@ -79,14 +79,15 @@ same children.
 ## System anchors
 
 A pair whose own two sides measured nothing still has a distance: its
-system's. `systemParallaxes`, `systemParallaxAnchors` and `systemPmAnchors`
-each walk the pairs in order and keep, per WDS id, the first side — primary,
+system's. `systemParallaxAnchors` (the parallax with its error) and
+`systemPmAnchors` each walk the pairs in order and keep, per WDS id, the first side — primary,
 then secondary — that measures the quantity, so a later all-unresolved row
 reads an earlier row's value. Each quantity picks independently, so a
 system's parallax and its proper motion can come from different components.
-Stage 4's NSS separation gate reads the parallax
+Stage 4's NSS separation gate reads the parallax anchor
 ([Stage 4](../README.md#stage-4--orbital-element-selection-per-pair)); Stage 5's
-separation-limit and common-proper-motion tests read the other two.
+separation-limit test reads it with its error, its common-proper-motion test
+the PM anchor.
 
 ## Counts
 

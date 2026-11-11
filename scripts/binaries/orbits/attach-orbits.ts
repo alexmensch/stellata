@@ -3,7 +3,7 @@
 import { fold, prefixed } from '../../util/counts/tally-pure';
 import type { Orb6Entry } from '../../wds/wds-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
-import { systemParallaxes } from '../astrometry/system-anchors-pure';
+import { systemParallaxAnchors } from '../astrometry/system-anchors-pure';
 import { canonicalCompLetter, pairRowKey, type PairRowKey } from '../component-tokens-pure';
 import { mscPairKey } from '../load/msc-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
@@ -24,7 +24,7 @@ function frozen(orbit: PairOrbit): PairOrbit {
 
 export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs): Stage4Result {
   const orb6ByPair: ReadonlyMap<PairRowKey, readonly Orb6Entry[]> = groupOrb6ByPair(reference.orb6);
-  const systemParallax = systemParallaxes(stage3.pairs, stage3.astrometry);
+  const systemParallax = systemParallaxAnchors(stage3.pairs, stage3.astrometry);
   const { msc, srcToNss } = reference.indices;
   const orbits = new Map<DecomposedPair, PairOrbit>();
   for (const p of stage3.pairs) {
@@ -32,7 +32,7 @@ export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs)
     const candidates = {
       orb6: orb6ByPair.get(pairRowKey(p.pair.wdsId, p.pair.components)) ?? [],
       msc: msc.orbitsByPair.get(mscPairKey(p.pair.wdsId, primary, canonicalCompLetter(primary, secondary)))?.rows ?? [],
-      systemParallaxMas: systemParallax.get(p.pair.wdsId) ?? null,
+      systemParallaxMas: systemParallax.get(p.pair.wdsId)?.parallaxMas ?? null,
     };
     orbits.set(p, frozen(selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss)));
   }
