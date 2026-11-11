@@ -56,8 +56,7 @@ describe('assignDisplayNames', () => {
 
     expect(stars.map((s) => s.proper)).toEqual(['Sirius', null, null]);
     expect(stars.map((s) => (s.flags & FLAG_HAS_NAME) !== 0)).toEqual([true, false, false]);
-    expect(out.counts.namingNameTable).toBe(1);
-    expect(out.counts.namingTier).toMatchObject({ iau: 1, bayer: 1, catalogue: 1 });
+    expect(out.records.map(({ name }) => (name.kind === 'unlabelled' ? null : name.tier))).toEqual(['iau', 'bayer', 'catalogue']);
     expect(labelOf(out, 1)).toBe('θ¹ Ori');
   });
 
@@ -78,10 +77,9 @@ describe('assignDisplayNames', () => {
     expect(out.records[0].dc).toEqual({ from: 'positional', index: CMA });
   });
 
-  it('counts a record with nothing to display as unlabelled', () => {
+  it('leaves a record with nothing to display unlabelled', () => {
     const stars = [star({ flags: FLAG_HAS_NAME })];
     const out = assignDisplayNames(stars, noComponents, CONSTELLATIONS, new Map(), [1]);
-    expect(out.counts.namingUnlabelled).toBe(1);
     expect(stars[0].proper).toBeNull();
     expect(stars[0].flags & FLAG_HAS_NAME).toBe(0);
     expect(out.records[0].name).toEqual({ kind: 'unlabelled' });
@@ -93,7 +91,7 @@ describe('assignDisplayNames', () => {
       stars, noComponents, CONSTELLATIONS, new Map([[77, 'Overridden']]), [77],
     );
     expect(stars[0].proper).toBe('Overridden');
-    expect(out.counts.namingTier.override).toBe(1);
+    expect(out.records[0].name).toMatchObject({ kind: 'own', tier: 'override' });
     expect(out.counts.namingOverrides).toBe(1);
   });
 
@@ -129,13 +127,12 @@ describe('assignDisplayNames', () => {
     const out = assignDisplayNames(stars, components, CONSTELLATIONS, new Map(), [1, 2]);
     expect(stars[0].proper).toBe('Sirius');
     expect(labelOf(out, 1)).toBe('Sirius B');
-    expect(out.counts.namingBorrowed).toBe(1);
+    expect(out.records[1].name).toMatchObject({ kind: 'borrowed', tier: 'iau' });
     // A borrowed label carries the ANCHOR's tier, so a component borrowing
     // an approved name reaches the name table too — which is why the table
     // holds more records than the authority names outright.
     expect(stars[1].proper).toBe('Sirius B');
     expect(stars.map((s) => (s.flags & FLAG_HAS_NAME) !== 0)).toEqual([true, true]);
-    expect(out.counts.namingNameTable).toBe(2);
   });
 
   it('keeps a borrowed DESIGNATION base out of the name table', () => {
@@ -148,6 +145,5 @@ describe('assignDisplayNames', () => {
     const out = assignDisplayNames(stars, components, CONSTELLATIONS, new Map(), [1, 2]);
     expect(labelOf(out, 1)).toBe('θ¹ Ori C');
     expect(stars.map((s) => s.proper)).toEqual([null, null]);
-    expect(out.counts.namingNameTable).toBe(0);
   });
 });

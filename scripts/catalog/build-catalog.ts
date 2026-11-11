@@ -114,14 +114,17 @@ import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
 import { emptyTallyPartition } from '../util/counts/tally-pure';
 import {
   applyDesignationConstellations,
-  loadDesignationConstellationInputs,
+  loadDesignationConstellationIndex,
 } from './classic-ids/apply-designation-constellation';
 import {
   applyStarNames,
   loadStarNamingInputs,
+  starNamingSummary,
 } from './naming/apply-star-names';
-import { assignDisplayNames, type NamedRecord } from './naming/display-names';
-import { NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines } from './naming/naming-lineage-pure';
+import { assignDisplayNames, type NamedRecord, type NamingDerivedCounts } from './naming/display-names';
+import {
+  NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary, type NamingCounts,
+} from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
 import {
   PARKED_COUNT_KEY,
@@ -153,7 +156,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
-import { nestByStage, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -272,7 +275,7 @@ function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly St
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
 function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogStageLineage(
+  return catalogCountedStageLineage(
     NAMING_LINEAGE, NAMING_CODES, () => namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
     NAMING_INVARIANTS, stepInputs,
   );
@@ -304,44 +307,12 @@ export async function main() {
   const inputHashesAtStart = stepInputHashes();
 
   const counts: FiledCounts = {
-    namingIauNamed: 0,
-    namingIauNamedByProper: 0,
-    namingIauUnreached: 0,
-    namingEponym: 0,
-    namingBayer: 0,
-    namingBayerAdded: 0,
-    namingBayerComponent: 0,
-    namingBayerDropped: 0,
-    namingGould: 0,
-    namingAliases: 0,
-    namingAliasRecords: 0,
-    namingDesigConFromWgsn: 0,
-    namingDesigConWgsnConflict: 0,
-    namingTierOverride: 0,
-    namingTierIau: 0,
-    namingTierEponym: 0,
-    namingTierBayer: 0,
-    namingTierFlamsteed: 0,
-    namingTierBayerLatin: 0,
-    namingTierGould: 0,
-    namingTierGcvs: 0,
-    namingTierCatalogue: 0,
-    namingBorrowed: 0,
-    namingLettered: 0,
-    namingNameTable: 0,
-    namingOverrides: 0,
-    namingUnlabelled: 0,
-    namingDuplicateLabels: 0,
-    namingDuplicateRecords: 0,
-    desigConFromCrossIndex: 0,
-    crossIndexUnknownCst: 0,
     bjEligible: 0,
     bjOverridden: 0,
     lmcCandidates: 0,
     lmcOverridden: 0,
     lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
-    nameTableEntries: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -571,35 +542,15 @@ export async function main() {
   // classic-ID tables still supply per record is IV/27A's constellation for
   // each Bayer / Flamsteed designation.
   console.log('Resolving designation constellations from IV/27A...');
-  const desigConCounts = applyDesignationConstellations(
-    stars, loadDesignationConstellationInputs(),
-  );
-  Object.assign(counts, desigConCounts);
-  console.log(
-    `  designation constellation from IV/27A on ${desigConCounts.desigConFromCrossIndex}`,
-  );
+  applyDesignationConstellations(stars, loadDesignationConstellationIndex());
 
   // Naming ladder, authority half: the IAU WGSN approved name and the
   // glyph-bearing Bayer / Gould designations, keyed on the record's
   // identifiers. Composition itself is post-sort, once every promoted record
   // exists and its component letter is known.
   console.log('Applying the IAU WGSN naming ladder...');
-  const namingCounts = applyStarNames(stars, loadStarNamingInputs(), CONSTELLATIONS);
-  Object.assign(counts, namingCounts);
-  console.log(
-    `  ${namingCounts.namingIauNamed} IAU names ` +
-      `(${namingCounts.namingIauNamedByProper} via the record's own spelling, ` +
-      `${namingCounts.namingIauUnreached} approved names unreached), ` +
-      `${namingCounts.namingEponym} string designations`,
-  );
-  console.log(
-    `  ${namingCounts.namingBayer} Bayer designations ` +
-      `(${namingCounts.namingBayerAdded} added, ` +
-      `${namingCounts.namingBayerDropped} spine cells the authority does not ` +
-      `reach), ${namingCounts.namingGould} Gould, ` +
-      `${namingCounts.namingAliases} aliases on ` +
-      `${namingCounts.namingAliasRecords} records`,
-  );
+  const starNamingCounts = applyStarNames(stars, loadStarNamingInputs(), CONSTELLATIONS);
+  console.log(starNamingSummary(starNamingCounts));
 
   // Companion promotion — read data/binaries/multiples.tsv and add
   // first-class catalog records for the secondary of every physical pair
@@ -816,45 +767,14 @@ export async function main() {
     stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
-  Object.assign(counts, {
-    namingTierOverride: display.counts.namingTier.override,
-    namingTierIau: display.counts.namingTier.iau,
-    namingTierEponym: display.counts.namingTier.eponym,
-    namingTierBayer: display.counts.namingTier.bayer,
-    namingTierFlamsteed: display.counts.namingTier.flamsteed,
-    namingTierBayerLatin: display.counts.namingTier.bayer_latin,
-    namingTierGould: display.counts.namingTier.gould,
-    namingTierGcvs: display.counts.namingTier.gcvs,
-    namingTierCatalogue: display.counts.namingTier.catalogue,
-    namingBorrowed: display.counts.namingBorrowed,
-    namingLettered: display.counts.namingLettered,
-    namingNameTable: display.counts.namingNameTable,
-    namingOverrides: display.counts.namingOverrides,
-    namingUnlabelled: display.counts.namingUnlabelled,
-    namingDuplicateLabels: display.counts.namingDuplicateLabels,
-    namingDuplicateRecords: display.counts.namingDuplicateRecords,
-  });
-  console.log(
-    `Display names: ${stars.length - display.counts.namingUnlabelled} composed ` +
-      `(${display.counts.namingNameTable} names in catalog.bin, ` +
-      `${display.counts.namingBorrowed} borrowed from a system anchor, ` +
-      `${display.counts.namingLettered} lettered, ` +
-      `${display.counts.namingUnlabelled} unlabelled)`,
-  );
-  if (display.counts.namingDuplicateLabels > 0) {
-    console.log(
-      `  ${display.counts.namingDuplicateLabels} duplicate label(s) across ` +
-        `${display.counts.namingDuplicateRecords} records — see ` +
-        'naming/naming-parity.test.ts',
-    );
-  }
 
   // Build name table — the NAME tiers only. Every designation is composed
   // at runtime off search-index.json so the main binary stays compact.
   const nameTable = encodeNameTable(stars.map((s) => s.proper));
   const nameOffsets = nameTable.offsets;
   const nameTableLength = nameTable.bytes.length;
-  counts.nameTableEntries += nameTable.entries;
+  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: nameTable.entries };
+  console.log(namingSummary(namingEmission.counts, namingDerived));
 
   // Allocate output buffer.
   const recordsLength = stars.length * RECORD_SIZE;
@@ -1073,6 +993,8 @@ export async function main() {
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+        { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
+        { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
         { stage: 'records', block: { kind: 'counted', counts: records } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },

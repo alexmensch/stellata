@@ -316,14 +316,13 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // name is the only nomenclature there is.
     const ltVul = makeStar({ hip: 93603, desigCon: NO_DESIGNATION_CON });
     const ryCen = makeStar({ hip: 71, desigCon: NO_DESIGNATION_CON });
-    const r = applyVariability([ltVul, ryCen], new Map<string, VarStarData>(), {
+    applyVariability([ltVul, ryCen], new Map<string, VarStarData>(), {
       byHip: new Map([[93603, 'LT Vul'], [71, 'RY Cen']]),
       byHd: new Map(),
       byGaia: new Map(),
     });
     expect(ltVul.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('vul') });
     expect(ryCen.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('cen') });
-    expect(r.gcvsDesignationCon).toBe(2);
   });
 
   it('yields to IV/27A where a Bayer/Flamsteed designation disagrees (TY Crv)', () => {
@@ -334,36 +333,33 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // the constellation out of the designation string and loses only its
     // expanded alias.
     const tyCrv = makeStar({ hip: 58587, desigCon: { via: 'iv27a', index: conIndexOf('crt') } });
-    const r = applyVariability([tyCrv], new Map<string, VarStarData>(), {
+    applyVariability([tyCrv], new Map<string, VarStarData>(), {
       byHip: new Map([[58587, 'TY Crv']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(tyCrv.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('crt') });
-    expect(r.gcvsDesignationCon).toBe(0);
   });
 
   it('fills an absent designation constellation rather than only correcting one', () => {
     // The shape every spine-driven record now arrives in: the walk sets no
     // designation constellation, so the GCVS name is the only source there is.
     const orphan = makeStar({ hip: 74, desigCon: NO_DESIGNATION_CON });
-    const r = applyVariability([orphan], new Map<string, VarStarData>(), {
+    applyVariability([orphan], new Map<string, VarStarData>(), {
       byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(orphan.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('aqr') });
-    expect(r.gcvsDesignationCon).toBe(1);
   });
 
   it('leaves an already-set index alone when the designation agrees or is silent', () => {
     // The dominant post-IV/27A shape: 698 records where the two agree.
     const agreeing = makeStar({ hip: 72, desigCon: { via: 'iv27a', index: conIndexOf('and') } });
     const silent = makeStar({ hip: 73, desigCon: { via: 'iv27a', index: conIndexOf('dor') } });
-    const r = applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
+    applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
       byHip: new Map([[72, 'R And'], [73, 'LMC V0471']]),
       byHd: new Map(),
       byGaia: new Map(),
     });
     expect(agreeing.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('and') });
     expect(silent.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('dor') });
-    expect(r.gcvsDesignationCon).toBe(0);
   });
 });
 

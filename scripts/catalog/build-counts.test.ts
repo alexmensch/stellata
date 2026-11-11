@@ -8,6 +8,7 @@ import {
   driftedRows,
   formatCountDiff,
   formatPartition,
+  type BuildCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
@@ -36,8 +37,6 @@ function baseCounts() {
     multiplicityResolved: 20000,
     multiplicityUnresolved: 5000,
     componentDesignations: 16000,
-    desigConFromCrossIndex: 3180,
-    crossIndexUnknownCst: 0,
     bjEntries: 310000,
     bjEligible: 305000,
     bjOverridden: 304000,
@@ -54,7 +53,6 @@ function baseCounts() {
     nameTableEntries: 350,
     variableCount: 3677,
     searchEntries: 290000,
-    solIndex: 100000,
     figureCount: 500,
     figureConstellations: 88,
     gaiaSourceIdResolved: 307000,
@@ -98,7 +96,6 @@ function baseCounts() {
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     companionExistingViaSameasBridge: 0,
     designationConMismatch: 1,
-    gcvsDesignationCon: 4,
     boundarySegments: 781,
     boundaryDirections: 12000,
     boundaryRegionRuns: 2961,
@@ -114,22 +111,7 @@ function baseCounts() {
     namingGould: 937,
     namingAliases: 21,
     namingAliasRecords: 21,
-    namingDesigConFromWgsn: 2900,
-    namingDesigConWgsnConflict: 0,
-    namingTierOverride: 0,
-    namingTierIau: 444,
-    namingTierEponym: 27,
-    namingTierBayer: 1669,
-    namingTierFlamsteed: 1568,
-    namingTierBayerLatin: 300,
-    namingTierGould: 935,
-    namingTierGcvs: 12438,
-    namingTierCatalogue: 295909,
-    namingBorrowed: 10087,
-    namingLettered: 300,
-    namingNameTable: 1500,
     namingOverrides: 0,
-    namingUnlabelled: 6000,
     namingDuplicateLabels: 30,
     namingDuplicateRecords: 60,
     gaiaAstrometryEntries: 315000,
@@ -195,7 +177,7 @@ function baseCounts() {
       none: 0, le1: 200000, le5: 40000, le10: 6000, le20: 3000, gt20: 1000,
     },
     rvGaiaErrorMaxKmS: 39.9433,
-  };
+  } satisfies Partial<BuildCounts>;
 }
 
 type FixtureCounts = ReturnType<typeof baseCounts>;
@@ -334,7 +316,7 @@ describe('formatCountDiff', () => {
   it('header reports the mismatched count, not the matched count', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    actual.solIndex = 99999;
+    actual.searchEntries = 99999;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(/1 of \d+ counts differ/);
   });

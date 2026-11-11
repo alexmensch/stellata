@@ -9,7 +9,8 @@ declarations. The row contract the codes sit in is [../README.md](../README.md#r
 ```
 scripts/catalog/lineage/reason-codes/
   reason-codes-pure.ts           stageCodes: a stage's codes, its live ones
-                                 typed apart, with their
+                                 typed apart (`liveCode` looks one up as a
+                                 count-block key), with their
                                  effect, role and status; outcomeCode and
                                  refusalCode, the two declaration shapes;
                                  retired, a retired code's status.

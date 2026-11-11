@@ -70,7 +70,9 @@ designation (Fomalhaut C is α PsA C while sitting in Aquarius).
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`../gcvs/gcvs-parse.ts`)
 sets `desigCon` from the designation's trailing abbreviation wherever
-IV/27A left it empty — `gcvsDesignationCon` pins **<!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count -->**. Its authority is
+IV/27A left it empty; on a record carrying a Bayer, Flamsteed or Gould
+designation that is the constellation it renders against, and
+`naming.dc.gcvs` pins **<!-- count:build-catalog/naming.dc.gcvs -->1<!-- /count -->** such record. Its authority is
 not a fallback position: the cell it used to correct was untrustworthy both
 ways —
 

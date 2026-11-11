@@ -106,7 +106,10 @@ scripts/catalog/classic-ids/
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for — and
                                   `DesignationCon`, a record's value with
-                                  the cascade tier that wrote it. Pure.
+                                  the cascade tier that wrote it. A `cst`
+                                  naming no IAU-88 constellation fails the
+                                  build: the table's abbreviations are the
+                                  IAU set. Pure.
   apply-designation-constellation.ts
     (+ test)                      The record build's one remaining classic-ID
                                   pass: loads IV/27A's cross-index and applies
@@ -309,7 +312,9 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
 The 123 rows it misses are faint Flamsteed-only records absent from IV/27A's
 TAP subset; they ride the positional fallback.
 
-**GCVS fills the field only where IV/27A left it empty** (<!-- count:build-catalog/gcvsDesignationCon -->7,929<!-- /count --> records). On the
+**GCVS fills the field only where IV/27A left it empty**; the records whose
+Bayer, Flamsteed or Gould designation then renders against it are
+`naming.dc.gcvs` (<!-- count:build-catalog/naming.dc.gcvs -->1<!-- /count -->). On the
 8 where the two disagree the star carries a Bayer/Flamsteed designation and a
 variable name in different constellations (HD 104337 is Crater's Flamsteed star
 and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its

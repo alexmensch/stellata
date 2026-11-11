@@ -50,10 +50,11 @@ relational:
    Bayer (Greek) → Flamsteed → Bayer (Latin) → Gould → GCVS → catalogue
    (HIP → HD → HR → GJ). **The Bayer tier is split**, because Bayer's Greek
    letters and his Latin overflow are read differently: `α UMa` outranks
-   `50 UMa`, while atlases print `15 UMa` over `f UMa`. 313 records take
-   their Flamsteed number back; the 237 with no Flamsteed number to take
-   keep their letter (`namingTierBayerLatin` — the far-southern `p Eri` /
-   `f Pup` series, outside what Greenwich could catalogue).
+   `50 UMa`, while atlases print `15 UMa` over `f UMa`. A Latin-letter
+   record with a Flamsteed number displays the number; one with none keeps
+   its letter (<!-- count:build-catalog/naming.name.own.bayer-latin -->201<!-- /count --> records displaying their own, `naming.name.own.bayer-latin`,
+   with borrowed Latin-letter labels under their own codes — the far-southern
+   `p Eri` / `f Pup` series, outside what Greenwich could catalogue).
    The Gaia tail and the `SID #<n>` last resort below it belong to the
    runtime's `resolveStarName`: neither is a designation a catalogue
    published, neither reaches the search index, and composing them here
@@ -80,12 +81,12 @@ never something the renderer should qualify away.
 
 **The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
 `/scripts/catalog/naming/display-names.ts` and `designationSetOfEntry` (`star-designations.ts`) are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/namingNameTable -->729<!-- /count --> records) so
+`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records) so
 first paint has names while the runtime composes every designation off
 `search-index.json` through the same function. A BORROWED label carries
 its anchor's tier, so `Sirius B` is a name-table entry too — which is why
-the table holds 725 records where the authority names only 447
-(`namingTierIau` + `namingTierEponym`, not `namingIauNamed`). That split is why
+the table holds <!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records where the authority names only <!-- count:build-catalog/namingIauNamed -->450<!-- /count -->
+(the `iau` and `eponym` name codes, own and borrowed, not `namingIauNamed`). That split is why
 `FLAG_HAS_NAME` now means *an authority named this star* — a record
 displaying a designation carries no name-table entry, and
 `/scripts/catalog/catalog-lookup.ts`'s `name:` record refs resolve through the composer

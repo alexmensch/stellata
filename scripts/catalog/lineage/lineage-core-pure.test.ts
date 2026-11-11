@@ -65,6 +65,23 @@ describe('foldStageLines', () => {
   });
 });
 
+describe('liveCode', () => {
+  const codes = stageCodes('demo', {
+    kept: outcomeCode('kept'),
+    gone: outcomeCode('gone', 'none', { kind: 'retired', retiredIn: '1.0.0' } as const),
+  });
+
+  it('answers a live branch with its code, typed as a count-block key', () => {
+    const counts = foldStageLines(codes, [stageLineageLine(codes, row('spine:1'))]);
+    expect(counts[codes.liveCode('kept')]).toBe(1);
+  });
+
+  it('refuses a retired branch, in the type and at run time', () => {
+    // @ts-expect-error a retired branch is not a live one
+    expect(() => codes.liveCode('gone')).toThrow(/"gone" is not a live code branch/);
+  });
+});
+
 describe('the lineage order', () => {
   it('sorts Gaia ids above 2^53 by bytes, never numerically, the same in writer and diff', () => {
     const mixed = [

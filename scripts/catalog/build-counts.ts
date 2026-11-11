@@ -18,6 +18,8 @@ import type { SearchCounts } from './record/search-index-pure.ts';
 import type { GcvsCounts } from './parse/gcvs/gcvs-parse.ts';
 import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.ts';
 import type { RecordsCounts } from './record/records-stage-pure.ts';
+import type { NamingCounts } from './naming/naming-lineage-pure.ts';
+import type { NamingDerivedCounts } from './naming/display-names.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -30,7 +32,8 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts
+  & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -58,8 +61,6 @@ export interface FiledCounts {
    *  posterior or the raw inversion on most rows; the split states which
    *  populations the override actually moves. */
   lmcOverriddenByDistVia: Record<DistVia, number>;
-  /** Stars with a proper name written into the name table. */
-  nameTableEntries: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -187,69 +188,6 @@ export interface FiledCounts {
    *  ships twice. Ratchets DOWN. */
   companionExistingViaSameasBridge: number;
 
-  // ---- Naming ladder (docs/star-naming.md, naming/README.md) ----------
-  /** Records the IAU WGSN names, and how many of those the identifier join
-   *  missed and the record's own printed spelling rescued. */
-  namingIauNamed: number;
-  namingIauNamedByProper: number;
-  /** Approved names no record carries an identifier or spelling for —
-   *  overwhelmingly the wgsnFaints hosts whose only key was a survey id
-   *  the normaliser drops, naming stars the catalogue does not hold. */
-  namingIauUnreached: number;
-  /** Records displaying a string designation (`Ross 128`; /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
-  namingEponym: number;
-  /** Records the authority gives a glyph-bearing Bayer designation, of
-   *  which `Added` had no spine Bayer cell at all and `Dropped` had one the
-   *  authority does not reach — its designation belongs to a sibling
-   *  record, so the record borrows the system's instead. */
-  namingBayer: number;
-  namingBayerAdded: number;
-  /** Bayer designations the authority attributes to a named component, whose
-   *  letter therefore renders unconditionally (κ Her B). */
-  namingBayerComponent: number;
-  namingBayerDropped: number;
-  namingGould: number;
-  /** Published spellings shipped as search-only aliases (`al`), and the
-   *  records carrying them. */
-  namingAliases: number;
-  namingAliasRecords: number;
-  /** Designation constellations the authority states, and how many of them
-   *  contradict the IV/27A cascade the label merge had already set. */
-  namingDesigConFromWgsn: number;
-  namingDesigConWgsnConflict: number;
-  /** Records displaying each ladder tier. */
-  namingTierOverride: number;
-  namingTierIau: number;
-  namingTierEponym: number;
-  namingTierBayer: number;
-  namingTierFlamsteed: number;
-  namingTierBayerLatin: number;
-  namingTierGould: number;
-  namingTierGcvs: number;
-  namingTierCatalogue: number;
-  /** Records whose base came from their system's naming anchor rather than
-   *  a designation of their own (`Sirius B`, `HIP 82676 Ab`). */
-  namingBorrowed: number;
-  /** Records carrying a component letter because a sibling owns the same
-   *  designation (θ¹ Ori A/B/C/D). */
-  namingLettered: number;
-  /** Records whose name reaches catalog.bin's name table — the NAME tiers
-   *  alone. Everything below is composed at runtime. */
-  namingNameTable: number;
-  /** Curated override rows applied (/docs/star-naming.md#7-curation-seam). Expected to
-   *  stay at zero; growth is a signal the ingest is wrong. */
-  namingOverrides: number;
-  /** Records with no composed label — no designation of their own and no
-   *  anchor to borrow from, so they display the runtime's `Gaia DR3` /
-   *  `SID #` last resort. */
-  namingUnlabelled: number;
-  /** Display labels two or more records both compose, and the records
-   *  claiming them. Ratchet DOWN: the composer is injective given (naming
-   *  anchor, component letter), so every survivor is two catalogue entries
-   *  claiming one designation — a data finding, never something the
-   *  renderer should qualify away (/docs/star-naming.md#8-parity--the-gate-on-any-naming-change). */
-  namingDuplicateLabels: number;
-  namingDuplicateRecords: number;
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
    *  records no owned parallax reaches, which do not ship. */
@@ -409,20 +347,11 @@ export interface FiledCounts {
    *  carries. Below DR3's own publication ceiling of 40 by construction; a
    *  refresh that moves it forces this snapshot to be reviewed. */
   rvGaiaErrorMaxKmS: number;
-  /** Records whose designation constellation came from IV/27A keyed on their
-   *  own HD / HIP — the nomenclature authority for the field. The GCVS pass
-   *  overwrites it where a variable designation carries its own
-   *  (`gcvsDesignationCon`). */
-  desigConFromCrossIndex: number;
-  /** IV/27A rows whose `cst` names no IAU-88 constellation. **Pinned at 0** —
-   *  the table's abbreviations ARE the IAU set, so a non-zero value is an
-   *  upstream convention change, not a tolerable miss. */
-  crossIndexUnknownCst: number;
 }
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'brightness-colour', 'desigCon', 'coherence', 'promotion',
+  'inputs', 'placement', 'brightness-colour', 'coherence', 'promotion',
   'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
@@ -484,38 +413,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   rvRadialRejected: 'placement',
   rvGaiaErrorBands: 'placement',
   rvGaiaErrorMaxKmS: 'placement',
-  desigConFromCrossIndex: 'desigCon',
-  crossIndexUnknownCst: 'desigCon',
-  namingIauNamed: 'naming',
-  namingIauNamedByProper: 'naming',
-  namingIauUnreached: 'naming',
-  namingEponym: 'naming',
-  namingBayer: 'naming',
-  namingBayerAdded: 'naming',
-  namingBayerComponent: 'naming',
-  namingBayerDropped: 'naming',
-  namingGould: 'naming',
-  namingAliases: 'naming',
-  namingAliasRecords: 'naming',
-  namingDesigConFromWgsn: 'naming',
-  namingDesigConWgsnConflict: 'naming',
-  namingTierOverride: 'naming',
-  namingTierIau: 'naming',
-  namingTierEponym: 'naming',
-  namingTierBayer: 'naming',
-  namingTierFlamsteed: 'naming',
-  namingTierBayerLatin: 'naming',
-  namingTierGould: 'naming',
-  namingTierGcvs: 'naming',
-  namingTierCatalogue: 'naming',
-  namingBorrowed: 'naming',
-  namingLettered: 'naming',
-  namingNameTable: 'naming',
-  namingOverrides: 'naming',
-  namingUnlabelled: 'naming',
-  namingDuplicateLabels: 'naming',
-  namingDuplicateRecords: 'naming',
-  nameTableEntries: 'naming',
   companionRowsScanned: 'promotion',
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',

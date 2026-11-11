@@ -10,20 +10,8 @@ import {
   type DesignationConIndex,
 } from './designation-constellation-pure';
 
-export interface DesignationConstellationInputs {
-  desigCon: DesignationConIndex;
-  crossIndexUnknownCst: number;
-}
-
-export function loadDesignationConstellationInputs(): DesignationConstellationInputs {
-  const { index: desigCon, counts } = buildDesignationConIndex(CROSS_INDEX.read());
-  return { desigCon, crossIndexUnknownCst: counts.crossIndexUnknownCst };
-}
-
-export interface DesignationConstellationCounts {
-  /** Records whose designation constellation came from IV/27A. */
-  desigConFromCrossIndex: number;
-  crossIndexUnknownCst: number;
+export function loadDesignationConstellationIndex(): DesignationConIndex {
+  return buildDesignationConIndex(CROSS_INDEX.read());
 }
 
 /** Write the constellation a Bayer / Flamsteed designation is NAMED for, which
@@ -31,16 +19,10 @@ export interface DesignationConstellationCounts {
  *  star across a 1930 boundary. Runs before companion promotion, so a promoted
  *  companion composes its name off an anchor already carrying it; the GCVS
  *  pass overwrites it downstream where a variable's own designation carries one. */
-export function applyDesignationConstellations(
-  stars: Star[],
-  inputs: DesignationConstellationInputs,
-): DesignationConstellationCounts {
-  let desigConFromCrossIndex = 0;
+export function applyDesignationConstellations(stars: Star[], index: DesignationConIndex): void {
   for (const star of stars) {
-    const conIndex = resolveDesignationConIndex(inputs.desigCon, star.hd, star.hip);
+    const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
     if (conIndex === NO_CONSTELLATION_INDEX) continue;
     star.desigCon = { via: 'iv27a', index: conIndex };
-    desigConFromCrossIndex++;
   }
-  return { desigConFromCrossIndex, crossIndexUnknownCst: inputs.crossIndexUnknownCst };
 }

@@ -89,13 +89,14 @@ scripts/catalog/naming/
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its naming
                                 outcome (`NamedRecord`), with the NAME
-                                tiers written into `proper` and the counts
-                                folded from the outcomes. Also the curated
-                                override's join, which hard-fails on an
-                                unmatched SID.
+                                tiers written into `proper`, and
+                                NamingDerivedCounts, the naming-derived
+                                block. Also the curated override's join,
+                                which hard-fails on an unmatched SID.
   naming-lineage-pure.ts        The display-name pass as a lineage stage:
-    (+ test)                    its reason codes and the serialiser over
-                                each record's naming outcome
+    (+ test)                    its reason codes, the serialiser over
+                                each record's naming outcome, and its
+                                count block's log line
                                 (#naming-lineage).
   naming-parity-pure.ts         Ledger row types, the record-identity key
                                 and the shared label resolver.
@@ -236,11 +237,13 @@ it, and it carries its own string.
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
 merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-covering <!-- count:build-catalog/namingDesigConFromWgsn -->2,975<!-- /count --> records. One `uint8` serves one designation and the tier
-that COMPOSES the label owns it, so where the authority's Bayer names a
-different constellation from the record's Flamsteed number — 16 Lyn is
-also ψ¹⁰ Aur, `namingDesigConWgsnConflict` pins <!-- count:build-catalog/namingDesigConWgsnConflict -->2<!-- /count --> — the displaced
-Flamsteed form ships as an alias rather than going unsearchable.
+so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,039<!-- /count --> records render against the constellation of the
+authority's Bayer designation and <!-- count:build-catalog/naming.dc.wgsn-gould -->936<!-- /count --> against its Gould one. One
+`uint8` serves one designation and the tier that COMPOSES the label owns
+it, so where the authority's Bayer names a different constellation from
+the record's Flamsteed number — 16 Lyn is also ψ¹⁰ Aur,
+`naming.dc.displaced` pins <!-- count:build-catalog/naming.dc.displaced -->2<!-- /count --> — the displaced Flamsteed form ships as an
+alias rather than going unsearchable.
 
 ## The parity ledger
 
@@ -289,10 +292,12 @@ contract (`naming-lineage-pure.ts`), after SID allocation, since the curated
 override keys on SIDs. `namingLineageRows` serialises each record's
 `NamedRecord` through an exhaustive `switch`:
 
-- every record gets one name row: `name.own` (the highest tier it carries),
-  one of three `name.borrowed.*` codes naming the borrowing rule that fired,
-  or `name.unlabelled`, where the runtime's Gaia DR3 / SID fallback takes over.
-  `params` carry the tier and the label; a borrowed row names its anchor by
+- every record gets one name row: `name.own.<tier>` (the highest tier it
+  carries), `name.borrowed.<rule>.<tier>` naming the borrowing rule that
+  fired and the anchor's tier, or `name.unlabelled`, where the runtime's
+  Gaia DR3 / SID fallback takes over. The tier is the ladder's, kebab-cased
+  (`bayer-latin`), so the count block folds each tier from its codes.
+  `params` carry the label; a borrowed row names its anchor by
   origin key (`params.anchor`) and its component letter;
 - each other tier the record carries is a `refused` row: `name.lower-tier`
   below an own label, `name.borrowed-over` for a borrowed one;
@@ -307,6 +312,14 @@ override keys on SIDs. `namingLineageRows` serialises each record's
 
 The stage founds no record, so it writes no identity rows, and every code's
 effect is `none`.
+
+Its snapshot stage `naming` is its lines folded per live code
+([Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)),
+beside `applyStarNames`' tally (`StarNamingCounts`), which has no codes
+and keeps its `naming*` keys. A per-tier figure is a sum of the tier's
+`name.own` and `name.borrowed` codes. `naming-derived` holds what no one
+record decides: the duplicate labels, the curated override rows applied
+and the name table's entries.
 
 Measured 2026-11-05: 1,017,955 rows, one name row per record plus its refused
 tiers, letter and designation constellation (78 MB plain), 9.7 MB gzipped in
