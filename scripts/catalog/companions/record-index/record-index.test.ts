@@ -265,7 +265,7 @@ describe('renderableOrbitRelations', () => {
 
 describe('buildComponentDesignations', () => {
   const designate = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars));
+    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars)).designations;
 
   it('maps every component (including the primary) to the primary as base', () => {
     // α Cen shape: A (the Bayer-bearing primary) + B resolve by HIP, C by

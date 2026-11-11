@@ -763,14 +763,14 @@ export async function main() {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
 
-  const componentDesignations = buildComponentDesignations(multiplesRows, rowIndexMap);
+  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(multiplesRows, rowIndexMap);
   const statuses = multiplicityStatuses(
     stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
   const multiplicity: MultiplicityCounts = {
     ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
-    componentDesignations: componentDesignations.size, ...statuses.counts,
+    ...componentCount, ...statuses.counts,
   };
   console.log(multiplicitySummary(multiplicity));
 

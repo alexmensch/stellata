@@ -296,7 +296,7 @@ export interface ComponentDesignation {
 export function buildComponentDesignations(
   rows: MultiplesTsvRow[],
   rowIndexMap: CatalogRowIndexMap,
-): Map<number, ComponentDesignation> {
+): Pick<MultiplicityCounts, 'componentDesignations'> & { designations: Map<number, ComponentDesignation> } {
   const systems = groupBySystem(rows);
   const resolved: { root: string; pair: ResolvedSystem }[] = [];
   const anchors = new Map<string, { comp: string; idx: number }>();
@@ -362,5 +362,5 @@ export function buildComponentDesignations(
       out.set(idx, { comp, primaryIdx: anchor.idx });
     }
   }
-  return out;
+  return { designations: out, componentDesignations: out.size };
 }
