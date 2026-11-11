@@ -47,7 +47,7 @@ class TableSpec:
 # (Tokovinin 2018, /data/papers/index.md#tokovinin2018) hierarchy labels,
 # NOT WDS component letters (MSC re-labels below the top level: ν Sco's WDS
 # Aa,Ab pair is MSC's Aab,Ac). The build-side mapping to WDS tokens is
-# scripts/binaries/msc_map.py; these TSVs keep the raw labels.
+# scripts/binaries/load/msc-pure.ts; these TSVs keep the raw labels.
 TABLES: tuple[TableSpec, ...] = (
     TableSpec(
         vizier_table="J/ApJS/235/6/systems",

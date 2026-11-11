@@ -2,4 +2,5 @@
 
 export const BUILD_FILES = {
   catalogRowIndexMap: 'build/catalog-row-index-map.json',
+  bindingVerdicts: 'build/binding-integrity-verdicts.tsv',
 } as const;

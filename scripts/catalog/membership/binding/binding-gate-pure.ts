@@ -3,10 +3,8 @@
 import type { ColumnTable } from '../../../util/tsv/table-pure';
 import type { PrintedV, PrintedVLookups } from '../../photometry/v-magnitude-pure';
 
-/** Magnitude-consistency gate for Gaia source bindings, shared with the
- *  binaries pipeline: keep equal to GAIA_BINDING_G_MINUS_V_REJECT_MAG in
- *  scripts/binaries/indices.py (binding-gate-pure.test.ts cross-checks the
- *  Python source text). A bound source more than this much fainter in G
+/** Magnitude-consistency gate for Gaia source bindings, which the binaries
+ *  pipeline's Stage 1 reads too. A bound source more than this much fainter in G
  *  than the star's V is not the star — Gaia's fit fails on saturated
  *  bright stars, so both AT-HYG's `gaia` cell and the
  *  hipparcos2_best_neighbour cross-walk can land on a resolvable
@@ -79,7 +77,7 @@ function wdsComponentsDisjoint(a: string, b: string): boolean {
 }
 
 /** Sibling-letter attribution gate — the catalog-boundary mirror of the
- *  binaries pipeline's identity refutation (stage2_resolve.py): true
+ *  binaries pipeline's identity refutation (binaries/resolve/binding-audit-pure.ts): true
  *  when SIMBAD's WDS cross-IDs give one component letter sole ownership
  *  of `sourceId` while the row's own identity points at a different
  *  letter of the same system. Gaia's HIP best-neighbour cross-walk (and

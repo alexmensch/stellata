@@ -106,7 +106,7 @@ term. All scripts share `scripts/refresh/refresh_lib.py` (TAP client
 + retry + batching + schema validation); SIMBAD pulls share
 `scripts/refresh/simbad/` (specs / inputs / query / TSV plumbing).
 
-**Layer 3 — catalogue builder.** `scripts/binaries/build-binaries.py`
+**Layer 3 — catalogue builder.** `scripts/binaries/build-binaries.ts`
 orchestrates seven stages with explicit per-component provenance.
 See `scripts/binaries/README.md` for the engineer-level walk-through; the
 astronomer-relevant summary:
@@ -247,19 +247,19 @@ astronomer-relevant summary:
    from Gaia NSS / SB2 spectroscopy where present, with per-class
    mass-table backfill (the same tables) for visual orbits without
    spectroscopy.
-7. **Assert against snapshots.** Per-stage counts gate
-   `build-binaries-expected.json`; per-strategy rates gate
-   `build-binaries-rates-expected.json`. A regression in either
-   surfaces in the build log as a per-key diff and refuses to
-   advance. Refreshes are explicit (`UPDATE_SNAPSHOTS=1`); silent
+7. **Assert against the snapshot.** Per-stage counts are pinned in
+   `build-binaries-expected.json`; a regression surfaces in the build
+   log as a per-key diff and nothing is written. The per-strategy rates
+   (resolve, HIP2 fallback, NSS orbit, optical rejection) are ratios of
+   those counts, so they print in the build log rather than carry a gate
+   of their own. Refreshes are explicit (`--update-snapshots`); silent
    drift is impossible.
 
-**Layer 4 — validation harness.** Three tiers covered in
-`scripts/binaries/README.md`: a hand-curated Tier A known-stars corpus
-(`scripts/catalog/validate/known-stars.tsv`) the binary catalogue must
+**Layer 4 — validation harness.** Three tiers: a hand-curated Tier A
+known-stars corpus (`scripts/catalog/validate/known-stars.tsv`,
+`scripts/catalog/validate/README.md`) the binary catalogue must
 reproduce; population-statistic Tier B snapshots
-(`build-binaries-expected.json` +
-`build-binaries-rates-expected.json`); a stratified random 10k SIMBAD sample
+(`build-binaries-expected.json`, `scripts/binaries/counts/README.md`); a stratified random 10k SIMBAD sample
 Tier C cross-checker (`validate-simbad-sample.ts` + the
 `distance-regression-check.ts` build-time subset that surfaces in
 `build-distance-outliers-expected.json` with hand-edited reasons).
@@ -274,9 +274,9 @@ sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 73% of WDS rows (114,933) leave the `components` field blank (an
 implied single A,B pair). The rescue tier ingests the high-confidence
 subset (an ORB6 orbit or a SIMBAD xid anchors the system —
-[Blank-components rescue](/scripts/binaries/README.md#blank-components-rescue-stage-12-boundary)); the remaining
+[Blank-components rescue](/scripts/binaries/load/README.md#blank-components-rescue)); the remaining
 ~<!-- count:build-binaries/blank_components_deferred k4 -->112.8k<!-- /count -->-row tail was instrumented before deciding whether to ingest it
-wholesale (`scripts/binaries/probe-blank-components-tail.py`):
+wholesale:
 
 - 22.0% of the tail resolves ≥1 component through the Stage-2 cascade,
   but overwhelmingly primary-only (21.7%) via position/CCDM matches —
@@ -581,8 +581,8 @@ consume it in two complementary ways:
    AT-HYG row carries no absmag through the AT-HYG path and — with no
    Δmag or per-component spectral type either — was dropped at promotion
    for want of a brightness. Its Gaia row does carry G + BP + RP, so
-   Stage 6 (`scripts/binaries/stage6_multiples.py`,
-   `gaia_photometry_absmag_ci`) derives an honest magnitude and colour
+   Stage 6 (`scripts/binaries/multiples/gaia-photometry-pure.ts`,
+   `gaiaPhotometryAbsmagCi`) derives an honest magnitude and colour
    from the component's own photometry, tagged
    `photometry_via = gaia_photometry`, which promotion's "own
    photometry" path then consumes. This recovers ~3.5k companions
@@ -660,7 +660,7 @@ consume it in two complementary ways:
    `build/catalog-row-index-map.json` joins the runtime binary's
    primary/secondary indices back to catalog.bin record indices.
 
-Implementation: `scripts/binaries/build-binaries.py` for the WDS+ORB6
+Implementation: `scripts/binaries/build-binaries.ts` for the WDS+ORB6
 pipeline (engineer walk-through in `scripts/binaries/README.md`);
 `scripts/binaries/build-runtime-binaries.ts` for the runtime artifact;
 `scripts/catalog/build-catalog.ts` + `visual-doubles.ts` +

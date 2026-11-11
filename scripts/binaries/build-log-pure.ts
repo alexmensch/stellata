@@ -1,7 +1,12 @@
-// How the binaries stages' build-log lines print a count, a tally of them, and a gate's dropped pairs.
+// How the binaries stages' build-log lines print a count, a share, a tally of counts, and a gate's dropped pairs.
 
 export function count(v: number): string {
   return v.toLocaleString('en-US');
+}
+
+/** A share as a percentage, one decimal. */
+export function percent(share: number): string {
+  return `${(share * 100).toFixed(1)}%`;
 }
 
 /** `key=count, …`, in the tally's key order. */

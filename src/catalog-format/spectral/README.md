@@ -47,9 +47,6 @@ same named codes. The bytes drop the subclass, the WD index and the
 Wolf-Rayet kind, so a decode reads the first two back as not stated and a
 Wolf-Rayet as carbon. **The decoder accepts exactly the 73 pairs the encoder
 writes** and throws on any other, pinned over all 65,536 pairs.
-`scripts/binaries/mass_estimate.py`
-parses to the same codes independently, pinned by
-`/scripts/catalog/parse/spectral-encoding-parity.test.ts`.
 
 ## The radius chain
 

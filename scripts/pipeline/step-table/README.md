@@ -78,9 +78,9 @@ a loop is a kept loop ([Loops through committed files](../README.md#loops-throug
 and covers its own outputs only, never a step
 reached through it. The converse fails it too: an `after` entry none of
 whose outputs the run read, listed or probed is a false ordering edge
-(Reachable must mean read, above). `build:binaries` is the only Python
-`build` step on the runner; its TypeScript port retires these
-declarations.
+(Reachable must mean read, above). No step on the table is a Python
+`build` step today; retiring the variant and these checks is
+`stellata-hhaw.45.43.1`.
 
 ## Load-time rules
 

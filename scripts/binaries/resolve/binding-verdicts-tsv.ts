@@ -1,6 +1,7 @@
 // Codec for build/binding-integrity-verdicts.tsv, the binding audit's review surface. See README.md#files-in-this-area.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
 import { BINDING_SHAPES, BINDING_VERDICTS, byError, type BindingShape, type BindingVerdict, type BindingVerdictKind } from './binding-audit-pure';
 
 export interface BindingVerdictRow {
@@ -28,7 +29,7 @@ export function bindingVerdictRow(v: BindingVerdict): BindingVerdictRow {
 }
 
 export const BINDING_VERDICTS_TSV = defineArtifact({
-  file: 'build/binding-integrity-verdicts.tsv',
+  file: BUILD_FILES.bindingVerdicts,
   columns: ['wds_id', 'shape', 'verdict', 'contested', 'reference_token', 'reference_source', 'winner', 'candidates'] as const,
   hint: 'Re-run `pnpm run build:binaries`.',
   order: 'as-given',

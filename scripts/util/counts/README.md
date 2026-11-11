@@ -2,9 +2,8 @@
 
 How a build step counts its outcomes, and the shape its committed count
 snapshot takes. Both modules are pure leaves: they import nothing. The
-snapshot checks that read the files are the parent folder's
-`snapshot-check.ts` and `snapshot_assert.py`
-([Util](../README.md)); the comparator is
+snapshot check that reads the files is the parent folder's
+`snapshot-check.ts` ([Util](../README.md)); the count comparator is
 `../../catalog/build-counts.ts`'s `compareCountSnapshot`.
 
 ```
@@ -64,5 +63,4 @@ its stage: the comparator (`compareCountSnapshot`), `committedBuildCounts`,
 the doc figures' snapshot load and `../../site/site-metrics.ts` all flatten
 first. The stage still counts as drift: when both sides are staged, a count
 filed under another stage than the snapshot's is `moved`
-(`stageOfCounts`), in that comparator and in `../snapshot_assert.py`'s,
-whose `flatten_stages` and `absent_stages` are this module's Python twins.
+(`stageOfCounts`), in that comparator.

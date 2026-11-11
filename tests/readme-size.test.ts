@@ -16,15 +16,6 @@ const MAX_LINES = 450;
 // listed here needs a reason that survives a future session re-reading
 // it with the intent to "finally clean this up."
 const ALLOWLIST: Record<string, string> = {
-  'scripts/binaries/README.md':
-    'Seven-stage linear pipeline where stage N consumes every earlier ' +
-    'stage. Splitting into resolve/pairs/emit measured 65 cross-folder ' +
-    'import edges vs 32 same-folder, and because readme-guard charges ' +
-    'the nearest README per folder touched, a stage-6 task would read ' +
-    '~910 lines across four READMEs instead of this one file — no ' +
-    'saving, plus duplicated rosters and no typechecker to verify the ' +
-    'rewrite. Already trimmed of everything that had another home; the ' +
-    'remainder is per-stage engineering contract.',
   'scripts/catalog/companions/README.md':
     'One pass (promoteCompanions) over one row type, whose post-passes all ' +
     'read state the cursor walk accumulated. Every seam measured needs ' +
@@ -33,7 +24,7 @@ const ALLOWLIST: Record<string, string> = {
     'topic at 91 lines, also writes seven counters ' +
     'on PromotionStats that build-catalog reads, and placement needs ' +
     'hasRenderableOrbit and the WDS letter algebra the rest of the pass ' +
-    'uses too. Same shape as scripts/binaries above. The science half is ' +
+    'uses too. The science half is ' +
     'already in docs/science-multiple-star-pipeline.md and the naming half ' +
     'in ../naming/ and record-index/; what is left is the per-gate ' +
     'engineering contract.',
@@ -74,8 +65,8 @@ function failureMessage(
     '     inside it — this removes the tax rather than relocating it.',
     '     Check the seam first: if the candidate subfolder imports its',
     '     way back into the parent on every file, the split will not',
-    '     help (see the scripts/binaries entry in ALLOWLIST for the',
-    '     worked example of a folder where it does not).',
+    '     help (see the scripts/catalog/companions entry in ALLOWLIST',
+    '     for the worked example of a folder where it does not).',
     '',
     '  2. Relocate science narrative to docs/science-*.md and leave a',
     '     one-line pointer. Applies to physics derivations and',

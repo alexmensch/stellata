@@ -1,4 +1,4 @@
-// The orbital-PM budget: the motion a pair's components carry from tighter sub-pairs they host. See ../README.md#stage-5--optical-pair-filter-cascade.
+// The orbital-PM budget: the motion a pair's components carry from tighter sub-pairs they host. See README.md#what-each-tier-decides.
 
 import { compoundContains, pairComponentTokens, relatedHier } from '../component-tokens-pure';
 import type { PairOrbit } from '../orbits/select-orbit-pure';

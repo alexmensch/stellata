@@ -19,7 +19,7 @@ glob is the list, so a new suite runs without a workflow edit. Each file
 runs in its own interpreter, since the suites put their own folder on
 `sys.path` and several import siblings by bare name; `unittest discover`
 is no substitute, as it matches no dotted name like
-`stage2_resolve.test.py`.
+`refresh-tycho2.test.py`.
 
 **A skip fails the run**, and so does a file that runs no tests. The
 refresh suites `skipTest` when pyvo, astropy or requests is missing, so a

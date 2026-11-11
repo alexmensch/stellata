@@ -177,7 +177,7 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
 }
 
 /** README.md#checks-and-counts */
-export function stage1Counts(c: ReferenceCatalogs): Record<string, number> {
+export function stage1Counts(c: ReferenceCatalogs) {
   const rescue = fold(BLANK_RESCUE_OUTCOMES, c.blankRescue, (o) => o);
   const msc = fold(MSC_SYNTHESIS_OUTCOMES, c.mscSynthesis, (o) => o);
   return {

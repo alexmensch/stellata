@@ -88,9 +88,7 @@ the target that rebuilds or re-pulls the file.
   `sourceId` takes bare digits only and answers a string, since a DR3
   source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
   on an empty cell, and `sourceIdList(column, separator)` reads a list of
-  them. Every source_id column a TypeScript reader takes goes through these;
-  the Gaia cross-walks' Python reader (`scripts/binaries/parsers.py`) refuses
-  a non-digit id the same way, which the parity test pins.
+  them. Every source_id column a TypeScript reader takes goes through these.
   `compareSourceIds` is the one order over them: absent
   first, then by `BigInt` value.
   `oneOf(column, values)` returns the cell typed to a closed set or throws.

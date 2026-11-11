@@ -69,7 +69,7 @@ function componentHip2(c: ResolvedComponent, indices: IdentifierIndices): Hip2As
   return hip === null ? null : indices.hipToHip2.get(hip) ?? null;
 }
 
-/** ../README.md#stage-3--per-component-astrometry-routing */
+/** README.md#what-each-route-decides */
 export function routeAstrometry(c: ResolvedComponent, minRhoArcsec: number | null, indices: IdentifierIndices): ComponentAstrometry {
   const gaia = c.gaiaSourceId === null ? null : indices.srcToAstrometry.get(c.gaiaSourceId) ?? null;
   if (gaia === null || gaia.parallaxMas === null) {

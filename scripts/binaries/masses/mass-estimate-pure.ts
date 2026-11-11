@@ -1,4 +1,4 @@
-// A star's mass in solar masses from its SIMBAD / MK spectral string: mass_estimate.py's parser and tables, ported unchanged. See README.md.
+// A star's mass in solar masses from its SIMBAD / MK spectral string: the parser and the mass tables. See README.md.
 
 export interface ParsedSpect {
   /** 0-6 = O..M, 7 = carbon / S / Wolf-Rayet, 8 = white dwarf. */

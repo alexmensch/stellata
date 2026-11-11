@@ -107,8 +107,6 @@ describe('canonicalCompLetter', () => {
 });
 
 describe('parentComponentToken', () => {
-  // Fixtures mirror component_tokens.py:test_parent_component_token so
-  // the Python↔TS mirror can't silently drift.
   it('drops the rightmost designator', () => {
     expect(parentComponentToken('Aa1')).toBe('Aa');
     expect(parentComponentToken('Ba')).toBe('B');
@@ -156,7 +154,7 @@ describe('isMoreCanonicalAnchor', () => {
     expect(isMoreCanonicalAnchor('A', 'A')).toBe(false);
   });
 
-  it('picks Aa over B, as anchor_offsets.py anchor_token_rank does', () => {
+  it('picks Aa over B: the branch letter decides before depth', () => {
     expect(isMoreCanonicalAnchor('Aa', 'B')).toBe(true);
     expect(isMoreCanonicalAnchor('B', 'Aa')).toBe(false);
   });

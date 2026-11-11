@@ -73,9 +73,6 @@ export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Resul
   };
 }
 
-/** The rates snapshot stores each rate rounded to this many decimals. */
-export const RATE_SNAPSHOT_DECIMALS = 6;
-
 /** The rates-snapshot keys over `stage3Counts`. */
 export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', number> {
   const total = counts.components_total;

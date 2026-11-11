@@ -242,8 +242,7 @@ batched pulls (`run_in_batches`), schema validation, row-count and
 coverage gating (`assert_row_count`, `report_coverage`), spot-check
 pinning (`validate_spot_rows`), and
 partial-write protection so a mid-run failure never leaves a
-half-written TSV under `data/`. `assert_row_count` is also imported by
-`scripts/binaries/build-binaries.py` for its Stage-1 parser bounds.
+half-written TSV under `data/`.
 
 The pulls port onto `pull/`, the TypeScript runtime: one CSV TAP backend whose
 overflow check is a row count, a query-keyed resume cache, required gates and

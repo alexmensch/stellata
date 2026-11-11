@@ -32,7 +32,7 @@ sub-labels shift one level relative to WDS where MSC subdivides deeper
 (ν Sco: MSC `Aab,Ac` is WDS `Aa,Ab`; MSC `Aa,Ab` is WDS `Aa1,Aa2`).
 `parent` is the union label a pair constitutes (`*` = system root;
 `t` / `X` = non-hierarchical or unattributed ties — unmappable).
-`scripts/binaries/msc_map.py` converts labels to WDS tokens by walking
+`scripts/binaries/load/msc-pure.ts` (`mapMscLabels`) converts labels to WDS tokens by walking
 each system's parent tree top-down; consumers never join on the raw
 labels.
 
@@ -48,7 +48,7 @@ labels.
 
 ## Consumed by
 
-- `scripts/binaries/build-binaries.py` Stage 1/2 (inner-pair synthesis
+- `scripts/binaries/build-binaries.ts` Stage 1/2 (inner-pair synthesis
   for MSC orbits with no WDS pair row), Stage 4 (`msc` orbit route,
   sub-resolution pairs only), Stage 6 (per-component `spect` tier
   `msc`; pair `dmag`/`mag_pri`/`mag_sec` fill where WDS has none).

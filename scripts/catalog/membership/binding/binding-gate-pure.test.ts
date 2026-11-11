@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { columnTable } from '../../../util/tsv/table-pure';
@@ -89,15 +87,6 @@ describe('gMinusVRejects', () => {
     expect(gMinusVRejects(1.5 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(false);
     expect(gMinusVRejects(1.51 + GAIA_BINDING_G_MINUS_V_REJECT_MAG, 1.5)).toBe(true);
     expect(gMinusVRejects(0.0, 1.5)).toBe(false);
-  });
-});
-
-describe('GAIA_BINDING_G_MINUS_V_REJECT_MAG', () => {
-  it('matches the binaries pipeline threshold (scripts/binaries/indices.py)', () => {
-    const py = readFileSync(resolve(__dirname, '../../../binaries/indices.py'), 'utf8');
-    const m = py.match(/^GAIA_BINDING_G_MINUS_V_REJECT_MAG\s*=\s*([\d.]+)/m);
-    expect(m).not.toBeNull();
-    expect(parseFloat(m![1])).toBe(GAIA_BINDING_G_MINUS_V_REJECT_MAG);
   });
 });
 

@@ -66,7 +66,7 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
   });
 }
 
-/** Refused and weighed sources stay in: ../README.md#binding-integrity-audit-enforced */
+/** Refused and weighed sources stay in: README.md#binding-integrity-audit-enforced */
 export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIndices): Set<string> {
   const ids = new Set<string>();
   for (const p of result.pairs) {
@@ -82,7 +82,7 @@ export function siblingRejectionTally(result: Stage2Result): Record<SiblingRejec
 }
 
 /** The count-snapshot keys Stage 2's code alone produces. */
-export function stage2Counts(result: Stage2Result): Record<string, number> {
+export function stage2Counts(result: Stage2Result) {
   return {
     ccdm_sibling_owned_rejected: siblingRejectionTally(result).ccdm_sibling_owned,
     ...bindingIntegrityCounts(result.verdicts),

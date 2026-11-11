@@ -31,7 +31,7 @@ orb6_orbits.txt    ~1.1 MB, LFS. Sixth catalog of visual binary
 
 ## Consumed by
 
-`scripts/binaries/build-binaries.py`:
+`scripts/binaries/build-binaries.ts`:
 
 - `wds_summ.txt` → Stage 1 row parse (every WDS pair → primary +
   secondary letter decomposition). `refresh:simbad-wds-xids` reads it too,

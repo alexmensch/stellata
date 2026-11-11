@@ -1,4 +1,4 @@
-// Stage 1's sub-pair passes: curated ORB6 component letters, ORB6 orphan pairs, MSC inner pairs. ../README.md#sub-pair-synthesis-subdividepy.
+// Stage 1's sub-pair passes: curated ORB6 component letters, ORB6 orphan pairs, MSC inner pairs. README.md#sub-pair-synthesis.
 
 import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import {
@@ -124,7 +124,7 @@ function compareMscPairs(a: MscPairOrbits, b: MscPairOrbits): number {
   return 0;
 }
 
-/** ../README.md#sub-pair-synthesis-subdividepy */
+/** README.md#sub-pair-synthesis */
 export function synthesizeMscInnerPairs(
   wdsPairs: readonly WdsPair[], msc: MscLookup,
 ): { pairs: WdsPair[]; outcomes: MscSynthesisOutcome[] } {

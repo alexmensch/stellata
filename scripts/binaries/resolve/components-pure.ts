@@ -44,7 +44,7 @@ export function pairsByDiscoverer(pairs: readonly WdsPair[]): PairsByDiscoverer 
   return groupBy(pairs, (p) => discovererKey(p.wdsId, p.discoverer));
 }
 
-/** Not necessarily the row that produced `c`: README.md#byte-identity-with-the-python-stage */
+/** Not necessarily the row that produced `c`: README.md#choices-the-outputs-rest-on */
 export function findOwningPair(c: ResolvedComponent, index: PairsByDiscoverer): WdsPair | null {
   const slot = c.isPrimary ? 0 : 1;
   for (const p of index.get(discovererKey(c.wdsId, c.discoverer)) ?? []) {

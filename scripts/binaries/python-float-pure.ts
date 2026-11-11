@@ -1,4 +1,4 @@
-// Python's float arithmetic where it differs from JavaScript's: the binaries stages' outputs must match the Python's byte for byte until the switch.
+// Python's float arithmetic where it differs from JavaScript's; multiples.tsv's bytes rest on it. See README.md#files-in-this-area.
 
 /** `x mod m` with the sign of `m`, as Python's `%` computes it — including
  *  its rounding up to `m` for a tiny negative `x`, which `((x % m) + m) % m`

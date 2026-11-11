@@ -1,4 +1,4 @@
-// The blank-components rescue: a blank WDS row an ORB6 orbit or a SIMBAD cross-ID confirms becomes its implied AB pair. ../README.md#blank-components-rescue-stage-12-boundary.
+// The blank-components rescue: a blank WDS row an ORB6 orbit or a SIMBAD cross-ID confirms becomes its implied AB pair. README.md#blank-components-rescue.
 
 import { discovererKey } from '../component-tokens-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';

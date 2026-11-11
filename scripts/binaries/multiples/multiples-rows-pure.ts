@@ -125,7 +125,7 @@ const NO_ORBIT_FIELDS: OrbitFields = {
 
 /** The orbit's elements, q backfilled from both spectral types, then — on
  *  the estimated-element routes only — q, a circular ω and a Kepler a
- *  backstopped: ../README.md#stage-6--multiplestsv-emit */
+ *  backstopped: README.md#what-each-column-carries */
 export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpect: string): OrbitFields {
   if (orbit.orbitVia === 'none') return NO_ORBIT_FIELDS;
   const el = orbit.elements;

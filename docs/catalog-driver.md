@@ -503,7 +503,7 @@ Whatever the pull does not reach goes through the two seams that exist:
 `spine-corrections.tsv` generalised into the evidenced merge table for the
 136.
 
-**The licence does not leave with the spine.** `scripts/binaries/build-binaries.py`
+**The licence does not leave with the spine.** `scripts/binaries/build-binaries.ts`
 Stages 1–3 parse `data/athyg/athyg_33_classic_ids.csv` on the `build:binaries`
 path — identifier binding, `athyg_gaia_native` bindings, the `athyg_position`
 fallback — so `multiples.tsv` and every companion built from it inherit

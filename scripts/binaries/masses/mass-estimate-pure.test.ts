@@ -98,6 +98,7 @@ describe('massRatioFromComponents', () => {
   });
 
   it('reads α Cen (G2V + K1V)', () => {
+    // The tables' value, not the truth: Pourbaix 2016 (/data/papers/index.md#pourbaix2016) measures κ = 0.4617.
     expect(massRatioFromComponents('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
   });
 

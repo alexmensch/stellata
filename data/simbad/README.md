@@ -377,11 +377,11 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
   `build:membership` and `build:astrometry-request`, whose binding
   derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
-- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.py` Stage 6
+- `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.ts` Stage 6
   (per-component sp_type, beats AT-HYG's system-inherited string).
 - `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,
   the spectral resolver's curated tier.
-- `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.py`
+- `simbad_wds_xids.tsv` → `scripts/binaries/build-binaries.ts`
   Stage 2 (`simbad_xid` tier of the WDS-component → Gaia source_id
   cascade) + `scripts/catalog/classic-ids/build-classic-id-overlay.ts`
   (sibling-letter attribution gate on the overlay's bindings — see

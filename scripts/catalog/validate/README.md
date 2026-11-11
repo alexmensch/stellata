@@ -32,9 +32,6 @@ scripts/catalog/validate/
                                   proper name. Loads the catalog
                                   `withSearchIndex`, which is where an HD
                                   resolves; the binary has no HD column.
-  gaia-hip-xmatch-parity.test.ts  Cross-language parity: gaia-xmatch.ts vs
-  gaia-hip-xmatch-parity.tsv      scripts/binaries/parsers.py over one
-                                  shared fixture.
   record-parity-pure.ts (+ test)  Sid-keyed field comparison of two built
                                   catalogues. Pure. README.md#additive-mode-record-parity.
   record-parity.ts                pnpm run validate:record-parity — the CLI
@@ -105,10 +102,8 @@ Three tiers, all snapshot-pinned:
 - **Tier B — population statistics.**
   `scripts/catalog/build-counts.ts` (`compareBuildCounts`) + the two
   per-build snapshot JSONs gate every absolute count and rate the build
-  emits. The diff format in `formatCountDiff` is the same in both Phase
-  2 and Phase 3 — `scripts/binaries/stage7_counts.py` mirrors
-  `scripts/catalog/build-counts.ts` so the per-strategy assertion shape
-  reads identically across the two builds. A `BuildCounts` entry is
+  emits; `build:binaries` passes its counts through the same
+  `compareCountSnapshot`. A `BuildCounts` entry is
   either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
   diffs as one `parent.bucket` row per bucket, so a single drifting population
   names itself ([Override-layer authoring discipline](../distance/refinement/README.md#override-layer-authoring-discipline)).

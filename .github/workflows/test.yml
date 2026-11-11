@@ -73,8 +73,8 @@ jobs:
       - run: pip install -r scripts/refresh/requirements-refresh.txt -r scripts/textures/requirements.txt
       - run: python scripts/ci/python_tests.py
 
-  # Stage 2 resolution asserted against the curated 93-system ground
-  # truth (data/binaries/spot_check_ground_truth.tsv).
+  # Stage 2 resolution asserted against the curated ground truth
+  # (data/binaries/spot_check_ground_truth.tsv).
   spotcheck:
     name: Resolution spot-check corpus
     runs-on: ubuntu-latest
@@ -82,10 +82,13 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/lfs-cache
-      - uses: actions/setup-python@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
         with:
-          python-version-file: .python-version
-      - run: python3 scripts/binaries/build-binaries-spotcheck.py
+          node-version-file: .nvmrc
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run test:spotcheck
 
   build-catalog:
     name: Catalogue, clouds & Local Group build

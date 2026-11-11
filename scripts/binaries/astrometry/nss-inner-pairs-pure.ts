@@ -1,4 +1,4 @@
-// Stage 3's Gaia NSS inner pairs: an orbit interior to one component, re-homed on a synthesized sub-pair. ../README.md#sub-pair-synthesis-subdividepy
+// Stage 3's Gaia NSS inner pairs: an orbit interior to one component, re-homed on a synthesized sub-pair. ../load/README.md#sub-pair-synthesis
 
 import { childComponentTokens } from '../component-tokens-pure';
 import type { NssOrbitRow } from '../load/gaia-pure';
