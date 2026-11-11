@@ -16,9 +16,8 @@ scripts/binaries/counts/
   binaries-counts.ts   binariesCounts, over the shell's StageResults.
 ```
 
-The real-data cases are the parent folder's `build-binaries.test.ts`: the
-snapshot as a refresh would write it, byte for byte, and every key a stage
-counts filed.
+The real-data case is the parent folder's `build-binaries.test.ts`: the
+snapshot as a refresh would write it, byte for byte.
 
 ## Composition, not counting
 
@@ -29,8 +28,9 @@ a code stage: `subdivide` holds Stage 1's ORB6 orphan and MSC inner-pair
 counts and Stage 3's NSS inner pairs; `ingest` holds Stage 3's
 `wds_pairs_total`, which its inner pairs add to. `binariesCounts` places each
 key by name, in the snapshot's order, so a refresh rewrites the file
-unchanged; a key a stage returns that it does not place fails the real-data
-case.
+unchanged. `filed` takes the stages with a second argument that is `true`
+only when they hold exactly the keys the six `stageNCounts` return, so a key
+left out or invented fails to compile, naming it.
 
 A rate's denominator is never empty on real data; `share` throws if it is
 (`stellata-hhaw.45.17.19`). `pnpm run build:binaries --update-snapshots`

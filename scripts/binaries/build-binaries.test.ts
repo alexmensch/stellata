@@ -18,14 +18,14 @@ import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERR
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages, type StageResults } from './build-binaries';
-import { stage3Counts, type Stage3Result } from './astrometry/attach-astrometry';
+import type { Stage3Result } from './astrometry/attach-astrometry';
 import { binariesCounts } from './counts/binaries-counts';
-import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
-import { stage4Counts, type Stage4Result } from './orbits/attach-orbits';
-import { stage5Counts, type Stage5Result } from './optical/attach-optical';
-import { stage6Counts, type Stage6Result } from './multiples/attach-multiples';
+import type { ReferenceCatalogs } from './load/reference-catalogs';
+import type { Stage4Result } from './orbits/attach-orbits';
+import type { Stage5Result } from './optical/attach-optical';
+import type { Stage6Result } from './multiples/attach-multiples';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from './multiples-tsv';
-import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
+import { astrometryRequestIds, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
 import { SIMBAD_WDS_SPTYPE } from './load/simbad-wds-sptype-source';
@@ -141,13 +141,5 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
 
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     expect(asWritten(binariesCounts(results)) === snapshotText('build-binaries-expected.json')).toBe(true);
-  });
-
-  it('files every key each stage counts, and no other', () => {
-    const stageKeys = [
-      stage1Counts(c), stage2Counts(r), stage3Counts(c, r, s3), stage4Counts(s4), stage5Counts(s5), stage6Counts(s6),
-    ].flatMap((counts) => Object.keys(counts));
-    const filed = Object.values(binariesCounts(results).stages).flatMap((block) => Object.keys(block));
-    expect([...filed].sort()).toEqual([...new Set(stageKeys)].sort());
   });
 });
