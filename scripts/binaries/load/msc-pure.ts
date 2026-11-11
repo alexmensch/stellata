@@ -1,6 +1,6 @@
 // Tokovinin's Multiple Star Catalogue: its three tables, the label → WDS token map, and the lookups Stages 2/4/6 join on.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
 import {
@@ -75,8 +75,8 @@ export const MSC_ROOT_PARENT_LABELS: ReadonlySet<string> = new Set(['*', 't', 'X
 export const MSC_T0_YEAR_MAX = 3000.0;
 export const TRUNCATED_JD_TO_JD_OFFSET = 2400000.0;
 /** A fitted periastron epoch outside Besselian ≈1700-2600 is a misread unit. */
-export const T0_MIN_PLAUSIBLE_JD = J2000_JD + (1700.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
-export const T0_MAX_PLAUSIBLE_JD = J2000_JD + (2600.0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
+export const T0_MIN_PLAUSIBLE_JD = jdOfJulianYear(1700.0);
+export const T0_MAX_PLAUSIBLE_JD = jdOfJulianYear(2600.0);
 
 declare const MSC_PAIR: unique symbol;
 /** An MSC pair by the WDS tokens of its sides, in order. */
@@ -267,7 +267,7 @@ export function mscPeriodDays(row: MscOrbitRow): number | null {
 export function mscT0Jd(t0: number | null): number | null {
   if (t0 === null) return null;
   if (t0 <= MSC_T0_YEAR_MAX) {
-    const yearJd = J2000_JD + (t0 - 2000.0) * DAYS_PER_JULIAN_YEAR;
+    const yearJd = jdOfJulianYear(t0);
     if (T0_MIN_PLAUSIBLE_JD <= yearJd && yearJd <= T0_MAX_PLAUSIBLE_JD) return yearJd;
   }
   const truncatedJd = t0 + TRUNCATED_JD_TO_JD_OFFSET;

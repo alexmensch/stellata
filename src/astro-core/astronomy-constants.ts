@@ -45,7 +45,7 @@ export const ARCSEC_TO_RAD = Math.PI / (180.0 * 3600.0);
 export const MAS_TO_RAD = Math.PI / (180.0 * 3600.0 * 1000.0);
 
 // Julian Date of the J2000.0 epoch (2000 Jan 1.5 TT). Anchor for
-// JD-offset wire formats and the JD ↔ Julian-year converter in stage 6.
+// JD-offset wire formats and jdOfJulianYear.
 export const J2000_JD = 2451545.0;
 
 // J2000 obliquity of the ecliptic (IAU) — the tilt between the ICRS
@@ -60,6 +60,8 @@ export const HIPPARCOS_EPOCH_JYEAR = 1991.25;
 
 export const DAYS_PER_JULIAN_YEAR = 365.25;
 export const SECONDS_PER_DAY = 86400;
+
+export const jdOfJulianYear = (year: number): number => J2000_JD + (year - 2000) * DAYS_PER_JULIAN_YEAR;
 
 // Catalogue RA columns (AT-HYG's `ra`) and sexagesimal `hh:mm:ss` boundary
 // coordinates both arrive in hours; everything downstream of the parse works

@@ -1,7 +1,7 @@
 // Simulation time `t` (Unix-seconds double) + UT ↔ Julian-day helpers.
 // See ./README.md#timescales.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../../astro-core/astronomy-constants';
 import { deltaTSeconds } from './delta-t-pure';
 
 // Julian Date of the Unix epoch (1970-01-01T00:00:00Z).
@@ -50,7 +50,7 @@ export function jdUtToT(jdUt: number): number {
 
 /** Julian epoch year (e.g. 2016.0) → Unix-seconds. */
 export function julianEpochYearToT(jyr: number): number {
-  return jdUtToT(J2000_JD + (jyr - 2000) * DAYS_PER_JULIAN_YEAR);
+  return jdUtToT(jdOfJulianYear(jyr));
 }
 
 // Model-clock clamp: the Standish 1992 (/data/papers/index.md#standish1992)

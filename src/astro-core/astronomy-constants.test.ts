@@ -8,6 +8,7 @@ import {
   J2000_JD,
   KM_PC,
   R_SUN_PC,
+  jdOfJulianYear,
 } from './astronomy-constants';
 
 describe('astronomy-constants', () => {
@@ -45,5 +46,11 @@ describe('astronomy-constants', () => {
 
   it('DAYS_PER_JULIAN_YEAR is 365.25', () => {
     expect(DAYS_PER_JULIAN_YEAR).toBe(365.25);
+  });
+
+  it('jdOfJulianYear anchors on J2000 and counts Julian years (J2016.0 = JD 2457389)', () => {
+    expect(jdOfJulianYear(2000)).toBe(J2000_JD);
+    expect(jdOfJulianYear(2016)).toBe(2457389);
+    expect(jdOfJulianYear(1700)).toBe(2341970.0);
   });
 });

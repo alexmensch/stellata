@@ -1,12 +1,12 @@
 // Gaia DR3 NSS two-body orbits as canonical orbital elements, and Gaia's astrometric-detectability regime. See README.md.
 
-import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD, J2000_JD } from '../../../src/astro-core/astronomy-constants';
+import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD, jdOfJulianYear } from '../../../src/astro-core/astronomy-constants';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
-export const GAIA_DR3_REF_EPOCH_JD = J2000_JD + (GAIA_DR3_REF_EPOCH - 2000) * DAYS_PER_JULIAN_YEAR;
+export const GAIA_DR3_REF_EPOCH_JD = jdOfJulianYear(GAIA_DR3_REF_EPOCH);
 
 export const NSS_PERIOD_THRESHOLD_DAYS = 3 * DAYS_PER_JULIAN_YEAR;
 export const NSS_SEPARATION_THRESHOLD_MAS = 1000;
