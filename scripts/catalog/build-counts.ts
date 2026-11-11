@@ -13,6 +13,7 @@ import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
 import type { InputsCounts } from './parse/read-stars-inputs.ts';
 import type { FiguresCounts } from './parse/constellations/constellations.ts';
+import type { BoundariesCounts } from './boundaries/build-boundaries-artifact.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -25,7 +26,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -125,25 +126,6 @@ export interface FiledCounts {
   /** Entries in search-index.json (stars with at least one searchable
    *  identifier). */
   searchEntries: number;
-  /** Boundary arcs in public/constellation-boundaries.json — one per IAU
-   *  edge record, so a drift means the edge set changed. */
-  boundarySegments: number;
-  /** Precessed ICRS sample directions across all boundary arcs. Set by the
-   *  subdivision step, and the artifact's whole wire cost. */
-  boundaryDirections: number;
-  /** RA runs the resolved cell grid collapses to, band-major. The wire cost
-   *  of the runtime membership lookup, and the one dimension of that grid no
-   *  other pin covers — the 89 regions and their areas are pinned in
-   *  src/client/constellation-boundaries/. */
-  boundaryRegionRuns: number;
-  /** public/constellation-boundaries.json size, rounded to KiB. Pinned
-   *  because the direction quantisation is a wire-size choice with no other
-   *  visible signal — dropping `DIRECTION_DECIMALS` by one moves ~30k values
-   *  a character each, ~30 KiB. Rounded rather than exact: the file is 30k
-   *  decimal-formatted floats, so a last-bit difference in one trig call
-   *  (V8 differs across Node versions and architectures — CI is Node 24
-   *  x64) changes its byte length while changing nothing that matters. */
-  boundaryArtifactKb: number;
   /** Search entries carrying `dc` — a designation constellation that
    *  differs from the record's positional one, so its Bayer / Flamsteed /
    *  GCVS aliases are built against the designation's constellation instead
@@ -694,10 +676,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   apsisTeffEither: 'records',
   searchEntries: 'search',
   designationConMismatch: 'search',
-  boundarySegments: 'boundaries',
-  boundaryDirections: 'boundaries',
-  boundaryRegionRuns: 'boundaries',
-  boundaryArtifactKb: 'boundaries',
 };
 
 export type CountDiff =

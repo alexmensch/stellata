@@ -65,7 +65,7 @@ import {
   figuresCounts,
   figuresSummary,
 } from './parse/constellations/constellations';
-import { renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
+import { boundaryArtifactSummary, renderBoundaryArtifact } from './boundaries/build-boundaries-artifact';
 import {
   applyDoublesFlag,
   collectPhysicalPairKeys,
@@ -376,10 +376,6 @@ export async function main() {
     searchEntries: 0,
     designationConMismatch: 0,
     gcvsDesignationCon: 0,
-    boundarySegments: 0,
-    boundaryDirections: 0,
-    boundaryRegionRuns: 0,
-    boundaryArtifactKb: 0,
     gaiaSourceIdResolved: 0,
     apsisMatched: 0,
     apsisTeffEither: 0,
@@ -1117,22 +1113,7 @@ export async function main() {
   // and measured over the shipped population, so this runs against the same
   // `stars` the binary was written from.
   const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
-  counts.boundarySegments = boundaries.segments;
-  counts.boundaryDirections = boundaries.directions;
-  counts.boundaryRegionRuns = boundaries.regionRuns;
-  counts.boundaryArtifactKb = Math.round(boundaries.bytes / 1024);
-  const fade = boundaries.artifact.fade;
-  console.log(
-    `Built ${CATALOG_OUTPUTS.files.boundaries} (${boundaries.segments} arcs, `
-      + `${boundaries.directions} directions, `
-      + `${boundaries.artifact.labels.length} labels, `
-      + `${boundaries.regionRuns} region runs, `
-      + `${(boundaries.bytes / 1024).toFixed(1)} KB); fade window at `
-      + `V<=${fade.magLimits[fade.magLimits.length - 1]}: `
-      + fade.quantilePcts
-        .map((pct, j) => `${pct}%=${fade.offsetsPc[fade.offsetsPc.length - 1][j].toFixed(2)} pc`)
-        .join(', '),
-  );
+  console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
   // Search index — one entry per star with at least one identifier the
   // user might type. buildSearchEntry owns the wire shape (catalog-pure.ts).
@@ -1248,6 +1229,7 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
