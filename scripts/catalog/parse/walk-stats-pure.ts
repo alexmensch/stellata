@@ -1,8 +1,6 @@
 // The readStars walk's counts, folded one RowOutcome at a time. See README.md#per-row-pipeline.
 
 import { DIST_VIA_VALUES, type DistVia } from '../../../src/catalog-format/record/catalog-pure';
-import { SIMBAD_NAMESPACE_VALUES, type SimbadNamespace } from '../simbad/simbad-namespace-ladder-pure';
-import { SPECTRAL_VIA_VALUES, type SpectralVia } from '../spectral/spectral-resolve';
 import { DIRECTION_VIA_VALUES, type DirectionVia } from '../distance/direction-cascade';
 import { VELOCITY_VIA_VALUES, type VelocityVia } from '../distance/velocity';
 import { isGaiaCatalogueBibcode } from '../distance/gaia-distrust';
@@ -13,8 +11,6 @@ import {
 } from '../distance/placement-lineage-pure';
 import { PM_RESCUE_OUTCOMES, pmRescueOutcome, type PmRescueOutcome } from '../distance/pm-rescue/pm-rescue';
 import { RV_VIA_VALUES, RV_ERROR_BANDS, type RvVia, type RvErrorBand } from '../distance/radial-velocity/radial-velocity';
-import { V_VIA_VALUES, type VVia } from '../photometry/v-magnitude-pure';
-import { CI_VIA_VALUES, type CiVia } from '../photometry/colour-index-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { RowOutcome, Star } from './stars-parse';
 
@@ -48,10 +44,6 @@ export interface WalkStats {
    *  the override actually moves. */
   lmcOverriddenByDistVia: Record<DistVia, number>;
   directionVia: Record<DirectionVia, number>; // per-tier direction-cascade routing
-  vVia: Record<VVia, number>;    // per-tier V-magnitude cascade routing
-  // tycho2-tier rows outside BT−VT ∈ [−0.25, 2.0], wider than ESA 1997
-  // (/data/papers/index.md#esa1997) SP-1200's published −0.2 … 1.8
-  vTycho2OutsideBtVtRange: number;
   directionTycho2FromIcrs: number;    // tycho2-tier rows placed at the J2000 cell, no mean solution
   directionTycho2Photocentre: number; // tycho2-tier rows whose mean solution is a double's photocentre
   velocityVia: Record<VelocityVia, number>;   // per-tier space-motion PM-source routing
@@ -68,9 +60,6 @@ export interface WalkStats {
   rvGaiaErrorBand: Record<RvErrorBand, number>; // gaia_dr3-tier rows by stated rv uncertainty
   rvGaiaErrorMaxKmS: number;     // largest stated rv uncertainty on a gaia_dr3-tier row
   rvApplied: number;             // rows whose velocity carries a non-zero radial velocity
-  spectralVia: Record<SpectralVia, number>; // per-tier spectral resolver routing; none renders as SPECTRAL_UNKNOWN
-  spectralSimbadKey: Record<SimbadNamespace, number>; // which namespace found a SIMBAD-tier row
-  ciVia: Record<CiVia, number>;  // per-tier B−V cascade routing
 }
 
 /** Counted against the SHIPPED tier, not the resolved parallax: where
@@ -100,8 +89,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     directionVia: emptyTallyPartition(DIRECTION_VIA_VALUES),
-    vVia: emptyTallyPartition(V_VIA_VALUES),
-    vTycho2OutsideBtVtRange: 0,
     directionTycho2FromIcrs: 0,
     directionTycho2Photocentre: 0,
     velocityVia: emptyTallyPartition(VELOCITY_VIA_VALUES),
@@ -118,9 +105,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     rvGaiaErrorBand: emptyTallyPartition(RV_ERROR_BANDS),
     rvGaiaErrorMaxKmS: 0,
     rvApplied: 0,
-    spectralVia: emptyTallyPartition(SPECTRAL_VIA_VALUES),
-    spectralSimbadKey: emptyTallyPartition(SIMBAD_NAMESPACE_VALUES),
-    ciVia: emptyTallyPartition(CI_VIA_VALUES),
   };
 
   const addRv = ({ resolution, gaiaError }: RowOutcome['rv']): void => {
@@ -134,7 +118,7 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
   };
 
   const addShipped = (o: Extract<RowOutcome, { kind: 'shipped' }>): void => {
-    const { placement: p, brightness: b, facts: f } = o;
+    const { placement: p, facts: f } = o;
     const fastSample = (kmS: number): string =>
       `${sampleLabel(o.star)}: ${kmS.toFixed(0)} km/s @ ${f.distPc.toFixed(0)} pc`;
     if (f.bailerJonesEligible) stats.bjEligible++;
@@ -154,8 +138,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
       if (f.tycho2Direction.isPhotocentre) stats.directionTycho2Photocentre++;
     }
     if (p.pmRescue !== null) stats.pmRescueOutcome[pmRescueOutcome(p.pmRescue)]++;
-    stats.vVia[b.v.via]++;
-    if (f.vTycho2OutsideBtVtRange) stats.vTycho2OutsideBtVtRange++;
     if (p.rv.kind === 'rejected') {
       stats.rvRadialRejected++;
       stats.rvRadialRejectedSample.push(
@@ -174,9 +156,6 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     }
     stats.velocityVia[shippedVelocityVia(p)]++;
     if (radialVelocityApplied(p)) stats.rvApplied++;
-    stats.spectralVia[b.spectral.via]++;
-    if (b.spectral.via === 'simbad') stats.spectralSimbadKey[b.spectral.value.namespace]++;
-    stats.ciVia[b.ci.via]++;
   };
 
   return {

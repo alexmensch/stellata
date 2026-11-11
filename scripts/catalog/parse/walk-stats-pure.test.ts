@@ -49,7 +49,6 @@ const FACTS: ShippedFacts = {
   bailerJonesEligible: false,
   inLmcCone: false,
   tycho2Direction: null,
-  vTycho2OutsideBtVtRange: false,
   distPc: 100,
   fastKmS: null,
 };

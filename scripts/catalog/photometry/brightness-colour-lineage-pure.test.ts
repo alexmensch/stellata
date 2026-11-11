@@ -4,6 +4,7 @@ import {
   BRIGHTNESS_COLOUR_CODES,
   brightnessColourLineageLines,
   brightnessColourLineageRows,
+  brightnessColourSummary,
   type BrightnessColour,
 } from './brightness-colour-lineage-pure';
 import { PHOTOMETRY_REF } from './photometry-fixture';
@@ -14,7 +15,8 @@ import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 import { curatedSpectralValue } from '../spectral/spectral-resolve';
-import { decodeLineageLine, paramsOf } from '../lineage/lineage-row-pure';
+import { decodeLineageLine, foldStageLines, paramsOf } from '../lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 
 const KEY = 'gaia-dr3-astrometry:1000';
@@ -133,5 +135,47 @@ describe('brightnessColourLineageRows', () => {
     const [line] = brightnessColourLineageLines(b);
     expect(decodeLineageLine(line)).toEqual(brightnessColourLineageRows(b)[0]);
     expect(decodeLineageLine(line).stage).toBe(BRIGHTNESS_COLOUR_CODES.stage);
+  });
+});
+
+describe('the brightness-colour count block', () => {
+  const tycho2 = (outsideRange: boolean): BrightnessColour => ({
+    kind: 'v-only', key: 'spine:9',
+    v: { via: 'tycho2', value: { vMag: 9, outsideRange }, evidence: [TYCHO2_REF], refusals: [] },
+  });
+  const shipped: BrightnessColour = {
+    kind: 'shipped', key: KEY,
+    v: { via: 'printed_hip', value: { vMag: 2.5 }, evidence: [HIP_REF], refusals: [] },
+    spectral: { via: 'simbad', value: { ...G2V, namespace: 'tyc' }, evidence: [SIMBAD_REF], refusals: [] },
+    ci: { via: 'gspc', value: 1.9, evidence: [GSPC_REF], refusals: [] },
+    dust: null,
+  };
+  const lines = [tycho2(true), tycho2(false), shipped].flatMap(brightnessColourLineageLines);
+
+  it('keys every live code, zeros included, and no retired one', () => {
+    const counts = foldStageLines(BRIGHTNESS_COLOUR_CODES, lines);
+    expect(Object.keys(counts)).toEqual(BRIGHTNESS_COLOUR_CODES.live);
+    expect(counts).toMatchObject({
+      'brightness-colour.v.tycho2.inside-bt-vt-range': 1,
+      'brightness-colour.v.tycho2.outside-bt-vt-range': 1,
+      'brightness-colour.spectral.simbad.tyc': 1,
+      'brightness-colour.ci.refused.non-finite': 0,
+    });
+    expect(Object.keys(counts)).not.toContain('brightness-colour.v.tycho2');
+    expect(Object.keys(counts)).not.toContain('brightness-colour.spectral.simbad');
+  });
+
+  it('logs the cascades from the block, the Tycho-2 and SIMBAD tiers summed over their codes', () => {
+    const summaryLines = brightnessColourSummary(foldStageLines(BRIGHTNESS_COLOUR_CODES, lines)).split('\n');
+    expect(summaryLines[0]).toContain('tycho2 2 (1 outside the counted BT−VT range)');
+    expect(summaryLines[1]).toContain('gspc 1');
+    expect(summaryLines[2]).toContain('SIMBAD 1 (100.0%; by source_id 0, HIP 0, TYC 1, GJ 0)');
+  });
+
+  it('a new code reaches the snapshot as a key, and fails the check until the snapshot is refreshed', () => {
+    const { drift, refreshed } = seededCodeCheck(BRIGHTNESS_COLOUR_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`brightness-colour.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 });

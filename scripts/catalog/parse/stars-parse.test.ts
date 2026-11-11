@@ -288,7 +288,6 @@ describe('readStars manifest labels', () => {
       Object.values(p).reduce((a, b) => a + b, 0);
     expect(sum(stats.parkedVia)).toBe(stats.parked.length);
     expect(sum(stats.distVia)).toBe(stars.length);
-    expect(sum(stats.vVia)).toBe(stars.length);
     expect(sum(stats.directionVia)).toBe(stars.length);
     // The rv cascade answers before any park, so its partition runs over rows.
     expect(sum(stats.rvVia)).toBe(stats.total);
@@ -422,8 +421,7 @@ describe('readStars constellation assignment', () => {
     });
     expect(stars[0].flags & FLAG_IS_SOL).toBe(FLAG_IS_SOL);
     expect(stats).toMatchObject({
-      directionVia: { curated: 1 }, vVia: { curated: 1 }, distVia: { curated: 1 },
-      spectralVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
+      directionVia: { curated: 1 }, distVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
     });
     expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
   });

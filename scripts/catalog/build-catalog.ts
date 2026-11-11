@@ -46,7 +46,6 @@ import {
   CATALOG_COUNT_STAGES,
   compareCountSnapshot,
   formatPartition,
-  spectralSimbadPartitionError,
   type CatalogCountStage,
   type FiledCounts,
 } from './build-counts';
@@ -87,7 +86,9 @@ import {
   countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageRun,
 } from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
-import { BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines } from './photometry/brightness-colour-lineage-pure';
+import {
+  BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines, brightnessColourSummary,
+} from './photometry/brightness-colour-lineage-pure';
 import { SIZE_CODES, SIZE_LINEAGE_BUDGET, sizeLineageLines } from './spectral/size-lineage-pure';
 import {
   buildCatalogRowIndexMap,
@@ -234,10 +235,10 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       );
       // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
       placementLines = [];
-      const brightnessEmission = catalogStageLineage(
+      const brightnessEmission = countedStageLineage(catalogStageRun(
         BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
         stepInputs,
-      );
+      ), BRIGHTNESS_COLOUR_CODES);
       const sizeEmission = catalogStageLineage(
         SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
       );
@@ -380,19 +381,6 @@ export async function main() {
     apsisTeffEither: 0,
     simbadSptypeEntries: 0,
     simbadValuesEntries: 0,
-    spectralByCurated: 0,
-    spectralBySimbad: 0,
-    spectralSimbadBySourceId: 0,
-    spectralSimbadByHip: 0,
-    spectralSimbadByTyc: 0,
-    spectralSimbadByGj: 0,
-    spectralByGspspec: 0,
-    spectralFallback: 0,
-    ciGaiaRelation: 0,
-    ciPrintedHipBv: 0,
-    ciGspc: 0,
-    ciSpectralDerived: 0,
-    ciSolarFallback: 0,
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -465,13 +453,6 @@ export async function main() {
     directionCns5: 0,
     directionSimbad: 0,
     directionCurated: 0,
-    vGaiaRiello: 0,
-    vPrintedHip: 0,
-    vTycho2: 0,
-    vTycho2OutsideBtVtRange: 0,
-    vGliese: 0,
-    vCurated: 0,
-    vNone: 0,
     velocityGaiaPm: 0,
     velocityHip2Pm: 0,
     velocityTycho2Pm: 0,
@@ -541,19 +522,7 @@ export async function main() {
       `double's photocentre), cns5 ${dv.cns5}, simbad ${dv.simbad}, ` +
       `curated ${dv.curated}`,
   );
-  const mv = stats.vVia;
-  console.log(
-    `  V cascade: gaia_riello ${mv.gaia_riello}, printed_hip ${mv.printed_hip}, ` +
-      `tycho2 ${mv.tycho2} (${stats.vTycho2OutsideBtVtRange} outside the ` +
-      `published BT−VT range), gliese ${mv.gliese}, ` +
-      `curated ${mv.curated}, none ${mv.none}`,
-  );
-  const cv = stats.ciVia;
-  console.log(
-    `  ci cascade: gaia_relation ${cv.gaia_relation}, ` +
-      `printed_hip_bv ${cv.printed_hip_bv}, gspc ${cv.gspc}, ` +
-      `spectral_derived ${cv.spectral_derived}, solar_fallback ${cv.none}`,
-  );
+  console.log(brightnessColourSummary(brightnessEmission.counts));
   const vv = stats.velocityVia;
   console.log(
     `  velocity cascade: gaia_pm ${vv.gaia_pm}, hip2_pm ${vv.hip2_pm}, ` +
@@ -628,13 +597,6 @@ export async function main() {
   counts.directionCurated = dv.curated;
   counts.directionTycho2FromIcrs = stats.directionTycho2FromIcrs;
   counts.directionTycho2Photocentre = stats.directionTycho2Photocentre;
-  counts.vGaiaRiello = stats.vVia.gaia_riello;
-  counts.vPrintedHip = stats.vVia.printed_hip;
-  counts.vTycho2 = stats.vVia.tycho2;
-  counts.vTycho2OutsideBtVtRange = stats.vTycho2OutsideBtVtRange;
-  counts.vGliese = stats.vVia.gliese;
-  counts.vCurated = stats.vVia.curated;
-  counts.vNone = stats.vVia.none;
   counts.velocityGaiaPm = vv.gaia_pm;
   counts.velocityHip2Pm = vv.hip2_pm;
   counts.velocityTycho2Pm = vv.tycho2_pm;
@@ -658,21 +620,6 @@ export async function main() {
   counts.rvRadialRejected = stats.rvRadialRejected;
   counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
   counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
-  counts.spectralByCurated = stats.spectralVia.curated;
-  counts.spectralBySimbad = stats.spectralVia.simbad;
-  counts.spectralSimbadBySourceId = stats.spectralSimbadKey.source_id;
-  counts.spectralSimbadByHip = stats.spectralSimbadKey.hip;
-  counts.spectralSimbadByTyc = stats.spectralSimbadKey.tyc;
-  counts.spectralSimbadByGj = stats.spectralSimbadKey.gj;
-  const partitionError = spectralSimbadPartitionError(counts);
-  if (partitionError !== null) throw new Error(partitionError);
-  counts.spectralByGspspec = stats.spectralVia.gspspec;
-  counts.spectralFallback = stats.spectralVia.none;
-  counts.ciGaiaRelation = stats.ciVia.gaia_relation;
-  counts.ciPrintedHipBv = stats.ciVia.printed_hip_bv;
-  counts.ciGspc = stats.ciVia.gspc;
-  counts.ciSpectralDerived = stats.ciVia.spectral_derived;
-  counts.ciSolarFallback = stats.ciVia.none;
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
   // classic-ID tables still supply per record is IV/27A's constellation for
@@ -706,18 +653,6 @@ export async function main() {
       `reach), ${namingCounts.namingGould} Gould, ` +
       `${namingCounts.namingAliases} aliases on ` +
       `${namingCounts.namingAliasRecords} records`,
-  );
-
-  const simbadPct = ((stats.spectralVia.simbad / stars.length) * 100).toFixed(1);
-  const gspspecPct = ((stats.spectralVia.gspspec / stars.length) * 100).toFixed(1);
-  const fallbackPct = ((stats.spectralVia.none / stars.length) * 100).toFixed(1);
-  console.log(
-    `  spectral classification: curated ${stats.spectralVia.curated}, ` +
-      `SIMBAD ${stats.spectralVia.simbad} (${simbadPct}%; by source_id ` +
-      `${stats.spectralSimbadKey.source_id}, HIP ${stats.spectralSimbadKey.hip}, ` +
-      `TYC ${stats.spectralSimbadKey.tyc}, GJ ${stats.spectralSimbadKey.gj}), ` +
-      `GSP-Spec ${stats.spectralVia.gspspec} (${gspspecPct}%), ` +
-      `unknown ${stats.spectralVia.none} (${fallbackPct}%)`,
   );
 
   // Companion promotion — read data/binaries/multiples.tsv and add
@@ -1328,6 +1263,7 @@ export async function main() {
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
       buildCountsCheck({ ...counts, solIndex }, [
+        { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
       ]), distanceOutliersCheck(stars),
       heap.check(),

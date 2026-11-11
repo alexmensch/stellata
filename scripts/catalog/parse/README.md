@@ -219,8 +219,10 @@ Every count the walk returns folds from the row's `RowOutcome`
 (`walk-stats-pure.ts`). A cascade partition counts shipped outcomes only, so it
 sums to the record count rather than to the rows entering the walk; a parked
 row is in none of them — `parkedVia`, over the closed reason enum, is the one
-place it is a number, and `distNone` / `vNone` stay pinned at 0 because a
-shipped record cannot have reached no tier. The radial-velocity counts are the
+place it is a number, and `distNone` stays pinned at 0 because a shipped
+record cannot have reached no tier. V, spectral class and B−V are counted by
+the brightness-colour stage's own block instead
+([Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)). The radial-velocity counts are the
 exception: the rv cascade answers before any park, so `rvVia`, the Gaia error
 bands and the two bibcode counts run over every manifest row.
 

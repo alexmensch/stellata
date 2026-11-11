@@ -10,6 +10,7 @@ import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
 import type { RecuratedBrightness } from './companions/companion-promotion.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
+import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -22,7 +23,7 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & CoherenceCounts;
+export type BuildCounts = FiledCounts & BrightnessColourCounts & CoherenceCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -182,39 +183,6 @@ export interface FiledCounts {
   simbadSptypeEntries: number;
   /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
   simbadValuesEntries: number;
-  /** Records the spectral resolver's curated tier classified (spectral/README.md#the-resolver). */
-  spectralByCurated: number;
-  /** Records whose spectral classification came from SIMBAD's `sp_type` — the canonical Morgan-Keenan tier. */
-  spectralBySimbad: number;
-  /** The four SIMBAD tiers split by the namespace that found the row, summing
-   *  to `spectralBySimbad` — enforced by `spectralSimbadPartitionError`, not
-   *  merely asserted here. The split is over which namespace WON, so the
-   *  ladder's order decides it: GJ is walked before TYC, and a record both
-   *  reach credits GJ. `spectralSimbadByTyc` is the only one reaching an
-   *  object SIMBAD holds no Gaia id and no HIP for. */
-  spectralSimbadBySourceId: number;
-  spectralSimbadByHip: number;
-  spectralSimbadByTyc: number;
-  spectralSimbadByGj: number;
-  /** Records that fell through to Gaia DR3 GSP-Spec's
-   *  `spectraltype_esphs` enum — second-tier letter-only classification. */
-  spectralByGspspec: number;
-  /** Records with neither SIMBAD sp_type nor GSP-Spec coverage — the
-   *  `unknown` class. */
-  spectralFallback: number;
-  /** Records whose `ci` came from the Gaia BP−RP relation. */
-  ciGaiaRelation: number;
-  /** Records taking Gaia's synthetic B−V — past the relation's colour bound,
-   *  inside the measured one, and with no printed colour above it. */
-  ciGspc: number;
-  /** Records falling through to printed `I/239` B−V keyed on their own HIP. */
-  ciPrintedHipBv: number;
-  /** No-Apsis-Teff records whose `ci` is baked from the parsed spectral class
-   *  instead of the solar fallback — the population that would otherwise
-   *  render solar-yellow. */
-  ciSpectralDerived: number;
-  /** Records no tier covers, taking `SOLAR_BV_FALLBACK`. */
-  ciSolarFallback: number;
   /** Pair rows in multiples.tsv scanned by the companion-promotion pass
    *  (excludes standalone rows). */
   companionRowsScanned: number;
@@ -528,37 +496,6 @@ export interface FiledCounts {
   /** Direction cascade: Sol, whose curated tier exists because it carries no
    *  identifier any tier above can key on. Pinned at 1. */
   directionCurated: number;
-  /** V cascade: rows whose Johnson V came from the Riello 2021
-   *  (/data/papers/index.md#riello2021) G,BP−RP transform — unsaturated Gaia
-   *  photometry inside the relation's validity range. See
-   *  scripts/catalog/photometry/README.md. */
-  vGaiaRiello: number;
-  /** V cascade: the bright rescue tier. Rows whose Gaia photometry is
-   *  saturated (G < 4), incomplete, or outside the transform's colour
-   *  range, resolved against printed I/239 Vmag instead. */
-  vPrintedHip: number;
-  /** V cascade: rows with no Gaia photometry and no printed HIP V, taking
-   *  Tycho-2's `VT` reduced to Johnson V by the ESA 1997
-   *  (/data/papers/index.md#esa1997) SP-1200 relation. */
-  vTycho2: number;
-  /** The `vTycho2` subset whose `BT−VT` sits outside [−0.25, 2.0], wider
-   *  than the −0.2 < BT−VT < 1.8 ESA 1997 (/data/papers/index.md#esa1997)
-   *  SP-1200 publishes that relation over.
-   *  Counted, not gated: none of these rows carries a `gl`, so gating would
-   *  cost each its only V and hence its record — ../photometry/v-magnitude-pure.ts `tycho2VMagnitude`. */
-  vTycho2OutsideBtVtRange: number;
-  /** V cascade: the GJ-only cohort, taking Gliese 1991
-   *  (/data/papers/index.md#gliese1991) V/70A's printed `Vmag`.
-   *  The tier below Tycho-2 and the last one: SIMBAD publishes no V flux at
-   *  all for the rows that reach here. */
-  vGliese: number;
-  /** V cascade: Sol, curated for the same reason its direction is. Pinned
-   *  at 1. */
-  vCurated: number;
-  /** V cascade: rows no tier supplied a V for, and so no absmag either —
-   *  readStars drops them. Pinned at 0, which is the assertion that the
-   *  absmag-cell membership gate still implies a usable magnitude. */
-  vNone: number;
   /** Space-motion velocity: rows whose tangential velocity came from
    *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
    *  directionGaiaNssSystemic). */
@@ -682,19 +619,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   lmcOverridden: 'placement',
   lmcParallaxRefusedByDistVia: 'placement',
   lmcOverriddenByDistVia: 'placement',
-  spectralByCurated: 'placement',
-  spectralBySimbad: 'placement',
-  spectralSimbadBySourceId: 'placement',
-  spectralSimbadByHip: 'placement',
-  spectralSimbadByTyc: 'placement',
-  spectralSimbadByGj: 'placement',
-  spectralByGspspec: 'placement',
-  spectralFallback: 'placement',
-  ciGaiaRelation: 'placement',
-  ciPrintedHipBv: 'placement',
-  ciGspc: 'placement',
-  ciSpectralDerived: 'placement',
-  ciSolarFallback: 'placement',
   distBailerJones: 'placement',
   distLmcKinematic: 'placement',
   distGaiaDr3Inversion: 'placement',
@@ -722,13 +646,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   directionCns5: 'placement',
   directionSimbad: 'placement',
   directionCurated: 'placement',
-  vGaiaRiello: 'placement',
-  vPrintedHip: 'placement',
-  vTycho2: 'placement',
-  vTycho2OutsideBtVtRange: 'placement',
-  vGliese: 'placement',
-  vCurated: 'placement',
-  vNone: 'placement',
   velocityGaiaPm: 'placement',
   velocityHip2Pm: 'placement',
   velocityTycho2Pm: 'placement',
@@ -978,21 +895,4 @@ export function compareCountSnapshot<T extends object>(
     drifted: driftedRows(diff).length > 0,
     report: formatCountDiff(diff),
   };
-}
-
-/** The SIMBAD namespace tallies must exhaust the SIMBAD tier: every record the
- *  resolver credits to SIMBAD reports exactly one namespace that found it, so a
- *  shortfall means a tier returned a row without naming its key and the
- *  per-namespace figures understate silently. Returns the message to fail the
- *  build with, or null when the partition holds. */
-export function spectralSimbadPartitionError(
-  counts: Pick<BuildCounts, 'spectralBySimbad' | `spectralSimbadBy${'SourceId' | 'Hip' | 'Tyc' | 'Gj'}`>,
-): string | null {
-  const sum = counts.spectralSimbadBySourceId + counts.spectralSimbadByHip
-    + counts.spectralSimbadByTyc + counts.spectralSimbadByGj;
-  if (sum === counts.spectralBySimbad) return null;
-  return 'spectralSimbad namespace partition does not exhaust the SIMBAD tier: '
-    + `source_id ${counts.spectralSimbadBySourceId} + hip ${counts.spectralSimbadByHip} `
-    + `+ tyc ${counts.spectralSimbadByTyc} + gj ${counts.spectralSimbadByGj} `
-    + `= ${sum}, but spectralBySimbad is ${counts.spectralBySimbad}`;
 }

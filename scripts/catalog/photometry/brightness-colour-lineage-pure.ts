@@ -12,7 +12,7 @@ import {
   TYCHO2_BT_MINUS_VT_MAX, TYCHO2_BT_MINUS_VT_MIN, type VMagnitudeResolution, type VVia,
 } from './v-magnitude-pure';
 import type { SpectralRefusal, SpectralResolution, SpectralVia } from '../spectral/spectral-resolve';
-import type { SimbadNamespace } from '../simbad/simbad-namespace-ladder-pure';
+import { SIMBAD_NAMESPACE_VALUES, type SimbadNamespace } from '../simbad/simbad-namespace-ladder-pure';
 import { BRIGHTNESS_COLOUR_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const BRIGHTNESS_COLOUR_LINEAGE_BUDGET = { gzipBytes: 42_400_000, writeMs: 60_000 };
@@ -112,6 +112,29 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
 });
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
+
+/** Brightness-colour's count block: its lines folded per live code. */
+export type BrightnessColourCounts = Readonly<Record<(typeof BRIGHTNESS_COLOUR_CODES.live)[number], number>>;
+
+export function brightnessColourSummary(counts: BrightnessColourCounts): string {
+  const n = (branch: Branch): number => counts[BRIGHTNESS_COLOUR_CODES.code(branch) as keyof BrightnessColourCounts];
+  const simbad = (ns: SimbadNamespace): number => n(SPECTRAL_SIMBAD_BRANCHES[ns]);
+  const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
+  const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
+  const pct = (k: number): string => `${((k / records) * 100).toFixed(1)}%`;
+  return [
+    `  V cascade: gaia_riello ${n('v.gaia-riello')}, printed_hip ${n('v.printed-hip')}, `
+      + `tycho2 ${n('v.tycho2.inside-bt-vt-range') + n('v.tycho2.outside-bt-vt-range')} `
+      + `(${n('v.tycho2.outside-bt-vt-range')} outside the counted BT−VT range), gliese ${n('v.gliese')}, `
+      + `curated ${n('v.curated')}, none ${n('v.none')}`,
+    `  ci cascade: gaia_relation ${n('ci.gaia-relation')}, printed_hip_bv ${n('ci.printed-hip-bv')}, `
+      + `gspc ${n('ci.gspc')}, spectral_derived ${n('ci.spectral-derived')}, solar_fallback ${n('ci.none')}`,
+    `  spectral classification: curated ${n('spectral.curated')}, SIMBAD ${simbadTotal} (${pct(simbadTotal)}; `
+      + `by source_id ${simbad('source_id')}, HIP ${simbad('hip')}, TYC ${simbad('tyc')}, GJ ${simbad('gj')}), `
+      + `GSP-Spec ${n('spectral.gspspec')} (${pct(n('spectral.gspspec'))}), `
+      + `unknown ${n('spectral.none')} (${pct(n('spectral.none'))})`,
+  ].join('\n');
+}
 
 type ParamsOf<B extends Branch> =
   B extends `dust.${string}` ? { av: string }
