@@ -62,9 +62,9 @@ scripts/binaries/
   astrometry/                     Stage 3 in TypeScript: each component's
                                   astrometry route, keyed by its
                                   DecomposedPair. Own README.
-  orbits/                         Stage 4's orbit knowledge in TypeScript:
-                                  the NSS two-body conversion and its
-                                  detectability regime, so far. Own README.
+  orbits/                         Stage 4 in TypeScript: each pair's
+                                  orbit from ORB6, Gaia NSS or the MSC,
+                                  keyed by its DecomposedPair. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,

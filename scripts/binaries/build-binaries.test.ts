@@ -21,6 +21,7 @@ import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages } from './build-binaries';
 import { RATE_SNAPSHOT_DECIMALS, stage3Counts, stage3Rates, type Stage3Result } from './astrometry/attach-astrometry';
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
+import { stage4Counts, stage4Rates, type Stage4Result } from './orbits/attach-orbits';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
@@ -40,13 +41,14 @@ const snapshot = (file: string): unknown => flattenStages(JSON.parse(readFileSyn
 const committed = snapshot('build-binaries-expected.json') as Record<string, number>;
 const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number }>;
 
-describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..3 through the shell, over the committed inputs', () => {
+describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..4 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
   let r: Stage2Result;
   let s3: Stage3Result;
+  let s4: Stage4Result;
   const log: string[] = [];
   beforeAll(async () => {
-    ({ reference: c, resolved: r, astrometry: s3 } = await runStages((line) => log.push(line)));
+    ({ reference: c, resolved: r, astrometry: s3, orbits: s4 } = await runStages((line) => log.push(line)));
   }, 120_000);
 
   it('logs Stage 1 with no input-drift warning', () => {
@@ -117,5 +119,20 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     const inner = s3.astrometry.get(s3.pairs.at(-1)!)!;
     expect(Object.isFrozen(inner)).toBe(true);
     expect([inner.primary.astrometryVia, Object.isFrozen(inner.primary)]).toEqual([expect.not.stringMatching(/^unresolved$/), true]);
+  });
+
+  it('counts what the committed count snapshot pins for Stage 4\'s keys', () => {
+    for (const [key, value] of Object.entries(stage4Counts(s4))) expect([key, value]).toEqual([key, committed[key]]);
+  });
+
+  it('rates what the committed rates snapshot pins for Stage 4\'s keys, at its rounding', () => {
+    for (const [key, rate] of Object.entries(stage4Rates(stage4Counts(s4)))) {
+      expect([key, Number(rate.toFixed(RATE_SNAPSHOT_DECIMALS))]).toEqual([key, committedRates[key].value]);
+    }
+  });
+
+  it('selects one frozen orbit for every Stage 3 pair', () => {
+    expect([...s4.orbits.keys()]).toEqual(s3.pairs);
+    expect(Object.isFrozen(s4.orbits.get(s3.pairs[0]))).toBe(true);
   });
 });
