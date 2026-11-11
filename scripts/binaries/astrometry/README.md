@@ -102,10 +102,10 @@ fallback), typed `Stage3Counts` so a key read is a key returned.
 `stage3Rates` derives `gaia_resolve_rate`, over the tiers the codec's
 `RESOLVE_VIA_ANCHORS_SOURCE_ID` marks, and `hip2_fallback_rate`, each through
 `share`, which throws on zero components. The parent folder's `build-binaries.test.ts`
-holds each key to the committed snapshot exactly, and each rate, rounded to
-the snapshot's `RATE_SNAPSHOT_DECIMALS`, to its committed value: every input
-to a rate is already pinned, so the build's tolerance band would only hide a
-formula error.
+holds each key to the committed snapshot exactly, and each rate, rounded as a
+refresh writes it ([The rates snapshot](../../util/counts/README.md#the-rates-snapshot)),
+to its committed value: every input to a rate is already pinned, so the
+build's tolerance band would only hide a formula error.
 
 ## Byte identity with the Python stage
 

@@ -47,10 +47,9 @@ scripts/binaries/
                                   runStages calls each ported stage in
                                   order. Called only from its test until
                                   the switch; the test runs it over the
-                                  committed inputs and holds each ported
-                                  stage's keys to the committed count
-                                  snapshot, and its rates to the rates
-                                  snapshot's committed values.
+                                  committed inputs and holds Stage 7's
+                                  counts and rates to both committed
+                                  snapshots byte for byte.
   load/                           Stage 1 in TypeScript: every reference
                                   catalogue read through its declaration,
                                   then the Stage 1 passes, as a frozen
@@ -80,6 +79,9 @@ scripts/binaries/
                                   standalone components, with the anchor
                                   offsets and the Gaia photometry. Own
                                   README.
+  counts/                         Stage 7 in TypeScript: every stage's
+                                  counts and rates, filed under the
+                                  snapshot's stages. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,

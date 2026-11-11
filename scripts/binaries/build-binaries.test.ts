@@ -11,18 +11,19 @@ import { ATHYG_CLASSIC_IDS } from '../catalog/spine/athyg-classic-ids-source';
 import { SIMBAD_WDS_XIDS } from '../catalog/membership/binding/simbad-wds-xids-source';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
-import { flattenStages } from '../util/counts/count-stages-pure';
+import { refreshedRates, rateEntries } from '../util/counts/rate-snapshot-pure';
 import { isReadable } from '../util/sources/source';
 import { componentKey } from './component-tokens-pure';
 import { BINARIES_ASTROMETRY } from './load/binaries-astrometry-source';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './load/curated-source';
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
-import { runStages } from './build-binaries';
-import { RATE_SNAPSHOT_DECIMALS, stage3Counts, stage3Rates, type Stage3Result } from './astrometry/attach-astrometry';
+import { runStages, type StageResults } from './build-binaries';
+import { stage3Counts, type Stage3Result } from './astrometry/attach-astrometry';
+import { binariesCounts, binariesRates } from './counts/binaries-counts';
 import { stage1Counts, type ReferenceCatalogs } from './load/reference-catalogs';
-import { stage4Counts, stage4Rates, type Stage4Result } from './orbits/attach-orbits';
-import { stage5Counts, stage5Rates, type Stage5Result } from './optical/attach-optical';
+import { stage4Counts, type Stage4Result } from './orbits/attach-orbits';
+import { stage5Counts, type Stage5Result } from './optical/attach-optical';
 import { stage6Counts, type Stage6Result } from './multiples/attach-multiples';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from './multiples-tsv';
 import { astrometryRequestIds, stage2Counts, type Stage2Result } from './resolve/resolve-pairs';
@@ -40,9 +41,8 @@ const INPUTS = [
 const REQUEST = { file: DATA_FILES.binariesAstrometryRequest, hint: 'Re-run `pnpm run build:binaries`.' };
 const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 
-const snapshot = (file: string): unknown => flattenStages(JSON.parse(readFileSync(resolve(__dirname, file), 'utf8')));
-const committed = snapshot('build-binaries-expected.json') as Record<string, number>;
-const committedRates = snapshot('build-binaries-rates-expected.json') as Record<string, { value: number }>;
+const snapshotText = (file: string): string => readFileSync(resolve(__dirname, file), 'utf8');
+const asWritten = (snapshot: unknown): string => `${JSON.stringify(snapshot, null, 2)}\n`;
 
 describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
@@ -51,9 +51,11 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
   let s4: Stage4Result;
   let s5: Stage5Result;
   let s6: Stage6Result;
+  let results: StageResults;
   const log: string[] = [];
   beforeAll(async () => {
-    ({ reference: c, resolved: r, astrometry: s3, orbits: s4, optical: s5, multiples: s6 } = await runStages((line) => log.push(line)));
+    results = await runStages((line) => log.push(line));
+    ({ reference: c, resolved: r, astrometry: s3, orbits: s4, optical: s5, multiples: s6 } = results);
   }, 120_000);
 
   it('logs Stage 1 with no input-drift warning', () => {
@@ -65,9 +67,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(c.checks.filter((check) => check.kind === 'fail')).toEqual([]);
   });
 
-  it('counts what the committed count snapshot pins for its keys', () => {
-    for (const [key, value] of Object.entries(stage1Counts(c))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
   it('is frozen', () => {
     expect(Object.isFrozen(c)).toBe(true);
@@ -84,9 +83,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(c.indices.msc.orbitsByPair.get(mscPairKey('23300+5833', 'Aa', 'Ab'))?.rows.map((r) => r.per)).toEqual([6.0663]);
   });
 
-  it('counts what the committed count snapshot pins for Stage 2\'s keys', () => {
-    for (const [key, value] of Object.entries(stage2Counts(r))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
   it('requests exactly the committed Gaia astrometry request', () => {
     expect(serialiseSourceIdRequest(astrometryRequestIds(r, c.indices)) === readRepoFile(REQUEST.file)).toBe(true);
@@ -106,15 +102,7 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(Object.isFrozen(r.pairs[0].primary)).toBe(true);
   });
 
-  it('counts what the committed count snapshot pins for Stage 3\'s keys', () => {
-    for (const [key, value] of Object.entries(stage3Counts(c, r, s3))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
-  it('rates what the committed rates snapshot pins for Stage 3\'s keys, at its rounding', () => {
-    for (const [key, rate] of Object.entries(stage3Rates(stage3Counts(c, r, s3)))) {
-      expect([key, Number(rate.toFixed(RATE_SNAPSHOT_DECIMALS))]).toEqual([key, committedRates[key].value]);
-    }
-  });
 
   it('routes every side of every pair, and hands Stage 4 frozen pairs', () => {
     expect(s3.pairs.every((p) => s3.astrometry.has(p))).toBe(true);
@@ -126,15 +114,7 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect([inner.primary.astrometryVia, Object.isFrozen(inner.primary)]).toEqual([expect.not.stringMatching(/^unresolved$/), true]);
   });
 
-  it('counts what the committed count snapshot pins for Stage 4\'s keys', () => {
-    for (const [key, value] of Object.entries(stage4Counts(s4))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
-  it('rates what the committed rates snapshot pins for Stage 4\'s keys, at its rounding', () => {
-    for (const [key, rate] of Object.entries(stage4Rates(stage4Counts(s4)))) {
-      expect([key, Number(rate.toFixed(RATE_SNAPSHOT_DECIMALS))]).toEqual([key, committedRates[key].value]);
-    }
-  });
 
   it('selects one frozen orbit for every Stage 3 pair', () => {
     expect([...s4.orbits.keys()]).toEqual(s3.pairs);
@@ -142,15 +122,7 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect([Object.isFrozen(withElements), Object.isFrozen(withElements.elements)]).toEqual([true, true]);
   });
 
-  it('counts what the committed count snapshot pins for Stage 5\'s keys', () => {
-    for (const [key, value] of Object.entries(stage5Counts(s5))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
-  it('rates what the committed rates snapshot pins for Stage 5\'s keys, at its rounding', () => {
-    for (const [key, rate] of Object.entries(stage5Rates(stage5Counts(s5)))) {
-      expect([key, Number(rate.toFixed(RATE_SNAPSHOT_DECIMALS))]).toEqual([key, committedRates[key].value]);
-    }
-  });
 
   it('classifies every Stage 3 pair, and logs the Stage 5 lines', () => {
     expect([...s5.optical.keys()]).toEqual(s3.pairs);
@@ -158,9 +130,6 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(log.filter((line) => line.startsWith('optical-pair cascade: ') || line.startsWith('separation-limit rejections: '))).toHaveLength(2);
   });
 
-  it('counts what the committed count snapshot pins for Stage 6\'s keys', () => {
-    for (const [key, value] of Object.entries(stage6Counts(s6))) expect([key, value]).toEqual([key, committed[key]]);
-  });
 
   it('encodes Stage 6\'s records to the committed multiples.tsv, byte for byte', () => {
     expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
@@ -169,5 +138,22 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
   it('hands the switch frozen rows, and logs the Stage 6 lines', () => {
     expect([Object.isFrozen(s6), Object.isFrozen(s6.rows), Object.isFrozen(s6.rows[0])]).toEqual([true, true, true]);
     expect(log.filter((line) => line.startsWith('multiples.tsv: ') || line.startsWith('spect provenance: '))).toHaveLength(2);
+  });
+
+  it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
+    expect(asWritten(binariesCounts(results)) === snapshotText('build-binaries-expected.json')).toBe(true);
+  });
+
+  it('files every key each stage counts, and no other', () => {
+    const stageKeys = [
+      stage1Counts(c), stage2Counts(r), stage3Counts(c, r, s3), stage4Counts(s4), stage5Counts(s5), stage6Counts(s6),
+    ].flatMap((counts) => Object.keys(counts));
+    const filed = Object.values(binariesCounts(results).stages).flatMap((block) => Object.keys(block));
+    expect([...filed].sort()).toEqual([...new Set(stageKeys)].sort());
+  });
+
+  it('rates the committed rates snapshot, byte for byte as a refresh writes it', () => {
+    const committed = JSON.parse(snapshotText('build-binaries-rates-expected.json'));
+    expect(asWritten(refreshedRates(committed, rateEntries(binariesRates(results))))).toBe(snapshotText('build-binaries-rates-expected.json'));
   });
 });
