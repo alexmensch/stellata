@@ -62,10 +62,12 @@ describe('parseMarkers', () => {
 });
 
 describe('parseFormat', () => {
-  it('knows exact, sigN and kN', () => {
+  it('knows exact, sigN, kN and dN', () => {
     expect(parseFormat(undefined)).toEqual({ kind: 'exact' });
     expect(parseFormat('sig2')).toEqual({ kind: 'significant', digits: 2 });
     expect(parseFormat('k3')).toEqual({ kind: 'thousands', digits: 3 });
+    expect(parseFormat('d2')).toEqual({ kind: 'decimals', digits: 2 });
+    expect(parseFormat('d0')).toBeNull();
     expect(parseFormat('pct')).toBeNull();
   });
 });
@@ -117,6 +119,13 @@ describe('formatFigure', () => {
     expect(formatFigure(63653, { kind: 'thousands', digits: 2 })).toBe('64k');
     expect(formatFigure(10110, { kind: 'thousands', digits: 3 })).toBe('10.1k');
     expect(formatFigure(1247240, { kind: 'thousands', digits: 3 })).toBe('1,250k');
+  });
+
+  it('fixes decimal places, trailing zeros and a typographic minus kept', () => {
+    expect(formatFigure(0.38995, { kind: 'decimals', digits: 3 })).toBe('0.390');
+    expect(formatFigure(22.5304, { kind: 'decimals', digits: 2 })).toBe('22.53');
+    expect(formatFigure(-1.0671, { kind: 'decimals', digits: 2 })).toBe('\u22121.07');
+    expect(formatFigure(4.743e-4, { kind: 'decimals', digits: 5 })).toBe('0.00047');
   });
 });
 

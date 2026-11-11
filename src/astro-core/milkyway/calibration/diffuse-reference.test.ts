@@ -15,7 +15,6 @@ import {
   bulgeToTotalLight,
   diffuseResidualMagArcsec2,
 } from './diffuse-reference';
-import { fluxNumber } from '../../emission/density0-solver-pure';
 import {
   combinedColourIndex,
   discColourIndex,
@@ -63,22 +62,12 @@ function bc03ColourIndexAt10Gyr(
 // draws. Pinning the published figure directly would enshrine that double
 // count, which is exactly what the retired GC anchor did.
 describe('MilkyWay diffuse reference', () => {
+  // The measured rows are pinned in /tests/integration/milkyway-sightlines-expected.json, never here.
   it('subtracts the resolved catalogue from the published NGP total', () => {
-    expect(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole).toBe(24.1109);
-    expect(RESOLVED_CATALOGUE_MAG_ARCSEC2.galacticCentre).toBe(22.1913);
-    expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeCloseTo(25.44, 2);
+    expect(diffuseResidualMagArcsec2(20, 20 + 2.5 * Math.log10(2))).toBeCloseTo(20 + 2.5 * Math.log10(2), 12);
     expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeGreaterThan(
       LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole,
     );
-  });
-
-  // The V ≤ 11 star field carries three quarters of the pole's starlight;
-  // the 388k catalogue before it carried two thirds.
-  it('pins how much of the NGP total the star field already draws', () => {
-    const share =
-      fluxNumber(RESOLVED_CATALOGUE_MAG_ARCSEC2.northGalacticPole) /
-      fluxNumber(LEINERT_TOTAL_STARLIGHT_MAG_ARCSEC2.northGalacticPole);
-    expect(share).toBeCloseTo(0.7720, 4);
   });
 
   // De-extincted catalogue vs observed sky model through a ~30 mag column:

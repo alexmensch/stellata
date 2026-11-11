@@ -117,16 +117,17 @@ Three things a change here has to know:
   one measured and one modelled, agreeing inside the measurement's error.
 
 **From Sol this correction is nearly invisible and that is the trap.** The
-bulge sits behind 4.6 τ_V from here, so it is 0.02 % of the GC column and
-13.9 % of the b = 5 one; every sightline row below moves under 0.09 mag.
+bulge sits behind 4.6 τ_V from here, so it is <!-- count:milkyway-sightlines/bulgeShareGcColumnPct d2 -->0.04<!-- /count --> % of the GC column
+and <!-- count:milkyway-sightlines/bulgeShareB5ColumnPct d1 -->16.4<!-- /count --> % of the b = 5 one, and trading the mass ratio for the light
+ratio moved no sightline row below by as much as a tenth of a magnitude.
 Where it shows is the face-on external view, which the camera can reach
-([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)): the centre pixel goes from
-48 % bulge to **31 %**, and the integrated bulge/disc luminance ratio from
-0.176 to **0.0840**. That contrast is what makes the model read as an Sbc
+([Camera-anywhere, any-epoch](/AGENTS.md#camera-anywhere-any-epoch--a-mental-model-rule)): the centre pixel is
+**<!-- count:milkyway-sightlines/faceOnCentreBulgePct sig2 -->31<!-- /count --> %** bulge, and the integrated bulge/disc luminance ratio
+**<!-- count:milkyway-sightlines/bulgeToDiscLight d4 -->0.0840<!-- /count -->**. That contrast is what makes the model read as an Sbc
 rather than an S0, and it is pinned in `../../../../tests/integration/milkyway.test.ts` alongside the
 edge-on case — where the bulge sits behind the full midplane dust column
-and carries 5.0e−5 of the centre pixel, exactly as a real edge-on spiral
-does in V.
+and carries well under a thousandth of the centre pixel, exactly as a real
+edge-on spiral does in V.
 
 ## Population colours — the disc's is solved, not cited
 
@@ -222,27 +223,27 @@ model's light at that point**, read out of `resolved-hole-table.ts`:
 **Measured on the V ≤ 11 catalogue (<!-- count:build-catalog/recordCount -->979,634<!-- /count --> records), not authored.**
 Within 200 pc the catalogue carries the whole of the model's light — the
 model's emissivity at Sol is right to a few percent, which is the one
-sightline-free check the solve has. From there the share falls: half the
-plane's light is resolved at 500 pc, a third at 1 kpc, under 2 % past
-3 kpc; the pole's population is thinner and its share is 43 % at 250 pc.
-Over the whole model the hole removes **0.35 %** of the band's light —
-0.004 mag from M31, so the ordering below stands — and 1.03× the
+sightline-free check the solve has. From there the share falls with
+distance, sooner toward the pole, whose population is thinner, and is near
+nothing a few kiloparsecs out; the table carries the values. Over the whole
+model the hole removes **<!-- count:milkyway-sightlines/holeShareOfModelPct d2 -->0.35<!-- /count --> %** of the band's light —
+<!-- count:milkyway-sightlines/holeDimsBandFromM31 d3 -->0.004<!-- /count --> mag from M31, so the ordering below stands — and about the
 catalogue's own light over the tabulated volume, the shell average being
 blind to structure in longitude.
 
 **The pole's hole column is the acceptance, and only the pole's.**
-Dust-free from Sol, the light the hole removes toward the pole reads 24.01
-against the catalogue's 24.11 cap. The same column toward the centre reads
-21.48 against 22.19, and that gap is not a finding: dust-free, the GC's
-total and unresolved columns differ by about a hundredth of a magnitude, so
-their difference is under a percent of either and any error in the hole is
-amplified some fiftyfold on the way out. Read the centre row as a
+Dust-free from Sol, the light the hole removes toward the pole reads
+<!-- count:milkyway-sightlines/holeColumnNgp d2 -->24.01<!-- /count --> against the catalogue's <!-- count:milkyway-sightlines/capNgp d2 -->24.11<!-- /count --> cap. The same column toward the
+centre reads <!-- count:milkyway-sightlines/holeColumnGc d2 -->21.48<!-- /count --> against <!-- count:milkyway-sightlines/capGc d2 -->22.19<!-- /count -->, and that gap is not a finding:
+dust-free, the hole dims the GC's column by only <!-- count:milkyway-sightlines/gcDustFreeHoleDims d2 -->0.02<!-- /count --> mag, so the light
+it removes is the small difference of two near-equal columns and any error
+in the hole is amplified many times over on the way out. Read the centre row as a
 sanity check that the sign and order are right, never as a tolerance.
 A single ray against a 10° cap is the other reason it cannot be one. **What it does on screen is a fainter
 diffuse band with the same stars in it**: the dusty column toward the
-centre is the nearest two kiloparsecs, so it dims 0.65 mag; the anticentre
-0.63, b = 30 0.58, the pole 0.83, b = 5 — where the column reaches through
-the plane — 0.19.
+centre is the nearest two kiloparsecs, so it dims <!-- count:milkyway-sightlines/holeDimsGc d2 -->0.65<!-- /count --> mag; the
+anticentre <!-- count:milkyway-sightlines/holeDimsAnticentre d2 -->0.63<!-- /count -->, b = 30 <!-- count:milkyway-sightlines/holeDimsB30 d2 -->0.58<!-- /count -->, the pole <!-- count:milkyway-sightlines/holeDimsNgp d2 -->0.83<!-- /count -->, b = 5 —
+where the column reaches through the plane — <!-- count:milkyway-sightlines/holeDimsB5 d2 -->0.19<!-- /count -->.
 
 **From Sol, at any epoch the clock reaches, the sky's total does not
 move**: its light shifts from the smooth march into the points, and the
@@ -250,7 +251,7 @@ two columns above are that check measured. The epoch is free because
 5,000 yr of proper motion is sub-parsec for the whole catalogue against a
 tenth-dex shell, so no star changes cell. **From outside the Galaxy the
 claim is not yet measured.** What is pinned there is the band alone,
-0.004 mag fainter ([Two checks](#two-checks-and-both-disagree-by-the-same-sign-and-order)). Giving it back needs the star field to
+<!-- count:milkyway-sightlines/holeDimsBandFromM31 d3 -->0.004<!-- /count --> mag fainter ([Two checks](#two-checks-and-both-disagree-by-the-same-sign-and-order)). Giving it back needs the star field to
 carry the whole of what came out, and the display-floor collapse does
 preserve a star's flux integral ([§ 4](/docs/render-rules.md#4-invisible-is-not-free)) while the
 magnitude cull above it does not — so the like-for-like total from
@@ -276,17 +277,16 @@ fraction under a magnitude limit, so it is intrinsically a sigmoid in
 log d, and log spacing is its natural parameterisation. Re-binning linear in
 d² to kill the `log` does not converge: the first cell spans
 0 → dMax/√(2N), still 177 pc at 512 cells, and the high-latitude columns are
-made of exactly that near field — measured worst error 0.113 mag at 8 KB
-against 0.115 at 4 KB. A uniform cube has no degenerate cell at the origin
-and does converge: 250 pc cells give 0.103 mag, 125 pc give **0.044**, 63 pc
-give 0.009.
+made of exactly that near field, so doubling the cells barely moves the
+worst sightline. A uniform cube has no degenerate cell at the origin and
+does converge as its cells shrink.
 
-**0.044 mag is the price of the 64-cube**, measured against the shipped
-table over the 32-step log march, emissivity-weighted and dust-free, worst
-of eight sightlines and concentrated at the poles. Against the 4.7e-4 mag
-half-float budget that is some ninety times larger; against the 0.378 mag a
-single scalar rescale would cost, nine times smaller. It is a field in
-galactocentric space, so it is right from every vantage, not just Sol's.
+**Resampling the table onto the 64-cube is the price**, measured against the
+shipped table over the 32-step log march, emissivity-weighted and dust-free,
+worst of eight sightlines and concentrated at the poles: far above the
+half-float loss (<!-- count:milkyway-sightlines/halfFloatLossMag d5 -->0.00047<!-- /count --> mag worst, pinned) and far under what a single
+scalar rescale of the hole would cost. It is a field in galactocentric
+space, so it is right from every vantage, not just Sol's.
 
 **The voxels are `1 − strength·hole`, not the hole**, which is what the
 march multiplies by anyway. The scaling is affine, so interpolating these
@@ -328,8 +328,8 @@ hole in the model column.
 
 | check | published | model | model is |
 | --- | --- | --- | --- |
-| NGP diffuse residual | 25.44 | 24.13 | **1.307 mag brighter** |
-| Galactic centre vs [Leinert 1998](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | 22.53 | **0.390 mag brighter** |
+| NGP diffuse residual | <!-- count:milkyway-sightlines/ngpResidual d2 -->25.44<!-- /count --> | <!-- count:milkyway-sightlines/ngpDustFreeModel d2 -->24.13<!-- /count --> | **<!-- count:milkyway-sightlines/ngpResidualOverModel d3 -->1.307<!-- /count --> mag brighter** |
+| Galactic centre vs [Leinert 1998](/data/papers/index.md#leinert1998)'s b = 30° total | 22.92 | <!-- count:milkyway-sightlines/sbGc d2 -->22.53<!-- /count --> | **<!-- count:milkyway-sightlines/gcUnderLeinertTotal d3 -->0.390<!-- /count --> mag brighter** |
 
 The second row grades a b = 0 sightline against a b = 30° value, not like
 for like; what to grade it against is an open decision (`stellata-uadc.69.10`).
@@ -339,15 +339,13 @@ The 25.44 is *not* published; `diffuse-reference.ts` builds it:
 | | mag/arcsec² |
 | --- | --- |
 | [Leinert 1998](/data/papers/index.md#leinert1998) Table 24, NGP — **total** starlight | 23.83 |
-| The <!-- count:build-catalog/recordCount -->979,634<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | 24.111 |
-| Residual left for the diffuse band | **25.44** |
+| The <!-- count:build-catalog/recordCount -->979,634<!-- /count --> catalogue stars Stellata draws at V ≤ 11 | <!-- count:milkyway-sightlines/capNgp d3 -->24.111<!-- /count --> |
+| Residual left for the diffuse band | **<!-- count:milkyway-sightlines/ngpResidual d2 -->25.44<!-- /count -->** |
 
 **The catalogue rows are measured by the `measure:band-resolved` bake, into
 `resolved-hole-table.ts` beside the hole** (`scripts/milkyway-calibration/`), and the residual moves
-with them. The 388k catalogue before the floor read 24.271 at the pole over
-1,155 stars and 22.368 toward the centre over 11,776; V ≤ 11 takes the pole
-to 24.111 over 2,762 and the centre to 22.191 over 16,870, so the star field's
-share of [Leinert 1998](/data/papers/index.md#leinert1998)'s pole total goes from two thirds to **77 %**. **A record
+with them. At V ≤ 11 the pole cap reads <!-- count:milkyway-sightlines/capNgp d3 -->24.111<!-- /count --> and the centre's <!-- count:milkyway-sightlines/capGc d3 -->22.191<!-- /count -->, so
+the star field carries **<!-- count:milkyway-sightlines/catalogueShareOfPoleTotalPct sig2 -->77<!-- /count --> %** of [Leinert 1998](/data/papers/index.md#leinert1998)'s pole total. **A record
 has to land INSIDE a 10° cap to move a row**, so a re-run the build demands
 can leave both rows where they were; when to re-run is the build's stop, not
 the caps.
@@ -363,38 +361,38 @@ pair deliberately, and folding it in would only widen the gap.
 **The two constraints cannot both be met, and no shape parameter bridges
 them** — the argument is [The luminosity solve](/docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy).
 The total wins because it is what the camera sees from
-outside: the Galaxy from M31 reads 3.08 against M31 from Sol at 3.44,
-ordered correctly, where the sightline anchor had it 1.11 mag *fainter*
-than M31 — and the residual anchor re-run at V ≤ 11 would put it a
-magnitude fainter still. What the deeper catalogue changed is the size of
-the disagreement, not its sign: **band plus catalogue at the pole reads
-23.42 against [Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83**, 0.41 mag over, where band-without-hole
-plus catalogue read 0.88 over — the double count was the other 0.47. That
-0.41 is the scale disagreement proper. eso0932a sides with the total but
+outside: the Galaxy from M31 reads <!-- count:milkyway-sightlines/galaxyFromM31 d2 -->3.08<!-- /count --> against M31 from Sol at <!-- count:milkyway-sightlines/m31FromSol d2 -->3.44<!-- /count -->,
+ordered correctly, where the sightline anchor had it *fainter* than M31 —
+and the residual anchor re-run at V ≤ 11 would put it fainter still. What
+the deeper catalogue changed is the size of the disagreement, not its sign:
+**band plus catalogue at the pole reads <!-- count:milkyway-sightlines/poleBandPlusCatalogue d2 -->23.42<!-- /count --> against
+[Leinert 1998](/data/papers/index.md#leinert1998)'s 23.83**, <!-- count:milkyway-sightlines/poleBandPlusCatalogueOverTotal d2 -->0.41<!-- /count --> mag over, where band-without-hole plus
+catalogue read <!-- count:milkyway-sightlines/poleDoubleCountedOverTotal d2 -->0.88<!-- /count --> over — the double count was the other <!-- count:milkyway-sightlines/poleDoubleCount d2 -->0.47<!-- /count -->.
+That <!-- count:milkyway-sightlines/poleBandPlusCatalogueOverTotal d2 -->0.41<!-- /count --> is the scale disagreement proper. eso0932a sides with the total but
 confirms a pole-side excess independently ([§ 8](/docs/science-hdr-pipeline.md#8-validation-contract-h7),
 graded on the pre-hole table).
 
 ## The gradient this produces, and what it reads on screen
 
 Levels are of 255 at the base epoch, no EV trim, no viewport — the
-summation area is fixed in angle. A threshold star also lands on 38.25, so
+summation area is fixed in angle. A threshold star also lands on <!-- count:milkyway-sightlines/levelThreshold d2 -->38.25<!-- /count -->, so
 `/255` doubles as "against a just-visible star". All pinned in
 `../../../../tests/integration/milkyway.test.ts`.
 
 **`Δ` is `S − S_lim`** against the 22.0 extended threshold, a plain
-subtraction. Don't restate it as a ratio of the levels: those are
+subtraction; negative is over threshold. Don't restate it as a ratio of the levels: those are
 tone-mapped and encoded, so `2.5·log10` of one reads ~0.5 mag shy at the
 pole.
 
 | sightline | mag/arcsec² | Δ vs S_lim | /255 |
 | --- | --- | --- | --- |
-| l = 0, b = 5 | 20.93 | **1.07 OVER** — the maximum | 63.7 |
-| l = 0, b = 0 (GC) | 22.53 | 0.53 under | 21.7 |
-| anticentre | 22.69 | 0.69 under | 15.7 |
-| b = 30 | 23.10 | 1.10 under | 3.6 |
-| NGP | 24.23 | 2.23 under | 0.0 |
+| l = 0, b = 5 | <!-- count:milkyway-sightlines/sbB5 d2 -->20.93<!-- /count --> | **<!-- count:milkyway-sightlines/gapB5 d2 -->−1.07<!-- /count -->** — the maximum | <!-- count:milkyway-sightlines/levelB5 d1 -->63.7<!-- /count --> |
+| l = 0, b = 0 (GC) | <!-- count:milkyway-sightlines/sbGc d2 -->22.53<!-- /count --> | <!-- count:milkyway-sightlines/gapGc d2 -->0.53<!-- /count --> | <!-- count:milkyway-sightlines/levelGc d1 -->21.7<!-- /count --> |
+| anticentre | <!-- count:milkyway-sightlines/sbAnticentre d2 -->22.69<!-- /count --> | <!-- count:milkyway-sightlines/gapAnticentre d2 -->0.69<!-- /count --> | <!-- count:milkyway-sightlines/levelAnticentre d1 -->15.7<!-- /count --> |
+| b = 30 | <!-- count:milkyway-sightlines/sbB30 d2 -->23.10<!-- /count --> | <!-- count:milkyway-sightlines/gapB30 d2 -->1.10<!-- /count --> | <!-- count:milkyway-sightlines/levelB30 d1 -->3.6<!-- /count --> |
+| NGP | <!-- count:milkyway-sightlines/sbNgp d2 -->24.23<!-- /count --> | <!-- count:milkyway-sightlines/gapNgp d2 -->2.23<!-- /count --> | <!-- count:milkyway-sightlines/levelNgp d1 -->0.0<!-- /count --> |
 
-Plane-to-pole contrast **1.70 mag** photometrically. **The midplane is
+Plane-to-pole contrast **<!-- count:milkyway-sightlines/planeToPoleContrast d2 -->1.70<!-- /count --> mag** photometrically. **The midplane is
 not the maximum** — b ≈ 5° is, because the in-plane sightline eats the
 most dust. The real band behaves the same way; the dark rift is dust,
 not a gap in the stars. Every row is the band alone — the resolved stars
@@ -404,28 +402,27 @@ column reaches through the plane past where the catalogue resolves.
 
 **Sub-threshold rows carry the operator's faint-end toe**
 ([Operator](../../tonemap/README.md#operator)): over-threshold levels are untouched,
-and 1.5 mag under threshold is black by construction — the NGP at 2.24
-under sits on the dither floor. Nothing pins the band to the threshold.
+and 1.5 mag under threshold is black by construction, which is where the
+NGP row's level sits: on the dither floor. Nothing pins the band to the threshold.
 
 **Every row here is dust-attenuated, so the dust cascade moves them and the
 solve does not.** [The dust stack](/docs/science-galactic-structure.md#the-dust-stack--sources-domains-and-the-partition) fixes
 which is which: the solve, its inputs and the dust-free NGP residual are
 anchors carrying no slack; this table, the plane-to-pole contrast and the
-[Leinert 1998](/data/papers/index.md#leinert1998) GC check are outcomes that move when the measured tiers land, to
-21.09 / 21.91 / 21.91 / 22.83 / 23.33 and a 1.42 contrast on the measured
-cascade. Re-pin them there; do not treat a moved row as a calibration error.
+[Leinert 1998](/data/papers/index.md#leinert1998) GC check are outcomes that move when the measured tiers land
+([How the decision grades](/docs/science-galactic-structure.md#how-the-decision-grades-and-what-it-does-not-fix)
+carries the cascade's rows). Re-pin them there; do not treat a moved row as
+a calibration error.
 
-**The 32-step in-volume march under-counts the GC column by 3.1 %**
-against a converged march (pinned; 1.6 % without the hole, which turns the
-emissivity over inside the first kiloparsec where the log march spends six
-steps). Deliberately left: `STEPS` is a visual + perf decision, and it
+**The 32-step in-volume march under-counts the GC column by <!-- count:milkyway-sightlines/gcMarchUnderCountPct d1 -->2.7<!-- /count --> %**
+against a converged march (pinned). Deliberately left: `STEPS` is a visual + perf decision, and it
 cannot bias the calibration at all — the solve is a volume integral, so no
 march feeds it.
 
 **The convolution and the footprint softening both leave this table where it
 is** — the first is an identity on a uniform field, the second is metres
-against a 300 pc scale height from inside the disc. Every row moves under
-0.005 mag at both FOV extremes (pinned). Neither is inert from *outside* the
+against a 300 pc scale height from inside the disc. No row moves more than
+<!-- count:milkyway-sightlines/footprintWorstMag d4 -->0.0042<!-- /count --> mag at either FOV extreme (pinned). Neither is inert from *outside* the
 Galaxy, which is where they were needed.
 
 **Do not raise or lower the emissivity if the band still reads wrong** —

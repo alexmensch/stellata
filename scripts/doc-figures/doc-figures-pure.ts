@@ -6,7 +6,8 @@ import { roundSignificant } from '../util/round-pure';
 export type FigureFormat =
   | { kind: 'exact' }
   | { kind: 'significant'; digits: number }
-  | { kind: 'thousands'; digits: number };
+  | { kind: 'thousands'; digits: number }
+  | { kind: 'decimals'; digits: number };
 
 export interface FigureMarker {
   key: string;
@@ -32,7 +33,8 @@ export const SNAPSHOT_SUFFIX = '-expected.json';
 
 const OPEN = /<!-- count:(\S+?)(?: (\S+))? -->/g;
 const CLOSE = '<!-- /count -->';
-const FORMAT = /^(sig|k)([1-9])$/;
+const FORMAT = /^(sig|k|d)([1-9])$/;
+const FORMAT_KIND = { sig: 'significant', k: 'thousands', d: 'decimals' } as const;
 
 function lineAt(text: string, index: number): number {
   let line = 1;
@@ -63,7 +65,7 @@ export function parseFormat(token: string | undefined): FigureFormat | null {
   if (token === undefined) return { kind: 'exact' };
   const m = FORMAT.exec(token);
   if (!m) return null;
-  return { kind: m[1] === 'sig' ? 'significant' : 'thousands', digits: Number(m[2]) };
+  return { kind: FORMAT_KIND[m[1] as keyof typeof FORMAT_KIND], digits: Number(m[2]) };
 }
 
 export function parseMarkers(text: string): { markers: FigureMarker[]; problems: string[] } {
@@ -127,6 +129,10 @@ export function formatFigure(value: number, format: FigureFormat): string {
       return grouped(roundSignificant(value, format.digits));
     case 'thousands':
       return `${grouped(roundSignificant(value / 1000, format.digits))}k`;
+    case 'decimals':
+      return value
+        .toLocaleString('en-US', { minimumFractionDigits: format.digits, maximumFractionDigits: format.digits })
+        .replace(/^-/, '\u2212');
   }
 }
 

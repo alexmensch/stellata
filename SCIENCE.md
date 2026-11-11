@@ -391,8 +391,8 @@ enough to see it.
       b = 30° value is graded against the model's Galactic-centre
       sightline. These are SKY-model predictions ([Wainscoat 1992](/data/papers/index.md#wainscoat1992)) for
       *total* starlight, so they include the resolved stars the catalogue
-      draws separately — at the NGP that overlap is 77 % of the
-      light, and the check subtracts it (25.44, not 23.83). The
+      draws separately — at the NGP that overlap is <!-- count:milkyway-sightlines/catalogueShareOfPoleTotalPct sig2 -->77<!-- /count --> % of the
+      light, and the check subtracts it (<!-- count:milkyway-sightlines/ngpResidual d2 -->25.44<!-- /count -->, not 23.83). The
       subtraction is only meaningful at the pole, where extinction is
       ~0.03 mag and a de-extincted catalogue sum and an observed sky model
       are commensurable.
@@ -412,8 +412,8 @@ enough to see it.
   [Bland-Hawthorn 2016](/data/papers/index.md#blandhawthorn2016)'s M_V = −21.37 is the INPUT: both components'
   density0 is solved so the proxy volumes integrate to it at the V-band
   LIGHT B/T derived from the three sources above. The two [Leinert 1998](/data/papers/index.md#leinert1998) checks
-  then disagree with it by 1.31 mag
-  at the pole and 0.390 toward the centre (the model's centre sightline
+  then disagree with it by <!-- count:milkyway-sightlines/ngpResidualOverModel d2 -->1.31<!-- /count --> mag
+  at the pole and <!-- count:milkyway-sightlines/gcUnderLeinertTotal d3 -->0.390<!-- /count --> toward the centre (the model's centre sightline
   against Leinert's b = 30° value), in the same direction, and no
   shape parameter bridges that — [The luminosity solve](docs/science-galactic-structure.md#the-luminosity-solve-and-the-constraint-it-cannot-satisfy)
   argues it out;
