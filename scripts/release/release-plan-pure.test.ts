@@ -110,7 +110,6 @@ describe('planReleases', () => {
 });
 
 describe('planReleases over a gh stack merge --squash landing', () => {
-  // GitHub's squash title for stack #768's members, bottom first: PR_TITLE plus ` (#N)`, one commit per member.
   const stack768: ReadonlyArray<readonly [string, number, string]> = [
     ['Binaries to TS, slice 1: Stage 1 load and a wiring-only shell, unwired (ticket-16)', 761, 'skip-version-bump'],
     ['Binaries Stage 2 (resolve) in TypeScript, unwired (ticket-17.1)', 762, 'skip-version-bump'],
