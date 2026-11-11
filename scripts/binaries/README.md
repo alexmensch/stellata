@@ -140,7 +140,10 @@ scripts/binaries/
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate
-                                  parent). And the map keys, one branded
+                                  parent); isMoreCanonicalAnchor, the
+                                  order Stage 6 and companion promotion
+                                  rank a root's anchor letter by. And the
+                                  map keys, one branded
                                   type per key space so one cannot look up
                                   another's map: componentKey
                                   (wds_id, token), discovererKey
