@@ -6,11 +6,14 @@ import { loadReferenceCatalogs, type ReferenceCatalogs } from './load/reference-
 import { stage1Report } from './load/stage1-report-pure';
 import { resolveStage2, type Stage2Result } from './resolve/resolve-pairs';
 import { stage2Report } from './resolve/stage2-report-pure';
+import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
+import { stage4Report } from './orbits/stage4-report-pure';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
   readonly resolved: Stage2Result;
   readonly astrometry: Stage3Result;
+  readonly orbits: Stage4Result;
 }
 
 export async function runStages(log: (line: string) => void): Promise<StageResults> {
@@ -20,5 +23,7 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
   for (const line of stage2Report(resolved)) log(line);
   const astrometry = attachStage3(resolved, reference);
   for (const line of stage3Report(astrometry)) log(line);
-  return { reference, resolved, astrometry };
+  const orbits = attachStage4(astrometry, reference);
+  for (const line of stage4Report(orbits)) log(line);
+  return { reference, resolved, astrometry, orbits };
 }

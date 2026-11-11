@@ -108,9 +108,15 @@ describe('parseGaiaAstrometry', () => {
 });
 
 describe('parseNssOrbits', () => {
+  const header = 'source_id\tnss_solution_type\tperiod\tt_periastron\teccentricity\ta_thiele_innes\tb_thiele_innes'
+    + '\tf_thiele_innes\tg_thiele_innes\tinclination\targ_periastron\tmass_ratio';
+
+  it('throws on a renamed column rather than reading every orbit without it', () => {
+    expect(() => parseNssOrbits(tsv(`${header.replace('\tperiod\t', '\torbital_period\t')}\n1\tSB1\t9.1\t\t\t\t\t\t\t\t\t\n`)))
+      .toThrow(/missing required columns: period/);
+  });
+
   it('reads the orbit columns; a repeated source keeps its last solution', () => {
-    const header = 'source_id\tnss_solution_type\tperiod\tt_periastron\teccentricity\ta_thiele_innes\tb_thiele_innes'
-      + '\tf_thiele_innes\tg_thiele_innes\tinclination\targ_periastron\tmass_ratio';
     const m = parseNssOrbits(tsv(`${header}\n33711199137024\tOrbital\t773.09\t143.0\t0.33\t-0.83\t-0.69\t0.45\t-0.99\t\t\t\n33711199137024\tSB1\t916.98\t443.9\t0.09\t\t\t\t\t\t266.5\t\n`));
     expect(m.size).toBe(1);
     expect(m.get('33711199137024')).toMatchObject({ solutionType: 'SB1', period: 916.98, argPeriastron: 266.5, aThieleInnes: null });

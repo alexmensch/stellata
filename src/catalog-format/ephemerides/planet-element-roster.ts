@@ -2,15 +2,12 @@
 // window every table spans. Authoring source for data/ephemerides/; editing a
 // cadence needs a re-run of `fetch:ephemerides`.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../astro-core/astronomy-constants';
+import { jdOfJulianYear } from '../../astro-core/precession';
 
 export type PlanetName =
   | 'mercury' | 'venus' | 'earth' | 'mars'
   | 'jupiter' | 'saturn' | 'uranus' | 'neptune'
   | 'pluto';
-
-const jdOfJulianYear = (year: number): number =>
-  J2000_JD + (year - 2000) * DAYS_PER_JULIAN_YEAR;
 
 /** The observationally meaningful window. Outside it the runtime falls back to
  *  the Standish 1992 (/data/papers/index.md#standish1992) series, which is within

@@ -1,9 +1,24 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
+import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import { describeCommittedRoundTrip } from '../util/tsv/committed-round-trip';
-import { MULTIPLES_COLUMNS, MULTIPLES_TSV } from './multiples-tsv';
+import { MULTIPLES_COLUMNS, MULTIPLES_TSV, ORBIT_VIA, ORBIT_VIA_ON_FILE, ORBIT_VIA_PROPERTIES } from './multiples-tsv';
 
 describeCommittedRoundTrip(MULTIPLES_TSV);
+
+describe('ORBIT_VIA_PROPERTIES', () => {
+  it('names every route but none as carrying elements, in route order', () => {
+    expect(ORBIT_VIA_ON_FILE).toEqual(ORBIT_VIA.filter((v) => v !== 'none'));
+  });
+
+  const path = resolve(REPO_ROOT, MULTIPLES_TSV.file);
+  it.skipIf(!lfsContentReadable(path))('gives every committed row its orbit_via\'s regime', () => {
+    const rows = MULTIPLES_TSV.parse(readFileSync(path, 'utf8'));
+    expect(rows.filter((r) => r.regime !== ORBIT_VIA_PROPERTIES[r.orbitVia].regime)).toEqual([]);
+  });
+});
 
 describe('multiples.tsv codec', () => {
   const header = MULTIPLES_COLUMNS.join('\t');

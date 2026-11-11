@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import {
-  decimalYearOfJd,
   deltaTSeconds,
   deltaTSecondsAtYear,
   lunarSecularAccelerationCorrection,
@@ -92,16 +91,6 @@ describe('deltaTSecondsAtYear', () => {
       expect(deltaTSecondsAtYear(y), `year ${y}`)
         .toBeLessThan(deltaTSecondsAtYear(y + 50));
     }
-  });
-});
-
-describe('decimalYearOfJd', () => {
-  it('maps J2000.0 to the year 2000', () => {
-    expect(decimalYearOfJd(2451545.0)).toBe(2000);
-  });
-
-  it('advances one year per Julian year', () => {
-    expect(decimalYearOfJd(2451545.0 + 365.25)).toBeCloseTo(2001, 9);
   });
 });
 

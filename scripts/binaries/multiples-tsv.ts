@@ -46,6 +46,28 @@ export const RESOLVE_VIA_ANCHORS_SOURCE_ID: Readonly<Record<ResolveVia, boolean>
   position_nopm: true,
   unresolved: false,
 };
+
+export type OrbitVia = (typeof ORBIT_VIA)[number];
+
+/** `hasElements`: the route selected orbital elements. `regime`: the legacy
+ *  column's 2 (a measured orbit) / 3 (spectroscopic or compiled) / 0 (none).
+ *  `estimatedElements`: Stage 6 backfills q, a circular ω and a Kepler a —
+ *  never on a visual orbit, whose pair carries a measured placement. */
+export const ORBIT_VIA_PROPERTIES = {
+  orb6: { hasElements: true, regime: 2, estimatedElements: false },
+  gaia_nss: { hasElements: true, regime: 2, estimatedElements: true },
+  orb6_spectroscopic: { hasElements: true, regime: 3, estimatedElements: true },
+  msc: { hasElements: true, regime: 3, estimatedElements: true },
+  none: { hasElements: false, regime: 0, estimatedElements: false },
+} as const satisfies Record<OrbitVia, { hasElements: boolean; regime: 0 | 2 | 3; estimatedElements: boolean }>;
+
+/** The routes that carry elements. */
+export type OrbitViaOnFile = {
+  [K in OrbitVia]: (typeof ORBIT_VIA_PROPERTIES)[K]['hasElements'] extends true ? K : never;
+}[OrbitVia];
+export const ORBIT_VIA_ON_FILE: readonly OrbitViaOnFile[] = ORBIT_VIA.filter(
+  (v): v is OrbitViaOnFile => ORBIT_VIA_PROPERTIES[v].hasElements,
+);
 export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];
@@ -68,7 +90,7 @@ export interface MultiplesRecord {
   regime: number;
   resolveVia: ResolveVia;
   astrometryVia: AstrometryVia;
-  orbitVia: (typeof ORBIT_VIA)[number];
+  orbitVia: OrbitVia;
   spectVia: SpectVia;
   photometryVia: PhotometryVia;
   aVia: (typeof A_VIA)[number];

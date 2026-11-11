@@ -1,6 +1,6 @@
 // Stage 3: each component's astrometry, then the NSS inner pairs, keyed by DecomposedPair. See README.md.
 
-import { fold } from '../../util/counts/tally-pure';
+import { fold, prefixed, share } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, RESOLVE_VIA_ANCHORS_SOURCE_ID, type ResolveVia } from '../multiples-tsv';
 import { componentsOf, type DecomposedPair } from '../resolve/components-pure';
@@ -52,10 +52,6 @@ export function nssTally(result: Stage3Result): Record<NssSynthesisOutcome, numb
   return fold(NSS_SYNTHESIS_OUTCOMES, result.nssOutcomes, (o) => o);
 }
 
-function prefixed<P extends string, K extends string>(prefix: P, tally: Record<K, number>): Record<`${P}${K}`, number> {
-  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
-}
-
 export type Stage3Counts = Record<
   'wds_pairs_total' | 'synthesized_nss_inner_pairs' | 'athyg_match_sibling_claimed_rejected' | 'decomposing_pairs' | 'components_total'
   | `resolution_${ResolveVia}` | `astrometry_${RoutedVia}`,
@@ -85,7 +81,7 @@ export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 
   const total = counts.components_total;
   const anchored = RESOLVE_VIA.filter((tier) => RESOLVE_VIA_ANCHORS_SOURCE_ID[tier]).reduce((n, tier) => n + counts[`resolution_${tier}`], 0);
   return {
-    gaia_resolve_rate: total > 0 ? anchored / total : 0,
-    hip2_fallback_rate: total > 0 ? counts.astrometry_hip2_long_baseline / total : 0,
+    gaia_resolve_rate: share(anchored, total, 'gaia_resolve_rate'),
+    hip2_fallback_rate: share(counts.astrometry_hip2_long_baseline, total, 'hip2_fallback_rate'),
   };
 }

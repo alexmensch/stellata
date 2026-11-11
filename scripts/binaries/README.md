@@ -62,9 +62,9 @@ scripts/binaries/
   astrometry/                     Stage 3 in TypeScript: each component's
                                   astrometry route, keyed by its
                                   DecomposedPair. Own README.
-  orbits/                         Stage 4's orbit knowledge in TypeScript:
-                                  the NSS two-body conversion and its
-                                  detectability regime, so far. Own README.
+  orbits/                         Stage 4 in TypeScript: each pair's
+                                  orbit from ORB6, Gaia NSS or the MSC,
+                                  keyed by its DecomposedPair. Own README.
   parsers.py                      Row dataclasses + parse functions for every
                                   reference catalogue (Stage 1).
   indices.py                      IdentifierIndices builder (HIP/Tyc → Gaia,
@@ -100,7 +100,9 @@ scripts/binaries/
                                   multiples.tsv — column roster, closed
                                   value sets and the properties a set's
                                   members carry (which resolve tiers
-                                  anchor on a Gaia source_id), per-column
+                                  anchor on a Gaia source_id; each
+                                  orbit route's elements, regime and
+                                  Stage 6 estimates), per-column
                                   decimal places,
                                   P and a positive and 0 ≤ e < 1 — and
                                   the only parse of the file on the TS
@@ -147,6 +149,10 @@ scripts/binaries/
                                   tangent-basis propagation
                                   (../catalog/distance/direction-cascade.ts):
                                   the switch proves byte identity first.
+  epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
+                                  epochs read as a JD: the truncated-JD
+                                  and MJD offsets, the plausible window
+                                  (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
                                   every TS stage's report.
@@ -710,15 +716,22 @@ The periastron epoch `T0` needs the same care, with a twist. Per
 `orb6format.txt` its `T0_unit` code is `d` = truncated JD (the file
 stores JD − 2,400,000, **not** a full JD — Algol Aa1,Aa2 carries
 `41771.353` = HJD 2441771.353), `m` = MJD (JD − 2,400,000.5), or `y` =
-fractional Besselian year. The twist: ORB6 mislabels ~50 truncated-JD
+fractional Besselian year. <a id="year-form-epochs"></a>**A year-form epoch — ORB6's `y` and
+the MSC's year-valued `t0` — is read on the Julian formula**
+(J2000 + (y − 2000) × 365.25 d, `jdOfJulianYear`), not the Besselian one
+(`besselianEpochToJd`): −0.31 d at 1900, +0.47 d at 2000, +0.70 d at
+2030, a fixed phase offset of that fraction of the period at every date
+on the clock. The twist: ORB6 mislabels ~50 truncated-JD
 epochs with the `y` flag (e.g. WDS 04227+1503 Aa,Ab stores
 `59501.496 y` for a 4-day pair), and the year formula throws those out
 past JD 2e7. `_orb6_T0_jd` therefore validates a `y` conversion against
-a physically-possible epoch window (Besselian years ≈1700–2600) and
+a physically-possible epoch window (years 1700–2600, read the same way) and
 retries the truncated-JD reading when it falls outside; unrecoverable
 rows (and the non-conforming `c` / blank flags) get a `None` epoch and
 place statically at the WDS observation epoch. `select_orbits_all`
-asserts every emitted `T_jd` stays inside the window. A wrong epoch
+asserts every emitted `T_jd` stays inside the window — and since the `d` /
+`m` flags and NSS epochs are taken as stated, a refresh carrying one outside
+it stops the build there. A wrong epoch
 isn't visible in a rendered orbit — baseline cancellation at
 `sep_pa_epoch_jd` hides it — but it shifts the pair's configuration at
 any *other* date, so conjunction / eclipse timing (Algol's minima

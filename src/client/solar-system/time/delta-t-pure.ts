@@ -2,7 +2,7 @@
 // Espenak 2006 (/data/papers/index.md#espenak2006) Sect. 2.7
 // polynomial set, -1999 to +3000. See README.md#timescales.
 
-import { DAYS_PER_JULIAN_YEAR, J2000_JD } from '../../../astro-core/astronomy-constants';
+import { julianYearOfJd } from '../../../astro-core/precession';
 
 function poly(x: number, coeffs: readonly number[]): number {
   let sum = 0;
@@ -84,13 +84,8 @@ function espenakPolynomialSeconds(y: number): number {
   return longTermParabola(y);
 }
 
-/** Decimal year of a Julian Date, to the precision ΔT resolves. */
-export function decimalYearOfJd(jd: number): number {
-  return 2000 + (jd - J2000_JD) / DAYS_PER_JULIAN_YEAR;
-}
-
 /** ΔT in seconds at Julian Date `jd`. Either scale may be passed: over
  *  one ΔT-worth of time the function itself changes by under 0.1 s. */
 export function deltaTSeconds(jd: number): number {
-  return deltaTSecondsAtYear(decimalYearOfJd(jd));
+  return deltaTSecondsAtYear(julianYearOfJd(jd));
 }
