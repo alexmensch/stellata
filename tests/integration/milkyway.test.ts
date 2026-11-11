@@ -686,7 +686,7 @@ describe('MilkyWay surface-brightness calibration', () => {
   // trim. Pinned as a table because the ORDERING is the acceptance. The
   // faint-end toe is in these figures: sightlines over the extended
   // threshold are untouched, sub-threshold ones roll off, and the pole —
-  // 2.19 mag under — sits on the dither floor because a patch the modelled
+  // over 1.5 mag under — sits on the dither floor because a patch the modelled
   // eye cannot detect must not read plainly visible (/src/astro-core/milkyway/calibration/README.md).
   it('pins the band against a threshold star at the base epoch', () => {
     pin('levelThreshold', displayLevel(L_THRESH) * 255, 2);
@@ -759,8 +759,8 @@ describe('MilkyWay surface-brightness calibration', () => {
   // the band seen from outside; from Sol it must be inert, because the table
   // above is the shipped look. The camera sits INSIDE the disc, so the
   // footprint is metres over the near half of the march and a few parsecs at
-  // the far rim — against a 300 pc scale height and a 3 kpc scale length. The
-  // worst residual is 0.0042 mag, so it cannot move a row pinned to 0.01.
+  // the far rim — against a 300 pc scale height and a 3 kpc scale length.
+  // The worst residual stays under half a row's 0.01 quoting step.
   it('leaves every Sol sightline where it was, at both FOV extremes', () => {
     let worst = 0;
     for (const fovDeg of [FOV_MIN_DEG, FOV_MAX_DEG]) {
