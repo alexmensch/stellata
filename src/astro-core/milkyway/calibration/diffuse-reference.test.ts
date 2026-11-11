@@ -62,7 +62,7 @@ function bc03ColourIndexAt10Gyr(
 // draws. Pinning the published figure directly would enshrine that double
 // count, which is exactly what the retired GC anchor did.
 describe('MilkyWay diffuse reference', () => {
-  // The measured rows are pinned in the docs' snapshot (/tests/integration/milkyway.test.ts), never here.
+  // The measured rows are pinned in /tests/integration/milkyway-sightlines-expected.json, never here.
   it('subtracts the resolved catalogue from the published NGP total', () => {
     expect(diffuseResidualMagArcsec2(20, 20 + 2.5 * Math.log10(2))).toBeCloseTo(20 + 2.5 * Math.log10(2), 12);
     expect(NGP_DIFFUSE_RESIDUAL_MAG_ARCSEC2).toBeGreaterThan(
