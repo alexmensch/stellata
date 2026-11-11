@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, prefixed, share } from './tally-pure';
+import { emptyTallyPartition, fold, prefixed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -58,6 +58,13 @@ describe('util/tally / emptyTallyPartition', () => {
 describe('util/tally / prefixed', () => {
   it('prefixes every key, values kept', () => {
     expect(prefixed('orbit_', fold(['msc', 'none'] as const, ['msc', 'msc'], (v) => v))).toEqual({ orbit_msc: 2, orbit_none: 0 });
+  });
+});
+
+describe('util/tally / sumOf', () => {
+  it('sums only the named members under the prefix', () => {
+    const counts = { orbit_msc: 2, orbit_orb6: 3, orbit_none: 7 };
+    expect(sumOf(counts, 'orbit_', ['msc', 'orb6'] as const)).toBe(5);
   });
 });
 

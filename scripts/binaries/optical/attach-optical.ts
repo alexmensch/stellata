@@ -1,6 +1,6 @@
 // Stage 5: every pair classified physical or optical, keyed by DecomposedPair, and the counts it completes. See README.md.
 
-import { fold, prefixed, share } from '../../util/counts/tally-pure';
+import { fold, prefixed, share, sumOf } from '../../util/counts/tally-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { systemParallaxAnchors, systemPmAnchors } from '../astrometry/system-anchors-pure';
@@ -49,11 +49,11 @@ export function stage5Counts(result: Stage5Result): Stage5Counts {
 }
 
 export function opticalRejected(counts: Stage5Counts): number {
-  return OPTICAL_REJECT_VIA.reduce((n, v) => n + counts[`optical_${v}`], 0);
+  return sumOf(counts, 'optical_', OPTICAL_REJECT_VIA);
 }
 
 /** The share of pairs Stage 5 rejected. */
 export function stage5Rates(counts: Stage5Counts): Record<'optical_rejected_rate', number> {
-  const total = OPTICAL_VIA.reduce((n, v) => n + counts[`optical_${v}`], 0);
+  const total = sumOf(counts, 'optical_', OPTICAL_VIA);
   return { optical_rejected_rate: share(opticalRejected(counts), total, 'optical_rejected_rate') };
 }
