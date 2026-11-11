@@ -79,8 +79,6 @@ export function compoundContains(a: string, b: string): boolean {
 
 /** The more canonical of two pair primaries under one WDS root: the
  *  top-level letter decides, then token length, then alphabetical order.
- *  Length alone would rank every single letter above `Aa`, so 15 Mon's root,
- *  whose only A-branch primary is `Aa`, anchored on its E component.
  *  `anchor_offsets.py`'s `anchor_token_rank` is its Python twin until the
  *  switch; change both. */
 export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
