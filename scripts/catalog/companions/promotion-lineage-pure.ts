@@ -40,6 +40,15 @@ const brightnessCodes = Object.fromEntries((Object.keys(BRIGHTNESS_CODES) as Com
   outcomeCode(`The minted record's absolute magnitude is ${BRIGHTNESS_SOURCES[source]}.`),
 ])) as Record<`brightness.${BrightnessCode}`, CodeDeclaration<typeof LIVE>>;
 
+const FACET_CODES = {
+  ...brightnessCodes,
+  'spectral.ms-from-own-absmag': outcomeCode('The minted record\'s spectral class is a main-sequence estimate from its own absolute magnitude, the row\'s type being its primary\'s or blank.'),
+  'constellation.split-from-anchor': outcomeCode('The minted record\'s position falls in another IAU constellation than its anchor\'s.'),
+  'desig-con.from-anchor': outcomeCode('The adopted record carried no designation constellation and takes its anchor\'s.'),
+  'fit.owned': outcomeCode('The refused row carries a per-component fit on an identifier of its own.'),
+};
+type Facet = keyof typeof FACET_CODES;
+
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
   'dropped.beyond-tidal-limit': outcomeCode('Projected at the anchor\'s distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.', 'retire'),
@@ -70,11 +79,7 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'parked.primary-unresolved': outcomeCode('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
   'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
   'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
-  ...brightnessCodes,
-  'spectral.ms-from-own-absmag': outcomeCode('The minted record\'s spectral class is a main-sequence estimate from its own absolute magnitude, the row\'s type being its primary\'s or blank.'),
-  'constellation.split-from-anchor': outcomeCode('The minted record\'s position falls in another IAU constellation than its anchor\'s.'),
-  'desig-con.from-anchor': outcomeCode('The adopted record carried no designation constellation and takes its anchor\'s.'),
-  'fit.owned': outcomeCode('The refused row carries a per-component fit on an identifier of its own.'),
+  ...FACET_CODES,
 });
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
@@ -90,8 +95,6 @@ export const PROMOTION_ADMISSION_CODES: ReadonlySet<string> = new Set(
 );
 
 type Via = { via: PromotedRow['via'] };
-type Facet = `brightness.${BrightnessCode}` | 'spectral.ms-from-own-absmag' | 'constellation.split-from-anchor'
-  | 'desig-con.from-anchor' | 'fit.owned';
 
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
