@@ -438,7 +438,7 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 | `flam` | merge backstop (<!-- count:membership-manifest/labelSpineOnly.flam -->693<!-- /count --> rows); 2,604 attested, 120 not, <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
 | `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` <!-- count:build-catalog/namingBayerAdded -->519<!-- /count -->, `namingBayerDropped` <!-- count:build-catalog/namingBayerDropped -->2<!-- /count -->) | WGSN ∪ IV/27A by HR/HD/HIP resolves <!-- count:manifest-naming/membershipBayerRowsCovered -->1,520<!-- /count --> of <!-- count:manifest-naming/membershipBayerRows -->1,522<!-- /count --> and the 2 drop by design ([Measured coverage](/scripts/catalog/naming/README.md#measured-coverage)): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
 | `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (<!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count --> records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> disposed names (26 display, 20 alias); the membership gate test's [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual gate | Sol → the generator emits its one row. <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
-| `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | `derivedVia` / `bindingByClass` / `derivationOutcome` / the review counts, plus `dispositionAsserted` — the <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
+| `gaia_source_id` | **none — `17.6` landed.** `derivationOutcome` replaced `derivedVsFrozen`; `differs` / `unreached` collapsed into `bound` / `refused`; the disposition file dropped its `frozen_source_id` column and became a standing overlay keyed on the record, authoritative wherever it keys; the collision keeper rule withholds from both rows | the membership stage's `binding.*`, `admit.*.<class>` and `disposition.*` codes, plus `disposition.asserted` — the <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> ids no committed source proposes, shipping on a cited basis | `stellata-hooj.17.6` ✓ |
 | `mag` | **none — `17.6` landed.** `spineBrightRows` / `spineBrightRowsWithoutOverlayEntry` re-keyed onto the printed-V cascade the binding gate already weighs each row against, reproducing 178 / 114 exactly (Sol named directly, having no gate evidence) | — | `stellata-hooj.17.6` ✓ |
 | `ra` `dec` `dist` `ci` `spect` `rv` `pm_ra` `pm_dec`, six `*_src` | none | none | `stellata-hooj.17.7` |
 
@@ -478,8 +478,8 @@ is held by the gates that remain:
    the prose, restate the licence once.
 
 **Expected movement, stated in advance.** Records: **zero** drops at every
-step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s residual is zero, so every row keeps an attested key; `rows`
-(376,909) and `bindingByClass` hold across the epic except as this
+step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s residual is zero, so every row keeps an attested key; the primaries rows
+(376,909) and their binding classes hold across the epic except as this
 paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
 moves at most the 136 cells above, each
 re-attested by the positional witness, corrected with evidence, or on a
@@ -490,7 +490,8 @@ a review outcome on ξ UMa's shared HIP; none from `17.6`, `17.5`, `17.7`.
 Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
 build. Pins that retired with `17.6`: `derivedVsFrozen`, `derivedContestedMatch`
 and the frozen-relative verdict names. Pins still to retire with the file:
-`spineRows`, `spineRowsFolded`, the byte pin, both audits' counts.
+the spine admission and fold codes (`membership.admit.spine.*`,
+`membership.fold`), the byte pin, both audits' counts.
 
 **The residual curation file — one or three.** Neither: no new file of the
 167-row shape. The 1 HD is disposed. The <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed numbers and the 26
