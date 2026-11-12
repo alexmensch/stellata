@@ -929,7 +929,13 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const attest = (key: string, row: ManifestCells, a?: RowAttestation): void => {
     const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
     row.routes = routes;
-    for (const cell of unattested) unattestedByCell[cell]++;
+    for (const cell of unattested) {
+      unattestedByCell[cell]++;
+      if (cell === 'hd' || cell === 'flam') {
+        throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${row[cell]}); dropUnattestedLabels empties it on spine rows and additions take it from the primaries`);
+      }
+      outcomes.push({ key, outcome: { kind: 'unattested', cell, value: row[cell] } });
+    }
     bindingByClass[row.binding as BindingClass]++;
     rows.push({ cells: row, key });
   };

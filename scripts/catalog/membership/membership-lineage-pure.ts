@@ -11,6 +11,7 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
+import type { ClassicalCell } from '../spine/primaries-audit-pure';
 import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
@@ -89,6 +90,18 @@ type RefusalBranch = (typeof REFUSAL_BRANCHES)[RefusalSubject][CandidateRefusal]
 export const DISPOSITION_QUEUES = ['queued', 'settled'] as const;
 export type DispositionQueue = (typeof DISPOSITION_QUEUES)[number];
 type DispositionBranch = `disposition.${BindingDisposition}.${DispositionQueue}`;
+
+/** The classical cells a manifest row can ship unattested: `hd` and `flam` leave the row instead (README.md#the-unattested-labels-leave-the-row). */
+export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'bayer', 'proper'] as const satisfies readonly ClassicalCell[];
+export type UnattestedCell = (typeof UNATTESTED_CELLS)[number];
+
+const UNATTESTED_BRANCHES = {
+  hip: 'unattested.hip',
+  hr: 'unattested.hr',
+  gl: 'unattested.gl',
+  bayer: 'unattested.bayer',
+  proper: 'unattested.proper',
+} as const satisfies Record<UnattestedCell, string>;
 
 const LABEL_DROP_BRANCHES = {
   flamsteed_unattested: 'label-drop.flamsteed-unattested',
@@ -218,6 +231,11 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.runner-up': refusalCode('An admitted star\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
   ...RETIRED_LABEL_CODES,
   ...LABEL_CODES,
+  'unattested.hip': outcomeCode('The record ships a HIP no primary attests for it.'),
+  'unattested.hr': outcomeCode('The record ships an HR number no primary attests for it.'),
+  'unattested.gl': outcomeCode('The record ships a GJ designation no primary attests for it.'),
+  'unattested.bayer': outcomeCode('The record ships a Bayer designation no primary attests for it.'),
+  'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
 });
@@ -276,6 +294,7 @@ export type MembershipOutcome =
   | { readonly kind: 'asserted'; readonly keep: string; readonly basis: string }
   | { readonly kind: 'ships-none' }
   | { readonly kind: 'bright'; readonly overlayEntry: boolean }
+  | { readonly kind: 'unattested'; readonly cell: UnattestedCell; readonly value: string }
   | { readonly kind: 'label-flip'; readonly flip: Omit<LabelFlip, 'sourceId'> }
   | {
     readonly kind: 'label-drop';
@@ -312,6 +331,7 @@ type ParamsOf<B extends Branch> =
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
+  : B extends `unattested.${UnattestedCell}` ? { value: string }
   : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
 
@@ -375,6 +395,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'asserted': return row(key, 'disposition.asserted', { keep_source_id: o.keep, basis: o.basis });
     case 'ships-none': return row(key, 'binding.ships-none', {});
     case 'bright': return row(key, o.overlayEntry ? 'overlay.bright.entry' : 'overlay.bright.no-entry', {});
+    case 'unattested': return row(key, UNATTESTED_BRANCHES[o.cell], { value: o.value });
     case 'label-flip':
       return row(key, labelBranch(o.flip.disposition, o.flip.field), {
         label: o.flip.label, spine: o.flip.spine,

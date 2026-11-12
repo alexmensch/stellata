@@ -217,6 +217,11 @@ membership.label.suppressed-collision.hip	membership	none	outcome	live		7.1.20	T
 membership.label.suppressed-collision.hr	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hr.
 membership.overlay.bright.entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has a row for the source it ships.
 membership.overlay.bright.no-entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has no row for the source it ships, or it ships none.
+membership.unattested.bayer	membership	none	outcome	live		7.1.20	The record ships a Bayer designation no primary attests for it.
+membership.unattested.gl	membership	none	outcome	live		7.1.20	The record ships a GJ designation no primary attests for it.
+membership.unattested.hip	membership	none	outcome	live		7.1.20	The record ships a HIP no primary attests for it.
+membership.unattested.hr	membership	none	outcome	live		7.1.20	The record ships an HR number no primary attests for it.
+membership.unattested.proper	membership	none	outcome	live		7.1.20	The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority's.
 naming.dc.anchor	naming	none	outcome	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
 naming.dc.displaced	naming	none	refused	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
 naming.dc.gcvs	naming	none	outcome	live		7.1.12	The record's designations render against the constellation its GCVS designation names.
