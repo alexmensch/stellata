@@ -1023,7 +1023,7 @@ describe('membership lineage', () => {
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
     expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
-    expect(summary.split('\n')).toHaveLength(5 + 5);
+    expect(summary.split('\n')).toHaveLength(6 + 5);
   });
 
   it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {

@@ -13,7 +13,7 @@ import {
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import type { ClassicalCell } from '../spine/primaries-audit-pure';
-import type { SpineCorrectionCell } from './spine-corrections/spine-corrections-pure';
+import { SPINE_CORRECTION_CELLS, type SpineCorrectionCell } from './spine-corrections/spine-corrections-pure';
 import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
@@ -680,6 +680,8 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
       + `source on the spine ${n('addition-binding.on-spine')}, gate-refused ${n('addition-binding.refused')}, `
       + `shared ${n('addition-binding.shared')}, contested ${n('addition-binding.contested')}, `
       + `TYC/HIP route disagreement ${n('addition-binding.route-disagree')}, blocked designation ${n('addition.blocked-designation')}`,
+    `spine corrections: ${n('fold')} rows folded, ${list(SPINE_CORRECTION_CELLS, (c) => derived[`spineCellsCorrected.${c}`])} cells set; `
+      + `${derived.sharedDesignations} designations on two rows; ${derived.rowsWithHdAlt} rows with an HD alias, ${derived.rowsWithHrAlt} with an HR alias`,
     `unattested cells: ${list(UNATTESTED_CELLS, (c) => n(UNATTESTED_BRANCHES[c]))}; `
       + `labels dropped: ${list(LABEL_DROP_REASONS, (r) => t.labelDropsByReason[r])}`,
     `label merge: ${derived.labelNoOverlayEntry} spine rows have no overlay entry at all (${n('binding.ships-none')} ship no `
