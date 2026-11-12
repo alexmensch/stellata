@@ -111,10 +111,9 @@ row's own TYC names the source where Tycho-2's best-neighbour walk reaches
 nothing. A winner a spine record already holds, or that two groups reach,
 leaves the cell empty, as a spine collision does. `magnitudeRowsOwnCandidate`
 counts the magnitude rows that are still some primaries row's unshipped
-candidate, by why it was not shipped. Each such row's `admit.magnitude`
-lineage row carries the reason as `own_candidate` and cites the proposing
-row's origin, and `MEMBERSHIP_INVARIANTS` fails the build on any reason
-outside `ALLOWED_OWN_CANDIDATE_REASONS`
+candidate, by why it was not shipped. Each such row's lineage code is
+`admit.magnitude.<reason>`, citing the proposing row's origin, and
+`MEMBERSHIP_INVARIANTS` fails the build on any `admit.magnitude.withheld` row
 ([Invariants](../../lineage/README.md#invariants)). A derived source a
 `pair_component` disposition declines counts as `component`, since the review
 names it the other star of the pair (44 Boo A's derivation reaching i Boo B);

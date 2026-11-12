@@ -720,9 +720,9 @@ describe('buildMembership — the additions', () => {
     expect(viaSimbad.counts.magnitudeRows).toBe(1);
     expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
       .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
-    const magnitude = viaSimbad.lineage.filter((r) => r.code === 'membership.admit.magnitude');
-    expect(magnitude.map((r) => [r.key, paramsOf(r).own_candidate, r.evidence.length]))
-      .toEqual([['gaia-dr3:777', 'refused_mag', 1]]);
+    const magnitude = viaSimbad.lineage.filter((r) => r.code.startsWith('membership.admit.magnitude.'));
+    expect(magnitude.map((r) => [r.key, r.code, r.evidence.length]))
+      .toEqual([['gaia-dr3:777', 'membership.admit.magnitude.refused-mag', 1]]);
     const lines = viaSimbad.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
     const [own] = invariantViolations(MEMBERSHIP_INVARIANTS, lines);
     expect(own.rows).toEqual([]);
@@ -747,7 +747,7 @@ describe('buildMembership — the additions', () => {
     expect(declined('tycho2_position').counts.magnitudeRowsOwnCandidate.withheld).toBe(1);
   });
 
-  it('fails the own-candidate invariant on a reason it does not allow, naming the row', () => {
+  it('fails the own-candidate invariant on a withheld source, naming the row', () => {
     const seeded = stageLineageLine(MEMBERSHIP_CODES, membershipLineageRow({
       key: 'gaia-dr3:42', outcome: { kind: 'admit-magnitude', ownCandidate: { reason: 'withheld', of: 'spine:7' } },
     }));

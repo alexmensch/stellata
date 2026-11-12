@@ -111,7 +111,13 @@ membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-s
 membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
 membership.admit.hd-omitted	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
 membership.admit.hip-omitted	membership	none	outcome	live		7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
-membership.admit.magnitude	membership	none	outcome	live		7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
+membership.admit.magnitude	membership	none	outcome	retired	7.1.20	7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
+membership.admit.magnitude.component	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and review names it the other star of the row's pair.
+membership.admit.magnitude.no-own-candidate	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. No primaries row weighed it as a binding candidate.
+membership.admit.magnitude.refused-mag	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation weighed it, and the magnitude gate refused it.
+membership.admit.magnitude.refused-sibling	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation weighed it, and the sibling gate refused it.
+membership.admit.magnitude.runner-up	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation passed it, and a higher-ranked candidate won.
+membership.admit.magnitude.withheld	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and the row was withheld from it.
 membership.admit.spine	membership	none	outcome	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
 membership.binding.bound	membership	none	outcome	live		7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
 membership.binding.collision	membership	none	outcome	live		7.1.6	Another spine row derives the same Gaia source, so both are withheld and queued for review.

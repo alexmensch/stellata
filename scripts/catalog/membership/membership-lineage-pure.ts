@@ -100,6 +100,16 @@ const LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.flatMap((d) => LABEL_F
   (f) => [labelBranch(d, f), outcomeCode(`${LABEL_DESCRIPTIONS[d]} Identifier: ${f}.`)],
 ))) as Record<LabelBranch, CodeDeclaration<typeof LIVE>>;
 
+const ADMIT_MAGNITUDE = 'A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.';
+
+const OWN_CANDIDATE_BRANCHES = {
+  refused_mag: 'admit.magnitude.refused-mag',
+  refused_sibling: 'admit.magnitude.refused-sibling',
+  withheld: 'admit.magnitude.withheld',
+  runner_up: 'admit.magnitude.runner-up',
+  component: 'admit.magnitude.component',
+} as const satisfies Record<OwnCandidateReason, string>;
+
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
   fold: outcomeCode('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
@@ -108,7 +118,13 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.hip-omitted': outcomeCode('An I/239 Hipparcos star with no IV/25 entry is admitted.'),
   'admit.cns5-census': outcomeCode('A CNS5 nearby-star census row the spine lacks is admitted.'),
   component: outcomeCode('Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.'),
-  'admit.magnitude': outcomeCode('A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.'),
+  'admit.magnitude': outcomeCode(ADMIT_MAGNITUDE, 'none', RETIRED_7_1_20),
+  'admit.magnitude.no-own-candidate': outcomeCode(`${ADMIT_MAGNITUDE} No primaries row weighed it as a binding candidate.`),
+  'admit.magnitude.refused-mag': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation weighed it, and the magnitude gate refused it.`),
+  'admit.magnitude.refused-sibling': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation weighed it, and the sibling gate refused it.`),
+  'admit.magnitude.withheld': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation won it, and the row was withheld from it.`),
+  'admit.magnitude.runner-up': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation passed it, and a higher-ranked candidate won.`),
+  'admit.magnitude.component': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation won it, and review names it the other star of the row's pair.`),
   'binding.bound': outcomeCode('One Gaia source survives both binding gates with no passing rival, and the record binds to it.'),
   'binding.rescued': outcomeCode('Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.'),
   'binding.contested': outcomeCode('The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.'),
@@ -211,7 +227,9 @@ type Branch = Parameters<typeof MEMBERSHIP_CODES.code>[0];
 
 /** The codes of the rows that admit a record into the manifest: what a new SID's mint event carries. */
 export const MEMBERSHIP_ADMISSION_CODES: ReadonlySet<string> = new Set(
-  (['admit.spine', 'admit.magnitude', ...Object.values(ADDITION_BRANCHES)] as const satisfies readonly Branch[])
+  ([
+    'admit.spine', 'admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES), ...Object.values(ADDITION_BRANCHES),
+  ] as const satisfies readonly Branch[])
     .map((b) => MEMBERSHIP_CODES.code(b)),
 );
 
@@ -221,7 +239,6 @@ type Candidate = { source_id: string; via: string };
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
-  : B extends 'admit.magnitude' ? { own_candidate?: OwnCandidateReason }
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' ? Candidate
@@ -231,10 +248,6 @@ type ParamsOf<B extends Branch> =
   : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
 
-export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<OwnCandidateReason> = new Set<OwnCandidateReason>([
-  'refused_mag', 'refused_sibling', 'runner_up', 'component',
-]);
-
 function membershipInvariant<B extends Branch>(
   branch: B, holds: string, allows: (params: ParamsOf<B>) => boolean,
 ): LineageInvariant {
@@ -243,9 +256,9 @@ function membershipInvariant<B extends Branch>(
 
 export const MEMBERSHIP_INVARIANTS: readonly LineageInvariant[] = [
   membershipInvariant(
-    'admit.magnitude',
-    `no magnitude-term record is a primaries row's unshipped candidate except as ${[...ALLOWED_OWN_CANDIDATE_REASONS].join(', ')}`,
-    (p) => p.own_candidate === undefined || ALLOWED_OWN_CANDIDATE_REASONS.has(p.own_candidate),
+    'admit.magnitude.withheld',
+    'no magnitude-term record is a source a primaries row\'s derivation won and was withheld from (additions/README.md#grouping-and-admission)',
+    NO_EXCEPTIONS,
   ),
   membershipInvariant(
     'binding.unweighed-no-pulled-row',
@@ -271,8 +284,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'component': return row(key, 'component', { designation: o.designation }, o.members);
     case 'admit-magnitude':
       return o.ownCandidate === null
-        ? row(key, 'admit.magnitude', {})
-        : row(key, 'admit.magnitude', { own_candidate: o.ownCandidate.reason }, [o.ownCandidate.of]);
+        ? row(key, 'admit.magnitude.no-own-candidate', {})
+        : row(key, OWN_CANDIDATE_BRANCHES[o.ownCandidate.reason], {}, [o.ownCandidate.of]);
     case 'spine-binding':
       return row(key, `binding.${o.outcome}`, {
         derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
