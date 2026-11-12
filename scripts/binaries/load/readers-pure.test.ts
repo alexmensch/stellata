@@ -164,6 +164,10 @@ describe('parseNssOrbits', () => {
     expect(() => pick(solution('SB1', 1, '8'), solution('SB3', 2, '9'))).toThrow(/"SB3" is not a known nss_solution_type/);
   });
 
+  it('refuses a row with no solution type, naming the line', () => {
+    expect(() => pick(solution('', 1, '5'))).toThrow(/:2: nss_solution_type is empty/);
+  });
+
   it('reads a lone solution of a type it does not know, for Stage 4 to convert to nothing', () => {
     expect(pick(solution('SB3', 1, '')).get('7')?.solutionType).toBe('SB3');
   });

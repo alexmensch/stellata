@@ -171,7 +171,7 @@ export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
       refuse: (message) => row.fail(message),
       row: {
         sourceId,
-        solutionType: row.text('nss_solution_type') ?? '',
+        solutionType: row.requiredText('nss_solution_type'),
         period: row.float('period'),
         tPeriastron: row.float('t_periastron'),
         eccentricity: row.float('eccentricity'),
