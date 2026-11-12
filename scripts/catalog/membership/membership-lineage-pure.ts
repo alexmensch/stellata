@@ -1,11 +1,15 @@
 // build:membership as a lineage stage: its reason codes, its outcome union, the one serialiser over it, and the four ledgers as views. See README.md#membership-lineage.
 
-import { LABEL_DISPOSITIONS, type LabelDisposition, type LabelFlip } from '../classic-ids/label-merge/label-merge-pure';
+import {
+  LABEL_DISPOSITIONS, LABEL_FIELDS, type LabelDisposition, type LabelField, type LabelFlip,
+} from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import {
+  outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration,
+} from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
@@ -74,6 +78,28 @@ const DISPOSITION_QUEUE_DESCRIPTIONS = {
   settled: 'The derivation settled the row by itself; the disposition overrides it.',
 } as const satisfies Record<DispositionQueue, string>;
 
+const LABEL_DESCRIPTIONS = {
+  added: 'The classic-ID overlay adds a designation the spine row lacked.',
+  'overlay-wins': 'The overlay and the spine disagree on a designation, and the overlay\'s value is taken.',
+  'override-spine': 'A curated override keeps the spine\'s designation over the overlay\'s.',
+  'override-value': 'A curated override sets the designation.',
+  'suppressed-collision': 'The overlay\'s designation already names another record, so it is not added.',
+  'extra-alias': 'The overlay names a further value for a field, carried as an alias the record answers to.',
+  'extra-sibling-rendered': 'The overlay\'s further value belongs to a companion drawn as its own star, so it is left to that star.',
+  'extra-dropped': 'The overlay names a further value for a single-valued field; it is dropped.',
+} as const satisfies Record<LabelDisposition, string>;
+
+type LabelBranch = `label.${LabelDisposition}.${LabelField}`;
+const labelBranch = (d: LabelDisposition, f: LabelField): LabelBranch => `label.${d}.${f}`;
+
+const RETIRED_LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.map(
+  (d) => [`label.${d}`, outcomeCode(LABEL_DESCRIPTIONS[d], 'none', RETIRED_7_1_20)],
+)) as Record<`label.${LabelDisposition}`, CodeDeclaration<typeof RETIRED_7_1_20>>;
+
+const LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.flatMap((d) => LABEL_FIELDS.map(
+  (f) => [labelBranch(d, f), outcomeCode(`${LABEL_DESCRIPTIONS[d]} Identifier: ${f}.`)],
+))) as Record<LabelBranch, CodeDeclaration<typeof LIVE>>;
+
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
   fold: outcomeCode('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
@@ -111,21 +137,12 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.gate-mag': refusalCode('An admitted star\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the star\'s printed V.'),
   'addition-binding.gate-sibling': refusalCode('An admitted star\'s binding candidate refused because SIMBAD gives that Gaia source to a different component of the star\'s system.'),
   'addition-binding.runner-up': refusalCode('An admitted star\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
-  'label.added': outcomeCode('The classic-ID overlay adds a designation the spine row lacked.'),
-  'label.overlay-wins': outcomeCode('The overlay and the spine disagree on a designation, and the overlay\'s value is taken.'),
-  'label.override-spine': outcomeCode('A curated override keeps the spine\'s designation over the overlay\'s.'),
-  'label.override-value': outcomeCode('A curated override sets the designation.'),
-  'label.suppressed-collision': outcomeCode('The overlay\'s designation already names another record, so it is not added.'),
-  'label.extra-alias': outcomeCode('The overlay names a further value for a field, carried as an alias the record answers to.'),
-  'label.extra-sibling-rendered': outcomeCode('The overlay\'s further value belongs to a companion drawn as its own star, so it is left to that star.'),
-  'label.extra-dropped': outcomeCode('The overlay names a further value for a single-valued field; it is dropped.'),
+  ...RETIRED_LABEL_CODES,
+  ...LABEL_CODES,
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
 });
 
-const LABEL_BRANCHES = Object.fromEntries(
-  LABEL_DISPOSITIONS.map((d) => [d, `label.${d}`]),
-) as Record<LabelDisposition, `label.${LabelDisposition}`>;
 
 export type BindingReviewCells = Omit<BindingReviewRow, 'verdict'>;
 
@@ -211,7 +228,7 @@ type ParamsOf<B extends Branch> =
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
-  : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
+  : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
 
 export const ALLOWED_OWN_CANDIDATE_REASONS: ReadonlySet<OwnCandidateReason> = new Set<OwnCandidateReason>([
@@ -273,8 +290,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'addition-binding':
       return row(key, `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
     case 'label-flip':
-      return row(key, LABEL_BRANCHES[o.flip.disposition], {
-        field: o.flip.field, label: o.flip.label, spine: o.flip.spine,
+      return row(key, labelBranch(o.flip.disposition, o.flip.field), {
+        label: o.flip.label, spine: o.flip.spine,
         overlay: o.flip.overlay, applied: o.flip.applied,
       });
     case 'label-drop':
@@ -306,7 +323,11 @@ export function membershipLedgers(
 ): MembershipLedgers {
   const additionReasons = invert(ADDITION_BRANCHES);
   const dropReasons = invert(LABEL_DROP_BRANCHES);
-  const flipDispositions = invert(LABEL_BRANCHES);
+  const flipBranches = new Map<string, { disposition: LabelDisposition; field: LabelField; branch: LabelBranch }>(
+    LABEL_DISPOSITIONS.flatMap((d) => LABEL_FIELDS.map(
+      (f) => [MEMBERSHIP_CODES.code(labelBranch(d, f)), { disposition: d, field: f, branch: labelBranch(d, f) }] as const,
+    )),
+  );
   const queued = byCode(QUEUED_BINDING_OUTCOMES, (o) => `binding.${o}` as const);
   const disposed = byCode(
     BINDING_DISPOSITIONS.flatMap((d) => DISPOSITION_QUEUES.map((q): DispositionBranch => `disposition.${d}.${q}`)),
@@ -329,7 +350,7 @@ export function membershipLedgers(
   for (const r of rows) {
     const addition = additionReasons.get(r.code);
     const drop = dropReasons.get(r.code);
-    const flip = flipDispositions.get(r.code);
+    const flip = flipBranches.get(r.code);
     const queue = queued.get(r.code);
     const disposal = disposed.get(r.code);
     if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition[0] });
@@ -340,7 +361,9 @@ export function membershipLedgers(
       const { cell, value } = paramsAs(r, drop[1]);
       out.labelDrops.push({ ...tuple(of(r.key)), cell, value, reason: drop[0] });
     } else if (flip !== undefined) {
-      out.flips.push({ sourceId: of(r.key).gaia_source_id, ...paramsAs(r, flip[1]), disposition: flip[0] });
+      out.flips.push({
+        sourceId: of(r.key).gaia_source_id, field: flip.field, ...paramsAs(r, flip.branch), disposition: flip.disposition,
+      });
     } else if (queue !== undefined) {
       review.set(r.key, reviewRow(queue[0], paramsAs(r, queue[1])));
     } else if (disposal !== undefined && !review.has(r.key)) {

@@ -136,14 +136,54 @@ membership.disposition.other.settled	membership	none	outcome	live		7.1.20	A comm
 membership.fold	membership	merge	outcome	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
 membership.label-drop.flamsteed-unattested	membership	none	outcome	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
 membership.label-drop.hd-unattested	membership	none	outcome	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.
-membership.label.added	membership	none	outcome	live		7.1.6	The classic-ID overlay adds a designation the spine row lacked.
-membership.label.extra-alias	membership	none	outcome	live		7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
-membership.label.extra-dropped	membership	none	outcome	live		7.1.6	The overlay names a further value for a single-valued field; it is dropped.
-membership.label.extra-sibling-rendered	membership	none	outcome	live		7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
-membership.label.overlay-wins	membership	none	outcome	live		7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
-membership.label.override-spine	membership	none	outcome	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
-membership.label.override-value	membership	none	outcome	live		7.1.6	A curated override sets the designation.
-membership.label.suppressed-collision	membership	none	outcome	live		7.1.6	The overlay's designation already names another record, so it is not added.
+membership.label.added	membership	none	outcome	retired	7.1.20	7.1.6	The classic-ID overlay adds a designation the spine row lacked.
+membership.label.added.flam	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: flam.
+membership.label.added.gl	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: gl.
+membership.label.added.hd	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hd.
+membership.label.added.hip	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hip.
+membership.label.added.hr	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hr.
+membership.label.extra-alias	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
+membership.label.extra-alias.flam	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: flam.
+membership.label.extra-alias.gl	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: gl.
+membership.label.extra-alias.hd	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hd.
+membership.label.extra-alias.hip	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hip.
+membership.label.extra-alias.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hr.
+membership.label.extra-dropped	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a single-valued field; it is dropped.
+membership.label.extra-dropped.flam	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: flam.
+membership.label.extra-dropped.gl	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: gl.
+membership.label.extra-dropped.hd	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hd.
+membership.label.extra-dropped.hip	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hip.
+membership.label.extra-dropped.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hr.
+membership.label.extra-sibling-rendered	membership	none	outcome	retired	7.1.20	7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
+membership.label.extra-sibling-rendered.flam	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: flam.
+membership.label.extra-sibling-rendered.gl	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: gl.
+membership.label.extra-sibling-rendered.hd	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hd.
+membership.label.extra-sibling-rendered.hip	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hip.
+membership.label.extra-sibling-rendered.hr	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hr.
+membership.label.overlay-wins	membership	none	outcome	retired	7.1.20	7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
+membership.label.overlay-wins.flam	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: flam.
+membership.label.overlay-wins.gl	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: gl.
+membership.label.overlay-wins.hd	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hd.
+membership.label.overlay-wins.hip	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hip.
+membership.label.overlay-wins.hr	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hr.
+membership.label.override-spine	membership	none	outcome	retired	7.1.20	7.1.6	A curated override keeps the spine's designation over the overlay's.
+membership.label.override-spine.flam	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: flam.
+membership.label.override-spine.gl	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: gl.
+membership.label.override-spine.hd	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hd.
+membership.label.override-spine.hip	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hip.
+membership.label.override-spine.hr	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hr.
+membership.label.override-value	membership	none	outcome	retired	7.1.20	7.1.6	A curated override sets the designation.
+membership.label.override-value.flam	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: flam.
+membership.label.override-value.gl	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: gl.
+membership.label.override-value.hd	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hd.
+membership.label.override-value.hip	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hip.
+membership.label.override-value.hr	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hr.
+membership.label.suppressed-collision	membership	none	outcome	retired	7.1.20	7.1.6	The overlay's designation already names another record, so it is not added.
+membership.label.suppressed-collision.flam	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: flam.
+membership.label.suppressed-collision.gl	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: gl.
+membership.label.suppressed-collision.hd	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hd.
+membership.label.suppressed-collision.hip	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hip.
+membership.label.suppressed-collision.hr	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hr.
 naming.dc.anchor	naming	none	outcome	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
 naming.dc.displaced	naming	none	refused	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
 naming.dc.gcvs	naming	none	outcome	live		7.1.12	The record's designations render against the constellation its GCVS designation names.
