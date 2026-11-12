@@ -24,6 +24,7 @@ import {
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { BINDING_CLASSES, type BindingClass } from './membership-manifest-tsv';
+import { sumOf } from '../../util/counts/tally-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
@@ -593,13 +594,14 @@ export type MembershipDerivedCounts = Readonly<Record<
 
 type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
 
-const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[`${MEMBERSHIP_CODES.stage}.${branch}`];
-const sumOf = (n: (branch: LiveBranch) => number) => (branches: readonly LiveBranch[]): number => branches.reduce((total, b) => total + n(b), 0);
+const STAGE_PREFIX = `${MEMBERSHIP_CODES.stage}.` as const;
+const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[MEMBERSHIP_CODES.liveCode(branch)];
+const sumOver = (counts: MembershipCounts) => (branches: readonly LiveBranch[]): number => sumOf(counts, STAGE_PREFIX, branches);
 
 /** The totals the ledgers and logs read: sums of membership's codes, never snapshot keys. */
 export function membershipTotals(counts: MembershipCounts) {
   const n = countOf(counts);
-  const sum = sumOf(n);
+  const sum = sumOver(counts);
   const spineAdmits = sum(SPINE_ADMISSION);
   const additionsByReason = Object.fromEntries(ADDITION_REASONS.map(
     (r) => [r, sum(additionAdmission(r))],
@@ -641,7 +643,7 @@ export function membershipTotals(counts: MembershipCounts) {
 
 export function membershipSummary(counts: MembershipCounts, derived: MembershipDerivedCounts): string {
   const n = countOf(counts);
-  const sum = sumOf(n);
+  const sum = sumOver(counts);
   const t = membershipTotals(counts);
   const list = <K extends string>(keys: readonly K[], of: (k: K) => number): string => keys.map((k) => `${k} ${of(k)}`).join(', ');
   const led = (outcome: string, lead: BindingSource) => `${outcome}.${lead}` as LiveBranch;
