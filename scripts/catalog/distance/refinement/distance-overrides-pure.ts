@@ -97,8 +97,7 @@ export function angularSeparationDeg(
   return Math.acos(dot) * (180 / Math.PI);
 }
 
-/** Whether (raHours, decDegrees) falls within the LMC sky cone — the
- *  population predicate behind the `lmcCandidates` build-counter. */
+/** Whether (raHours, decDegrees) falls within the LMC sky cone. */
 export function isInLmcCone(raHours: number, decDegrees: number): boolean {
   const sep = angularSeparationDeg(
     raHours, decDegrees,
@@ -115,7 +114,9 @@ export const LMC_PARALLAX_CONSISTENCY_SIGMA = 10;
 export type LmcKinematicVerdict =
   | { kind: 'snap'; distPc: number }
   | { kind: 'parallax_rules_out' }
-  | { kind: 'not_member' };
+  | { kind: 'pm_outside_gate' }
+  | { kind: 'no_pm' }
+  | { kind: 'outside_cone' };
 
 /** Every gate is evaluated here, so no caller can produce an override by
  *  forgetting one. */
@@ -126,10 +127,10 @@ export function applyLmcKinematicOverride(
   pmDec: number | null,
   parallax: MeasuredParallax | null,
 ): LmcKinematicVerdict {
-  if (pmRa === null || pmDec === null) return { kind: 'not_member' };
-  if (!isInLmcCone(raHours, decDegrees)) return { kind: 'not_member' };
-  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
-  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'not_member' };
+  if (!isInLmcCone(raHours, decDegrees)) return { kind: 'outside_cone' };
+  if (pmRa === null || pmDec === null) return { kind: 'no_pm' };
+  if (Math.abs(pmRa - LMC_PM_RA_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'pm_outside_gate' };
+  if (Math.abs(pmDec - LMC_PM_DEC_CENTRE) > LMC_PM_TOLERANCE) return { kind: 'pm_outside_gate' };
   const sigmaAboveLmc = parallax === null
     ? null
     : parallaxSignalToNoise(parallax.mas - LMC_PARALLAX_MAS, parallax.errMas);

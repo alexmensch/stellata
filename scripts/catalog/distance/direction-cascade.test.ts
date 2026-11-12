@@ -10,6 +10,7 @@ import {
   directionOnPm,
   hip2PmDisagrees,
   resolveDirection,
+  tycho2SolutionKind,
   type DirectionInputs,
   type DirectionSolution,
   type DirectionVia,
@@ -605,5 +606,14 @@ describe('direction-cascade / directionOnPm', () => {
     expect(angSepArcsec(advanced, directionAtEpoch(
       res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 1991.07, CATALOG_SCENE_EPOCH,
     ))).toBeCloseTo(28482.604, 2);
+  });
+});
+
+describe('tycho2SolutionKind', () => {
+  it('reads an observed position as observed, whatever the photocentre flag says', () => {
+    expect(tycho2SolutionKind({ fromIcrs: false, isPhotocentre: false })).toBe('mean');
+    expect(tycho2SolutionKind({ fromIcrs: false, isPhotocentre: true })).toBe('photocentre');
+    expect(tycho2SolutionKind({ fromIcrs: true, isPhotocentre: false })).toBe('observed');
+    expect(tycho2SolutionKind({ fromIcrs: true, isPhotocentre: true })).toBe('observed');
   });
 });

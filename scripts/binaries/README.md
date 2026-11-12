@@ -89,7 +89,10 @@ scripts/binaries/
                                   orbit route's elements, regime and
                                   Stage 6 estimates), per-column
                                   decimal places,
-                                  P and a positive and 0 ≤ e < 1 — and
+                                  P and a positive and 0 ≤ e < 1, a
+                                  comp and a WDS id on every row, so
+                                  every row composes a synthetic key —
+                                  and
                                   the only parse of the file. Its test
                                   round-trips the committed file byte for
                                   byte. Its rowKey cites a row by

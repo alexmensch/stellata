@@ -173,7 +173,7 @@ look up to date to the next run and skip itself silently.
 ## The pinned row
 
 `TYC 3694-2544-1` (HD 14039) is the highest-proper-motion row of the 41
-`directionTycho2` stars, so pinning it holds both the printed tier this
+Tycho-2-placed stars, so pinning it holds both the printed tier this
 ingest replaced and the J2000 mean cell that replaces it. Its printed
 AT-HYG cell matches this table's unpropagated mean position to 8 decimal
 places — the ~27″ staleness measured rather than asserted.
@@ -206,7 +206,7 @@ republish; a re-pull is warranted only when the request set moves.
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
   row of its own ([The request set](#the-request-set--manifest--iv25), [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/pmRescueTycho2 -->71<!-- /count -->** rows.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/placement.pm-rescue.tycho2 -->71<!-- /count -->** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
   to, and Tycho-2 is the tier admitted without a bibcode check, because a
   1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row
@@ -214,7 +214,7 @@ republish; a re-pull is warranted only when the request set moves.
   wanted, and the flag's warning is about the position.
 
 Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
-(`directionTycho2`, `vTycho2`, `pmRescueTycho2`) and moves with membership —
+(`placement.direction.tycho2.*`, `vTycho2`, `placement.pm-rescue.tycho2`) and moves with membership —
 read it rather than this list when they disagree.
 
 The parser resolves [Which position to propagate from](#which-position-to-propagate-from) at parse time, so

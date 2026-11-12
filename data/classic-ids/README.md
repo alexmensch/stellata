@@ -271,10 +271,10 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**<!-- count:membership-manifest/labelNoOverlayEntry -->14,956<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/spineRowsWithoutSourceId -->400<!-- /count --> bind no source, and the
+**<!-- count:membership-manifest/labelNoOverlayEntry -->14,956<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/membership.binding.ships-none -->400<!-- /count --> bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
 concentrated at the bright end exactly as [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s bright
-tier predicts: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> rows at V ≤ 3 have no overlay row**, Vega,
+tier predicts: **<!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> rows at V ≤ 3 have no overlay row**, against <!-- count:membership-manifest/membership.overlay.bright.entry -->64<!-- /count --> that do, Vega,
 Sirius, Procyon and Betelgeuse among them.
 Gaia saturates near G ≈ 3, so the most famous stars in the catalogue are absent
 from a source_id-keyed table by construction, not by a join defect.
@@ -302,7 +302,7 @@ Three structural bounds behind the shortfalls:
    `labelAgree.gl` / `labelSpineOnly.gl` pair is the only gated number.
 
 `gl`'s flips run high for its size because the comparison scores the COMPONENT
-the two sides name, not the bare number: 13 of the <!-- count:membership-manifest/labelFlipped.gl -->79<!-- /count --> are a swapped component
+the two sides name, not the bare number: 13 of the <!-- count:membership-manifest/membership.label.overlay-wins.gl -->79<!-- /count --> are a swapped component
 letter CNS5 states on its own Gaia-keyed row
 ([The gl comparison is specificity-aware](/scripts/catalog/classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware)).
 

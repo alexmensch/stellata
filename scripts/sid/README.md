@@ -268,7 +268,7 @@ effect of the upstream code:
 
 | Cause | Event |
 |---|---|
-| a new object | `mint`, coded by the decision that admitted the record (`membership.admit.*`, `promotion.minted`, or allocation's own `allocation.mint.*` for the sol, shell, cloud and Local Group lists) |
+| a new object | `mint`, coded by the decision that admitted the record (`membership.admit.*`, `promotion.minted.*`, or allocation's own `allocation.mint.*` for the sol, shell, cloud and Local Group lists) |
 | upstream effect `retire` | `retire` |
 | upstream effect `merge` | `merge`, with the SID of the record the decision names (`params.record`, else its single evidence ref) |
 | a SID in service whose key a record keeping another SID now carries, no stage deciding | `merge` into that SID, coded `allocation.merged.same-class` ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)) |

@@ -178,7 +178,8 @@ assertion cost: `labelOverridden` hd 1 → 9 / hr 0 → 7, five freed HD numbers
 admitted as manifest rows of their own — three building a record (f Eri B,
 δ Ser B, 12 Aqr B) and two parking — one `hd:` SID minted (δ Ser B; the other
 two already keyed their designations as promoted companions, so
-`companionPromoted` falls by the 2 that `companionAlreadyInCatalog` gains and
+`companionPromoted` (now `promotion.minted.keyed` + `.synthetic`) falls by the
+2 that `companionAlreadyInCatalog` (now the `promotion.adopted.*` codes) gains and
 `recordCount` nets +1), `namingDuplicateLabels` 48 → **47**. Five designations
 leave the search index in the trade
 ([What a freed number costs](../classic-ids/label-merge/README.md#what-a-freed-number-costs)). Each

@@ -148,7 +148,7 @@ label-merge/README.md).
 and 2) is a membership decision: the row reaches no parallax, no V, or no
 position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. Parks are pinned at their
-measured counts: `parked*` per reason, from `PARKED_COUNT_KEY`. A row past
+measured counts, one `placement.park.*` code per reason. A row past
 the step-5 cutoff is a reference table disagreeing with the tiers above it —
 never a membership decision — so the walk throws, naming the row.
 
@@ -212,16 +212,14 @@ never a membership decision — so the walk throws, naming the row.
     ([Positional constellation membership](constellations/README.md#positional-constellation-membership)). Nothing here sets the
     DESIGNATION's constellation: the manifest carries no editorial `con` cell.
 
-Every count the walk returns folds from the row's `RowOutcome`
-(`walk-stats-pure.ts`). A cascade partition counts shipped outcomes only, so it
-sums to the record count rather than to the rows entering the walk; a parked
-row is in none of them — `parkedVia`, over the closed reason enum, is the one
-place it is a number, and `distNone` stays pinned at 0 because a shipped
-record cannot have reached no tier. V, spectral class and B−V are counted by
-the brightness-colour stage's own block instead
-([Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)). The radial-velocity counts are the
-exception: the rv cascade answers before any park, so `rvVia`, the Gaia error
-bands and the two bibcode counts run over every manifest row.
+The walk's counts are its stages' lines folded per code: placement's
+([Placement counts](../distance/README.md#placement-counts)) and
+brightness-colour's
+([Brightness-colour lineage](../photometry/README.md#brightness-colour-lineage)).
+`walk-stats-pure.ts` folds the rest from each `RowOutcome` as it passes: the
+parked list promotion reads, placement-derived's shipped tiers, and the
+build log's velocity samples. A parked row writes no step past its park, so
+it is in no shipped tier and no radial-velocity code.
 
 `plxDistPc` / `plxVia` are build-time-only, like `vVia`: step 0's own inversion
 and the tier that supplied it, captured before any override layer fires so the

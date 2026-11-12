@@ -54,6 +54,17 @@ export const LABEL_DISPOSITIONS = [
 ] as const;
 export type LabelDisposition = (typeof LABEL_DISPOSITIONS)[number];
 
+/** The fields with an alias list (`writeAlt`), and the dispositions only an alias list can reach. */
+export const ALIAS_FIELDS = ['hd', 'hr'] as const satisfies readonly LabelField[];
+export type AliasField = (typeof ALIAS_FIELDS)[number];
+export const ALIAS_DISPOSITIONS = ['extra-alias', 'extra-sibling-rendered'] as const satisfies readonly LabelDisposition[];
+export type AliasDisposition = (typeof ALIAS_DISPOSITIONS)[number];
+
+/** The fields a disposition can be written on. */
+export function dispositionFields(d: LabelDisposition): readonly LabelField[] {
+  return (ALIAS_DISPOSITIONS as readonly string[]).includes(d) ? ALIAS_FIELDS : LABEL_FIELDS;
+}
+
 /** One row of the committed review queue — every place the merge's output
  *  departs from the spine's labels, plus the values a single-valued field could
  *  not carry. The queue is therefore the COMPLETE delta. Sort by `disposition`
@@ -72,51 +83,23 @@ export interface LabelFlip {
   disposition: LabelDisposition;
 }
 
-/** The label-parity measurement AND the merge's own routing, in one partition
- *  set: per identifier, `labelAgree + labelFlipped + labelSpineOnly` is every
- *  record the spine labels, and `labelAgree` is the subset the overlay
- *  reproduces — so coverage is a ratio of these counts rather than a second
- *  walk that could disagree with what the build actually wrote. */
+/** The merge's coverage partition: see README.md#what-the-merge-compares-values-on. */
 export interface LabelMergeCounts {
   /** Records the overlay has no row for at all — the spine backstop's reach
    *  (`/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority`). */
   labelNoOverlayEntry: number;
   /** Spine value confirmed by the overlay; the spine's own spelling is kept. */
   labelAgree: LabelPartition;
-  /** Identifier the spine had no value for at all. */
-  labelAdded: LabelPartition;
-  /** Overlay value adopted over a disagreeing spine value (the HD-route precedence, /docs/catalog-driver.md#4-how-hd-reaches-gaia). */
-  labelFlipped: LabelPartition;
   /** Spine value kept because the overlay asserts none for this identifier —
    *  including every record it has no row for. */
   labelSpineOnly: LabelPartition;
-  /** Proposals withheld by the collision guard. */
-  labelSuppressed: LabelPartition;
-  /** Overlay values the field could not display but the record still answers
-   *  to — a search key and a same-as designation. */
-  labelExtraAlias: LabelPartition;
-  /** Extras withheld because the pair's other component is a record of its
-   *  own: the number names that record, not this one. */
-  labelExtraSiblingRendered: LabelPartition;
-  /** Overlay values a single-valued field cannot carry beside the one it took
-   *  AND has no alias list to hold, so the record will not answer to them. */
-  labelExtraDropped: LabelPartition;
-  /** Cells a curated override decided. */
-  labelOverridden: LabelPartition;
 }
 
 export function emptyLabelMergeCounts(): LabelMergeCounts {
   return {
     labelNoOverlayEntry: 0,
     labelAgree: emptyLabelPartition(),
-    labelAdded: emptyLabelPartition(),
-    labelFlipped: emptyLabelPartition(),
     labelSpineOnly: emptyLabelPartition(),
-    labelSuppressed: emptyLabelPartition(),
-    labelExtraAlias: emptyLabelPartition(),
-    labelExtraSiblingRendered: emptyLabelPartition(),
-    labelExtraDropped: emptyLabelPartition(),
-    labelOverridden: emptyLabelPartition(),
   };
 }
 
@@ -473,18 +456,14 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
     if (p.value !== null) spec.write(record, p.value);
 
     if (p.override !== undefined) {
-      counts.labelOverridden[field]++;
       pushFlip(p.value ?? spine ?? '', p.value === null ? 'override-spine' : 'override-value');
     } else if (p.suppressed) {
-      counts.labelSuppressed[field]++;
       pushFlip(spine ?? '', 'suppressed-collision');
     } else if (p.value === null) {
       counts.labelAgree[field]++;
     } else if (spine === null) {
-      counts.labelAdded[field]++;
       pushFlip(p.value, 'added');
     } else {
-      counts.labelFlipped[field]++;
       pushFlip(p.value, 'overlay-wins');
     }
 
@@ -493,12 +472,11 @@ export function mergeClassicIdLabels<R extends LabelMergeRecord>(
     if (spec.writeAlt !== null && p.aliasExtras.length > 0) {
       spec.writeAlt(record, p.aliasExtras);
     }
-    for (const [extras, partition, disposition] of [
-      [p.aliasExtras, counts.labelExtraAlias, 'extra-alias'],
-      [p.siblingExtras, counts.labelExtraSiblingRendered, 'extra-sibling-rendered'],
-      [p.droppedExtras, counts.labelExtraDropped, 'extra-dropped'],
+    for (const [extras, disposition] of [
+      [p.aliasExtras, 'extra-alias'],
+      [p.siblingExtras, 'extra-sibling-rendered'],
+      [p.droppedExtras, 'extra-dropped'],
     ] as const) {
-      partition[field] += extras.length;
       for (const extra of extras) pushFlip(extra, disposition);
     }
   }
