@@ -251,13 +251,14 @@ one build's worth in.
 
 The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
-it fails its emission. Membership, measured 2026-10-29 on the full tree:
-1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
-(85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
+it fails its emission. Membership, measured 2026-11-12 on the full tree:
+1,651,103 rows (165 MB plain, 17.4 MB gzipped) plus 975,840 identity rows
+(22.3 MB gzipped), 39.6 MB together, 1.4 MB under its budget: a change that
+adds a row to every record raises the budget with it. The timed window is everything lineage
 adds to the build — the baseline headers' file re-hash, the base's input
 re-hash each verdict asks for, producing the lines (`lines`, a function the
 window calls: a spill reads back there), the diff, rendering,
-gzip and invariants: about 5.8 s with a diff
+gzip and invariants: about 8.2 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
