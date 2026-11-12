@@ -65,6 +65,7 @@ import {
   type KeyedOutcome,
   type MembershipLedgers,
   type MembershipOutcome,
+  type RefusalSubject,
 } from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
 import {
@@ -467,14 +468,14 @@ function spineBindingOutcome(
 
 /** The candidates a derivation weighed and did not take: each gate refusal,
  *  and each runner-up that passed. */
-function refusedCandidates(key: string, d: DerivedBinding): KeyedOutcome[] {
+function refusedCandidates(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
   const refused = d.rejected.map((r): KeyedOutcome => ({
     key,
-    outcome: { kind: 'candidate-refused', refusal: r.reason, sourceId: r.sourceId, via: r.via.join('+') },
+    outcome: { kind: 'candidate-refused', subject, refusal: r.reason, sourceId: r.sourceId, via: r.via.join('+') },
   }));
   const runnersUp = passingRunnersUp(d).map((c): KeyedOutcome => ({
     key,
-    outcome: { kind: 'candidate-refused', refusal: 'runner-up', sourceId: c.sourceId, via: c.via.join('+') },
+    outcome: { kind: 'candidate-refused', subject, refusal: 'runner-up', sourceId: c.sourceId, via: c.via.join('+') },
   }));
   return [...refused, ...runnersUp];
 }
@@ -957,7 +958,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     let binding: BindingClass = 'none';
     if (b.derived !== null) {
       const d = b.derived;
-      outcomes.push(...refusedCandidates(origin, d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
+      outcomes.push(...refusedCandidates(origin, 'spine', d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
       for (const r of d.rejected) derivedRejected[r.reason]++;
       derivedWeighedNullGMag += d.weighedNullGMag;
       if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
@@ -1122,7 +1123,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         kind: 'addition-binding', outcome: additionBindingOutcome(g),
         sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
       } },
-      ...refusedCandidates(g.origin, g.derived),
+      ...refusedCandidates(g.origin, 'addition', g.derived),
     );
     if (a.verdict.kind === 'component') {
       componentRows++;

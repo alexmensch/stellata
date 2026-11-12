@@ -99,10 +99,13 @@ coherence.not-applicable	coherence	none	outcome	live		7.1.12	The record is in no
 coherence.snapped	coherence	none	outcome	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
 coherence.unmoved.at-anchor-distance	coherence	none	outcome	live		7.1.12	The record already sits at its system anchor's distance.
 membership.addition-binding.bound	membership	none	outcome	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.gate-mag	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because its Gaia G is more than a magnitude fainter than the star's printed V.
+membership.addition-binding.gate-sibling	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because SIMBAD gives that Gaia source to a different component of the star's system.
 membership.addition-binding.no-candidate	membership	none	outcome	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
 membership.addition-binding.on-spine	membership	none	outcome	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
 membership.addition-binding.refused	membership	none	outcome	live		7.1.6	Every Gaia candidate of the admitted star failed a binding gate.
 membership.addition-binding.rescued	membership	none	outcome	live		7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An admitted star's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
 membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
 membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.

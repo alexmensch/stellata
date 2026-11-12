@@ -34,11 +34,21 @@ export const ADDITION_BINDING_OUTCOMES = [
 export type AdditionBindingOutcome = (typeof ADDITION_BINDING_OUTCOMES)[number];
 
 export type CandidateRefusal = GateReason | 'runner-up';
+/** Whose derivation weighed the refused candidate: a spine row's or an addition group's. */
+export type RefusalSubject = 'spine' | 'addition';
 const REFUSAL_BRANCHES = {
-  mag: 'binding.gate-mag',
-  sibling: 'binding.gate-sibling',
-  'runner-up': 'binding.runner-up',
-} as const satisfies Record<CandidateRefusal, string>;
+  spine: {
+    mag: 'binding.gate-mag',
+    sibling: 'binding.gate-sibling',
+    'runner-up': 'binding.runner-up',
+  },
+  addition: {
+    mag: 'addition-binding.gate-mag',
+    sibling: 'addition-binding.gate-sibling',
+    'runner-up': 'addition-binding.runner-up',
+  },
+} as const satisfies Record<RefusalSubject, Record<CandidateRefusal, string>>;
+type RefusalBranch = (typeof REFUSAL_BRANCHES)[RefusalSubject][CandidateRefusal];
 
 export const BINDING_DISPOSITION_OUTCOMES = ['derived', 'other', 'none'] as const;
 export type DispositionOutcome = (typeof BINDING_DISPOSITION_OUTCOMES)[number];
@@ -76,6 +86,9 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
+  'addition-binding.gate-mag': refusalCode('An admitted star\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the star\'s printed V.'),
+  'addition-binding.gate-sibling': refusalCode('An admitted star\'s binding candidate refused because SIMBAD gives that Gaia source to a different component of the star\'s system.'),
+  'addition-binding.runner-up': refusalCode('An admitted star\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
   'label.added': outcomeCode('The classic-ID overlay adds a designation the spine row lacked.'),
   'label.overlay-wins': outcomeCode('The overlay and the spine disagree on a designation, and the overlay\'s value is taken.'),
   'label.override-spine': outcomeCode('A curated override keeps the spine\'s designation over the overlay\'s.'),
@@ -117,6 +130,7 @@ export type MembershipOutcome =
   }
   | {
     readonly kind: 'candidate-refused';
+    readonly subject: RefusalSubject;
     readonly refusal: CandidateRefusal;
     readonly sourceId: string;
     readonly via: string;
@@ -170,7 +184,7 @@ type ParamsOf<B extends Branch> =
   : B extends 'admit.magnitude' ? { own_candidate?: OwnCandidateReason }
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
-  : B extends (typeof REFUSAL_BRANCHES)[CandidateRefusal] | 'binding.unweighed-no-pulled-row' ? Candidate
+  : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' ? Candidate
   : B extends `disposition.${DispositionOutcome}` ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
@@ -228,7 +242,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'candidate-refused':
-      return row(key, REFUSAL_BRANCHES[o.refusal], { source_id: o.sourceId, via: o.via });
+      return row(key, REFUSAL_BRANCHES[o.subject][o.refusal], { source_id: o.sourceId, via: o.via });
     case 'candidate-unweighed':
       return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':
