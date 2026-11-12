@@ -714,7 +714,8 @@ interface AdditionGroup {
   derived: DerivedBinding;
   sourceOnSpine: boolean;
   sourceGateRefused: boolean;
-  routeSourceDisagree: boolean;
+  /** The TYC and HIP routes' candidates, where both propose one and they differ. */
+  routeDisagreement: { tyc: string; hip: string } | null;
   /** The anchor item's source row — IV/25, else I/239, else CNS5 — with the
    *  other items' rows as evidence. */
   origin: string;
@@ -780,7 +781,8 @@ function additionGroup(
     derived,
     sourceOnSpine,
     sourceGateRefused: derived.ranked.length > 0 && winner === null,
-    routeSourceDisagree: tycSource !== null && hipSource !== null && tycSource !== hipSource,
+    routeDisagreement: tycSource !== null && hipSource !== null && tycSource !== hipSource
+      ? { tyc: tycSource, hip: hipSource } : null,
   };
 }
 
@@ -1138,7 +1140,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
-    if (g.source !== null && passingRunnersUp(g.derived).length > 0) additionContested++;
+    if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
+      additionContested++;
+      outcomes.push({ key: g.origin, outcome: { kind: 'addition-contested' } });
+    }
     const component = a.verdict.kind === 'component';
     if (component && g.derived.sourceId !== null && !ownCandidates.has(g.derived.sourceId)) {
       ownCandidates.set(g.derived.sourceId, { reason: 'component', of: g.origin });
@@ -1146,7 +1151,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     noteUnshipped(g.origin, g.derived, component ? null : g.source);
     if (g.sourceOnSpine) additionSourceOnSpine++;
     if (g.sourceGateRefused) additionSourceGateRefused++;
-    if (g.routeSourceDisagree) additionRouteSourceDisagree++;
+    if (g.routeDisagreement !== null) {
+      additionRouteSourceDisagree++;
+      outcomes.push({ key: g.origin, outcome: {
+        kind: 'route-disagree', tycSourceId: g.routeDisagreement.tyc, hipSourceId: g.routeDisagreement.hip,
+      } });
+    }
     outcomes.push(
       { key: g.origin, outcome: {
         kind: 'addition-binding', ...withLead(additionBindingOutcome(g), LED_ADDITION_OUTCOMES, g.derived.via),
@@ -1167,7 +1177,12 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       key: g.origin, outcome: { kind: 'admit-addition', reason: a.verdict.reason, members: g.members },
     });
     additionsByReason[a.verdict.reason]++;
-    if (a.blocked.length > 0) additionsWithBlockedDesignation++;
+    if (a.blocked.length > 0) {
+      additionsWithBlockedDesignation++;
+      outcomes.push({ key: g.origin, outcome: {
+        kind: 'blocked-designation', designations: [...a.blocked].sort(compareDesignations),
+      } });
+    }
     const designations = manifestDesignations(toRecord(a.verdict.row, g.origin));
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) additionGaiaKeyedOnly++;
     claimRecord(claims, a.verdict.record);

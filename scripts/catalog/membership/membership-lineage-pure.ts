@@ -226,6 +226,9 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
+  'addition-binding.contested': outcomeCode('The admitted star binds its winner, and a runner-up also passed both gates; precedence chose it.'),
+  'addition-binding.route-disagree': outcomeCode('The admitted star\'s TYC route and HIP route propose different Gaia sources.'),
+  'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
   'addition-binding.gate-mag': refusalCode('An admitted star\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the star\'s printed V.'),
   'addition-binding.gate-sibling': refusalCode('An admitted star\'s binding candidate refused because SIMBAD gives that Gaia source to a different component of the star\'s system.'),
   'addition-binding.runner-up': refusalCode('An admitted star\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
@@ -295,6 +298,9 @@ export type MembershipOutcome =
   | { readonly kind: 'ships-none' }
   | { readonly kind: 'bright'; readonly overlayEntry: boolean }
   | { readonly kind: 'unattested'; readonly cell: UnattestedCell; readonly value: string }
+  | { readonly kind: 'addition-contested' }
+  | { readonly kind: 'route-disagree'; readonly tycSourceId: string; readonly hipSourceId: string }
+  | { readonly kind: 'blocked-designation'; readonly designations: readonly string[] }
   | { readonly kind: 'label-flip'; readonly flip: Omit<LabelFlip, 'sourceId'> }
   | {
     readonly kind: 'label-drop';
@@ -329,6 +335,9 @@ type ParamsOf<B extends Branch> =
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
+  : B extends 'addition-binding.route-disagree' ? { tyc_source_id: string; hip_source_id: string }
+  : B extends 'addition-binding.contested' ? Record<string, never>
+  : B extends 'addition.blocked-designation' ? { designations: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends `unattested.${UnattestedCell}` ? { value: string }
@@ -396,6 +405,11 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'ships-none': return row(key, 'binding.ships-none', {});
     case 'bright': return row(key, o.overlayEntry ? 'overlay.bright.entry' : 'overlay.bright.no-entry', {});
     case 'unattested': return row(key, UNATTESTED_BRANCHES[o.cell], { value: o.value });
+    case 'addition-contested': return row(key, 'addition-binding.contested', {});
+    case 'route-disagree':
+      return row(key, 'addition-binding.route-disagree', { tyc_source_id: o.tycSourceId, hip_source_id: o.hipSourceId });
+    case 'blocked-designation':
+      return row(key, 'addition.blocked-designation', { designations: o.designations.join('|') });
     case 'label-flip':
       return row(key, labelBranch(o.flip.disposition, o.flip.field), {
         label: o.flip.label, spine: o.flip.spine,

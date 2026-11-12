@@ -103,6 +103,7 @@ membership.addition-binding.bound.cns5	membership	none	outcome	live		7.1.20	The 
 membership.addition-binding.bound.hip	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
 membership.addition-binding.bound.simbad	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The winner rests on SIMBAD's cross-IDs alone.
 membership.addition-binding.bound.tyc	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
+membership.addition-binding.contested	membership	none	outcome	live		7.1.20	The admitted star binds its winner, and a runner-up also passed both gates; precedence chose it.
 membership.addition-binding.gate-mag	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because its Gaia G is more than a magnitude fainter than the star's printed V.
 membership.addition-binding.gate-sibling	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because SIMBAD gives that Gaia source to a different component of the star's system.
 membership.addition-binding.no-candidate	membership	none	outcome	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
@@ -113,8 +114,10 @@ membership.addition-binding.rescued.cns5	membership	none	outcome	live		7.1.20	Th
 membership.addition-binding.rescued.hip	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
 membership.addition-binding.rescued.simbad	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The winner rests on SIMBAD's cross-IDs alone.
 membership.addition-binding.rescued.tyc	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
+membership.addition-binding.route-disagree	membership	none	outcome	live		7.1.20	The admitted star's TYC route and HIP route propose different Gaia sources.
 membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An admitted star's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
+membership.addition.blocked-designation	membership	none	outcome	live		7.1.20	The admitted star ships without a designation its primaries publish, because another record answers to it.
 membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
 membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
 membership.admit.hd-omitted	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
