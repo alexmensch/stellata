@@ -50,6 +50,7 @@ import {
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { foldStageLines } from '../lineage/lineage-row-pure';
+import { LABEL_FIELDS } from '../classic-ids/label-merge/label-merge-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
@@ -1023,7 +1024,8 @@ describe('membership lineage', () => {
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
     expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
-    expect(summary.split('\n')).toHaveLength(6 + 5);
+    const fieldLines = summary.split('\n').filter((l) => /^  \S/.test(l)).map((l) => l.trim().split(' ')[0]);
+    expect(fieldLines).toEqual([...LABEL_FIELDS]);
   });
 
   it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {
