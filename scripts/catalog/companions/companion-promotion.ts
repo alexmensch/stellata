@@ -402,12 +402,12 @@ function emptyPostPassStats(): PostPassStats {
 }
 
 /** Members an adoption re-curated, per brightness source, once per member however many cursors reach it. */
-function recuratedMembers(rows: readonly PromotedRow[]): Record<RecuratedBrightness, number> {
-  const members = new Map<RecuratedBrightness, Set<number>>(RECURATED_BRIGHTNESS.map((b) => [b, new Set()]));
+export function recuratedMembers(rows: readonly PromotedRow[]): Record<RecuratedBrightness, number> {
+  const members = new Map<string, RecuratedBrightness>();
   for (const { outcome: o } of rows) {
-    if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) members.get(o.recurated)!.add(o.idx);
+    if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) members.set(`${o.recurated} ${o.idx}`, o.recurated);
   }
-  return fold(RECURATED_BRIGHTNESS, [...members].flatMap(([b, idxs]) => [...idxs].map(() => b)), (b) => b);
+  return fold(RECURATED_BRIGHTNESS, members.values(), (b) => b);
 }
 
 interface ExistingIndexes {

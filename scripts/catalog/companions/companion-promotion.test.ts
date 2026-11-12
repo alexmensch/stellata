@@ -15,6 +15,7 @@ import {
   projectFromSepPa,
   parkedRefusals,
   promoteCompanions,
+  recuratedMembers,
   type MultiplesTsvRow,
   type PromotionInputs,
   type PromotionStats,
@@ -3223,5 +3224,18 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const { newStars, codes } = promote(rows, [anchor], inputs());
     expect(codes['promotion.adopted.sameas-bridge']).toBe(0);
     expect(newStars).toHaveLength(1);
+  });
+});
+
+describe('recuratedMembers', () => {
+  const row = multiplesRow();
+  const adopted = (idx: number, recurated: 'wds_mag' | 'held' | null) => ({
+    row, via: 'secondary' as const, anchor: null, systemAnchor: null, synthKey: 'synth-00000+0000-B',
+    outcome: { kind: 'adopted' as const, idx, via: 'own-id' as const, desigConFromAnchor: false, recurated },
+  });
+
+  it('counts each re-curated member once per brightness source, however many cursors reach it', () => {
+    expect(recuratedMembers([adopted(2, 'wds_mag'), adopted(2, 'wds_mag'), adopted(3, 'held'), adopted(4, null)]))
+      .toEqual({ dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 1 });
   });
 });
