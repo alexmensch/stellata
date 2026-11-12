@@ -75,7 +75,7 @@ committed count snapshot, as Stage 3's are
 - **Ties**: among one grade band, the most recent ref year and then the
   first row; among MSC rows, the most complete and then the last. A source
   reaches this stage with one NSS solution, already picked
-  ([Gaia NSS: one solution per source](../README.md#gaia-nss-one-solution-per-source)).
+  ([Gaia NSS: one solution per source](../load/README.md#gaia-nss-one-solution-per-source)).
 
 ## What each route decides
 

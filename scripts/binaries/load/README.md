@@ -31,7 +31,7 @@ scripts/binaries/load/
                                columns; NSS_SOLUTION_TYPES, one table naming
                                what each solution type's columns constrain,
                                which Stage 4 converts by, and its pick tier
-                               (../README.md#gaia-nss-one-solution-per-source).
+                               (#gaia-nss-one-solution-per-source).
   binaries-astrometry-source.ts  BINARIES_ASTROMETRY (gaia_dr3_astrometry.tsv).
   simbad-pure.ts               SIMBAD's WDS cross-IDs, the sp_type pull, and
                                their join on simbad_oid.
@@ -96,6 +96,28 @@ no position, distance or absolute magnitude, a SIMBAD cross-ID with no
 wds_id, component or oid. A curated row missing a cell it exists to state
 throws ([Cell corrections](../../util/tsv/README.md#cell-corrections)).
 AT-HYG spells an absent identifier `0` as well as empty.
+
+## Gaia NSS: one solution per source
+
+Gaia DR3 publishes several two-body solutions for some sources, and the
+stages read one orbit per source. `parseNssOrbits` (`gaia-pure.ts`) keeps
+the best by `nss_solution_type`'s tier (`NSS_PICK_TIERS`, one per type in
+`NSS_SOLUTION_TYPES`):
+
+1. astrometric — `Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
+   `AstroSpectroSB1`, the solutions that fix the orbit's orientation;
+2. double-lined — `SB2`, `SB2C`, `EclipsingSpectro`;
+3. single-lined — `SB1`, `SB1C`;
+4. eclipse only — `EclipsingBinary`.
+
+Within a tier the greater `significance` wins. File order never decides:
+every pair of a source's solutions is compared, and a pair the rule cannot
+order — equal or missing significance within a tier, or a type the table
+does not name — stops the build at the line, as does a row with no type. A
+lone solution of an unnamed type is read, and Stage 4 converts it to
+nothing ([Conventions](../orbits/README.md#conventions-the-outputs-rest-on)).
+`../build-binaries.test.ts` reverses every source's rows and holds
+`multiples.tsv` byte for byte.
 
 ## Checks and counts
 

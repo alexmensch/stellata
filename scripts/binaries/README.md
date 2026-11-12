@@ -34,7 +34,8 @@ why:
 
 1. [`load/`](load/README.md) — every reference catalogue read, the
    magnitude gate, the blank-components rescue and the synthesized ORB6
-   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)).
+   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)),
+   and the one Gaia NSS solution kept per source ([Gaia NSS: one solution per source](load/README.md#gaia-nss-one-solution-per-source)).
 2. [`resolve/`](resolve/README.md) — each WDS component bound to a Gaia DR3
    source and / or a HIP ([What each tier decides](resolve/README.md#what-each-tier-decides)),
    then the binding-integrity audit.
@@ -52,27 +53,6 @@ why:
 `multiples.tsv` and the counts are pinned exactly, so each
 stage's README lists the choices its outputs rest on; changing one moves
 rows and is a correctness change, never a refactor.
-
-## Gaia NSS: one solution per source
-
-Gaia DR3 publishes several two-body solutions for some sources, and the
-stages read one orbit per source. `parseNssOrbits` (`load/gaia-pure.ts`) keeps the best by
-`nss_solution_type`'s tier (`NSS_PICK_TIERS`, one per type in
-`NSS_SOLUTION_TYPES`):
-
-1. astrometric — `Orbital`, `OrbitalAlternative*`, `OrbitalTargetedSearch*`,
-   `AstroSpectroSB1`, the solutions that fix the orbit's orientation;
-2. double-lined — `SB2`, `SB2C`, `EclipsingSpectro`;
-3. single-lined — `SB1`, `SB1C`;
-4. eclipse only — `EclipsingBinary`.
-
-Within a tier the greater `significance` wins. File order never decides: a
-pair the rule cannot order — equal or missing significance within a tier,
-or a type the table does not name — stops the build at the line. A lone
-solution of an unnamed type is read, and Stage 4 converts it to nothing
-([Conventions](orbits/README.md#conventions-the-outputs-rest-on)).
-`build-binaries.test.ts` reverses every source's rows and holds
-`multiples.tsv` byte for byte.
 
 ## Files in this area
 

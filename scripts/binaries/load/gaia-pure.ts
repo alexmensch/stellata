@@ -92,7 +92,7 @@ export function applyAstrometryExclusions(
  *  ω at most. */
 export type NssSolutionKind = 'thiele_innes' | 'eclipsing' | 'spectroscopic';
 
-/** Which of a source's solutions binaries keeps, best first. ../README.md#gaia-nss-one-solution-per-source */
+/** Which of a source's solutions binaries keeps, best first. README.md#gaia-nss-one-solution-per-source */
 export const NSS_PICK_TIERS = ['astrometric', 'double_lined', 'single_lined', 'eclipse_only'] as const;
 export type NssPickTier = (typeof NSS_PICK_TIERS)[number];
 
@@ -160,7 +160,7 @@ function pickNssSolution(candidates: readonly NssCandidate[]): NssOrbitRow {
   return ranked.reduce((best, c) => (compareRanked(c, best) < 0 ? c : best)).row;
 }
 
-/** source_id → its orbit. ../README.md#gaia-nss-one-solution-per-source */
+/** source_id → its orbit. README.md#gaia-nss-one-solution-per-source */
 export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
   const bySource = new Map<string, NssCandidate[]>();
   for (const row of table(NSS_COLUMNS)) {
