@@ -645,6 +645,7 @@ export function membershipTotals(counts: MembershipCounts) {
     manifestRows: spineAdmits + additions + magnitudeRows,
     derivation,
     spineLeads,
+    ownCandidates: Object.fromEntries(Object.entries(OWN_CANDIDATE_BRANCHES).map(([r, b]) => [r, n(b)])) as Record<OwnCandidateReason, number>,
     additionLeads,
     spineAdmits,
     spineRows: spineAdmits + n('fold'),

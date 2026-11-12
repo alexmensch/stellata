@@ -49,7 +49,6 @@ import {
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
-import { OWN_CANDIDATE_REASONS, type OwnCandidateReason } from './ledger-rows-pure';
 import { foldStageLines } from '../lineage/lineage-row-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
@@ -67,9 +66,7 @@ const codes = (r: MembershipResult): Readonly<Record<Branch, number>> => Object.
 const totals = (r: MembershipResult) => membershipTotals(folded(r));
 const derivation = (r: MembershipResult) => totals(r).derivation;
 const leads = (r: MembershipResult) => totals(r).spineLeads;
-const ownCandidates = (r: MembershipResult) => Object.fromEntries(OWN_CANDIDATE_REASONS.map(
-  (reason) => [reason, codes(r)[`admit.magnitude.${reason.replace('_', '-')}` as Branch]],
-)) as Record<OwnCandidateReason, number>;
+const ownCandidates = (r: MembershipResult) => totals(r).ownCandidates;
 
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
