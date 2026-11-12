@@ -255,7 +255,7 @@ export type PlacedPlacement = Extract<Placement, { kind: 'placed' }>;
 type DistanceLayers = Pick<PlacedPlacement, 'parallax' | 'bailerJones' | 'lmc'>;
 
 /** The tier a placed row's distance stood on when the LMC override weighed it. */
-export function distViaBeforeLmc(p: DistanceLayers): DistVia {
+export function distViaBeforeLmc(p: DistanceLayers): Exclude<DistVia, 'lmc_kinematic'> {
   return p.bailerJones.kind === 'override' ? 'bailer_jones' : p.parallax.via;
 }
 

@@ -68,9 +68,10 @@ describe('placementDerivedFold', () => {
     expect(derived([gaiaRv(3.5), gaiaRv(39.98), gaiaRv(45, 'rejected')]).rvGaiaErrorMaxKmS).toBe(39.98);
   });
 
-  it('refuses a shipped raw Gaia inversion, the row placement\'s invariant names', () => {
-    expect(() => derived([placed({ parallax: GAIA_PLX, bailerJones: { kind: 'absent' } })]))
-      .toThrow(/spine:1 ships a raw Gaia DR3 inversion/);
+  it('refuses every row shipping a raw Gaia inversion at once, as placement\'s invariant names them', () => {
+    const raw = (key: string): PlacedPlacement => placed({ key, parallax: GAIA_PLX, bailerJones: { kind: 'absent' } });
+    expect(() => derived([raw('spine:1'), placed(), raw('spine:3')]))
+      .toThrow(/2 rows ship a raw Gaia DR3 inversion.*: spine:1, spine:3$/);
   });
 
   it('pins the block\'s keys', () => {

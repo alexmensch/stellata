@@ -371,4 +371,5 @@ Two zeros are assertions, not counts. A shipped distance cannot reach no
 tier: `DistVia` holds no `none`. A raw Gaia DR3 inversion cannot ship: an
 eligible row with no Bailer-Jones posterior is placement's invariant
 ([Invariants](../lineage/README.md#invariants)), so the shipped-tier type
-holds no `gaia_dr3_inversion` and the fold throws on one.
+holds no `gaia_dr3_inversion`, and the fold throws once naming every such
+row, as the invariant would.

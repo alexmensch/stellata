@@ -58,19 +58,6 @@ export type PlacementDerivedCounts =
     rvGaiaErrorMaxKmS: number;
   };
 
-function shippedTier(p: PlacedPlacement, tier: DistVia): ShippedDistTier {
-  if (tier === 'gaia_dr3_inversion') {
-    throw new Error(`placement: ${p.key} ships a raw Gaia DR3 inversion, eligible for a Bailer-Jones posterior the pull lacks (placement.distance.bailer-jones-absent)`);
-  }
-  return tier;
-}
-
-function lmcWeighedTier(p: PlacedPlacement): LmcWeighedTier {
-  const tier = shippedTier(p, distViaBeforeLmc(p));
-  if (tier === 'lmc_kinematic') throw new Error(`placement: ${p.key} stood on the LMC snap before the snap weighed it`);
-  return tier;
-}
-
 function shipsLowPrecisionParallax(p: PlacedPlacement): boolean {
   return p.parallax.via !== 'curated'
     && isLowPrecisionParallax(p.parallax.value) && shippedDistVia(p) === p.parallax.via;
@@ -85,26 +72,40 @@ export function placementDerivedFold(): { add(p: PlacedPlacement): void; result(
   let distLowPrecisionParallax = 0;
   let velocityRvApplied = 0;
   let rvGaiaErrorMaxKmS = 0;
+  const rawInversions: string[] = [];
   return {
     add(p) {
-      dist[shippedTier(p, shippedDistVia(p))]++;
+      const shipped = shippedDistVia(p);
+      const weighed = distViaBeforeLmc(p);
+      if (shipped === 'gaia_dr3_inversion' || weighed === 'gaia_dr3_inversion') rawInversions.push(p.key);
+      else {
+        dist[shipped]++;
+        if (p.lmc === 'snap') lmcOverriddenByDistVia[weighed]++;
+        if (p.lmc === 'parallax_rules_out') lmcParallaxRefusedByDistVia[weighed]++;
+      }
       velocity[shippedVelocityVia(p)]++;
-      if (p.lmc === 'snap') lmcOverriddenByDistVia[lmcWeighedTier(p)]++;
-      if (p.lmc === 'parallax_rules_out') lmcParallaxRefusedByDistVia[lmcWeighedTier(p)]++;
       if (shipsLowPrecisionParallax(p)) distLowPrecisionParallax++;
       if (radialVelocityApplied(p)) velocityRvApplied++;
       const { rv } = p.rv;
       if (p.rv.kind === 'kept' && rv.via === 'gaia_dr3') rvGaiaErrorMaxKmS = Math.max(rvGaiaErrorMaxKmS, rv.value.errorKmS);
     },
-    result: (): PlacementDerivedCounts => ({
-      ...renamed(SHIPPED_DIST_COUNT_KEY, dist),
-      ...renamed(VELOCITY_COUNT_KEY, velocity),
-      distLowPrecisionParallax,
-      velocityRvApplied,
-      ...prefixed(LMC_OVERRIDDEN, lmcOverriddenByDistVia),
-      ...prefixed(LMC_PARALLAX_REFUSED, lmcParallaxRefusedByDistVia),
-      rvGaiaErrorMaxKmS,
-    }),
+    result: (): PlacementDerivedCounts => {
+      if (rawInversions.length > 0) {
+        throw new Error(
+          `placement: ${rawInversions.length} rows ship a raw Gaia DR3 inversion, eligible for a Bailer-Jones posterior `
+            + `the pull lacks (placement.distance.bailer-jones-absent): ${rawInversions.join(', ')}`,
+        );
+      }
+      return {
+        ...renamed(SHIPPED_DIST_COUNT_KEY, dist),
+        ...renamed(VELOCITY_COUNT_KEY, velocity),
+        distLowPrecisionParallax,
+        velocityRvApplied,
+        ...prefixed(LMC_OVERRIDDEN, lmcOverriddenByDistVia),
+        ...prefixed(LMC_PARALLAX_REFUSED, lmcParallaxRefusedByDistVia),
+        rvGaiaErrorMaxKmS,
+      };
+    },
   };
 }
 
