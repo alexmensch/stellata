@@ -514,12 +514,6 @@ function flattenCounts(counts: object): Map<string, { n: number; count: string }
   return rows;
 }
 
-/** One-line `bucket=n` rundown of a row partition, zeros included — the
- *  per-partition dry-run figure an override PR quotes. */
-export function formatPartition(partition: Readonly<Record<string, number>>): string {
-  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
-}
-
 type DriftedRow = Exclude<CountDiff, { status: 'match' }>;
 
 export function driftedRows(diff: CountDiff[]): DriftedRow[] {

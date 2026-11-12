@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, prefixed, share, sumOf } from './tally-pure';
+import { emptyTallyPartition, fold, formatPartition, prefixed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -72,5 +72,13 @@ describe('util/tally / share', () => {
   it('divides, and throws on an empty whole rather than calling it 0', () => {
     expect(share(1, 4, 'r')).toBe(0.25);
     expect(() => share(0, 0, 'nss_orbit_rate')).toThrow(/nss_orbit_rate: nothing to rate/);
+  });
+});
+
+describe('formatPartition', () => {
+  it('lists every bucket in declaration order, zeros included', () => {
+    expect(formatPartition({ bailer_jones: 58, gaia_dr3_inversion: 2, curated: 0 })).toBe(
+      'bailer_jones=58, gaia_dr3_inversion=2, curated=0',
+    );
   });
 });

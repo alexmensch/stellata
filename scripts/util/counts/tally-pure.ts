@@ -41,3 +41,9 @@ export function share(part: number, whole: number, rate: string): number {
   if (whole <= 0) throw new Error(`${rate}: nothing to rate (denominator ${whole})`);
   return part / whole;
 }
+
+/** One-line `bucket=n` rundown of a row partition, zeros included — the
+ *  per-partition dry-run figure an override PR quotes. */
+export function formatPartition(partition: Readonly<Record<string, number>>): string {
+  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
+}

@@ -7,7 +7,6 @@ import {
   compareCountSnapshot,
   driftedRows,
   formatCountDiff,
-  formatPartition,
   type BuildCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
@@ -399,13 +398,5 @@ describe('compareCountSnapshot', () => {
     expect(formatCountDiff(compareBuildCounts<object>(counted, absent)))
       .toContain("filter stage's input is absent from the build, counted in the snapshot");
     expect(compareCountSnapshot<object>(absent, absent).drifted).toBe(false);
-  });
-});
-
-describe('formatPartition', () => {
-  it('lists every bucket in declaration order, zeros included', () => {
-    expect(formatPartition({ bailer_jones: 58, gaia_dr3_inversion: 2, curated: 0 })).toBe(
-      'bailer_jones=58, gaia_dr3_inversion=2, curated=0',
-    );
   });
 });
