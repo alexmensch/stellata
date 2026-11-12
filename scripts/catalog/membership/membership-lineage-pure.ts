@@ -5,16 +5,19 @@ import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, refusalCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
+import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
+
+const RETIRED_7_1_20 = retired('7.1.20');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -50,13 +53,26 @@ const REFUSAL_BRANCHES = {
 } as const satisfies Record<RefusalSubject, Record<CandidateRefusal, string>>;
 type RefusalBranch = (typeof REFUSAL_BRANCHES)[RefusalSubject][CandidateRefusal];
 
-export const BINDING_DISPOSITION_OUTCOMES = ['derived', 'other', 'none'] as const;
-export type DispositionOutcome = (typeof BINDING_DISPOSITION_OUTCOMES)[number];
+/** Whether the row a disposition settles is on the review queue (`contested`, `collision`) or was settled by the derivation. */
+export const DISPOSITION_QUEUES = ['queued', 'settled'] as const;
+export type DispositionQueue = (typeof DISPOSITION_QUEUES)[number];
+type DispositionBranch = `disposition.${BindingDisposition}.${DispositionQueue}`;
 
 const LABEL_DROP_BRANCHES = {
   flamsteed_unattested: 'label-drop.flamsteed-unattested',
   hd_unattested: 'label-drop.hd-unattested',
 } as const satisfies Record<LabelDropReason, string>;
+
+const DISPOSITION_DESCRIPTIONS = {
+  derived: 'A committed review disposition confirms the derived Gaia source.',
+  other: 'A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.',
+  none: 'A committed review disposition leaves the record unbound.',
+} as const satisfies Record<BindingDisposition, string>;
+
+const DISPOSITION_QUEUE_DESCRIPTIONS = {
+  queued: 'The derivation queued the row for review, as contested or a collision.',
+  settled: 'The derivation settled the row by itself; the disposition overrides it.',
+} as const satisfies Record<DispositionQueue, string>;
 
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
@@ -77,9 +93,15 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'binding.gate-sibling': refusalCode('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
   'binding.runner-up': refusalCode('A binding candidate that passed both gates but lost to a higher-ranked one.'),
   'binding.unweighed-no-pulled-row': outcomeCode('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
-  'disposition.derived': outcomeCode('A committed review disposition confirms the derived Gaia source.'),
-  'disposition.other': outcomeCode('A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.'),
-  'disposition.none': outcomeCode('A committed review disposition leaves the record unbound.'),
+  'disposition.derived': outcomeCode(DISPOSITION_DESCRIPTIONS.derived, 'none', RETIRED_7_1_20),
+  'disposition.other': outcomeCode(DISPOSITION_DESCRIPTIONS.other, 'none', RETIRED_7_1_20),
+  'disposition.none': outcomeCode(DISPOSITION_DESCRIPTIONS.none, 'none', RETIRED_7_1_20),
+  'disposition.derived.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.derived} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
+  'disposition.derived.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.derived} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
+  'disposition.other.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.other} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
+  'disposition.other.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.other} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
+  'disposition.none.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
+  'disposition.none.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
   'addition-binding.bound': outcomeCode('The admitted star\'s own Gaia source survives both gates and is no other record\'s.'),
   'addition-binding.rescued': outcomeCode('The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.'),
   'addition-binding.on-spine': outcomeCode('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
@@ -143,7 +165,8 @@ export type MembershipOutcome =
   }
   | {
     readonly kind: 'disposition';
-    readonly outcome: DispositionOutcome;
+    readonly outcome: BindingDisposition;
+    readonly queue: DispositionQueue;
     readonly keep: string;
     readonly basis: string;
     readonly review: BindingReviewCells;
@@ -185,7 +208,7 @@ type ParamsOf<B extends Branch> =
   : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
   : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' ? Candidate
-  : B extends `disposition.${DispositionOutcome}` ? BindingReviewCells & { keep_source_id: string; basis: string }
+  : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends `label.${LabelDisposition}` ? Pick<LabelFlip, 'field' | 'label' | 'spine' | 'overlay' | 'applied'>
@@ -246,7 +269,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'candidate-unweighed':
       return row(key, 'binding.unweighed-no-pulled-row', { source_id: o.sourceId, via: o.via }, o.items);
     case 'disposition':
-      return row(key, `disposition.${o.outcome}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
+      return row(key, `disposition.${o.outcome}.${o.queue}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':
       return row(key, `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
     case 'label-flip':
@@ -285,7 +308,10 @@ export function membershipLedgers(
   const dropReasons = invert(LABEL_DROP_BRANCHES);
   const flipDispositions = invert(LABEL_BRANCHES);
   const queued = byCode(QUEUED_BINDING_OUTCOMES, (o) => `binding.${o}` as const);
-  const disposed = byCode(BINDING_DISPOSITION_OUTCOMES, (d) => `disposition.${d}` as const);
+  const disposed = byCode(
+    BINDING_DISPOSITIONS.flatMap((d) => DISPOSITION_QUEUES.map((q): DispositionBranch => `disposition.${d}.${q}`)),
+    (b) => b,
+  );
   const of = (key: string): IdentityRow => {
     const id = identity.get(key);
     if (id === undefined) throw new Error(`membership lineage: ${key} has no identity row`);

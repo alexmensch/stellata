@@ -124,9 +124,15 @@ membership.binding.runner-up	membership	none	refused	live		7.1.6	A binding candi
 membership.binding.sol	membership	none	outcome	live		7.1.6	The Sun takes no Gaia binding.
 membership.binding.unweighed-no-pulled-row	membership	none	outcome	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
 membership.component	membership	none	outcome	live		7.1.6	Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.
-membership.disposition.derived	membership	none	outcome	live		7.1.6	A committed review disposition confirms the derived Gaia source.
-membership.disposition.none	membership	none	outcome	live		7.1.6	A committed review disposition leaves the record unbound.
-membership.disposition.other	membership	none	outcome	live		7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
+membership.disposition.derived	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition confirms the derived Gaia source.
+membership.disposition.derived.queued	membership	none	outcome	live		7.1.20	A committed review disposition confirms the derived Gaia source. The derivation queued the row for review, as contested or a collision.
+membership.disposition.derived.settled	membership	none	outcome	live		7.1.20	A committed review disposition confirms the derived Gaia source. The derivation settled the row by itself; the disposition overrides it.
+membership.disposition.none	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition leaves the record unbound.
+membership.disposition.none.queued	membership	none	outcome	live		7.1.20	A committed review disposition leaves the record unbound. The derivation queued the row for review, as contested or a collision.
+membership.disposition.none.settled	membership	none	outcome	live		7.1.20	A committed review disposition leaves the record unbound. The derivation settled the row by itself; the disposition overrides it.
+membership.disposition.other	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
+membership.disposition.other.queued	membership	none	outcome	live		7.1.20	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence. The derivation queued the row for review, as contested or a collision.
+membership.disposition.other.settled	membership	none	outcome	live		7.1.20	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence. The derivation settled the row by itself; the disposition overrides it.
 membership.fold	membership	merge	outcome	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
 membership.label-drop.flamsteed-unattested	membership	none	outcome	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
 membership.label-drop.hd-unattested	membership	none	outcome	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.

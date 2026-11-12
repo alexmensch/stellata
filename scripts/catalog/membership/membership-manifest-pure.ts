@@ -975,6 +975,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
           key: origin,
           outcome: {
             kind: 'disposition', outcome: dispositionOf(disposition),
+            queue: b.outcome === 'contested' || b.outcome === 'collision' ? 'queued' : 'settled',
             keep: disposition.keep_source_id, basis: disposition.basis,
             review: bindingReviewCells(spineRow, b, tables),
           },
