@@ -2853,8 +2853,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   ];
   for (const placement of withPlacement) {
     const label = placement.x_pc === null ? 'no xyz of its own' : 'a placement too';
-    it(`reports a refused row that DID carry a per-component fit, with ${label}`
-      + ' — which is what the zero-pin is watching for', () => {
+    it(`counts a refused row that DID carry a per-component fit as promotion.fit.owned, with ${label}`, () => {
       const ownFit = blendedRows.map((r) => (r.comp === 'B'
         ? {
           ...r, hip: 7980, astrometryVia: 'gaia_5p' as const,
