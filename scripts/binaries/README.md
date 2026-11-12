@@ -55,9 +55,8 @@ rows and is a correctness change, never a refactor.
 
 ## Gaia NSS: one solution per source
 
-Gaia DR3 publishes several two-body solutions for some sources (5,926 in
-the committed table, 4 of them with three), and the stages read one orbit
-per source. `parseNssOrbits` (`load/gaia-pure.ts`) keeps the best by
+Gaia DR3 publishes several two-body solutions for some sources, and the
+stages read one orbit per source. `parseNssOrbits` (`load/gaia-pure.ts`) keeps the best by
 `nss_solution_type`'s tier (`NSS_PICK_TIERS`, one per type in
 `NSS_SOLUTION_TYPES`):
 
