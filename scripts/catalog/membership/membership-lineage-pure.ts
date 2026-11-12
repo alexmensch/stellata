@@ -204,6 +204,12 @@ const SPINE_LED_DESCRIPTIONS = {
   contested: 'The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.',
 } as const satisfies Record<LedSpineOutcome, string>;
 
+/** An addition group's binding codes describe the group, admitted or ledgered as a component. */
+const ADDITION_GROUP_LED_DESCRIPTIONS = {
+  bound: 'The addition group\'s own Gaia source survives both gates and is no other record\'s.',
+  rescued: 'The addition group\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+} as const satisfies Record<LedAdditionOutcome, string>;
+
 const ADDITION_LED_DESCRIPTIONS = {
   bound: 'The admitted star\'s own Gaia source survives both gates and is no other record\'s.',
   rescued: 'The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
@@ -273,17 +279,17 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'disposition.none.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
   'addition-binding.bound': outcomeCode(ADDITION_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
   'addition-binding.rescued': outcomeCode(ADDITION_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
-  ...ledCodes('addition-binding', ADDITION_LED_DESCRIPTIONS),
+  ...ledCodes('addition-binding', ADDITION_GROUP_LED_DESCRIPTIONS),
   'addition-binding.on-spine': outcomeCode('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
-  'addition-binding.contested': outcomeCode('The admitted star binds its winner, and a runner-up also passed both gates; precedence chose it.'),
-  'addition-binding.route-disagree': outcomeCode('The admitted star\'s TYC route and HIP route propose different Gaia sources.'),
+  'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.'),
+  'addition-binding.route-disagree': outcomeCode('The addition group\'s TYC route and HIP route propose different Gaia sources.'),
   'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
-  'addition-binding.gate-mag': refusalCode('An admitted star\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the star\'s printed V.'),
-  'addition-binding.gate-sibling': refusalCode('An admitted star\'s binding candidate refused because SIMBAD gives that Gaia source to a different component of the star\'s system.'),
-  'addition-binding.runner-up': refusalCode('An admitted star\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
+  'addition-binding.gate-mag': refusalCode('An addition group\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the group\'s printed V.'),
+  'addition-binding.gate-sibling': refusalCode('An addition group\'s binding candidate refused because SIMBAD gives that Gaia source to a different component of the group\'s system.'),
+  'addition-binding.runner-up': refusalCode('An addition group\'s binding candidate that passed both gates but lost to a higher-ranked one.'),
   ...RETIRED_LABEL_CODES,
   ...LABEL_CODES,
   'unattested.hip': outcomeCode('The record ships a HIP no primary attests for it.'),
