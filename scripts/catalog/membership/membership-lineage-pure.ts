@@ -690,9 +690,9 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
     const of = (d: LabelDisposition): number => (dispositionFields(d).includes(field) ? n(labelBranch(d, field)) : 0);
     const covered = derived[`labelAgree.${field}`];
     const keyed = covered + of('overlay-wins') + derived[`labelSpineOnly.${field}`];
-    const pct = keyed === 0 ? 0 : (100 * covered) / keyed;
+    const coverage = keyed === 0 ? '—' : `${((100 * covered) / keyed).toFixed(1)}%`;
     lines.push(
-      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)} (${pct.toFixed(1)}%) — `
+      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)} (${coverage}) — `
         + list(LABEL_DISPOSITIONS, of),
     );
   }
