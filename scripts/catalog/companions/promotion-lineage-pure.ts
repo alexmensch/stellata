@@ -5,9 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import {
-  codeEffects, outcomeCode, retired, stageCodes, type CodeDeclaration, type LIVE,
-} from '../lineage/reason-codes/reason-codes-pure';
+import { codeEffects, outcomeCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import type {
@@ -24,30 +22,22 @@ const BRIGHTNESS_CODES = {
   dmag_imputed: 'dmag-imputed', own: 'own', wds_mag: 'wds-mag', spectral: 'spectral',
   inherited_twin: 'inherited-twin', anchor_collocated: 'anchor-collocated',
 } as const satisfies Record<CompanionAbsmagSource, string>;
-type BrightnessCode = (typeof BRIGHTNESS_CODES)[CompanionAbsmagSource];
-
-const BRIGHTNESS_SOURCES: Record<CompanionAbsmagSource, string> = {
-  dmag_imputed: 'its anchor\'s absolute magnitude plus the pair\'s magnitude difference',
-  own: 'the row\'s own photometry',
-  wds_mag: 'the row\'s own WDS magnitude at the system\'s distance',
-  spectral: 'its per-component spectral type\'s absolute magnitude',
-  inherited_twin: 'the primary\'s inherited magnitude, kept because the pair has a renderable orbit',
-  anchor_collocated: 'its anchor\'s magnitude, the last resort for a pair\'s primary promoted as the anchor\'s companion',
-};
-
-const brightnessCodes = Object.fromEntries((Object.keys(BRIGHTNESS_CODES) as CompanionAbsmagSource[]).map((source) => [
-  `brightness.${BRIGHTNESS_CODES[source]}`,
-  outcomeCode(`The minted record's absolute magnitude is ${BRIGHTNESS_SOURCES[source]}.`),
-])) as Record<`brightness.${BrightnessCode}`, CodeDeclaration<typeof LIVE>>;
 
 const FACET_CODES = {
-  ...brightnessCodes,
+  'brightness.dmag-imputed': outcomeCode('The minted record\'s absolute magnitude is its anchor\'s absolute magnitude plus the pair\'s magnitude difference.'),
+  'brightness.own': outcomeCode('The minted record\'s absolute magnitude is the row\'s own photometry.'),
+  'brightness.wds-mag': outcomeCode('The minted record\'s absolute magnitude is the row\'s own WDS magnitude at the system\'s distance.'),
+  'brightness.spectral': outcomeCode('The minted record\'s absolute magnitude is its per-component spectral type\'s absolute magnitude.'),
+  'brightness.inherited-twin': outcomeCode('The minted record\'s absolute magnitude is the primary\'s inherited magnitude, kept because the pair has a renderable orbit.'),
+  'brightness.anchor-collocated': outcomeCode('The minted record\'s absolute magnitude is its anchor\'s magnitude, the last resort for a pair\'s primary promoted as the anchor\'s companion.'),
   'spectral.ms-from-own-absmag': outcomeCode('The minted record\'s spectral class is a main-sequence estimate from its own absolute magnitude, the row\'s type being its primary\'s or blank.'),
   'constellation.split-from-anchor': outcomeCode('The minted record\'s position falls in another IAU constellation than its anchor\'s.'),
   'desig-con.from-anchor': outcomeCode('The adopted record carried no designation constellation and takes its anchor\'s.'),
   'fit.owned': outcomeCode('The refused row carries a per-component fit on an identifier of its own.'),
 };
 type Facet = keyof typeof FACET_CODES;
+
+const brightnessFacet = (source: CompanionAbsmagSource): Facet => `brightness.${BRIGHTNESS_CODES[source]}`;
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
@@ -140,7 +130,7 @@ export function promotionLineageRows(r: PromotedRow, recordKey: (idx: number) =>
     case 'minted':
       return [
         row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }),
-        facet(`brightness.${BRIGHTNESS_CODES[o.brightness.source]}`),
+        facet(brightnessFacet(o.brightness.source)),
         ...(o.brightness.spectMsFromOwnAbsmag ? [facet('spectral.ms-from-own-absmag')] : []),
         ...(o.constellationSplit ? [facet('constellation.split-from-anchor')] : []),
       ];
