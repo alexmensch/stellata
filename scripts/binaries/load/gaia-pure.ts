@@ -87,6 +87,26 @@ export function applyAstrometryExclusions(
   return { kept, outcomes };
 }
 
+/** What a solution type's columns constrain: `thiele_innes` the photocentre
+ *  orbit's A, B, F, G; `eclipsing` a stored inclination and ω; `spectroscopic`
+ *  ω at most. */
+export type NssSolutionKind = 'thiele_innes' | 'eclipsing' | 'spectroscopic';
+
+export const NSS_SOLUTION_KINDS: ReadonlyMap<string, NssSolutionKind> = new Map([
+  ['Orbital', 'thiele_innes'],
+  ['OrbitalAlternative', 'thiele_innes'],
+  ['OrbitalAlternativeValidated', 'thiele_innes'],
+  ['OrbitalTargetedSearch', 'thiele_innes'],
+  ['OrbitalTargetedSearchValidated', 'thiele_innes'],
+  ['AstroSpectroSB1', 'thiele_innes'],
+  ['EclipsingBinary', 'eclipsing'],
+  ['EclipsingSpectro', 'eclipsing'],
+  ['SB1', 'spectroscopic'],
+  ['SB1C', 'spectroscopic'],
+  ['SB2', 'spectroscopic'],
+  ['SB2C', 'spectroscopic'],
+]);
+
 const NSS_COLUMNS = [
   'source_id', 'nss_solution_type', 'period', 't_periastron', 'eccentricity',
   'a_thiele_innes', 'b_thiele_innes', 'f_thiele_innes', 'g_thiele_innes',

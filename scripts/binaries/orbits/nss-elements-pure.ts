@@ -3,7 +3,7 @@
 import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
-import type { NssOrbitRow } from '../load/gaia-pure';
+import { NSS_SOLUTION_KINDS, type NssOrbitRow } from '../load/gaia-pure';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
@@ -28,26 +28,6 @@ export interface OrbitElements {
   readonly q: number | null;
   readonly distancePc: number | null;
 }
-
-/** What a solution type's columns constrain: `thiele_innes` the photocentre
- *  orbit's A, B, F, G; `eclipsing` a stored inclination and ω; `spectroscopic`
- *  ω at most. */
-export type NssSolutionKind = 'thiele_innes' | 'eclipsing' | 'spectroscopic';
-
-export const NSS_SOLUTION_KINDS: ReadonlyMap<string, NssSolutionKind> = new Map([
-  ['Orbital', 'thiele_innes'],
-  ['OrbitalAlternative', 'thiele_innes'],
-  ['OrbitalAlternativeValidated', 'thiele_innes'],
-  ['OrbitalTargetedSearch', 'thiele_innes'],
-  ['OrbitalTargetedSearchValidated', 'thiele_innes'],
-  ['AstroSpectroSB1', 'thiele_innes'],
-  ['EclipsingBinary', 'eclipsing'],
-  ['EclipsingSpectro', 'eclipsing'],
-  ['SB1', 'spectroscopic'],
-  ['SB1C', 'spectroscopic'],
-  ['SB2', 'spectroscopic'],
-  ['SB2C', 'spectroscopic'],
-]);
 
 export interface Campbell {
   readonly aMas: number;

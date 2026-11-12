@@ -12,9 +12,7 @@ a: [What each route decides](#what-each-route-decides).
 
 ```
 scripts/binaries/orbits/
-  nss-elements-pure.ts (+ test)  OrbitElements; NSS_SOLUTION_KINDS, one
-                                 table naming what each solution type's
-                                 columns constrain; thieleInnesToCampbell;
+  nss-elements-pure.ts (+ test)  OrbitElements; thieleInnesToCampbell;
                                  nssToCanonicalElements; nssInRegime, the
                                  detectability regime (P < 3 yr or a0 < 1″).
   nss-fixture.ts                 Test-only: tiFromCampbell (the forward
