@@ -34,7 +34,7 @@ const PLACED: PlacedPlacement = {
   },
   pmRescue: null,
   bailerJones: { kind: 'not-applied' },
-  lmc: 'not_member',
+  lmc: 'outside_cone',
   rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
   velocityClamped: false,
 };
@@ -47,7 +47,6 @@ const BRIGHTNESS: ShippedBrightness = {
 };
 const FACTS: ShippedFacts = {
   bailerJonesEligible: false,
-  inLmcCone: false,
   tycho2Direction: null,
   distPc: 100,
   fastKmS: null,
@@ -94,15 +93,16 @@ describe('walkStatsFold', () => {
 
   it('files an LMC snap and a parallax refusal under the tier the distance stood on before the LMC layer', () => {
     const stats = fold([
-      shipped({ bailerJones: { kind: 'override', ref: BJ_REF }, lmc: 'snap' }, { inLmcCone: true }),
-      shipped({ lmc: 'parallax_rules_out' }, { inLmcCone: true }),
-      shipped({}, { inLmcCone: true }),
+      shipped({ bailerJones: { kind: 'override', ref: BJ_REF }, lmc: 'snap' }),
+      shipped({ lmc: 'parallax_rules_out' }),
+      shipped({ lmc: 'pm_outside_gate' }),
+      shipped({}),
     ]);
     expect(stats.lmcCandidates).toBe(3);
     expect(stats.lmcOverridden).toBe(1);
     expect(stats.lmcOverriddenByDistVia.bailer_jones).toBe(1);
     expect(stats.lmcParallaxRefusedByDistVia.gliese_plx).toBe(1);
-    expect(stats.distVia).toMatchObject({ lmc_kinematic: 1, gliese_plx: 2, bailer_jones: 0 });
+    expect(stats.distVia).toMatchObject({ lmc_kinematic: 1, gliese_plx: 3, bailer_jones: 0 });
     expect(stats.bjOverridden).toBe(1);
   });
 

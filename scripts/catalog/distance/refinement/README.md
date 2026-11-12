@@ -70,9 +70,10 @@ is testable in isolation (`distance-overrides-pure.test.ts`).
 self-gates on its map lookup; the LMC layer checks its own sky cone as
 well as the PM window. A caller cannot produce an override by forgetting
 a gate, so the next layer can be written to either sibling's shape
-without inheriting a footgun. Predicates a build-counter also needs
-(`isInLmcCone`) stay separately exported — the counter evaluates once per
-row, the override re-checks on the handful of rows that reach it.
+without inheriting a footgun. The LMC verdict names the gate that stopped
+it — `outside_cone`, `no_pm`, `pm_outside_gate`, `parallax_rules_out` — so
+the cone is tested once per row and every in-cone row writes its step to
+[placement lineage](../README.md#placement-lineage).
 
 ## Override-layer authoring discipline
 
@@ -191,10 +192,9 @@ Constants in `distance-overrides-pure.ts`:
 | `LMC_PARALLAX_MAS` | 1000 / `LMC_DISTANCE_PC` ≈ 0.0202 mas | The LMC's own parallax, the zero the consistency test measures from. |
 | `LMC_PARALLAX_CONSISTENCY_SIGMA` | 10 | Errors above `LMC_PARALLAX_MAS` past which a row's own parallax refuses the snap. |
 
-`isInLmcCone(raHours, decDegrees)` evaluates the cone independently
-of the PM gate so `readStars` can count cone-membership candidates
-(`lmcCandidates` in `build-catalog-expected.json`) separately from
-PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **<!-- count:build-catalog/lmcOverridden -->111<!-- /count -->
+The verdict tells the cone's candidates (`lmcCandidates` in
+`build-catalog-expected.json`) apart from PM-passing overrides
+(`lmcOverridden`). At `V ≤ 11` it fires for **<!-- count:build-catalog/lmcOverridden -->111<!-- /count -->
 of <!-- count:build-catalog/lmcCandidates -->14,553<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
 halo / runaway stars whose PMs sit far from the LMC bulk centroid).
 

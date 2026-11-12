@@ -97,7 +97,6 @@ import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
   isBailerJonesEligible,
-  isInLmcCone,
   type BailerJonesIndex,
 } from '../distance/refinement/distance-overrides-pure';
 import { walkStatsFold, type WalkStats } from './walk-stats-pure';
@@ -223,8 +222,6 @@ export interface RvRouting {
 /** The per-row inputs a shipped row's counts fold from that no lineage type records. */
 export interface ShippedFacts {
   readonly bailerJonesEligible: boolean;
-  /** Inside the LMC sky cone, whatever the PM gate made of the row. */
-  readonly inLmcCone: boolean;
   readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
   /** The distance the override stack settled on. */
   readonly distPc: number;
@@ -486,16 +483,11 @@ export function rowResolver({
 
     // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
     // same rows.
-    const raHours = dirRes.srcRaDeg / 15;
-    let lmcStep: LmcStep = 'not_member';
-    const inLmcCone = isInLmcCone(raHours, dirRes.srcDecDeg);
-    if (inLmcCone) {
-      const lmc = applyLmcKinematicOverride(
-        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
-      );
-      lmcStep = lmc.kind;
-      if (lmc.kind === 'snap') dist = lmc.distPc;
-    }
+    const lmc = applyLmcKinematicOverride(
+      dirRes.srcRaDeg / 15, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
+    );
+    const lmcStep: LmcStep = lmc.kind;
+    if (lmc.kind === 'snap') dist = lmc.distPc;
     const distVia = shippedDistVia({ parallax: plxRes, bailerJones: bjStep, lmc: lmcStep });
 
     if (dist > MAX_DIST_PC) {
@@ -664,7 +656,6 @@ export function rowResolver({
       star,
       facts: {
         bailerJonesEligible,
-        inLmcCone,
         tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
           ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
           : null,

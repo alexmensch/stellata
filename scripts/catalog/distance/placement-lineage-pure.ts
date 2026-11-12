@@ -87,6 +87,13 @@ const PARK_BRANCHES = {
   no_position: 'park.no-position',
 } as const satisfies Record<ParkedReason, string>;
 
+const LMC_BRANCHES = {
+  snap: 'distance.lmc-kinematic',
+  parallax_rules_out: 'distance.lmc-refused-by-own-parallax',
+  pm_outside_gate: 'distance.lmc-refused-pm-outside-gate',
+  no_pm: 'distance.lmc-refused-no-pm',
+} as const satisfies Record<Exclude<LmcKinematicVerdict['kind'], 'outside_cone'>, string>;
+
 const PARK = 'park';
 
 export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
@@ -127,6 +134,8 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
   'distance.bailer-jones-absent': outcomeCode('The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.'),
   'distance.lmc-kinematic': outcomeCode('Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.'),
   'distance.lmc-refused-by-own-parallax': refusalCode('The LMC snap is refused: the record\'s own parallax is more than 10 sigma above the LMC\'s.'),
+  'distance.lmc-refused-pm-outside-gate': refusalCode('The LMC snap is refused: inside the LMC cone, but the proper motion lies outside the LMC\'s bulk-motion window.'),
+  'distance.lmc-refused-no-pm': refusalCode('The LMC snap is refused: inside the LMC cone, but the record carries no proper motion to test.'),
   'velocity.clamped': outcomeCode('The space velocity exceeds the sanity ceiling, so it is zeroed.'),
   'park.refused-no-defensible-parallax': outcomeCode('Every parallax reaching the record was refused, so it cannot be placed.', PARK),
   'park.no-parallax-published': outcomeCode('No parallax tier reaches the record, so it cannot be placed.', PARK),
@@ -295,8 +304,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       }
       if (p.bailerJones.kind === 'override') row('distance.bailer-jones', none, [p.bailerJones.ref]);
       if (p.bailerJones.kind === 'absent') row('distance.bailer-jones-absent', none, []);
-      if (p.lmc === 'snap') row('distance.lmc-kinematic', none, []);
-      if (p.lmc === 'parallax_rules_out') row('distance.lmc-refused-by-own-parallax', none, []);
+      if (p.lmc !== 'outside_cone') row(LMC_BRANCHES[p.lmc], none, []);
       const { rv } = p.rv;
       for (const r of rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
       if (p.rv.kind === 'rejected') {

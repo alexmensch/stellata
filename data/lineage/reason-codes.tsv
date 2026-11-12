@@ -203,6 +203,8 @@ placement.distance.bailer-jones	placement	none	outcome	live		7.1.6	The posterior
 placement.distance.bailer-jones-absent	placement	none	outcome	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
 placement.distance.lmc-kinematic	placement	none	outcome	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
 placement.distance.lmc-refused-by-own-parallax	placement	none	refused	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
+placement.distance.lmc-refused-no-pm	placement	none	refused	live		7.1.20	The LMC snap is refused: inside the LMC cone, but the record carries no proper motion to test.
+placement.distance.lmc-refused-pm-outside-gate	placement	none	refused	live		7.1.20	The LMC snap is refused: inside the LMC cone, but the proper motion lies outside the LMC's bulk-motion window.
 placement.parallax.cns5-plx	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.
 placement.parallax.curated	placement	none	outcome	live		7.1.6	Sol: distance zero by construction.
 placement.parallax.gaia-dr3-inversion	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.

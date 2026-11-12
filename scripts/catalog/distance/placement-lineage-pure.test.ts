@@ -42,7 +42,7 @@ describe('placementLineageRows', () => {
       },
       pmRescue: null,
       bailerJones: { kind: 'override', ref: BJ },
-      lmc: 'not_member',
+      lmc: 'outside_cone',
       rv: {
         kind: 'kept',
         rv: {
@@ -98,13 +98,34 @@ describe('placementLineageRows', () => {
       direction: { via, value: SOLUTION, evidence: [GAIA], refusals: [] },
       pmRescue: { via: 'none', refusals: [] },
       bailerJones: { kind: 'not-applied' },
-      lmc: 'not_member',
+      lmc: 'outside_cone',
       rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
       velocityClamped: false,
     });
     expect(codes(placed('gaia_2p'))).toContain('outcome placement.direction.gaia-2p');
     expect(codes(placed('gaia_5p'))).toContain('outcome placement.direction.gaia-5p');
     expect(codes(placed('gaia_2p'))).toContain('outcome placement.pm-rescue.none');
+  });
+
+  it('writes the LMC step for every in-cone row and none outside the cone', () => {
+    const placed = (lmc: Extract<Placement, { kind: 'placed' }>['lmc']): Placement => ({
+      kind: 'placed',
+      key: 'spine:1',
+      parallax: { via: 'pair_member_parallax', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+      direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
+      pmRescue: null,
+      bailerJones: { kind: 'not-applied' },
+      lmc,
+      rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
+      velocityClamped: false,
+    });
+    const lmcCodes = (lmc: Parameters<typeof placed>[0]): string[] =>
+      codes(placed(lmc)).filter((c) => c.includes('.lmc-'));
+    expect(lmcCodes('outside_cone')).toEqual([]);
+    expect(lmcCodes('snap')).toEqual(['outcome placement.distance.lmc-kinematic']);
+    expect(lmcCodes('parallax_rules_out')).toEqual(['refused placement.distance.lmc-refused-by-own-parallax']);
+    expect(lmcCodes('pm_outside_gate')).toEqual(['refused placement.distance.lmc-refused-pm-outside-gate']);
+    expect(lmcCodes('no_pm')).toEqual(['refused placement.distance.lmc-refused-no-pm']);
   });
 
   it('writes a rejected radial term as its own outcome, and the steps that only fire when they do', () => {
@@ -203,7 +224,7 @@ describe('PLACEMENT_INVARIANTS', () => {
     direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
     pmRescue: null,
     bailerJones,
-    lmc: 'not_member',
+    lmc: 'outside_cone',
     rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
     velocityClamped: false,
   });
@@ -229,7 +250,7 @@ describe('the shipped tiers read off a placed row', () => {
     direction: { via: 'gaia_2p', value: { ...SOLUTION, velVia: 'zero' }, evidence: [GAIA], refusals: [] },
     pmRescue: { via: 'tycho2', value: { pmRaMasyr: 1, pmDecMasyr: 1 }, evidence: [], refusals: [] },
     bailerJones: { kind: 'override', ref: BJ },
-    lmc: 'not_member',
+    lmc: 'outside_cone',
     rv: {
       kind: 'kept',
       rv: { via: 'simbad', value: { kmS: 12, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] },

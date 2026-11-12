@@ -324,8 +324,9 @@ ran, in walk order, up to the park that stopped it or the record it shipped.
 - every step writes its outcome code and its refused candidates, the
   candidate's tier in `params`; a refusal code names the rule, never the tier;
 - parallax and direction always, then the park for a parked row; a placed
-  row adds the PM rescue where it ran, Bailer-Jones and the LMC snap where
-  they fired, and its radial velocity;
+  row adds the PM rescue where it ran, Bailer-Jones where it fired, the LMC
+  step inside the LMC cone (the snap, or the gate that refused it), and its
+  radial velocity;
 - each row cites, as evidence, the source rows its cascade read
   (`CascadeResult`, `../cascade-result.ts`), and no measured value;
 - the four park codes declare effect `park`, so a SID the build stops

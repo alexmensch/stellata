@@ -123,7 +123,7 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
       `${sampleLabel(o.star)}: ${kmS.toFixed(0)} km/s @ ${f.distPc.toFixed(0)} pc`;
     if (f.bailerJonesEligible) stats.bjEligible++;
     if (p.bailerJones.kind === 'override') stats.bjOverridden++;
-    if (f.inLmcCone) stats.lmcCandidates++;
+    if (p.lmc !== 'outside_cone') stats.lmcCandidates++;
     if (p.lmc === 'snap') {
       stats.lmcOverridden++;
       stats.lmcOverriddenByDistVia[distViaBeforeLmc(p)]++;
