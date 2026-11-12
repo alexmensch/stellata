@@ -52,6 +52,7 @@ import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {
   CONTESTED_LEADS,
+  isQueuedOutcome,
   LED_ADDITION_OUTCOMES,
   LED_SPINE_OUTCOMES,
   membershipLedgers,
@@ -371,7 +372,7 @@ function spineBindingOutcome(
     sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
     hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
   };
-  if (b.outcome === 'contested' || b.outcome === 'collision') {
+  if (isQueuedOutcome(b.outcome)) {
     return {
       kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? [], CONTESTED_LEADS),
       review: bindingReviewCells(row, b, tables), ...letters,
@@ -877,7 +878,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
           key: origin,
           outcome: {
             kind: 'disposition', outcome: dispositionOf(disposition),
-            queue: b.outcome === 'contested' || b.outcome === 'collision' ? 'queued' : 'settled',
+            queue: isQueuedOutcome(b.outcome) ? 'queued' : 'settled',
             keep: disposition.keep_source_id, basis: disposition.basis,
             review: bindingReviewCells(spineRow, b, tables),
           },

@@ -75,6 +75,7 @@ function classCodes<P extends string, C extends PrimariesBindingClass>(
 
 export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
 export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
+export const isQueuedOutcome = (o: string): o is QueuedBindingOutcome => (QUEUED_BINDING_OUTCOMES as readonly string[]).includes(o);
 export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'refused', 'sol'] as const;
 export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
 
