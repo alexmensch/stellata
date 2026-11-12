@@ -11,6 +11,7 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
+import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
@@ -188,10 +189,17 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'binding.gate-mag': refusalCode('A binding candidate refused because its Gaia G is more than a magnitude fainter than the record\'s printed V.'),
   'binding.gate-sibling': refusalCode('A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record\'s system.'),
   'binding.runner-up': refusalCode('A binding candidate that passed both gates but lost to a higher-ranked one.'),
+  'binding.consensus': outcomeCode('The record ships the derived winner, and two or more sources proposed it.'),
+  'binding.ungateable': outcomeCode('The record reached a binding candidate with no printed V under any tier, so only the sibling gate weighs its candidates.'),
+  'binding.weighed-null-g': outcomeCode('A binding candidate weighed on an astrometry row publishing no Gaia G, so the magnitude gate passed it unweighed.'),
+  'binding.ships-none': outcomeCode('The spine row ships no Gaia source, so no classic-ID overlay entry can reach its labels.'),
+  'overlay.bright.entry': outcomeCode(`The spine row is at V <= ${BRIGHT_TIER_MAG_CEILING}, and the classic-ID overlay has a row for the source it ships.`),
+  'overlay.bright.no-entry': outcomeCode(`The spine row is at V <= ${BRIGHT_TIER_MAG_CEILING}, and the classic-ID overlay has no row for the source it ships, or it ships none.`),
   'binding.unweighed-no-pulled-row': outcomeCode('A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.'),
   'disposition.derived': outcomeCode(DISPOSITION_DESCRIPTIONS.derived, 'none', RETIRED_7_1_20),
   'disposition.other': outcomeCode(DISPOSITION_DESCRIPTIONS.other, 'none', RETIRED_7_1_20),
   'disposition.none': outcomeCode(DISPOSITION_DESCRIPTIONS.none, 'none', RETIRED_7_1_20),
+  'disposition.asserted': outcomeCode('A committed review disposition keeps a Gaia source no committed source proposes, on its stated basis alone.'),
   'disposition.derived.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.derived} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
   'disposition.derived.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.derived} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
   'disposition.other.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.other} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
@@ -262,6 +270,12 @@ export type MembershipOutcome =
     readonly sourceId: string;
     readonly via: string;
   } & Led<AdditionBindingOutcome, LedAdditionOutcome>)
+  | { readonly kind: 'consensus' }
+  | { readonly kind: 'ungateable' }
+  | { readonly kind: 'weighed-null-g'; readonly sourceId: string; readonly via: string }
+  | { readonly kind: 'asserted'; readonly keep: string; readonly basis: string }
+  | { readonly kind: 'ships-none' }
+  | { readonly kind: 'bright'; readonly overlayEntry: boolean }
   | { readonly kind: 'label-flip'; readonly flip: Omit<LabelFlip, 'sourceId'> }
   | {
     readonly kind: 'label-drop';
@@ -293,7 +307,8 @@ type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
   : B extends QueuedBranch ? BindingReviewCells & Letters
   : B extends `binding.${LedSpineOutcome}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
-  : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' ? Candidate
+  : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
+  : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
@@ -354,6 +369,12 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       return row(key, `disposition.${o.outcome}.${o.queue}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':
       return row(key, 'lead' in o ? `addition-binding.${o.outcome}.${o.lead}` : `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
+    case 'consensus': return row(key, 'binding.consensus', {});
+    case 'ungateable': return row(key, 'binding.ungateable', {});
+    case 'weighed-null-g': return row(key, 'binding.weighed-null-g', { source_id: o.sourceId, via: o.via });
+    case 'asserted': return row(key, 'disposition.asserted', { keep_source_id: o.keep, basis: o.basis });
+    case 'ships-none': return row(key, 'binding.ships-none', {});
+    case 'bright': return row(key, o.overlayEntry ? 'overlay.bright.entry' : 'overlay.bright.no-entry', {});
     case 'label-flip':
       return row(key, labelBranch(o.flip.disposition, o.flip.field), {
         label: o.flip.label, spine: o.flip.spine,

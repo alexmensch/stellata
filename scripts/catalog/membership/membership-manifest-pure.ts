@@ -967,7 +967,13 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       outcomes.push(...refusedCandidates(origin, 'spine', d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
       for (const r of d.rejected) derivedRejected[r.reason]++;
       derivedWeighedNullGMag += d.weighedNullGMag.length;
-      if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
+      outcomes.push(...d.weighedNullGMag.map((c): KeyedOutcome => ({
+        key: origin, outcome: { kind: 'weighed-null-g', sourceId: c.sourceId, via: c.via.join('+') },
+      })));
+      if (!d.gateable && d.ranked.length > 0) {
+        derivedUngateable++;
+        outcomes.push({ key: origin, outcome: { kind: 'ungateable' } });
+      }
       const key = bindingReviewKey(spineRow);
       const disposition = dispositions.get(key);
       const s = settleBinding(b, disposition, evidence);
@@ -975,7 +981,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       binding = s.binding;
       if (disposition !== undefined) {
         bindingDispositions[dispositionOf(disposition)]++;
-        if (s.asserted) dispositionAsserted++;
+        if (s.asserted) {
+          dispositionAsserted++;
+          outcomes.push({ key: origin, outcome: { kind: 'asserted', keep: disposition.keep_source_id, basis: disposition.basis } });
+        }
         applied.add(key);
         outcomes.push({
           key: origin,
@@ -989,7 +998,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       }
       if (value !== null && value === d.sourceId) {
         derivedVia[d.via[0]]++;
-        if (d.via.length > 1) derivedConsensus++;
+        if (d.via.length > 1) {
+          derivedConsensus++;
+          outcomes.push({ key: origin, outcome: { kind: 'consensus' } });
+        }
       }
     }
     const withheldAs: OwnCandidateReason = dispositions.get(bindingReviewKey(spineRow))?.basis === 'pair_component' ? 'component' : 'withheld';
@@ -1026,7 +1038,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const spineManifestRows: ManifestCells[] = [];
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
-    if (record.gaiaSourceId === null) spineRowsWithoutSourceId++;
+    if (record.gaiaSourceId === null) {
+      spineRowsWithoutSourceId++;
+      outcomes.push({ key: spineKey(i), outcome: { kind: 'ships-none' } });
+    }
     // Sol derives no binding, so it carries no gate evidence of its own.
     const mag = kept[i].proper === SOL_PROPER_NAME
       ? SOL_APPARENT_V_MAGNITUDE
@@ -1034,6 +1049,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       spineBrightRows++;
       if (noEntry) spineBrightRowsWithoutOverlayEntry++;
+      outcomes.push({ key: spineKey(i), outcome: { kind: 'bright', overlayEntry: !noEntry } });
     }
     const row = manifestRowFromRecord(kept[i], record, settled[i].binding);
     spineManifestRows.push(row);
