@@ -35,6 +35,12 @@ export function sumOf<P extends string, K extends string>(counts: Record<`${P}${
   return members.reduce((n, m) => n + counts[`${prefix}${m}`], 0);
 }
 
+/** One-line `bucket=n` rundown of a row partition, zeros included — the
+ *  per-partition dry-run figure an override PR quotes. */
+export function formatPartition(partition: Readonly<Record<string, number>>): string {
+  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
+}
+
 /** `part / whole` for a snapshot rate; throws on an empty whole, which is a
  *  broken build, not a rate of 0. */
 export function share(part: number, whole: number, rate: string): number {

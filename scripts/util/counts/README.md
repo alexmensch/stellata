@@ -10,6 +10,8 @@ snapshot check that reads the files is the parent folder's
 tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 prefixed, a tally's keys as snapshot keys;
                                 sumOf, a prefixed subset's total;
+                                formatPartition, a partition's one-line
+                                `bucket=n` rundown;
                                 share, a rate that throws on an empty whole.
 count-stages-pure.ts (+ test)   The staged snapshot: CountBlock and
                                 StageBlock, nestByStage, flattenStages,
