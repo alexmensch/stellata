@@ -156,7 +156,6 @@ membership.binding.consensus	membership	none	outcome	live		7.1.20	The record shi
 membership.binding.contested	membership	none	outcome	retired	7.1.20	7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
 membership.binding.contested.cns5	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is CNS5.
 membership.binding.contested.hip	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
-membership.binding.contested.simbad	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The winner rests on SIMBAD's cross-IDs alone.
 membership.binding.contested.tyc	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.gate-mag	membership	none	refused	live		7.1.6	A binding candidate refused because its Gaia G is more than a magnitude fainter than the record's printed V.
 membership.binding.gate-sibling	membership	none	refused	live		7.1.6	A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record's system.
@@ -193,10 +192,7 @@ membership.label.added.hd	membership	none	outcome	live		7.1.20	The classic-ID ov
 membership.label.added.hip	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hip.
 membership.label.added.hr	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hr.
 membership.label.extra-alias	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
-membership.label.extra-alias.flam	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: flam.
-membership.label.extra-alias.gl	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: gl.
 membership.label.extra-alias.hd	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hd.
-membership.label.extra-alias.hip	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hip.
 membership.label.extra-alias.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hr.
 membership.label.extra-dropped	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a single-valued field; it is dropped.
 membership.label.extra-dropped.flam	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: flam.
@@ -205,10 +201,7 @@ membership.label.extra-dropped.hd	membership	none	outcome	live		7.1.20	The overl
 membership.label.extra-dropped.hip	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hip.
 membership.label.extra-dropped.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hr.
 membership.label.extra-sibling-rendered	membership	none	outcome	retired	7.1.20	7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
-membership.label.extra-sibling-rendered.flam	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: flam.
-membership.label.extra-sibling-rendered.gl	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: gl.
 membership.label.extra-sibling-rendered.hd	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hd.
-membership.label.extra-sibling-rendered.hip	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hip.
 membership.label.extra-sibling-rendered.hr	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hr.
 membership.label.overlay-wins	membership	none	outcome	retired	7.1.20	7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
 membership.label.overlay-wins.flam	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: flam.

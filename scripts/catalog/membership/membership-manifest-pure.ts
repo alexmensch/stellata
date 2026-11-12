@@ -16,6 +16,7 @@ import type {
   BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution,
 } from './binding/binding-gate-pure';
 import {
+  BINDING_SOURCES,
   bindingCandidates,
   deriveBinding,
   indexSimbadSources,
@@ -50,6 +51,7 @@ import {
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {
+  CONTESTED_LEADS,
   LED_ADDITION_OUTCOMES,
   LED_SPINE_OUTCOMES,
   membershipLedgers,
@@ -371,13 +373,13 @@ function spineBindingOutcome(
   };
   if (b.outcome === 'contested' || b.outcome === 'collision') {
     return {
-      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? []),
+      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? [], CONTESTED_LEADS),
       review: bindingReviewCells(row, b, tables), ...letters,
     };
   }
   return {
     kind: 'spine-binding',
-    ...withLead(b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? []),
+    ...withLead(b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? [], BINDING_SOURCES),
     sourceId: sourceId ?? '',
     via: b.derived?.via.join('+') ?? '',
     ...letters,
@@ -1013,7 +1015,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
     outcomes.push(
       { key: g.origin, outcome: {
-        kind: 'addition-binding', ...withLead(additionBindingOutcome(g), LED_ADDITION_OUTCOMES, g.derived.via),
+        kind: 'addition-binding', ...withLead(additionBindingOutcome(g), LED_ADDITION_OUTCOMES, g.derived.via, BINDING_SOURCES),
         sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),

@@ -1,7 +1,8 @@
 // build:membership as a lineage stage: its reason codes, its outcome union, the one serialiser over it, and the four ledgers as views. See README.md#membership-lineage.
 
 import {
-  LABEL_DISPOSITIONS, LABEL_FIELDS, type LabelDisposition, type LabelField, type LabelFlip,
+  LABEL_DISPOSITIONS, LABEL_FIELDS, dispositionFields,
+  type AliasDisposition, type AliasField, type LabelDisposition, type LabelField, type LabelFlip,
 } from '../classic-ids/label-merge/label-merge-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
@@ -81,26 +82,30 @@ export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
 export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'contested'] as const;
 export const LED_ADDITION_OUTCOMES = ['bound', 'rescued'] as const;
 type LedSpineOutcome = (typeof LED_SPINE_OUTCOMES)[number];
-type QueuedBranch = `binding.contested.${BindingSource}` | 'binding.collision';
+/** A winner SIMBAD alone proposes ranks below every other passing candidate, so it is never contested. */
+export const CONTESTED_LEADS = ['tyc', 'hip', 'cns5'] as const satisfies readonly BindingSource[];
+type ContestedLead = (typeof CONTESTED_LEADS)[number];
+type QueuedBranch = `binding.contested.${ContestedLead}` | 'binding.collision';
 const QUEUED_BRANCHES: readonly (readonly [QueuedBindingOutcome, QueuedBranch])[] = [
-  ...BINDING_SOURCES.map((lead) => ['contested', `binding.contested.${lead}`] as const),
+  ...CONTESTED_LEADS.map((lead) => ['contested', `binding.contested.${lead}`] as const),
   ['collision', 'binding.collision'],
 ];
 type LedAdditionOutcome = (typeof LED_ADDITION_OUTCOMES)[number];
 
 /** An outcome in `Led` carries the source leading its winner; any other carries none. */
-type Led<O extends string, L extends O> =
+type Led<O extends string, L extends O, S extends BindingSource = BindingSource> =
   | { readonly outcome: Exclude<O, L> }
-  | { readonly outcome: L; readonly lead: BindingSource };
+  | { readonly outcome: L; readonly lead: S };
 
 /** `outcome`, carrying the source leading its winner (`via[0]`) when it is one of `led`. */
-export function withLead<O extends string, L extends string>(
-  outcome: O, led: readonly L[], via: readonly BindingSource[],
-): Led<O, L & O> {
-  if (!(led as readonly string[]).includes(outcome)) return { outcome } as Led<O, L & O>;
+export function withLead<O extends string, L extends string, S extends BindingSource = BindingSource>(
+  outcome: O, led: readonly L[], via: readonly BindingSource[], leads: readonly S[],
+): Led<O, L & O, S> {
+  if (!(led as readonly string[]).includes(outcome)) return { outcome } as Led<O, L & O, S>;
   const lead = via[0];
   if (lead === undefined) throw new Error(`a ${outcome} binding names no source proposing its winner`);
-  return { outcome: outcome as L & O, lead };
+  if (!(leads as readonly string[]).includes(lead)) throw new Error(`a ${outcome} binding cannot rest on ${lead} alone`);
+  return { outcome: outcome as L & O, lead: lead as S };
 }
 
 export const ADDITION_BINDING_OUTCOMES = [
@@ -169,14 +174,19 @@ const LABEL_DESCRIPTIONS = {
   'extra-dropped': 'The overlay names a further value for a single-valued field; it is dropped.',
 } as const satisfies Record<LabelDisposition, string>;
 
-type LabelBranch = `label.${LabelDisposition}.${LabelField}`;
-const labelBranch = (d: LabelDisposition, f: LabelField): LabelBranch => `label.${d}.${f}`;
+type LabelBranch =
+  | `label.${Exclude<LabelDisposition, AliasDisposition>}.${LabelField}`
+  | `label.${AliasDisposition}.${AliasField}`;
+function labelBranch(d: LabelDisposition, f: LabelField): LabelBranch {
+  if (!dispositionFields(d).includes(f)) throw new Error(`label merge: no ${d} disposition reaches the ${f} field`);
+  return `label.${d}.${f}` as LabelBranch;
+}
 
 const RETIRED_LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.map(
   (d) => [`label.${d}`, outcomeCode(LABEL_DESCRIPTIONS[d], 'none', RETIRED_7_1_20)],
 )) as Record<`label.${LabelDisposition}`, CodeDeclaration<typeof RETIRED_7_1_20>>;
 
-const LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.flatMap((d) => LABEL_FIELDS.map(
+const LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.flatMap((d) => dispositionFields(d).map(
   (f) => [labelBranch(d, f), outcomeCode(`${LABEL_DESCRIPTIONS[d]} Identifier: ${f}.`)],
 ))) as Record<LabelBranch, CodeDeclaration<typeof LIVE>>;
 
@@ -222,12 +232,12 @@ const LEAD_DESCRIPTIONS = {
   simbad: 'The winner rests on SIMBAD\'s cross-IDs alone.',
 } as const satisfies Record<BindingSource, string>;
 
-function ledCodes<P extends string, O extends string>(
-  prefix: P, descriptions: Readonly<Record<O, string>>,
-): Record<`${P}.${O}.${BindingSource}`, CodeDeclaration<typeof LIVE>> {
-  return Object.fromEntries(Object.entries<string>(descriptions).flatMap(([outcome, d]) => BINDING_SOURCES.map(
+function ledCodes<P extends string, O extends string, S extends BindingSource>(
+  prefix: P, descriptions: Readonly<Record<O, string>>, leads: readonly S[],
+): Record<`${P}.${O}.${S}`, CodeDeclaration<typeof LIVE>> {
+  return Object.fromEntries(Object.entries<string>(descriptions).flatMap(([outcome, d]) => leads.map(
     (lead) => [`${prefix}.${outcome}.${lead}`, outcomeCode(`${d} ${LEAD_DESCRIPTIONS[lead]}`)],
-  ))) as Record<`${P}.${O}.${BindingSource}`, CodeDeclaration<typeof LIVE>>;
+  ))) as Record<`${P}.${O}.${S}`, CodeDeclaration<typeof LIVE>>;
 }
 
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
@@ -253,7 +263,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'binding.bound': outcomeCode(SPINE_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
   'binding.rescued': outcomeCode(SPINE_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
   'binding.contested': outcomeCode(SPINE_LED_DESCRIPTIONS.contested, 'none', RETIRED_7_1_20),
-  ...ledCodes('binding', SPINE_LED_DESCRIPTIONS),
+  ...ledCodes('binding', { bound: SPINE_LED_DESCRIPTIONS.bound, rescued: SPINE_LED_DESCRIPTIONS.rescued }, BINDING_SOURCES),
+  ...ledCodes('binding', { contested: SPINE_LED_DESCRIPTIONS.contested }, CONTESTED_LEADS),
   'binding.refused': outcomeCode('No Gaia source survives the binding gates; the record ships unbound.'),
   'binding.collision': outcomeCode('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
   'binding.sol': outcomeCode('The Sun takes no Gaia binding.'),
@@ -279,7 +290,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'disposition.none.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
   'addition-binding.bound': outcomeCode(ADDITION_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
   'addition-binding.rescued': outcomeCode(ADDITION_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
-  ...ledCodes('addition-binding', ADDITION_GROUP_LED_DESCRIPTIONS),
+  ...ledCodes('addition-binding', ADDITION_GROUP_LED_DESCRIPTIONS, BINDING_SOURCES),
   'addition-binding.on-spine': outcomeCode('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
@@ -327,7 +338,7 @@ export type MembershipOutcome =
     readonly review: BindingReviewCells;
     readonly sourceLetters: string;
     readonly hipLetters: string;
-  } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome>)
+  } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome, ContestedLead>)
   | {
     readonly kind: 'candidate-refused';
     readonly subject: RefusalSubject;
@@ -396,7 +407,7 @@ type Candidate = { source_id: string; via: string };
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
   : B extends QueuedBranch ? BindingReviewCells & Letters
-  : B extends `binding.${LedSpineOutcome}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
+  : B extends `binding.${'bound' | 'rescued'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
@@ -512,7 +523,7 @@ export function membershipLedgers(
   ));
   const dropReasons = invert(LABEL_DROP_BRANCHES);
   const flipBranches = new Map<string, { disposition: LabelDisposition; field: LabelField; branch: LabelBranch }>(
-    LABEL_DISPOSITIONS.flatMap((d) => LABEL_FIELDS.map(
+    LABEL_DISPOSITIONS.flatMap((d) => dispositionFields(d).map(
       (f) => [MEMBERSHIP_CODES.code(labelBranch(d, f)), { disposition: d, field: f, branch: labelBranch(d, f) }] as const,
     )),
   );
@@ -607,7 +618,7 @@ export function membershipTotals(counts: MembershipCounts) {
   };
   const disposed = (q: DispositionQueue) => sum(BINDING_DISPOSITIONS.map((d): LiveBranch => `disposition.${d}.${q}`));
   const reviewByVerdict: Record<BindingReviewVerdict, number> = {
-    contested: sum(BINDING_SOURCES.map((l): LiveBranch => `binding.contested.${l}`)),
+    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
     collision: n('binding.collision'),
     disposed: disposed('settled'),
   };
@@ -644,8 +655,8 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
       + `bindings ${list(BINDING_CLASSES, (c) => t.bindingByClass[c])}`,
     `derivation: bound ${sum(BINDING_SOURCES.map((l) => led('binding.bound', l)))}, `
       + `rescued ${sum(BINDING_SOURCES.map((l) => led('binding.rescued', l)))}, refused ${n('binding.refused')}, `
-      + `contested ${sum(BINDING_SOURCES.map((l) => led('binding.contested', l)))}, collision ${n('binding.collision')}, sol ${n('binding.sol')}; `
-      + `led by ${list(BINDING_SOURCES, (l) => leads('binding', LED_SPINE_OUTCOMES, l))}, consensus ${n('binding.consensus')}, `
+      + `contested ${t.reviewByVerdict.contested}, collision ${n('binding.collision')}, sol ${n('binding.sol')}; `
+      + `led by ${list(BINDING_SOURCES, (l) => leads('binding', (CONTESTED_LEADS as readonly string[]).includes(l) ? LED_SPINE_OUTCOMES : ['bound', 'rescued'], l))}, consensus ${n('binding.consensus')}, `
       + `asserted by review ${n('disposition.asserted')}; gate refused mag ${n('binding.gate-mag')}, sibling ${n('binding.gate-sibling')}; `
       + `${n('binding.ungateable')} rows have a candidate and no printed V; ${n('binding.weighed-null-g')} candidates on a row with no published G`,
     `review queue: ${list(BINDING_REVIEW_VERDICTS, (v) => t.reviewByVerdict[v])}; dispositions ${list(BINDING_DISPOSITIONS, (d) => t.dispositions[d])}; `
@@ -660,7 +671,7 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
       + `${n('overlay.bright.no-entry') + n('overlay.bright.entry')} rows at V <= ${BRIGHT_TIER_MAG_CEILING}. Those labels ride the inherited spine, not the overlay.`,
   ];
   for (const field of LABEL_FIELDS) {
-    const of = (d: LabelDisposition): number => n(labelBranch(d, field));
+    const of = (d: LabelDisposition): number => (dispositionFields(d).includes(field) ? n(labelBranch(d, field)) : 0);
     const covered = derived[`labelAgree.${field}`];
     const keyed = covered + of('overlay-wins') + derived[`labelSpineOnly.${field}`];
     const pct = keyed === 0 ? 0 : (100 * covered) / keyed;

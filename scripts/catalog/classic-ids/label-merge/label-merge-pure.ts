@@ -54,6 +54,17 @@ export const LABEL_DISPOSITIONS = [
 ] as const;
 export type LabelDisposition = (typeof LABEL_DISPOSITIONS)[number];
 
+/** The fields with an alias list (`writeAlt`), and the dispositions only an alias list can reach. */
+export const ALIAS_FIELDS = ['hd', 'hr'] as const satisfies readonly LabelField[];
+export type AliasField = (typeof ALIAS_FIELDS)[number];
+export const ALIAS_DISPOSITIONS = ['extra-alias', 'extra-sibling-rendered'] as const satisfies readonly LabelDisposition[];
+export type AliasDisposition = (typeof ALIAS_DISPOSITIONS)[number];
+
+/** The fields a disposition can be written on. */
+export function dispositionFields(d: LabelDisposition): readonly LabelField[] {
+  return (ALIAS_DISPOSITIONS as readonly string[]).includes(d) ? ALIAS_FIELDS : LABEL_FIELDS;
+}
+
 /** One row of the committed review queue — every place the merge's output
  *  departs from the spine's labels, plus the values a single-valued field could
  *  not carry. The queue is therefore the COMPLETE delta. Sort by `disposition`

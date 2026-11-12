@@ -45,7 +45,7 @@ import {
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
+  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
@@ -67,7 +67,7 @@ const codes = (r: MembershipResult): Readonly<Record<Branch, number>> => Object.
 ) as Record<Branch, number>;
 const totals = (r: MembershipResult) => membershipTotals(folded(r));
 const ledOf = (r: MembershipResult, outcome: 'bound' | 'rescued' | 'contested') => (
-  BINDING_SOURCES.reduce((n, l) => n + codes(r)[`binding.${outcome}.${l}`], 0)
+  (outcome === 'contested' ? CONTESTED_LEADS : BINDING_SOURCES).reduce((n, l) => n + codes(r)[`binding.${outcome}.${l}` as Branch], 0)
 );
 const derivation = (r: MembershipResult) => ({
   bound: ledOf(r, 'bound') + ledOf(r, 'rescued'),
@@ -77,7 +77,7 @@ const derivation = (r: MembershipResult) => ({
   sol: codes(r)['binding.sol'],
 });
 const leads = (r: MembershipResult) => Object.fromEntries(BINDING_SOURCES.map((l) => [l, (
-  (['bound', 'rescued', 'contested'] as const).reduce((n, o) => n + codes(r)[`binding.${o}.${l}`], 0)
+  (['bound', 'rescued', 'contested'] as const).reduce((n, o) => n + (codes(r)[`binding.${o}.${l}` as Branch] ?? 0), 0)
 )])) as Record<BindingSource, number>;
 const ownCandidates = (r: MembershipResult) => Object.fromEntries(OWN_CANDIDATE_REASONS.map(
   (reason) => [reason, codes(r)[`admit.magnitude.${reason.replace('_', '-')}` as Branch]],

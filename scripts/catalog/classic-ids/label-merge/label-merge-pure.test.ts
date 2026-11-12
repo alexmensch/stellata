@@ -12,7 +12,9 @@ import {
 } from '../designation-constellation-pure';
 import { fold } from '../../../util/counts/tally-pure';
 import {
+  ALIAS_FIELDS,
   LABEL_DISPOSITIONS,
+  LABEL_FIELD_SPECS,
   LABEL_FIELDS,
   labelFlipDesignationDelta,
   mergeClassicIdLabels,
@@ -61,6 +63,12 @@ function merge(
   )])) as Record<LabelDisposition, Record<LabelField, number>>;
   return { ...result, routed };
 }
+
+describe('ALIAS_FIELDS', () => {
+  it('names exactly the fields whose spec carries an alias list', () => {
+    expect(LABEL_FIELD_SPECS.filter((spec) => spec.writeAlt !== null).map((spec) => spec.field)).toEqual([...ALIAS_FIELDS]);
+  });
+});
 
 describe('mergeClassicIdLabels', () => {
   it('adds an identifier the spine lacks', () => {
