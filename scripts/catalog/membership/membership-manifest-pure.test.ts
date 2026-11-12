@@ -45,11 +45,13 @@ import {
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
+  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, withLead, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { foldStageLines } from '../lineage/lineage-row-pure';
+import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
+import { BINDING_SOURCES } from './binding/binding-derivation-pure';
 import { LABEL_FIELDS } from '../classic-ids/label-merge/label-merge-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
@@ -984,6 +986,63 @@ describe('matchSpineToManifest', () => {
 
   it('reports the manifest rows no spine row reaches', () => {
     expect(match.unreached).toEqual([4, 5, 6]);
+  });
+});
+
+describe('membership lineage — per-row facts', () => {
+  const rowsOf = (r: MembershipResult, branch: Branch) => r.lineage.filter((row) => row.code === MEMBERSHIP_CODES.code(branch));
+
+  it('writes ships-none for exactly the spine rows that ship no source, and the V <= 3 split for Sol', () => {
+    const unbound = result.rows.filter((r) => r.originKey.startsWith('spine:') && r.gaiaSourceId === null).map((r) => r.originKey);
+    expect(rowsOf(result, 'binding.ships-none').map((r) => r.key).sort()).toEqual(unbound.sort());
+    const sol = result.rows.find((r) => r.proper === SOL_PROPER_NAME)!;
+    expect(rowsOf(result, 'overlay.bright.no-entry').map((r) => r.key)).toEqual([sol.originKey]);
+    expect(rowsOf(result, 'overlay.bright.entry')).toEqual([]);
+    expect(codes(result)['binding.ungateable']).toBe(2);
+  });
+
+  it('names both routes\' sources on a route disagreement, and the withheld designations on a blocked admission', () => {
+    const [disagree] = rowsOf(result, 'addition-binding.route-disagree');
+    const { tyc_source_id: tyc, hip_source_id: hip } = paramsOf(disagree);
+    expect(tyc).not.toBe('');
+    expect(hip).not.toBe('');
+    expect(tyc).not.toBe(hip);
+    const [blocked] = rowsOf(result, 'addition.blocked-designation');
+    expect(String(paramsOf(blocked).designations)).not.toBe('');
+  });
+
+  it('writes a weighed-null-g row for a candidate whose pulled row publishes no G', () => {
+    const nullG = buildMembership({
+      ...input,
+      spine: [...spine, spineRow({ tyc: '6-6-1', hip: '60', hd: '600' })],
+      tables: {
+        ...tables,
+        hipI239: new Set([...tables.hipI239, 60]),
+        tycToSource: new Map([...tables.tycToSource, ['6-6-1', '6061']]),
+        hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
+      },
+      evidence: gateEvidence(tables, new Map([['6062', 5.1], ['777', 14.0]]), printedHipTable([[60, 5.0]]), new Set(['888', '6060', '777', '6061', '6062'])),
+    });
+    expect(rowsOf(nullG, 'binding.weighed-null-g').map((r) => paramsOf(r).source_id)).toEqual(['6061']);
+  });
+
+  it('writes an unattested row carrying the value of a proper name no primary publishes', () => {
+    const named = buildMembership({
+      ...withTables({ ...tables, hipI239: new Set([...tables.hipI239, 70]) }),
+      spine: [...spine, spineRow({ tyc: '7-7-1', hip: '70', proper: 'Nonesuch' })],
+    });
+    expect(rowsOf(named, 'unattested.proper').map((r) => paramsOf(r).value)).toEqual(['Nonesuch']);
+  });
+
+  it('codes a disposition on a row the derivation settled as settled, not queued', () => {
+    const disposed = buildMembership({ ...input, dispositions: new Map([[HD40_KEY, disposition({})]]) });
+    expect([codes(disposed)['disposition.other.settled'], codes(disposed)['disposition.other.queued']]).toEqual([1, 0]);
+  });
+
+  it('refuses a lead outside the set an outcome may name, and a led outcome with no source', () => {
+    expect(() => withLead('contested', ['contested'], ['simbad'], CONTESTED_LEADS)).toThrow(/cannot rest on simbad alone/);
+    expect(() => withLead('bound', ['bound'], [], BINDING_SOURCES)).toThrow(/names no source/);
+    expect(withLead('refused', ['bound'], [], BINDING_SOURCES)).toEqual({ outcome: 'refused' });
   });
 });
 
