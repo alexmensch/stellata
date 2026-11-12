@@ -594,6 +594,7 @@ export type MembershipDerivedCounts = Readonly<Record<
 
 type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
 
+const DERIVATION_OUTCOMES = ['bound', 'rescued', 'refused', 'contested', 'collision', 'sol'] as const;
 const STAGE_PREFIX = `${MEMBERSHIP_CODES.stage}.` as const;
 const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[MEMBERSHIP_CODES.liveCode(branch)];
 const sumOver = (counts: MembershipCounts) => (branches: readonly LiveBranch[]): number => sumOf(counts, STAGE_PREFIX, branches);
@@ -624,8 +625,27 @@ export function membershipTotals(counts: MembershipCounts) {
     collision: n('binding.collision'),
     disposed: disposed('settled'),
   };
+  const isContestedLead = (l: BindingSource): l is ContestedLead => (CONTESTED_LEADS as readonly string[]).includes(l);
+  const led = (o: 'bound' | 'rescued'): number => sum(BINDING_SOURCES.map((l): LiveBranch => `binding.${o}.${l}`));
+  const derivation = {
+    bound: led('bound'),
+    rescued: led('rescued'),
+    refused: n('binding.refused'),
+    contested: reviewByVerdict.contested,
+    collision: n('binding.collision'),
+    sol: n('binding.sol'),
+  };
+  const spineLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
+    n(`binding.bound.${l}`) + n(`binding.rescued.${l}`) + (isContestedLead(l) ? n(`binding.contested.${l}`) : 0),
+  ])) as Record<BindingSource, number>;
+  const additionLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
+    n(`addition-binding.bound.${l}`) + n(`addition-binding.rescued.${l}`),
+  ])) as Record<BindingSource, number>;
   return {
     manifestRows: spineAdmits + additions + magnitudeRows,
+    derivation,
+    spineLeads,
+    additionLeads,
     spineAdmits,
     spineRows: spineAdmits + n('fold'),
     additionsByReason,
@@ -643,26 +663,19 @@ export function membershipTotals(counts: MembershipCounts) {
 
 export function membershipSummary(counts: MembershipCounts, derived: MembershipDerivedCounts): string {
   const n = countOf(counts);
-  const sum = sumOver(counts);
   const t = membershipTotals(counts);
   const list = <K extends string>(keys: readonly K[], of: (k: K) => number): string => keys.map((k) => `${k} ${of(k)}`).join(', ');
-  const led = (outcome: string, lead: BindingSource) => `${outcome}.${lead}` as LiveBranch;
-  const leads = (prefix: string, outcomes: readonly string[], lead: BindingSource): number => (
-    sum(outcomes.map((o) => led(`${prefix}.${o}`, lead)))
-  );
   const lines = [
     `manifest: ${t.manifestRows} rows — ${t.spineAdmits} from the spine `
       + `(${n('fold')} folded), ${t.additions} admitted (${list(ADDITION_REASONS, (r) => t.additionsByReason[r])}), `
       + `${t.magnitudeRows} from the magnitude term; ${n('component')} groups resolve onto an existing record; `
       + `bindings ${list(BINDING_CLASSES, (c) => t.bindingByClass[c])}`,
-    `derivation: bound ${sum(BINDING_SOURCES.map((l) => led('binding.bound', l)))}, `
-      + `rescued ${sum(BINDING_SOURCES.map((l) => led('binding.rescued', l)))}, refused ${n('binding.refused')}, `
-      + `contested ${t.reviewByVerdict.contested}, collision ${n('binding.collision')}, sol ${n('binding.sol')}; `
-      + `led by ${list(BINDING_SOURCES, (l) => leads('binding', (CONTESTED_LEADS as readonly string[]).includes(l) ? LED_SPINE_OUTCOMES : ['bound', 'rescued'], l))}, consensus ${n('binding.consensus')}, `
+    `derivation: ${list(DERIVATION_OUTCOMES, (o) => t.derivation[o])}; `
+      + `led by ${list(BINDING_SOURCES, (l) => t.spineLeads[l])}, consensus ${n('binding.consensus')}, `
       + `asserted by review ${n('disposition.asserted')}; gate refused mag ${n('binding.gate-mag')}, sibling ${n('binding.gate-sibling')}; `
       + `${n('binding.ungateable')} rows have a candidate and no printed V; ${n('binding.weighed-null-g')} candidates on a row with no published G`,
     `review queue: ${list(BINDING_REVIEW_VERDICTS, (v) => t.reviewByVerdict[v])}; dispositions ${list(BINDING_DISPOSITIONS, (d) => t.dispositions[d])}; `
-      + `additions led by ${list(BINDING_SOURCES, (l) => leads('addition-binding', LED_ADDITION_OUTCOMES, l))}, `
+      + `additions led by ${list(BINDING_SOURCES, (l) => t.additionLeads[l])}, `
       + `source on the spine ${n('addition-binding.on-spine')}, gate-refused ${n('addition-binding.refused')}, `
       + `shared ${n('addition-binding.shared')}, contested ${n('addition-binding.contested')}, `
       + `TYC/HIP route disagreement ${n('addition-binding.route-disagree')}, blocked designation ${n('addition.blocked-designation')}`,

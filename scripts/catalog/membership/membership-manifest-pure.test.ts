@@ -45,11 +45,10 @@ import {
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
-import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import { OWN_CANDIDATE_REASONS, type OwnCandidateReason } from './ledger-rows-pure';
 import { foldStageLines } from '../lineage/lineage-row-pure';
 import { fold } from '../../util/counts/tally-pure';
@@ -66,19 +65,8 @@ const codes = (r: MembershipResult): Readonly<Record<Branch, number>> => Object.
   Object.entries(folded(r)).map(([code, n]) => [code.slice(MEMBERSHIP_CODES.stage.length + 1), n]),
 ) as Record<Branch, number>;
 const totals = (r: MembershipResult) => membershipTotals(folded(r));
-const ledOf = (r: MembershipResult, outcome: 'bound' | 'rescued' | 'contested') => (
-  (outcome === 'contested' ? CONTESTED_LEADS : BINDING_SOURCES).reduce((n, l) => n + codes(r)[`binding.${outcome}.${l}` as Branch], 0)
-);
-const derivation = (r: MembershipResult) => ({
-  bound: ledOf(r, 'bound') + ledOf(r, 'rescued'),
-  refused: codes(r)['binding.refused'],
-  contested: ledOf(r, 'contested'),
-  collision: codes(r)['binding.collision'],
-  sol: codes(r)['binding.sol'],
-});
-const leads = (r: MembershipResult) => Object.fromEntries(BINDING_SOURCES.map((l) => [l, (
-  (['bound', 'rescued', 'contested'] as const).reduce((n, o) => n + (codes(r)[`binding.${o}.${l}` as Branch] ?? 0), 0)
-)])) as Record<BindingSource, number>;
+const derivation = (r: MembershipResult) => totals(r).derivation;
+const leads = (r: MembershipResult) => totals(r).spineLeads;
 const ownCandidates = (r: MembershipResult) => Object.fromEntries(OWN_CANDIDATE_REASONS.map(
   (reason) => [reason, codes(r)[`admit.magnitude.${reason.replace('_', '-')}` as Branch]],
 )) as Record<OwnCandidateReason, number>;
@@ -257,7 +245,7 @@ describe('buildMembership — the spine side', () => {
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(derivation(result)).toEqual({
-      bound: 3, refused: 2, contested: 0, collision: 0, sol: 1,
+      bound: 3, rescued: 0, refused: 2, contested: 0, collision: 0, sol: 1,
     });
     expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
     expect(codes(result)['binding.consensus']).toBe(1);
@@ -1037,7 +1025,7 @@ describe('membership lineage', () => {
     const summary = membershipSummary(folded(result), result.derived);
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
-    expect(summary).toContain(`derivation: bound ${d.bound - ledOf(result, 'rescued')}, rescued ${ledOf(result, 'rescued')}, refused ${d.refused}`);
+    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
     expect(summary.split('\n')).toHaveLength(5 + 5);
   });
 
