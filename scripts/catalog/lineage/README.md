@@ -9,14 +9,14 @@ folder's code is built to.
 A stage returns a typed outcome per record; lineage is those outcomes
 serialised. The target is that a stage's count snapshot folds from its
 lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
-so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
-its review-queue and label-drop counts fold from the outcomes, while the
-derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23). Coherence's, brightness-colour's, promotion's
-and naming's snapshot keys are their codes, folded from their lines (naming's
-beside a code-less authority tally, [Naming lineage](../naming/README.md#naming-lineage);
-promotion's post-passes, which act on records, file a derived block), and so
-are placement's, beside a derived block of the shipped tiers
+so the snapshot is a projection of lineage, never kept in step with it. Membership's
+keys are its codes, beside a derived block
+([Membership lineage](../membership/README.md#membership-lineage)). Coherence's,
+brightness-colour's, promotion's and naming's snapshot keys are their codes,
+folded from their lines (naming's beside a code-less authority tally,
+[Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
+which act on records, file a derived block), and so are placement's,
+beside a derived block of the shipped tiers
 ([Placement counts](../distance/README.md#placement-counts)).
 
 ## Files in this area
@@ -207,8 +207,7 @@ which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
-Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
-`own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
+Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
 ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
@@ -252,13 +251,14 @@ one build's worth in.
 
 The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
-it fails its emission. Membership, measured 2026-10-29 on the full tree:
-1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
-(85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
+it fails its emission. Membership, measured 2026-11-12 on the full tree:
+1,651,103 rows (165 MB plain, 17.4 MB gzipped) plus 975,840 identity rows
+(22.3 MB gzipped), 39.6 MB together, 1.4 MB under its budget: a change that
+adds a row to every record raises the budget with it. The timed window is everything lineage
 adds to the build — the baseline headers' file re-hash, the base's input
 re-hash each verdict asks for, producing the lines (`lines`, a function the
 window calls: a spill reads back there), the diff, rendering,
-gzip and invariants: about 5.8 s with a diff
+gzip and invariants: about 8.2 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a

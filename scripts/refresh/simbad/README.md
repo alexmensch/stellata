@@ -64,7 +64,7 @@ a radial velocity for. A row is OUT of the cohort only where that holds
 Gaia's own source), or a `crosswalk_gated` binding plus a TYC or a HIP.
 Read off the astrometry table alone, every magnitude-term row looked
 incomplete and the cohort was 673,679 rows; with both tables and
-`gaia_native` first-hand it is 121,109 of the manifest's <!-- count:membership-manifest/rows -->975,373<!-- /count -->
+`gaia_native` first-hand it is 121,109 of the manifest's 975,373
 rows (measured 2026-11-08).
 
 **Both halves, because the manifest carries value provenance for neither.**

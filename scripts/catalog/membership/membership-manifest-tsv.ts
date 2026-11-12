@@ -5,6 +5,7 @@ import { compareSourceIds, idCell, idListCell, sourceIdCell } from '../../util/t
 import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { BINDING_CLASSES, type BindingClass } from './ledger-rows-pure';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
@@ -20,16 +21,6 @@ export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
 export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
 export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
-/** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
- *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
- *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
- *  through the same gates; `reviewed` is the value a committed disposition row
- *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
- *  an empty cell. */
-export const BINDING_CLASSES = [
-  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'gaia_native', 'none',
-] as const;
-export type BindingClass = (typeof BINDING_CLASSES)[number];
 
 export interface ManifestRecord {
   tyc: string | null;

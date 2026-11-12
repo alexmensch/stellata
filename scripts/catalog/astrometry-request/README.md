@@ -62,15 +62,15 @@ through the astrometry pull back into `build:membership`
 The derivation's candidates cover every binding it can reach, since a binding
 is one of its candidates; what they leave out is a reviewed id no committed
 source proposes
-(<!-- count:membership-manifest/dispositionAsserted -->33<!-- /count --> today), which is why the dispositions file is the fourth
+(<!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> today), which is why the dispositions file is the fourth
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The <!-- count:membership-manifest/bindingByClass.none -->1,778<!-- /count --> primaries rows carrying none are the no-Gaia tier. The
+The 1,778 primaries rows carrying none are the no-Gaia tier. The
 `term = magnitude` rows are not requested: their astrometry is the magnitude
 pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> rows that file already holds.
+and requesting them would re-pull 598,464 rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
@@ -165,7 +165,7 @@ HD 2094 B's source, which only the spine's uncorrected TYC reached
 magnitude-term row on the magnitude pull's own astrometry, which is why the
 spine guard reads both pulls ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count -->) and
-`derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->): sources Gaia has a row for and publishes no
+`derivedWeighedNullGMag` (<!-- count:membership-manifest/membership.binding.weighed-null-g -->77<!-- /count -->): sources Gaia has a row for and publishes no
 `phot_g_mean_mag` for, which stay unvettable at any request size.
 
 ## What the pulled set feeds

@@ -265,9 +265,10 @@ primary catalogue names it by a classical designation — HD, HR, Bayer,
 Flamsteed, Hipparcos, Gliese or an IAU name — or Gaia measures it at
 visual magnitude 11 or brighter. The first term starts from AT-HYG's
 <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows, re-keyed on the designations the primaries publish for each,
-and adds the <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> stars those primaries name that AT-HYG never carried —
+and adds the 63,653 stars those primaries name that AT-HYG never carried —
 most of them HD stars a defect in AT-HYG's own cross-matching dropped. The
-second term adds <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> Gaia stars no classical catalogue names. Both
+second term adds the Gaia stars down to that floor that no classical catalogue
+names. Both
 are written to one committed membership list, regenerated and compared on
 every change, and every addition carries a stated reason.
 

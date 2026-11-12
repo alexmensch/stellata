@@ -129,7 +129,7 @@ reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
 walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
 which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
 to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
-by four. The manifest's `derivationOutcome` count carries what the derivation
+by four. The membership stage's `binding.*` codes carry what the derivation
 reaches; nothing compares it against the frozen column any more
 ([The spine side](../membership/README.md#the-spine-side)).
 
@@ -386,7 +386,7 @@ That baseline also predates the four manifest-derived re-pulls
 ([The staleness gate](../../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator)), so a move below carries both
 the new binding and the table row it can now reach; two records whose binding
 never changed move for the second reason alone.
-Pins: `derivationOutcome`, `derivedVia` and the review counts in
+Pins: the `membership.binding.*` and `membership.disposition.*` codes in
 `../membership/membership-manifest-expected.json`; per-tier routing in
 `../build-catalog-expected.json`.
 
