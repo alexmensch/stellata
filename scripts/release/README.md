@@ -129,8 +129,10 @@ puts a releasing commit there. `deploy.yml` mints the token in the step
 before `publish`, scoped to Contents and Workflows write and Pull requests
 read (the notes read each PR's body); the App and its secrets are in
 [Required repository secrets](/RELEASING.md#what-the-deploy-workflow-does).
-`deploy-workflow.test.ts` pins both: `publish`'s `GH_TOKEN` is that step's
-output, and the step asks for those three permissions.
+The workflow's own `GITHUB_TOKEN` is held at `contents: read`, so the App
+token is the only writer. `deploy-workflow.test.ts` pins all three:
+`publish`'s `GH_TOKEN` is that step's output, the step asks for those
+three permissions, and `GITHUB_TOKEN` stays read-only.
 
 ## The pre-traffic check
 

@@ -33,4 +33,9 @@ describe('deploy.yml Publish releases token', () => {
     expect(field(mint, 'permission-workflows')).toBe('write');
     expect(field(mint, 'permission-pull-requests')).toBe('read');
   });
+
+  it('leaves GITHUB_TOKEN read-only, so the App token is the one writer', () => {
+    const block = WORKFLOW.match(/^permissions:\n((?: {2}.+\n)+)/m)?.[1] ?? '';
+    expect(field(block, 'contents')).toBe('read');
+  });
 });
