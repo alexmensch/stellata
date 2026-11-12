@@ -45,9 +45,12 @@ import {
   MEMBERSHIP_EXPECTED_FILE,
   manifestKey,
   matchSpineToManifest,
-  type MembershipCounts,
   type SpineMatch,
 } from './membership-manifest-pure';
+import {
+  MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
+} from './membership-lineage-pure';
+import { flattenStages } from '../../util/counts/count-stages-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
@@ -76,9 +79,10 @@ const built = [
   resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap),
 ].every(existsSync);
 
-const expected = JSON.parse(
+const snapshot = flattenStages(JSON.parse(
   readFileSync(resolve(REPO_ROOT, MEMBERSHIP_EXPECTED_FILE), 'utf-8'),
-) as MembershipCounts;
+)) as MembershipCounts & MembershipDerivedCounts;
+const expected = membershipTotals(snapshot);
 
 const NAMING_EXPECTED_FILE = 'scripts/catalog/naming/manifest-naming-expected.json';
 
@@ -100,19 +104,19 @@ function differences(a: Map<string, number>, b: Map<string, number>): string[] {
 // Both files are regular git, so this runs in every job.
 describe('binding review dispositions', () => {
   it('disposes every review-queue row on the id the row states', () => {
-    expect(queue).toHaveLength(expected.bindingReviewRows);
+    expect(queue).toHaveLength(expected.reviewRows);
     const queued = new Map(queue.map((r) => [bindingReviewKey(r), r]));
     for (const [key, d] of dispositions) {
       expect(queued.has(key), key).toBe(true);
       expect(d.derived_source_id, key).toEqual(queued.get(key)!.derived_source_id);
     }
     expect(dispositions.size).toBe(
-      Object.values(expected.bindingDispositions).reduce((a, n) => a + n, 0),
+      Object.values(expected.dispositions).reduce((a, n) => a + n, 0),
     );
     const byVerdict = new Map<string, number>();
     for (const row of queue) byVerdict.set(row.verdict, (byVerdict.get(row.verdict) ?? 0) + 1);
     expect(Object.fromEntries(byVerdict)).toEqual(
-      Object.fromEntries(Object.entries(expected.bindingReviewByVerdict).filter(([, n]) => n > 0)),
+      Object.fromEntries(Object.entries(expected.reviewByVerdict).filter(([, n]) => n > 0)),
     );
   });
 });
@@ -141,7 +145,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   }, 180_000);
 
   it('matches the pinned row counts', () => {
-    expect(manifest).toHaveLength(expected.rows);
+    expect(manifest).toHaveLength(expected.manifestRows);
     expect(spine).toHaveLength(expected.spineRows);
   });
 
@@ -158,8 +162,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(match.unmatched.slice(0, 20).map((i) => spine[i])).toEqual([]);
     expect(match.multiple.slice(0, 20).map((i) => spine[i])).toEqual([]);
     const targets = match.manifestIndex.filter((i): i is number => i !== null);
-    expect(targets.length - new Set(targets).size).toBe(expected.spineRowsFolded);
-    expect(folds).toHaveLength(expected.spineRowsFolded);
+    expect(targets.length - new Set(targets).size).toBe(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
+    expect(folds).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
     for (const { foldedRow, survivorRow } of folds) {
       expect(match.manifestIndex[foldedRow], bindingReviewKey(spine[foldedRow]))
         .toBe(match.manifestIndex[survivorRow]);
@@ -194,7 +198,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const manifestKeys = new Set(manifest.map(manifestKey));
     const manifestTycs = new Set(manifest.map((r) => r.tyc).filter((t) => t !== null));
     const designations = new Set(manifest.flatMap(manifestDesignations));
-    expect(components).toHaveLength(expected.componentRows);
+    expect(components).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('component')]);
     for (const c of components) {
       expect(manifestKeys.has(parkedRecordKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
       if (c.tyc !== '') expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
@@ -275,7 +279,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       .filter(([, rows]) => rows.some((i) => additions.has(i)))
       .map(([d, rows]) => `${d}: ${rows.map((i) => manifest[i].tyc || '(no tyc)').join(', ')}`);
     expect(reachingAnAddition.slice(0, 20)).toEqual([]);
-    expect(shared).toHaveLength(expected.sharedDesignations);
+    expect(shared).toHaveLength(snapshot.sharedDesignations);
   });
 
   // Every disposed row ships the value its disposition settled on, under

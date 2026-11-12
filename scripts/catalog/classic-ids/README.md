@@ -336,8 +336,8 @@ constellation out of the designation string and loses only its expanded alias
 - **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
   `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
   That last one is the count to watch alongside `../membership/`'s
-  `spineBrightRowsWithoutOverlayEntry` — <!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> rows the printed-V
-  cascade puts at V <= 3 — which is where the known-unfixed mis-bindings live.
+  `membership.overlay.bright.no-entry` — <!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> rows the printed-V cascade puts
+  at V <= 3 with no overlay row, against <!-- count:membership-manifest/membership.overlay.bright.entry -->64<!-- /count --> with one — which is where the known-unfixed mis-bindings live.
 
 The merge's own counts are [What the merge compares values on](label-merge/README.md#what-the-merge-compares-values-on).
 

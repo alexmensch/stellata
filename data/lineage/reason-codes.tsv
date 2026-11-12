@@ -98,43 +98,142 @@ coherence.kept.wide-gap	coherence	none	outcome	live		7.1.12	The record has no pa
 coherence.not-applicable	coherence	none	outcome	live		7.1.12	The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.
 coherence.snapped	coherence	none	outcome	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
 coherence.unmoved.at-anchor-distance	coherence	none	outcome	live		7.1.12	The record already sits at its system anchor's distance.
-membership.addition-binding.bound	membership	none	outcome	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.bound.cns5	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is CNS5.
+membership.addition-binding.bound.hip	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.addition-binding.bound.simbad	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The winner rests on SIMBAD's cross-IDs alone.
+membership.addition-binding.bound.tyc	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
+membership.addition-binding.contested	membership	none	outcome	live		7.1.20	The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.
+membership.addition-binding.gate-mag	membership	none	refused	live		7.1.20	An addition group's binding candidate refused because its Gaia G is more than a magnitude fainter than the group's printed V.
+membership.addition-binding.gate-sibling	membership	none	refused	live		7.1.20	An addition group's binding candidate refused because SIMBAD gives that Gaia source to a different component of the group's system.
 membership.addition-binding.no-candidate	membership	none	outcome	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
 membership.addition-binding.on-spine	membership	none	outcome	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
 membership.addition-binding.refused	membership	none	outcome	live		7.1.6	Every Gaia candidate of the admitted star failed a binding gate.
-membership.addition-binding.rescued	membership	none	outcome	live		7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.rescued	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.rescued.cns5	membership	none	outcome	live		7.1.20	The addition group's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is CNS5.
+membership.addition-binding.rescued.hip	membership	none	outcome	live		7.1.20	The addition group's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.addition-binding.rescued.simbad	membership	none	outcome	live		7.1.20	The addition group's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The winner rests on SIMBAD's cross-IDs alone.
+membership.addition-binding.rescued.tyc	membership	none	outcome	live		7.1.20	The addition group's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
+membership.addition-binding.route-disagree	membership	none	outcome	live		7.1.20	The addition group's TYC route and HIP route propose different Gaia sources.
+membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An addition group's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
-membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
-membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
-membership.admit.hd-omitted	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
-membership.admit.hip-omitted	membership	none	outcome	live		7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
-membership.admit.magnitude	membership	none	outcome	live		7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
-membership.admit.spine	membership	none	outcome	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
-membership.binding.bound	membership	none	outcome	live		7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
+membership.addition.blocked-designation	membership	none	outcome	live		7.1.20	The admitted star ships without a designation its primaries publish, because another record answers to it.
+membership.admit.cns5-census	membership	none	outcome	retired	7.1.20	7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
+membership.admit.cns5-census.crosswalk-gated	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.cns5-census.none	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships no Gaia source.
+membership.admit.cns5-census.simbad-corroborated	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hd-link-gap	membership	none	outcome	retired	7.1.20	7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
+membership.admit.hd-link-gap.crosswalk-gated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hd-link-gap.none	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships no Gaia source.
+membership.admit.hd-link-gap.simbad-corroborated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hd-omitted	membership	none	outcome	retired	7.1.20	7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
+membership.admit.hd-omitted.crosswalk-gated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hd-omitted.none	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships no Gaia source.
+membership.admit.hd-omitted.simbad-corroborated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hip-omitted	membership	none	outcome	retired	7.1.20	7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
+membership.admit.hip-omitted.crosswalk-gated	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hip-omitted.none	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships no Gaia source.
+membership.admit.hip-omitted.simbad-corroborated	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.magnitude	membership	none	outcome	retired	7.1.20	7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
+membership.admit.magnitude.component	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and review names it the other star of the row's pair.
+membership.admit.magnitude.no-own-candidate	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. No primaries row weighed it as a binding candidate.
+membership.admit.magnitude.refused-mag	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation weighed it, and the magnitude gate refused it.
+membership.admit.magnitude.refused-sibling	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation weighed it, and the sibling gate refused it.
+membership.admit.magnitude.runner-up	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation passed it, and a higher-ranked candidate won.
+membership.admit.magnitude.withheld	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and the row was withheld from it.
+membership.admit.spine	membership	none	outcome	retired	7.1.20	7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
+membership.admit.spine.crosswalk-gated	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.spine.none	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships no Gaia source.
+membership.admit.spine.reviewed	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships the value a committed review disposition settles.
+membership.admit.spine.simbad-corroborated	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
+membership.binding.bound.cns5	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is CNS5.
+membership.binding.bound.hip	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.bound.simbad	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The winner rests on SIMBAD's cross-IDs alone.
+membership.binding.bound.tyc	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.collision	membership	none	outcome	live		7.1.6	Another spine row derives the same Gaia source, so both are withheld and queued for review.
-membership.binding.contested	membership	none	outcome	live		7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
+membership.binding.consensus	membership	none	outcome	live		7.1.20	The record ships the derived winner, and two or more sources proposed it.
+membership.binding.contested	membership	none	outcome	retired	7.1.20	7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
+membership.binding.contested.cns5	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is CNS5.
+membership.binding.contested.hip	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.contested.tyc	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.gate-mag	membership	none	refused	live		7.1.6	A binding candidate refused because its Gaia G is more than a magnitude fainter than the record's printed V.
 membership.binding.gate-sibling	membership	none	refused	live		7.1.6	A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record's system.
 membership.binding.refused	membership	none	outcome	live		7.1.6	No Gaia source survives the binding gates; the record ships unbound.
-membership.binding.rescued	membership	none	outcome	live		7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
+membership.binding.rescued	membership	none	outcome	retired	7.1.20	7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
+membership.binding.rescued.cns5	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is CNS5.
+membership.binding.rescued.hip	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.rescued.simbad	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The winner rests on SIMBAD's cross-IDs alone.
+membership.binding.rescued.tyc	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.runner-up	membership	none	refused	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
+membership.binding.ships-none	membership	none	outcome	live		7.1.20	The spine row ships no Gaia source, so no classic-ID overlay entry can reach its labels.
 membership.binding.sol	membership	none	outcome	live		7.1.6	The Sun takes no Gaia binding.
+membership.binding.ungateable	membership	none	outcome	live		7.1.20	The record reached a binding candidate with no printed V under any tier, so only the sibling gate weighs its candidates.
 membership.binding.unweighed-no-pulled-row	membership	none	outcome	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
+membership.binding.weighed-null-g	membership	none	outcome	live		7.1.20	A binding candidate weighed on an astrometry row publishing no Gaia G, so the magnitude gate passed it unweighed.
 membership.component	membership	none	outcome	live		7.1.6	Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.
-membership.disposition.derived	membership	none	outcome	live		7.1.6	A committed review disposition confirms the derived Gaia source.
-membership.disposition.none	membership	none	outcome	live		7.1.6	A committed review disposition leaves the record unbound.
-membership.disposition.other	membership	none	outcome	live		7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
+membership.disposition.asserted	membership	none	outcome	live		7.1.20	A committed review disposition keeps a Gaia source no committed source proposes, on its stated basis alone.
+membership.disposition.derived	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition confirms the derived Gaia source.
+membership.disposition.derived.queued	membership	none	outcome	live		7.1.20	A committed review disposition confirms the derived Gaia source. The derivation queued the row for review, as contested or a collision.
+membership.disposition.derived.settled	membership	none	outcome	live		7.1.20	A committed review disposition confirms the derived Gaia source. The derivation settled the row by itself; the disposition overrides it.
+membership.disposition.none	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition leaves the record unbound.
+membership.disposition.none.queued	membership	none	outcome	live		7.1.20	A committed review disposition leaves the record unbound. The derivation queued the row for review, as contested or a collision.
+membership.disposition.none.settled	membership	none	outcome	live		7.1.20	A committed review disposition leaves the record unbound. The derivation settled the row by itself; the disposition overrides it.
+membership.disposition.other	membership	none	outcome	retired	7.1.20	7.1.6	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence.
+membership.disposition.other.queued	membership	none	outcome	live		7.1.20	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence. The derivation queued the row for review, as contested or a collision.
+membership.disposition.other.settled	membership	none	outcome	live		7.1.20	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence. The derivation settled the row by itself; the disposition overrides it.
 membership.fold	membership	merge	outcome	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
 membership.label-drop.flamsteed-unattested	membership	none	outcome	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
 membership.label-drop.hd-unattested	membership	none	outcome	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.
-membership.label.added	membership	none	outcome	live		7.1.6	The classic-ID overlay adds a designation the spine row lacked.
-membership.label.extra-alias	membership	none	outcome	live		7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
-membership.label.extra-dropped	membership	none	outcome	live		7.1.6	The overlay names a further value for a single-valued field; it is dropped.
-membership.label.extra-sibling-rendered	membership	none	outcome	live		7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
-membership.label.overlay-wins	membership	none	outcome	live		7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
-membership.label.override-spine	membership	none	outcome	live		7.1.6	A curated override keeps the spine's designation over the overlay's.
-membership.label.override-value	membership	none	outcome	live		7.1.6	A curated override sets the designation.
-membership.label.suppressed-collision	membership	none	outcome	live		7.1.6	The overlay's designation already names another record, so it is not added.
+membership.label.added	membership	none	outcome	retired	7.1.20	7.1.6	The classic-ID overlay adds a designation the spine row lacked.
+membership.label.added.flam	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: flam.
+membership.label.added.gl	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: gl.
+membership.label.added.hd	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hd.
+membership.label.added.hip	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hip.
+membership.label.added.hr	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: hr.
+membership.label.extra-alias	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a field, carried as an alias the record answers to.
+membership.label.extra-alias.hd	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hd.
+membership.label.extra-alias.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a field, carried as an alias the record answers to. Identifier: hr.
+membership.label.extra-dropped	membership	none	outcome	retired	7.1.20	7.1.6	The overlay names a further value for a single-valued field; it is dropped.
+membership.label.extra-dropped.flam	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: flam.
+membership.label.extra-dropped.gl	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: gl.
+membership.label.extra-dropped.hd	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hd.
+membership.label.extra-dropped.hip	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hip.
+membership.label.extra-dropped.hr	membership	none	outcome	live		7.1.20	The overlay names a further value for a single-valued field; it is dropped. Identifier: hr.
+membership.label.extra-sibling-rendered	membership	none	outcome	retired	7.1.20	7.1.6	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star.
+membership.label.extra-sibling-rendered.hd	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hd.
+membership.label.extra-sibling-rendered.hr	membership	none	outcome	live		7.1.20	The overlay's further value belongs to a companion drawn as its own star, so it is left to that star. Identifier: hr.
+membership.label.overlay-wins	membership	none	outcome	retired	7.1.20	7.1.6	The overlay and the spine disagree on a designation, and the overlay's value is taken.
+membership.label.overlay-wins.flam	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: flam.
+membership.label.overlay-wins.gl	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: gl.
+membership.label.overlay-wins.hd	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hd.
+membership.label.overlay-wins.hip	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hip.
+membership.label.overlay-wins.hr	membership	none	outcome	live		7.1.20	The overlay and the spine disagree on a designation, and the overlay's value is taken. Identifier: hr.
+membership.label.override-spine	membership	none	outcome	retired	7.1.20	7.1.6	A curated override keeps the spine's designation over the overlay's.
+membership.label.override-spine.flam	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: flam.
+membership.label.override-spine.gl	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: gl.
+membership.label.override-spine.hd	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hd.
+membership.label.override-spine.hip	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hip.
+membership.label.override-spine.hr	membership	none	outcome	live		7.1.20	A curated override keeps the spine's designation over the overlay's. Identifier: hr.
+membership.label.override-value	membership	none	outcome	retired	7.1.20	7.1.6	A curated override sets the designation.
+membership.label.override-value.flam	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: flam.
+membership.label.override-value.gl	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: gl.
+membership.label.override-value.hd	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hd.
+membership.label.override-value.hip	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hip.
+membership.label.override-value.hr	membership	none	outcome	live		7.1.20	A curated override sets the designation. Identifier: hr.
+membership.label.suppressed-collision	membership	none	outcome	retired	7.1.20	7.1.6	The overlay's designation already names another record, so it is not added.
+membership.label.suppressed-collision.flam	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: flam.
+membership.label.suppressed-collision.gl	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: gl.
+membership.label.suppressed-collision.hd	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hd.
+membership.label.suppressed-collision.hip	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hip.
+membership.label.suppressed-collision.hr	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hr.
+membership.overlay.bright.entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has a row for the source it ships.
+membership.overlay.bright.no-entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has no row for the source it ships, or it ships none.
+membership.unattested.bayer	membership	none	outcome	live		7.1.20	The record ships a Bayer designation no primary attests for it.
+membership.unattested.gl	membership	none	outcome	live		7.1.20	The record ships a GJ designation no primary attests for it.
+membership.unattested.hip	membership	none	outcome	live		7.1.20	The record ships a HIP no primary attests for it.
+membership.unattested.hr	membership	none	outcome	live		7.1.20	The record ships an HR number no primary attests for it.
+membership.unattested.proper	membership	none	outcome	live		7.1.20	The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority's.
 naming.dc.anchor	naming	none	outcome	live		7.1.12	The record's designations render against the designation constellation of its system anchor.
 naming.dc.displaced	naming	none	refused	live		7.1.12	The IV/27A constellation, refused because the IAU WGSN designation names a different one.
 naming.dc.gcvs	naming	none	outcome	live		7.1.12	The record's designations render against the constellation its GCVS designation names.

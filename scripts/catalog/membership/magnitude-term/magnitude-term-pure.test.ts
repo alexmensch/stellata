@@ -7,6 +7,8 @@ import {
   magnitudeTermNewcomers,
   magnitudeVerdict,
   selectMagnitudeTerm,
+  magnitudeTermBlock,
+  magnitudeTermSummary,
 } from './magnitude-term-pure';
 
 const FROM = { file: 'pull.tsv', hint: 'h' };
@@ -96,6 +98,22 @@ describe('selectMagnitudeTerm', () => {
       /exceeds the pull's G <= 11 bound/,
     );
     expect(() => select(HEADER, MAGNITUDE_PULL_G_BOUND)).not.toThrow();
+  });
+});
+
+describe('magnitudeTermBlock', () => {
+  it('is absent while the floor is null, never four zeros', () => {
+    const block = magnitudeTermBlock(null);
+    expect(block).toEqual({ kind: 'absent' });
+    expect(magnitudeTermSummary(block)).toContain('off');
+  });
+
+  it('files the selection\'s partition under its magnitudeTerm key paths', () => {
+    const counts = { rows: 3, kept: 1, above_floor: 1, no_v: 1 };
+    expect(magnitudeTermBlock({ keptSourceIds: new Set(['1']), counts })).toEqual({
+      kind: 'counted',
+      counts: { 'magnitudeTerm.rows': 3, 'magnitudeTerm.kept': 1, 'magnitudeTerm.above_floor': 1, 'magnitudeTerm.no_v': 1 },
+    });
   });
 });
 

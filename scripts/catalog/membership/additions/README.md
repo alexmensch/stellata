@@ -79,15 +79,16 @@ the cohort filter's question, and `spineKeys` answers it against the bare
 number there.
 
 Three admitted rows ship without a designation their primaries publish
-(`additionsWithBlockedDesignation`): TYC 8188-4142-1 on HIP 50798 without
+(`addition.blocked-designation`): TYC 8188-4142-1 on HIP 50798 without
 HD 90034, TYC 1567-2517-2 on HD 166479 without HR 6803, TYC 8374-2988-1 on
 HIP 93538 without HD 176555, each held by a spine record. The record ships; only the label is withheld.
 
-No admitted row keys on a Gaia id alone (`additionGaiaKeyedOnly`), and no
+No admitted row keys on a Gaia id alone — admission throws on one, since a
+group with no classical designation left is ledgered as a component — and no
 designation one carries sits on a second row (`sharedDesignations`, <!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->, every
 one a spine-side `hd:` or `hr:` pair), so SID allocation mints every addition under `hd:` /
-`hip:` / `gl:`. The two counts answer only together: the first says the row has
-a classical designation, the second that the designation is its own.
+`hip:` / `gl:`. The two answer only together: the first says the row has a classical
+designation, the second that the designation is its own.
 
 <a id="admission-is-not-a-promise-of-a-record"></a>**Admission is not a promise of a record.** An admitted row walks the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 cascades like any other, so one that reaches no owned parallax or no V parks on
@@ -109,12 +110,11 @@ so a source an addition could bind but does not comes back as a second,
 unnamed record. SIMBAD is the route that matters here — its object under the
 row's own TYC names the source where Tycho-2's best-neighbour walk reaches
 nothing. A winner a spine record already holds, or that two groups reach,
-leaves the cell empty, as a spine collision does. `magnitudeRowsOwnCandidate`
-counts the magnitude rows that are still some primaries row's unshipped
-candidate, by why it was not shipped. Each such row's `admit.magnitude`
-lineage row carries the reason as `own_candidate` and cites the proposing
-row's origin, and `MEMBERSHIP_INVARIANTS` fails the build on any reason
-outside `ALLOWED_OWN_CANDIDATE_REASONS`
+leaves the cell empty, as a spine collision does. The `admit.magnitude.*` codes
+count the magnitude rows that are still some primaries row's unshipped
+candidate, by why it was not shipped. Each such row's lineage code is
+`admit.magnitude.<reason>`, citing the proposing row's origin, and
+`MEMBERSHIP_INVARIANTS` fails the build on any `admit.magnitude.withheld` row
 ([Invariants](../../lineage/README.md#invariants)). A derived source a
 `pair_component` disposition declines counts as `component`, since the review
 names it the other star of the pair (44 Boo A's derivation reaching i Boo B);

@@ -51,13 +51,13 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 
 ```
 <!-- count:<stem>/<json.path>[ sigN|kN|dN] -->FIGURE<!-- /count -->
-the manifest holds <!-- count:membership-manifest/rows -->975,573<!-- /count --> rows
+<!-- count:membership-manifest/membership.component -->465<!-- /count --> groups resolve onto an existing record
 ```
 
 - **Key** — the snapshot's stem (`membership-manifest` for
   `scripts/catalog/membership/membership-manifest-expected.json`), a `/`,
   then the JSON path, dot-separated
-  (`membership-manifest/additionsByReason.admitted:hd_omitted`). A key that
+  (`membership-manifest/labelAgree.hd`). A key that
   itself holds dots, a reason code, is one step of the path: each step takes
   the longest run of segments that is a key there
   (`build-catalog/brightness-colour.v.gliese`). The value must be a number.

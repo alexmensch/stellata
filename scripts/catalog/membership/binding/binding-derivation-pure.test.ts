@@ -190,9 +190,9 @@ describe('deriveBinding', () => {
   it('counts candidates it weighed without a G, by cause, and passes them', () => {
     const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
     expect(deriveBinding(candidates({ tyc: 'unpulled' }), gate))
-      .toMatchObject({ sourceId: 'unpulled', unweighedNoPulledRow: [{ sourceId: 'unpulled' }], weighedNullGMag: 0 });
+      .toMatchObject({ sourceId: 'unpulled', unweighedNoPulledRow: [{ sourceId: 'unpulled' }], weighedNullGMag: [] });
     expect(deriveBinding(candidates({ tyc: 'nullg' }), gate))
-      .toMatchObject({ sourceId: 'nullg', unweighedNoPulledRow: [], weighedNullGMag: 1 });
+      .toMatchObject({ sourceId: 'nullg', unweighedNoPulledRow: [], weighedNullGMag: [{ sourceId: 'nullg' }] });
   });
 
   // Gl 864 is the shape: the winner's rival was the TYC walk's neighbour at
