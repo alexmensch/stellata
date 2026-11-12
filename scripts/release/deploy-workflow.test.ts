@@ -16,17 +16,19 @@ function field(step: string, key: string): string | null {
   return step.match(new RegExp(`^\\s*${key}: (.+)$`, 'm'))?.[1].trim() ?? null;
 }
 
-describe('deploy.yml Publish releases token', () => {
-  const publish = stepWhere(/^name: Publish releases$/m);
-  const token = field(publish, 'GH_TOKEN');
+function publishToken(): string | null {
+  return field(stepWhere(/^name: Publish releases$/m), 'GH_TOKEN');
+}
 
+describe('deploy.yml Publish releases token', () => {
   it('is a GitHub App token minted in this job, never GITHUB_TOKEN', () => {
+    const token = publishToken();
     expect(token).not.toMatch(/GITHUB_TOKEN|github\.token/);
     expect(token).toMatch(/^\$\{\{ steps\.[\w-]+\.outputs\.token \}\}$/);
   });
 
   it('carries contents and workflows write, and pull-requests read for the notes', () => {
-    const id = token?.match(/steps\.([\w-]+)\.outputs/)?.[1];
+    const id = publishToken()?.match(/steps\.([\w-]+)\.outputs/)?.[1];
     const mint = stepWhere(new RegExp(`^\\s*id: ${id}$`, 'm'));
     expect(field(mint, 'uses')).toMatch(/^actions\/create-github-app-token@/);
     expect(field(mint, 'permission-contents')).toBe('write');
