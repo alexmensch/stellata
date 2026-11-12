@@ -12,6 +12,8 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 snapshot keys;
                                 sumOf, a prefixed subset's total;
                                 share, a rate that throws on an empty whole;
+                                percentOf, a log line's percentage, `n/a` on
+                                an empty whole;
                                 formatPartition, a partition's one-line
                                 `bucket=n` rundown.
 count-stages-pure.ts (+ test)   The staged snapshot: CountBlock and

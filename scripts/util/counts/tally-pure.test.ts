@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, formatPartition, prefixed, renamed, share, sumOf } from './tally-pure';
+import { emptyTallyPartition, fold, formatPartition, percentOf, prefixed, renamed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -86,5 +86,12 @@ describe('formatPartition', () => {
 describe('renamed', () => {
   it('renames each bucket to its snapshot key, zeros included', () => {
     expect(renamed({ msc: 'orbitMsc', orb6: 'orbitOrb6' } as const, { msc: 3, orb6: 0 })).toEqual({ orbitMsc: 3, orbitOrb6: 0 });
+  });
+});
+
+describe('percentOf', () => {
+  it('rounds to one decimal, and reads an empty whole as n/a', () => {
+    expect(percentOf(1, 3)).toBe('33.3%');
+    expect(percentOf(0, 0)).toBe('n/a');
   });
 });

@@ -12,6 +12,7 @@ import type {
 } from '../classic-ids/classic-ids-parse';
 import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
 import { intCell } from '../../util/tsv/table-pure';
+import { percentOf } from '../../util/counts/tally-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { SimbadXids } from '../spectral/spectral-resolve';
 import type { SpineRow } from './inherited-spine-pure';
@@ -781,10 +782,6 @@ function sortedEntries(counts: Record<string, number>): Array<[string, number]> 
   });
 }
 
-function percent(part: number, whole: number): string {
-  return whole === 0 ? 'n/a' : `${((100 * part) / whole).toFixed(1)}%`;
-}
-
 export function formatAuditReport(s: AuditSummary): string {
   const lines: string[] = [];
   lines.push(`spine rows: ${s.rows}`);
@@ -814,9 +811,9 @@ export function formatAuditReport(s: AuditSummary): string {
   const cov = a.iv25Coverage;
   lines.push('  spine coverage of IV/25 HD numbers:');
   lines.push(`    below HD ${ATHYG_HD_LINK_FLOOR}: ${cov.belowFloor.onSpine} of ` +
-    `${cov.belowFloor.iv25} (${percent(cov.belowFloor.onSpine, cov.belowFloor.iv25)})`);
+    `${cov.belowFloor.iv25} (${percentOf(cov.belowFloor.onSpine, cov.belowFloor.iv25)})`);
   lines.push(`    at or above: ${cov.atOrAboveFloor.onSpine} of ` +
-    `${cov.atOrAboveFloor.iv25} (${percent(cov.atOrAboveFloor.onSpine, cov.atOrAboveFloor.iv25)})`);
+    `${cov.atOrAboveFloor.iv25} (${percentOf(cov.atOrAboveFloor.onSpine, cov.atOrAboveFloor.iv25)})`);
   lines.push('additions the primaries admit that the spine lacks:');
   lines.push(`  IV/25 HD stars (by TYC): ${a.hdRecords}  ` +
     `(HD < ${ATHYG_HD_LINK_FLOOR}: ${a.hdBelowLinkFloor}, ambiguous-flagged: ${a.hdAmbiguous}, ` +

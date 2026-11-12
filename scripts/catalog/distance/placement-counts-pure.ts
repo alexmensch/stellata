@@ -1,8 +1,8 @@
 // Placement's two count blocks — its codes' fold, and the shipped tiers folded off each placed row — and their build-log summary. See README.md#placement-counts.
 
 import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
-import type { StageCodes } from '../lineage/reason-codes/reason-codes-pure';
-import { emptyTallyPartition, formatPartition, prefixed, renamed } from '../../util/counts/tally-pure';
+import { codeCount } from '../lineage/reason-codes/reason-codes-pure';
+import { emptyTallyPartition, formatPartition, percentOf, prefixed, renamed } from '../../util/counts/tally-pure';
 import { isLowPrecisionParallax } from './parallax/parallax-cascade';
 import {
   distViaBeforeLmc, PLACEMENT_CODES, radialVelocityApplied, shippedDistVia, shippedVelocityVia, type PlacedPlacement,
@@ -104,24 +104,21 @@ export function placementDerivedFold(): { add(p: PlacedPlacement): void; result(
   };
 }
 
-type LiveBranch = typeof PLACEMENT_CODES extends StageCodes<string, string, infer L> ? L : never;
-
 const lmcPartition = (derived: PlacementDerivedCounts, prefix: typeof LMC_OVERRIDDEN | typeof LMC_PARALLAX_REFUSED): string =>
   formatPartition(Object.fromEntries(LMC_WEIGHED_TIERS.map((t) => [t, derived[`${prefix}${t}`]])));
 
 export function placementSummary(counts: PlacementCounts, derived: PlacementDerivedCounts): string {
-  const n = (branch: LiveBranch): number => counts[`${PLACEMENT_CODES.stage}.${branch}`];
+  const n = codeCount(PLACEMENT_CODES, counts);
   const lmcCandidates = n('distance.lmc-kinematic') + n('distance.lmc-refused-by-own-parallax')
     + n('distance.lmc-refused-pm-outside-gate') + n('distance.lmc-refused-no-pm');
   const bjEligible = n('distance.bailer-jones') + n('distance.bailer-jones-absent');
   const rvGaia = n('rv.gaia-dr3.error-le1') + n('rv.gaia-dr3.error-le5') + n('rv.gaia-dr3.error-le10')
     + n('rv.gaia-dr3.error-le20') + n('rv.gaia-dr3.error-gt20');
-  const pct = (k: number, of: number): string => `${((k / of) * 100).toFixed(1)}%`;
   return [
     `  Bailer-Jones override: ${n('distance.bailer-jones')} / ${bjEligible} Gaia-inverse-distance stars `
-      + `(${pct(n('distance.bailer-jones'), bjEligible)})`,
+      + `(${percentOf(n('distance.bailer-jones'), bjEligible)})`,
     `  LMC kinematic override: ${n('distance.lmc-kinematic')} / ${lmcCandidates} LMC-cone stars `
-      + `(${pct(n('distance.lmc-kinematic'), lmcCandidates)}); refused: PM outside the gate `
+      + `(${percentOf(n('distance.lmc-kinematic'), lmcCandidates)}); refused: PM outside the gate `
       + `${n('distance.lmc-refused-pm-outside-gate')}, no PM ${n('distance.lmc-refused-no-pm')}, `
       + `own parallax ${n('distance.lmc-refused-by-own-parallax')}`,
     `    displacing: ${lmcPartition(derived, LMC_OVERRIDDEN)}`,

@@ -59,6 +59,13 @@ export interface StageCodes<B extends string, S extends string = string, L exten
   roleOf(code: string): LineageRole;
 }
 
+/** A count block read by live branch: `codeCount(codes, counts)('v.none')`. */
+export function codeCount<B extends string, S extends string, L extends B>(
+  codes: StageCodes<B, S, L>, counts: Readonly<Record<StageCode<S, NoInfer<L>>, number>>,
+): (branch: L) => number {
+  return (branch) => counts[codes.liveCode(branch)];
+}
+
 const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*$/;
 
 export function stageCodes<D extends Record<string, CodeDeclaration>, S extends string = string>(

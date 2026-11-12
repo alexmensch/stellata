@@ -47,6 +47,11 @@ export function share(part: number, whole: number, rate: string): number {
   return part / whole;
 }
 
+/** `part` as a percentage of `whole` to one decimal, `n/a` for an empty whole. */
+export function percentOf(part: number, whole: number): string {
+  return whole === 0 ? 'n/a' : `${((100 * part) / whole).toFixed(1)}%`;
+}
+
 /** One-line `bucket=n` rundown of a row partition, zeros included — the
  *  per-partition dry-run figure an override PR quotes. */
 export function formatPartition(partition: Readonly<Record<string, number>>): string {
