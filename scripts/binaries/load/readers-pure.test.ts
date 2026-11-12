@@ -144,6 +144,15 @@ describe('parseNssOrbits', () => {
     expect(pick(...rows.reverse()).get('7')?.period).toBe(2);
   });
 
+  it('picks, or refuses, a three-solution source the same way in all six file orders', () => {
+    const orders = (rows: string[]): string[][] => [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
+      .map((order) => order.map((i) => rows[i]));
+    const orderable = [solution('SB1', 1, '5'), solution('Orbital', 2, '9'), solution('SB2', 3, '50')];
+    for (const rows of orders(orderable)) expect(pick(...rows).get('7')?.period).toBe(2);
+    const tied = [solution('Orbital', 1, '9'), solution('SB1', 2, '5'), solution('SB1C', 3, '5')];
+    for (const rows of orders(tied)) expect(() => pick(...rows)).toThrow(/share a tier with no greater significance/);
+  });
+
   it('keeps each source\'s first position in the map', () => {
     expect([...pick(solution('SB1', 1, '1', '9'), solution('SB1', 1, '1', '3'), solution('Orbital', 2, '1', '9')).keys()])
       .toEqual(['9', '3']);

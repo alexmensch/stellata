@@ -125,35 +125,50 @@ const NSS_COLUMNS = [
 interface NssCandidate {
   readonly row: NssOrbitRow;
   readonly significance: number | null;
+  /** Throws naming this candidate's file line. */
+  readonly refuse: (message: string) => never;
 }
 
-/** NSS_PICK_TIERS index, or the reason the type cannot be ranked. */
-function pickTierIndex(c: NssCandidate): number | string {
+interface RankedCandidate extends NssCandidate {
+  readonly tier: number;
+}
+
+function rankCandidate(c: NssCandidate): RankedCandidate {
   const type = NSS_SOLUTION_TYPES.get(c.row.solutionType);
-  return type === undefined ? `"${c.row.solutionType}" is not a known nss_solution_type` : NSS_PICK_TIERS.indexOf(type.tier);
+  if (type === undefined) {
+    return c.refuse(`source ${c.row.sourceId} has several solutions, and "${c.row.solutionType}" is not a known nss_solution_type`);
+  }
+  return { ...c, tier: NSS_PICK_TIERS.indexOf(type.tier) };
 }
 
-/** The better of two solutions for one source, or the reason the rule cannot order them. */
-function betterNssSolution(a: NssCandidate, b: NssCandidate): NssCandidate | string {
-  const ta = pickTierIndex(a);
-  const tb = pickTierIndex(b);
-  if (typeof ta === 'string') return ta;
-  if (typeof tb === 'string') return tb;
-  if (ta !== tb) return ta < tb ? a : b;
+/** Negative when a ranks before b; throws, at b's line, when the rule cannot order them. */
+function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
+  if (a.tier !== b.tier) return a.tier - b.tier;
   if (a.significance === null || b.significance === null || a.significance === b.significance) {
-    return `${a.row.solutionType} and ${b.row.solutionType} share a tier with no greater significance between them`;
+    return b.refuse(`source ${b.row.sourceId} has several solutions the pick rule cannot order: `
+      + `${a.row.solutionType} and ${b.row.solutionType} share a tier with no greater significance between them`);
   }
-  return a.significance > b.significance ? a : b;
+  return b.significance - a.significance;
+}
+
+/** The best of one source's solutions; every pair is compared, so whether
+ *  the rule refuses does not depend on file order. */
+function pickNssSolution(candidates: readonly NssCandidate[]): NssOrbitRow {
+  if (candidates.length === 1) return candidates[0].row;
+  const ranked = candidates.map(rankCandidate);
+  for (let i = 0; i < ranked.length; i++) for (let j = i + 1; j < ranked.length; j++) compareRanked(ranked[i], ranked[j]);
+  return ranked.reduce((best, c) => (compareRanked(c, best) < 0 ? c : best)).row;
 }
 
 /** source_id → its orbit. ../README.md#gaia-nss-one-solution-per-source */
 export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
-  const picked = new Map<string, NssCandidate>();
+  const bySource = new Map<string, NssCandidate[]>();
   for (const row of table(NSS_COLUMNS)) {
     const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     const candidate: NssCandidate = {
       significance: row.float('significance'),
+      refuse: (message) => row.fail(message),
       row: {
         sourceId,
         solutionType: row.text('nss_solution_type') ?? '',
@@ -169,11 +184,9 @@ export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
         massRatio: row.float('mass_ratio'),
       },
     };
-    const held = picked.get(sourceId);
-    const kept = held === undefined ? candidate : betterNssSolution(held, candidate);
-    picked.set(sourceId, typeof kept === 'string'
-      ? row.fail(`source ${sourceId} has several solutions the pick rule cannot order: ${kept}`)
-      : kept);
+    const held = bySource.get(sourceId);
+    if (held === undefined) bySource.set(sourceId, [candidate]);
+    else held.push(candidate);
   }
-  return new Map([...picked].map(([sourceId, c]) => [sourceId, c.row]));
+  return new Map([...bySource].map(([sourceId, candidates]) => [sourceId, pickNssSolution(candidates)]));
 }
