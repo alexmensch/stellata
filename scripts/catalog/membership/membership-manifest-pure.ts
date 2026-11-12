@@ -39,6 +39,7 @@ import { nullableCell } from '../../util/tsv/artifact-pure';
 import { fold, prefixed } from '../../util/counts/tally-pure';
 import {
   type AdditionReason,
+  type BindingClass,
   bindingReviewKey,
   type LabelDropReason,
   type OwnCandidate,
@@ -107,7 +108,6 @@ import {
   manifestDesignations,
   manifestRecord,
   sortManifestRecords,
-  type BindingClass,
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';

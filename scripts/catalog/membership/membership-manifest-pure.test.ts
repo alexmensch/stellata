@@ -26,12 +26,11 @@ import {
 import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
-import { ADDITION_REASONS, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import { ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
-  BINDING_CLASSES,
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
   manifestRecord,

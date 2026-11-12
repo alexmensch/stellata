@@ -18,12 +18,12 @@ import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure'
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
-  ADDITION_REASONS, BINDING_REVIEW_VERDICTS, LABEL_DROP_REASONS,
+  ADDITION_REASONS, BINDING_CLASSES, BINDING_REVIEW_VERDICTS, LABEL_DROP_REASONS,
+  type BindingClass,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
-import { BINDING_CLASSES, type BindingClass } from './membership-manifest-tsv';
 import { sumOf } from '../../util/counts/tally-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 

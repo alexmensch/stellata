@@ -23,7 +23,7 @@ and fails on any diff under `data/membership/`.
 ```
 scripts/catalog/membership/
   membership-manifest-tsv.ts      MEMBERSHIP_MANIFEST, the manifest's codec:
-                                  the columns, the binding and term sets, and
+                                  the columns, the term set, and
                                   ManifestRecord — typed ids, alias lists,
                                   binding and term checked against their
                                   sets, isSol. manifestRecord is the one
@@ -41,8 +41,10 @@ scripts/catalog/membership/
                                   queue's carries the key a disposition joins
                                   on; the additions ledger's, the
                                   /docs/catalog-driver.md#61-record-parity reason codes. Also the
-                                  own-candidate reasons, which the generator
-                                  and its lineage both read.
+                                  own-candidate reasons and the manifest's
+                                  binding classes, which the generator and
+                                  its lineage both read, so lineage reaches
+                                  no manifest declaration.
   origin-keys.ts                  ORIGIN_KEYS: each record's origin key,
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.
