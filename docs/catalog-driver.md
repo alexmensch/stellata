@@ -681,7 +681,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   covered 7,126 rows (spine-wide `rv_src`: HYG 7,965 · OTHER 871 · G_R2 295
   non-first-order); the bibcoded SIMBAD tier covers **7,171**, dropping 689
   of the old set and adding 734 rows that never had a printed velocity.
-  Residual `rvNone` **39,958**, pinned. The **skip rule fires on 307** rows,
+  Residual `placement.rv.none` **39,958**, pinned. The **skip rule fires on 307** rows,
   and the measurement justifying it is sharper than this section projected:
   over the 354 gate-withheld rows |Δrv| against the withheld Gaia value is
   p50 **0.0026 km/s** for a DR3 bibcode (the same value returning) against
@@ -697,7 +697,7 @@ Measured exposure and expected coverage (2026-08-14; pins in
   1500 km/s ceiling the velocity assembly already enforces now rejects a
   radial term breaching it **on its own**, so a bad rv costs a row its
   radial term rather than its tangential motion — pinned as
-  `rvRadialRejected` 1, `velocityClamped` unmoved at 8.
+  `placement.rv.rejected-above-ceiling` 1, `placement.velocity.clamped` unmoved at 8.
   Full detail: `scripts/catalog/distance/radial-velocity/README.md`.
 - **V** — SHIPPED (`stellata-3bsf.26`). `vCatalogued` 140 retires into
   `vTycho2` **123** · `vGliese` **16** · `vCurated` **1** (Sol), residual
@@ -759,8 +759,8 @@ Measured exposure and expected coverage (2026-08-14; pins in
   a positional disagreement between Tycho-2's J2000 cell and SIMBAD's, not an
   epoch error ([The rescued motion advances the position too](/scripts/catalog/distance/pm-rescue/README.md#the-rescued-motion-advances-the-position-too)).
 
-  Those three are pinned as `directionTycho2FromIcrs`, and a further **2** of
-  the 43 are `directionTycho2Photocentre` — a `pflag='P'` mean solution, so the
+  Those three are pinned as `placement.direction.tycho2.observed`, and a further **2** of
+  the 43 are `placement.direction.tycho2.photocentre` — a `pflag='P'` mean solution, so the
   position is an unresolved double's light-centre rather than one star's place.
   Both are counted rather than gated: no tier sits below this one for a
   TYC-keyed row, so gating either would cost the record. The V side of a `P`
@@ -772,8 +772,8 @@ Measured exposure and expected coverage (2026-08-14; pins in
   (position-only) solution, 1,264 route `hip2_saturated` and already took
   HIP2's motion, so the cohort shipping static was **273**, not 1,537 — 23 of
   them inside 25 pc. With the 3 Tycho-2 rows above that is **276**, routed
-  `pmRescueTycho2` **242** · `pmRescueCns5` **2** · `pmRescueSimbad` **17**,
-  residual `pmRescueGaiaBibcodeSkipped` **13** · `pmRescueNone` **2**.
+  `placement.pm-rescue.tycho2` **242** · `placement.pm-rescue.cns5` **2** · `placement.pm-rescue.simbad` **17**,
+  residual `placement.pm-rescue.none.gaia-release-refused` **13** · `placement.pm-rescue.none.unreached` **2**.
   `velocityZero` 285 → **24** (Sol + 8 clamped + those 15).
 
   **The DR2 question this section left open is answered the same way the rv

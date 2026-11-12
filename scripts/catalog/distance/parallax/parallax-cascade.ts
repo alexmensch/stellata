@@ -13,22 +13,6 @@ import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse-pure';
 import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 
-/** The `BuildCounts` field each tier reports into. Declared beside the enum so
- *  adding a tier fails to compile until it is pinned, rather than shipping a
- *  route nothing counts. */
-export const DIST_VIA_COUNT_KEY = {
-  bailer_jones: 'distBailerJones',
-  lmc_kinematic: 'distLmcKinematic',
-  gaia_dr3_inversion: 'distGaiaDr3Inversion',
-  hip2_parallax: 'distHip2Parallax',
-  cns5_plx: 'distCns5Plx',
-  gliese_plx: 'distGliesePlx',
-  simbad_plx: 'distSimbadPlx',
-  pair_member_parallax: 'distPairMemberParallax',
-  gliese_photometric_plx: 'distGliesePhotometricPlx',
-  curated: 'distCurated',
-} as const satisfies Record<DistVia, string>;
-
 /** Below this the parallax is not distinguishable from zero, so its inverse is
  *  unbounded above and carries no distance at all — a different failure from
  *  imprecision, which is why this is the gate rather than the ~20% bound that

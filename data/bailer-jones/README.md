@@ -35,7 +35,7 @@ parallax, which is the measurement this posterior treats — AND the B-J map
 covers it. A record placed by Hipparcos, CNS5, Gliese, SIMBAD or a bound
 sibling is excluded deliberately: regressing a non-Gaia parallax onto B-J's
 Galactic-density prior discards a measurement for one computed from a
-different, worse one. Coverage pins as `bjOverridden / bjEligible` in
+different, worse one. Coverage pins as `placement.distance.bailer-jones` in
 `scripts/catalog/build-catalog-expected.json`, and **an eligible record the
 table lacks fails the build**, named by placement lineage's
 `placement.distance.bailer-jones-absent` invariant: an eligible record has its own

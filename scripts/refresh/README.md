@@ -170,7 +170,7 @@ fetch. The build's skip gate already invalidates the artifact on any build-scrip
 edit and it is no help here: nothing is stale in the *build*, the *data* is.
 
 **What does catch it is gating the shortfall.** A coverage numerator —
-`bjOverridden`, `apsisMatched` — cannot serve as the gate, because when the
+`placement.distance.bailer-jones`, `apsisMatched` — cannot serve as the gate, because when the
 column gains sources the pull was never asked for, the numerator simply
 stops growing. "Stopped growing" is the most invisible diff a snapshot can
 carry: it reads as no change, and `UPDATE_SNAPSHOTS` writes it back

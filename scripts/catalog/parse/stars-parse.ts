@@ -59,9 +59,6 @@ import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
-  rvErrorBand,
-  type RadialVelocityResolution,
-  type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
@@ -211,16 +208,8 @@ export interface Star {
   originKey: string;
 }
 
-/** The radial-velocity cascade's answer, resolved on every row before any park. */
-export interface RvRouting {
-  readonly resolution: RadialVelocityResolution;
-  /** Null exactly when the Gaia DR3 tier did not answer. */
-  readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number } | null;
-}
-
-/** The per-row inputs a shipped row's counts fold from that no lineage type records. */
+/** What a shipped row's build-log samples quote that no lineage type records. */
 export interface ShippedFacts {
-  readonly bailerJonesEligible: boolean;
   /** The distance the override stack settled on. */
   readonly distPc: number;
   /** The space velocity before any clamp. */
@@ -234,14 +223,12 @@ export type RowOutcome =
     readonly kind: 'parked';
     readonly placement: ParkedPlacement;
     readonly brightness: BrightnessColour | null;
-    readonly rv: RvRouting;
   }
   | {
     readonly kind: 'shipped';
     readonly placement: PlacedPlacement;
     readonly brightness: ShippedBrightness;
     readonly size: Size;
-    readonly rv: RvRouting;
     readonly star: Star;
     readonly facts: ShippedFacts;
   };
@@ -354,12 +341,6 @@ export function rowResolver({
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity({ gaia: gaiaRow, simbad: simbadRow?.rv ?? null });
-    const rv: RvRouting = {
-      resolution: rvRes,
-      gaiaError: rvRes.via === 'gaia_dr3'
-        ? { band: rvErrorBand(rvRes.value.errorKmS), kmS: rvRes.value.errorKmS }
-        : null,
-    };
     const resolvedRvKmS = rvRes.via === 'none' ? null : rvRes.value.kmS;
     // A radial term past the sanity ceiling on its own is rejected here rather
     // than left to the whole-vector clamp below, which would drop the row's
@@ -392,7 +373,7 @@ export function rowResolver({
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null, rv };
+      return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -414,7 +395,6 @@ export function rowResolver({
         kind: 'parked',
         placement: { kind: 'parked-no-v', key, ids, parallax: plxRes },
         brightness: { kind: 'v-only', key, v: vRes },
-        rv,
       };
     }
 
@@ -436,7 +416,6 @@ export function rowResolver({
         kind: 'parked',
         placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction },
         brightness: { kind: 'v-only', key, v: vRes },
-        rv,
       };
     }
     const dirRes = direction.value;
@@ -650,10 +629,8 @@ export function rowResolver({
         apsis: apsis === null ? null : { ref: apsis.ref, outOfWindow: apsisTeff.outOfWindow },
         classEvidence: spectral.via === 'none' ? [] : spectral.evidence,
       },
-      rv,
       star,
       facts: {
-        bailerJonesEligible,
         distPc: dist,
         speedKmS: speedPcYr / KM_S_TO_PC_YR,
       },

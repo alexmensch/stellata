@@ -37,7 +37,11 @@ import {
 } from '../membership/membership-manifest-tsv';
 import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import { shippedVelocityVia, type Placement } from '../distance/placement-lineage-pure';
+import {
+  PLACEMENT_CODES, placementLineageLines, shippedVelocityVia, type Placement,
+} from '../distance/placement-lineage-pure';
+import type { PlacementCounts } from '../distance/placement-counts-pure';
+import { foldStageLines, type LineageLine } from '../lineage/lineage-row-pure';
 import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
@@ -46,9 +50,15 @@ import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { BrightnessColour, DustStep } from '../photometry/brightness-colour-lineage-pure';
 
+/** The walk, with placement's count block folded from the lines its outcomes write. */
 const readStarsDiscarding = (
   manifest: Parameters<typeof readStars>[0], options: Parameters<typeof readStars>[1],
-): ReturnType<typeof readStars> => readStars(manifest, options, () => {});
+): ReturnType<typeof readStars> & { counts: PlacementCounts } => {
+  const lines: LineageLine[] = [];
+  const walked = readStars(manifest, options, (o) => lines.push(...placementLineageLines(o.placement)));
+  return { ...walked, counts: foldStageLines(PLACEMENT_CODES, lines) };
+};
+const placement = (code: string): keyof PlacementCounts => `placement.${code}` as keyof PlacementCounts;
 
 const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
 const BASE_OPTIONS = { conAssignment: CON_ASSIGNMENT, bailerJones: { source: BAILER_JONES, distPc: new Map<string, number>() } };
@@ -192,6 +202,7 @@ describe('readStars Gaia source_id', () => {
       }]),
       {
         ...BASE_OPTIONS,
+        bailerJones: { source: BAILER_JONES, distPc: new Map([[sourceId, 100]]) },
         // Gaia places it (outranking Tycho-2); Tycho-2 still has to light it,
         // since this Gaia row carries no BP/RP for the Riello 2021
         // (/data/papers/index.md#riello2021) transform.
@@ -226,7 +237,7 @@ describe('readStars manifest labels', () => {
   });
 
   it('parks a row no V tier lights, under its own record-parity reason', () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
       {
         ...BASE_OPTIONS,
@@ -239,14 +250,14 @@ describe('readStars manifest labels', () => {
       tyc: ORIGIN_TYC, hip: null, hd: 55, gl: ORIGIN_GL, gaiaSourceId: null,
       reason: 'no_v_magnitude', refusedPlxMas: [], originKey: 'spine:1',
     }]);
-    expect(stats.parkedVia.no_v_magnitude).toBe(1);
-    expect(stats.distVia.gliese_plx).toBe(0);
+    expect(counts[placement('park.no-v-magnitude')]).toBe(1);
+    expect(stats.placementDerived.distGliesePlx).toBe(0);
   });
 
   // The shipped cohort's shape: a HIP-only addition a bound sibling's parallax
   // places and printed HIP photometry lights, which no positional tier reaches.
   it('parks a row placed and lit but that no direction tier states', () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ hip: '4242', gl: ORIGIN_GL }]),
       {
         ...BASE_OPTIONS,
@@ -260,7 +271,7 @@ describe('readStars manifest labels', () => {
       tyc: null, hip: 4242, hd: null, gl: ORIGIN_GL, gaiaSourceId: null,
       reason: 'no_position', refusedPlxMas: [], originKey: 'spine:1',
     }]);
-    expect(stats.parkedVia.no_position).toBe(1);
+    expect(counts[placement('park.no-position')]).toBe(1);
   });
 
   // A park is counted once, in the park partition, and in none of the
@@ -269,6 +280,7 @@ describe('readStars manifest labels', () => {
   it('counts a park in the park partition alone', () => {
     const placements: Placement[] = [];
     const brightness: (BrightnessColour | null)[] = [];
+    const lines: LineageLine[] = [];
     const { stars, stats } = readStars(
       manifestRows([
         { ...AT_ORIGIN_SIGHTLINE, hd: '55' },
@@ -283,16 +295,17 @@ describe('readStars manifest labels', () => {
       (row) => {
         placements.push(row.placement);
         brightness.push(row.brightness);
+        lines.push(...placementLineageLines(row.placement));
       },
     );
     expect(stars).toHaveLength(0);
-    const sum = (p: Record<string, number>): number =>
-      Object.values(p).reduce((a, b) => a + b, 0);
-    expect(sum(stats.parkedVia)).toBe(stats.parked.length);
-    expect(sum(stats.distVia)).toBe(stars.length);
-    expect(sum(stats.directionVia)).toBe(stars.length);
-    // The rv cascade answers before any park, so its partition runs over rows.
-    expect(sum(stats.rvVia)).toBe(stats.total);
+    const counts = foldStageLines(PLACEMENT_CODES, lines);
+    const sumOf = (group: string): number => Object.entries(counts)
+      .filter(([code]) => code.startsWith(placement(group)))
+      .reduce((n, [, k]) => n + k, 0);
+    expect(sumOf('park.')).toBe(stats.parked.length);
+    expect(sumOf('rv.')).toBe(stars.length);
+    expect(Object.values(stats.placementDerived).reduce((a, b) => a + b, 0)).toBe(0);
     expect(placements.map((p) => p.kind)).toEqual(['parked-no-v', 'parked-no-position']);
     expect(placements).toHaveLength(stats.total);
     // Both rows reached V, so both carry the V cascade's outcome; neither got further.
@@ -340,15 +353,15 @@ describe('readStars manifest labels', () => {
   });
 
   it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
-    const { stats } = readStarsDiscarding(manifestRows([AT_ORIGIN_SIGHTLINE]), {
+    const { counts } = readStarsDiscarding(manifestRows([AT_ORIGIN_SIGHTLINE]), {
       ...BASE_OPTIONS,
       directions: tycho2Sources([{
         tyc: ORIGIN_TYC, raDeg: LMC_CENTRE_RA_HOURS * 15, decDeg: LMC_CENTRE_DEC_DEG, vMag: 10,
       }]),
       gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
     });
-    expect(stats.lmcCandidates).toBe(1);
-    expect(stats.lmcOverridden).toBe(0);
+    expect(counts[placement('distance.lmc-refused-pm-outside-gate')]).toBe(1);
+    expect(counts[placement('distance.lmc-kinematic')]).toBe(0);
   });
 
   it('fails the walk on a row the overrides leave past MAX_DIST_PC, naming it', () => {
@@ -413,7 +426,7 @@ describe('readStars constellation assignment', () => {
   });
 
   it('builds Sol from its curated record alone: origin, at rest, G2V, every tier curated', () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ proper: 'Sol' }]),
       { ...BASE_OPTIONS, curatedRecords: CURATED_RECORDS },
     );
@@ -422,10 +435,9 @@ describe('readStars constellation assignment', () => {
       absmag: SOL_ABSOLUTE_V_MAGNITUDE, spectDisplay: 'G2V', vVia: 'curated',
     });
     expect(stars[0].flags & FLAG_IS_SOL).toBe(FLAG_IS_SOL);
-    expect(stats).toMatchObject({
-      directionVia: { curated: 1 }, distVia: { curated: 1 }, velocityVia: { zero: 1 }, rvApplied: 0,
-    });
-    expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
+    expect(counts[placement('direction.curated')]).toBe(1);
+    expect(stats.placementDerived).toMatchObject({ distCurated: 1, velocityZero: 1, velocityRvApplied: 0 });
+    expect(Object.entries(counts).filter(([code, n]) => code.includes('.pm-rescue.') && n > 0)).toEqual([]);
   });
 
   it('parks Sol where no curated record answers for it', () => {
@@ -493,7 +505,7 @@ describe('readStars PM rescue', () => {
     Math.hypot(s.vx, s.vy, s.vz);
 
   it('rescues a 2p row off its own TYC, and credits Tycho-2 not the tier', () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         ...BASE_OPTIONS,
@@ -503,15 +515,15 @@ describe('readStars PM rescue', () => {
     );
     // The position still comes from the Gaia anchor — only the motion is
     // re-keyed.
-    expect(stats.directionVia.gaia_2p).toBe(1);
-    expect(stats.pmRescueOutcome.tycho2).toBe(1);
-    expect(stats.velocityVia.tycho2_pm).toBe(1);
-    expect(stats.velocityVia.zero).toBe(0);
+    expect(counts[placement('direction.gaia-2p')]).toBe(1);
+    expect(counts[placement('pm-rescue.tycho2')]).toBe(1);
+    expect(stats.placementDerived.velocityTycho2Pm).toBe(1);
+    expect(stats.placementDerived.velocityZero).toBe(0);
     expect(speed(stars[0])).toBeGreaterThan(0);
   });
 
   it('ships static where the cascade reaches nothing — the control', () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         ...BASE_OPTIONS,
@@ -522,16 +534,17 @@ describe('readStars PM rescue', () => {
         ),
       },
     );
-    expect(stats.pmRescueOutcome.none).toBe(1);
-    expect(stats.velocityVia.zero).toBe(1);
+    expect(counts[placement('pm-rescue.none.unreached')]).toBe(1);
+    expect(stats.placementDerived.velocityZero).toBe(1);
     expect(speed(stars[0])).toBe(0);
   });
 
   it('never enters the cascade where the tier states its own motion', () => {
-    const { stats } = readStarsDiscarding(
+    const { stats, counts } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
         ...BASE_OPTIONS,
+        bailerJones: { source: BAILER_JONES, distPc: new Map([[SOURCE_ID, 20]]) },
         gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, {
           gaiaAstrometry: gaiaRow({
@@ -540,14 +553,14 @@ describe('readStars PM rescue', () => {
         }),
       },
     );
-    expect(stats.velocityVia.gaia_pm).toBe(1);
+    expect(stats.placementDerived.velocityGaiaPm).toBe(1);
     // Every rescue bucket empty: a 5p row must not reach the cascade at all,
     // or Tycho-2's blend motion would displace Gaia's own converged fit.
-    expect(Object.values(stats.pmRescueOutcome).every((n) => n === 0)).toBe(true);
+    expect(Object.entries(counts).filter(([code, n]) => code.includes('.pm-rescue.') && n > 0)).toEqual([]);
   });
 
   it("refuses a Gaia-bibcoded motion on the record's OWN 2p solution", () => {
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, counts } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
         ...BASE_OPTIONS,
@@ -560,7 +573,7 @@ describe('readStars PM rescue', () => {
         }),
       },
     );
-    expect(stats.pmRescueOutcome.gaia_bibcode_skipped).toBe(1);
+    expect(counts[placement('pm-rescue.none.gaia-release-refused')]).toBe(1);
     expect(speed(stars[0])).toBe(0);
   });
 
@@ -568,7 +581,7 @@ describe('readStars PM rescue', () => {
     // Identical to the case above but for the absent Gaia row, which is the
     // whole of the difference: with no fit to distrust the citation is
     // ordinary. Inverting the predicate would strip the motion from these.
-    const { stars, stats } = readStarsDiscarding(
+    const { stars, stats, counts } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gl: GJ }]),
       {
         ...BASE_OPTIONS,
@@ -580,9 +593,9 @@ describe('readStars PM rescue', () => {
         }),
       },
     );
-    expect(stats.directionVia.tycho2).toBe(1);
-    expect(stats.pmRescueOutcome.cns5).toBe(1);
-    expect(stats.velocityVia.cns5_pm).toBe(1);
+    expect(counts[placement('direction.tycho2.mean')]).toBe(1);
+    expect(counts[placement('pm-rescue.cns5')]).toBe(1);
+    expect(stats.placementDerived.velocityCns5Pm).toBe(1);
     expect(speed(stars[0])).toBeGreaterThan(0);
   });
 });
@@ -628,7 +641,7 @@ describe('readStars advances the position on a rescued PM', () => {
     }]]),
   });
 
-  const built = (): ReturnType<typeof readStars> => readStarsDiscarding(
+  const built = (): ReturnType<typeof readStarsDiscarding> => readStarsDiscarding(
     manifestRows([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
     {
       ...BASE_OPTIONS,
@@ -652,11 +665,11 @@ describe('readStars advances the position on a rescued PM', () => {
   );
 
   it('routes the row through the rescue and credits SIMBAD for the motion', () => {
-    const { stars, stats } = built();
+    const { stars, stats, counts } = built();
     expect(stars).toHaveLength(1);
-    expect(stats.directionVia.tycho2).toBe(1);
-    expect(stats.pmRescueOutcome.simbad).toBe(1);
-    expect(stats.velocityVia.simbad_pm).toBe(1);
+    expect(counts[placement('direction.tycho2.observed')]).toBe(1);
+    expect(counts[placement('pm-rescue.simbad')]).toBe(1);
+    expect(stats.placementDerived.velocitySimbadPm).toBe(1);
   });
 
   it('ships the advanced place, 2.337″ off the unpropagated observed cell', () => {
