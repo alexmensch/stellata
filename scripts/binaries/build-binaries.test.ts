@@ -139,10 +139,12 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
 /** The NSS file with each source's rows reversed in the slots they hold. */
 function reverseNssTieOrder(text: string): { text: string; reordered: number } {
   const [header, ...rows] = text.split('\n');
+  const sourceIdColumn = header.split('\t').indexOf('source_id');
+  if (sourceIdColumn < 0) throw new Error('NSS header has no source_id column');
   const slots = new Map<string, number[]>();
   rows.forEach((row, i) => {
     if (row === '') return;
-    const sourceId = row.slice(0, row.indexOf('\t'));
+    const sourceId = row.split('\t')[sourceIdColumn];
     slots.set(sourceId, [...(slots.get(sourceId) ?? []), i]);
   });
   const out = [...rows];
