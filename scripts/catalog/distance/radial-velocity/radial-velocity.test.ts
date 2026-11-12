@@ -33,7 +33,7 @@ describe('resolveRadialVelocity cascade', () => {
   ) => resolveRadialVelocity({ gaia, simbad });
   const NO_5P = { tier: 'gaia_dr3', reason: 'no_5p_solution', ref: GAIA_REF } as const;
   const SKIPPED = { tier: 'simbad', reason: 'gaia_release', ref: SIMBAD_REF } as const;
-  const gaia = (kmS: number) => ({ via: 'gaia_dr3', value: { kmS }, evidence: [GAIA_REF], refusals: [] });
+  const gaia = (kmS: number, errorKmS = 0.35) => ({ via: 'gaia_dr3', value: { kmS, errorKmS }, evidence: [GAIA_REF], refusals: [] });
   const simbad = (
     kmS: number, bibcode = LITERATURE, refusals: readonly object[] = [],
   ) => ({ via: 'simbad', value: { kmS, bibcode, ref: SIMBAD_REF }, evidence: [SIMBAD_REF], refusals });
@@ -106,7 +106,12 @@ describe('resolveRadialVelocity cascade', () => {
     const noisy = gaiaAstrometryRow({
       parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: 39.9,
     });
-    expect(resolve(noisy, simbadRv(-15.9))).toEqual(gaia(-80.3));
+    expect(resolve(noisy, simbadRv(-15.9))).toEqual(gaia(-80.3, 39.9));
+  });
+
+  it('throws on a Gaia rv published with no error, naming its source', () => {
+    const bare = gaiaAstrometryRow({ parallaxMas: 5, radialVelocityKmS: -80.3, radialVelocityErrorKmS: null });
+    expect(() => resolve(bare, null)).toThrow(/Gaia DR3 0 states a radial_velocity with no radial_velocity_error/);
   });
 
   it('keeps a genuine zero rather than falling through it', () => {
@@ -131,8 +136,7 @@ describe('resolveRadialVelocity cascade', () => {
     expect(radialTermExceedsCeiling(null)).toBe(false);
   });
 
-  it('bands the stated uncertainty on its upper edge, nulls to none', () => {
-    expect(rvErrorBand(null)).toBe('none');
+  it('bands the stated uncertainty on its upper edge', () => {
     expect(rvErrorBand(0)).toBe('le1');
     expect(rvErrorBand(1)).toBe('le1');
     expect(rvErrorBand(1.01)).toBe('le5');

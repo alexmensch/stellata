@@ -52,11 +52,10 @@ describe('threshold constants', () => {
   it('holds the Gaia inversion loosely (factor 30) — Bailer-Jones territory', () => {
     expect(SELF_CONSISTENCY_THRESHOLDS.gaia_dr3_inversion).toBeCloseTo(Math.log10(30), 10);
   });
-  it('has no opinion on the override layers, Sol or a park', () => {
+  it('has no opinion on the override layers or Sol', () => {
     expect(SELF_CONSISTENCY_THRESHOLDS.bailer_jones).toBeUndefined();
     expect(SELF_CONSISTENCY_THRESHOLDS.lmc_kinematic).toBeUndefined();
     expect(SELF_CONSISTENCY_THRESHOLDS.curated).toBeUndefined();
-    expect(SELF_CONSISTENCY_THRESHOLDS.none).toBeUndefined();
   });
   it('uses factor-5 for SIMBAD cross-check', () => {
     expect(SIMBAD_DISTANCE_THRESHOLD).toBeCloseTo(Math.log10(5), 10);

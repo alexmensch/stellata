@@ -4,10 +4,9 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
 import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
 import { REPO_ROOT } from '../util/paths.ts';
-import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
+import type { PlacementCounts, PlacementDerivedCounts } from './distance/placement-counts-pure.ts';
 import type { PromotionDerivedCounts } from './companions/companion-promotion.ts';
 import type { PromotionCounts } from './companions/promotion-lineage-pure.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
@@ -33,196 +32,12 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & PromotionCounts
-  & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & NamingCounts & NamingDerivedCounts & RecordsCounts
-  & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
+  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & NamingCounts
+  & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
-  /** Rows the Bailer-Jones override is allowed to fire on: a Gaia DR3
-   *  source_id present AND the parallax cascade resolved `gaia_dr3_inversion`
-   *  (the Gaia inverse-parallax population the posterior is the principled
-   *  replacement for). Rows on any other tier are excluded — their distance
-   *  isn't a Gaia inverse and B-J would silently move them to the prior's
-   *  distant tail at low parallax S/N. */
-  bjEligible: number;
-  /** bjEligible rows whose source_id was also in the B-J catalogue —
-   *  the count actually overridden. Coverage = bjOverridden / bjEligible. */
-  bjOverridden: number;
-  /** Rows whose resolved direction falls inside the LMC sky cone — the
-   *  population the LMC kinematic PM gate is evaluated against. */
-  lmcCandidates: number;
-  /** Rows that ALSO pass the LMC bulk-PM gate; their dist/x/y/z/absmag
-   *  were snapped to Pietrzyński 2019's
-   *  (/data/papers/index.md#pietrzynski2019) eclipsing-binary distance. */
-  lmcOverridden: number;
-  /** Cone + PM matches the snap refuses on their own parallax, split by the
-   *  tier they keep. See distance/refinement/README.md#layer-2--lmc-kinematic-override. */
-  lmcParallaxRefusedByDistVia: Record<DistVia, number>;
-  /** lmcOverridden split by the distance tier the snap displaced — B-J's
-   *  posterior or the raw inversion on most rows; the split states which
-   *  populations the override actually moves. */
-  lmcOverriddenByDistVia: Record<DistVia, number>;
-
-  /** Distance cascade: the parallax tier each record's distance inverts,
-   *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
-   *  records no owned parallax reaches, which do not ship. */
-  distBailerJones: number;
-  distLmcKinematic: number;
-  distGaiaDr3Inversion: number;
-  distHip2Parallax: number;
-  distCns5Plx: number;
-  distGliesePlx: number;
-  distSimbadPlx: number;
-  /** Records placed by a V/70A photometric or spectroscopic parallax — a
-   *  distance from colour and spectral type rather than astrometry, which is
-   *  why it is its own tier below every bibcoded measurement of the star and
-   *  why it is counted apart. Ratchet DOWN: each of these is a record waiting
-   *  for someone to measure its parallax. */
-  distGliesePhotometricPlx: number;
-  distPairMemberParallax: number;
-  distCurated: number;
-  distNone: number;
-  /** Rows whose SHIPPED distance inverts a parallax with worse than 20%
-   *  fractional error, so the result is biased. Bailer-Jones 2021
-   *  (/data/papers/index.md#bailerjones2021) rows are excluded:
-   *  there the posterior, not the inversion, handles the low-S/N case.
-   *
-   *  These rows have no second source, so refusing one would cost it its record
-   *  rather than its precision — this count is how the population stays visible
-   *  for a Gaia DR4 revisit instead of dissolving into the catalogue. Recompute
-   *  the set at any time as `plx / e_plx < PARALLAX_LOW_PRECISION_SN` over the
-   *  non-Bailer-Jones tiers. */
-  distLowPrecisionParallax: number;
-  /** The record-parity parks (/docs/catalog-driver.md#61-record-parity), per reason — rows that reach no parallax, no V, or no
-   *  position and so build no record. They are in no cascade partition: those
-   *  run over records, and a parked row is not one. `refused_*` against
-   *  `no_parallax_published` is the residual policy (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) counting a refused
-   *  measurement apart from an absent one. */
-  parkedRefusedNoDefensibleParallax: number;
-  parkedNoParallaxPublished: number;
-  parkedNoVMagnitude: number;
-  parkedNoPosition: number;
-  /** Direction cascade: rows whose sky direction came from a clean
-   *  Gaia DR3 5p solution. */
-  directionGaia5p: number;
-  /** Direction cascade: Gaia 2p position-only rows with no HIP2 cover. */
-  directionGaia2p: number;
-  /** Direction cascade: Gaia rows with an NSS orbit AND an unreliable
-   *  5p fit — same Gaia values, tagged as the binaries pipeline's Stage 3
-   *  tags them (`gaia_nss_systemic`). */
-  directionGaiaNssSystemic: number;
-  /** Direction cascade: rows with no usable Gaia parallax (saturated
-   *  bright set / 2p solutions) whose direction came from HIP2. */
-  directionHip2Saturated: number;
-  /** Direction cascade: rows whose Gaia-vs-HIP2 PM disagreement
-   *  (> 50 mas/yr on either axis) routed the direction to HIP2. */
-  directionHip2PmDiscrepant: number;
-  /** Direction cascade: rows Gaia and HIP2 both miss, placed at Tycho-2's
-   *  own mean position propagated to the scene epoch from its per-star,
-   *  per-coordinate mean epochs. */
-  directionTycho2: number;
-  /** The `directionTycho2` subset with no mean solution at all, placed at the
-   *  row's J2000 `ra_icrs` cell instead. Those rows carry no Tycho-2 PM
-   *  either, so the position is unpropagated unless another tier rescues a
-   *  PM for it — the residual the per-field cascades (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) require enumerated rather than implied. */
-  directionTycho2FromIcrs: number;
-  /** The `directionTycho2` subset whose mean solution is an unresolved
-   *  double's photocentre (`pflag='P'`) rather than one star's place, so the
-   *  position is the pair's light-centre. Counted, not gated: no tier sits
-   *  below this one for a TYC-keyed row, so gating would cost each its record.
-   *  The V side of the same row is marked a system blend for this reason. */
-  directionTycho2Photocentre: number;
-  /** Direction cascade: TYC-less Gliese rows placed at CNS5's own
-   *  coordinates, propagated from the row's own `pos_epoch`. */
-  directionCns5: number;
-  /** Direction cascade: the bottom tier — rows no first-order catalogue
-   *  reaches, placed at SIMBAD's bibcoded J2000 coordinates propagated to
-   *  the scene epoch. Sol is NOT here: it has no direction at all. */
-  directionSimbad: number;
-  /** Direction cascade: Sol, whose curated tier exists because it carries no
-   *  identifier any tier above can key on. Pinned at 1. */
-  directionCurated: number;
-  /** Space-motion velocity: rows whose tangential velocity came from
-   *  Gaia DR3 5p PM (the dominant set; tracks directionGaia5p +
-   *  directionGaiaNssSystemic). */
-  velocityGaiaPm: number;
-  /** Space-motion velocity: rows whose PM came from HIP2 (the
-   *  hip2_saturated + hip2_pm_discrepant tiers with a usable HIP2 PM). */
-  velocityHip2Pm: number;
-  /** Space-motion velocity: rows whose PM came from Tycho-2 — its own
-   *  direction tier plus the rescue cascade's `pmRescueTycho2`. */
-  velocityTycho2Pm: number;
-  /** Space-motion velocity: rows whose PM came from CNS5, both routes. */
-  velocityCns5Pm: number;
-  /** Space-motion velocity: rows whose PM came from a bibcoded SIMBAD
-   *  `pmra`/`pmdec`, both routes. */
-  velocitySimbadPm: number;
-  /** Space-motion velocity: rows with no usable PM from any source —
-   *  zero tangential velocity (Sol, the rows the rescue cascade leaves at
-   *  `pmRescueGaiaBibcodeSkipped` / `pmRescueNone`, and the artifact rows the
-   *  sanity ceiling zeroed). */
-  velocityZero: number;
-  /** PM rescue: rows the direction tier left without a proper motion whose
-   *  own TYC reaches a Tycho-2 mean solution. The cascade's top tier and its
-   *  only one needing no bibcode check — Tycho-2 predates Gaia
-   *  (`distance/README.md#the-proper-motion-rescue-cascade`). */
-  pmRescueTycho2: number;
-  /** PM rescue: rows reached by CNS5 on their own GJ, whose PM cites the
-   *  literature rather than a Gaia release. */
-  pmRescueCns5: number;
-  /** PM rescue: rows reached by a bibcoded SIMBAD PM citing the literature —
-   *  the second-order bottom tier. */
-  pmRescueSimbad: number;
-  /** PM rescue: 2p rows whose only owned PM cites a Gaia release, refused so
-   *  the pull cannot return the motion DR3 declined to fit. They take a zero
-   *  tangential term; the cost is enumerated in the README. */
-  pmRescueGaiaBibcodeSkipped: number;
-  /** PM rescue: rows no owned PM source reaches at all. Distinct from the
-   *  skipped bucket — nothing was refused, there is nothing there. */
-  pmRescueNone: number;
-  /** Rows whose computed space velocity exceeded VELOCITY_SANITY_CEILING
-   *  (PM×distance artifact) and was zeroed — a subset of velocityZero. */
-  velocityClamped: number;
-  /** Kept rows above the Galactic escape velocity `GALACTIC_ESCAPE_VELOCITY_KM_S`. Unbound
-   *  stars are genuinely exceptional, so this band is almost all PM×distance
-   *  / bad-RV artifacts — tracked as a ratchet (not clamped) so a proven
-   *  hypervelocity star survives and the artifact tail stays visible for
-   *  finer filtering. */
-  velocityAboveEscape: number;
-  /** Rows whose velocity carries a non-zero radial velocity from either
-   *  rv tier below. */
-  velocityRvApplied: number;
-  /** Rows taking the radial term from Gaia DR3 `radial_velocity`. */
-  rvGaiaDr3: number;
-  /** Rows RVS did not reach, taking a bibcoded SIMBAD `rvz_radvel`. */
-  rvSimbad: number;
-  /** `rvSimbad` rows whose bibcode is a Gaia catalogue release rather than
-   *  the literature — legitimate here (Gaia published no rv of its own for
-   *  them), and the split the skip rule's own cohort is measured against. */
-  rvSimbadGaiaBibcode: number;
-  /** Rows whose own 5p gate withheld a Gaia rv AND whose SIMBAD candidate
-   *  cited a Gaia release — the skip rule's catch, falling to zero rather
-   *  than laundering the withheld value back in. */
-  rvGaiaBibcodeSkipped: number;
-  /** Rows no tier covers — the radial term is zero. */
-  rvNone: number;
-  /** Rows whose resolved radial term alone exceeded
-   *  `VELOCITY_SANITY_CEILING_KM_S` and was dropped, leaving the measured
-   *  proper motion in place rather than losing it to the whole-vector clamp
-   *  (`distance/radial-velocity/README.md#the-sanity-thresholds-are-the-filter-on-a-bad-simbad-value`). Counted
-   *  under the tier that supplied the value — the cascade routed correctly
-   *  and the threshold, not the cascade, rejected it. */
-  rvRadialRejected: number;
-  /** `rvGaiaDr3` rows split by the stated `radial_velocity_error`, a tracked
-   *  ratchet rather than a gate — DR3 is taken as published
-   *  (`distance/radial-velocity/README.md`). `none` is pinned at 0: the
-   *  published catalogue always pairs an rv with an error. */
-  rvGaiaErrorBands: RvErrorBandPartition;
-  /** Largest stated `radial_velocity_error` (km/s) any `rvGaiaDr3` row
-   *  carries. Below DR3's own publication ceiling of 40 by construction; a
-   *  refresh that moves it forces this snapshot to be reviewed. */
-  rvGaiaErrorMaxKmS: number;
 }
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
@@ -234,61 +49,6 @@ export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 
 /** The stage each filed count sits under in the snapshot: the step that computes it. */
 export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
-  bjEligible: 'placement',
-  bjOverridden: 'placement',
-  lmcCandidates: 'placement',
-  lmcOverridden: 'placement',
-  lmcParallaxRefusedByDistVia: 'placement',
-  lmcOverriddenByDistVia: 'placement',
-  distBailerJones: 'placement',
-  distLmcKinematic: 'placement',
-  distGaiaDr3Inversion: 'placement',
-  distHip2Parallax: 'placement',
-  distCns5Plx: 'placement',
-  distGliesePlx: 'placement',
-  distSimbadPlx: 'placement',
-  distGliesePhotometricPlx: 'placement',
-  distPairMemberParallax: 'placement',
-  distCurated: 'placement',
-  distNone: 'placement',
-  distLowPrecisionParallax: 'placement',
-  parkedRefusedNoDefensibleParallax: 'placement',
-  parkedNoParallaxPublished: 'placement',
-  parkedNoVMagnitude: 'placement',
-  parkedNoPosition: 'placement',
-  directionGaia5p: 'placement',
-  directionGaia2p: 'placement',
-  directionGaiaNssSystemic: 'placement',
-  directionHip2Saturated: 'placement',
-  directionHip2PmDiscrepant: 'placement',
-  directionTycho2: 'placement',
-  directionTycho2FromIcrs: 'placement',
-  directionTycho2Photocentre: 'placement',
-  directionCns5: 'placement',
-  directionSimbad: 'placement',
-  directionCurated: 'placement',
-  velocityGaiaPm: 'placement',
-  velocityHip2Pm: 'placement',
-  velocityTycho2Pm: 'placement',
-  velocityCns5Pm: 'placement',
-  velocitySimbadPm: 'placement',
-  velocityZero: 'placement',
-  pmRescueTycho2: 'placement',
-  pmRescueCns5: 'placement',
-  pmRescueSimbad: 'placement',
-  pmRescueGaiaBibcodeSkipped: 'placement',
-  pmRescueNone: 'placement',
-  velocityClamped: 'placement',
-  velocityAboveEscape: 'placement',
-  velocityRvApplied: 'placement',
-  rvGaiaDr3: 'placement',
-  rvSimbad: 'placement',
-  rvSimbadGaiaBibcode: 'placement',
-  rvGaiaBibcodeSkipped: 'placement',
-  rvNone: 'placement',
-  rvRadialRejected: 'placement',
-  rvGaiaErrorBands: 'placement',
-  rvGaiaErrorMaxKmS: 'placement',
 };
 
 export type CountDiff =

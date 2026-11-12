@@ -15,9 +15,9 @@ derivation, admission and component counters are still kept by hand beside
 them (stellata-hhaw.45.23). Coherence's, brightness-colour's, promotion's
 and naming's snapshot keys are their codes, folded from their lines (naming's
 beside a code-less authority tally, [Naming lineage](../naming/README.md#naming-lineage);
-promotion's post-passes, which act on records, file a derived block). The record walk's placement
-counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
-under their old keys (stellata-hhaw.45.23).
+promotion's post-passes, which act on records, file a derived block), and so
+are placement's, beside a derived block of the shipped tiers
+([Placement counts](../distance/README.md#placement-counts)).
 
 ## Files in this area
 

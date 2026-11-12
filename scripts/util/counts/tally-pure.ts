@@ -30,15 +30,14 @@ export function prefixed<P extends string, K extends string>(prefix: P, tally: R
   return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
 }
 
+/** A tally's keys renamed to snapshot keys: `renamed({msc: 'orbitMsc'}, {msc: 3})` is `{orbitMsc: 3}`. */
+export function renamed<K extends string, const M extends Record<K, string>>(names: M, tally: Record<K, number>): Record<M[K], number> {
+  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [names[k as K], v])) as Record<M[K], number>;
+}
+
 /** The sum of `members`' counts under a snapshot prefix: `sumOf(counts, 'orbit_', ['msc', 'orb6'])`. */
 export function sumOf<P extends string, K extends string>(counts: Record<`${P}${K}`, number>, prefix: P, members: readonly K[]): number {
   return members.reduce((n, m) => n + counts[`${prefix}${m}`], 0);
-}
-
-/** One-line `bucket=n` rundown of a row partition, zeros included — the
- *  per-partition dry-run figure an override PR quotes. */
-export function formatPartition(partition: Readonly<Record<string, number>>): string {
-  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }
 
 /** `part / whole` for a snapshot rate; throws on an empty whole, which is a
@@ -46,4 +45,15 @@ export function formatPartition(partition: Readonly<Record<string, number>>): st
 export function share(part: number, whole: number, rate: string): number {
   if (whole <= 0) throw new Error(`${rate}: nothing to rate (denominator ${whole})`);
   return part / whole;
+}
+
+/** `part` as a percentage of `whole` to one decimal, `n/a` for an empty whole. */
+export function percentOf(part: number, whole: number): string {
+  return whole === 0 ? 'n/a' : `${((100 * part) / whole).toFixed(1)}%`;
+}
+
+/** One-line `bucket=n` rundown of a row partition, zeros included — the
+ *  per-partition dry-run figure an override PR quotes. */
+export function formatPartition(partition: Readonly<Record<string, number>>): string {
+  return Object.entries(partition).map(([b, n]) => `${b}=${n}`).join(', ');
 }

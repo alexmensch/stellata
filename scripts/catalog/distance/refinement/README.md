@@ -70,9 +70,10 @@ is testable in isolation (`distance-overrides-pure.test.ts`).
 self-gates on its map lookup; the LMC layer checks its own sky cone as
 well as the PM window. A caller cannot produce an override by forgetting
 a gate, so the next layer can be written to either sibling's shape
-without inheriting a footgun. Predicates a build-counter also needs
-(`isInLmcCone`) stay separately exported — the counter evaluates once per
-row, the override re-checks on the handful of rows that reach it.
+without inheriting a footgun. The LMC verdict names the gate that stopped
+it — `outside_cone`, `no_pm`, `pm_outside_gate`, `parallax_rules_out` — so
+the cone is tested once per row and every in-cone row writes its step to
+[placement lineage](../README.md#placement-lineage).
 
 ## Override-layer authoring discipline
 
@@ -135,8 +136,8 @@ The pipeline:
    prior's ~10–40 kpc tail would cost it: [Consumed by](/data/bailer-jones/README.md#consumed-by).
 3. On a hit, `applyBailerJonesOverride` returns
    `{ dist, absmag }` with `absmag = mag − 5·log₁₀(dist / 10)`.
-4. Coverage is `bjOverridden / bjEligible`, printed per build and pinned
-   in `../../build-catalog-expected.json`. An eligible row with no posterior
+4. Coverage is `placement.distance.bailer-jones` over every eligible row,
+   printed per build and pinned in `../../build-catalog-expected.json`. An eligible row with no posterior
    writes `placement.distance.bailer-jones-absent`, and placement's invariant
    fails the build on any such row, naming it
    ([Invariants](../../lineage/README.md#invariants)) — [Scope-derived pulls](#scope-derived-pulls--why-the-zero-pin-is-here)
@@ -191,12 +192,11 @@ Constants in `distance-overrides-pure.ts`:
 | `LMC_PARALLAX_MAS` | 1000 / `LMC_DISTANCE_PC` ≈ 0.0202 mas | The LMC's own parallax, the zero the consistency test measures from. |
 | `LMC_PARALLAX_CONSISTENCY_SIGMA` | 10 | Errors above `LMC_PARALLAX_MAS` past which a row's own parallax refuses the snap. |
 
-`isInLmcCone(raHours, decDegrees)` evaluates the cone independently
-of the PM gate so `readStars` can count cone-membership candidates
-(`lmcCandidates` in `build-catalog-expected.json`) separately from
-PM-passing overrides (`lmcOverridden`). At `V ≤ 11` it fires for **<!-- count:build-catalog/lmcOverridden -->111<!-- /count -->
-of <!-- count:build-catalog/lmcCandidates -->14,553<!-- /count -->** cone candidates; most of the rest fail the PM tolerance (MW
-halo / runaway stars whose PMs sit far from the LMC bulk centroid).
+Every row inside the cone writes its verdict, so the cone's candidates are
+the snap plus its three refusals. At `V ≤ 11` it snaps **<!-- count:build-catalog/placement.distance.lmc-kinematic -->111<!-- /count -->**;
+**<!-- count:build-catalog/placement.distance.lmc-refused-pm-outside-gate -->14,430<!-- /count -->** fail the PM tolerance (MW halo / runaway stars whose PMs sit
+far from the LMC bulk centroid), **<!-- count:build-catalog/placement.distance.lmc-refused-no-pm -->1<!-- /count -->** carries no PM to test, and the
+own-parallax refusals follow.
 
 **The PM gate is not a membership test, and the cone is crowded**, so
 the snap also asks the record's own resolved parallax (the cascade's
@@ -209,7 +209,7 @@ every other tier pinned at 0. A parallax with no stated error
 cannot contradict, so it snaps.
 
 The threshold sits in a measured gap over every row the cone + PM gate
-admits: the <!-- count:build-catalog/lmcOverridden -->111<!-- /count --> genuine members all lie within **3.2σ**, the <!-- count:build-catalog/lmcParallaxRefusedByDistVia.bailer_jones -->11<!-- /count -->
+admits: the <!-- count:build-catalog/placement.distance.lmc-kinematic -->111<!-- /count --> genuine members all lie within **3.2σ**, the <!-- count:build-catalog/lmcParallaxRefusedByDistVia.bailer_jones -->11<!-- /count -->
 captures at **44.7σ to 338σ** (274 pc to 1,419 pc, every RUWE but one
 ≤ 1.25). The members' side includes 24 rows whose Gaia DR3 parallax is
 negative — consistent with the LMC, but unusable for inversion — so the

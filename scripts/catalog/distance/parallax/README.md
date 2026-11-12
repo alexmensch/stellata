@@ -301,8 +301,8 @@ says which.
 **A park is a ledger entry, never a walk-gate drop.** The walk's one other
 exit, the `MAX_DIST_PC` cutoff, throws: a row past it means a refreshed
 reference table disagreeing with the tiers above it, which is a different and
-unintended event. Parks are pinned at their measured counts, one `parked*`
-key per reason (`PARKED_COUNT_KEY`), enumerated in
+unintended event. Parks are pinned at their measured counts, one
+`placement.park.*` code per reason, enumerated in
 `parked-ledger.tsv` and gated by
 `../../membership/membership-manifest-gate.test.ts`, which subtracts the ledger
 from the manifest by key before comparing designation multisets.
