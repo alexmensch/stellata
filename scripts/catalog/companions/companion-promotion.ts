@@ -200,7 +200,6 @@ export type RowOutcome =
     brightness: MintedBrightness;
     constellationSplit: boolean;
   }
-  | { kind: 'repositioned'; idx: number; brightness: MintedBrightness }
   | { kind: 'primary-unresolved' }
   | { kind: 'unpaired' }
   | { kind: 'pair-anchor' };
@@ -261,11 +260,6 @@ export interface RowOutcomeStats {
    *  back to the anchor's collocated brightness (see imputeCompanionAbsmag).
    *  Ratchet-down: curate WD absmags. */
   absmagAnchorCollocated: number;
-  /** Existing AT-HYG records repositioned in place because they ARE
-   *  the companion (same composed name, bit-identical to the anchor —
-   *  AT-HYG blend-coordinate double entries like ξ UMa B). Not counted
-   *  in `promoted`; no new record is minted. */
-  repositionedCollocatedDouble: number;
   /** Subset of `promoted` still carrying the inherited primary absmag
    *  (full-luminosity twin) because the pair has a renderable orbit
    *  and no per-component type is curated yet. Each is a known
@@ -506,7 +500,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
     absmagWdsMagDerived: 0,
     absmagAnchorCollocated: 0,
     absmagInheritedTwinOrbital: 0,
-    repositionedCollocatedDouble: 0,
     droppedCompoundComp: 0,
     droppedCollocatedPrimary: 0,
     anchorIsComponent: 0,
@@ -561,10 +554,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
         stats.promoted++;
         if (o.synthetic) stats.promotedSynthetic++;
         if (o.constellationSplit) stats.constellationSplitFromAnchor++;
-        countBrightness(o.brightness);
-        break;
-      case 'repositioned':
-        stats.repositionedCollocatedDouble++;
         countBrightness(o.brightness);
         break;
       case 'primary-unresolved':
@@ -1622,31 +1611,17 @@ function promoteRow(
   const anchorVel = inheritAnchor
     ? { x: inheritAnchor.vx, y: inheritAnchor.vy, z: inheritAnchor.vz }
     : { x: 0, y: 0, z: 0 };
-  // Collocated AT-HYG double-entry merge. A record sitting bit-identically on
-  // the anchor under the anchor's name plus this letter IS the companion, so
-  // minting would render the pair twice — once collocated, once at the
-  // projected separation. Reposition it and backfill the row's Gaia id so the
-  // runtime binaries resolver can address it.
   if (anchorStar !== null && anchorCatalogIdx !== null) {
     for (const probe of athygDoubleProbeNames(ctx, anchorStar)) {
       const dupIdx = state.existing.byProper.get(probe);
       if (dupIdx === undefined || dupIdx === anchorCatalogIdx) continue;
       const dup = state.existingStars[dupIdx];
-      if (dup.x === anchorStar.x && dup.y === anchorStar.y
-          && dup.z === anchorStar.z) {
-        dup.x = position.x;
-        dup.y = position.y;
-        dup.z = position.z;
-        dup.conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
-        dup.vx = anchorVel.x;
-        dup.vy = anchorVel.y;
-        dup.vz = anchorVel.z;
-        if (dup.gaiaSourceId === null && companionGaia !== null) {
-          dup.gaiaSourceId = companionGaia;
-        }
-        if (companionGaia) state.promotedByGaia.set(companionGaia, dupIdx);
-        if (companionHip !== null) state.promotedByHip.set(companionHip, dupIdx);
-        return { kind: 'repositioned', idx: dupIdx, brightness };
+      if (dup.x === anchorStar.x && dup.y === anchorStar.y && dup.z === anchorStar.z) {
+        throw new Error(
+          `${row.systemId} ${row.comp}: ${dup.originKey} ("${probe}") sits bit-identically on its anchor `
+            + `${anchorStar.originKey}, reached by name alone — a membership record for this component `
+            + 'with no identifier the row resolves (README.md#collocated-double-refusal)',
+        );
       }
     }
   }
@@ -2399,7 +2374,7 @@ function promoteCursorPrimary(
   );
 }
 
-/** The record a row placed: a mint, or an AT-HYG double moved onto the row. */
+/** The record a row minted. */
 function placedRecordIdx(outcome: RowOutcome): number | null {
-  return outcome.kind === 'minted' || outcome.kind === 'repositioned' ? outcome.idx : null;
+  return outcome.kind === 'minted' ? outcome.idx : null;
 }

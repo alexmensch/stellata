@@ -88,7 +88,6 @@ function baseCounts() {
     companionBlendDimGaiaResolved: 0,
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
-    companionRepositionedCollocatedDouble: 1,
     physicalOverlaps: 1,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,

@@ -2010,37 +2010,22 @@ describe('promoteCompanions', () => {
     expect(stats.promoted).toBe(1);
   });
 
-  it('repositions a collocated AT-HYG double entry instead of minting a duplicate (ξ UMa B class)', () => {
-    // AT-HYG carries BOTH members of the pair at the same printed
-    // blend coordinates: "Testar" and "Testar B" bit-identical. The
-    // promoted secondary composes the name "Testar B" — that record IS
-    // the companion; it must move to the projected position and adopt
-    // the row's gaia, and no new record may be created.
+  it('fails the build on a membership record reached only by name, bit-identical on its anchor', () => {
     const primaryStar = makeStar({
       x: -0.494, y: 2.477, z: -0.758,
-      absmag: 4.24, proper: 'Testar', hip: 55203,
+      absmag: 4.24, proper: 'Testar', hip: 55203, originKey: 'spine:1',
     });
     const athygB = makeStar({
       x: -0.494, y: 2.477, z: -0.758,
-      absmag: 4.71, proper: 'Testar B',
+      absmag: 4.71, proper: 'Testar B', originKey: 'spine:2',
     });
     const rows = siriusRows();
     rows[0].hip = 55203;
     rows[0].name = 'Testar';
     rows[1].hip = null;
     rows[1].name = '';
-    const { newStars, stats } = promoteCompanions(
-      rows, [primaryStar, athygB], inputs(),
-    );
-    expect(stats.repositionedCollocatedDouble).toBe(1);
-    expect(stats.promoted).toBe(0);
-    expect(newStars).toHaveLength(0);
-    // Moved off the primary to the tangent-projected position…
-    expect(athygB.x).not.toBe(primaryStar.x);
-    // …keeping its own photometry, adopting the row's gaia for the
-    // runtime binaries resolver.
-    expect(athygB.absmag).toBe(4.71);
-    expect(athygB.gaiaSourceId).toBe('2947050466531873024');
+    expect(() => promoteCompanions(rows, [primaryStar, athygB], inputs()))
+      .toThrow(/spine:2 \("Testar B"\) sits bit-identically on its anchor spine:1/);
   });
 
   it('drops a sep-0.000 secondary with no renderable orbit (ξ UMa Bb class)', () => {
@@ -3261,7 +3246,6 @@ describe('foldRowOutcomes', () => {
       kind: 'minted', idx: 4, synthetic: false,
       brightness: { source: 'spectral', spectMsFromOwnAbsmag: false }, constellationSplit: false,
     },
-    { kind: 'repositioned', idx: 5, brightness: { source: 'inherited_twin', spectMsFromOwnAbsmag: false } },
   ];
 
   it('counts each per-row counter from its variant, and scans only secondaries', () => {
@@ -3272,7 +3256,7 @@ describe('foldRowOutcomes', () => {
       { row, via: 'primary', outcome: { kind: 'primary-unresolved' }, ...unanchored },
     ]);
     expect(stats).toEqual({
-      pairRowsScanned: 13,
+      pairRowsScanned: 12,
       alreadyInCatalog: 3,
       promoted: 2,
       promotedSynthetic: 1,
@@ -3283,8 +3267,7 @@ describe('foldRowOutcomes', () => {
       spectMsFromOwnAbsmag: 1,
       absmagWdsMagDerived: 0,
       absmagAnchorCollocated: 0,
-      absmagInheritedTwinOrbital: 1,
-      repositionedCollocatedDouble: 1,
+      absmagInheritedTwinOrbital: 0,
       droppedCompoundComp: 1,
       droppedCollocatedPrimary: 2,
       anchorIsComponent: 1,

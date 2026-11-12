@@ -29,7 +29,7 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'adopted.sameas-bridge': outcomeCode('A same-as edge bridges the row\'s synthetic key to a Gaia source already in the catalogue, whose record is the component.', 'merge'),
   'adopted.earlier-mint': outcomeCode('An earlier row of this build already minted the record this row names.', 'merge'),
   minted: outcomeCode('The row becomes a new catalogue record.'),
-  repositioned: outcomeCode('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge'),
+  repositioned: outcomeCode('An AT-HYG record sitting on the anchor under the anchor\'s name plus this letter is the component, and moves to the row\'s position.', 'merge', RETIRED_7_1_20),
   'primary-unresolved': outcomeCode(
     'A pair\'s primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.',
     'none', RETIRED_7_1_8,
@@ -58,7 +58,6 @@ type ParamsOf<B extends Branch> =
   : B extends 'adopted.earlier-mint' ? Via & { record: string }
   : B extends `adopted.${string}` ? Via & { record: string; desig_con_from_anchor: Flag; recurated?: string }
   : B extends 'minted' ? Via & Brightness & { synthetic: Flag; constellation_split: Flag }
-  : B extends 'repositioned' ? Via & Brightness & { record: string }
   : Via;
 
 const flag = (b: boolean): Flag => (b ? 'true' : 'false');
@@ -102,8 +101,6 @@ export function promotionLineageRow(r: PromotedRow, recordKey: (idx: number) => 
       return row('minted', {
         via, ...brightness(o.brightness), synthetic: flag(o.synthetic), constellation_split: flag(o.constellationSplit),
       });
-    case 'repositioned':
-      return row('repositioned', { via, ...brightness(o.brightness), record: recordKey(o.idx) });
     case 'primary-unresolved':
       return row('parked.primary-unresolved', { via });
     case 'unpaired':

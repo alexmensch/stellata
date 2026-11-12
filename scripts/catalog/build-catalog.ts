@@ -339,7 +339,6 @@ export async function main() {
     companionBlendDimGaiaResolved: 0,
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
-    companionRepositionedCollocatedDouble: 0,
     physicalOverlaps: 0,
     companionConstellationSplitFromAnchor: 0,
     companionExistingDesigConFromAnchor: 0,
@@ -599,7 +598,6 @@ export async function main() {
       `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
       `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
       `misfit ${ps.blendDimMembersMisfit}), ` +
-      `repositioned-collocated-double=${ps.repositionedCollocatedDouble}, ` +
       `constellation-split-from-anchor=${ps.constellationSplitFromAnchor}, ` +
       `refused-parked=${ps.droppedParkedRecord} ` +
       `(via gaia_5p ${ps.droppedParkedRecordViaGaia5p}, ` +
@@ -632,7 +630,6 @@ export async function main() {
   counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
   counts.companionBlendDimBeyondSeparation = ps.blendDimMembersBeyondSeparation;
   counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
-  counts.companionRepositionedCollocatedDouble = ps.repositionedCollocatedDouble;
   counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
   counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
   counts.companionExistingMemberRecurated = ps.existingMemberRecurated;

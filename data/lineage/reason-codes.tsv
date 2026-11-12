@@ -248,7 +248,7 @@ promotion.not-applicable.pair-anchor	promotion	none	outcome	live		7.1.8	Promotio
 promotion.parked.primary-unresolved	promotion	park	outcome	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
 promotion.parked.unpaired	promotion	park	outcome	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
 promotion.primary-unresolved	promotion	none	outcome	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
-promotion.repositioned	promotion	merge	outcome	live		7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.
+promotion.repositioned	promotion	merge	outcome	retired	7.1.20	7.1.6	An AT-HYG record sitting on the anchor under the anchor's name plus this letter is the component, and moves to the row's position.
 size.apsis-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.
 size.class-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and the class-table Teff and bolometric correction.
 size.non-finite-luminosity	size	none	outcome	live		7.1.16	The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.

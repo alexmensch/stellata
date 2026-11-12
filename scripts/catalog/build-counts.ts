@@ -164,9 +164,6 @@ export interface FiledCounts {
   companionBlendDimMisfit: number;
   /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
   companionBlendDimSkipped: number;
-  /** Existing blend-coordinate double entries repositioned in
-   *  place by companion promotion (ξ UMa B class). */
-  companionRepositionedCollocatedDouble: number;
   /** companions/README.md#overlap-gate. */
   physicalOverlaps: number;
   /** Promoted companions whose own IAU-positional constellation differs from
@@ -436,7 +433,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   companionBlendDimGaiaResolved: 'promotion',
   companionBlendDimBeyondSeparation: 'promotion',
   companionBlendDimMisfit: 'promotion',
-  companionRepositionedCollocatedDouble: 'promotion',
   physicalOverlaps: 'promotion',
   companionConstellationSplitFromAnchor: 'promotion',
   companionExistingDesigConFromAnchor: 'promotion',

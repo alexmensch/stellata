@@ -84,7 +84,7 @@ a third via real Gaia/HIP keys, two-thirds via synthetic identifiers
 
 Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
-earlier mint this build), minted, or an AT-HYG double repositioned onto it;
+earlier mint this build), or minted;
 a pair's primary is `pair-anchor` when it anchors its pair and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
@@ -202,16 +202,17 @@ Per-row gates and resolution:
   hip → proper name (position-guarded, for GJ-only AT-HYG rows
   carrying neither id — ξ UMa A). An unresolvable primary would
   otherwise run its whole cursor anchor-less.
-- **Collocated AT-HYG double merge.** When a record AT-HYG named
-  `<its name for the anchor> <letter>` sits bit-identical on the anchor
-  (AT-HYG carries both members of a resolved pair at the same printed
-  blend coordinates — ξ UMa's "Alula Australis" + "Alula Australis B"
-  is the only case in the catalog), that record IS the companion: it is
-  repositioned in place (gaia backfilled from the row) instead of minting
-  a duplicate. The probe reads AT-HYG's own convention and nothing else —
-  the index it hits holds the manifest's `proper` cells alone, so a base
-  composed off a Bayer or catalogue designation could never match one and none
-  is tried.
+- <a id="collocated-double-refusal"></a>**Collocated-double refusal.** A
+  record named `<its name for the anchor> <letter>` sitting bit-identical on
+  the anchor (AT-HYG's convention for both members of a resolved pair at one
+  printed blend coordinate) is this component, reached by name because the
+  row's identifiers missed it — so minting would draw the pair twice. That is
+  a membership defect, fixed by giving the record the component's identifier:
+  the build throws, naming the row and the record. ξ UMa B carries its own
+  Gaia source and is adopted by id before this probe runs. The probe reads
+  AT-HYG's own convention and nothing else — the index it hits holds the
+  manifest's `proper` cells alone, so a base composed off a Bayer or catalogue
+  designation could never match one and none is tried.
 - **Position.** Prefer the row's own xyz when its astrometry is a
   real per-component fit AND its xyz differs from the primary row's
   xyz. Else apply a sky-tangent projection from the EXISTING catalog
