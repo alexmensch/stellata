@@ -346,8 +346,8 @@ those cells are the parked ledger's key and the parity gate's join, and
 park rows alone, decoding only the lines whose code is a park code. Placement
 founds no record, so it writes no identity rows.
 
-Measured 2026-10-30: 3,872,657 rows (349 MB plain, 31.0 MB gzipped) in 3.2 s
-without a diff and 8.1 s with one against a full baseline;
+Measured 2026-11-12: 3,888,456 rows (360 MB plain, 32.4 MB gzipped), 16.1 s
+with a diff against a full baseline on a local build;
 `PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 40 s: a CI run with a diff took
 26.5 s (2026-11-06).
 
