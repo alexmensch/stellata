@@ -392,12 +392,12 @@ export interface KeyedOutcome {
 type Branch = Parameters<typeof MEMBERSHIP_CODES.code>[0];
 
 /** The codes of the rows that admit a record into the manifest: what a new SID's mint event carries. */
+const SPINE_ADMISSION = SPINE_BINDING_CLASSES.map(spineAdmitBranch);
+const additionAdmission = (r: AdditionReason) => ADDITION_BINDING_CLASSES.map((c) => additionAdmitBranch(r, c));
+const MAGNITUDE_ADMISSION = ['admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES)] as const;
+
 export const MEMBERSHIP_ADMISSION_CODES: ReadonlySet<string> = new Set(
-  ([
-    ...SPINE_BINDING_CLASSES.map(spineAdmitBranch),
-    ...ADDITION_REASONS.flatMap((r) => ADDITION_BINDING_CLASSES.map((c) => additionAdmitBranch(r, c))),
-    'admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES),
-  ] satisfies readonly Branch[])
+  ([...SPINE_ADMISSION, ...ADDITION_REASONS.flatMap(additionAdmission), ...MAGNITUDE_ADMISSION] satisfies readonly Branch[])
     .map((b) => MEMBERSHIP_CODES.code(b)),
 );
 
@@ -595,18 +595,17 @@ type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, inf
 
 const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[`${MEMBERSHIP_CODES.stage}.${branch}`];
 const sumOf = (n: (branch: LiveBranch) => number) => (branches: readonly LiveBranch[]): number => branches.reduce((total, b) => total + n(b), 0);
-const ADMISSION_MAGNITUDE: readonly LiveBranch[] = ['admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES)];
 
 /** The totals the ledgers and logs read: sums of membership's codes, never snapshot keys. */
 export function membershipTotals(counts: MembershipCounts) {
   const n = countOf(counts);
   const sum = sumOf(n);
-  const spineAdmits = sum(SPINE_BINDING_CLASSES.map(spineAdmitBranch));
+  const spineAdmits = sum(SPINE_ADMISSION);
   const additionsByReason = Object.fromEntries(ADDITION_REASONS.map(
-    (r) => [r, sum(ADDITION_BINDING_CLASSES.map((c) => additionAdmitBranch(r, c)))],
+    (r) => [r, sum(additionAdmission(r))],
   )) as Record<AdditionReason, number>;
   const additions = ADDITION_REASONS.reduce((total, r) => total + additionsByReason[r], 0);
-  const magnitudeRows = sum(ADMISSION_MAGNITUDE);
+  const magnitudeRows = sum(MAGNITUDE_ADMISSION);
   const admittedAs = (c: PrimariesBindingClass): number => n(spineAdmitBranch(c)) + (c === 'reviewed' ? 0 : sum(
     ADDITION_REASONS.map((r) => additionAdmitBranch(r, c)),
   ));
