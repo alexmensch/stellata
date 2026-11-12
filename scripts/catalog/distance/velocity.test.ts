@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { KM_S_TO_PC_YR, velocityPcPerYr } from './velocity';
+import {
+  GALACTIC_ESCAPE_VELOCITY_PC_YR, KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_PC_YR, speedBand, velocityPcPerYr,
+} from './velocity';
 import { MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasis } from '../../../src/astro-core/equatorial-basis';
 
@@ -48,5 +50,15 @@ describe('velocityPcPerYr', () => {
     const muArcsec = Math.hypot(798.71, 10337.77) / 1000;
     const tangentialKmS = Math.sqrt(speedKmS ** 2 - radialKmS ** 2);
     expect(tangentialKmS).toBeCloseTo(4.740470 * muArcsec * d, 1);
+  });
+});
+
+describe('speedBand', () => {
+  it('keeps a speed at either threshold in the band below it', () => {
+    expect(speedBand(0)).toBe('bound');
+    expect(speedBand(GALACTIC_ESCAPE_VELOCITY_PC_YR)).toBe('bound');
+    expect(speedBand(GALACTIC_ESCAPE_VELOCITY_PC_YR * 1.0001)).toBe('above_escape');
+    expect(speedBand(VELOCITY_SANITY_CEILING_PC_YR)).toBe('above_escape');
+    expect(speedBand(VELOCITY_SANITY_CEILING_PC_YR * 1.0001)).toBe('clamped');
   });
 });
