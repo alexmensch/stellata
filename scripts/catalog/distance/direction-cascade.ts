@@ -200,9 +200,9 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
   const refusals: DirectionRefusal[] = [];
-  const hit = (
-    via: Exclude<DirectionVia, 'tycho2'>, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
-  ): DirectionResolution => ({ via, value, evidence, refusals });
+  const hit = <V extends DirectionVia>(
+    via: V, value: Extract<DirectionResolution, { via: V }>['value'], evidence: readonly AnySourceRowRef[],
+  ): DirectionResolution => ({ via, value, evidence, refusals }) as DirectionResolution;
 
   const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
@@ -245,18 +245,13 @@ export function resolveDirection(
   // the proper motion that carries it forward wherever its solution has one.
   const tycho2 = tyc !== null ? sources.tycho2.get(tyc) : undefined;
   if (tycho2 !== undefined) {
-    return {
-      via: 'tycho2',
-      value: {
-        srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
-        srcEpoch: tycho2.epoch,
-        srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
-        velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-        tycho2Solution: tycho2SolutionKind(tycho2),
-      },
-      evidence: [tycho2.ref],
-      refusals,
-    };
+    return hit('tycho2', {
+      srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
+      srcEpoch: tycho2.epoch,
+      srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
+      velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
+      tycho2Solution: tycho2SolutionKind(tycho2),
+    }, [tycho2.ref]);
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
