@@ -3,7 +3,7 @@
 import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
-import { NSS_SOLUTION_KINDS, type NssOrbitRow } from '../load/gaia-pure';
+import { NSS_SOLUTION_TYPES, type NssOrbitRow } from '../load/gaia-pure';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
@@ -75,7 +75,7 @@ const degToRad = (deg: number | null): number | null => (deg === null ? null : d
 
 /** README.md#conventions-the-outputs-rest-on */
 export function nssToCanonicalElements(row: NssOrbitRow, plxMas: number | null): OrbitElements | null {
-  const kind = NSS_SOLUTION_KINDS.get(row.solutionType);
+  const kind = NSS_SOLUTION_TYPES.get(row.solutionType)?.kind;
   if (kind === undefined) return null;
   const angles = ((): Pick<OrbitElements, 'iRad' | 'periastronRad' | 'nodeRad'> => {
     switch (kind) {
@@ -104,7 +104,7 @@ export function nssToCanonicalElements(row: NssOrbitRow, plxMas: number | null):
 /** Period under 3 yr, or a photocentre orbit under 1″; a row stating neither is outside. */
 export function nssInRegime(row: NssOrbitRow): boolean {
   if (row.period !== null && row.period < NSS_PERIOD_THRESHOLD_DAYS) return true;
-  if (NSS_SOLUTION_KINDS.get(row.solutionType) !== 'thiele_innes') return false;
+  if (NSS_SOLUTION_TYPES.get(row.solutionType)?.kind !== 'thiele_innes') return false;
   const c = rowCampbell(row);
   return c !== null && c.aMas < NSS_SEPARATION_THRESHOLD_MAS;
 }

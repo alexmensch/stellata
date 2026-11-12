@@ -28,9 +28,10 @@ scripts/binaries/load/
                                COMPONENT_SPTYPE_OVERRIDES,
                                ASTROMETRY_EXCLUSIONS.
   gaia-pure.ts                 The 5p astrometry pull and the NSS orbit
-                               columns; NSS_SOLUTION_KINDS, one table naming
+                               columns; NSS_SOLUTION_TYPES, one table naming
                                what each solution type's columns constrain,
-                               which Stage 4 converts by.
+                               which Stage 4 converts by, and its pick tier
+                               (../README.md#gaia-nss-one-solution-per-source).
   binaries-astrometry-source.ts  BINARIES_ASTROMETRY (gaia_dr3_astrometry.tsv).
   simbad-pure.ts               SIMBAD's WDS cross-IDs, the sp_type pull, and
                                their join on simbad_oid.

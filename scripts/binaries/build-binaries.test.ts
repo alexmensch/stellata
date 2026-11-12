@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { GAIA_HIP_XMATCH } from '../catalog/parse/gaia-hip-xmatch-source';
 import { GAIA_TYC_XMATCH } from '../catalog/parse/gaia-tyc-xmatch-source';
@@ -12,6 +12,7 @@ import { SIMBAD_WDS_XIDS } from '../catalog/membership/binding/simbad-wds-xids-s
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { isReadable } from '../util/sources/source';
+import { columnTable } from '../util/tsv/table-pure';
 import { componentKey } from './component-tokens-pure';
 import { BINARIES_ASTROMETRY } from './load/binaries-astrometry-source';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './load/curated-source';
@@ -133,4 +134,35 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     expect(asWritten(binariesCounts(results)) === snapshotText('build-binaries-expected.json')).toBe(true);
   });
+});
+
+/** The NSS file with each source's rows reversed in the slots they hold. */
+function reverseNssTieOrder(text: string): { text: string; reordered: number } {
+  const [header, ...rows] = text.split('\n');
+  const slots = new Map<string, number[]>();
+  rows.forEach((row, i) => {
+    if (row === '') return;
+    const sourceId = row.slice(0, row.indexOf('\t'));
+    slots.set(sourceId, [...(slots.get(sourceId) ?? []), i]);
+  });
+  const out = [...rows];
+  let reordered = 0;
+  for (const at of slots.values()) {
+    if (at.length < 2) continue;
+    reordered++;
+    at.forEach((slot, k) => { out[slot] = rows[at[at.length - 1 - k]]; });
+  }
+  return { text: [header, ...out].join('\n'), reordered };
+}
+
+describe.skipIf(![...INPUTS, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('the NSS file\'s tie order', () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  it('leaves multiples.tsv byte for byte when each source\'s solutions are reversed', async () => {
+    const shuffled = reverseNssTieOrder(readRepoFile(GAIA_NSS.file));
+    expect(shuffled.reordered).toBeGreaterThan(0);
+    vi.spyOn(GAIA_NSS, 'read').mockReturnValue(columnTable(GAIA_NSS, shuffled.text));
+    const { multiples } = await runStages(() => {});
+    expect(MULTIPLES_TSV.serialize(multiples.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
+  }, 120_000);
 });
