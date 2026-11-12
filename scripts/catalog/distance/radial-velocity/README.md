@@ -34,16 +34,18 @@ It returns the shared cascade shape (`../../cascade-result.ts`), `none` being
 the zero radial term. Each gate below records a refusal on whichever variant
 the row ends on: `no_5p_solution` where the 5p gate withheld a Gaia rv, and
 the refused publication where the skip rule rejected a SIMBAD value —
-`rvGaiaBibcodeSkipped` counts the second.
+`placement.rv.refused.gaia-release` counts the second.
 
 The spine's printed `rv` cell is **not** a tier and is no longer read: it is
 an AT-HYG transcription we cannot re-pull, so [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 retires it. Its 871 `rv_src=OTHER` cells were unattributable even by that
 standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
-Per-tier counts are pinned as `rvGaiaDr3` **<!-- count:build-catalog/rvGaiaDr3 -->869,112<!-- /count -->** / `rvSimbad` **<!-- count:build-catalog/rvSimbad -->36,948<!-- /count -->** /
-`rvNone` **<!-- count:build-catalog/rvNone -->69,313<!-- /count -->**, the same discipline the direction cascade pins
-`directionVia` under. The SIMBAD tier is not the printed cell renamed:
+Every shipped record's rv outcome is a placement code, pinned the way the
+direction cascade's are: the Gaia tier by its five error bands (below), the
+SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,303<!-- /count -->** and
+`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,518<!-- /count -->**. A parked
+row writes no rv step, so none of these counts it. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)
 and adds 734 rows that had no printed velocity at all.
@@ -75,8 +77,8 @@ The gate above refuses a 2p row's spectrum for a physical reason, and SIMBAD
 serves Gaia's own reduction of that same spectrum back under a Gaia catalogue
 bibcode — so on **every** 2p row, the SIMBAD tier **skips** candidates whose
 `rvz_bibcode` names a Gaia release (`isGaiaCatalogueBibcode`), falling to zero
-rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/rvGaiaBibcodeSkipped -->2,405<!-- /count -->** rows
-(`rvGaiaBibcodeSkipped`); the breakdowns below were measured on the build
+rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/placement.rv.refused.gaia-release -->430<!-- /count -->** shipped rows
+(`placement.rv.refused.gaia-release`); the breakdowns below were measured on the build
 before the V ≤ 11 magnitude term, when it fired on 307.
 
 **It turns on the blend, not on holding the competing value.** 205 of the 307
@@ -104,14 +106,15 @@ instrument and literature is an independent measurement, which is why the
 rule keys on the bibcode rather than on agreement.
 
 **A row with no 2p blend behind it is a different case**, and a Gaia catalogue
-bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/rvSimbadGaiaBibcode -->14,579<!-- /count -->** shipped
-rows carry one (`rvSimbadGaiaBibcode`) and the skip rule leaves them alone.
+bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,554<!-- /count -->** shipped
+rows carry one (`placement.rv.simbad.gaia-release`) and the skip rule leaves them alone.
 Before the magnitude term they were 363 — 278 DR2 and 85 DR3 — and every one
 of the 85 was a record the spine carried no `gaia_source_id` for, so
 there is no Gaia solution to distrust at all: SIMBAD resolved the object to a
 Gaia source this build cannot key, and that DR3 velocity reaches the record
-only through the citation. `rvSimbad`, `rvSimbadGaiaBibcode` and
-`rvGaiaBibcodeSkipped` pin all three populations.
+only through the citation. `placement.rv.simbad.literature`,
+`placement.rv.simbad.gaia-release` and `placement.rv.refused.gaia-release` pin
+all three populations.
 
 **What the rule costs.** The 102 rows it newly refuses take a zero radial
 term, and zero is not a better estimate than the blend — for a bound pair the
@@ -168,12 +171,12 @@ arrives with it and is caught downstream by the two thresholds
 [Space-motion velocity](../README.md#space-motion-velocity) describes, not by a quality
 or magnitude gate here. Both moved when the tier landed, and both are pinned:
 
-- `velocityAboveEscape` **45 → 56**. Fourteen tier values exceed 550 km/s,
+- `placement.velocity.above-escape` **45 → 56**. Fourteen tier values exceed 550 km/s,
   most of them quality-`A` rows from one APOGEE-era compilation
   ([Jönsson 2020](/data/papers/index.md#jonsson2020)) plus τ Sco at 650 km/s — near-certainly upstream
   fit artifacts on hot stars, but legitimately published and cited. Keeping
   them visible in the ratchet is exactly its stated job.
-- `rvRadialRejected` **1**, `velocityClamped` unmoved at **8**. One tier value
+- `placement.rv.rejected-above-ceiling` **1**, `placement.velocity.clamped` unmoved at **8**. One tier value
   exceeds the 1500 km/s ceiling: **EZ Aqr** (Gl 866A, 3.4 pc) at
   **6,824.7 km/s**, quality `D`, cited to
   [Costa-Almeida 2021](/data/papers/index.md#costaalmeida2021).
@@ -193,9 +196,9 @@ its radial term still rejected. It is now the worked example of what this
 rejection was for rather than a case where it made no difference.
 
 What the rejection buys is that the ratchet names the right failure, and
-that a row arriving with both a real PM and a nonphysical rv keeps the PM. The rejected row is still counted under the tier that supplied the
-value (`rvSimbad`) — the cascade routed correctly and the threshold, not the
-cascade, refused it. No |rv| bound is added to the tier itself: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
+that a row arriving with both a real PM and a nonphysical rv keeps the PM. The rejected row is coded `placement.rv.rejected-above-ceiling`, with
+the tier that supplied the value in `params` — the cascade routed correctly
+and the threshold, not the cascade, refused it. No |rv| bound is added to the tier itself: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)
 authorises none, and this reuses the ceiling the assembly already enforces.
 
 Note what these thresholds do NOT cover: all are ceilings, so they see a
@@ -219,19 +222,19 @@ so it is no better an instrument. Nine of those rows sit on a Gaia row
 stating more than 20 km/s of uncertainty, and their median disagreement is
 4.9 km/s. The one large disagreement in that set (Gaia 7.26 ± 23.94 against
 −148.00) is a 6σ gap in which the older value is the likelier suspect. Nine
-rows against a coarser reference cannot locate a knee, and the ~<!-- count:build-catalog/rvGaiaDr3 k3 -->869k<!-- /count --> rows the
-Gaia tier itself supplies score nothing at all.
+rows against a coarser reference cannot locate a knee, and the rows the Gaia
+tier itself supplies score nothing at all.
 
 So the uncertainty is **counted rather than obeyed** — the same treatment
-`velocityAboveEscape` gives an unbound velocity, and for the same reason: an
+`placement.velocity.above-escape` gives an unbound velocity, and for the same reason: an
 extreme value can be real, and a filter tuned on nine stars would remove real
-ones. `rvGaiaErrorBands` bands the Gaia tier's rows by stated uncertainty and
+ones. `placement.rv.gaia-dr3.error-*` bands the Gaia tier's rows by stated uncertainty and
 `rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
-distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/rvGaiaErrorBands.le1 -->660,315<!-- /count -->
-rows ≤ 1 km/s, <!-- count:build-catalog/rvGaiaErrorBands.le5 -->165,557<!-- /count --> ≤ 5, <!-- count:build-catalog/rvGaiaErrorBands.le10 -->30,989<!-- /count --> ≤ 10, <!-- count:build-catalog/rvGaiaErrorBands.le20 -->10,220<!-- /count --> ≤ 20, **<!-- count:build-catalog/rvGaiaErrorBands.gt20 -->2,031<!-- /count -->** above 20, and a
+distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/placement.rv.gaia-dr3.error-le1 -->660,140<!-- /count -->
+rows ≤ 1 km/s, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le5 -->165,340<!-- /count --> ≤ 5, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le10 -->30,901<!-- /count --> ≤ 10, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le20 -->10,183<!-- /count --> ≤ 20, **<!-- count:build-catalog/placement.rv.gaia-dr3.error-gt20 -->2,017<!-- /count -->** above 20, and a
 maximum of **<!-- count:build-catalog/rvGaiaErrorMaxKmS -->39.9898<!-- /count -->** — under DR3's own publication ceiling of 40, which no
-pulled row reaches. The `none` band is pinned at **<!-- count:build-catalog/rvGaiaErrorBands.none -->0<!-- /count -->**: the published
-catalogue always pairs an `rv` with an error, so a non-zero count there is an
+pulled row reaches. A Gaia `rv` with no stated error fails the build, naming
+its source: the published catalogue always pairs the two, so one alone is an
 upstream schema change, not a tolerable miss.
 
 Revisit at DR4, which reprocesses RVS and is the first event that could supply

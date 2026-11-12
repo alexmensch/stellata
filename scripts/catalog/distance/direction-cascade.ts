@@ -87,13 +87,24 @@ export interface DirectionSolution {
   velVia: VelocityVia;
 }
 
+/** Which of a Tycho-2 row's positions the tier read: its mean solution, a
+ *  mean solution that is an unresolved double's photocentre, or the observed
+ *  position of a row with no mean solution. */
+export type Tycho2SolutionKind = 'mean' | 'photocentre' | 'observed';
+
+export function tycho2SolutionKind(row: Pick<Tycho2Row, 'fromIcrs' | 'isPhotocentre'>): Tycho2SolutionKind {
+  if (row.fromIcrs) return 'observed';
+  return row.isPhotocentre ? 'photocentre' : 'mean';
+}
+
 /** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
  *  corruption), or the fit is 2p and HIP2 covers the star. */
 export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
 
 /** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
 export type DirectionResolution = CascadeResult<
-  UniformValues<DirectionVia, DirectionSolution>,
+  Omit<UniformValues<DirectionVia, DirectionSolution>, 'tycho2'>
+    & { tycho2: DirectionSolution & { readonly tycho2Solution: Tycho2SolutionKind } },
   DirectionRefusal
 >;
 
@@ -189,9 +200,9 @@ export function resolveDirection(
     : undefined;
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
   const refusals: DirectionRefusal[] = [];
-  const hit = (
-    via: DirectionVia, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
-  ): DirectionResolution => ({ via, value, evidence, refusals });
+  const hit = <V extends DirectionVia>(
+    via: V, value: Extract<DirectionResolution, { via: V }>['value'], evidence: readonly AnySourceRowRef[],
+  ): DirectionResolution => ({ via, value, evidence, refusals }) as DirectionResolution;
 
   const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
@@ -239,6 +250,7 @@ export function resolveDirection(
       srcEpoch: tycho2.epoch,
       srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
       velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
+      tycho2Solution: tycho2SolutionKind(tycho2),
     }, [tycho2.ref]);
   }
 

@@ -239,7 +239,9 @@ describe('applyLmcKinematicOverride', () => {
   ];
 
   const SNAP = { kind: 'snap', distPc: LMC_DISTANCE_PC } as const;
-  const NOT_MEMBER = { kind: 'not_member' } as const;
+  const OUTSIDE_CONE = { kind: 'outside_cone' } as const;
+  const PM_OUTSIDE_GATE = { kind: 'pm_outside_gate' } as const;
+  const NO_PM = { kind: 'no_pm' } as const;
   const RULES_OUT = { kind: 'parallax_rules_out' } as const;
   const atCentre = [LMC_CENTRE_RA_HOURS, LMC_CENTRE_DEC_DEG] as const;
   const bulkPm = [LMC_PM_RA_CENTRE, LMC_PM_DEC_CENTRE] as const;
@@ -252,10 +254,10 @@ describe('applyLmcKinematicOverride', () => {
     }
   });
 
-  it('LMC-direction + non-LMC-PM star is not a member', () => {
+  it('LMC-direction + non-LMC-PM star is refused on its PM', () => {
     for (const f of LMC_PM_NON_HITS) {
       const out = applyLmcKinematicOverride(f.ra, f.dec, f.pmRa, f.pmDec, null);
-      expect(out, f.label).toEqual(NOT_MEMBER);
+      expect(out, f.label).toEqual(PM_OUTSIDE_GATE);
     }
   });
 
@@ -264,14 +266,13 @@ describe('applyLmcKinematicOverride', () => {
     // sits exactly on the LMC bulk centre but which lies nowhere near the
     // LMC gets no override. Snapping it would teleport a Galactic star to
     // 49.6 kpc.
-    expect(applyLmcKinematicOverride(12, 0, ...bulkPm, null)).toEqual(NOT_MEMBER);
+    expect(applyLmcKinematicOverride(12, 0, ...bulkPm, null)).toEqual(OUTSIDE_CONE);
+    expect(applyLmcKinematicOverride(12, 0, null, null, null)).toEqual(OUTSIDE_CONE);
   });
 
-  it('is not a member when pm_ra or pm_dec is missing', () => {
-    // A row can reach a position tier that states no proper motion; treat
-    // those as ineligible for the kinematic gate.
-    expect(applyLmcKinematicOverride(...atCentre, null, 0, null)).toEqual(NOT_MEMBER);
-    expect(applyLmcKinematicOverride(...atCentre, 0, null, null)).toEqual(NOT_MEMBER);
+  it('refuses an in-cone row when pm_ra or pm_dec is missing', () => {
+    expect(applyLmcKinematicOverride(...atCentre, null, 0, null)).toEqual(NO_PM);
+    expect(applyLmcKinematicOverride(...atCentre, 0, null, null)).toEqual(NO_PM);
   });
 
   it('refuses a cone + PM match whose own parallax rules the LMC out', () => {
@@ -335,7 +336,7 @@ describe('applyLmcKinematicOverride', () => {
     const failJustOver = applyLmcKinematicOverride(
       ...atCentre, LMC_PM_RA_CENTRE + LMC_PM_TOLERANCE + eps, LMC_PM_DEC_CENTRE, null,
     );
-    expect(failJustOver).toEqual(NOT_MEMBER);
+    expect(failJustOver).toEqual(PM_OUTSIDE_GATE);
   });
 
 });

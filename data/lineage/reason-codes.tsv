@@ -297,11 +297,16 @@ placement.direction.hip2-saturated	placement	none	outcome	live		7.1.6	Hipparcos-
 placement.direction.refused.no-5p-solution	placement	none	refused	live		7.1.6	The Gaia solution is position-only and Hipparcos-2 covers the star.
 placement.direction.refused.pm-disagrees-with-hip2	placement	none	refused	live		7.1.6	The Gaia solution's proper motion disagrees with Hipparcos-2's by more than 50 mas/yr, the mark of an orbit-corrupted fit.
 placement.direction.simbad	placement	none	outcome	live		7.1.6	SIMBAD's bibcoded coordinates, the bottom tier.
-placement.direction.tycho2	placement	none	outcome	live		7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
+placement.direction.tycho2	placement	none	outcome	retired	7.1.20	7.1.6	The record's own TYC in Tycho-2, which neither Gaia nor Hipparcos-2 reaches.
+placement.direction.tycho2.mean	placement	none	outcome	live		7.1.20	The record's own TYC in Tycho-2's mean solution, which neither Gaia nor Hipparcos-2 reaches.
+placement.direction.tycho2.observed	placement	none	outcome	live		7.1.20	The record's own TYC in Tycho-2, which states no mean solution, so its observed J1991.25 position.
+placement.direction.tycho2.photocentre	placement	none	outcome	live		7.1.20	The record's own TYC in Tycho-2, whose mean solution is the photocentre of a double it did not resolve.
 placement.distance.bailer-jones	placement	none	outcome	live		7.1.6	The posterior distance of Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) replaces the inverted Gaia DR3 parallax.
 placement.distance.bailer-jones-absent	placement	none	outcome	live		7.1.6	The inverted Gaia DR3 parallax is eligible for a Bailer-Jones posterior that the committed pull lacks.
 placement.distance.lmc-kinematic	placement	none	outcome	live		7.1.6	Inside the LMC cone and sharing its proper motion, the record snaps to the LMC distance.
 placement.distance.lmc-refused-by-own-parallax	placement	none	refused	live		7.1.6	The LMC snap is refused: the record's own parallax is more than 10 sigma above the LMC's.
+placement.distance.lmc-refused-no-pm	placement	none	refused	live		7.1.20	The LMC snap is refused: inside the LMC cone, but the record carries no proper motion to test.
+placement.distance.lmc-refused-pm-outside-gate	placement	none	refused	live		7.1.20	The LMC snap is refused: inside the LMC cone, but the proper motion lies outside the LMC's bulk-motion window.
 placement.parallax.cns5-plx	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, cited to a publication no tier above refused, above the S/N floor.
 placement.parallax.curated	placement	none	outcome	live		7.1.6	Sol: distance zero by construction.
 placement.parallax.gaia-dr3-inversion	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 five-parameter parallax.
@@ -318,16 +323,26 @@ placement.park.no-position	placement	park	outcome	live		7.1.6	No direction tier 
 placement.park.no-v-magnitude	placement	park	outcome	live		7.1.6	No V tier lights the record, so it has no brightness.
 placement.park.refused-no-defensible-parallax	placement	park	outcome	live		7.1.6	Every parallax reaching the record was refused, so it cannot be placed.
 placement.pm-rescue.cns5	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; the record's own GJ in CNS5 supplies one.
-placement.pm-rescue.none	placement	none	outcome	live		7.1.6	The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.
+placement.pm-rescue.none	placement	none	outcome	retired	7.1.20	7.1.6	The direction tier states no proper motion and no rescue tier supplies one, so the record ships static.
+placement.pm-rescue.none.gaia-release-refused	placement	none	outcome	live		7.1.20	The direction tier states no proper motion and the only one reaching the record cites a Gaia release on a position-only fit, so the record ships static.
+placement.pm-rescue.none.unreached	placement	none	outcome	live		7.1.20	The direction tier states no proper motion and no rescue tier reaches the record, so it ships static.
 placement.pm-rescue.refused.gaia-release	placement	none	refused	live		7.1.6	A courier's proper motion cites a Gaia release on a record whose own Gaia fit is position-only.
 placement.pm-rescue.simbad	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; SIMBAD's bibcoded one supplies it.
 placement.pm-rescue.tycho2	placement	none	outcome	live		7.1.6	The direction tier states no proper motion; the record's own TYC in Tycho-2 supplies one.
-placement.rv.gaia-dr3	placement	none	outcome	live		7.1.6	Gaia DR3's RVS radial velocity on a record with a five-parameter solution.
+placement.rv.gaia-dr3	placement	none	outcome	retired	7.1.20	7.1.6	Gaia DR3's RVS radial velocity on a record with a five-parameter solution.
+placement.rv.gaia-dr3.error-gt20	placement	none	outcome	live		7.1.20	Gaia DR3's RVS radial velocity on a five-parameter record, stating an error above 20 km/s.
+placement.rv.gaia-dr3.error-le1	placement	none	outcome	live		7.1.20	Gaia DR3's RVS radial velocity on a five-parameter record, stating an error of at most 1 km/s.
+placement.rv.gaia-dr3.error-le10	placement	none	outcome	live		7.1.20	Gaia DR3's RVS radial velocity on a five-parameter record, stating an error above 5 and at most 10 km/s.
+placement.rv.gaia-dr3.error-le20	placement	none	outcome	live		7.1.20	Gaia DR3's RVS radial velocity on a five-parameter record, stating an error above 10 and at most 20 km/s.
+placement.rv.gaia-dr3.error-le5	placement	none	outcome	live		7.1.20	Gaia DR3's RVS radial velocity on a five-parameter record, stating an error above 1 and at most 5 km/s.
 placement.rv.none	placement	none	outcome	live		7.1.6	No tier states a radial velocity, so the radial term is zero.
 placement.rv.refused.gaia-release	placement	none	refused	live		7.1.6	SIMBAD's radial velocity cites a Gaia release on a record whose own Gaia fit is position-only.
 placement.rv.refused.no-5p-solution	placement	none	refused	live		7.1.6	Gaia's RVS velocity on a position-only solution, whose spectrum is a blend.
 placement.rv.rejected-above-ceiling	placement	none	outcome	live		7.1.6	The radial velocity a tier supplied exceeds the sanity ceiling on its own, so the radial term is dropped.
-placement.rv.simbad	placement	none	outcome	live		7.1.6	SIMBAD's bibcoded radial velocity.
+placement.rv.simbad	placement	none	outcome	retired	7.1.20	7.1.6	SIMBAD's bibcoded radial velocity.
+placement.rv.simbad.gaia-release	placement	none	outcome	live		7.1.20	SIMBAD's radial velocity, cited to a Gaia release on a record whose own Gaia fit the build does not distrust.
+placement.rv.simbad.literature	placement	none	outcome	live		7.1.20	SIMBAD's radial velocity, cited to the literature.
+placement.velocity.above-escape	placement	none	outcome	live		7.1.20	The space velocity exceeds the Galactic escape velocity but not the sanity ceiling, so it is kept.
 placement.velocity.clamped	placement	none	outcome	live		7.1.6	The space velocity exceeds the sanity ceiling, so it is zeroed.
 promotion.adopted.earlier-mint	promotion	merge	outcome	live		7.1.6	An earlier row of this build already minted the record this row names.
 promotion.adopted.own-hip	promotion	merge	outcome	live		7.1.6	The row's Gaia source names no record, but its own HIP names one other than the anchor, which is the component.

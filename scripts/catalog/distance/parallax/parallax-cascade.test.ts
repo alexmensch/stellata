@@ -3,7 +3,6 @@ import { describe, it, expect } from 'vitest';
 import {
   isLowPrecisionParallax,
   resolveParallax,
-  DIST_VIA_COUNT_KEY,
   PARALLAX_SN_FLOOR,
   PARALLAX_LOW_PRECISION_SN,
   type ParallaxResolution,
@@ -413,10 +412,5 @@ describe('parallax-cascade / the residual', () => {
       expect(via).not.toBe('bailer_jones');
       expect(via).not.toBe('lmc_kinematic');
     }
-  });
-
-  it('every tier reports into a distinct build-count field', () => {
-    const keys = DIST_VIA_VALUES.map((v) => DIST_VIA_COUNT_KEY[v]);
-    expect(new Set(keys).size).toBe(DIST_VIA_VALUES.length);
   });
 });

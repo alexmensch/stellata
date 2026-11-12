@@ -151,10 +151,10 @@ rows reach the record only through a stored same-as edge
 
 | reason | today | at `V <= 11` | now |
 |---|---|---|---|
-| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/parkedNoParallaxPublished -->7,492<!-- /count --> |
-| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/parkedRefusedNoDefensibleParallax -->2,285<!-- /count --> |
-| `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/parkedNoVMagnitude -->637<!-- /count --> |
-| `no_position` | 1 | 1 | <!-- count:build-catalog/parkedNoPosition -->1<!-- /count --> |
+| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/placement.park.no-parallax-published -->7,492<!-- /count --> |
+| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/placement.park.refused-no-defensible-parallax -->2,285<!-- /count --> |
+| `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/placement.park.no-v-magnitude -->637<!-- /count --> |
+| `no_position` | 1 | 1 | <!-- count:build-catalog/placement.park.no-position -->1<!-- /count --> |
 
 The newcomers publish no parallax at 0.931%, not the projected 0.887%, and the
 defensible-parallax gate refuses 52 on top — inside the "a few hundred at most"

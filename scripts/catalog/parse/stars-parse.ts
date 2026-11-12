@@ -38,8 +38,7 @@ import {
 import {
   velocityPcPerYr,
   KM_S_TO_PC_YR,
-  VELOCITY_SANITY_CEILING_PC_YR,
-  GALACTIC_ESCAPE_VELOCITY_PC_YR,
+  speedBand,
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { resolveParallax } from '../distance/parallax/parallax-cascade';
@@ -60,9 +59,6 @@ import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
 import {
   radialTermExceedsCeiling,
   resolveRadialVelocity,
-  rvErrorBand,
-  type RadialVelocityResolution,
-  type RvErrorBand,
 } from '../distance/radial-velocity/radial-velocity';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
@@ -97,7 +93,6 @@ import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
   isBailerJonesEligible,
-  isInLmcCone,
   type BailerJonesIndex,
 } from '../distance/refinement/distance-overrides-pure';
 import { walkStatsFold, type WalkStats } from './walk-stats-pure';
@@ -213,24 +208,12 @@ export interface Star {
   originKey: string;
 }
 
-/** The radial-velocity cascade's answer, resolved on every row before any park. */
-export interface RvRouting {
-  readonly resolution: RadialVelocityResolution;
-  /** Null exactly when the Gaia DR3 tier did not answer. */
-  readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number | null } | null;
-}
-
-/** The per-row inputs a shipped row's counts fold from that no lineage type records. */
+/** What a shipped row's build-log samples quote that no lineage type records. */
 export interface ShippedFacts {
-  readonly bailerJonesEligible: boolean;
-  /** Inside the LMC sky cone, whatever the PM gate made of the row. */
-  readonly inLmcCone: boolean;
-  readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
   /** The distance the override stack settled on. */
   readonly distPc: number;
-  /** The space velocity before any clamp, wherever it exceeded the Galactic
-   *  escape velocity — clamped or not, as the placement says. */
-  readonly fastKmS: number | null;
+  /** The space velocity before any clamp. */
+  readonly speedKmS: number;
 }
 
 /** One manifest row resolved: parked, or a record with the provenance of each
@@ -240,14 +223,12 @@ export type RowOutcome =
     readonly kind: 'parked';
     readonly placement: ParkedPlacement;
     readonly brightness: BrightnessColour | null;
-    readonly rv: RvRouting;
   }
   | {
     readonly kind: 'shipped';
     readonly placement: PlacedPlacement;
     readonly brightness: ShippedBrightness;
     readonly size: Size;
-    readonly rv: RvRouting;
     readonly star: Star;
     readonly facts: ShippedFacts;
   };
@@ -263,7 +244,7 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   /** `CURATED_RECORDS` — every cascade's curated tier. Absent parks Sol. */
   curatedRecords?: CuratedRecords;
-  bailerJones?: BailerJonesIndex;
+  bailerJones: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** `SPTYPE_OVERRIDES` — the spectral resolver's curated tier. */
   sptypeOverrides?: SpectralSources['sptypeOverrides'];
@@ -360,11 +341,6 @@ export function rowResolver({
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity({ gaia: gaiaRow, simbad: simbadRow?.rv ?? null });
-    const gaiaRvErrorKmS = rvRes.via === 'gaia_dr3' && gaiaRow !== null ? gaiaRow.radialVelocityErrorKmS : undefined;
-    const rv: RvRouting = {
-      resolution: rvRes,
-      gaiaError: gaiaRvErrorKmS === undefined ? null : { band: rvErrorBand(gaiaRvErrorKmS), kmS: gaiaRvErrorKmS },
-    };
     const resolvedRvKmS = rvRes.via === 'none' ? null : rvRes.value.kmS;
     // A radial term past the sanity ceiling on its own is rejected here rather
     // than left to the whole-vector clamp below, which would drop the row's
@@ -397,7 +373,7 @@ export function rowResolver({
     );
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
-      return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null, rv };
+      return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null };
     }
 
     // V through the Riello 2021 (/data/papers/index.md#riello2021)
@@ -419,7 +395,6 @@ export function rowResolver({
         kind: 'parked',
         placement: { kind: 'parked-no-v', key, ids, parallax: plxRes },
         brightness: { kind: 'v-only', key, v: vRes },
-        rv,
       };
     }
 
@@ -441,7 +416,6 @@ export function rowResolver({
         kind: 'parked',
         placement: { kind: 'parked-no-position', key, ids, parallax: plxRes, direction },
         brightness: { kind: 'v-only', key, v: vRes },
-        rv,
       };
     }
     const dirRes = direction.value;
@@ -474,7 +448,7 @@ export function rowResolver({
     let dist = plxDistPc ?? 0;
     const bailerJonesEligible = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     let bjStep: BailerJonesStep = { kind: 'not-applied' };
-    if (bailerJonesEligible && bailerJones !== undefined) {
+    if (bailerJonesEligible) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bailerJones);
       if (ovr !== null) {
         dist = ovr.distPc;
@@ -486,16 +460,11 @@ export function rowResolver({
 
     // Runs AFTER B-J so the LMC snap overrides B-J's mis-anchored value on the
     // same rows.
-    const raHours = dirRes.srcRaDeg / 15;
-    let lmcStep: LmcStep = 'not_member';
-    const inLmcCone = isInLmcCone(raHours, dirRes.srcDecDeg);
-    if (inLmcCone) {
-      const lmc = applyLmcKinematicOverride(
-        raHours, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
-      );
-      lmcStep = lmc.kind;
-      if (lmc.kind === 'snap') dist = lmc.distPc;
-    }
+    const lmc = applyLmcKinematicOverride(
+      dirRes.srcRaDeg / 15, dirRes.srcDecDeg, pmRaMasyr, pmDecMasyr, measuredPlx,
+    );
+    const lmcStep: LmcStep = lmc.kind;
+    if (lmc.kind === 'snap') dist = lmc.distPc;
     const distVia = shippedDistVia({ parallax: plxRes, bailerJones: bjStep, lmc: lmcStep });
 
     if (dist > MAX_DIST_PC) {
@@ -535,8 +504,8 @@ export function rowResolver({
     // (a proven escaper must survive) but tracked: that band is almost all
     // PM×distance / bad-RV artifacts.
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
-    const velocityClamped = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR;
-    if (velocityClamped) vel = { x: 0, y: 0, z: 0 };
+    const speed = speedBand(speedPcYr);
+    if (speed === 'clamped') vel = { x: 0, y: 0, z: 0 };
 
     let apsis: CitedValue<ApsisRow> | null = null;
     if (gaiaSourceId) {
@@ -651,7 +620,7 @@ export function rowResolver({
         bailerJones: bjStep,
         lmc: lmcStep,
         rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
-        velocityClamped,
+        speed,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
       size: {
@@ -660,16 +629,10 @@ export function rowResolver({
         apsis: apsis === null ? null : { ref: apsis.ref, outOfWindow: apsisTeff.outOfWindow },
         classEvidence: spectral.via === 'none' ? [] : spectral.evidence,
       },
-      rv,
       star,
       facts: {
-        bailerJonesEligible,
-        inLmcCone,
-        tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
-          ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
-          : null,
         distPc: dist,
-        fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
+        speedKmS: speedPcYr / KM_S_TO_PC_YR,
       },
     };
   };
