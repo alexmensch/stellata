@@ -76,9 +76,6 @@ export interface FiledCounts {
    *  catalog row (most pair rows fall here — the brighter component is
    *  almost always a record already). */
   companionAlreadyInCatalog: number;
-  /** Pair rows dropped because both gaia_source_id AND hip were blank
-   *  on the secondary — no way for runtime code to address them. */
-  companionDroppedNoIdentifier: number;
   /** Pair rows dropped because neither the secondary's own astrometry
    *  nor sep+PA tangent projection from the primary yielded a 3D
    *  position. */
@@ -417,7 +414,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   companionPromoted: 'promotion',
   companionPromotedSynthetic: 'promotion',
   companionAlreadyInCatalog: 'promotion',
-  companionDroppedNoIdentifier: 'promotion',
   companionDroppedNoPosition: 'promotion',
   companionDroppedBeyondTidalLimit: 'promotion',
   companionDroppedNoAbsmag: 'promotion',

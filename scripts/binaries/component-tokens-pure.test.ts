@@ -76,13 +76,13 @@ describe('composeSyntheticId', () => {
     expect(composeSyntheticId('16120-1928-Aa,Ab', 'Ab')).toBe('synth-16120-1928-Ab');
   });
 
-  it('returns null for empty comp letter', () => {
-    expect(composeSyntheticId('03082+4057-Aa,Ab', '')).toBeNull();
-    expect(composeSyntheticId('03082+4057-Aa,Ab', '   ')).toBeNull();
+  it('throws on an empty comp letter', () => {
+    expect(() => composeSyntheticId('03082+4057-Aa,Ab', '')).toThrow(/no synthetic key/);
+    expect(() => composeSyntheticId('03082+4057-Aa,Ab', '   ')).toThrow(/no synthetic key/);
   });
 
-  it('returns null when system_id has no dash (malformed)', () => {
-    expect(composeSyntheticId('NODASH', 'Ab')).toBeNull();
+  it('throws when system_id has no dash (malformed)', () => {
+    expect(() => composeSyntheticId('NODASH', 'Ab')).toThrow(/no synthetic key/);
   });
 });
 

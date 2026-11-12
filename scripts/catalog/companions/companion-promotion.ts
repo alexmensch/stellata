@@ -181,7 +181,7 @@ export type RowOutcome =
   | {
     kind: 'dropped';
     reason: 'compound-comp' | 'beyond-tidal-limit' | 'collocated-primary'
-      | 'no-identifier' | 'no-position' | 'no-absmag';
+      | 'no-position' | 'no-absmag';
   }
   | { kind: 'dropped'; reason: 'anchor-is-component'; idx: number }
   | { kind: 'dropped'; reason: 'parked-record'; parked: string; viaGaia5p: boolean; ownedFit: boolean }
@@ -219,7 +219,7 @@ export interface PromotedRow {
   anchor: string | null;
   systemAnchor: string | null;
   /** The synthetic key a mint from this row would carry, whether or not it minted. */
-  synthKey: string | null;
+  synthKey: string;
 }
 
 export type PromotionStats = RowOutcomeStats & PostPassStats;
@@ -233,9 +233,6 @@ export interface RowOutcomeStats {
   promoted: number;
   /** Subset of `promoted` addressable only via the synthetic-ID path. */
   promotedSynthetic: number;
-  /** Dropped because no identifier could be formed (gaia + hip both
-   *  blank AND synthetic key uncomposable). */
-  droppedNoIdentifier: number;
   /** Dropped because no anchor — neither own astrometry nor sep+PA. */
   droppedNoPosition: number;
   /** Dropped because the tangent projection ρ·d exceeds
@@ -501,7 +498,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
     alreadyInCatalog: 0,
     promoted: 0,
     promotedSynthetic: 0,
-    droppedNoIdentifier: 0,
     droppedNoPosition: 0,
     droppedBeyondTidalLimit: 0,
     droppedNoAbsmag: 0,
@@ -540,7 +536,6 @@ export function foldRowOutcomes(rows: readonly PromotedRow[]): RowOutcomeStats {
           case 'compound-comp': stats.droppedCompoundComp++; break;
           case 'beyond-tidal-limit': stats.droppedBeyondTidalLimit++; break;
           case 'collocated-primary': stats.droppedCollocatedPrimary++; break;
-          case 'no-identifier': stats.droppedNoIdentifier++; break;
           case 'anchor-is-component': stats.anchorIsComponent++; break;
           case 'no-position': stats.droppedNoPosition++; break;
           case 'no-absmag': stats.droppedNoAbsmag++; break;
@@ -1211,7 +1206,7 @@ interface PromoteRowContext {
   canonicalComp: string;
   /** `composeSyntheticId` of the row over `canonicalComp`: the key a mint
    *  carries, and the one its PromotedRow records. */
-  synthKey: string | null;
+  synthKey: string;
   /** True when this row is a pair-row-primary escape (the cursor primary
    *  itself, promoted as a companion of the WDS-root anchor); drives
    *  anchorDmagApplies=false in imputeCompanionAbsmag. */
@@ -1469,9 +1464,6 @@ function promoteRow(
   const { row, anchorPrimaryRow, anchorStar, systemAnchorStar, anchorCatalogIdx,
           position, canonicalComp, isPairRowPrimary, synthKey: synthId } = ctx;
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
-  if (row.gaiaSourceId === null && !rowHasOwnHip && synthId === null) {
-    return { kind: 'dropped', reason: 'no-identifier' };
-  }
   // Gaia inheritance gate. Gaia resolves only the blended photocentre
   // of sub-arcsec pairs, so Stage 2/3 bind the SAME source_id to both
   // component rows (2090 tight pairs). Like the inherited HIP below,
@@ -1577,9 +1569,6 @@ function promoteRow(
   const companionHip = inheritedHip ? null : row.hip;
   const usesSynth = companionGaia === null && companionHip === null;
   if (usesSynth) {
-    if (synthId === null) {
-      return { kind: 'dropped', reason: 'no-identifier' };
-    }
     const mintedOnSynth = state.promotedBySynth.get(synthId);
     if (mintedOnSynth !== undefined) {
       return { kind: 'adopted', idx: mintedOnSynth, via: 'earlier-mint' };
@@ -1758,7 +1747,7 @@ function promoteRow(
     if (bucket) bucket.push(cand);
     else state.gaiaPhotometryByBackingSource.set(row.gaiaSourceId, [cand]);
   }
-  if (usesSynth) state.promotedBySynth.set(synthId as string, newIdx);
+  if (usesSynth) state.promotedBySynth.set(synthId, newIdx);
   if (companionGaia) state.promotedByGaia.set(companionGaia, newIdx);
   if (companionHip !== null) state.promotedByHip.set(companionHip, newIdx);
   return {
@@ -1906,8 +1895,7 @@ export function promoteCompanions(
       // Sub-letter primaries (Castor Ca) are excluded: the inner-pair
       // post-pass + writer parent override own that re-homing.
       const escapedIdx =
-        (primarySynthKey !== null ? state.promotedBySynth.get(primarySynthKey) : undefined)
-        ?? escapeCursorPrimary(cursor);
+        state.promotedBySynth.get(primarySynthKey) ?? escapeCursorPrimary(cursor);
       if (escapedIdx !== null && escapedIdx !== undefined) {
         primaryCatalogIdx = escapedIdx;
       }
@@ -2047,9 +2035,7 @@ export function promoteCompanions(
     const parentTok = parentComponentToken(cursor.primary.comp);
     if (parentTok === null) continue;
     const parentSynth = composeSyntheticId(cursor.primary.systemId, parentTok);
-    const parentIdx = (parentSynth !== null
-      ? state.promotedBySynth.get(parentSynth)
-      : undefined)
+    const parentIdx = state.promotedBySynth.get(parentSynth)
       ?? componentIndex.get(compKey(wdsRootOf(cursor.primary.systemId), parentTok) ?? '');
     if (parentIdx === undefined) continue;
     const parentStar = getStarAt(parentIdx);
@@ -2370,7 +2356,7 @@ function escapeAnchorOf(
 function promoteCursorPrimary(
   primary: MultiplesTsvRow,
   anchor: SystemAnchor,
-  synthKey: string | null,
+  synthKey: string,
   state: PromotionState,
 ): RowOutcome {
   // Neither route available → drop. Collocating at the anchor would bake a

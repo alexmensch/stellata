@@ -239,7 +239,7 @@ promotion.dropped.beyond-tidal-limit	promotion	retire	outcome	live		7.1.6	Projec
 promotion.dropped.collocated-primary	promotion	retire	outcome	live		7.1.6	A pair's primary promoted as the system anchor's companion has neither its own fit nor a measured offset from the anchor, so it has no position.
 promotion.dropped.compound-comp	promotion	retire	outcome	live		7.1.6	The row's component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.
 promotion.dropped.no-absmag	promotion	retire	outcome	live		7.1.6	The row has no brightness of its own: no photometry, magnitude difference, WDS magnitude or per-component spectral type, and no renderable orbit.
-promotion.dropped.no-identifier	promotion	retire	outcome	live		7.1.6	The row has no Gaia source, no HIP of its own and no composable synthetic key.
+promotion.dropped.no-identifier	promotion	retire	outcome	retired	7.1.20	7.1.6	The row has no Gaia source, no HIP of its own and no composable synthetic key.
 promotion.dropped.no-position	promotion	retire	outcome	live		7.1.6	The row has neither an independent fit nor a measured separation and position angle off its anchor.
 promotion.dropped.parked-record	promotion	park	outcome	live		7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
 promotion.minted	promotion	none	outcome	live		7.1.6	The row becomes a new catalogue record.

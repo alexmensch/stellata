@@ -1162,7 +1162,7 @@ describe('promoteCompanions rows', () => {
       systemId: '00001+0001-AB', comp: 'B', gaiaSourceId: '222', astrometryVia: 'gaia_5p',
       x_pc: 40, y_pc: 0.01, z_pc: 0, distPc: 40,
     });
-    const standalone = multiplesRow({ systemId: '00002+0002', comp: 'A', orbitRole: 'standalone' });
+    const standalone = multiplesRow({ systemId: '00002+0002-_A', comp: 'A', orbitRole: 'standalone' });
     const unresolved = multiplesRow({
       systemId: '00003+0003-AB', comp: 'A', orbitRole: 'primary', gaiaSourceId: '999',
     });
@@ -1638,7 +1638,6 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
     const { newStars, stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
-    expect(stats.droppedNoIdentifier).toBe(0);
     expect(stats.promoted).toBe(1);
     expect(stats.promotedSynthetic).toBe(1);
     expect(newStars).toHaveLength(1);
@@ -1687,16 +1686,6 @@ describe('promoteCompanions', () => {
     expect(newStars).toHaveLength(1);
     const aa2 = newStars[0];
     expect(aa2.syntheticId).toBe('synth-03082+4057-Aa2');
-  });
-
-  it('drops a secondary when both gaia/hip are blank AND no synth ID can be composed (no comp letter)', () => {
-    const rows = siriusRows();
-    rows[1].gaiaSourceId = null;
-    rows[1].hip = null;
-    rows[1].comp = '';
-    const { stats } = promoteCompanions(rows, [sirius_a_existing], inputs());
-    expect(stats.droppedNoIdentifier).toBe(1);
-    expect(stats.promoted).toBe(0);
   });
 
   it('promotes a no-gaia secondary whose HIP was inherited from the primary (findExisting escape) and mints a synthetic ID', () => {
@@ -3249,12 +3238,11 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
 describe('foldRowOutcomes', () => {
   const row = multiplesRow();
   const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: true };
-  const unanchored = { anchor: null, systemAnchor: null, synthKey: null };
+  const unanchored = { anchor: null, systemAnchor: null, synthKey: 'synth-00000+0000-B' };
   const outcomes: RowOutcome[] = [
     { kind: 'dropped', reason: 'compound-comp' },
     { kind: 'dropped', reason: 'beyond-tidal-limit' },
     { kind: 'dropped', reason: 'collocated-primary' },
-    { kind: 'dropped', reason: 'no-identifier' },
     { kind: 'dropped', reason: 'anchor-is-component', idx: 0 },
     { kind: 'dropped', reason: 'no-position' },
     { kind: 'dropped', reason: 'no-absmag' },
@@ -3284,11 +3272,10 @@ describe('foldRowOutcomes', () => {
       { row, via: 'primary', outcome: { kind: 'primary-unresolved' }, ...unanchored },
     ]);
     expect(stats).toEqual({
-      pairRowsScanned: 14,
+      pairRowsScanned: 13,
       alreadyInCatalog: 3,
       promoted: 2,
       promotedSynthetic: 1,
-      droppedNoIdentifier: 1,
       droppedNoPosition: 1,
       droppedBeyondTidalLimit: 1,
       droppedNoAbsmag: 1,

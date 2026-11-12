@@ -66,7 +66,6 @@ function baseCounts() {
     companionPromoted: 4500,
     companionPromotedSynthetic: 12,
     companionAlreadyInCatalog: 7000,
-    companionDroppedNoIdentifier: 100,
     companionDroppedNoPosition: 500,
     companionDroppedBeyondTidalLimit: 0,
     companionDroppedNoAbsmag: 900,

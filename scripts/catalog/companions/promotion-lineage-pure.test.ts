@@ -10,7 +10,7 @@ import {
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
 const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): PromotedRow => (
-  { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', synthKey: null, ...anchors }
+  { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', synthKey: 'synth-22266-1645-B', ...anchors }
 );
 const recordKey = (idx: number): string => `spine:${idx}`;
 const own = { source: 'own', spectMsFromOwnAbsmag: false } as const;
@@ -106,16 +106,17 @@ describe('promotionLineage identity', () => {
     }]);
   });
 
-  it('keys a parked or retired row on the identifier cells it arrived with, and skips one with none', () => {
+  it('keys a parked or retired row on the identifier cells it arrived with, and skips one whose every designation is founded', () => {
     const standalone = multiplesRow({ systemId: '19082+3829-_C', comp: 'C', hip: 42, gaiaSourceId: '2099222754064121216' });
     const { identity } = promotionLineage([
-      { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: null },
+      { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: 'synth-19082+3829-C' },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
-    ], stars, new Set());
+    ], stars, new Set(['synth:22266-1645-B']));
     expect(identity).toEqual([
       {
         key: 'multiples:19082+3829-_C/C', tyc: '', hip: '42', hd: '', gl: '',
-        gaia_source_id: '2099222754064121216', designations: ['hip:42', 'gaia_dr3:2099222754064121216'],
+        gaia_source_id: '2099222754064121216',
+        designations: ['hip:42', 'synth:19082+3829-C', 'gaia_dr3:2099222754064121216'],
       },
     ]);
   });
@@ -137,17 +138,17 @@ describe('promotionLineage identity', () => {
   it('keys a removed row on no designation membership or a mint of this stage already founds', () => {
     const unpaired = (comp: string, cells: { hip?: number; gaiaSourceId?: string }): PromotedRow => ({
       row: multiplesRow({ systemId: '21050+1243-_X', comp, ...cells }),
-      via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: null,
+      via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: `synth-21050+1243-${comp}`,
     });
     const { identity } = promotionLineage([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       unpaired('A', { hip: 104066 }),
       unpaired('B', { gaiaSourceId: '2595463996992115840' }),
       unpaired('C', { hip: 104066, gaiaSourceId: '77' }),
-    ], stars, new Set(['hip:104066']));
+    ], stars, new Set(['hip:104066', 'synth:21050+1243-A', 'synth:21050+1243-B']));
     expect(identity.map((r) => [r.key, r.hip, r.gaia_source_id, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', '', '2595463996992115840', ['synth:22266-1645-B', 'gaia_dr3:2595463996992115840']],
-      ['multiples:21050+1243-_X/C', '', '77', ['gaia_dr3:77']],
+      ['multiples:21050+1243-_X/C', '', '77', ['synth:21050+1243-C', 'gaia_dr3:77']],
     ]);
   });
 });

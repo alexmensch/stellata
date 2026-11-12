@@ -13,12 +13,13 @@ import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_040_000, writeMs: 10_000 };
 
 const RETIRED_7_1_8 = retired('7.1.8');
+const RETIRED_7_1_20 = retired('7.1.20');
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
   'dropped.beyond-tidal-limit': outcomeCode('Projected at the anchor\'s distance, the pair is wider than the 1 pc tidal limit, so it cannot be bound.', 'retire'),
   'dropped.collocated-primary': outcomeCode('A pair\'s primary promoted as the system anchor\'s companion has neither its own fit nor a measured offset from the anchor, so it has no position.', 'retire'),
-  'dropped.no-identifier': outcomeCode('The row has no Gaia source, no HIP of its own and no composable synthetic key.', 'retire'),
+  'dropped.no-identifier': outcomeCode('The row has no Gaia source, no HIP of its own and no composable synthetic key.', 'retire', RETIRED_7_1_20),
   'dropped.anchor-is-component': outcomeCode('The row\'s ids resolve to its anchor\'s record, which the naming authority already letters as this component, so that record is the component.', 'merge'),
   'dropped.parked-record': outcomeCode('The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.', 'park'),
   'dropped.no-position': outcomeCode('The row has neither an independent fit nor a measured separation and position angle off its anchor.', 'retire'),

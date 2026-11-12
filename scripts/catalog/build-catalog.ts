@@ -317,7 +317,6 @@ export async function main() {
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
     companionAlreadyInCatalog: 0,
-    companionDroppedNoIdentifier: 0,
     companionDroppedNoPosition: 0,
     companionDroppedBeyondTidalLimit: 0,
     companionDroppedNoAbsmag: 0,
@@ -584,8 +583,7 @@ export async function main() {
       `already-in-catalog ${ps.alreadyInCatalog} ` +
       `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
       `${ps.existingViaSameasBridge} via same-as bridge); ` +
-      `dropped (no-identifier=${ps.droppedNoIdentifier}, ` +
-      `no-position=${ps.droppedNoPosition}, ` +
+      `dropped (no-position=${ps.droppedNoPosition}, ` +
       `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
       `no-absmag=${ps.droppedNoAbsmag}, ` +
       `compound-comp=${ps.droppedCompoundComp}, ` +
@@ -612,7 +610,6 @@ export async function main() {
   counts.companionPromoted = ps.promoted;
   counts.companionPromotedSynthetic = ps.promotedSynthetic;
   counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
-  counts.companionDroppedNoIdentifier = ps.droppedNoIdentifier;
   counts.companionDroppedNoPosition = ps.droppedNoPosition;
   counts.companionDroppedBeyondTidalLimit = ps.droppedBeyondTidalLimit;
   counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
