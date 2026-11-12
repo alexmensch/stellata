@@ -348,8 +348,9 @@ founds no record, so it writes no identity rows.
 
 Measured 2026-11-12: 3,888,456 rows (360 MB plain, 32.4 MB gzipped), 16.1 s
 with a diff against a full baseline on a local build;
-`PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 40 s: a CI run with a diff took
-26.5 s (2026-11-06).
+`PLACEMENT_LINEAGE_BUDGET` pins 34 MB and 60 s: a CI run with a diff took
+26.5 s (2026-11-06), and one diffing a near-total re-code (904,855 keys)
+46.2 s, 18.6 s of it the diff (2026-11-12).
 
 ## Placement counts
 
