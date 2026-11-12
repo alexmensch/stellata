@@ -7,14 +7,13 @@ import {
   compareCountSnapshot,
   driftedRows,
   formatCountDiff,
-  formatPartition,
   type BuildCounts,
 } from './build-counts';
 import { RECURATED_BRIGHTNESS } from './companions/companion-promotion';
 import { DIST_VIA_VALUES } from '../../src/catalog-format/record/catalog-pure';
 
 function baseCounts() {
-  return {
+  const counts = {
     recordCount: 313242,
     binaryPairs: 100,
     binaryMutualPairs: 50,
@@ -38,18 +37,8 @@ function baseCounts() {
     multiplicityUnresolved: 5000,
     componentDesignations: 16000,
     bjEntries: 310000,
-    bjEligible: 305000,
-    bjOverridden: 304000,
     apsisSourcesUnpulled: 4000,
     gspcSourcesUnpulled: 30000,
-    lmcCandidates: 1200,
-    lmcOverridden: 60,
-    lmcParallaxRefusedByDistVia: {
-      ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 3,
-    },
-    lmcOverriddenByDistVia: {
-      ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 58, gaia_dr3_inversion: 2,
-    },
     nameTableEntries: 350,
     variableCount: 3677,
     searchEntries: 290000,
@@ -126,58 +115,11 @@ function baseCounts() {
     pairMemberSiblingNoParallax: 0,
     pairMemberSiblingNotAnchorGrade: 0,
     pairMemberSiblingBelowSnFloor: 0,
-    distBailerJones: 0,
-    distLmcKinematic: 0,
-    distGaiaDr3Inversion: 0,
-    distHip2Parallax: 0,
-    distCns5Plx: 0,
-    distGliesePlx: 0,
-    distGliesePhotometricPlx: 0,
-    distSimbadPlx: 0,
-    distPairMemberParallax: 0,
-    distCurated: 0,
-    distNone: 0,
-    distLowPrecisionParallax: 840,
-    parkedRefusedNoDefensibleParallax: 0,
-    parkedNoParallaxPublished: 0,
-    parkedNoVMagnitude: 0,
-    parkedNoPosition: 0,
-    directionGaia5p: 300000,
-    directionGaia2p: 200,
-    directionGaiaNssSystemic: 10000,
-    directionHip2Saturated: 2500,
-    directionHip2PmDiscrepant: 146,
-    directionTycho2: 43,
-    directionTycho2FromIcrs: 3,
-    directionTycho2Photocentre: 2,
-    directionCns5: 4,
-    directionSimbad: 13,
-    directionCurated: 1,
-    velocityGaiaPm: 308000,
-    velocityHip2Pm: 2600,
-    velocityTycho2Pm: 40,
-    velocityCns5Pm: 4,
-    velocitySimbadPm: 13,
-    velocityZero: 2617,
-    pmRescueTycho2: 242,
-    pmRescueCns5: 2,
-    pmRescueSimbad: 17,
-    pmRescueGaiaBibcodeSkipped: 13,
-    pmRescueNone: 2,
-    velocityClamped: 40,
-    velocityAboveEscape: 50,
-    velocityRvApplied: 267000,
-    rvGaiaDr3: 250000,
-    rvSimbad: 7000,
-    rvSimbadGaiaBibcode: 240,
-    rvGaiaBibcodeSkipped: 205,
-    rvNone: 46000,
-    rvRadialRejected: 1,
-    rvGaiaErrorBands: {
-      none: 0, le1: 200000, le5: 40000, le10: 6000, le20: 3000, gt20: 1000,
-    },
-    rvGaiaErrorMaxKmS: 39.9433,
   } satisfies Partial<BuildCounts>;
+  return {
+    ...counts,
+    tierPartition: { ...emptyTallyPartition(DIST_VIA_VALUES), bailer_jones: 58, gaia_dr3_inversion: 2 },
+  };
 }
 
 type FixtureCounts = ReturnType<typeof baseCounts>;
@@ -219,11 +161,11 @@ describe('compareBuildCounts', () => {
   it('names the drifting bucket of a partition, not the whole partition', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    actual.lmcOverriddenByDistVia.hip2_parallax = 11;
+    actual.tierPartition.hip2_parallax = 11;
     const mismatches = compareBuildCounts(expected, actual)
       .filter((d) => d.status === 'mismatch');
     expect(mismatches).toEqual([{
-      key: 'lmcOverriddenByDistVia.hip2_parallax',
+      key: 'tierPartition.hip2_parallax',
       status: 'mismatch',
       expected: 0,
       actual: 11,
@@ -233,11 +175,11 @@ describe('compareBuildCounts', () => {
   it('flags a partition bucket the snapshot has no entry for', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected.lmcOverriddenByDistVia as Partial<Record<string, number>>).gaia_dr3_inversion;
+    delete (expected.tierPartition as Partial<Record<string, number>>).gaia_dr3_inversion;
     expect(drifted(expected, actual)).toEqual([{
-      key: 'lmcOverriddenByDistVia.gaia_dr3_inversion',
+      key: 'tierPartition.gaia_dr3_inversion',
       status: 'absent-from-snapshot',
-      actual: actual.lmcOverriddenByDistVia.gaia_dr3_inversion,
+      actual: actual.tierPartition.gaia_dr3_inversion,
     }]);
   });
 
@@ -262,11 +204,11 @@ describe('compareBuildCounts', () => {
   it('flags a partition bucket the build no longer produces', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (actual.lmcOverriddenByDistVia as Partial<Record<string, number>>).bailer_jones;
+    delete (actual.tierPartition as Partial<Record<string, number>>).bailer_jones;
     expect(drifted(expected, actual)).toEqual([{
-      key: 'lmcOverriddenByDistVia.bailer_jones',
+      key: 'tierPartition.bailer_jones',
       status: 'absent-from-build',
-      expected: expected.lmcOverriddenByDistVia.bailer_jones,
+      expected: expected.tierPartition.bailer_jones,
     }]);
   });
 
@@ -324,20 +266,20 @@ describe('formatCountDiff', () => {
   it('labels a partition mismatch with its dotted bucket key', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    actual.lmcOverriddenByDistVia.cns5_plx = 3;
+    actual.tierPartition.cns5_plx = 3;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(
-      /lmcOverriddenByDistVia\.cns5_plx\s+expected 0, got 3 \(\+3\)/,
+      /tierPartition\.cns5_plx\s+expected 0, got 3 \(\+3\)/,
     );
   });
 
   it('says "absent from snapshot" rather than printing a NaN delta', () => {
     const expected = baseCounts();
     const actual = baseCounts();
-    delete (expected.lmcOverriddenByDistVia as Partial<Record<string, number>>).bailer_jones;
+    delete (expected.tierPartition as Partial<Record<string, number>>).bailer_jones;
     const out = formatCountDiff(compareBuildCounts(expected, actual));
     expect(out).toMatch(
-      /lmcOverriddenByDistVia\.bailer_jones\s+absent from snapshot, got 58/,
+      /tierPartition\.bailer_jones\s+absent from snapshot, got 58/,
     );
     expect(out).not.toMatch(/NaN/);
   });
@@ -399,13 +341,5 @@ describe('compareCountSnapshot', () => {
     expect(formatCountDiff(compareBuildCounts<object>(counted, absent)))
       .toContain("filter stage's input is absent from the build, counted in the snapshot");
     expect(compareCountSnapshot<object>(absent, absent).drifted).toBe(false);
-  });
-});
-
-describe('formatPartition', () => {
-  it('lists every bucket in declaration order, zeros included', () => {
-    expect(formatPartition({ bailer_jones: 58, gaia_dr3_inversion: 2, curated: 0 })).toBe(
-      'bailer_jones=58, gaia_dr3_inversion=2, curated=0',
-    );
   });
 });

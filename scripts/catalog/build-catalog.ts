@@ -21,7 +21,6 @@ import {
   planCatalogChunks,
   recordsInChunkPrefix,
   type CatalogManifest,
-  DIST_VIA_VALUES,
   SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
@@ -42,11 +41,9 @@ import {
   CATALOG_COUNT_STAGE,
   CATALOG_COUNT_STAGES,
   compareCountSnapshot,
-  formatPartition,
   type CatalogCountStage,
   type FiledCounts,
 } from './build-counts';
-import { DIST_VIA_COUNT_KEY } from './distance/parallax/parallax-cascade';
 import {
   buildRegressionReport,
   compareRegressionReports,
@@ -110,8 +107,7 @@ import {
   gcvsSummary,
 } from './parse/gcvs/gcvs-parse';
 import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
-import { RV_ERROR_BANDS } from './distance/radial-velocity/radial-velocity';
-import { emptyTallyPartition } from '../util/counts/tally-pure';
+import { emptyTallyPartition, formatPartition } from '../util/counts/tally-pure';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationIndex,
@@ -126,14 +122,11 @@ import {
   NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary, type NamingCounts,
 } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
-import {
-  PARKED_COUNT_KEY,
-  PARKED_REASONS,
-} from './distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from './distance/placement-lineage-pure';
+import { placementSummary } from './distance/placement-counts-pure';
 import {
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
@@ -241,7 +234,7 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       });
       const parkedLedger = parkedLedgerTsv(placementLines);
       const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-      const placementEmission = catalogStageLineage(
+      const placementEmission = catalogCountedStageLineage(
         PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
       );
       // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
@@ -307,12 +300,6 @@ export async function main() {
   const inputHashesAtStart = stepInputHashes();
 
   const counts: FiledCounts = {
-    bjEligible: 0,
-    bjOverridden: 0,
-    lmcCandidates: 0,
-    lmcOverridden: 0,
-    lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
-    lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     companionRowsScanned: 0,
     companionPromoted: 0,
     companionPromotedSynthetic: 0,
@@ -346,55 +333,6 @@ export async function main() {
     companionExistingDesigConFromAnchor: 0,
     companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
     companionExistingViaSameasBridge: 0,
-    distBailerJones: 0,
-    distLmcKinematic: 0,
-    distGaiaDr3Inversion: 0,
-    distHip2Parallax: 0,
-    distCns5Plx: 0,
-    distGliesePlx: 0,
-    distSimbadPlx: 0,
-    distGliesePhotometricPlx: 0,
-    distPairMemberParallax: 0,
-    distCurated: 0,
-    distNone: 0,
-    distLowPrecisionParallax: 0,
-    parkedRefusedNoDefensibleParallax: 0,
-    parkedNoParallaxPublished: 0,
-    parkedNoVMagnitude: 0,
-    parkedNoPosition: 0,
-    directionGaia5p: 0,
-    directionGaia2p: 0,
-    directionGaiaNssSystemic: 0,
-    directionHip2Saturated: 0,
-    directionHip2PmDiscrepant: 0,
-    directionTycho2: 0,
-    directionTycho2FromIcrs: 0,
-    directionTycho2Photocentre: 0,
-    directionCns5: 0,
-    directionSimbad: 0,
-    directionCurated: 0,
-    velocityGaiaPm: 0,
-    velocityHip2Pm: 0,
-    velocityTycho2Pm: 0,
-    velocityCns5Pm: 0,
-    velocitySimbadPm: 0,
-    velocityZero: 0,
-    pmRescueTycho2: 0,
-    pmRescueCns5: 0,
-    pmRescueSimbad: 0,
-    pmRescueGaiaBibcodeSkipped: 0,
-    pmRescueNone: 0,
-    velocityClamped: 0,
-    velocityAboveEscape: 0,
-    velocityRvApplied: 0,
-    rvGaiaDr3: 0,
-    rvSimbad: 0,
-    rvSimbadGaiaBibcode: 0,
-    rvGaiaBibcodeSkipped: 0,
-    rvNone: 0,
-    rvRadialRejected: 0,
-    rvGaiaErrorBands: emptyTallyPartition(RV_ERROR_BANDS),
-    rvGaiaErrorMaxKmS: 0,
   };
 
   const inputs = await loadReadStarsInputs();
@@ -410,64 +348,8 @@ export async function main() {
   } = walkManifest(inputs, inputHashesAtStart);
   console.log(`  parsed ${stats.total} rows in ${Date.now() - t0}ms`);
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
-  if (stats.bjEligible > 0) {
-    const pct = ((stats.bjOverridden / stats.bjEligible) * 100).toFixed(1);
-    console.log(
-      `  Bailer-Jones override: ${stats.bjOverridden} / ${stats.bjEligible} ` +
-        `Gaia-inverse-distance stars (${pct}%)`,
-    );
-  }
-  if (stats.lmcCandidates > 0) {
-    const pct = ((stats.lmcOverridden / stats.lmcCandidates) * 100).toFixed(1);
-    console.log(
-      `  LMC kinematic override: ${stats.lmcOverridden} / ${stats.lmcCandidates} ` +
-        `LMC-cone stars (${pct}%)`,
-    );
-    console.log(
-      `    displacing: ${formatPartition(stats.lmcOverriddenByDistVia)}`,
-    );
-    console.log(
-      `    refused on own parallax, keeping: ${formatPartition(stats.lmcParallaxRefusedByDistVia)}`,
-    );
-  }
-  const dv = stats.directionVia;
-  console.log(
-    `  direction cascade: gaia_5p ${dv.gaia_5p}, ` +
-      `gaia_nss_systemic ${dv.gaia_nss_systemic}, ` +
-      `hip2_saturated ${dv.hip2_saturated}, ` +
-      `hip2_pm_discrepant ${dv.hip2_pm_discrepant}, ` +
-      `tycho2 ${dv.tycho2} (${stats.directionTycho2FromIcrs} at the J2000 ` +
-      `cell with no mean solution, ${stats.directionTycho2Photocentre} a ` +
-      `double's photocentre), cns5 ${dv.cns5}, simbad ${dv.simbad}, ` +
-      `curated ${dv.curated}`,
-  );
+  console.log(placementSummary(placementEmission.counts, stats.placementDerived));
   console.log(brightnessColourSummary(brightnessEmission.counts));
-  const vv = stats.velocityVia;
-  console.log(
-    `  velocity cascade: gaia_pm ${vv.gaia_pm}, hip2_pm ${vv.hip2_pm}, ` +
-      `tycho2_pm ${vv.tycho2_pm}, cns5_pm ${vv.cns5_pm}, ` +
-      `simbad_pm ${vv.simbad_pm}, zero ${vv.zero} ` +
-      `(clamped ${stats.velocityClamped}); rv applied ${stats.rvApplied}`,
-  );
-  const pmr = stats.pmRescueOutcome;
-  console.log(
-    `  PM rescue (direction tier carries none): tycho2 ${pmr.tycho2}, ` +
-      `cns5 ${pmr.cns5}, simbad ${pmr.simbad}, ` +
-      `${pmr.gaia_bibcode_skipped} Gaia-bibcoded values skipped on 2p rows, ` +
-      `${pmr.none} with no owned PM`,
-  );
-  const rv = stats.rvVia;
-  const rvErr = stats.rvGaiaErrorBand;
-  console.log(
-    `  rv cascade: gaia_dr3 ${rv.gaia_dr3}, simbad ${rv.simbad} ` +
-      `(${stats.rvSimbadGaiaBibcode} citing a Gaia release), none ${rv.none}; ` +
-      `${stats.rvGaiaBibcodeSkipped} Gaia-bibcoded values skipped on 2p rows`,
-  );
-  console.log(
-    `  rv uncertainty on the gaia_dr3 tier: <=1 ${rvErr.le1}, <=5 ${rvErr.le5}, ` +
-      `<=10 ${rvErr.le10}, <=20 ${rvErr.le20}, >20 ${rvErr.gt20}, ` +
-      `absent ${rvErr.none}; max ${stats.rvGaiaErrorMaxKmS} km/s`,
-  );
   if (stats.rvRadialRejectedSample.length > 0) {
     console.log(
       `  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`,
@@ -479,64 +361,11 @@ export async function main() {
     for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
   }
   console.log(
-    `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked): ${stats.velocityAboveEscape} ` +
-      `— sample (first ${stats.velocityAboveEscapeSample.length}):`,
+    `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — `
+      + `sample (first ${stats.velocityAboveEscapeSample.length}):`,
   );
   for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);
-  console.log(
-    '  distance by tier: '
-    + DIST_VIA_VALUES.map((v) => `${v}=${stats.distVia[v]}`).join(' · '),
-  );
-  if (stats.distLowPrecisionParallax > 0) {
-    console.log(
-      `  parallaxes admitted below 20% precision: ${stats.distLowPrecisionParallax}`
-      + ' (ship, biased inversion — revisit at Gaia DR4)',
-    );
-  }
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
-  counts.bjEligible = stats.bjEligible;
-  counts.bjOverridden = stats.bjOverridden;
-  counts.distLowPrecisionParallax = stats.distLowPrecisionParallax;
-  for (const r of PARKED_REASONS) counts[PARKED_COUNT_KEY[r]] = stats.parkedVia[r];
-  for (const v of DIST_VIA_VALUES) counts[DIST_VIA_COUNT_KEY[v]] = stats.distVia[v];
-  counts.lmcCandidates = stats.lmcCandidates;
-  counts.lmcOverridden = stats.lmcOverridden;
-  counts.lmcParallaxRefusedByDistVia = stats.lmcParallaxRefusedByDistVia;
-  counts.lmcOverriddenByDistVia = stats.lmcOverriddenByDistVia;
-  counts.directionGaia5p = dv.gaia_5p;
-  counts.directionGaia2p = dv.gaia_2p;
-  counts.directionGaiaNssSystemic = dv.gaia_nss_systemic;
-  counts.directionHip2Saturated = dv.hip2_saturated;
-  counts.directionHip2PmDiscrepant = dv.hip2_pm_discrepant;
-  counts.directionTycho2 = dv.tycho2;
-  counts.directionCns5 = dv.cns5;
-  counts.directionSimbad = dv.simbad;
-  counts.directionCurated = dv.curated;
-  counts.directionTycho2FromIcrs = stats.directionTycho2FromIcrs;
-  counts.directionTycho2Photocentre = stats.directionTycho2Photocentre;
-  counts.velocityGaiaPm = vv.gaia_pm;
-  counts.velocityHip2Pm = vv.hip2_pm;
-  counts.velocityTycho2Pm = vv.tycho2_pm;
-  counts.velocityCns5Pm = vv.cns5_pm;
-  counts.velocitySimbadPm = vv.simbad_pm;
-  counts.velocityZero = vv.zero;
-  const pr = stats.pmRescueOutcome;
-  counts.pmRescueTycho2 = pr.tycho2;
-  counts.pmRescueCns5 = pr.cns5;
-  counts.pmRescueSimbad = pr.simbad;
-  counts.pmRescueGaiaBibcodeSkipped = pr.gaia_bibcode_skipped;
-  counts.pmRescueNone = pr.none;
-  counts.velocityClamped = stats.velocityClamped;
-  counts.velocityAboveEscape = stats.velocityAboveEscape;
-  counts.velocityRvApplied = stats.rvApplied;
-  counts.rvGaiaDr3 = stats.rvVia.gaia_dr3;
-  counts.rvSimbad = stats.rvVia.simbad;
-  counts.rvSimbadGaiaBibcode = stats.rvSimbadGaiaBibcode;
-  counts.rvGaiaBibcodeSkipped = stats.rvGaiaBibcodeSkipped;
-  counts.rvNone = stats.rvVia.none;
-  counts.rvRadialRejected = stats.rvRadialRejected;
-  counts.rvGaiaErrorBands = stats.rvGaiaErrorBand;
-  counts.rvGaiaErrorMaxKmS = stats.rvGaiaErrorMaxKmS;
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
   // classic-ID tables still supply per record is IV/27A's constellation for
@@ -991,6 +820,8 @@ export async function main() {
       ...namingEmission.checks,
       buildCountsCheck(counts, [
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+        { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
+        { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
         { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },

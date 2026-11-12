@@ -13,7 +13,10 @@ scripts/catalog/lineage/reason-codes/
                                  count-block key), with their
                                  effect, role and status; outcomeCode and
                                  refusalCode, the two declaration shapes;
-                                 retired, a retired code's status.
+                                 retired, a retired code's status;
+                                 codeCount, a count block read by live
+                                 branch (LiveBranchOf), as each stage's log
+                                 summary reads it.
   reason-code-list-pure.ts       reasonCodeList, the generated list, and
                                  appendOnlyViolations.
   reason-codes-tsv.ts            REASON_CODES, the list's codec;
