@@ -9,9 +9,12 @@ export interface StagedCounts<V = unknown> {
   readonly stages: Readonly<Record<string, StageEntry<V>>>;
 }
 
+/** One count, or a partition of one by bucket. */
+export type CountValue = number | Readonly<Record<string, number>>;
+
 /** A stage's own counts, or the state that its input is missing: never zeros standing in for it. */
-export type CountBlock<K extends string> =
-  | { readonly kind: 'counted'; readonly counts: Readonly<Record<K, number>> }
+export type CountBlock<K extends string, V extends CountValue = number> =
+  | { readonly kind: 'counted'; readonly counts: Readonly<Record<K, V>> }
   | { readonly kind: 'absent' };
 
 /** The counts with no per-row decision of a stage, filed as a stage of their own beside it. */
@@ -21,9 +24,9 @@ export function derivedStage<S extends string>(stage: S): DerivedStage<S> {
   return `${stage}-derived`;
 }
 
-export interface StageBlock<S extends string> {
+export interface StageBlock<S extends string, V extends CountValue = number> {
   readonly stage: S | DerivedStage<S>;
-  readonly block: CountBlock<string>;
+  readonly block: CountBlock<string, V>;
 }
 
 /** Where each flat count of a staged snapshot is filed: the stages in pipeline order, and each key's stage. */
@@ -33,12 +36,12 @@ export interface CountStages<K extends string, S extends string> {
 }
 
 /** see README.md#the-staged-snapshot */
-export function nestByStage<K extends string, S extends string, V>(
+export function nestByStage<K extends string, S extends string, V, B extends CountValue = number>(
   flat: Readonly<Record<K, V>>,
   stages: CountStages<K, S>,
-  blocks: readonly StageBlock<S>[] = [],
-): StagedCounts<V | number> {
-  const nested = new Map<string, Record<string, V | number> | typeof ABSENT_STAGE>(
+  blocks: readonly StageBlock<S, B>[] = [],
+): StagedCounts<V | B> {
+  const nested = new Map<string, Record<string, V | B> | typeof ABSENT_STAGE>(
     stages.order.flatMap((stage) => [[stage, {}], [derivedStage(stage), {}]]),
   );
   const composed = new Set<string>();
