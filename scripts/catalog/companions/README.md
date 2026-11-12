@@ -619,6 +619,7 @@ membership's.
 
 Measured 2026-11-12: 75,366 rows — one outcome row per `multiples.tsv` row
 plus 28,345 facet rows — and 31,908 identity rows (the minted companions and
-the 17,232 rows promotion retires, parks or merges), 1.06 MB gzipped;
+the 17,232 rows promotion retires, parks or merges), 1.06 MB gzipped in
+0.46 s (header, diff, write and invariants; 0.31 s of it the baseline);
 `PROMOTION_LINEAGE_BUDGET` pins 1.16 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
