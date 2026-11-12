@@ -327,8 +327,8 @@ answers to** — a designation on two records keys no SID ([§ 4.1](/docs/sid.md
 so attaching one another record holds would cost that record its key. The claim
 set is the spine's after the label merge and grows as each group is admitted,
 so an earlier addition blocks a later one exactly as a spine row does. That
-lands its records under four reasons — `hd_link_gap` <!-- count:membership-manifest/membership.admit.hd-link-gap -->54,813<!-- /count --> · `hd_omitted` <!-- count:membership-manifest/membership.admit.hd-omitted -->5,063<!-- /count --> ·
-`hip_omitted` <!-- count:membership-manifest/membership.admit.hip-omitted -->425<!-- /count --> · `cns5_census` <!-- count:membership-manifest/membership.admit.cns5-census -->3,352<!-- /count --> — and ledgers **<!-- count:membership-manifest/membership.component -->465<!-- /count -->** groups as
+lands its records under four reasons — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
+`hip_omitted` 425 · `cns5_census` 3,352 — and ledgers **<!-- count:membership-manifest/membership.component -->465<!-- /count -->** groups as
 `component:<anchor>`, not as records. They are not the ~90 bright-double
 secondaries above, which reach the manifest as HD-addition records or as second
 HD numbers on spine TYCs: five are the second of such a pair with neither

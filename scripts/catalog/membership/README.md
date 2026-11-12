@@ -367,8 +367,11 @@ partition, `sharedDesignations`, the alias tallies and `spineCellsCorrected` —
 and `magnitude-term` the pull's partition, or `"absent"` while the floor is
 null. A per-row fact orthogonal to a row's outcome is a row of its own
 (`binding.consensus`, `unattested.<cell>`, `overlay.bright.*`, …), so no count
-is kept by hand. Totals the logs and the gate read — manifest rows, the review
-queue by verdict — are sums of codes (`membershipTotals`), never snapshot keys.
+is kept by hand. Each admission code names the binding class the row ships
+(`admit.spine.<class>`, `admit.<reason>.<class>`; a magnitude row is always
+`gaia_native`). Totals the logs and the gate read — manifest rows, rows per
+binding class, the review queue by verdict — are sums of codes
+(`membershipTotals`), never snapshot keys.
 Two zeros are assertions rather than keys: an unattested `hd` or `flam` cell,
 and an admitted addition keyed on its Gaia id alone, each throw.
 

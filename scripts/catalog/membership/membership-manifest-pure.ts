@@ -61,6 +61,8 @@ import {
   type MembershipDerivedCounts,
   type MembershipLedgers,
   type MembershipOutcome,
+  type AdditionBindingClass,
+  type PrimariesBindingClass,
   type RefusalSubject,
 } from './membership-lineage-pure';
 import { spineDesignations, type SpineRow } from '../spine/inherited-spine-pure';
@@ -424,7 +426,7 @@ function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
 /** See binding/README.md. */
 function settleBinding(
   b: SpineBinding, disposition: BindingDispositionRow | undefined, evidence: BindingEvidence,
-): { value: string | null; binding: BindingClass; asserted: boolean } {
+): { value: string | null; binding: PrimariesBindingClass; asserted: boolean } {
   const derived = b.derived!;
   if (disposition === undefined) {
     const shippable = b.outcome === 'bound' || b.outcome === 'contested';
@@ -620,7 +622,7 @@ interface AdditionGroup {
   rawGl: string | null;
   tyc: string;
   source: string | null;
-  binding: BindingClass;
+  binding: AdditionBindingClass;
   derived: DerivedBinding;
   sourceOnSpine: boolean;
   /** The TYC and HIP routes' candidates, where both propose one and they differ. */
@@ -847,12 +849,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const settled = spineBindings.map((b, i) => {
     const spineRow = kept[i];
     const origin = spineKey(i);
-    outcomes.push(
-      { key: origin, outcome: { kind: 'admit-spine' } },
-      { key: origin, outcome: spineBindingOutcome(spineRow, b, tables, evidence.wdsXids) },
-    );
+    outcomes.push({ key: origin, outcome: spineBindingOutcome(spineRow, b, tables, evidence.wdsXids) });
     let value: string | null = null;
-    let binding: BindingClass = 'none';
+    let binding: PrimariesBindingClass = 'none';
     if (b.derived !== null) {
       const d = b.derived;
       outcomes.push(...refusedCandidates(origin, 'spine', d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
@@ -886,6 +885,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         outcomes.push({ key: origin, outcome: { kind: 'consensus' } });
       }
     }
+    outcomes.push({ key: origin, outcome: { kind: 'admit-spine', binding } });
     const withheldAs: OwnCandidateReason = dispositions.get(bindingReviewKey(spineRow))?.basis === 'pair_component' ? 'component' : 'withheld';
     return { value, binding, withheldAs };
   });
@@ -1027,7 +1027,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       continue;
     }
     outcomes.push({
-      key: g.origin, outcome: { kind: 'admit-addition', reason: a.verdict.reason, members: g.members },
+      key: g.origin, outcome: { kind: 'admit-addition', reason: a.verdict.reason, binding: g.binding, members: g.members },
     });
     if (a.blocked.length > 0) {
       outcomes.push({ key: g.origin, outcome: {

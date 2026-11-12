@@ -22,6 +22,7 @@ import {
   type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
+import { BINDING_CLASSES, type BindingClass } from './membership-manifest-tsv';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
@@ -34,6 +35,42 @@ const ADDITION_BRANCHES = {
   'admitted:hip_omitted': 'admit.hip-omitted',
   'admitted:cns5_census': 'admit.cns5-census',
 } as const satisfies Record<AdditionReason, string>;
+type AdditionBranch = (typeof ADDITION_BRANCHES)[AdditionReason];
+
+/** The binding classes a primaries row can ship; a magnitude-term row is always `gaia_native`. */
+export type PrimariesBindingClass = Exclude<BindingClass, 'gaia_native'>;
+/** An addition ships no review disposition's value. */
+export type AdditionBindingClass = Exclude<PrimariesBindingClass, 'reviewed'>;
+const SPINE_BINDING_CLASSES = ['crosswalk_gated', 'simbad_corroborated', 'reviewed', 'none'] as const satisfies readonly PrimariesBindingClass[];
+const ADDITION_BINDING_CLASSES = ['crosswalk_gated', 'simbad_corroborated', 'none'] as const satisfies readonly AdditionBindingClass[];
+
+const CLASS_BRANCHES = {
+  crosswalk_gated: 'crosswalk-gated',
+  simbad_corroborated: 'simbad-corroborated',
+  reviewed: 'reviewed',
+  none: 'none',
+} as const satisfies Record<PrimariesBindingClass, string>;
+type ClassBranch<C extends PrimariesBindingClass> = (typeof CLASS_BRANCHES)[C];
+
+const CLASS_DESCRIPTIONS = {
+  crosswalk_gated: 'It ships a TYC, HIP or CNS5 candidate the binding gates passed.',
+  simbad_corroborated: 'It ships the source SIMBAD\'s cross-IDs hold under its own designation, through the binding gates.',
+  reviewed: 'It ships the value a committed review disposition settles.',
+  none: 'It ships no Gaia source.',
+} as const satisfies Record<PrimariesBindingClass, string>;
+
+type SpineAdmitBranch = `admit.spine.${ClassBranch<(typeof SPINE_BINDING_CLASSES)[number]>}`;
+type AdditionAdmitBranch = `${AdditionBranch}.${ClassBranch<AdditionBindingClass>}`;
+const spineAdmitBranch = (c: PrimariesBindingClass): SpineAdmitBranch => `admit.spine.${CLASS_BRANCHES[c]}`;
+const additionAdmitBranch = (r: AdditionReason, c: AdditionBindingClass): AdditionAdmitBranch => `${ADDITION_BRANCHES[r]}.${CLASS_BRANCHES[c]}`;
+
+function classCodes<P extends string, C extends PrimariesBindingClass>(
+  prefix: P, description: string, classes: readonly C[],
+): Record<`${P}.${ClassBranch<C>}`, CodeDeclaration<typeof LIVE>> {
+  return Object.fromEntries(classes.map(
+    (c) => [`${prefix}.${CLASS_BRANCHES[c]}`, outcomeCode(`${description} ${CLASS_DESCRIPTIONS[c]}`)],
+  )) as Record<`${P}.${ClassBranch<C>}`, CodeDeclaration<typeof LIVE>>;
+}
 
 export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
 export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
@@ -143,6 +180,14 @@ const LABEL_CODES = Object.fromEntries(LABEL_DISPOSITIONS.flatMap((d) => LABEL_F
   (f) => [labelBranch(d, f), outcomeCode(`${LABEL_DESCRIPTIONS[d]} Identifier: ${f}.`)],
 ))) as Record<LabelBranch, CodeDeclaration<typeof LIVE>>;
 
+const ADMIT_DESCRIPTIONS = {
+  spine: 'An AT-HYG spine row becomes a manifest row on the merge decision it records.',
+  'admitted:hd_link_gap': 'An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.',
+  'admitted:hd_omitted': 'An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG\'s subset, is admitted.',
+  'admitted:hip_omitted': 'An I/239 Hipparcos star with no IV/25 entry is admitted.',
+  'admitted:cns5_census': 'A CNS5 nearby-star census row the spine lacks is admitted.',
+} as const satisfies Record<'spine' | AdditionReason, string>;
+
 const ADMIT_MAGNITUDE = 'A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.';
 
 const OWN_CANDIDATE_BRANCHES = {
@@ -180,12 +225,17 @@ function ledCodes<P extends string, O extends string>(
 }
 
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
-  'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
+  'admit.spine': outcomeCode(ADMIT_DESCRIPTIONS.spine, 'none', RETIRED_7_1_20),
+  ...classCodes('admit.spine', ADMIT_DESCRIPTIONS.spine, SPINE_BINDING_CLASSES),
   fold: outcomeCode('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
-  'admit.hd-link-gap': outcomeCode('An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.'),
-  'admit.hd-omitted': outcomeCode('An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG\'s subset, is admitted.'),
-  'admit.hip-omitted': outcomeCode('An I/239 Hipparcos star with no IV/25 entry is admitted.'),
-  'admit.cns5-census': outcomeCode('A CNS5 nearby-star census row the spine lacks is admitted.'),
+  'admit.hd-link-gap': outcomeCode(ADMIT_DESCRIPTIONS['admitted:hd_link_gap'], 'none', RETIRED_7_1_20),
+  'admit.hd-omitted': outcomeCode(ADMIT_DESCRIPTIONS['admitted:hd_omitted'], 'none', RETIRED_7_1_20),
+  'admit.hip-omitted': outcomeCode(ADMIT_DESCRIPTIONS['admitted:hip_omitted'], 'none', RETIRED_7_1_20),
+  'admit.cns5-census': outcomeCode(ADMIT_DESCRIPTIONS['admitted:cns5_census'], 'none', RETIRED_7_1_20),
+  ...classCodes('admit.hd-link-gap', ADMIT_DESCRIPTIONS['admitted:hd_link_gap'], ADDITION_BINDING_CLASSES),
+  ...classCodes('admit.hd-omitted', ADMIT_DESCRIPTIONS['admitted:hd_omitted'], ADDITION_BINDING_CLASSES),
+  ...classCodes('admit.hip-omitted', ADMIT_DESCRIPTIONS['admitted:hip_omitted'], ADDITION_BINDING_CLASSES),
+  ...classCodes('admit.cns5-census', ADMIT_DESCRIPTIONS['admitted:cns5_census'], ADDITION_BINDING_CLASSES),
   component: outcomeCode('Every designation the primaries give this star already names another record, so it is ledgered onto that record instead of admitted.'),
   'admit.magnitude': outcomeCode(ADMIT_MAGNITUDE, 'none', RETIRED_7_1_20),
   'admit.magnitude.no-own-candidate': outcomeCode(`${ADMIT_MAGNITUDE} No primaries row weighed it as a binding candidate.`),
@@ -249,9 +299,14 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
 export type BindingReviewCells = Omit<BindingReviewRow, 'verdict'>;
 
 export type MembershipOutcome =
-  | { readonly kind: 'admit-spine' }
+  | { readonly kind: 'admit-spine'; readonly binding: PrimariesBindingClass }
   | { readonly kind: 'fold'; readonly survivor: string }
-  | { readonly kind: 'admit-addition'; readonly reason: AdditionReason; readonly members: readonly string[] }
+  | {
+    readonly kind: 'admit-addition';
+    readonly reason: AdditionReason;
+    readonly binding: AdditionBindingClass;
+    readonly members: readonly string[];
+  }
   | { readonly kind: 'component'; readonly designation: string; readonly members: readonly string[] }
   | { readonly kind: 'admit-magnitude'; readonly ownCandidate: OwnCandidate | null }
   | ({
@@ -321,8 +376,10 @@ type Branch = Parameters<typeof MEMBERSHIP_CODES.code>[0];
 /** The codes of the rows that admit a record into the manifest: what a new SID's mint event carries. */
 export const MEMBERSHIP_ADMISSION_CODES: ReadonlySet<string> = new Set(
   ([
-    'admit.spine', 'admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES), ...Object.values(ADDITION_BRANCHES),
-  ] as const satisfies readonly Branch[])
+    ...SPINE_BINDING_CLASSES.map(spineAdmitBranch),
+    ...ADDITION_REASONS.flatMap((r) => ADDITION_BINDING_CLASSES.map((c) => additionAdmitBranch(r, c))),
+    'admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES),
+  ] satisfies readonly Branch[])
     .map((b) => MEMBERSHIP_CODES.code(b)),
 );
 
@@ -376,9 +433,9 @@ function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
 
 export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): LineageRow {
   switch (o.kind) {
-    case 'admit-spine': return row(key, 'admit.spine', {});
+    case 'admit-spine': return row(key, spineAdmitBranch(o.binding), {});
     case 'fold': return row(key, 'fold', {}, [o.survivor]);
-    case 'admit-addition': return row(key, ADDITION_BRANCHES[o.reason], {}, o.members);
+    case 'admit-addition': return row(key, additionAdmitBranch(o.reason, o.binding), {}, o.members);
     case 'component': return row(key, 'component', { designation: o.designation }, o.members);
     case 'admit-magnitude':
       return o.ownCandidate === null
@@ -444,7 +501,9 @@ export interface MembershipLedgers {
 export function membershipLedgers(
   rows: readonly LineageRow[], identity: ReadonlyMap<string, IdentityRow>,
 ): MembershipLedgers {
-  const additionReasons = invert(ADDITION_BRANCHES);
+  const additionReasons = new Map<string, AdditionReason>(ADDITION_REASONS.flatMap(
+    (r) => ADDITION_BINDING_CLASSES.map((c) => [MEMBERSHIP_CODES.code(additionAdmitBranch(r, c)), r] as const),
+  ));
   const dropReasons = invert(LABEL_DROP_BRANCHES);
   const flipBranches = new Map<string, { disposition: LabelDisposition; field: LabelField; branch: LabelBranch }>(
     LABEL_DISPOSITIONS.flatMap((d) => LABEL_FIELDS.map(
@@ -478,7 +537,7 @@ export function membershipLedgers(
     const flip = flipBranches.get(r.code);
     const queue = queued.get(r.code);
     const disposal = disposed.get(r.code);
-    if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition[0] });
+    if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition });
     else if (r.code === MEMBERSHIP_CODES.code('component')) {
       const { designation } = paramsAs(r, 'component');
       out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${designation}` });
@@ -524,9 +583,22 @@ const ADMISSION_MAGNITUDE: readonly LiveBranch[] = ['admit.magnitude.no-own-cand
 export function membershipTotals(counts: MembershipCounts) {
   const n = countOf(counts);
   const sum = sumOf(n);
-  const additionsByReason = Object.fromEntries(Object.entries(ADDITION_BRANCHES).map(([r, b]) => [r, n(b)])) as Record<AdditionReason, number>;
-  const additions = sum(Object.values(ADDITION_BRANCHES));
+  const spineAdmits = sum(SPINE_BINDING_CLASSES.map(spineAdmitBranch));
+  const additionsByReason = Object.fromEntries(ADDITION_REASONS.map(
+    (r) => [r, sum(ADDITION_BINDING_CLASSES.map((c) => additionAdmitBranch(r, c)))],
+  )) as Record<AdditionReason, number>;
+  const additions = ADDITION_REASONS.reduce((total, r) => total + additionsByReason[r], 0);
   const magnitudeRows = sum(ADMISSION_MAGNITUDE);
+  const admittedAs = (c: PrimariesBindingClass): number => n(spineAdmitBranch(c)) + (c === 'reviewed' ? 0 : sum(
+    ADDITION_REASONS.map((r) => additionAdmitBranch(r, c)),
+  ));
+  const bindingByClass: Record<BindingClass, number> = {
+    crosswalk_gated: admittedAs('crosswalk_gated'),
+    simbad_corroborated: admittedAs('simbad_corroborated'),
+    reviewed: admittedAs('reviewed'),
+    gaia_native: magnitudeRows,
+    none: admittedAs('none'),
+  };
   const disposed = (q: DispositionQueue) => sum(BINDING_DISPOSITIONS.map((d): LiveBranch => `disposition.${d}.${q}`));
   const reviewByVerdict: Record<BindingReviewVerdict, number> = {
     contested: sum(BINDING_SOURCES.map((l): LiveBranch => `binding.contested.${l}`)),
@@ -534,9 +606,11 @@ export function membershipTotals(counts: MembershipCounts) {
     disposed: disposed('settled'),
   };
   return {
-    manifestRows: n('admit.spine') + additions + magnitudeRows,
-    spineRows: n('admit.spine') + n('fold'),
+    manifestRows: spineAdmits + additions + magnitudeRows,
+    spineAdmits,
+    spineRows: spineAdmits + n('fold'),
     additionsByReason,
+    bindingByClass,
     additions,
     magnitudeRows,
     reviewByVerdict,
@@ -558,9 +632,10 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
     sum(outcomes.map((o) => led(`${prefix}.${o}`, lead)))
   );
   const lines = [
-    `manifest: ${t.manifestRows} rows — ${n('admit.spine')} from the spine `
+    `manifest: ${t.manifestRows} rows — ${t.spineAdmits} from the spine `
       + `(${n('fold')} folded), ${t.additions} admitted (${list(ADDITION_REASONS, (r) => t.additionsByReason[r])}), `
-      + `${t.magnitudeRows} from the magnitude term; ${n('component')} groups resolve onto an existing record`,
+      + `${t.magnitudeRows} from the magnitude term; ${n('component')} groups resolve onto an existing record; `
+      + `bindings ${list(BINDING_CLASSES, (c) => t.bindingByClass[c])}`,
     `derivation: bound ${sum(BINDING_SOURCES.map((l) => led('binding.bound', l)))}, `
       + `rescued ${sum(BINDING_SOURCES.map((l) => led('binding.rescued', l)))}, refused ${n('binding.refused')}, `
       + `contested ${sum(BINDING_SOURCES.map((l) => led('binding.contested', l)))}, collision ${n('binding.collision')}, sol ${n('binding.sol')}; `

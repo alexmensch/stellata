@@ -118,10 +118,22 @@ membership.addition-binding.route-disagree	membership	none	outcome	live		7.1.20	
 membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An admitted star's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
 membership.addition.blocked-designation	membership	none	outcome	live		7.1.20	The admitted star ships without a designation its primaries publish, because another record answers to it.
-membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
-membership.admit.hd-link-gap	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
-membership.admit.hd-omitted	membership	none	outcome	live		7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
-membership.admit.hip-omitted	membership	none	outcome	live		7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
+membership.admit.cns5-census	membership	none	outcome	retired	7.1.20	7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
+membership.admit.cns5-census.crosswalk-gated	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.cns5-census.none	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships no Gaia source.
+membership.admit.cns5-census.simbad-corroborated	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hd-link-gap	membership	none	outcome	retired	7.1.20	7.1.6	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted.
+membership.admit.hd-link-gap.crosswalk-gated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hd-link-gap.none	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships no Gaia source.
+membership.admit.hd-link-gap.simbad-corroborated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD below 100,000 that AT-HYG never linked is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hd-omitted	membership	none	outcome	retired	7.1.20	7.1.6	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted.
+membership.admit.hd-omitted.crosswalk-gated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hd-omitted.none	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships no Gaia source.
+membership.admit.hd-omitted.simbad-corroborated	membership	none	outcome	live		7.1.20	An IV/25 Tycho-2 star with an HD of 100,000 or more, outside AT-HYG's subset, is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
+membership.admit.hip-omitted	membership	none	outcome	retired	7.1.20	7.1.6	An I/239 Hipparcos star with no IV/25 entry is admitted.
+membership.admit.hip-omitted.crosswalk-gated	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.hip-omitted.none	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships no Gaia source.
+membership.admit.hip-omitted.simbad-corroborated	membership	none	outcome	live		7.1.20	An I/239 Hipparcos star with no IV/25 entry is admitted. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
 membership.admit.magnitude	membership	none	outcome	retired	7.1.20	7.1.6	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted.
 membership.admit.magnitude.component	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and review names it the other star of the row's pair.
 membership.admit.magnitude.no-own-candidate	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. No primaries row weighed it as a binding candidate.
@@ -129,7 +141,11 @@ membership.admit.magnitude.refused-mag	membership	none	outcome	live		7.1.20	A Ga
 membership.admit.magnitude.refused-sibling	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation weighed it, and the sibling gate refused it.
 membership.admit.magnitude.runner-up	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation passed it, and a higher-ranked candidate won.
 membership.admit.magnitude.withheld	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and the row was withheld from it.
-membership.admit.spine	membership	none	outcome	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
+membership.admit.spine	membership	none	outcome	retired	7.1.20	7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
+membership.admit.spine.crosswalk-gated	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
+membership.admit.spine.none	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships no Gaia source.
+membership.admit.spine.reviewed	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships the value a committed review disposition settles.
+membership.admit.spine.simbad-corroborated	membership	none	outcome	live		7.1.20	An AT-HYG spine row becomes a manifest row on the merge decision it records. It ships the source SIMBAD's cross-IDs hold under its own designation, through the binding gates.
 membership.binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
 membership.binding.bound.cns5	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is CNS5.
 membership.binding.bound.hip	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is the Gaia HIP cross-match.

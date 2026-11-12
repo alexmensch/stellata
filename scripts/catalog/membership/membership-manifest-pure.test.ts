@@ -31,6 +31,7 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
+  BINDING_CLASSES,
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
   manifestRecord,
@@ -51,6 +52,7 @@ import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import { OWN_CANDIDATE_REASONS, type OwnCandidateReason } from './ledger-rows-pure';
 import { foldStageLines } from '../lineage/lineage-row-pure';
+import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
@@ -1028,6 +1030,7 @@ describe('membership lineage', () => {
     expect(totals(result).manifestRows).toBe(result.rows.length);
     expect(totals(result).spineRows).toBe(input.spine.length);
     expect(totals(result).reviewRows).toBe(result.bindingReview.length);
+    expect(totals(result).bindingByClass).toEqual(fold(BINDING_CLASSES, result.rows, (r) => r.binding));
   });
 
   it('logs the fold\'s totals and the derivation beside its codes', () => {
