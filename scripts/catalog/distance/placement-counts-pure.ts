@@ -1,16 +1,20 @@
 // Placement's two count blocks — its codes' fold, and the shipped tiers folded off each placed row — and their build-log summary. See README.md#placement-counts.
 
 import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
-import { codeCount } from '../lineage/reason-codes/reason-codes-pure';
+import { codeCount, type LiveBranchOf } from '../lineage/reason-codes/reason-codes-pure';
 import { emptyTallyPartition, formatPartition, percentOf, prefixed, renamed } from '../../util/counts/tally-pure';
 import { isLowPrecisionParallax } from './parallax/parallax-cascade';
 import {
-  distViaBeforeLmc, PLACEMENT_CODES, radialVelocityApplied, shippedDistVia, shippedVelocityVia, type PlacedPlacement,
+  BAILER_JONES_BRANCHES, DIRECTION_BRANCHES, DIRECTION_TYCHO2_BRANCHES, distViaBeforeLmc, LMC_BRANCHES, PLACEMENT_CODES,
+  PM_RESCUE_BRANCHES, radialVelocityApplied, RV_GAIA_BRANCHES, RV_SIMBAD_BRANCHES, shippedDistVia, shippedVelocityVia,
+  type PlacedPlacement,
 } from './placement-lineage-pure';
 import { VELOCITY_VIA_VALUES, type VelocityVia } from './velocity';
 
 /** Placement's count block: its lines folded per live code. */
 export type PlacementCounts = Readonly<Record<(typeof PLACEMENT_CODES.live)[number], number>>;
+
+type Branch = LiveBranchOf<typeof PLACEMENT_CODES>;
 
 export type ShippedDistTier = Exclude<DistVia, 'gaia_dr3_inversion'>;
 
@@ -109,38 +113,29 @@ const lmcPartition = (derived: PlacementDerivedCounts, prefix: typeof LMC_OVERRI
 
 export function placementSummary(counts: PlacementCounts, derived: PlacementDerivedCounts): string {
   const n = codeCount(PLACEMENT_CODES, counts);
-  const lmcCandidates = n('distance.lmc-kinematic') + n('distance.lmc-refused-by-own-parallax')
-    + n('distance.lmc-refused-pm-outside-gate') + n('distance.lmc-refused-no-pm');
-  const bjEligible = n('distance.bailer-jones') + n('distance.bailer-jones-absent');
-  const rvGaia = n('rv.gaia-dr3.error-le1') + n('rv.gaia-dr3.error-le5') + n('rv.gaia-dr3.error-le10')
-    + n('rv.gaia-dr3.error-le20') + n('rv.gaia-dr3.error-gt20');
+  const sum = (branches: Readonly<Record<string, Branch>>): number =>
+    Object.values(branches).reduce((total, b) => total + n(b), 0);
+  const each = (branches: Readonly<Record<string, Branch>>): string =>
+    Object.entries(branches).map(([tier, b]) => `${tier} ${n(b)}`).join(', ');
+  const { snap, ...lmcRefusals } = LMC_BRANCHES;
+  const lmcCandidates = sum(LMC_BRANCHES);
+  const bjEligible = sum(BAILER_JONES_BRANCHES);
   return [
-    `  Bailer-Jones override: ${n('distance.bailer-jones')} / ${bjEligible} Gaia-inverse-distance stars `
-      + `(${percentOf(n('distance.bailer-jones'), bjEligible)})`,
-    `  LMC kinematic override: ${n('distance.lmc-kinematic')} / ${lmcCandidates} LMC-cone stars `
-      + `(${percentOf(n('distance.lmc-kinematic'), lmcCandidates)}); refused: PM outside the gate `
-      + `${n('distance.lmc-refused-pm-outside-gate')}, no PM ${n('distance.lmc-refused-no-pm')}, `
-      + `own parallax ${n('distance.lmc-refused-by-own-parallax')}`,
+    `  Bailer-Jones override: ${n(BAILER_JONES_BRANCHES.override)} / ${bjEligible} Gaia-inverse-distance stars `
+      + `(${percentOf(n(BAILER_JONES_BRANCHES.override), bjEligible)})`,
+    `  LMC kinematic override: ${n(snap)} / ${lmcCandidates} LMC-cone stars `
+      + `(${percentOf(n(snap), lmcCandidates)}); refused: ${each(lmcRefusals)}`,
     `    displacing: ${lmcPartition(derived, LMC_OVERRIDDEN)}`,
     `    refused on own parallax, keeping: ${lmcPartition(derived, LMC_PARALLAX_REFUSED)}`,
-    `  direction cascade: gaia_5p ${n('direction.gaia-5p')}, gaia_2p ${n('direction.gaia-2p')}, `
-      + `gaia_nss_systemic ${n('direction.gaia-nss-systemic')}, hip2_saturated ${n('direction.hip2-saturated')}, `
-      + `hip2_pm_discrepant ${n('direction.hip2-pm-discrepant')}, tycho2 mean ${n('direction.tycho2.mean')} / `
-      + `photocentre ${n('direction.tycho2.photocentre')} / observed ${n('direction.tycho2.observed')}, `
-      + `cns5 ${n('direction.cns5')}, simbad ${n('direction.simbad')}, curated ${n('direction.curated')}`,
+    `  direction cascade: ${each(DIRECTION_BRANCHES)}; tycho2 ${each(DIRECTION_TYCHO2_BRANCHES)}`,
     `  velocity cascade: ${VELOCITY_VIA_VALUES.map((v) => `${v} ${derived[VELOCITY_COUNT_KEY[v]]}`).join(', ')} `
       + `(clamped ${n('velocity.clamped')}); above escape, kept ${n('velocity.above-escape')}; `
       + `rv applied ${derived.velocityRvApplied}`,
-    `  PM rescue (direction tier carries none): tycho2 ${n('pm-rescue.tycho2')}, cns5 ${n('pm-rescue.cns5')}, `
-      + `simbad ${n('pm-rescue.simbad')}, ${n('pm-rescue.none.gaia-release-refused')} Gaia-bibcoded values refused `
-      + `on 2p rows, ${n('pm-rescue.none.unreached')} with no owned PM`,
-    `  rv cascade: gaia_dr3 ${rvGaia}, simbad ${n('rv.simbad.literature') + n('rv.simbad.gaia-release')} `
-      + `(${n('rv.simbad.gaia-release')} citing a Gaia release), none ${n('rv.none')}, `
-      + `rejected above the ceiling ${n('rv.rejected-above-ceiling')}; `
+    `  PM rescue (direction tier carries none): ${each(PM_RESCUE_BRANCHES)}`,
+    `  rv cascade: gaia_dr3 ${sum(RV_GAIA_BRANCHES)}, simbad ${sum(RV_SIMBAD_BRANCHES)} (${each(RV_SIMBAD_BRANCHES)}), `
+      + `none ${n('rv.none')}, rejected above the ceiling ${n('rv.rejected-above-ceiling')}; `
       + `${n('rv.refused.gaia-release')} Gaia-bibcoded values skipped on 2p rows`,
-    `  rv uncertainty on the gaia_dr3 tier: <=1 ${n('rv.gaia-dr3.error-le1')}, <=5 ${n('rv.gaia-dr3.error-le5')}, `
-      + `<=10 ${n('rv.gaia-dr3.error-le10')}, <=20 ${n('rv.gaia-dr3.error-le20')}, >20 ${n('rv.gaia-dr3.error-gt20')}; `
-      + `max ${derived.rvGaiaErrorMaxKmS} km/s`,
+    `  rv uncertainty on the gaia_dr3 tier: ${each(RV_GAIA_BRANCHES)}; max ${derived.rvGaiaErrorMaxKmS} km/s`,
     `  distance by tier: ${SHIPPED_DIST_TIERS.map((t) => `${t}=${derived[SHIPPED_DIST_COUNT_KEY[t]]}`).join(' · ')}`,
     `  parallaxes admitted below 20% precision: ${derived.distLowPrecisionParallax} `
       + '(ship, biased inversion — revisit at Gaia DR4)',

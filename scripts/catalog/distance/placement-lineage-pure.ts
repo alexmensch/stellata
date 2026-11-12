@@ -42,7 +42,7 @@ const PARALLAX_REFUSAL_BRANCHES = {
 } as const satisfies Record<ParallaxRefusalReason, string>;
 
 type DirectionOutcome = Exclude<DirectionVia, 'none' | 'tycho2'>;
-const DIRECTION_BRANCHES = {
+export const DIRECTION_BRANCHES = {
   gaia_5p: 'direction.gaia-5p',
   gaia_2p: 'direction.gaia-2p',
   gaia_nss_systemic: 'direction.gaia-nss-systemic',
@@ -53,7 +53,7 @@ const DIRECTION_BRANCHES = {
   curated: 'direction.curated',
 } as const satisfies Record<DirectionOutcome, string>;
 
-const DIRECTION_TYCHO2_BRANCHES = {
+export const DIRECTION_TYCHO2_BRANCHES = {
   mean: 'direction.tycho2.mean',
   photocentre: 'direction.tycho2.photocentre',
   observed: 'direction.tycho2.observed',
@@ -64,7 +64,7 @@ const DIRECTION_REFUSAL_BRANCHES = {
   no_5p_solution: 'direction.refused.no-5p-solution',
 } as const satisfies Record<DirectionResolution['refusals'][number]['reason'], string>;
 
-const PM_RESCUE_BRANCHES = {
+export const PM_RESCUE_BRANCHES = {
   tycho2: 'pm-rescue.tycho2',
   cns5: 'pm-rescue.cns5',
   simbad: 'pm-rescue.simbad',
@@ -76,7 +76,7 @@ const PM_RESCUE_REFUSAL_BRANCHES = {
   gaia_release: 'pm-rescue.refused.gaia-release',
 } as const satisfies Record<PmRescueResolution['refusals'][number]['reason'], string>;
 
-const RV_GAIA_BRANCHES = {
+export const RV_GAIA_BRANCHES = {
   le1: 'rv.gaia-dr3.error-le1',
   le5: 'rv.gaia-dr3.error-le5',
   le10: 'rv.gaia-dr3.error-le10',
@@ -96,12 +96,22 @@ const PARK_BRANCHES = {
   no_position: 'park.no-position',
 } as const satisfies Record<ParkedReason, string>;
 
-const LMC_BRANCHES = {
+export const LMC_BRANCHES = {
   snap: 'distance.lmc-kinematic',
   parallax_rules_out: 'distance.lmc-refused-by-own-parallax',
   pm_outside_gate: 'distance.lmc-refused-pm-outside-gate',
   no_pm: 'distance.lmc-refused-no-pm',
 } as const satisfies Record<Exclude<LmcKinematicVerdict['kind'], 'outside_cone'>, string>;
+
+export const RV_SIMBAD_BRANCHES = {
+  literature: 'rv.simbad.literature',
+  gaia_release: 'rv.simbad.gaia-release',
+} as const;
+
+export const BAILER_JONES_BRANCHES = {
+  override: 'distance.bailer-jones',
+  absent: 'distance.bailer-jones-absent',
+} as const satisfies Record<Exclude<BailerJonesStep['kind'], 'not-applied'>, string>;
 
 const VELOCITY_BRANCHES = {
   above_escape: 'velocity.above-escape',
@@ -332,8 +342,8 @@ export function placementLineageRows(p: Placement): LineageRow[] {
         row(PM_RESCUE_BRANCHES[pmRescueOutcome(p.pmRescue)], none,
           p.pmRescue.via === 'none' ? [] : p.pmRescue.evidence);
       }
-      if (p.bailerJones.kind === 'override') row('distance.bailer-jones', none, [p.bailerJones.ref]);
-      if (p.bailerJones.kind === 'absent') row('distance.bailer-jones-absent', none, []);
+      if (p.bailerJones.kind === 'override') row(BAILER_JONES_BRANCHES.override, none, [p.bailerJones.ref]);
+      if (p.bailerJones.kind === 'absent') row(BAILER_JONES_BRANCHES.absent, none, []);
       if (p.lmc !== 'outside_cone') row(LMC_BRANCHES[p.lmc], none, []);
       const { rv } = p.rv;
       for (const r of rv.refusals) refused(RV_REFUSAL_BRANCHES[r.reason], r);
@@ -342,7 +352,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       } else if (rv.via === 'gaia_dr3') {
         row(RV_GAIA_BRANCHES[rvErrorBand(rv.value.errorKmS)], none, rv.evidence);
       } else if (rv.via === 'simbad') {
-        row(isGaiaCatalogueBibcode(rv.value.bibcode) ? 'rv.simbad.gaia-release' : 'rv.simbad.literature', none, rv.evidence);
+        row(RV_SIMBAD_BRANCHES[isGaiaCatalogueBibcode(rv.value.bibcode) ? 'gaia_release' : 'literature'], none, rv.evidence);
       } else {
         row('rv.none', none, []);
       }
