@@ -6,7 +6,7 @@ import { makeStar } from '../parse/star-fixture';
 import type { PromotedRow, PromotionDerivedCounts, RowOutcome } from './companion-promotion';
 import { multiplesRow } from './multiples-fixture';
 import {
-  PROMOTION_CODES, promotionLineage, promotionLineageRows, promotionOriginKey, promotionSummary,
+  decisionRows, PROMOTION_CODES, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary,
 } from './promotion-lineage-pure';
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
@@ -15,7 +15,7 @@ const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): Prom
 );
 const recordKey = (idx: number): string => `spine:${idx}`;
 const own = { source: 'own', spectMsFromOwnAbsmag: false } as const;
-const rowsOf = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => promotionLineageRows(promoted(outcome, anchors), recordKey);
+const rowsOf = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => decisionRows(promotionDecision(promoted(outcome, anchors), recordKey));
 const outcomeRow = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => rowsOf(outcome, anchors)[0];
 
 const OUTCOMES: RowOutcome[] = [
@@ -32,7 +32,7 @@ const OUTCOMES: RowOutcome[] = [
 ];
 const LINES = OUTCOMES.flatMap((o) => rowsOf(o)).map((r) => stageLineageLine(PROMOTION_CODES, r));
 
-describe('promotionLineageRows', () => {
+describe('promotionDecision', () => {
   it('keys every row on its multiples.tsv row', () => {
     expect(promotionOriginKey(row)).toBe('multiples:22266-1645-AB/B');
     expect(rowsOf({ kind: 'pair-anchor' }).map((r) => r.key)).toEqual(['multiples:22266-1645-AB/B']);

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { tangentOffset, type Stage6Offset } from './anchor-offset-pure';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
-import { familyTotal, PROMOTION_CODES, promotionLineageRows } from './promotion-lineage-pure';
+import { decisionRows, familyTotal, PROMOTION_CODES, promotionDecision } from './promotion-lineage-pure';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   componentDepth,
@@ -43,7 +43,7 @@ import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 /** promoteCompanions plus its rows' lineage folded per code, as the build folds them. */
 function promote(...args: Parameters<typeof promoteCompanions>) {
   const result = promoteCompanions(...args);
-  const lines = result.rows.flatMap((r) => promotionLineageRows(r, () => 'spine:0'))
+  const lines = result.rows.flatMap((r) => decisionRows(promotionDecision(r, () => 'spine:0')))
     .map((row) => stageLineageLine(PROMOTION_CODES, row));
   return { ...result, codes: foldStageLines(PROMOTION_CODES, lines) };
 }

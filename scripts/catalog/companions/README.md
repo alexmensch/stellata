@@ -589,7 +589,7 @@ duplicate labels that survive the ladder are data findings, enumerated in
 `build:catalog`'s companion promotion is the lineage stage after coherence
 (`promotion-lineage-pure.ts`). `promoteCompanions` returns one
 `PromotedRow` per `multiples.tsv` row, keyed on that row
-(`multiples:<system_id>/<comp>`), and `promotionLineageRows` serialises its
+(`multiples:<system_id>/<comp>`), and `promotionDecision` serialises its
 `RowOutcome` ([above](#companion-promotion-from-databinariesmultiplestsv)) through an exhaustive `switch`: the
 outcome row (a mint is `promotion.minted.keyed` or `.synthetic`, a refused
 parked record `.gaia-5p` or `.other-route` by route), then a facet row, effect

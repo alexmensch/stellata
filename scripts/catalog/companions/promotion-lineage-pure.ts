@@ -96,8 +96,13 @@ export function promotionOriginKey(row: Pick<MultiplesTsvRow, 'systemId' | 'comp
   return rowKeyText(MULTIPLES_ROW_KEY, row);
 }
 
-/** The row's outcome row first, then one row per facet of its decision. `recordKey` is the origin key of the record at a pre-sort catalogue index. */
-export function promotionLineageRows(r: PromotedRow, recordKey: (idx: number) => string): LineageRow[] {
+export interface PromotionDecision {
+  readonly outcome: LineageRow;
+  readonly facets: readonly LineageRow[];
+}
+
+/** `recordKey` is the origin key of the record at a pre-sort catalogue index. */
+export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => string): PromotionDecision {
   const key = promotionOriginKey(r.row);
   const o: RowOutcome = r.outcome;
   const cited = o.kind === 'dropped' && o.reason === 'parked-record' ? o.parked : null;
@@ -106,45 +111,51 @@ export function promotionLineageRows(r: PromotedRow, recordKey: (idx: number) =>
   const row = <B extends Exclude<Branch, Facet>>(branch: B, params: ParamsOf<B>): LineageRow => (
     stageRow(PROMOTION_CODES, key, branch, params as LineageParams, evidence)
   );
-  const facet = (branch: Facet): LineageRow => stageRow(PROMOTION_CODES, key, branch, {}, []);
+  const decided = (outcome: LineageRow, facets: readonly (Facet | false)[] = []): PromotionDecision => ({
+    outcome,
+    facets: facets.flatMap((f) => (f === false ? [] : [stageRow(PROMOTION_CODES, key, f, {}, [])])),
+  });
   switch (o.kind) {
     case 'dropped':
       if (o.reason === 'parked-record') {
-        return [
+        return decided(
           row(o.viaGaia5p ? 'dropped.parked-record.gaia-5p' : 'dropped.parked-record.other-route', { via }),
-          ...(o.ownedFit ? [facet('fit.owned')] : []),
-        ];
+          [o.ownedFit && 'fit.owned'],
+        );
       }
       if (o.reason === 'anchor-is-component') {
-        return [row('dropped.anchor-is-component', { via, record: recordKey(o.idx) })];
+        return decided(row('dropped.anchor-is-component', { via, record: recordKey(o.idx) }));
       }
-      return [row(`dropped.${o.reason}`, { via })];
+      return decided(row(`dropped.${o.reason}`, { via }));
     case 'adopted':
-      if (o.via === 'earlier-mint') return [row('adopted.earlier-mint', { via, record: recordKey(o.idx) })];
-      return [
+      if (o.via === 'earlier-mint') return decided(row('adopted.earlier-mint', { via, record: recordKey(o.idx) }));
+      return decided(
         row(`adopted.${o.via}`, {
           via, record: recordKey(o.idx), ...(o.recurated === null ? {} : { recurated: o.recurated }),
         }),
-        ...(o.desigConFromAnchor ? [facet('desig-con.from-anchor')] : []),
-      ];
+        [o.desigConFromAnchor && 'desig-con.from-anchor'],
+      );
     case 'minted':
-      return [
-        row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }),
-        facet(brightnessFacet(o.brightness.source)),
-        ...(o.brightness.spectMsFromOwnAbsmag ? [facet('spectral.ms-from-own-absmag')] : []),
-        ...(o.constellationSplit ? [facet('constellation.split-from-anchor')] : []),
-      ];
+      return decided(row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }), [
+        brightnessFacet(o.brightness.source),
+        o.brightness.spectMsFromOwnAbsmag && 'spectral.ms-from-own-absmag',
+        o.constellationSplit && 'constellation.split-from-anchor',
+      ]);
     case 'primary-unresolved':
-      return [row('parked.primary-unresolved', { via })];
+      return decided(row('parked.primary-unresolved', { via }));
     case 'unpaired':
-      return [row('parked.unpaired', { via })];
+      return decided(row('parked.unpaired', { via }));
     case 'pair-anchor':
-      return [row('not-applicable.pair-anchor', { via })];
+      return decided(row('not-applicable.pair-anchor', { via }));
     default: {
       const unmapped: never = o;
       throw new Error(`promotion outcome with no row mapping: ${JSON.stringify(unmapped)}`);
     }
   }
+}
+
+export function decisionRows(d: PromotionDecision): LineageRow[] {
+  return [d.outcome, ...d.facets];
 }
 
 /** Promotion's lines folded per live code. */
@@ -187,13 +198,13 @@ export function promotionLineage(
   rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
 ): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
-  const decided = rows.map((r) => promotionLineageRows(r, recordKey));
-  const lineage = decided.flat();
+  const decided = rows.map((r) => promotionDecision(r, recordKey));
+  const lineage = decided.flatMap(decisionRows);
   const minted = rows.flatMap(({ outcome: o }) => (o.kind === 'minted' ? [stars[o.idx]] : []))
     .map((s) => identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
   const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
   const removed = rows.flatMap((r, i): IdentityRow[] => {
-    const effect = PROMOTION_EFFECTS.get(decided[i][0].code);
+    const effect = PROMOTION_EFFECTS.get(decided[i].outcome.code);
     if (effect === undefined || effect === 'none') return [];
     const designations = starDesignations({
       isSol: false, hip: r.row.hip, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, syntheticId: r.synthKey,
