@@ -25,7 +25,6 @@ export type RvVia = (typeof RV_VIA_VALUES)[number];
 // Coarse `radial_velocity_error` spread over the rows the Gaia tier supplies,
 // pinned in build-counts. Nothing routes on it — README.md#radial_velocity_error-is-tracked-never-gated.
 export const RV_ERROR_BANDS = [
-  'none',
   'le1',
   'le5',
   'le10',
@@ -44,11 +43,8 @@ const RV_ERROR_BAND_EDGES_KM_S: ReadonlyArray<readonly [number, RvErrorBand]> = 
   [20, 'le20'],
 ];
 
-/** Band for one row's stated rv uncertainty. `none` is the shape the
- *  published catalogue never carries — an rv with no error — and is pinned
- *  at 0. */
-export function rvErrorBand(errorKmS: number | null): RvErrorBand {
-  if (errorKmS === null) return 'none';
+/** Band for one row's stated rv uncertainty. */
+export function rvErrorBand(errorKmS: number): RvErrorBand {
   for (const [edge, band] of RV_ERROR_BAND_EDGES_KM_S) {
     if (errorKmS <= edge) return band;
   }
@@ -72,7 +68,7 @@ export type RadialVelocityRefusal = CascadeRefusal<RvTier, 'no_5p_solution' | 'g
 /** The Gaia tier's citation is the release itself, so only SIMBAD's value
  *  carries a bibcode. `none` is a zero radial term. */
 export type RadialVelocityResolution = CascadeResult<
-  { gaia_dr3: { kmS: number }; simbad: SimbadRadialVelocity },
+  { gaia_dr3: { kmS: number; errorKmS: number }; simbad: SimbadRadialVelocity },
   RadialVelocityRefusal
 >;
 
@@ -102,7 +98,11 @@ export function resolveRadialVelocity(
   const refusals: RadialVelocityRefusal[] = [];
   if (gaia !== null && gaia.radialVelocityKmS !== null) {
     if (gaiaHas5pSolution(gaia)) {
-      return { via: 'gaia_dr3', value: { kmS: gaia.radialVelocityKmS }, evidence: [gaia.ref], refusals };
+      const errorKmS = gaia.radialVelocityErrorKmS;
+      if (errorKmS === null) {
+        throw new Error(`Gaia DR3 ${gaia.ref.row} states a radial_velocity with no radial_velocity_error (README.md#radial_velocity_error-is-tracked-never-gated)`);
+      }
+      return { via: 'gaia_dr3', value: { kmS: gaia.radialVelocityKmS, errorKmS }, evidence: [gaia.ref], refusals };
     }
     refusals.push({ tier: 'gaia_dr3', reason: 'no_5p_solution', ref: gaia.ref });
   }

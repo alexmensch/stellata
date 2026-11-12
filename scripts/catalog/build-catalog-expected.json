@@ -98,7 +98,6 @@
       "rvNone": 69313,
       "rvRadialRejected": 2,
       "rvGaiaErrorBands": {
-        "none": 0,
         "le1": 660315,
         "le5": 165557,
         "le10": 30989,

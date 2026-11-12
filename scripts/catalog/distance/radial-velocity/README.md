@@ -230,8 +230,8 @@ ones. `rvGaiaErrorBands` bands the Gaia tier's rows by stated uncertainty and
 distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/rvGaiaErrorBands.le1 -->660,315<!-- /count -->
 rows ≤ 1 km/s, <!-- count:build-catalog/rvGaiaErrorBands.le5 -->165,557<!-- /count --> ≤ 5, <!-- count:build-catalog/rvGaiaErrorBands.le10 -->30,989<!-- /count --> ≤ 10, <!-- count:build-catalog/rvGaiaErrorBands.le20 -->10,220<!-- /count --> ≤ 20, **<!-- count:build-catalog/rvGaiaErrorBands.gt20 -->2,031<!-- /count -->** above 20, and a
 maximum of **<!-- count:build-catalog/rvGaiaErrorMaxKmS -->39.9898<!-- /count -->** — under DR3's own publication ceiling of 40, which no
-pulled row reaches. The `none` band is pinned at **<!-- count:build-catalog/rvGaiaErrorBands.none -->0<!-- /count -->**: the published
-catalogue always pairs an `rv` with an error, so a non-zero count there is an
+pulled row reaches. A Gaia `rv` with no stated error fails the build, naming
+its source: the published catalogue always pairs the two, so one alone is an
 upstream schema change, not a tolerable miss.
 
 Revisit at DR4, which reprocesses RVS and is the first event that could supply

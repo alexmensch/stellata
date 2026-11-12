@@ -216,7 +216,7 @@ export interface Star {
 export interface RvRouting {
   readonly resolution: RadialVelocityResolution;
   /** Null exactly when the Gaia DR3 tier did not answer. */
-  readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number | null } | null;
+  readonly gaiaError: { readonly band: RvErrorBand; readonly kmS: number } | null;
 }
 
 /** The per-row inputs a shipped row's counts fold from that no lineage type records. */
@@ -357,10 +357,11 @@ export function rowResolver({
     };
     const simbadRow = lookupSimbadValues(simbadValues, simbadKeys);
     const rvRes = resolveRadialVelocity({ gaia: gaiaRow, simbad: simbadRow?.rv ?? null });
-    const gaiaRvErrorKmS = rvRes.via === 'gaia_dr3' && gaiaRow !== null ? gaiaRow.radialVelocityErrorKmS : undefined;
     const rv: RvRouting = {
       resolution: rvRes,
-      gaiaError: gaiaRvErrorKmS === undefined ? null : { band: rvErrorBand(gaiaRvErrorKmS), kmS: gaiaRvErrorKmS },
+      gaiaError: rvRes.via === 'gaia_dr3'
+        ? { band: rvErrorBand(rvRes.value.errorKmS), kmS: rvRes.value.errorKmS }
+        : null,
     };
     const resolvedRvKmS = rvRes.via === 'none' ? null : rvRes.value.kmS;
     // A radial term past the sanity ceiling on its own is rejected here rather

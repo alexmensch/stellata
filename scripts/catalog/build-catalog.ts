@@ -465,8 +465,8 @@ export async function main() {
   );
   console.log(
     `  rv uncertainty on the gaia_dr3 tier: <=1 ${rvErr.le1}, <=5 ${rvErr.le5}, ` +
-      `<=10 ${rvErr.le10}, <=20 ${rvErr.le20}, >20 ${rvErr.gt20}, ` +
-      `absent ${rvErr.none}; max ${stats.rvGaiaErrorMaxKmS} km/s`,
+      `<=10 ${rvErr.le10}, <=20 ${rvErr.le20}, >20 ${rvErr.gt20}; ` +
+      `max ${stats.rvGaiaErrorMaxKmS} km/s`,
   );
   if (stats.rvRadialRejectedSample.length > 0) {
     console.log(

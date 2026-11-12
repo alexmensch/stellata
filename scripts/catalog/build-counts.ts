@@ -340,8 +340,7 @@ export interface FiledCounts {
   rvRadialRejected: number;
   /** `rvGaiaDr3` rows split by the stated `radial_velocity_error`, a tracked
    *  ratchet rather than a gate — DR3 is taken as published
-   *  (`distance/radial-velocity/README.md`). `none` is pinned at 0: the
-   *  published catalogue always pairs an rv with an error. */
+   *  (`distance/radial-velocity/README.md`). */
   rvGaiaErrorBands: RvErrorBandPartition;
   /** Largest stated `radial_velocity_error` (km/s) any `rvGaiaDr3` row
    *  carries. Below DR3's own publication ceiling of 40 by construction; a

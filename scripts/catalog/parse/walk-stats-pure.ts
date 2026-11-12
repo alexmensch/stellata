@@ -113,7 +113,7 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     if (resolution.refusals.some((r) => r.tier === 'simbad')) stats.rvGaiaBibcodeSkipped++;
     if (gaiaError !== null) {
       stats.rvGaiaErrorBand[gaiaError.band]++;
-      if (gaiaError.kmS !== null && gaiaError.kmS > stats.rvGaiaErrorMaxKmS) stats.rvGaiaErrorMaxKmS = gaiaError.kmS;
+      if (gaiaError.kmS > stats.rvGaiaErrorMaxKmS) stats.rvGaiaErrorMaxKmS = gaiaError.kmS;
     }
   };
 
