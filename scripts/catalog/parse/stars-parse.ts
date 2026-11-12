@@ -263,7 +263,7 @@ export interface ReadStarsOptions {
   conAssignment: ConstellationAssignment;
   /** `CURATED_RECORDS` — every cascade's curated tier. Absent parks Sol. */
   curatedRecords?: CuratedRecords;
-  bailerJones?: BailerJonesIndex;
+  bailerJones: BailerJonesIndex;
   simbadSpectral?: SimbadSpectralIndex;
   /** `SPTYPE_OVERRIDES` — the spectral resolver's curated tier. */
   sptypeOverrides?: SpectralSources['sptypeOverrides'];
@@ -474,7 +474,7 @@ export function rowResolver({
     let dist = plxDistPc ?? 0;
     const bailerJonesEligible = isBailerJonesEligible(gaiaSourceId, plxRes.via);
     let bjStep: BailerJonesStep = { kind: 'not-applied' };
-    if (bailerJonesEligible && bailerJones !== undefined) {
+    if (bailerJonesEligible) {
       const ovr = applyBailerJonesOverride(gaiaSourceId, bailerJones);
       if (ovr !== null) {
         dist = ovr.distPc;

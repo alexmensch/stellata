@@ -27,7 +27,6 @@ export const DIST_VIA_COUNT_KEY = {
   pair_member_parallax: 'distPairMemberParallax',
   gliese_photometric_plx: 'distGliesePhotometricPlx',
   curated: 'distCurated',
-  none: 'distNone',
 } as const satisfies Record<DistVia, string>;
 
 /** Below this the parallax is not distinguishable from zero, so its inverse is

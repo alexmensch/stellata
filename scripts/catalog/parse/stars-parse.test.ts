@@ -40,6 +40,7 @@ import { STELLARIUM } from './constellations/stellarium-source';
 import { shippedVelocityVia, type Placement } from '../distance/placement-lineage-pure';
 import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
 import { CURATED_RECORDS } from '../record/curated-records';
+import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
 import { AV_PER_EZGR } from '../../../src/astro-core/baker-constants';
 import { printedHipTable } from '../photometry/photometry-fixture';
@@ -50,6 +51,7 @@ const readStarsDiscarding = (
 ): ReturnType<typeof readStars> => readStars(manifest, options, () => {});
 
 const CON_ASSIGNMENT = createConstellationAssignment(iauEdgeRecords(STELLARIUM.read()));
+const BASE_OPTIONS = { conAssignment: CON_ASSIGNMENT, bailerJones: { source: BAILER_JONES, distPc: new Map<string, number>() } };
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
 
@@ -141,7 +143,7 @@ describe('readStars build-time de-extinction of ci', () => {
         { ...AT_ORIGIN_SIGHTLINE, proper: 'ObservedCi', hip: '11111' },
       ]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         dustGrid: grid,
         hipBv: printedHipTable([[11111, 0.5]]),
         directions: AT_ORIGIN_DIRECTIONS(),
@@ -189,7 +191,7 @@ describe('readStars Gaia source_id', () => {
         ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId,
       }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         // Gaia places it (outranking Tycho-2); Tycho-2 still has to light it,
         // since this Gaia row carries no BP/RP for the Riello 2021
         // (/data/papers/index.md#riello2021) transform.
@@ -210,7 +212,7 @@ describe('readStars manifest labels', () => {
         ...AT_ORIGIN_SIGHTLINE, hd: '100', hd_alt: '101|102', hr: '7', hr_alt: '8',
       }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         directions: AT_ORIGIN_DIRECTIONS(),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
@@ -227,7 +229,7 @@ describe('readStars manifest labels', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...AT_ORIGIN_SIGHTLINE, hd: '55' }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       },
@@ -247,7 +249,7 @@ describe('readStars manifest labels', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ hip: '4242', gl: ORIGIN_GL }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         directions: tycho2Sources([]),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
         hipVMag: printedHipTable([[4242, 7.5]]),
@@ -273,7 +275,7 @@ describe('readStars manifest labels', () => {
         { hip: '4242', gl: ORIGIN_GL },
       ]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         directions: tycho2Sources([{ tyc: ORIGIN_TYC, raDeg: 0, decDeg: 0, vMag: null }]),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
         hipVMag: printedHipTable([[4242, 7.5]]),
@@ -299,7 +301,7 @@ describe('readStars manifest labels', () => {
 
   it('resolves one row to the record readStars ships, its placement and brightness beside it', () => {
     const options = {
-      conAssignment: CON_ASSIGNMENT,
+      ...BASE_OPTIONS,
       directions: AT_ORIGIN_DIRECTIONS(),
       gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
     };
@@ -323,7 +325,7 @@ describe('readStars manifest labels', () => {
     };
     const [row] = manifestRows([{ ...AT_ORIGIN_SIGHTLINE, gaia_source_id: sourceId }]);
     const outcome = rowResolver({
-      conAssignment: CON_ASSIGNMENT,
+      ...BASE_OPTIONS,
       directions: AT_ORIGIN_DIRECTIONS(),
       gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: 100 }]),
       apsisMap: new Map([[sourceId, apsisRow]]),
@@ -339,7 +341,7 @@ describe('readStars manifest labels', () => {
 
   it('counts a row inside the LMC cone as a candidate even where the PM gate refuses it', () => {
     const { stats } = readStarsDiscarding(manifestRows([AT_ORIGIN_SIGHTLINE]), {
-      conAssignment: CON_ASSIGNMENT,
+      ...BASE_OPTIONS,
       directions: tycho2Sources([{
         tyc: ORIGIN_TYC, raDeg: LMC_CENTRE_RA_HOURS * 15, decDeg: LMC_CENTRE_DEC_DEG, vMag: 10,
       }]),
@@ -353,7 +355,7 @@ describe('readStars manifest labels', () => {
     expect(() => readStarsDiscarding(
       manifestRows([{ ...AT_ORIGIN_SIGHTLINE, origin_key: 'spine:77' }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         directions: AT_ORIGIN_DIRECTIONS(),
         gliese: glieseParallaxes([{ gl: ORIGIN_GL, distPc: MAX_DIST_PC + 1 }]),
       },
@@ -382,7 +384,7 @@ describe('readStars constellation assignment', () => {
   it('resolves byte 34 positionally', () => {
     const { stars } = readStarsDiscarding(
       manifestRows([RHO_AQL]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
+      { ...BASE_OPTIONS, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
@@ -395,7 +397,7 @@ describe('readStars constellation assignment', () => {
     // them in a bare walk, so its aliases fall back to the positional index.
     const { stars } = readStarsDiscarding(
       manifestRows([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
-      { conAssignment: CON_ASSIGNMENT, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
+      { ...BASE_OPTIONS, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
     expect(stars.map((s) => s.desigCon)).toEqual([NO_DESIGNATION_CON, NO_DESIGNATION_CON]);
   });
@@ -403,7 +405,7 @@ describe('readStars constellation assignment', () => {
   it('leaves Sol unclassified — the origin has no sky direction', () => {
     const { stars } = readStarsDiscarding(
       manifestRows([{ proper: 'Sol' }]),
-      { conAssignment: CON_ASSIGNMENT, curatedRecords: CURATED_RECORDS },
+      { ...BASE_OPTIONS, curatedRecords: CURATED_RECORDS },
     );
     expect(stars).toHaveLength(1);
     expect(stars[0].conIndex).toBe(NO_CONSTELLATION_INDEX);
@@ -413,7 +415,7 @@ describe('readStars constellation assignment', () => {
   it('builds Sol from its curated record alone: origin, at rest, G2V, every tier curated', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ proper: 'Sol' }]),
-      { conAssignment: CON_ASSIGNMENT, curatedRecords: CURATED_RECORDS },
+      { ...BASE_OPTIONS, curatedRecords: CURATED_RECORDS },
     );
     expect(stars[0]).toMatchObject({
       x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0,
@@ -427,7 +429,7 @@ describe('readStars constellation assignment', () => {
   });
 
   it('parks Sol where no curated record answers for it', () => {
-    const { stars, stats } = readStarsDiscarding(manifestRows([{ proper: 'Sol' }]), { conAssignment: CON_ASSIGNMENT });
+    const { stars, stats } = readStarsDiscarding(manifestRows([{ proper: 'Sol' }]), BASE_OPTIONS);
     expect(stars).toEqual([]);
     expect(stats.parked).toHaveLength(1);
   });
@@ -494,7 +496,7 @@ describe('readStars PM rescue', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, { gaiaAstrometry: gaiaRow() }),
       },
@@ -512,7 +514,7 @@ describe('readStars PM rescue', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         gliese: PARALLAXES,
         directions: sources(
           { pmRaMasyr: null, pmDecMasyr: null },
@@ -529,7 +531,7 @@ describe('readStars PM rescue', () => {
     const { stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         gliese: PARALLAXES,
         directions: sources(TYCHO2_PM, {
           gaiaAstrometry: gaiaRow({
@@ -548,7 +550,7 @@ describe('readStars PM rescue', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gaia_source_id: SOURCE_ID, gl: GJ }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           gaiaAstrometry: gaiaRow(),
@@ -569,7 +571,7 @@ describe('readStars PM rescue', () => {
     const { stars, stats } = readStarsDiscarding(
       manifestRows([{ ...MANIFEST_ROW, gl: GJ }]),
       {
-        conAssignment: CON_ASSIGNMENT,
+        ...BASE_OPTIONS,
         gliese: PARALLAXES,
         directions: sources({ pmRaMasyr: null, pmDecMasyr: null }, {
           cns5: new Map([['423A', cns5Astrometry({
@@ -629,7 +631,7 @@ describe('readStars advances the position on a rescued PM', () => {
   const built = (): ReturnType<typeof readStars> => readStarsDiscarding(
     manifestRows([{ tyc: NO_MEAN_TYC, gl: NO_MEAN_GL }]),
     {
-      conAssignment: CON_ASSIGNMENT,
+      ...BASE_OPTIONS,
       simbadValues: simbadPmOnly(),
       gliese: glieseParallaxes([{ gl: NO_MEAN_GL, distPc: DIST_PC }]),
       directions: {
