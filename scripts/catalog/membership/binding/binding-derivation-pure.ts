@@ -164,7 +164,7 @@ export interface DerivedBinding {
    *  under-covering the derivation (README.md#the-candidates-have-to-be-in-the-astrometry-pull). */
   unweighedNoPulledRow: RankedCandidate[];
   /** Candidates weighed on a pulled row publishing no `phot_g_mean_mag`. */
-  weighedNullGMag: number;
+  weighedNullGMag: RankedCandidate[];
 }
 
 /** The evidence a row's candidates are weighed against: the row's own HIP and
@@ -209,12 +209,12 @@ export function deriveBinding(
   const rejected: RejectedCandidate[] = [];
   const gateable = gate.printedV !== null;
   const unweighedNoPulledRow: RankedCandidate[] = [];
-  let weighedNullGMag = 0;
+  const weighedNullGMag: RankedCandidate[] = [];
   let winner: RankedCandidate | null = null;
   const { evidence } = gate;
   for (const candidate of ranked) {
     const verdict = weighBinding(candidate.sourceId, gate, evidence);
-    if (verdict.magnitude === 'null_g') weighedNullGMag++;
+    if (verdict.magnitude === 'null_g') weighedNullGMag.push(candidate);
     if (verdict.magnitude === 'no_pulled_row') unweighedNoPulledRow.push(candidate);
     const reason = rejectionOf(verdict);
     if (reason !== null) {

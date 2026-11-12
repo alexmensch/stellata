@@ -966,7 +966,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       const d = b.derived;
       outcomes.push(...refusedCandidates(origin, 'spine', d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
       for (const r of d.rejected) derivedRejected[r.reason]++;
-      derivedWeighedNullGMag += d.weighedNullGMag;
+      derivedWeighedNullGMag += d.weighedNullGMag.length;
       if (!d.gateable && d.ranked.length > 0) derivedUngateable++;
       const key = bindingReviewKey(spineRow);
       const disposition = dispositions.get(key);
