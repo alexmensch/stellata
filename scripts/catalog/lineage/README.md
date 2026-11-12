@@ -12,11 +12,10 @@ lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fol
 so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
 its review-queue and label-drop counts fold from the outcomes, while the
 derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
-outcomes; its post-passes act on records and keep their own. Coherence's,
-brightness-colour's and naming's snapshot keys are their codes, folded from
-their lines (naming's beside a code-less authority tally,
-[Naming lineage](../naming/README.md#naming-lineage)). The record walk's placement
+them (stellata-hhaw.45.23). Coherence's, brightness-colour's, promotion's
+and naming's snapshot keys are their codes, folded from their lines (naming's
+beside a code-less authority tally, [Naming lineage](../naming/README.md#naming-lineage);
+promotion's post-passes, which act on records, file a derived block). The record walk's placement
 counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
 under their old keys (stellata-hhaw.45.23).
 
@@ -276,12 +275,9 @@ letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
-11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
-per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
-17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
-`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 10 s: a CI run with a diff took
-6.9 s (2026-11-07), almost all of it the baseline phase. Every other stage's
+11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
+[promotion's](../companions/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
 [size's](../spectral/README.md#size-lineage),
@@ -421,28 +417,5 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the stage after coherence
-(`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
-`PromotedRow` per `multiples.tsv` row, keyed on that row
-(`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
-`RowOutcome` (`../companions/README.md`) through an exhaustive `switch`. A
-pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
-A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
-to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
-both park, since promotion ships no record for the star the row names, so a
-SID keyed on its identifiers stays in the ledger with that cause. Each row cites as evidence the record its pair
-resolved to and its WDS root's anchor; every merge-effect row names the
-record it merges into in `params.record`. Both are origin keys: every record
-carries its own from the manifest's `origin_key` column
-(`../membership/README.md#columns`), so these are joins on the origin key.
-
-A minted companion is founded on its row, so promotion writes its identity
-row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
-does every row whose code retires, parks or merges, keyed on the `hip` and
-`gaia_source_id` cells it arrived with and the synthetic key a mint from it
-would carry (`PromotedRow.synthKey`), less any designation a membership
-manifest record or one of promotion's own mints already carries, so an
-orphaned SID keyed on one of them joins to that row's cause and never to a
-row that merely cites another stage's star. A cloud's or Local Group
-object's is its sibling allocation stage's; every other record's is
-membership's.
+`build:catalog`'s companion promotion is the stage after coherence; its
+contract lives beside its module, in [Promotion lineage](../companions/README.md#promotion-lineage).

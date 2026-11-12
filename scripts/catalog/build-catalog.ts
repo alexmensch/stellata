@@ -71,14 +71,16 @@ import {
   promoteCompanions,
   readMultiplesTsv,
   parkedRefusals,
-  RECURATED_BRIGHTNESS,
+  type PromotionDerivedCounts,
 } from './companions/companion-promotion';
-import { PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage } from './companions/promotion-lineage-pure';
+import {
+  PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
+} from './companions/promotion-lineage-pure';
 import { identityText } from './lineage/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
 import {
-  lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
+  foldStageLines, lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
@@ -155,7 +157,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
-import { derivedStage, nestByStage, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs } from '../sid/events-pure';
@@ -312,37 +314,6 @@ export async function main() {
     lmcOverridden: 0,
     lmcParallaxRefusedByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
     lmcOverriddenByDistVia: emptyTallyPartition(DIST_VIA_VALUES),
-    companionRowsScanned: 0,
-    companionPromoted: 0,
-    companionPromotedSynthetic: 0,
-    companionAlreadyInCatalog: 0,
-    companionDroppedNoPosition: 0,
-    companionDroppedBeyondTidalLimit: 0,
-    companionDroppedNoAbsmag: 0,
-    companionDroppedCompoundComp: 0,
-    companionDroppedCollocatedPrimary: 0,
-    companionAnchorIsComponent: 0,
-    companionDroppedParkedRecord: 0,
-    companionDroppedParkedViaGaia5p: 0,
-    companionDroppedParkedOwnedFit: 0,
-    companionAbsmagSpectralDerived: 0,
-    companionSpectMsFromOwnAbsmag: 0,
-    companionAbsmagWdsMagDerived: 0,
-    companionAbsmagAnchorCollocated: 0,
-    companionAbsmagInheritedTwinOrbital: 0,
-    companionBlendSplit: 0,
-    companionBlendDimmedAnchors: 0,
-    companionBlendDimSkipped: 0,
-    companionBlendDimUnfit: 0,
-    companionBlendDimOutside: 0,
-    companionBlendDimGaiaResolved: 0,
-    companionBlendDimBeyondSeparation: 0,
-    companionBlendDimMisfit: 0,
-    physicalOverlaps: 0,
-    companionConstellationSplitFromAnchor: 0,
-    companionExistingDesigConFromAnchor: 0,
-    companionExistingMemberRecurated: emptyTallyPartition(RECURATED_BRIGHTNESS),
-    companionExistingViaSameasBridge: 0,
     distBailerJones: 0,
     distLmcKinematic: 0,
     distGaiaDr3Inversion: 0,
@@ -575,64 +546,8 @@ export async function main() {
   for (const ns of newStars) stars.push(ns);
   const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded);
   const promotionLines = promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row));
-  console.log(
-    `  scanned ${ps.pairRowsScanned} pair rows; promoted ${ps.promoted} ` +
-      `(${ps.promotedSynthetic} via synthetic ID); ` +
-      `already-in-catalog ${ps.alreadyInCatalog} ` +
-      `(re-curated ${formatPartition(ps.existingMemberRecurated)}, ` +
-      `${ps.existingViaSameasBridge} via same-as bridge); ` +
-      `dropped (no-position=${ps.droppedNoPosition}, ` +
-      `beyond-tidal=${ps.droppedBeyondTidalLimit}, ` +
-      `no-absmag=${ps.droppedNoAbsmag}, ` +
-      `compound-comp=${ps.droppedCompoundComp}, ` +
-      `collocated-primary=${ps.droppedCollocatedPrimary}, ` +
-      `anchor-is-component=${ps.anchorIsComponent}); ` +
-      `absmag spectral-derived=${ps.absmagSpectralDerived}, ` +
-      `spect ms-from-own-absmag=${ps.spectMsFromOwnAbsmag}, ` +
-      `wds-mag-derived=${ps.absmagWdsMagDerived}, ` +
-      `inherited-twin-orbital=${ps.absmagInheritedTwinOrbital}, ` +
-      `blend-split=${ps.blendSplitRecords}, ` +
-      `dimmed-anchors=${ps.blendDimmedAnchors} (skipped ${ps.blendDimSkipped}, ` +
-      `unfit ${ps.blendDimMembersUnfit}, outside ${ps.blendDimMembersOutside}, ` +
-      `gaia-resolved ${ps.blendDimGaiaResolved}, ` +
-      `beyond-separation ${ps.blendDimMembersBeyondSeparation}, ` +
-      `misfit ${ps.blendDimMembersMisfit}), ` +
-      `constellation-split-from-anchor=${ps.constellationSplitFromAnchor}, ` +
-      `refused-parked=${ps.droppedParkedRecord} ` +
-      `(via gaia_5p ${ps.droppedParkedRecordViaGaia5p}, ` +
-      `owned fit ${ps.droppedParkedRecordOwnedFit}) ` +
-      `in ${Date.now() - tProm}ms`,
-  );
-  counts.companionRowsScanned = ps.pairRowsScanned;
-  counts.companionPromoted = ps.promoted;
-  counts.companionPromotedSynthetic = ps.promotedSynthetic;
-  counts.companionAlreadyInCatalog = ps.alreadyInCatalog;
-  counts.companionDroppedNoPosition = ps.droppedNoPosition;
-  counts.companionDroppedBeyondTidalLimit = ps.droppedBeyondTidalLimit;
-  counts.companionDroppedNoAbsmag = ps.droppedNoAbsmag;
-  counts.companionDroppedCompoundComp = ps.droppedCompoundComp;
-  counts.companionDroppedCollocatedPrimary = ps.droppedCollocatedPrimary;
-  counts.companionAnchorIsComponent = ps.anchorIsComponent;
-  counts.companionDroppedParkedRecord = ps.droppedParkedRecord;
-  counts.companionDroppedParkedViaGaia5p = ps.droppedParkedRecordViaGaia5p;
-  counts.companionDroppedParkedOwnedFit = ps.droppedParkedRecordOwnedFit;
-  counts.companionAbsmagSpectralDerived = ps.absmagSpectralDerived;
-  counts.companionSpectMsFromOwnAbsmag = ps.spectMsFromOwnAbsmag;
-  counts.companionAbsmagWdsMagDerived = ps.absmagWdsMagDerived;
-  counts.companionAbsmagAnchorCollocated = ps.absmagAnchorCollocated;
-  counts.companionAbsmagInheritedTwinOrbital = ps.absmagInheritedTwinOrbital;
-  counts.companionBlendSplit = ps.blendSplitRecords;
-  counts.companionBlendDimmedAnchors = ps.blendDimmedAnchors;
-  counts.companionBlendDimSkipped = ps.blendDimSkipped;
-  counts.companionBlendDimUnfit = ps.blendDimMembersUnfit;
-  counts.companionBlendDimOutside = ps.blendDimMembersOutside;
-  counts.companionBlendDimGaiaResolved = ps.blendDimGaiaResolved;
-  counts.companionBlendDimBeyondSeparation = ps.blendDimMembersBeyondSeparation;
-  counts.companionBlendDimMisfit = ps.blendDimMembersMisfit;
-  counts.companionConstellationSplitFromAnchor = ps.constellationSplitFromAnchor;
-  counts.companionExistingDesigConFromAnchor = ps.existingDesigConFromAnchor;
-  counts.companionExistingMemberRecurated = ps.existingMemberRecurated;
-  counts.companionExistingViaSameasBridge = ps.existingViaSameasBridge;
+  const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
+  console.log(`  promotion decided ${promotedRows.length} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
@@ -703,7 +618,10 @@ export async function main() {
     stars,
     orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
   );
-  counts.physicalOverlaps = overlaps.length;
+  const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
+  console.log(promotionSummary(
+    promotionCounts, promotionDerived, promotedRows.filter((r) => r.via === 'secondary').length,
+  ));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
   for (const [a, b] of overlaps) {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
@@ -994,13 +912,15 @@ export async function main() {
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
         { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
         { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
+        { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
+        { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
       ]), distanceOutliersCheck(stars),
       heap.check(),
     ],
   });
 }
 
-function buildCountsCheck(counts: FiledCounts, blocks: readonly StageBlock<CatalogCountStage>[]): Check {
+function buildCountsCheck(counts: FiledCounts, blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
   return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
     actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }, blocks),

@@ -20,7 +20,9 @@ export interface CatalogLineage {
 
 const UPSTREAM_ORDER = LINEAGE_STAGES.map((s) => s.codes.stage).filter((stage) => stage !== ALLOCATION_LINEAGE.stage);
 const EFFECTS = codeEffects(LINEAGE_STAGES.map((s) => s.codes));
-const ADMISSIONS = new Set([...MEMBERSHIP_ADMISSION_CODES, PROMOTION_CODES.code('minted')]);
+const ADMISSIONS = new Set([
+  ...MEMBERSHIP_ADMISSION_CODES, PROMOTION_CODES.liveCode('minted.keyed'), PROMOTION_CODES.liveCode('minted.synthetic'),
+]);
 
 export function catalogUpstream(local: CatalogLineage): Upstream {
   function* lines(): Generator<LineageLine> {

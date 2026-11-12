@@ -8,7 +8,8 @@ import type { DistVia } from '../../src/catalog-format/record/catalog-pure.ts';
 import { absentStages, flattenStages, stageOfCounts } from '../util/counts/count-stages-pure.ts';
 import { REPO_ROOT } from '../util/paths.ts';
 import type { RvErrorBandPartition } from './distance/radial-velocity/radial-velocity.ts';
-import type { RecuratedBrightness } from './companions/companion-promotion.ts';
+import type { PromotionDerivedCounts } from './companions/companion-promotion.ts';
+import type { PromotionCounts } from './companions/promotion-lineage-pure.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
 import type { InputsCounts } from './parse/read-stars-inputs.ts';
@@ -32,8 +33,9 @@ export function committedBuildCounts(): BuildCounts {
 }
 
 /** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & MultiplicityCounts & GcvsCounts
-  & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+export type BuildCounts = FiledCounts & InputsCounts & BrightnessColourCounts & CoherenceCounts & PromotionCounts
+  & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & NamingCounts & NamingDerivedCounts & RecordsCounts
+  & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
 export interface FiledCounts {
@@ -61,126 +63,6 @@ export interface FiledCounts {
    *  posterior or the raw inversion on most rows; the split states which
    *  populations the override actually moves. */
   lmcOverriddenByDistVia: Record<DistVia, number>;
-  /** Pair rows in multiples.tsv scanned by the companion-promotion pass
-   *  (excludes standalone rows). */
-  companionRowsScanned: number;
-  /** Newly minted catalog records — companions whose identifier wasn't
-   *  already a record and that survived the position + absmag gates. */
-  companionPromoted: number;
-  /** Subset of `companionPromoted` addressable only via a synthetic
-   *  identifier (`synth-<wds_id>-<comp>`) because the row carried no
-   *  own Gaia source_id and no non-inherited HIP. Algol Aa,Ab + Aa1,2's
-   *  Ab / Aa2 sit here. */
-  companionPromotedSynthetic: number;
-  /** Pair rows whose identifier already resolved to an existing
-   *  catalog row (most pair rows fall here — the brighter component is
-   *  almost always a record already). */
-  companionAlreadyInCatalog: number;
-  /** Pair rows dropped because neither the secondary's own astrometry
-   *  nor sep+PA tangent projection from the primary yielded a 3D
-   *  position. */
-  companionDroppedNoPosition: number;
-  /** Pair rows dropped because the tangent projection ρ·d exceeds the
-   *  bound-pair tidal limit — a fabricated companion that far can't be
-   *  gravitationally bound (a line-of-sight optical double with no
-   *  parallax for Stage 5 to catch). */
-  companionDroppedBeyondTidalLimit: number;
-  /** Pair rows dropped because the secondary's absmag couldn't be
-   *  imputed — no own absmag AND no primary+Δmag combo. */
-  companionDroppedNoAbsmag: number;
-  /** Pair rows dropped because the secondary's comp letter is a WDS
-   *  unresolved compound (e.g. "BC" / "AB" / "ABC") whose constituent
-   *  single-letter components are already resolved as sibling cursors
-   *  in the same WDS root. The aggregate isn't a single star and would
-   *  double-count its components if promoted. */
-  companionDroppedCompoundComp: number;
-  /** Pair-row primaries dropped because no position was derivable —
-   *  neither own per-component astrometry nor a compound-sibling sep+PA
-   *  proxy — so collocating on the anchor would render a false
-   *  coincident star (Alsephina C). */
-  companionDroppedCollocatedPrimary: number;
-  /** Pair rows whose ids resolved onto the anchor record while the naming
-   *  authority already letters that record as the row's own component: the
-   *  pair's two ends are one star, so minting would bake a twin and the
-   *  pair's orbit would animate a star against its own copy. Ratchets down —
-   *  each is a mis-keyed multiples.tsv row upstream. */
-  companionAnchorIsComponent: number;
-  /** Pair rows refused because the record they name is parked with no owned
-   *  parallax — promoting would re-serve the measurement the cascade
-   *  refused. */
-  companionDroppedParkedRecord: number;
-  companionDroppedParkedViaGaia5p: number;
-  companionDroppedParkedOwnedFit: number;
-  /** Promoted secondaries whose absmag came from the class→M_V
-   *  spectral calibration (inherited/missing photometry, no WDS Δmag,
-   *  per-component spect_via=curated/simbad). */
-  companionAbsmagSpectralDerived: number;
-  /** Promoted records whose spectral info was re-derived as a
-   *  main-sequence estimate from the component's own de-extincted
-   *  absmag (spect_via inherited/blank + an own-brightness absmag
-   *  source) — the hot-but-tiny inherited-type population (Algol Ab,
-   *  Acrab B, Acrux B). */
-  companionSpectMsFromOwnAbsmag: number;
-  /** Promoted records whose absmag came from the row's own WDS
-   *  apparent magnitude at the system distance (both Δmag paths
-   *  unavailable, or an escape row whose "own" photometry is the
-   *  anchor's blend — Acrux B). */
-  companionAbsmagWdsMagDerived: number;
-  /** Promoted pair-row-primary escapes whose absmag fell back to the
-   *  anchor's collocated brightness (imputeCompanionAbsmag). Ratchet DOWN
-   *  by curating white-dwarf absmags. */
-  companionAbsmagAnchorCollocated: number;
-  /** Promoted secondaries still carrying the inherited primary absmag
-   *  (full-luminosity twin) — kept only because the pair has a
-   *  renderable orbit binaries.bin must keep addressing. Ratchet DOWN
-   *  by curating per-component types; an increase is a regression. */
-  companionAbsmagInheritedTwinOrbital: number;
-  /** Promoted gaia_photometry records whose absmag was reduced by the
-   *  blend-split post-pass — N≥2 collocated records sharing one Gaia
-   *  source (an unresolved sub-arcsec pair) each fainter than the derived
-   *  combined magnitude by 2.5·log10(N). YY Gem Ca/Cb is the showcase. */
-  companionBlendSplit: number;
-  /** Anchor records dimmed by the flux-conservation post-pass: a synth
-   *  member with anchor-inherited-then-stripped ids took a wds_mag/dmag
-   *  absmag, so its flux is subtracted from the anchor's athyg_own blend
-   *  magnitude and total system light is conserved. */
-  companionBlendDimmedAnchors: number;
-  /** Non-structural dim candidates the subset solve could not fit (no
-   *  observed WDS mags / distance) — left un-dimmed. */
-  companionBlendDimUnfit: number;
-  /** Non-structural dim candidates the winning subset left out, or whose
-   *  fit was indecisive within the decisive margin — their light is not in
-   *  the anchor's blend. */
-  companionBlendDimOutside: number;
-  /** Dim candidates Gaia had already resolved out of the anchor's magnitude:
-   *  the member carries its own DR3 source_id and the anchor's V came from
-   *  Gaia's, so its light was never in there. Rises with Gaia coverage. */
-  companionBlendDimGaiaResolved: number;
-  /** Dim candidates wider than the anchor tier's blending scale, or carrying no
-   *  published separation at all — no entry of that catalogue sums both. */
-  companionBlendDimBeyondSeparation: number;
-  /** Dim candidates whose winning hypothesis still missed the anchor's observed
-   *  magnitude by more than the input's error scale — matched nothing. */
-  companionBlendDimMisfit: number;
-  /** Dim candidates skipped by the M_member > M_blend + 0.05 guard. */
-  companionBlendDimSkipped: number;
-  /** companions/README.md#overlap-gate. */
-  physicalOverlaps: number;
-  /** Promoted companions whose own IAU-positional constellation differs from
-   *  their anchor's — a pair wide enough to straddle a boundary, which
-   *  inheriting the anchor's index used to hide. */
-  companionConstellationSplitFromAnchor: number;
-  /** Existing records a pair row resolved to that took the anchor's
-   *  designation constellation, carrying none of their own. */
-  companionExistingDesigConFromAnchor: number;
-  /** Existing records whose own 5p solution Gaia rejects, re-curated onto the
-   *  pair's measured geometry and the anchor's systemic velocity, per where
-   *  the brightness came from (Sirius B is `dmag_imputed`). */
-  companionExistingMemberRecurated: Record<RecuratedBrightness, number>;
-  /** Synthetic mints refused because a stored same-as edge bridges the key to
-   *  a Gaia source the catalogue already holds — without it one physical star
-   *  ships twice. Ratchets DOWN. */
-  companionExistingViaSameasBridge: number;
 
   /** Distance cascade: the parallax tier each record's distance inverts,
    *  before the two override layers. `distNone` is the membership-parity ledger drop (/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) —
@@ -407,37 +289,6 @@ export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCoun
   rvRadialRejected: 'placement',
   rvGaiaErrorBands: 'placement',
   rvGaiaErrorMaxKmS: 'placement',
-  companionRowsScanned: 'promotion',
-  companionPromoted: 'promotion',
-  companionPromotedSynthetic: 'promotion',
-  companionAlreadyInCatalog: 'promotion',
-  companionDroppedNoPosition: 'promotion',
-  companionDroppedBeyondTidalLimit: 'promotion',
-  companionDroppedNoAbsmag: 'promotion',
-  companionDroppedCompoundComp: 'promotion',
-  companionDroppedCollocatedPrimary: 'promotion',
-  companionAnchorIsComponent: 'promotion',
-  companionDroppedParkedRecord: 'promotion',
-  companionDroppedParkedViaGaia5p: 'promotion',
-  companionDroppedParkedOwnedFit: 'promotion',
-  companionAbsmagSpectralDerived: 'promotion',
-  companionSpectMsFromOwnAbsmag: 'promotion',
-  companionAbsmagWdsMagDerived: 'promotion',
-  companionAbsmagAnchorCollocated: 'promotion',
-  companionAbsmagInheritedTwinOrbital: 'promotion',
-  companionBlendSplit: 'promotion',
-  companionBlendDimmedAnchors: 'promotion',
-  companionBlendDimSkipped: 'promotion',
-  companionBlendDimUnfit: 'promotion',
-  companionBlendDimOutside: 'promotion',
-  companionBlendDimGaiaResolved: 'promotion',
-  companionBlendDimBeyondSeparation: 'promotion',
-  companionBlendDimMisfit: 'promotion',
-  physicalOverlaps: 'promotion',
-  companionConstellationSplitFromAnchor: 'promotion',
-  companionExistingDesigConFromAnchor: 'promotion',
-  companionExistingMemberRecurated: 'promotion',
-  companionExistingViaSameasBridge: 'promotion',
 };
 
 export type CountDiff =

@@ -315,24 +315,23 @@ mas, the HIP2 value the floor refused to eight significant figures. That is the
 shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
-[The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted as `companionDroppedParkedRecord`
-(**<!-- count:build-catalog/companionDroppedParkedRecord -->8<!-- /count -->**), and it matches on the measurement: `refusalStated` compares the
+[The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted per astrometry route,
+`promotion.dropped.parked-record.other-route` (**<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->8<!-- /count -->**) and
+`promotion.dropped.parked-record.gaia-5p` (**<!-- count:build-catalog/promotion.dropped.parked-record.gaia-5p -->0<!-- /count -->**), and it matches on the measurement: `refusalStated` compares the
 row's stated distance against every parallax a skip rule refused on that record,
 indexed by the id the pair row names it with.
 
-**Refusing withholds no measurement of the component's own**, and the build
-states that rather than arguing it. Two counts partition the <!-- count:build-catalog/companionDroppedParkedRecord -->8<!-- /count -->:
-`companionDroppedParkedViaGaia5p` is **<!-- count:build-catalog/companionDroppedParkedViaGaia5p -->0<!-- /count -->** — every refused row routes
-`hip2_long_baseline` (7) or `system_inherited` (1) — and
-`companionDroppedParkedOwnedFit` is **<!-- count:build-catalog/companionDroppedParkedOwnedFit -->0<!-- /count -->**, which is the stronger claim and the
-pinned one: not one refused row satisfies `hasIndependentFitRoute`, so none
-carries an owned identifier on a per-component route. It asks about the ROUTE,
+**Refusing withholds no measurement of the component's own.** Every refused
+row routes `hip2_long_baseline` (7) or `system_inherited` (1), and
+`promotion.fit.owned` — a refused row satisfying `hasIndependentFitRoute`, an
+identifier of its own on a per-component route — is **<!-- count:build-catalog/promotion.fit.owned -->0<!-- /count -->**. It asks about the ROUTE,
 not the placement `resolveIndependentAstrometry` builds on it — a measurement
 is what refusing withholds, and a row can state one with no xyz of its own. The 7
 `hip2_long_baseline` rows all carry the parked primary's HIP, inherited, which
-is exactly why their stated distance IS the refusal. **A non-zero
-`companionDroppedParkedOwnedFit` inverts the argument** — the gate would then
-be withholding a component's own fit — so it is a gate, not a note.
+is exactly why their stated distance IS the refusal. A non-zero count is a row
+to read, not a broken gate: the parked record arriving on its own identifier
+(σ Ori's shape, in `../../companions/companion-promotion.test.ts`) counts, and
+its own fit IS the refused parallax, so refusing it withholds nothing.
 
 **Count these over the rows the gate SEES, not over the parked set.** Joining
 the parked ledger to `multiples.tsv` on `hip`/`gaia_source_id` reaches 94 parked

@@ -362,7 +362,7 @@ genuinely measured depth (Alpha Centauri and Proxima) survives.
 **Missing companions.** Thousands of well-known companions — Sirius B,
 the components of Algol — have no entry of their own in general star
 catalogues. These are minted as first-class objects from the
-multiple-star table (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> of them), positioned from the measured
+multiple-star table (<!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed on an identifier of their own, <!-- count:build-catalog/promotion.minted.synthetic -->11,169<!-- /count --> addressed by a synthetic key), positioned from the measured
 separation and angle off their primary, and given an honest brightness:
 a companion never inherits its primary's full brightness, and a row with
 no defensible brightness source is dropped rather than faked. A
