@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, formatPartition, prefixed, share, sumOf } from './tally-pure';
+import { emptyTallyPartition, fold, formatPartition, prefixed, renamed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -80,5 +80,11 @@ describe('formatPartition', () => {
     expect(formatPartition({ bailer_jones: 58, gaia_dr3_inversion: 2, curated: 0 })).toBe(
       'bailer_jones=58, gaia_dr3_inversion=2, curated=0',
     );
+  });
+});
+
+describe('renamed', () => {
+  it('renames each bucket to its snapshot key, zeros included', () => {
+    expect(renamed({ msc: 'orbitMsc', orb6: 'orbitOrb6' } as const, { msc: 3, orb6: 0 })).toEqual({ orbitMsc: 3, orbitOrb6: 0 });
   });
 });

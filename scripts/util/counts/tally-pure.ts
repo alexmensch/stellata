@@ -30,6 +30,11 @@ export function prefixed<P extends string, K extends string>(prefix: P, tally: R
   return Object.fromEntries(Object.entries(tally).map(([k, v]) => [`${prefix}${k}`, v])) as Record<`${P}${K}`, number>;
 }
 
+/** A tally's keys renamed to snapshot keys: `renamed({msc: 'orbitMsc'}, {msc: 3})` is `{orbitMsc: 3}`. */
+export function renamed<K extends string, const M extends Record<K, string>>(names: M, tally: Record<K, number>): Record<M[K], number> {
+  return Object.fromEntries(Object.entries(tally).map(([k, v]) => [names[k as K], v])) as Record<M[K], number>;
+}
+
 /** The sum of `members`' counts under a snapshot prefix: `sumOf(counts, 'orbit_', ['msc', 'orb6'])`. */
 export function sumOf<P extends string, K extends string>(counts: Record<`${P}${K}`, number>, prefix: P, members: readonly K[]): number {
   return members.reduce((n, m) => n + counts[`${prefix}${m}`], 0);

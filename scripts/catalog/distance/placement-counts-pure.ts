@@ -2,7 +2,7 @@
 
 import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
 import type { StageCodes } from '../lineage/reason-codes/reason-codes-pure';
-import { emptyTallyPartition, formatPartition, prefixed } from '../../util/counts/tally-pure';
+import { emptyTallyPartition, formatPartition, prefixed, renamed } from '../../util/counts/tally-pure';
 import { isLowPrecisionParallax } from './parallax/parallax-cascade';
 import {
   distViaBeforeLmc, PLACEMENT_CODES, radialVelocityApplied, shippedDistVia, shippedVelocityVia, type PlacedPlacement,
@@ -92,15 +92,15 @@ export function placementDerivedFold(): { add(p: PlacedPlacement): void; result(
       const { rv } = p.rv;
       if (p.rv.kind === 'kept' && rv.via === 'gaia_dr3') rvGaiaErrorMaxKmS = Math.max(rvGaiaErrorMaxKmS, rv.value.errorKmS);
     },
-    result: () => ({
-      ...Object.fromEntries(SHIPPED_DIST_TIERS.map((t) => [SHIPPED_DIST_COUNT_KEY[t], dist[t]])),
-      ...Object.fromEntries(VELOCITY_VIA_VALUES.map((v) => [VELOCITY_COUNT_KEY[v], velocity[v]])),
+    result: (): PlacementDerivedCounts => ({
+      ...renamed(SHIPPED_DIST_COUNT_KEY, dist),
+      ...renamed(VELOCITY_COUNT_KEY, velocity),
       distLowPrecisionParallax,
       velocityRvApplied,
       ...prefixed(LMC_OVERRIDDEN, lmcOverriddenByDistVia),
       ...prefixed(LMC_PARALLAX_REFUSED, lmcParallaxRefusedByDistVia),
       rvGaiaErrorMaxKmS,
-    }) as PlacementDerivedCounts,
+    }),
   };
 }
 
