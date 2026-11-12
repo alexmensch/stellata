@@ -990,7 +990,7 @@ describe('membership lineage', () => {
 
   it('writes an admission row for every record, folded and component ones included', () => {
     const admitted = new Set(result.lineage
-      .filter((r) => /\.(admit\.[a-z0-9-]+|component|fold)$/.test(r.code)).map((r) => r.key));
+      .filter((r) => /^membership\.(admit\.[a-z0-9.-]+|component|fold)$/.test(r.code)).map((r) => r.key));
     expect(new Set(result.identity.map((r) => r.key))).toEqual(admitted);
     expect(result.lineage.every((r) => MEMBERSHIP_CODES.has(r.code))).toBe(true);
   });
@@ -1004,13 +1004,13 @@ describe('membership lineage', () => {
     const rebound = changes.find((c) => c.key === 'spine:4')!;
     expect(rebound.kind).toBe('changed');
     const binding = (lines: readonly LineageLine[]) =>
-      lines.map(decodeLineageLine).find((r) => r.code === 'membership.binding.bound')!;
+      lines.map(decodeLineageLine).find((r) => r.code.startsWith('membership.binding.bound.'))!;
     expect(paramsOf(binding(rebound.removed)))
       .toMatchObject({ derived_source_id: '222', source_letters: 'W1:A' });
     expect(paramsOf(binding(rebound.added)))
       .toMatchObject({ derived_source_id: '2223', source_letters: 'W1:B' });
     expect(Buffer.from(stageDiffText(changes)).toString('utf8'))
-      .toMatch(/changed\t\+\tmembership\tspine:4\toutcome\tmembership\.binding\.bound\t.*"source_letters":"W1:B"/);
+      .toMatch(/changed\t\+\tmembership\tspine:4\toutcome\tmembership\.binding\.bound\.[a-z0-9]+\t.*"source_letters":"W1:B"/);
   });
 
   it('writes an empty diff when nothing changed', () => {

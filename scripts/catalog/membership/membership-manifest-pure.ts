@@ -58,8 +58,11 @@ import {
 import type { IdentityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import {
+  LED_ADDITION_OUTCOMES,
+  LED_SPINE_OUTCOMES,
   membershipLedgers,
   membershipLineageRow,
+  withLead,
   type AdditionBindingOutcome,
   type BindingReviewCells,
   type KeyedOutcome,
@@ -455,11 +458,14 @@ function spineBindingOutcome(
     hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
   };
   if (b.outcome === 'contested' || b.outcome === 'collision') {
-    return { kind: 'spine-binding-queued', outcome: b.outcome, review: bindingReviewCells(row, b, tables), ...letters };
+    return {
+      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? []),
+      review: bindingReviewCells(row, b, tables), ...letters,
+    };
   }
   return {
     kind: 'spine-binding',
-    outcome: b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome,
+    ...withLead(b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? []),
     sourceId: sourceId ?? '',
     via: b.derived?.via.join('+') ?? '',
     ...letters,
@@ -1121,7 +1127,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (g.routeSourceDisagree) additionRouteSourceDisagree++;
     outcomes.push(
       { key: g.origin, outcome: {
-        kind: 'addition-binding', outcome: additionBindingOutcome(g),
+        kind: 'addition-binding', ...withLead(additionBindingOutcome(g), LED_ADDITION_OUTCOMES, g.derived.via),
         sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),

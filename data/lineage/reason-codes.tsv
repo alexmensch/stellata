@@ -98,13 +98,21 @@ coherence.kept.wide-gap	coherence	none	outcome	live		7.1.12	The record has no pa
 coherence.not-applicable	coherence	none	outcome	live		7.1.12	The record is in no kept-physical WDS system with two or more resolved catalogue records, so coherence decides nothing for it.
 coherence.snapped	coherence	none	outcome	live		7.1.12	The record moves radially onto its system anchor's distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor's.
 coherence.unmoved.at-anchor-distance	coherence	none	outcome	live		7.1.12	The record already sits at its system anchor's distance.
-membership.addition-binding.bound	membership	none	outcome	live		7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
+membership.addition-binding.bound.cns5	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is CNS5.
+membership.addition-binding.bound.hip	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.addition-binding.bound.simbad	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The winner rests on SIMBAD's cross-IDs alone.
+membership.addition-binding.bound.tyc	membership	none	outcome	live		7.1.20	The admitted star's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.addition-binding.gate-mag	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because its Gaia G is more than a magnitude fainter than the star's printed V.
 membership.addition-binding.gate-sibling	membership	none	refused	live		7.1.20	An admitted star's binding candidate refused because SIMBAD gives that Gaia source to a different component of the star's system.
 membership.addition-binding.no-candidate	membership	none	outcome	live		7.1.6	No catalogue proposes a Gaia source for the admitted star.
 membership.addition-binding.on-spine	membership	none	outcome	live		7.1.6	The admitted star's Gaia source is a spine record's, so the star ships unbound.
 membership.addition-binding.refused	membership	none	outcome	live		7.1.6	Every Gaia candidate of the admitted star failed a binding gate.
-membership.addition-binding.rescued	membership	none	outcome	live		7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.rescued	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one.
+membership.addition-binding.rescued.cns5	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is CNS5.
+membership.addition-binding.rescued.hip	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.addition-binding.rescued.simbad	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The winner rests on SIMBAD's cross-IDs alone.
+membership.addition-binding.rescued.tyc	membership	none	outcome	live		7.1.20	The admitted star's candidates all failed a gate, and SIMBAD's witness under its TYC rescued one. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An admitted star's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
 membership.admit.cns5-census	membership	none	outcome	live		7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
@@ -119,13 +127,25 @@ membership.admit.magnitude.refused-sibling	membership	none	outcome	live		7.1.20	
 membership.admit.magnitude.runner-up	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation passed it, and a higher-ranked candidate won.
 membership.admit.magnitude.withheld	membership	none	outcome	live		7.1.20	A Gaia DR3 source at or brighter than the V floor that no primaries record binds is admitted. A primaries row's derivation won it, and the row was withheld from it.
 membership.admit.spine	membership	none	outcome	live		7.1.6	An AT-HYG spine row becomes a manifest row on the merge decision it records.
-membership.binding.bound	membership	none	outcome	live		7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
+membership.binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	One Gaia source survives both binding gates with no passing rival, and the record binds to it.
+membership.binding.bound.cns5	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is CNS5.
+membership.binding.bound.hip	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.bound.simbad	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The winner rests on SIMBAD's cross-IDs alone.
+membership.binding.bound.tyc	membership	none	outcome	live		7.1.20	One Gaia source survives both binding gates with no passing rival, and the record binds to it. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.collision	membership	none	outcome	live		7.1.6	Another spine row derives the same Gaia source, so both are withheld and queued for review.
-membership.binding.contested	membership	none	outcome	live		7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
+membership.binding.contested	membership	none	outcome	retired	7.1.20	7.1.6	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.
+membership.binding.contested.cns5	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is CNS5.
+membership.binding.contested.hip	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.contested.simbad	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The winner rests on SIMBAD's cross-IDs alone.
+membership.binding.contested.tyc	membership	none	outcome	live		7.1.20	The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.gate-mag	membership	none	refused	live		7.1.6	A binding candidate refused because its Gaia G is more than a magnitude fainter than the record's printed V.
 membership.binding.gate-sibling	membership	none	refused	live		7.1.6	A binding candidate refused because SIMBAD gives that Gaia source to a different component of the record's system.
 membership.binding.refused	membership	none	outcome	live		7.1.6	No Gaia source survives the binding gates; the record ships unbound.
-membership.binding.rescued	membership	none	outcome	live		7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
+membership.binding.rescued	membership	none	outcome	retired	7.1.20	7.1.6	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds.
+membership.binding.rescued.cns5	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is CNS5.
+membership.binding.rescued.hip	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is the Gaia HIP cross-match.
+membership.binding.rescued.simbad	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The winner rests on SIMBAD's cross-IDs alone.
+membership.binding.rescued.tyc	membership	none	outcome	live		7.1.20	Every candidate failed a gate, and SIMBAD files the record's own TYC under the one the sibling gate refused, so that one binds. The highest-precedence source proposing the winner is the Gaia TYC cross-match.
 membership.binding.runner-up	membership	none	refused	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
 membership.binding.sol	membership	none	outcome	live		7.1.6	The Sun takes no Gaia binding.
 membership.binding.unweighed-no-pulled-row	membership	none	outcome	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.

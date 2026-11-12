@@ -11,6 +11,7 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
+import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
@@ -34,6 +35,32 @@ export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
 export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
 export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'refused', 'sol'] as const;
 export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
+
+/** The binding outcomes with a winner, whose code names the highest-precedence source proposing it. */
+export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'contested'] as const;
+export const LED_ADDITION_OUTCOMES = ['bound', 'rescued'] as const;
+type LedSpineOutcome = (typeof LED_SPINE_OUTCOMES)[number];
+type QueuedBranch = `binding.contested.${BindingSource}` | 'binding.collision';
+const QUEUED_BRANCHES: readonly (readonly [QueuedBindingOutcome, QueuedBranch])[] = [
+  ...BINDING_SOURCES.map((lead) => ['contested', `binding.contested.${lead}`] as const),
+  ['collision', 'binding.collision'],
+];
+type LedAdditionOutcome = (typeof LED_ADDITION_OUTCOMES)[number];
+
+/** An outcome in `Led` carries the source leading its winner; any other carries none. */
+type Led<O extends string, L extends O> =
+  | { readonly outcome: Exclude<O, L> }
+  | { readonly outcome: L; readonly lead: BindingSource };
+
+/** `outcome`, carrying the source leading its winner (`via[0]`) when it is one of `led`. */
+export function withLead<O extends string, L extends string>(
+  outcome: O, led: readonly L[], via: readonly BindingSource[],
+): Led<O, L & O> {
+  if (!(led as readonly string[]).includes(outcome)) return { outcome } as Led<O, L & O>;
+  const lead = via[0];
+  if (lead === undefined) throw new Error(`a ${outcome} binding names no source proposing its winner`);
+  return { outcome: outcome as L & O, lead };
+}
 
 export const ADDITION_BINDING_OUTCOMES = [
   'bound', 'rescued', 'on-spine', 'shared', 'refused', 'no-candidate',
@@ -110,6 +137,32 @@ const OWN_CANDIDATE_BRANCHES = {
   component: 'admit.magnitude.component',
 } as const satisfies Record<OwnCandidateReason, string>;
 
+const SPINE_LED_DESCRIPTIONS = {
+  bound: 'One Gaia source survives both binding gates with no passing rival, and the record binds to it.',
+  rescued: 'Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.',
+  contested: 'The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.',
+} as const satisfies Record<LedSpineOutcome, string>;
+
+const ADDITION_LED_DESCRIPTIONS = {
+  bound: 'The admitted star\'s own Gaia source survives both gates and is no other record\'s.',
+  rescued: 'The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+} as const satisfies Record<LedAdditionOutcome, string>;
+
+const LEAD_DESCRIPTIONS = {
+  tyc: 'The highest-precedence source proposing the winner is the Gaia TYC cross-match.',
+  hip: 'The highest-precedence source proposing the winner is the Gaia HIP cross-match.',
+  cns5: 'The highest-precedence source proposing the winner is CNS5.',
+  simbad: 'The winner rests on SIMBAD\'s cross-IDs alone.',
+} as const satisfies Record<BindingSource, string>;
+
+function ledCodes<P extends string, O extends string>(
+  prefix: P, descriptions: Readonly<Record<O, string>>,
+): Record<`${P}.${O}.${BindingSource}`, CodeDeclaration<typeof LIVE>> {
+  return Object.fromEntries(Object.entries<string>(descriptions).flatMap(([outcome, d]) => BINDING_SOURCES.map(
+    (lead) => [`${prefix}.${outcome}.${lead}`, outcomeCode(`${d} ${LEAD_DESCRIPTIONS[lead]}`)],
+  ))) as Record<`${P}.${O}.${BindingSource}`, CodeDeclaration<typeof LIVE>>;
+}
+
 export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.spine': outcomeCode('An AT-HYG spine row becomes a manifest row on the merge decision it records.'),
   fold: outcomeCode('Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor\'s.', 'merge'),
@@ -125,9 +178,10 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'admit.magnitude.withheld': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation won it, and the row was withheld from it.`),
   'admit.magnitude.runner-up': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation passed it, and a higher-ranked candidate won.`),
   'admit.magnitude.component': outcomeCode(`${ADMIT_MAGNITUDE} A primaries row's derivation won it, and review names it the other star of the row's pair.`),
-  'binding.bound': outcomeCode('One Gaia source survives both binding gates with no passing rival, and the record binds to it.'),
-  'binding.rescued': outcomeCode('Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.'),
-  'binding.contested': outcomeCode('The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.'),
+  'binding.bound': outcomeCode(SPINE_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
+  'binding.rescued': outcomeCode(SPINE_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
+  'binding.contested': outcomeCode(SPINE_LED_DESCRIPTIONS.contested, 'none', RETIRED_7_1_20),
+  ...ledCodes('binding', SPINE_LED_DESCRIPTIONS),
   'binding.refused': outcomeCode('No Gaia source survives the binding gates; the record ships unbound.'),
   'binding.collision': outcomeCode('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
   'binding.sol': outcomeCode('The Sun takes no Gaia binding.'),
@@ -144,8 +198,9 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'disposition.other.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.other} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
   'disposition.none.queued': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.queued}`),
   'disposition.none.settled': outcomeCode(`${DISPOSITION_DESCRIPTIONS.none} ${DISPOSITION_QUEUE_DESCRIPTIONS.settled}`),
-  'addition-binding.bound': outcomeCode('The admitted star\'s own Gaia source survives both gates and is no other record\'s.'),
-  'addition-binding.rescued': outcomeCode('The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.'),
+  'addition-binding.bound': outcomeCode(ADDITION_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
+  'addition-binding.rescued': outcomeCode(ADDITION_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
+  ...ledCodes('addition-binding', ADDITION_LED_DESCRIPTIONS),
   'addition-binding.on-spine': outcomeCode('The admitted star\'s Gaia source is a spine record\'s, so the star ships unbound.'),
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
@@ -168,21 +223,19 @@ export type MembershipOutcome =
   | { readonly kind: 'admit-addition'; readonly reason: AdditionReason; readonly members: readonly string[] }
   | { readonly kind: 'component'; readonly designation: string; readonly members: readonly string[] }
   | { readonly kind: 'admit-magnitude'; readonly ownCandidate: OwnCandidate | null }
-  | {
+  | ({
     readonly kind: 'spine-binding';
-    readonly outcome: SettledBindingOutcome;
     readonly sourceId: string;
     readonly via: string;
     readonly sourceLetters: string;
     readonly hipLetters: string;
-  }
-  | {
+  } & Led<SettledBindingOutcome, LedSpineOutcome & SettledBindingOutcome>)
+  | ({
     readonly kind: 'spine-binding-queued';
-    readonly outcome: QueuedBindingOutcome;
     readonly review: BindingReviewCells;
     readonly sourceLetters: string;
     readonly hipLetters: string;
-  }
+  } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome>)
   | {
     readonly kind: 'candidate-refused';
     readonly subject: RefusalSubject;
@@ -204,12 +257,11 @@ export type MembershipOutcome =
     readonly basis: string;
     readonly review: BindingReviewCells;
   }
-  | {
+  | ({
     readonly kind: 'addition-binding';
-    readonly outcome: AdditionBindingOutcome;
     readonly sourceId: string;
     readonly via: string;
-  }
+  } & Led<AdditionBindingOutcome, LedAdditionOutcome>)
   | { readonly kind: 'label-flip'; readonly flip: Omit<LabelFlip, 'sourceId'> }
   | {
     readonly kind: 'label-drop';
@@ -239,11 +291,11 @@ type Candidate = { source_id: string; via: string };
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
-  : B extends `binding.${QueuedBindingOutcome}` ? BindingReviewCells & Letters
-  : B extends `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
+  : B extends QueuedBranch ? BindingReviewCells & Letters
+  : B extends `binding.${LedSpineOutcome}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' ? Candidate
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
-  : B extends `addition-binding.${AdditionBindingOutcome}` ? Candidate
+  : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
@@ -287,11 +339,11 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
         ? row(key, 'admit.magnitude.no-own-candidate', {})
         : row(key, OWN_CANDIDATE_BRANCHES[o.ownCandidate.reason], {}, [o.ownCandidate.of]);
     case 'spine-binding':
-      return row(key, `binding.${o.outcome}`, {
+      return row(key, 'lead' in o ? `binding.${o.outcome}.${o.lead}` : `binding.${o.outcome}`, {
         derived_source_id: o.sourceId, derived_via: o.via, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'spine-binding-queued':
-      return row(key, `binding.${o.outcome}`, {
+      return row(key, 'lead' in o ? `binding.${o.outcome}.${o.lead}` : `binding.${o.outcome}`, {
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
     case 'candidate-refused':
@@ -301,7 +353,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'disposition':
       return row(key, `disposition.${o.outcome}.${o.queue}`, { ...o.review, keep_source_id: o.keep, basis: o.basis });
     case 'addition-binding':
-      return row(key, `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
+      return row(key, 'lead' in o ? `addition-binding.${o.outcome}.${o.lead}` : `addition-binding.${o.outcome}`, { source_id: o.sourceId, via: o.via });
     case 'label-flip':
       return row(key, labelBranch(o.flip.disposition, o.flip.field), {
         label: o.flip.label, spine: o.flip.spine,
@@ -341,7 +393,9 @@ export function membershipLedgers(
       (f) => [MEMBERSHIP_CODES.code(labelBranch(d, f)), { disposition: d, field: f, branch: labelBranch(d, f) }] as const,
     )),
   );
-  const queued = byCode(QUEUED_BINDING_OUTCOMES, (o) => `binding.${o}` as const);
+  const queued = new Map<string, [QueuedBindingOutcome, QueuedBranch]>(QUEUED_BRANCHES.map(
+    ([verdict, branch]) => [MEMBERSHIP_CODES.code(branch), [verdict, branch]],
+  ));
   const disposed = byCode(
     BINDING_DISPOSITIONS.flatMap((d) => DISPOSITION_QUEUES.map((q): DispositionBranch => `disposition.${d}.${q}`)),
     (b) => b,
