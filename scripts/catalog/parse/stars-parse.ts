@@ -38,8 +38,7 @@ import {
 import {
   velocityPcPerYr,
   KM_S_TO_PC_YR,
-  VELOCITY_SANITY_CEILING_PC_YR,
-  GALACTIC_ESCAPE_VELOCITY_PC_YR,
+  speedBand,
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { resolveParallax } from '../distance/parallax/parallax-cascade';
@@ -222,12 +221,10 @@ export interface RvRouting {
 /** The per-row inputs a shipped row's counts fold from that no lineage type records. */
 export interface ShippedFacts {
   readonly bailerJonesEligible: boolean;
-  readonly tycho2Direction: { readonly fromIcrs: boolean; readonly isPhotocentre: boolean } | null;
   /** The distance the override stack settled on. */
   readonly distPc: number;
-  /** The space velocity before any clamp, wherever it exceeded the Galactic
-   *  escape velocity — clamped or not, as the placement says. */
-  readonly fastKmS: number | null;
+  /** The space velocity before any clamp. */
+  readonly speedKmS: number;
 }
 
 /** One manifest row resolved: parked, or a record with the provenance of each
@@ -528,8 +525,8 @@ export function rowResolver({
     // (a proven escaper must survive) but tracked: that band is almost all
     // PM×distance / bad-RV artifacts.
     const speedPcYr = Math.hypot(vel.x, vel.y, vel.z);
-    const velocityClamped = speedPcYr > VELOCITY_SANITY_CEILING_PC_YR;
-    if (velocityClamped) vel = { x: 0, y: 0, z: 0 };
+    const speed = speedBand(speedPcYr);
+    if (speed === 'clamped') vel = { x: 0, y: 0, z: 0 };
 
     let apsis: CitedValue<ApsisRow> | null = null;
     if (gaiaSourceId) {
@@ -644,7 +641,7 @@ export function rowResolver({
         bailerJones: bjStep,
         lmc: lmcStep,
         rv: rvRejected && rvRes.via !== 'none' ? { kind: 'rejected', rv: rvRes } : { kind: 'kept', rv: rvRes },
-        velocityClamped,
+        speed,
       },
       brightness: { kind: 'shipped', key, v: vRes, spectral, ci: ciRes, dust },
       size: {
@@ -657,11 +654,8 @@ export function rowResolver({
       star,
       facts: {
         bailerJonesEligible,
-        tycho2Direction: direction.via === 'tycho2' && tycho2Row !== null
-          ? { fromIcrs: tycho2Row.fromIcrs, isPhotocentre: tycho2Row.isPhotocentre }
-          : null,
         distPc: dist,
-        fastKmS: speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? speedPcYr / KM_S_TO_PC_YR : null,
+        speedKmS: speedPcYr / KM_S_TO_PC_YR,
       },
     };
   };

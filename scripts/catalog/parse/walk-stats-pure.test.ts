@@ -9,6 +9,7 @@ import type { ShippedBrightness } from '../photometry/brightness-colour-lineage-
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import { physicalRadius } from '../../../src/catalog-format/spectral/physical-radius';
 import { makeStar } from './star-fixture';
+import type { Tycho2SolutionKind } from '../distance/direction-cascade';
 import type { RowOutcome, RvRouting, ShippedFacts } from './stars-parse';
 import { VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP, walkStatsFold, type WalkStats } from './walk-stats-pure';
 
@@ -22,13 +23,21 @@ const glieseParallax = (errMas: number): PlacedPlacement['parallax'] => (
   { via: 'gliese_plx', value: { mas: 10, errMas }, evidence: [GL_REF], refusals: [] }
 );
 
+const TYCHO2_SOLUTION = {
+  srcRaDeg: 0, srcDecDeg: 0, srcEpoch: 2000, srcPmraMasyr: 1, srcPmdecMasyr: 1, velVia: 'tycho2_pm', tycho2Solution: 'mean',
+} as const;
+
+const tycho2Direction = (tycho2Solution: Tycho2SolutionKind): PlacedPlacement['direction'] => (
+  { via: 'tycho2', value: { ...TYCHO2_SOLUTION, tycho2Solution }, evidence: [TYC_REF], refusals: [] }
+);
+
 const PLACED: PlacedPlacement = {
   kind: 'placed',
   key: 'spine:1',
   parallax: glieseParallax(0.01),
   direction: {
     via: 'tycho2',
-    value: { srcRaDeg: 0, srcDecDeg: 0, srcEpoch: 2000, srcPmraMasyr: 1, srcPmdecMasyr: 1, velVia: 'tycho2_pm' },
+    value: TYCHO2_SOLUTION,
     evidence: [TYC_REF],
     refusals: [],
   },
@@ -36,7 +45,7 @@ const PLACED: PlacedPlacement = {
   bailerJones: { kind: 'not-applied' },
   lmc: 'outside_cone',
   rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
-  velocityClamped: false,
+  speed: 'bound',
 };
 const BRIGHTNESS: ShippedBrightness = {
   kind: 'shipped', key: 'spine:1',
@@ -47,9 +56,8 @@ const BRIGHTNESS: ShippedBrightness = {
 };
 const FACTS: ShippedFacts = {
   bailerJonesEligible: false,
-  tycho2Direction: null,
   distPc: 100,
-  fastKmS: null,
+  speedKmS: 30,
 };
 
 const shipped = (
@@ -119,8 +127,8 @@ describe('walkStatsFold', () => {
 
   it('caps the above-escape sample but counts every fast row, and samples every clamp', () => {
     const stats = fold([
-      ...Array.from({ length: VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP + 1 }, () => shipped({}, { fastKmS: 600 })),
-      shipped({ velocityClamped: true }, { fastKmS: 2000 }),
+      ...Array.from({ length: VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP + 1 }, () => shipped({ speed: 'above_escape' }, { speedKmS: 600 })),
+      shipped({ speed: 'clamped' }, { speedKmS: 2000 }),
     ]);
     expect(stats.velocityAboveEscape).toBe(VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP + 1);
     expect(stats.velocityAboveEscapeSample).toHaveLength(VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP);
@@ -130,13 +138,13 @@ describe('walkStatsFold', () => {
     expect(stats.velocityVia).toMatchObject({ tycho2_pm: VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP + 1, zero: 1 });
   });
 
-  it('splits the Tycho-2 direction tier by its two solution flags', () => {
+  it('splits the Tycho-2 direction tier by the solution it read', () => {
     const stats = fold([
-      shipped({}, { tycho2Direction: { fromIcrs: true, isPhotocentre: false } }),
-      shipped({}, { tycho2Direction: { fromIcrs: true, isPhotocentre: true } }),
+      shipped({ direction: tycho2Direction('observed') }),
+      shipped({ direction: tycho2Direction('photocentre') }),
       shipped(),
     ]);
-    expect(stats.directionTycho2FromIcrs).toBe(2);
+    expect(stats.directionTycho2FromIcrs).toBe(1);
     expect(stats.directionTycho2Photocentre).toBe(1);
     expect(stats.directionVia.tycho2).toBe(3);
   });

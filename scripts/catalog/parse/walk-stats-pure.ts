@@ -133,9 +133,9 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     stats.distVia[shippedDistVia(p)]++;
     if (shipsLowPrecisionParallax(p)) stats.distLowPrecisionParallax++;
     stats.directionVia[p.direction.via]++;
-    if (f.tycho2Direction !== null) {
-      if (f.tycho2Direction.fromIcrs) stats.directionTycho2FromIcrs++;
-      if (f.tycho2Direction.isPhotocentre) stats.directionTycho2Photocentre++;
+    if (p.direction.via === 'tycho2') {
+      if (p.direction.value.tycho2Solution === 'observed') stats.directionTycho2FromIcrs++;
+      if (p.direction.value.tycho2Solution === 'photocentre') stats.directionTycho2Photocentre++;
     }
     if (p.pmRescue !== null) stats.pmRescueOutcome[pmRescueOutcome(p.pmRescue)]++;
     if (p.rv.kind === 'rejected') {
@@ -144,14 +144,13 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
         `${sampleLabel(o.star)}: ${p.rv.rv.value.kmS.toFixed(1)} km/s @ ${f.distPc.toFixed(1)} pc`,
       );
     }
-    if (p.velocityClamped) {
-      if (f.fastKmS === null) throw new Error(`walk stats: ${p.key} clamped below the escape velocity`);
+    if (p.speed === 'clamped') {
       stats.velocityClamped++;
-      stats.velocityClampedSample.push(fastSample(f.fastKmS));
-    } else if (f.fastKmS !== null) {
+      stats.velocityClampedSample.push(fastSample(f.speedKmS));
+    } else if (p.speed === 'above_escape') {
       stats.velocityAboveEscape++;
       if (stats.velocityAboveEscapeSample.length < VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP) {
-        stats.velocityAboveEscapeSample.push(fastSample(f.fastKmS));
+        stats.velocityAboveEscapeSample.push(fastSample(f.speedKmS));
       }
     }
     stats.velocityVia[shippedVelocityVia(p)]++;

@@ -45,11 +45,20 @@ export const VELOCITY_SANITY_CEILING_PC_YR =
 // hypervelocity stars Galaxy-wide), so a large above-escape population is
 // almost entirely PM×distance / bad-RV artifacts. These rows are NOT
 // clamped (a proven escaper must survive); they are counted + logged as a
-// tracked ratchet (build-counts `velocityAboveEscape`) so the artifact tail
+// tracked ratchet (`placement.velocity.above-escape`) so the artifact tail
 // is visible and can drive finer per-row PM-S/N + RV-sanity filtering.
 export const GALACTIC_ESCAPE_VELOCITY_KM_S = 550;
 export const GALACTIC_ESCAPE_VELOCITY_PC_YR =
   GALACTIC_ESCAPE_VELOCITY_KM_S * KM_S_TO_PC_YR;
+
+/** Where a space velocity falls against the two thresholds: kept below escape,
+ *  kept but above it, or past the sanity ceiling and zeroed. */
+export type SpeedBand = 'bound' | 'above_escape' | 'clamped';
+
+export function speedBand(speedPcYr: number): SpeedBand {
+  if (speedPcYr > VELOCITY_SANITY_CEILING_PC_YR) return 'clamped';
+  return speedPcYr > GALACTIC_ESCAPE_VELOCITY_PC_YR ? 'above_escape' : 'bound';
+}
 
 /** Space-motion velocity in the equatorial Cartesian frame `catalog.bin`
  *  uses, in pc/yr:

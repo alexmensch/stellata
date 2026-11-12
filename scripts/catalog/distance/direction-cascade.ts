@@ -87,13 +87,24 @@ export interface DirectionSolution {
   velVia: VelocityVia;
 }
 
+/** Which of a Tycho-2 row's positions the tier read: its mean solution, a
+ *  mean solution that is an unresolved double's photocentre, or the observed
+ *  position of a row with no mean solution. */
+export type Tycho2SolutionKind = 'mean' | 'photocentre' | 'observed';
+
+export function tycho2SolutionKind(row: Pick<Tycho2Row, 'fromIcrs' | 'isPhotocentre'>): Tycho2SolutionKind {
+  if (row.fromIcrs) return 'observed';
+  return row.isPhotocentre ? 'photocentre' : 'mean';
+}
+
 /** A Gaia 5p solution passed over: its PM disagrees with HIP2's (orbit
  *  corruption), or the fit is 2p and HIP2 covers the star. */
 export type DirectionRefusal = CascadeRefusal<'gaia_5p', 'pm_disagrees_with_hip2' | 'no_5p_solution'>;
 
 /** `none` is a record no tier states a position for — a /docs/catalog-driver.md#61-record-parity park. */
 export type DirectionResolution = CascadeResult<
-  UniformValues<DirectionVia, DirectionSolution>,
+  Omit<UniformValues<DirectionVia, DirectionSolution>, 'tycho2'>
+    & { tycho2: DirectionSolution & { readonly tycho2Solution: Tycho2SolutionKind } },
   DirectionRefusal
 >;
 
@@ -190,7 +201,7 @@ export function resolveDirection(
   const hip2 = hip !== null ? sources.hip2.get(hip) : undefined;
   const refusals: DirectionRefusal[] = [];
   const hit = (
-    via: DirectionVia, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
+    via: Exclude<DirectionVia, 'tycho2'>, value: DirectionSolution, evidence: readonly AnySourceRowRef[],
   ): DirectionResolution => ({ via, value, evidence, refusals });
 
   const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
@@ -234,12 +245,18 @@ export function resolveDirection(
   // the proper motion that carries it forward wherever its solution has one.
   const tycho2 = tyc !== null ? sources.tycho2.get(tyc) : undefined;
   if (tycho2 !== undefined) {
-    return hit('tycho2', {
-      srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
-      srcEpoch: tycho2.epoch,
-      srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
-      velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
-    }, [tycho2.ref]);
+    return {
+      via: 'tycho2',
+      value: {
+        srcRaDeg: tycho2.raDeg, srcDecDeg: tycho2.decDeg,
+        srcEpoch: tycho2.epoch,
+        srcPmraMasyr: tycho2.pmRaMasyr, srcPmdecMasyr: tycho2.pmDecMasyr,
+        velVia: pmVelVia(tycho2.pmRaMasyr, tycho2.pmDecMasyr, 'tycho2_pm'),
+        tycho2Solution: tycho2SolutionKind(tycho2),
+      },
+      evidence: [tycho2.ref],
+      refusals,
+    };
   }
 
   const cns5 = lookupCns5Astrometry(sources.cns5, gl);
