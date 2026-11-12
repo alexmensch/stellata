@@ -11,14 +11,14 @@ export function wdsRootOf(systemId: string): string | null {
   return systemId.slice(0, dash) || null;
 }
 
-/** `synth-<wds_id>-<comp>`; null when the comp is blank or the system_id has no WDS id. */
-export function composeSyntheticId(
-  systemId: string,
-  comp: string,
-): string | null {
+/** `synth-<wds_id>-<comp>`. Every multiples.tsv row composes one: its reader
+ *  refuses a blank comp or a system_id with no WDS id, so this throws on either. */
+export function composeSyntheticId(systemId: string, comp: string): string {
   const c = comp.trim();
   const wdsId = wdsRootOf(systemId);
-  if (!c || wdsId === null) return null;
+  if (!c || wdsId === null) {
+    throw new Error(`no synthetic key composes from system_id "${systemId}", comp "${comp}"`);
+  }
   return `synth-${wdsId}-${c}`;
 }
 

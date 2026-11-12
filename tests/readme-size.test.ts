@@ -21,13 +21,15 @@ const ALLOWLIST: Record<string, string> = {
     'read state the cursor walk accumulated. Every seam measured needs ' +
     'MultiplesTsvRow plus 2-4 value helpers back OUT of the parent (the ' +
     'wrong split, per AGENTS.md). Anchor flux conservation, the largest ' +
-    'topic at 91 lines, also writes seven counters ' +
-    'on PromotionStats that build-catalog reads, and placement needs ' +
+    'topic at 91 lines, also writes seven of the PostPassStats counters ' +
+    'promotion\'s derived count block files, and placement needs ' +
     'hasRenderableOrbit and the WDS letter algebra the rest of the pass ' +
     'uses too. The science half is ' +
     'already in docs/science-multiple-star-pipeline.md and the naming half ' +
     'in ../naming/ and record-index/; what is left is the per-gate ' +
-    'engineering contract.',
+    'engineering contract, and promotion\'s lineage contract, which ' +
+    'describes promotion-lineage-pure.ts here rather than lineage/, whose ' +
+    'README keeps a pointer like every other stage\'s.',
 };
 
 // A trailing newline terminates the last line rather than starting a new

@@ -478,7 +478,7 @@ consume it in two complementary ways:
    right, so an anchor matching neither "alone" nor any blend — WDS pair
    mags in a non-V band, or estimates — would still dim by whichever
    missed by less. `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses that,
-   counted `blendDimMembersMisfit`.
+   counted `companionBlendDimMisfit`.
 
    Calibrated off the winning residual `|m_obs − m(S_best)|` over all 2,301
    anchors whose fit is decisive, i.e. every anchor the solve would dim absent
@@ -586,7 +586,7 @@ consume it in two complementary ways:
    from the component's own photometry, tagged
    `photometry_via = gaia_photometry`, which promotion's "own
    photometry" path then consumes. This recovers ~3.5k companions
-   (`companionDroppedNoAbsmag` 6207 → 2553; the residual are
+   (`promotion.dropped.no-absmag` 6207 → 2553; the residual are
    system-inherited blends of tight inner binaries — no own 5p fit — and
    Gaia-NSS centre-of-mass sources whose G is the blended pair's, both
    deliberately excluded). Derivation:

@@ -5,6 +5,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
+import { wdsRootOf } from './component-tokens-pure';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const MULTIPLES_COLUMNS = [
@@ -146,9 +147,13 @@ export const MULTIPLES_TSV = defineArtifact({
     if (eccentricity !== null && !(eccentricity >= 0 && eccentricity < 1)) {
       row.fail(`e ${eccentricity} is not a bound orbit's eccentricity`);
     }
+    const systemId = row.raw('system_id');
+    if (wdsRootOf(systemId) === null) row.fail(`system_id "${systemId}" names no WDS id`);
+    const comp = row.raw('comp');
+    if (comp.trim() === '') row.fail('comp is empty');
     return {
-      systemId: row.raw('system_id'),
-      comp: row.raw('comp'),
+      systemId,
+      comp,
       hip: row.int('hip'),
       gaiaSourceId: row.sourceId('gaia_source_id'),
       hd: row.int('hd'),

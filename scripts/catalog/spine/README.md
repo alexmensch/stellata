@@ -148,9 +148,9 @@ moved that is not a retired gate traces to these four**:
 | `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of in a re-classification after it |
 | `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 279 ([The ci cascade](../photometry/README.md#the-ci-cascade)) |
 | `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
-| `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
-| `companionRepositionedCollocatedDouble` | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
-| `companionAbsmagWdsMagDerived` | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |
+| `companionAlreadyInCatalog` (now the sum of the `promotion.adopted.*` codes) | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
+| `companionRepositionedCollocatedDouble` (now a build failure, [Collocated-double refusal](../companions/README.md#collocated-double-refusal)) | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
+| `companionAbsmagWdsMagDerived` (now `promotion.brightness.wds-mag`) | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |
 | `systemCoherenceSystems` (now the sum of the `coherence.anchor.*` codes) | +1 | ξ UMa B: the coherence pass resolves members by source_id then HIP, so B used to collapse onto A's record on the shared HIP 55203 and the root never reached two members |
 | `bjEligible` | −1 | none of the four — the one `tooFar` row the old walk counted as eligible before dropping it; the spine never carried it |
 
