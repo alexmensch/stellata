@@ -25,7 +25,7 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   makes each planned release's annotated tag locally; `publish --plan
   <file>` creates each release, and with it its tag on origin. `parsePlan()` refuses a
   malformed plan before either acts. Reads each commit's PR labels and
-  body with `gh`.
+  body with `gh`. `publish`'s token: [The publish token](#the-publish-token).
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
   which ranks a file list largest first and splits out oversize and
@@ -116,6 +116,21 @@ release (`gh release create --target`), so origin never holds a release
 tag without its page: a tag the next plan starts from has always been
 published. The tags GitHub makes are lightweight, which `releaseAt` reads
 the same (`describe --tags`).
+
+### The publish token
+
+**`publish` runs on a GitHub App token, never `GITHUB_TOKEN`.** A tag
+`gh release create --target` makes at a commit whose `.github/workflows/`
+files differ from `main`'s tip counts as a workflow update, which needs the
+Workflows permission `GITHUB_TOKEN` can never hold: it answers HTTP 403,
+"Resource not accessible by integration". A stack whose upper member edits
+a workflow, or a workflow edit landing while an earlier deploy is queued,
+puts a releasing commit there. `deploy.yml` mints the token in the step
+before `publish`, scoped to Contents and Workflows write and Pull requests
+read (the notes read each PR's body); the App and its secrets are in
+[Required repository secrets](/RELEASING.md#what-the-deploy-workflow-does).
+`deploy-workflow.test.ts` pins both: `publish`'s `GH_TOKEN` is that step's
+output, and the step asks for those three permissions.
 
 ## The pre-traffic check
 

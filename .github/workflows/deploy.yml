@@ -103,7 +103,17 @@ jobs:
           pnpm exec wrangler versions deploy "$VERSION_ID@100%" --message "$GITHUB_SHA" --yes
           pnpm exec wrangler triggers deploy
 
+      - name: Mint release token
+        id: release-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-workflows: write
+          permission-pull-requests: read
+
       - name: Publish releases
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.release-token.outputs.token }}
         run: node scripts/release/cut-releases.ts publish --plan "$RUNNER_TEMP/release-plan.json"

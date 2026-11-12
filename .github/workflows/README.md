@@ -22,7 +22,9 @@ previous version live and pushes no tag
 ([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
 Last, `cut-releases.ts publish` creates each GitHub release, and its tag
 with it, carrying the `## Release notes` block from its own PR body in
-place of the flat auto-generated notes.
+place of the flat auto-generated notes, on a GitHub App token minted in
+the step before
+([The publish token](/scripts/release/README.md#the-publish-token)).
 
 The range can hold several releasing commits — a failed deploy leaves its
 commit untagged for the next push's run — and each releases at its own
