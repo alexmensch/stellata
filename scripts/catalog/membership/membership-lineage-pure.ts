@@ -1,4 +1,4 @@
-// build:membership as a lineage stage: its reason codes, its outcome union, the one serialiser over it, and the four ledgers as views. See README.md#membership-lineage.
+// build:membership as a lineage stage: its reason codes, outcome union and serialiser, the four ledgers as views, and its count blocks with their totals and log. See README.md#membership-lineage.
 
 import {
   LABEL_DISPOSITIONS, LABEL_FIELDS, dispositionFields,
