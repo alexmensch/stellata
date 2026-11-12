@@ -50,9 +50,8 @@ export interface ParallaxSources {
   curated: OriginPlacement | null;
 }
 
-/** The tiers `resolveParallax` answers on: every `DistVia` but the two override
- *  layers and the residual. */
-export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic' | 'none'>;
+/** The tiers `resolveParallax` answers on: every `DistVia` but the two override layers. */
+export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic'>;
 
 /** A tier's parallax the floor or a skip rule refused. On a `none` result the
  *  refusals are what distinguish a row nothing measured from one whose only
