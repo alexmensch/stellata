@@ -363,7 +363,7 @@ because it snapshots a build that no longer exists; the primaries-derived
 membership is a pure function of committed inputs, so it can be, and that
 is what replaces the byte guard with a regenerate-and-diff. The swap emits a
 committed **membership manifest** (`data/membership/membership-manifest.tsv`,
-376,909 rows = <!-- count:inherited-spine/rows -->313,257<!-- /count --> spine less the one folded + 63,653 admitted) — one
+the spine's <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows less the one folded, plus the admitted additions) — one
 row per admitted record: admitting designations, route, source_id and its
 provenance class — regenerated in CI and diffed like
 `classic_id_overlay.tsv`. Those counts are sums of the membership stage's

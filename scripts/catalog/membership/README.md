@@ -3,10 +3,11 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-([Correcting a merge decision](#correcting-a-merge-decision)), plus the 63,653 records the primaries name
-that AT-HYG's subset never carried — 376,909 rows, and the 598,464 the V <= 11
-magnitude term adds on top (`magnitude-term/README.md`), 975,373 in
-all. **`readStars` walks it, and
+([Correcting a merge decision](#correcting-a-merge-decision)), plus the records the primaries name
+that AT-HYG's subset never carried, and the V <= 11 magnitude term on top
+(`magnitude-term/README.md`) — 975,373 rows in all, measured 2026-11-12; the
+count snapshot holds each part as its admission codes
+([Membership lineage](#membership-lineage)). **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
 `data/athyg/inherited-spine.tsv` as the build's input; the contract is
