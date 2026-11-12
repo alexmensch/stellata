@@ -9,10 +9,9 @@ folder's code is built to.
 A stage returns a typed outcome per record; lineage is those outcomes
 serialised. The target is that a stage's count snapshot folds from its
 lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
-so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
-its review-queue and label-drop counts fold from the outcomes, while the
-derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
+so the snapshot is a projection of lineage, never kept in step with it. Membership's
+keys are its codes, beside a derived block
+([Membership lineage](../membership/README.md#membership-lineage)). Promotion's per-row counters all fold from its
 outcomes; its post-passes act on records and keep their own. Coherence's,
 brightness-colour's and naming's snapshot keys are their codes, folded from
 their lines (naming's beside a code-less authority tally,

@@ -10,11 +10,16 @@ import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
 } from '../designation-constellation-pure';
+import { fold } from '../../../util/counts/tally-pure';
 import {
+  LABEL_DISPOSITIONS,
+  LABEL_FIELDS,
   labelFlipDesignationDelta,
   mergeClassicIdLabels,
   parseLabelOverridesTsv,
   spineDesignationsRemovedBy,
+  type LabelDisposition,
+  type LabelField,
   type LabelFlip,
   type LabelMergeRecord,
 } from './label-merge-pure';
@@ -44,22 +49,26 @@ function merge(
   overrides = new Map<string, string | null>(),
   siblingRenderedSourceIds: ReadonlySet<string> = new Set<string>(),
 ) {
-  return mergeClassicIdLabels({
+  const result = mergeClassicIdLabels({
     records,
     labels: records.map((_, i) => `record ${i}`),
     overlay,
     overrides,
     siblingRenderedSourceIds,
   });
+  const routed = Object.fromEntries(LABEL_DISPOSITIONS.map((d) => [d, fold(
+    LABEL_FIELDS, result.flips.filter((f) => f.disposition === d), (f) => f.field,
+  )])) as Record<LabelDisposition, Record<LabelField, number>>;
+  return { ...result, routed };
 }
 
 describe('mergeClassicIdLabels', () => {
   it('adds an identifier the spine lacks', () => {
     const records = [record()];
-    const { counts } = merge(records, new Map([[SRC_A, entry({ hd: [172167] })]]));
+    const { routed } = merge(records, new Map([[SRC_A, entry({ hd: [172167] })]]));
     expect(records[0].hd).toBe(172167);
-    expect(counts.labelAdded.hd).toBe(1);
-    expect(counts.labelFlipped.hd).toBe(0);
+    expect(routed.added.hd).toBe(1);
+    expect(routed['overlay-wins'].hd).toBe(0);
   });
 
   it('keeps the spine spelling where the overlay confirms the value', () => {
@@ -84,9 +93,9 @@ describe('mergeClassicIdLabels', () => {
   // real disagreement and the HD-route precedence (/docs/catalog-driver.md#4-how-hd-reaches-gaia) has to reach it.
   it('reads a swapped GJ component letter as a disagreement', () => {
     const records = [record({ gl: 'Gl 563.2A' })];
-    const { counts } = merge(records, new Map([[SRC_A, entry({ gj: ['563.2B'] })]]));
+    const { routed } = merge(records, new Map([[SRC_A, entry({ gj: ['563.2B'] })]]));
     expect(records[0].gl).toBe('GJ 563.2B');
-    expect(counts.labelFlipped.gl).toBe(1);
+    expect(routed['overlay-wins'].gl).toBe(1);
   });
 
   // CNS5's gj_comp states a system's letters COMBINED — Gl 423 is one entry
@@ -128,11 +137,11 @@ describe('mergeClassicIdLabels', () => {
       record({ hip: 71904, gl: 'GJ 9490A' }),
       record({ gaiaSourceId: SRC_B, hip: 71914, gl: 'GJ 9490B' }),
     ];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ gj: ['9490B'] })]]),
     );
     expect([records[0].gl, records[1].gl]).toEqual(['GJ 9490A', 'GJ 9490B']);
-    expect(counts.labelSuppressed.gl).toBe(1);
+    expect(routed['suppressed-collision'].gl).toBe(1);
     expect(flips.map((f) => f.disposition)).toEqual(['suppressed-collision']);
   });
 
@@ -143,22 +152,22 @@ describe('mergeClassicIdLabels', () => {
       record({ gl: 'Gl 421A' }),
       record({ gaiaSourceId: SRC_B, gl: 'Gl 421B' }),
     ];
-    const { counts } = merge(records, new Map([
+    const { routed } = merge(records, new Map([
       [SRC_A, entry({ gj: ['421B'] })],
       [SRC_B, entry({ gj: ['421A'] })],
     ]));
     expect([records[0].gl, records[1].gl]).toEqual(['GJ 421B', 'GJ 421A']);
-    expect(counts.labelFlipped.gl).toBe(2);
-    expect(counts.labelSuppressed.gl).toBe(0);
+    expect(routed['overlay-wins'].gl).toBe(2);
+    expect(routed['suppressed-collision'].gl).toBe(0);
   });
 
   it('lets the overlay win on disagreement and enumerates the flip', () => {
     const records = [record({ hr: 5505 })];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ hr: [5506] })]]),
     );
     expect(records[0].hr).toBe(5506);
-    expect(counts.labelFlipped.hr).toBe(1);
+    expect(routed['overlay-wins'].hr).toBe(1);
     expect(flips).toEqual([{
       sourceId: SRC_A, label: 'record 0', field: 'hr',
       spine: '5505', overlay: '5506', applied: '5506', disposition: 'overlay-wins',
@@ -182,36 +191,36 @@ describe('mergeClassicIdLabels', () => {
 
   it('aliases the values a single-valued field cannot display', () => {
     const records = [record({ hd: 172167 })];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ hd: [172167, 172168] })]]),
     );
     expect(records[0].hd).toBe(172167);
     expect(records[0].hdAlt).toEqual([172168]);
-    expect(counts.labelExtraAlias.hd).toBe(1);
-    expect(counts.labelExtraDropped.hd).toBe(0);
+    expect(routed['extra-alias'].hd).toBe(1);
+    expect(routed['extra-dropped'].hd).toBe(0);
     expect(flips.map((f) => [f.applied, f.disposition]))
       .toEqual([['172168', 'extra-alias']]);
   });
 
   it('aliases every extra value, not just the first', () => {
     const records = [record({ hr: 7001 })];
-    const { counts } = merge(
+    const { routed } = merge(
       records, new Map([[SRC_A, entry({ hr: [7001, 7002, 7003] })]]),
     );
     expect(records[0].hr).toBe(7001);
     expect(records[0].hrAlt).toEqual([7002, 7003]);
-    expect(counts.labelExtraAlias.hr).toBe(2);
+    expect(routed['extra-alias'].hr).toBe(2);
   });
 
   // gl has no alias list, so its extras stay labels the record will not answer
   // to — the disposition split is what keeps the two outcomes distinguishable.
   it('drops an extra the field has nowhere to carry', () => {
     const records = [record({ gl: 'GJ 559' })];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ gj: ['559', '560'] })]]),
     );
-    expect(counts.labelExtraAlias.gl).toBe(0);
-    expect(counts.labelExtraDropped.gl).toBe(1);
+    expect(routed['extra-alias'].gl).toBe(0);
+    expect(routed['extra-dropped'].gl).toBe(1);
     expect(flips.map((f) => [f.applied, f.disposition]))
       .toEqual([['GJ 560', 'extra-dropped']]);
   });
@@ -222,14 +231,14 @@ describe('mergeClassicIdLabels', () => {
   // separately, so it is withheld rather than aliased.
   it('withholds an extra whose pair component is a record of its own', () => {
     const records = [record({ hd: 49618 })];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
       undefined, new Set([SRC_A]),
     );
     expect(records[0].hd).toBe(49618);
     expect(records[0].hdAlt).toEqual([]);
-    expect(counts.labelExtraSiblingRendered.hd).toBe(1);
-    expect(counts.labelExtraAlias.hd).toBe(0);
+    expect(routed['extra-sibling-rendered'].hd).toBe(1);
+    expect(routed['extra-alias'].hd).toBe(0);
     expect(flips.map((f) => [f.applied, f.disposition]))
       .toEqual([['49619', 'extra-sibling-rendered']]);
   });
@@ -238,13 +247,13 @@ describe('mergeClassicIdLabels', () => {
   // carries both components' light, so it answers to both numbers.
   it('aliases the extra where no sibling component is rendered', () => {
     const records = [record({ hd: 49618 })];
-    const { counts } = merge(
+    const { routed } = merge(
       records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
       undefined, new Set(['some-other-source']),
     );
     expect(records[0].hdAlt).toEqual([49619]);
-    expect(counts.labelExtraAlias.hd).toBe(1);
-    expect(counts.labelExtraSiblingRendered.hd).toBe(0);
+    expect(routed['extra-alias'].hd).toBe(1);
+    expect(routed['extra-sibling-rendered'].hd).toBe(0);
   });
 
   // An alias becomes an hd: designation, so a value another record DISPLAYS
@@ -252,13 +261,13 @@ describe('mergeClassicIdLabels', () => {
   // own rule, on a path its tally cannot see.
   it('withholds an alias a different record already displays', () => {
     const records = [record({ hd: 49618 }), record({ gaiaSourceId: SRC_B, hd: 49619 })];
-    const { counts, flips } = merge(
+    const { flips, routed } = merge(
       records, new Map([[SRC_A, entry({ hd: [49618, 49619] })]]),
     );
     expect(records[0].hdAlt).toEqual([]);
     expect(records[1].hd).toBe(49619);
-    expect(counts.labelExtraDropped.hd).toBe(1);
-    expect(counts.labelExtraAlias.hd).toBe(0);
+    expect(routed['extra-dropped'].hd).toBe(1);
+    expect(routed['extra-alias'].hd).toBe(0);
     expect(flips.map((f) => [f.applied, f.disposition]))
       .toEqual([['49619', 'extra-dropped']]);
   });
@@ -267,25 +276,25 @@ describe('mergeClassicIdLabels', () => {
   // neither displays it, so neither may claim it.
   it('withholds an alias two records would both claim', () => {
     const records = [record({ hd: 49618 }), record({ gaiaSourceId: SRC_B, hd: 49620 })];
-    const { counts } = merge(records, new Map([
+    const { routed } = merge(records, new Map([
       [SRC_A, entry({ hd: [49618, 49619] })],
       [SRC_B, entry({ hd: [49620, 49619] })],
     ]));
     expect(records[0].hdAlt).toEqual([]);
     expect(records[1].hdAlt).toEqual([]);
-    expect(counts.labelExtraDropped.hd).toBe(2);
+    expect(routed['extra-dropped'].hd).toBe(2);
   });
 
   // An overlay cell repeating a value must not propose it twice, which would
   // read as two records claiming it and withhold a legitimate alias.
   it('deduplicates a repeated overlay value before scoring it', () => {
     const records = [record({ hd: 172167 })];
-    const { counts } = merge(
+    const { routed } = merge(
       records, new Map([[SRC_A, entry({ hd: [172167, 172168, 172168] })]]),
     );
     expect(records[0].hdAlt).toEqual([172168]);
-    expect(counts.labelExtraAlias.hd).toBe(1);
-    expect(counts.labelExtraDropped.hd).toBe(0);
+    expect(routed['extra-alias'].hd).toBe(1);
+    expect(routed['extra-dropped'].hd).toBe(0);
   });
 
   // An alias adds a designation without displacing the spine's, which is the
@@ -306,25 +315,25 @@ describe('mergeClassicIdLabels', () => {
     const records = [record({ hip: 7751, hd: 10360 }), record({
       gaiaSourceId: SRC_B, hd: 10361,
     })];
-    const { counts, flips } = merge(records, new Map([
+    const { flips, routed } = merge(records, new Map([
       [SRC_A, entry({ hd: [10360] })],
       [SRC_B, entry({ hd: [10361], hip: [7751] })],
     ]));
     expect(records[0].hip).toBe(7751);
     expect(records[1].hip).toBeNull();
-    expect(counts.labelSuppressed.hip).toBe(1);
+    expect(routed['suppressed-collision'].hip).toBe(1);
     expect(flips.map((f) => f.disposition)).toEqual(['suppressed-collision']);
   });
 
   it('allows a mutual swap, where neither value gains an owner', () => {
     const records = [record({ hd: 4082 }), record({ gaiaSourceId: SRC_B, hd: 4083 })];
-    const { counts } = merge(records, new Map([
+    const { routed } = merge(records, new Map([
       [SRC_A, entry({ hd: [4083] })],
       [SRC_B, entry({ hd: [4082] })],
     ]));
     expect([records[0].hd, records[1].hd]).toEqual([4083, 4082]);
-    expect(counts.labelFlipped.hd).toBe(2);
-    expect(counts.labelSuppressed.hd).toBe(0);
+    expect(routed['overlay-wins'].hd).toBe(2);
+    expect(routed['suppressed-collision'].hd).toBe(0);
   });
 
   it('attaches a value the spine already made ambiguous, the policy owning it', () => {
@@ -333,10 +342,10 @@ describe('mergeClassicIdLabels', () => {
       record({ gaiaSourceId: SRC_B, hd: 205811 }),
       record({ gaiaSourceId: '3', hd: null }),
     ];
-    const { counts } = merge(records, new Map([['3', entry({ hd: [205811] })]]));
+    const { routed } = merge(records, new Map([['3', entry({ hd: [205811] })]]));
     expect(records[2].hd).toBe(205811);
-    expect(counts.labelSuppressed.hd).toBe(0);
-    expect(counts.labelAdded.hd).toBe(1);
+    expect(routed['suppressed-collision'].hd).toBe(0);
+    expect(routed.added.hd).toBe(1);
   });
 
   it('honours a curated override, both as a value and as keep-the-spine', () => {
@@ -346,14 +355,14 @@ describe('mergeClassicIdLabels', () => {
       + `${SRC_A}\thd\t99999\n`
       + `${SRC_B}\thr\t\n`, OVERRIDES_FROM,
     );
-    const { counts, flips } = merge(records, new Map([
+    const { flips, routed } = merge(records, new Map([
       [SRC_A, entry({ hd: [4083] })],
       [SRC_B, entry({ hr: [5506] })],
     ]), overrides);
     expect(records[0].hd).toBe(99999);
     expect(records[1].hr).toBe(5505);
-    expect(counts.labelOverridden.hd).toBe(1);
-    expect(counts.labelOverridden.hr).toBe(1);
+    expect((routed['override-spine'].hd + routed['override-value'].hd)).toBe(1);
+    expect((routed['override-spine'].hr + routed['override-value'].hr)).toBe(1);
     expect(flips.map((f) => f.disposition).sort())
       .toEqual(['override-spine', 'override-value']);
   });

@@ -6,6 +6,8 @@ import type { Declared } from '../../../util/sources/source';
 import { readTable, tableLineReader, type TableRow } from '../../../util/tsv/table-pure';
 import { rielloVMagnitude } from '../../photometry/v-magnitude-pure';
 import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
+import type { CountBlock } from '../../../util/counts/count-stages-pure';
+import { prefixed } from '../../../util/counts/tally-pure';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
  *  README.md#the-floor-is-one-constant. */
@@ -41,6 +43,20 @@ export interface MagnitudeTermSelection {
   /** Every `source_id` the floor keeps, insertion-ordered by the pull. */
   keptSourceIds: Set<string>;
   counts: MagnitudeTermCounts;
+}
+
+/** The term's count block: absent while the floor is null, since no pull is read. */
+type MagnitudeTermKey = `magnitudeTerm.${keyof MagnitudeTermCounts}`;
+
+export function magnitudeTermBlock(selection: MagnitudeTermSelection | null): CountBlock<MagnitudeTermKey> {
+  return selection === null ? { kind: 'absent' } : { kind: 'counted', counts: prefixed('magnitudeTerm.', selection.counts) };
+}
+
+export function magnitudeTermSummary(block: CountBlock<MagnitudeTermKey>): string {
+  if (block.kind === 'absent') return 'magnitude term: off — membership is the primaries alone';
+  const c = block.counts;
+  return `magnitude term at V <= ${MAGNITUDE_FLOOR_V}: ${c['magnitudeTerm.rows']} pull rows — kept ${c['magnitudeTerm.kept']}, `
+    + `above the floor ${c['magnitudeTerm.above_floor']}, no transformed V ${c['magnitudeTerm.no_v']}`;
 }
 
 function magnitudeTermFold(floorV: number): {

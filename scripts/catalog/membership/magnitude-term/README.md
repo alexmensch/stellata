@@ -83,12 +83,12 @@ and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
 Against today's manifest the union measures 375,131 bound source_ids, 331,465
-of them in the kept set, so <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> rows are the term's own and the union is
+of them in the kept set, so 598,464 rows are the term's own and the union is
 973,595 source_ids. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
 
-At `V ≤ 11` the generator writes **<!-- count:membership-manifest/rows -->975,373<!-- /count -->** manifest rows — 376,909 plus
-those <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> — and every primaries-side count holds byte for byte, which is
+At `V ≤ 11` the generator writes **975,373** manifest rows — 376,909 plus
+those 598,464 — and every primaries-side count holds byte for byte, which is
 what says the term adds and moves nothing on the manifest side. The record side
 is not additive: [What the floor moves that was already there](#what-the-floor-moves-that-was-already-there).
 
@@ -99,17 +99,17 @@ A magnitude-term row carries no classical cell, `binding` `gaia_native` and
 brightness rather than on a primary naming it, and it is the whole ledger for
 this cohort — every row of it has the same admission reason, and the manifest
 already names which rows those are. An `additions-ledger.tsv` entry per row
-would restate the column <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> times.
+would restate the column 598,464 times.
 
 `gaia_native` is a fifth binding class rather than `none`, which means an empty
 cell: these rows' `gaia_source_id` is the pull row itself, justified by nothing
 because there is nothing between the source and the record.
 
 **Every one keys its SID on `gaia_dr3:`** — they hold no designation that could
-key anything else. That is the opposite of `additionGaiaKeyedOnly`, which the
-primaries' own additions pin at zero: an admitted group falling through to its
-Gaia id means the admission rule leaked, while a magnitude row doing so is the
-term working. The two counts must not be read against each other.
+key anything else. That is the opposite of the primaries' own additions, whose admission
+throws on a row keyed on its Gaia id alone: an admitted group falling through to
+its Gaia id means the admission rule leaked, while a magnitude row doing so is
+the term working.
 
 ## The record total the floor implies — measured
 
@@ -125,7 +125,7 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,131 |
 | in both | 327,701 | 327,701 | 331,465 |
 | source_id union | 973,222 | 973,222 | 973,595 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + <!-- count:membership-manifest/bindingByClass.none -->1,778<!-- /count --> |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,778 |
 | companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> |
 | rows parked, so never a record | − 10,429 | **− 10,748** | − 10,415 |
 | **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,634<!-- /count -->** |

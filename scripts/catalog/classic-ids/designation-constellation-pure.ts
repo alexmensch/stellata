@@ -16,7 +16,7 @@ export interface DesignationConIndex {
  *  it needs no binding gate and may key on HD/HIP where the overlay may not.
  *  That is also what lets it reach the bright tier, where Gaia saturates and
  *  most records have no overlay row at all
- *  (`spineBrightRowsWithoutOverlayEntry` is the count). */
+ *  (`membership.overlay.bright.no-entry` is the count). */
 export function buildDesignationConIndex(rows: readonly CrossIndexRow[]): DesignationConIndex {
   const index: DesignationConIndex = { byHd: new Map(), byHip: new Map() };
   for (const row of rows) {

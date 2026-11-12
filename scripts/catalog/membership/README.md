@@ -3,9 +3,9 @@
 `data/membership/membership-manifest.tsv` is one row per record the frozen
 primaries admit: the spine's <!-- count:inherited-spine/rows -->313,257<!-- /count --> rows re-keyed on the designations the
 primaries publish for them, less the one a correction folds
-([Correcting a merge decision](#correcting-a-merge-decision)), plus the <!-- count:membership-manifest/additionRows -->63,653<!-- /count --> records the primaries name
-that AT-HYG's subset never carried — 376,909 rows, and the <!-- count:membership-manifest/magnitudeRows -->598,464<!-- /count --> the V <= 11
-magnitude term adds on top (`magnitude-term/README.md`), <!-- count:membership-manifest/rows -->975,373<!-- /count --> in
+([Correcting a merge decision](#correcting-a-merge-decision)), plus the 63,653 records the primaries name
+that AT-HYG's subset never carried — 376,909 rows, and the 598,464 the V <= 11
+magnitude term adds on top (`magnitude-term/README.md`), 975,373 in
 all. **`readStars` walks it, and
 membership is exactly these rows less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks**
 ([Per-row pipeline](../parse/README.md#per-row-pipeline)). It is the artifact that retires
@@ -48,7 +48,9 @@ scripts/catalog/membership/
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
     (+ test)                      outcome union and its serialiser, the
                                   four ledgers as views of it
-                                  (#membership-lineage), and the change
+                                  (#membership-lineage), its count blocks'
+                                  types, membershipTotals and the build
+                                  log's summary, and the change
                                   report's multiples join, which reads the
                                   baseline's identity file only for a key
                                   the build lacks.
@@ -90,7 +92,8 @@ scripts/catalog/membership/
                                   The replacement parity gate, (i)–(iii) below,
                                   over the COMMITTED artifacts. LFS-gated.
   membership-manifest-expected.json
-                                  Pinned count snapshot. Refresh with
+                                  Pinned count snapshot, staged by
+                                  MEMBERSHIP_COUNT_STAGES. Refresh with
                                   --update-snapshots.
   additions/                      The primaries' rows the spine lacks: their
                                   items, grouping, admission and outcomes.
@@ -137,7 +140,7 @@ gaia_source_id  binding  routes  term  origin_key
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one
-  no primary publishes — <!-- count:membership-manifest/unattestedByCell.proper -->46<!-- /count --> today, the proper names
+  no primary publishes — <!-- count:membership-manifest/membership.unattested.proper -->46<!-- /count --> today, the proper names
   `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
@@ -165,7 +168,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/spineRowsWithoutSourceId -->400<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->400<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -182,21 +185,25 @@ A/B, whose letters AT-HYG swapped, is reached mechanically now the merge scores
 The binding is **derived**, not copied, and **nothing holds it against the
 spine's `gaia_source_id` cell**: [The four sources, in precedence order](binding/README.md#the-four-sources-in-precedence-order)
 walks four committed
-sources through both gates and writes what survives. `derivationOutcome` in the
-count snapshot pins what the derivation reached, over every spine row:
+sources through both gates and writes what survives. Its `binding.*` lineage
+codes, folded into the count snapshot, pin what it reached over every spine row;
+a code with a winner names the highest-precedence source proposing it
+(`.tyc` / `.hip` / `.cns5` / `.simbad`), which is also what decides
+`crosswalk_gated` against `simbad_corroborated`:
 
-| Outcome | Rows | What it is |
+| Code | Rows | What it is |
 |---|---|---|
-| `bound` | <!-- count:membership-manifest/derivationOutcome.bound -->312,490<!-- /count --> | one source survives both gates, with no passing rival |
-| `refused` | <!-- count:membership-manifest/derivationOutcome.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
-| `contested` | <!-- count:membership-manifest/derivationOutcome.contested -->326<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
-| `collision` | <!-- count:membership-manifest/derivationOutcome.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
-| `sol` | <!-- count:membership-manifest/derivationOutcome.sol -->1<!-- /count --> | |
+| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,125<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->861<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
+| `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
+| `refused` | <!-- count:membership-manifest/membership.binding.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
+| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->274<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->47<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.contested.simbad -->0<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence. Ships the winner and queues the row |
+| `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
+| `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
 
 The outcome is a property of the derivation alone, so a count moving is the
-derivation moving. That is what replaced the frozen comparison: `derivedVia`,
-`bindingByClass` and the review counts are the pins a binding change has to
-get past, in place of a diff against a cell AT-HYG wrote.
+derivation moving. That is what replaced the frozen comparison: the `binding.*`
+and `disposition.*` codes are the pins a binding change has to get past, in
+place of a diff against a cell AT-HYG wrote.
 
 **A disposition is the authority wherever one keys a row**, whatever the
 derivation reached — `data/membership/binding-review-dispositions.tsv`, keyed on
@@ -204,15 +211,14 @@ the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
 was taken over, so a re-pull that moves the derivation re-opens the review
 rather than carrying a stale verdict forward. `keep_source_id` is what the row
 ships: the derived id, any other candidate the queue row lists, an id **no
-committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/dispositionAsserted -->33<!-- /count --> of
-the 53 today (`dispositionAsserted`) and is why the file exists — the review
+committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> of
+the 53 today (`disposition.asserted`) and is why the file exists — the review
 reached evidence the derivation cannot, and the count is what keeps the number
 of ids resting on it visible.
 
 **An asserted id still needs a second witness**, because the count cannot
-supply one: a mistyped digit leaves `dispositionAsserted`, `bindingDispositions`
-and `bindingByClass` all reading what they read before, so nothing but the
-value itself says it is wrong. The generator therefore requires every asserted
+supply one: a mistyped digit leaves every `disposition.*` code reading what it
+read before, so nothing but the value itself says it is wrong. The generator therefore requires every asserted
 id to be a source `data/gaia/gaia_dr3_astrometry_catalog.tsv` carries, and
 fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
 whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
@@ -225,7 +231,9 @@ proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Today `bindingDispositions` reads <!-- count:membership-manifest/bindingDispositions.derived -->9<!-- /count --> `derived` and <!-- count:membership-manifest/bindingDispositions.other -->44<!-- /count --> `other`. The nine
+reach). Each disposition's code says what it kept and whether the derivation
+had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
+9 keep the derived id and 44 another. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
 record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
 (SIMBAD names the brighter of a blended pair whose fainter member the TYC
@@ -246,8 +254,8 @@ display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
 lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
 are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
 the manifest row as it stands afterwards, under `hd_unattested` or
-`flamsteed_unattested`. Today that is <!-- count:membership-manifest/labelDropsByReason.hd_unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
-I/239 prints HD 336187 — and <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> are real
+`flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
+I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are real
 designations with no frozen primary behind them: IV/27A is the whole
 3,690-row table (<!-- count:classic-id-overlay/crossIndexRows -->3,688<!-- /count --> after its curated corrections) and publishes 2,755
 Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
@@ -257,7 +265,7 @@ ledger says which.
 
 **No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
-Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/labelDropsByReason.flamsteed_unattested -->119<!-- /count --> cannot move a key. An
+Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
 the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record
@@ -350,6 +358,19 @@ params beside the codes; the writer and the views both read through it, so
 a renamed key fails typecheck on both sides. Every record gets an admission
 row. `membershipLedgers` generates the four ledgers from those rows and the
 identity rows alone, byte-identical to the files they replaced as writers.
+
+**The count snapshot is a fold of these rows.** `membership-manifest-expected.json`
+is staged ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)):
+`membership` is the stage's lines folded per live code (`countedStageLineage`),
+`membership-derived` the counts no row decides — the label merge's coverage
+partition, `sharedDesignations`, the alias tallies and `spineCellsCorrected` —
+and `magnitude-term` the pull's partition, or `"absent"` while the floor is
+null. A per-row fact orthogonal to a row's outcome is a row of its own
+(`binding.consensus`, `unattested.<cell>`, `overlay.bright.*`, …), so no count
+is kept by hand. Totals the logs and the gate read — manifest rows, the review
+queue by verdict — are sums of codes (`membershipTotals`), never snapshot keys.
+Two zeros are assertions rather than keys: an unattested `hd` or `flam` cell,
+and an admitted addition keyed on its Gaia id alone, each throw.
 
 ## The identifier columns are read, never re-derived
 

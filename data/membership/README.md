@@ -66,7 +66,7 @@ binding-review-dispositions.tsv
                          9 take the derived id, 1 ships none (44 Boo), 44
                          another — 33 of those an id
                          only the cited basis stands behind
-                         (dispositionAsserted). A kept value rides the manifest
+                         (membership.disposition.asserted). A kept value rides the manifest
                          as binding=reviewed.
 spine-corrections.tsv    Regular git. Hand-curated: where review found
                          AT-HYG's MERGE DECISION wrong, which no other curated

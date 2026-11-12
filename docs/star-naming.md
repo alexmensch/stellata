@@ -381,8 +381,8 @@ Sequencing note: the ladder is independent of the driver swap
 (`stellata-3bsf.4`) — it reads designations, whichever source produced them
 — but its Bayer/Flamsteed tail and every label's spine backstop come from
 `data/athyg/inherited-spine.tsv`, which is why the ingest keys HIP/HR/HD and
-never `gaia_source_id` alone: **<!-- count:membership-manifest/spineBrightRowsWithoutOverlayEntry -->114<!-- /count --> of the <!-- count:membership-manifest/spineBrightRows -->178<!-- /count --> stars at V ≤ 3 have no
-source_id-keyed overlay row** ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)), and
+never `gaia_source_id` alone: **<!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> stars at V ≤ 3 have no
+source_id-keyed overlay row**, against <!-- count:membership-manifest/membership.overlay.bright.entry -->64<!-- /count --> that do ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)), and
 those are exactly the stars the authority names.
 
 **Dead patterns — do not rebuild:** composing a display string anywhere but

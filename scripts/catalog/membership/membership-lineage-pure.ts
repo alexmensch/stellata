@@ -8,14 +8,16 @@ import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import {
-  outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration,
+  outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration, type StageCodes,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import type { ClassicalCell } from '../spine/primaries-audit-pure';
+import type { SpineCorrectionCell } from './spine-corrections/spine-corrections-pure';
 import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
+  ADDITION_REASONS, BINDING_REVIEW_VERDICTS, LABEL_DROP_REASONS,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
@@ -495,6 +497,98 @@ export function membershipLedgers(
   }
   out.bindingReview.push(...review.values());
   return out;
+}
+
+/** Membership's count block: its lines folded per live code. */
+export type MembershipCounts = Readonly<Record<(typeof MEMBERSHIP_CODES.live)[number], number>>;
+
+/** see README.md#membership-lineage */
+export type MembershipDerivedCounts = Readonly<Record<
+  | 'labelNoOverlayEntry'
+  | `labelAgree.${LabelField}`
+  | `labelSpineOnly.${LabelField}`
+  | 'sharedDesignations'
+  | 'rowsWithHdAlt'
+  | 'rowsWithHrAlt'
+  | `spineCellsCorrected.${SpineCorrectionCell}`,
+  number
+>>;
+
+type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
+
+const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[`${MEMBERSHIP_CODES.stage}.${branch}`];
+const sumOf = (n: (branch: LiveBranch) => number) => (branches: readonly LiveBranch[]): number => branches.reduce((total, b) => total + n(b), 0);
+const ADMISSION_MAGNITUDE: readonly LiveBranch[] = ['admit.magnitude.no-own-candidate', ...Object.values(OWN_CANDIDATE_BRANCHES)];
+
+/** The totals the ledgers and logs read: sums of membership's codes, never snapshot keys. */
+export function membershipTotals(counts: MembershipCounts) {
+  const n = countOf(counts);
+  const sum = sumOf(n);
+  const additionsByReason = Object.fromEntries(Object.entries(ADDITION_BRANCHES).map(([r, b]) => [r, n(b)])) as Record<AdditionReason, number>;
+  const additions = sum(Object.values(ADDITION_BRANCHES));
+  const magnitudeRows = sum(ADMISSION_MAGNITUDE);
+  const disposed = (q: DispositionQueue) => sum(BINDING_DISPOSITIONS.map((d): LiveBranch => `disposition.${d}.${q}`));
+  const reviewByVerdict: Record<BindingReviewVerdict, number> = {
+    contested: sum(BINDING_SOURCES.map((l): LiveBranch => `binding.contested.${l}`)),
+    collision: n('binding.collision'),
+    disposed: disposed('settled'),
+  };
+  return {
+    manifestRows: n('admit.spine') + additions + magnitudeRows,
+    spineRows: n('admit.spine') + n('fold'),
+    additionsByReason,
+    additions,
+    magnitudeRows,
+    reviewByVerdict,
+    reviewRows: reviewByVerdict.contested + reviewByVerdict.collision + reviewByVerdict.disposed,
+    dispositions: Object.fromEntries(BINDING_DISPOSITIONS.map(
+      (d) => [d, sum(DISPOSITION_QUEUES.map((q): LiveBranch => `disposition.${d}.${q}`))],
+    )) as Record<BindingDisposition, number>,
+    labelDropsByReason: Object.fromEntries(Object.entries(LABEL_DROP_BRANCHES).map(([r, b]) => [r, n(b)])) as Record<LabelDropReason, number>,
+  };
+}
+
+export function membershipSummary(counts: MembershipCounts, derived: MembershipDerivedCounts): string {
+  const n = countOf(counts);
+  const sum = sumOf(n);
+  const t = membershipTotals(counts);
+  const list = <K extends string>(keys: readonly K[], of: (k: K) => number): string => keys.map((k) => `${k} ${of(k)}`).join(', ');
+  const led = (outcome: string, lead: BindingSource) => `${outcome}.${lead}` as LiveBranch;
+  const leads = (prefix: string, outcomes: readonly string[], lead: BindingSource): number => (
+    sum(outcomes.map((o) => led(`${prefix}.${o}`, lead)))
+  );
+  const lines = [
+    `manifest: ${t.manifestRows} rows — ${n('admit.spine')} from the spine `
+      + `(${n('fold')} folded), ${t.additions} admitted (${list(ADDITION_REASONS, (r) => t.additionsByReason[r])}), `
+      + `${t.magnitudeRows} from the magnitude term; ${n('component')} groups resolve onto an existing record`,
+    `derivation: bound ${sum(BINDING_SOURCES.map((l) => led('binding.bound', l)))}, `
+      + `rescued ${sum(BINDING_SOURCES.map((l) => led('binding.rescued', l)))}, refused ${n('binding.refused')}, `
+      + `contested ${sum(BINDING_SOURCES.map((l) => led('binding.contested', l)))}, collision ${n('binding.collision')}, sol ${n('binding.sol')}; `
+      + `led by ${list(BINDING_SOURCES, (l) => leads('binding', LED_SPINE_OUTCOMES, l))}, consensus ${n('binding.consensus')}, `
+      + `asserted by review ${n('disposition.asserted')}; gate refused mag ${n('binding.gate-mag')}, sibling ${n('binding.gate-sibling')}; `
+      + `${n('binding.ungateable')} rows have a candidate and no printed V; ${n('binding.weighed-null-g')} candidates on a row with no published G`,
+    `review queue: ${list(BINDING_REVIEW_VERDICTS, (v) => t.reviewByVerdict[v])}; dispositions ${list(BINDING_DISPOSITIONS, (d) => t.dispositions[d])}; `
+      + `additions led by ${list(BINDING_SOURCES, (l) => leads('addition-binding', LED_ADDITION_OUTCOMES, l))}, `
+      + `source on the spine ${n('addition-binding.on-spine')}, gate-refused ${n('addition-binding.refused')}, `
+      + `shared ${n('addition-binding.shared')}, contested ${n('addition-binding.contested')}, `
+      + `TYC/HIP route disagreement ${n('addition-binding.route-disagree')}, blocked designation ${n('addition.blocked-designation')}`,
+    `unattested cells: ${list(UNATTESTED_CELLS, (c) => n(UNATTESTED_BRANCHES[c]))}; `
+      + `labels dropped: ${list(LABEL_DROP_REASONS, (r) => t.labelDropsByReason[r])}`,
+    `label merge: ${derived.labelNoOverlayEntry} spine rows have no overlay entry at all (${n('binding.ships-none')} ship no `
+      + `source; the rest ship one absent from both cross-walks), including ${n('overlay.bright.no-entry')} of `
+      + `${n('overlay.bright.no-entry') + n('overlay.bright.entry')} rows at V <= ${BRIGHT_TIER_MAG_CEILING}. Those labels ride the inherited spine, not the overlay.`,
+  ];
+  for (const field of LABEL_FIELDS) {
+    const of = (d: LabelDisposition): number => n(labelBranch(d, field));
+    const covered = derived[`labelAgree.${field}`];
+    const keyed = covered + of('overlay-wins') + derived[`labelSpineOnly.${field}`];
+    const pct = keyed === 0 ? 0 : (100 * covered) / keyed;
+    lines.push(
+      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)} (${pct.toFixed(1)}%) — `
+        + list(LABEL_DISPOSITIONS, of),
+    );
+  }
+  return lines.join('\n');
 }
 
 export interface MultiplesComponent {

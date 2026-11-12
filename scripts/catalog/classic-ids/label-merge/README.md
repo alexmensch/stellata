@@ -95,7 +95,7 @@ SYSTEM rather than the source_id — a secondary routinely carries its own
 source_id or none, so grouping by source_id misses the sibling on exactly the
 resolved pairs this asks about. Promotion can still decline to render a member
 row, so the set is a deliberate **superset** of what ships — 35 withheld
-(<!-- count:membership-manifest/labelExtraSiblingRendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/labelExtraSiblingRendered.hr -->1<!-- /count --> hr) across the 34 records whose system names a sibling, of which
+(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 34 records whose system names a sibling, of which
 33 render one today.
 
 An alias also clears [The collision guard](#the-collision-guard)'s rule, which the guard itself
@@ -163,8 +163,8 @@ proposal can re-expose a value its partner had proposed to vacate.
 an explicit value, or empty for "keep the spine's". It is for the case
 [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) names: review finding the CDS join wrong. It holds
 **17 rows**, and they are three shapes rather than 17 judgements. The count is
-`labelOverridden` summed across the identifiers in
-`../../membership/membership-manifest-expected.json`.
+the `membership.label.override-spine.*` and `membership.label.override-value.*`
+codes summed in `../../membership/membership-manifest-expected.json`.
 
 **One is a refusal.** Propus, where a Gaia source keyed to the wrong component
 of a resolved Tycho-2 pair would take η Gem's own HD off the star; the file's
@@ -253,9 +253,10 @@ keys on `extra-sibling-rendered`, which is why they are two suites and not one.
 CNS5's trailing `.0` a formatting artifact — not collapsing it scored 14
 same-star pairs as disagreements), `flam` on the number alone (its row is
 already keyed on one source_id, so a same-number-different-constellation match
-is not reachable). The merge's `label*` routing and the spine-side coverage
-counts are pinned in `../../membership/membership-manifest-expected.json`, the
-build that runs it.
+is not reachable). Each routing writes a `membership.label.<disposition>.<field>`
+lineage row, folded into `../../membership/membership-manifest-expected.json`, the
+build that runs it; the coverage partition (`labelAgree`, `labelSpineOnly`,
+`labelNoOverlayEntry`) writes no row and sits in its `membership-derived` block.
 
 ### The gl comparison is specificity-aware
 
@@ -270,7 +271,7 @@ entry's letters COMBINED (Gl 423 is one entry reading `ABCD`) and a bare number
 names the system too, so strict comparison would read a hundred-odd such pairs
 as disagreements and swap a component for a system spelling.
 
-`labelFlipped.gl` reaches **13 records**, 8 as four mutual A↔B swaps (Gl 66,
+`membership.label.overlay-wins.gl` reaches **13 records**, 8 as four mutual A↔B swaps (Gl 66,
 Gl 150.1, Gl 421, Gl 563.2), each on CNS5's own Gaia-keyed row rather than a
 walk. Two key `gl:` and nothing else, so the relabel renames the canonical key
 and identity rides a `data/sid/sameas-overrides.tsv` bridge as the Gliese

@@ -17,6 +17,7 @@ import {
   buildMembership,
   manifestKey,
   matchSpineToManifest,
+  type MembershipResult,
 } from './membership-manifest-pure';
 import {
   parseBindingDispositionsTsv,
@@ -42,12 +43,43 @@ import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
-import { MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow } from './membership-lineage-pure';
+import {
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipTotals,
+  type MembershipCounts, type MembershipDerivedCounts,
+} from './membership-lineage-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
+import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
+import { OWN_CANDIDATE_REASONS, type OwnCandidateReason } from './ledger-rows-pure';
+import { foldStageLines } from '../lineage/lineage-row-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
+
+type Branch = Parameters<typeof MEMBERSHIP_CODES.liveCode>[0];
+const folded = (r: MembershipResult) => foldStageLines(MEMBERSHIP_CODES, r.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)));
+/** A result's code counts, keyed on the branch. */
+const codes = (r: MembershipResult): Readonly<Record<Branch, number>> => Object.fromEntries(
+  Object.entries(folded(r)).map(([code, n]) => [code.slice(MEMBERSHIP_CODES.stage.length + 1), n]),
+) as Record<Branch, number>;
+const totals = (r: MembershipResult) => membershipTotals(folded(r));
+const ledOf = (r: MembershipResult, outcome: 'bound' | 'rescued' | 'contested') => (
+  BINDING_SOURCES.reduce((n, l) => n + codes(r)[`binding.${outcome}.${l}`], 0)
+);
+const derivation = (r: MembershipResult) => ({
+  bound: ledOf(r, 'bound') + ledOf(r, 'rescued'),
+  refused: codes(r)['binding.refused'],
+  contested: ledOf(r, 'contested'),
+  collision: codes(r)['binding.collision'],
+  sol: codes(r)['binding.sol'],
+});
+const leads = (r: MembershipResult) => Object.fromEntries(BINDING_SOURCES.map((l) => [l, (
+  (['bound', 'rescued', 'contested'] as const).reduce((n, o) => n + codes(r)[`binding.${o}.${l}`], 0)
+)])) as Record<BindingSource, number>;
+const ownCandidates = (r: MembershipResult) => Object.fromEntries(OWN_CANDIDATE_REASONS.map(
+  (reason) => [reason, codes(r)[`admit.magnitude.${reason.replace('_', '-')}` as Branch]],
+)) as Record<OwnCandidateReason, number>;
 
 
 function spineRow(cells: Partial<SpineRow>): SpineRow {
@@ -218,15 +250,15 @@ const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
 describe('buildMembership — the spine side', () => {
   it('derives every spine binding on the committed sources alone', () => {
-    expect(result.counts.spineRows).toBe(6);
+    expect(totals(result).spineRows).toBe(6);
     expect(byTyc.get('1-1-1')?.binding).toBe('crosswalk_gated');
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
-    expect(result.counts.derivationOutcome).toEqual({
+    expect(derivation(result)).toEqual({
       bound: 3, refused: 2, contested: 0, collision: 0, sol: 1,
     });
-    expect(result.counts.derivedVia).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
-    expect(result.counts.derivedConsensus).toBe(1);
+    expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
+    expect(codes(result)['binding.consensus']).toBe(1);
   });
 
   it('ships the id a committed disposition names, and queues the row as disposed', () => {
@@ -236,9 +268,9 @@ describe('buildMembership — the spine side', () => {
     const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
     expect(row).toMatchObject({ gaiaSourceId: '888', binding: 'reviewed' });
     expect(disposed.bindingReview).toHaveLength(1);
-    expect(disposed.counts.bindingByClass.reviewed).toBe(1);
-    expect(disposed.counts.bindingDispositions).toEqual({ derived: 0, other: 1, none: 0 });
-    expect(disposed.counts.dispositionAsserted).toBe(1);
+    expect(disposed.rows.filter((r) => r.binding === 'reviewed').length).toBe(1);
+    expect(totals(disposed).dispositions).toEqual({ derived: 0, other: 1, none: 0 });
+    expect(codes(disposed)['disposition.asserted']).toBe(1);
     expect(disposed.bindingReview[0].verdict).toBe('disposed');
   });
 
@@ -248,7 +280,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(disposed.rows.find((r) => r.tyc === '9-8-1'))
       .toMatchObject({ gaiaSourceId: null, binding: 'none' });
-    expect(disposed.counts.bindingByClass.reviewed).toBe(0);
+    expect(disposed.rows.filter((r) => r.binding === 'reviewed').length).toBe(0);
   });
 
   it('refuses a disposition the derivation has moved under', () => {
@@ -279,7 +311,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(dr2.rows.find((r) => r.hd === 40))
       .toMatchObject({ gaiaSourceId: '999', binding: 'reviewed' });
-    expect(dr2.counts.dispositionAsserted).toBe(1);
+    expect(codes(dr2)['disposition.asserted']).toBe(1);
   });
 
   it('ships a cleanly bound row unqueued, and lets a disposition override it', () => {
@@ -297,7 +329,7 @@ describe('buildMembership — the spine side', () => {
     expect(differing.rows.find((r) => r.tyc === '6-6-1'))
       .toMatchObject({ gaiaSourceId: '6061', binding: 'crosswalk_gated' });
     expect(differing.bindingReview.map((r) => r.tyc)).not.toContain('6-6-1');
-    expect(differing.counts.derivationOutcome.bound).toBe(4);
+    expect(derivation(differing).bound).toBe(4);
     const key = bindingReviewKey({ tyc: '6-6-1', hip: '60', hd: '600', gl: '' });
     const reverted = buildMembership({
       ...differingInput,
@@ -317,7 +349,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(filled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
-    expect(filled.counts.derivationOutcome.bound).toBe(4);
+    expect(derivation(filled).bound).toBe(4);
     expect(filled.bindingReview).toHaveLength(0);
   });
 
@@ -345,7 +377,7 @@ describe('buildMembership — the spine side', () => {
       })]]),
     });
     expect(settled.rows.find((r) => r.hip === 70)).toMatchObject({ gaiaSourceId: '7071', binding: 'reviewed' });
-    expect(settled.counts.bindingDispositions).toEqual({ derived: 0, other: 1, none: 0 });
+    expect(totals(settled).dispositions).toEqual({ derived: 0, other: 1, none: 0 });
   });
 
   // The counterpart to the test above, and the reason the derivation weighs
@@ -365,7 +397,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(settled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
-    expect(settled.counts.derivationOutcome).toMatchObject({ bound: 4, contested: 0 });
+    expect(derivation(settled)).toMatchObject({ bound: 4, contested: 0 });
     expect(settled.bindingReview).toHaveLength(0);
   });
 
@@ -380,7 +412,7 @@ describe('buildMembership — the spine side', () => {
     expect(colliding.bindingReview).toContainEqual(expect.objectContaining({
       hip: '70', verdict: 'collision', derived_source_id: '111',
     }));
-    expect(colliding.counts.derivationOutcome.collision).toBe(2);
+    expect(derivation(colliding).collision).toBe(2);
   });
 
   // Both gates run through the one `weighBinding` the overlay gate calls:
@@ -400,8 +432,8 @@ describe('buildMembership — the spine side', () => {
     });
     expect(gated.rows.find((r) => r.tyc === '6-6-1'))
       .toMatchObject({ gaiaSourceId: '6062', binding: 'crosswalk_gated' });
-    expect(gated.counts.derivedRejected).toEqual({ mag: 1, sibling: 0 });
-    expect(gated.counts.derivedVia.hip).toBe(2);
+    expect([codes(gated)['binding.gate-mag'], codes(gated)['binding.gate-sibling']]).toEqual([1, 0]);
+    expect(leads(gated).hip).toBe(2);
     expect(gated.lineage.filter((r) => r.code === 'membership.binding.unweighed-no-pulled-row' && r.key.startsWith('spine:'))).toEqual([]);
   });
 
@@ -422,7 +454,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(filled.rows.find((r) => r.tyc === '4-4-1'))
       .toMatchObject({ gaiaSourceId: '1616', hd: 400, hip: 44, binding: 'crosswalk_gated' });
-    expect(filled.counts.derivationOutcome.bound).toBe(4);
+    expect(derivation(filled).bound).toBe(4);
     expect(filled.flips).toContainEqual(expect.objectContaining({
       sourceId: '1616', field: 'hip', spine: '', applied: '44', disposition: 'added',
     }));
@@ -455,9 +487,7 @@ describe('buildMembership — the spine side', () => {
       { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
       { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
     ]);
-    expect(result.counts.labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
-    expect(result.counts.unattestedByCell.hd).toBe(0);
-    expect(result.counts.unattestedByCell.flam).toBe(0);
+    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
   });
 
   it('refuses a row no source reaches, and queues nothing', () => {
@@ -465,8 +495,8 @@ describe('buildMembership — the spine side', () => {
     expect(row.gaiaSourceId).toBeNull();
     expect(row.binding).toBe('none');
     expect(result.bindingReview).toEqual([]);
-    expect(result.counts.bindingReviewRows).toBe(0);
-    expect(result.counts.bindingReviewByVerdict).toEqual({ contested: 0, collision: 0, disposed: 0 });
+    expect(totals(result).reviewRows).toBe(0);
+    expect(totals(result).reviewByVerdict).toEqual({ contested: 0, collision: 0, disposed: 0 });
   });
 
   it('carries the label merge onto the row and attests the merged cells', () => {
@@ -502,8 +532,8 @@ describe('spine corrections', () => {
     });
     const row = fixed.rows.find((r) => r.hd === 5)!;
     expect(row).toMatchObject({ tyc: '1-9-1', gaiaSourceId: '999' });
-    expect(fixed.counts.spineCellsCorrected).toEqual({ tyc: 1 });
-    expect(fixed.counts.spineRowsFolded).toBe(0);
+    expect(fixed.derived['spineCellsCorrected.tyc']).toBe(1);
+    expect(codes(fixed).fold).toBe(0);
   });
 
   it('folds a duplicate row onto its survivor and leaves the survivor keying it', () => {
@@ -516,11 +546,11 @@ describe('spine corrections', () => {
         value: bindingReviewKey({ tyc: '7-7-1', hip: '20', hd: '', gl: 'Gl 165A' }),
       })],
     });
-    expect(folded.counts.spineRowsFolded).toBe(1);
+    expect(codes(folded).fold).toBe(1);
     expect(folded.rows.filter((r) => r.gl === 'Gl 165A')).toHaveLength(1);
     expect(folded.rows.find((r) => r.gl === 'Gl 165A'))
       .toMatchObject({ hip: 20, gaiaSourceId: '333' });
-    expect(folded.counts.rows).toBe(result.counts.rows);
+    expect(totals(folded).manifestRows).toBe(totals(result).manifestRows);
   });
 
   // The fold asserts a merge, so the survivor has to answer to everything the
@@ -610,7 +640,7 @@ describe('buildMembership — the additions', () => {
     const gj = result.rows.find((r) => r.gl === 'GJ 10001')!;
     expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
     expect(gj.gaiaSourceId).toBe('555');
-    expect(result.counts.additionsByReason).toEqual({
+    expect(totals(result).additionsByReason).toEqual({
       'admitted:hd_link_gap': 8, 'admitted:hd_omitted': 1,
       'admitted:hip_omitted': 1, 'admitted:cns5_census': 2,
     });
@@ -627,7 +657,7 @@ describe('buildMembership — the additions', () => {
     expect(result.ledger).toContainEqual({
       tyc: '2-3-1', hip: '', hd: '100001', gl: '', gaia_source_id: '', reason: 'component:hd:100001',
     });
-    expect(result.counts.componentRows).toBe(4);
+    expect(codes(result).component).toBe(4);
   });
 
   // IV/25 resolving one HD onto two Tycho-2 stars, neither on the spine: the
@@ -639,7 +669,7 @@ describe('buildMembership — the additions', () => {
       tyc: '2-6-1', hip: '', hd: '60', gl: '', gaia_source_id: '', reason: 'component:hd:60',
     });
     expect(byTyc.get('2-1-1')?.hd).toBe(60);
-    expect(result.counts.sharedDesignations).toBe(0);
+    expect(result.derived.sharedDesignations).toBe(0);
   });
 
   // The contested designation goes to the component a gated walk bound, not to
@@ -669,12 +699,12 @@ describe('buildMembership — the additions', () => {
 
   it('leaves the source empty where the walk binds a spine record\'s own source', () => {
     expect(byTyc.get('2-4-1')).toMatchObject({ hd: 61, gaiaSourceId: null, binding: 'none' });
-    expect(result.counts.additionSourceOnSpine).toBe(1);
+    expect(codes(result)['addition-binding.on-spine']).toBe(1);
   });
 
   it('leaves the source empty where the gate refused the binding', () => {
     expect(byTyc.get('2-5-1')).toMatchObject({ hd: 62, gaiaSourceId: null });
-    expect(result.counts.additionSourceGateRefused).toBe(1);
+    expect(codes(result)['addition-binding.refused']).toBe(1);
   });
 
   // Two census rows under one GJ number are one star, and the second resolves
@@ -692,13 +722,13 @@ describe('buildMembership — the additions', () => {
   it('leaves a source no group takes where two groups reach it', () => {
     expect(byTyc.get('3-1-1')).toMatchObject({ hd: 80, gaiaSourceId: null });
     expect(byTyc.get('3-2-1')).toMatchObject({ hd: 81, gaiaSourceId: null });
-    expect(result.counts.additionSourceShared).toBe(1);
+    expect(codes(result)['addition-binding.shared']).toBe(2);
   });
 
   // The HD route (/docs/catalog-driver.md#4-how-hd-reaches-gaia) carries label authority; the source follows it too.
   it("takes the TYC route's source where the HIP route binds another", () => {
     expect(byTyc.get('3-3-1')).toMatchObject({ hip: 50, gaiaSourceId: '1313' });
-    expect(result.counts.additionRouteSourceDisagree).toBe(1);
+    expect(codes(result)['addition-binding.route-disagree']).toBe(1);
   });
 
   it('binds an addition through SIMBAD and dedupes the magnitude term against it', () => {
@@ -717,8 +747,8 @@ describe('buildMembership — the additions', () => {
     expect(viaSimbad.rows.find((r) => r.tyc === '5-5-1'))
       .toMatchObject({ hd: 500, gaiaSourceId: '5050', binding: 'simbad_corroborated' });
     expect(viaSimbad.rows.filter((r) => r.gaiaSourceId === '5050')).toHaveLength(1);
-    expect(viaSimbad.counts.magnitudeRows).toBe(1);
-    expect(viaSimbad.counts.magnitudeRowsOwnCandidate)
+    expect(totals(viaSimbad).magnitudeRows).toBe(1);
+    expect(ownCandidates(viaSimbad))
       .toEqual({ refused_mag: 1, refused_sibling: 0, withheld: 0, runner_up: 0, component: 0 });
     const magnitude = viaSimbad.lineage.filter((r) => r.code.startsWith('membership.admit.magnitude.'));
     expect(magnitude.map((r) => [r.key, r.code, r.evidence.length]))
@@ -741,10 +771,10 @@ describe('buildMembership — the additions', () => {
     });
     const component = declined('pair_component');
     expect(component.rows.filter((r) => r.gaiaSourceId === '222')).toHaveLength(1);
-    expect(component.counts.magnitudeRowsOwnCandidate.component).toBe(1);
+    expect(codes(component)['admit.magnitude.component']).toBe(1);
     const lines = component.lineage.map((r) => stageLineageLine(MEMBERSHIP_CODES, r));
     expect(invariantViolations(MEMBERSHIP_INVARIANTS, lines)[0].rows).toEqual([]);
-    expect(declined('tycho2_position').counts.magnitudeRowsOwnCandidate.withheld).toBe(1);
+    expect(codes(declined('tycho2_position'))['admit.magnitude.withheld']).toBe(1);
   });
 
   it('fails the own-candidate invariant on a withheld source, naming the row', () => {
@@ -767,7 +797,7 @@ describe('buildMembership — the additions', () => {
     });
     expect(oneStar.rows.filter((r) => r.gaiaSourceId === '5151'))
       .toEqual([expect.objectContaining({ tyc: '5-6-1', hd: 501, hip: 61 })]);
-    expect(oneStar.counts.additionSourceShared).toBe(result.counts.additionSourceShared);
+    expect(codes(oneStar)['addition-binding.shared']).toBe(codes(result)['addition-binding.shared']);
   });
 
   // The TYC item and the merged group each weigh 5151 against Tycho-2's V with
@@ -826,14 +856,14 @@ describe('buildMembership — the additions', () => {
       }),
     });
     expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaiaSourceId).toBe('5171');
-    expect(twoSources.counts.additionContested - result.counts.additionContested).toBe(1);
+    expect(codes(twoSources)['addition-binding.contested'] - codes(result)['addition-binding.contested']).toBe(1);
   });
 
   // Admitted, but one designation short: HD 5 is a spine record's, so the
   // record ships without a number the primaries publish for it.
   it('counts an admitted row the guard withheld a designation from', () => {
     expect(byTyc.get('3-4-1')).toMatchObject({ hd: 83, hdAlt: [] });
-    expect(result.counts.additionsWithBlockedDesignation).toBe(1);
+    expect(codes(result)['addition.blocked-designation']).toBe(1);
   });
 
   it('carries no duplicate source_id and keys every row on a classical designation', () => {
@@ -845,8 +875,7 @@ describe('buildMembership — the additions', () => {
       expect(manifestDesignations(row).filter((d) => !d.startsWith('gaia_dr3:')).length)
         .toBeGreaterThan(0);
     }
-    expect(result.counts.additionGaiaKeyedOnly).toBe(0);
-    expect(result.counts.rows).toBe(18);
+    expect(totals(result).manifestRows).toBe(18);
   });
 });
 
@@ -993,6 +1022,29 @@ describe('membership lineage', () => {
       .filter((r) => /^membership\.(admit\.[a-z0-9.-]+|component|fold)$/.test(r.code)).map((r) => r.key));
     expect(new Set(result.identity.map((r) => r.key))).toEqual(admitted);
     expect(result.lineage.every((r) => MEMBERSHIP_CODES.has(r.code))).toBe(true);
+  });
+
+  it('folds totals that agree with the manifest and the spine it was built from', () => {
+    expect(totals(result).manifestRows).toBe(result.rows.length);
+    expect(totals(result).spineRows).toBe(input.spine.length);
+    expect(totals(result).reviewRows).toBe(result.bindingReview.length);
+  });
+
+  it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {
+    const { drift, refreshed } = seededCodeCheck(MEMBERSHIP_CODES, sorted(result.lineage));
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`membership.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
+  });
+
+  it('types both count blocks on their keys', () => {
+    const counts: MembershipCounts = folded(result);
+    const derived: MembershipDerivedCounts = result.derived;
+    // @ts-expect-error a membership count with no code behind it is no key of the block
+    const unkeyed: MembershipCounts = { ...counts, 'membership.unkeyed': 1 };
+    // @ts-expect-error a derived count with no key in the block
+    const undeclared: MembershipDerivedCounts = { ...derived, undeclared: 1 };
+    expect([unkeyed, undeclared]).toHaveLength(2);
   });
 
   it('shows a row re-bound onto a companion, with its component letters and code', () => {
