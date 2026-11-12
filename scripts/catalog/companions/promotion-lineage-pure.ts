@@ -151,7 +151,7 @@ export function promotionLineageRows(r: PromotedRow, recordKey: (idx: number) =>
 /** Promotion's lines folded per live code. */
 export type PromotionCounts = Readonly<Record<LiveCode, number>>;
 
-const familyTotal = (counts: PromotionCounts, family: string): number => {
+export const familyTotal = (counts: PromotionCounts, family: string): number => {
   const prefix = `${PROMOTION_CODES.stage}.${family}.`;
   return PROMOTION_CODES.live.reduce((n, code) => (code.startsWith(prefix) ? n + counts[code] : n), 0);
 };

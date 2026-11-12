@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { tangentOffset, type Stage6Offset } from './anchor-offset-pure';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
-import { PROMOTION_CODES, promotionLineageRows, type PromotionCounts } from './promotion-lineage-pure';
+import { familyTotal, PROMOTION_CODES, promotionLineageRows } from './promotion-lineage-pure';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   componentDepth,
@@ -46,11 +46,6 @@ function promote(...args: Parameters<typeof promoteCompanions>) {
   const lines = result.rows.flatMap((r) => promotionLineageRows(r, () => 'spine:0'))
     .map((row) => stageLineageLine(PROMOTION_CODES, row));
   return { ...result, codes: foldStageLines(PROMOTION_CODES, lines) };
-}
-
-function family(codes: PromotionCounts, name: string): number {
-  const prefix = `promotion.${name}.`;
-  return PROMOTION_CODES.live.reduce((n, code) => (code.startsWith(prefix) ? n + codes[code] : n), 0);
 }
 
 // The real IAU decomposition, not a stub: the fixtures below carry real
@@ -922,7 +917,7 @@ describe('anchor flux dimming', () => {
     const { stats, codes } = promote(
       rows, [anchor, member], inputs(),
     );
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(stats.companionBlendDimBeyondSeparation).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(blend);
@@ -979,7 +974,7 @@ describe('anchor flux dimming', () => {
       rows, [anchor, member], inputs(),
     );
     expect(newStars).toHaveLength(0);
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(1);
     // Its own measurement is subtracted; the record itself is never rewritten.
     expect(member.absmag).toBe(4.1);
@@ -1068,7 +1063,7 @@ describe('anchor flux dimming', () => {
     const { stats, codes } = promote(
       rows, [anchor, member], inputs(),
     );
-    expect(family(codes, 'adopted')).toBe(2);
+    expect(familyTotal(codes, 'adopted')).toBe(2);
     expect(stats.companionBlendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
@@ -1101,7 +1096,7 @@ describe('anchor flux dimming', () => {
     // record's real 2.2 drops the anchor to 3.93, a 1.9 mag move certified by a
     // 0.06 mag fit. On the record's own light nothing beats anchor-alone.
     const { anchor, stats, codes } = disagreeingMember(2.0, 2.2);
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(0);
     expect(stats.companionBlendDimOutside).toBe(1);
     expect(anchor.absmag).toBe(2.0);
@@ -1292,8 +1287,8 @@ describe('promoteCompanions', () => {
 
   it('promotes Sirius B with imputed absmag and FLAG_BINARY_COMPANION_ONLY', () => {
     const { newStars, codes } = promote(siriusRows(), [sirius_a_existing], inputs());
-    expect(family(codes, 'minted')).toBe(1);
-    expect(family(codes, 'adopted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(0);
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
     expect(b.gaiaSourceId).toBe('2947050466531873024');
@@ -1373,7 +1368,7 @@ describe('promoteCompanions', () => {
       }),
     ];
     const { codes } = promote(rows, [a, b], inputs());
-    expect(family(codes, 'adopted')).toBe(1); // B already in catalog, not promoted
+    expect(familyTotal(codes, 'adopted')).toBe(1); // B already in catalog, not promoted
     const expected = {
       x: (1 - q) * vA.x + q * vB.x,
       y: (1 - q) * vA.y + q * vB.y,
@@ -1412,7 +1407,7 @@ describe('promoteCompanions', () => {
       }),
     ];
     const { codes } = promote(rows, [anchor, member], inputs());
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(codes['promotion.desig-con.from-anchor']).toBe(1);
     expect(member.desigCon).toEqual({ via: 'anchor', index: psa });
     // Positional membership is untouched — the two answer different questions.
@@ -1476,7 +1471,7 @@ describe('promoteCompanions', () => {
     ];
     const { newStars, codes } = promote(rows, [anchor, cExisting], inputs());
     expect(newStars).toHaveLength(0);
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
   });
 
   it('re-homes a blended inner-pair secondary onto its true parent (Castor Ba,Bb → B, not A)', () => {
@@ -1637,8 +1632,8 @@ describe('promoteCompanions', () => {
       gaiaSourceId: '2947050466531873024', absmag: 11.18,
     });
     const { newStars, codes } = promote(rows, [existing, sirius_a_existing], inputs());
-    expect(family(codes, 'minted')).toBe(0);
-    expect(family(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(newStars).toHaveLength(0);
   });
 
@@ -1650,7 +1645,7 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;
     rows[1].hip = null;
     const { newStars, codes } = promote(rows, [sirius_a_existing], inputs());
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(codes['promotion.minted.synthetic']).toBe(1);
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
@@ -1714,8 +1709,8 @@ describe('promoteCompanions', () => {
     rows[1].hip = 32349;               // still shares primary's HIP
     rows[1].astrometryVia = 'system_inherited';
     const { newStars, codes } = promote(rows, [sirius_a_existing], inputs());
-    expect(family(codes, 'adopted')).toBe(0);
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(codes['promotion.minted.synthetic']).toBe(1);
     expect(newStars).toHaveLength(1);
     const b = newStars[0];
@@ -1744,8 +1739,8 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = '555000111';
     rows[1].hip = null;
     const { newStars, codes } = promote(rows, [primaryWithGaia], inputs());
-    expect(family(codes, 'adopted')).toBe(0);
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'adopted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(codes['promotion.minted.synthetic']).toBe(1);
     const b = newStars[0];
     expect(b.gaiaSourceId).toBeNull();
@@ -1762,8 +1757,8 @@ describe('promoteCompanions', () => {
     const rows = siriusRows();
     rows[1].gaiaSourceId = '777';
     const { codes } = promote(rows, [sirius_a_existing, otherStar], inputs());
-    expect(family(codes, 'adopted')).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('still reports alreadyInCatalog for a no-gaia row whose HIP matches a NON-primary AT-HYG record', () => {
@@ -1778,8 +1773,8 @@ describe('promoteCompanions', () => {
     rows[1].gaiaSourceId = null;
     rows[1].hip = 99999;  // matches `otherStar`, NOT Sirius A
     const { codes } = promote(rows, [sirius_a_existing, otherStar], inputs());
-    expect(family(codes, 'adopted')).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'adopted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('drops secondaries with no absmag path (no own absmag, no Δmag)', () => {
@@ -1791,7 +1786,7 @@ describe('promoteCompanions', () => {
     rows[0].absmag = null;
     const { codes } = promote(rows, [sirius_a_existing], inputs());
     expect(codes['promotion.dropped.no-absmag']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('projects secondary position from sep+PA when astrometry is system_inherited', () => {
@@ -1955,7 +1950,7 @@ describe('promoteCompanions', () => {
     rows[1].paDeg = null;
     const { codes } = promote(rows, [sirius_a_existing], inputs());
     expect(codes['promotion.dropped.no-position']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('drops a secondary when astrometry is system_inherited but sep+PA are missing', () => {
@@ -1965,7 +1960,7 @@ describe('promoteCompanions', () => {
     rows[1].paDeg = null;
     const { codes } = promote(rows, [sirius_a_existing], inputs());
     expect(codes['promotion.dropped.no-position']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('drops a tangent-projected secondary beyond the tidal limit (ρ·d > 1 pc)', () => {
@@ -1993,7 +1988,7 @@ describe('promoteCompanions', () => {
     ];
     const { newStars, codes } = promote(rows, [farPrimary], inputs());
     expect(codes['promotion.dropped.beyond-tidal-limit']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
     expect(newStars).toHaveLength(0);
   });
 
@@ -2019,7 +2014,7 @@ describe('promoteCompanions', () => {
     ];
     const { codes } = promote(rows, [nearPrimary], inputs());
     expect(codes['promotion.dropped.beyond-tidal-limit']).toBe(0);
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(1);
   });
 
   it('fails the build on a membership record reached only by name, bit-identical on its anchor', () => {
@@ -2051,7 +2046,7 @@ describe('promoteCompanions', () => {
     rows[1].paDeg = 75.0;
     const { codes } = promote(rows, [sirius_a_existing], inputs());
     expect(codes['promotion.dropped.no-position']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
   });
 
   it('collocates a sep-0.000 ORBITAL secondary bit-identically on the anchor (zero-baseline bake)', () => {
@@ -2061,7 +2056,7 @@ describe('promoteCompanions', () => {
     rows[1].paDeg = 43.0;
     Object.assign(rows[1], ORBIT_ELEMENTS);
     const { newStars, codes } = promote(rows, [sirius_a_existing], inputs());
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(newStars[0].x).toBe(sirius_a_existing.x);
     expect(newStars[0].y).toBe(sirius_a_existing.y);
     expect(newStars[0].z).toBe(sirius_a_existing.z);
@@ -2078,7 +2073,7 @@ describe('promoteCompanions', () => {
     Object.assign(rows[1], ORBIT_ELEMENTS);
     const { newStars, codes } = promote(rows, [sirius_a_existing], inputs());
     expect(codes['promotion.dropped.no-position']).toBe(0);
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(newStars[0].x).toBe(sirius_a_existing.x);
   });
 
@@ -2116,7 +2111,7 @@ describe('promoteCompanions', () => {
     ];
     const { newStars, codes } = promote(rows, [alsephina], inputs());
     expect(codes['promotion.dropped.collocated-primary']).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
     expect(newStars.find(s => s.gaiaSourceId === '5317053587002655872'))
       .toBeUndefined();
   });
@@ -2150,7 +2145,7 @@ describe('promoteCompanions', () => {
       }),
     ];
     const { newStars, codes } = promote(rows, [anchor], inputs());
-    expect(family(codes, 'minted')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(1);
     expect(codes['promotion.dropped.collocated-primary']).toBe(0);
     const c = newStars.find(s => s.gaiaSourceId === 'g_pair_c');
     expect(c, 'C promoted at own astrometry').toBeDefined();
@@ -2370,7 +2365,7 @@ describe('promoteCompanions', () => {
     const { newStars, codes } = promote(rows, [keid], inputs());
     // The "BC" compound row drops; B and C both promote.
     expect(codes['promotion.dropped.compound-comp']).toBe(1);
-    expect(family(codes, 'minted')).toBe(2);
+    expect(familyTotal(codes, 'minted')).toBe(2);
     expect(newStars.map(s => s.gaiaSourceId ?? s.syntheticId).sort())
       .toEqual(['3195919254111314816', '3195919254111315712']);
     // B's xyz comes from projecting its 83.2″ / 108° anchor offset off
@@ -2725,7 +2720,7 @@ describe('promoteCompanions', () => {
       }),
     ];
     const { codes } = promote(rows, [], inputs());
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'minted')).toBe(0);
     expect(rows).toHaveLength(1);
   });
 });
@@ -2763,7 +2758,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       rows, [anchor], inputs(),
     );
     expect(newStars).toHaveLength(1);
-    expect(family(codes, 'dropped.parked-record')).toBe(0);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(0);
   });
 
   it('refuses it once the ledger names the record, counts the refusal and names the parked record', () => {
@@ -2774,8 +2769,8 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       }]) }),
     );
     expect(newStars).toHaveLength(0);
-    expect(family(codes, 'dropped.parked-record')).toBe(1);
-    expect(family(codes, 'minted')).toBe(0);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
+    expect(familyTotal(codes, 'minted')).toBe(0);
     expect(promoted.map((r) => r.outcome)).toContainEqual(expect.objectContaining({
       kind: 'dropped', reason: 'parked-record', parked: 'spine:1',
     }));
@@ -2788,7 +2783,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         reason: 'refused_no_defensible_parallax', refusedPlxMas: [3.04], originKey: 'spine:1',
       }]) }),
     );
-    expect(family(codes, 'dropped.parked-record')).toBe(1);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
   });
 
   // The population this refusal mostly catches, and the reason it sits where it
@@ -2829,7 +2824,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     expect(newStars).toHaveLength(1);
     expect(newStars[0].hip).toBeNull();
     expect(newStars[0].syntheticId).toBe('synth-01425+5000-B');
-    expect(family(codes, 'dropped.parked-record')).toBe(0);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(0);
   });
 
   it('refuses that sibling once the ledger names the id it borrowed, before '
@@ -2841,7 +2836,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       }]) }),
     );
     expect(newStars).toHaveLength(0);
-    expect(family(codes, 'dropped.parked-record')).toBe(1);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
     // The borrowed HIP is the primary's, so the row carries no per-component
     // fit and refusing it withholds no measurement of B's own. That zero is
     // the refusal's warrant, not a note — ../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in.
@@ -2872,7 +2867,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
           reason: 'refused_no_defensible_parallax', refusedPlxMas: [0.97], originKey: 'spine:1',
         }]) }),
       );
-      expect(family(codes, 'dropped.parked-record')).toBe(1);
+      expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
       expect(codes['promotion.dropped.parked-record.gaia-5p']).toBe(1);
       expect(codes['promotion.fit.owned']).toBe(1);
     });
@@ -2895,7 +2890,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         refusedPlxMas: [0.97, SECOND_REFUSAL_MAS], originKey: 'spine:1',
       }]) }),
     );
-    expect(family(codes, 'dropped.parked-record')).toBe(1);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
   });
 
   it('promotes where the row states none of them — a second refusal does not '
@@ -2907,7 +2902,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         refusedPlxMas: [SECOND_REFUSAL_MAS, 6.8354], originKey: 'spine:1',
       }]) }),
     );
-    expect(family(codes, 'dropped.parked-record')).toBe(0);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(0);
     expect(newStars).toHaveLength(1);
   });
 
@@ -2926,7 +2921,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         },
       ]) }),
     );
-    expect(family(codes, 'dropped.parked-record')).toBe(1);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(1);
   });
 
   // A row parked on a reason that refused nothing: there is no measurement for
@@ -2947,7 +2942,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       );
       expect(newStars).toHaveLength(1);
       expect(newStars[0].syntheticId).toBe('synth-01425+5000-B');
-      expect(family(codes, 'dropped.parked-record')).toBe(0);
+      expect(familyTotal(codes, 'dropped.parked-record')).toBe(0);
     },
   );
 
@@ -2989,7 +2984,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
         refusedPlxMas: [ALF_HER_REFUSED_MAS], originKey: 'spine:1',
       }]) }),
     );
-    expect(family(codes, 'dropped.parked-record')).toBe(0);
+    expect(familyTotal(codes, 'dropped.parked-record')).toBe(0);
     expect(newStars).toHaveLength(1);
   });
 
@@ -3004,7 +2999,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
           refusedPlxMas: [1000 / 110.253583], originKey: 'spine:1',
         }]) }),
       );
-      expect(family(codes, 'dropped.parked-record'), String(distPc)).toBe(1);
+      expect(familyTotal(codes, 'dropped.parked-record'), String(distPc)).toBe(1);
     }
   });
 });
