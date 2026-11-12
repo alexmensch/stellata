@@ -83,6 +83,12 @@ type LiveCode = (typeof PROMOTION_CODES.live)[number];
 
 const PROMOTION_EFFECTS = codeEffects([PROMOTION_CODES]);
 
+const MINT_BRANCHES = { keyed: 'minted.keyed', synthetic: 'minted.synthetic' } as const satisfies Record<string, LiveBranch>;
+
+export const PROMOTION_ADMISSION_CODES: ReadonlySet<string> = new Set(
+  Object.values(MINT_BRANCHES).map((b) => PROMOTION_CODES.liveCode(b)),
+);
+
 type Via = { via: PromotedRow['via'] };
 type Facet = `brightness.${BrightnessCode}` | 'spectral.ms-from-own-absmag' | 'constellation.split-from-anchor'
   | 'desig-con.from-anchor' | 'fit.owned';
@@ -130,7 +136,7 @@ export function promotionLineageRows(r: PromotedRow, recordKey: (idx: number) =>
       ];
     case 'minted':
       return [
-        row(o.synthetic ? 'minted.synthetic' : 'minted.keyed', { via }),
+        row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }),
         facet(`brightness.${BRIGHTNESS_CODES[o.brightness.source]}`),
         ...(o.brightness.spectMsFromOwnAbsmag ? [facet('spectral.ms-from-own-absmag')] : []),
         ...(o.constellationSplit ? [facet('constellation.split-from-anchor')] : []),
