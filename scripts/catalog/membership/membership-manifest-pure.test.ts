@@ -44,7 +44,7 @@ import {
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipTotals,
+  MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
@@ -1028,6 +1028,14 @@ describe('membership lineage', () => {
     expect(totals(result).manifestRows).toBe(result.rows.length);
     expect(totals(result).spineRows).toBe(input.spine.length);
     expect(totals(result).reviewRows).toBe(result.bindingReview.length);
+  });
+
+  it('logs the fold\'s totals and the derivation beside its codes', () => {
+    const summary = membershipSummary(folded(result), result.derived);
+    expect(summary).toContain(`manifest: ${result.rows.length} rows`);
+    const d = derivation(result);
+    expect(summary).toContain(`derivation: bound ${d.bound - ledOf(result, 'rescued')}, rescued ${ledOf(result, 'rescued')}, refused ${d.refused}`);
+    expect(summary.split('\n')).toHaveLength(5 + 5);
   });
 
   it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {
