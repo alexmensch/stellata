@@ -58,7 +58,10 @@ allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
                           codes the migrated retirement rows carry;
                           AllocationCounts, the count block over its
                           row codes, and allocationSummary, its log
-                          line read off that block), the
+                          line read off that block;
+                          allocationAdmissionCode, the only code type a
+                          declared object's admission and a sibling's
+                          mintCode accept), the
                           one serialiser over its outcomes, and
                           allocation.sids (key -> SID), its own codec.
                           objectOutcomeCodes / objectOutcomeRows: the

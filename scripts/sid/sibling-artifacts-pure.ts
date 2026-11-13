@@ -3,7 +3,9 @@
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
 import type { SidObject } from './allocate-pure';
-import { ALLOCATION_CODES, objectOutcomeCodes, type ObjectOutcomeCodes } from './allocation-lineage-pure';
+import {
+  allocationAdmissionCode, objectOutcomeCodes, type AllocationAdmissionCode, type ObjectOutcomeCodes,
+} from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
 import { sourceRowRef, sourceRowRefText, type RowKeyed } from '../util/sources/row-ref-pure';
 import {
@@ -20,7 +22,7 @@ export interface SiblingArtifactSpec<S extends string = string> {
   /** The pnpm script that emits the artifact and allocates `ns`. */
   step: string;
   /** The allocation code a new object of this artifact mints under. */
-  mintCode: string;
+  mintCode: AllocationAdmissionCode;
   /** The `<source>` its artifact's records are cited under: `<rowId>:<slug>`. */
   rowId: string;
   /** The build's own allocation stage. */
@@ -35,7 +37,7 @@ export const SIBLING_ARTIFACTS = {
     ns: CLOUD_PARTITION,
     kind: 'cloud',
     step: 'build:clouds',
-    mintCode: ALLOCATION_CODES.code('mint.cloud'),
+    mintCode: allocationAdmissionCode('mint.cloud'),
     rowId: 'clouds',
     lineage: CLOUDS_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
@@ -45,7 +47,7 @@ export const SIBLING_ARTIFACTS = {
     ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',
     step: 'build:local-group',
-    mintCode: ALLOCATION_CODES.code('mint.local-group'),
+    mintCode: allocationAdmissionCode('mint.local-group'),
     rowId: 'local-group',
     lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),

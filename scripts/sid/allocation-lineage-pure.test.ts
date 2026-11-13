@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { allocate, type SidObject } from './allocate-pure';
+import { allocate, type Admission, type SidObject } from './allocate-pure';
 import {
-  ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows, allocationSummary,
+  ALLOCATION_CODES, allocationAdmissionCode, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
+  allocationSummary,
 } from './allocation-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
 import { foldStageLines, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
@@ -51,8 +52,17 @@ describe('allocation lineage', () => {
       'allocation.merged.same-class', 'allocation.retired', 'allocation.parked',
     ]);
     for (const branch of ['mint.sol-list', 'mint.shell-list', 'mint.cloud', 'mint.local-group'] as const) {
-      expect(ALLOCATION_CODES.onRows(ALLOCATION_CODES.code(branch))).toBe(false);
+      expect(ALLOCATION_CODES.onRows(allocationAdmissionCode(branch))).toBe(false);
     }
+  });
+
+  it('admits a declared object only under an admission code, in the type', () => {
+    const admitted: Admission = { kind: 'declared', code: allocationAdmissionCode('mint.cloud') };
+    // @ts-expect-error a row code is no admission code
+    const refused: Admission = { kind: 'declared', code: ALLOCATION_CODES.code('resolved') };
+    // @ts-expect-error a row code is no admission branch
+    const unreachable = () => allocationAdmissionCode('resolved');
+    expect([admitted.kind, refused.kind, typeof unreachable]).toEqual(['declared', 'declared', 'function']);
   });
 
   it('folds its rows into its count block, a minted row once whatever its route', () => {

@@ -2,7 +2,7 @@
 
 import { sortUtf8, stageRow, type LineageParams, type LineageRow, type RowCoder } from '../catalog/lineage/lineage-row-pure';
 import {
-  HISTORICAL, admissionCode, codeCount, outcomeCode, stageCodes, type StageCodes, type StageCounts,
+  HISTORICAL, admissionCode, codeCount, outcomeCode, stageCodes, type StageCode, type StageCodes, type StageCounts,
 } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
@@ -26,16 +26,20 @@ export function objectOutcomeCodes(stage: string): ObjectOutcomeCodes {
   return stageCodes(stage, OBJECT_OUTCOMES);
 }
 
+const ADMISSIONS = {
+  'mint.sol-list': admissionCode('The object is a row of data/sid/sol-objects.tsv.'),
+  'mint.shell-list': admissionCode('The object is a row of data/sid/shell-objects.tsv.'),
+  'mint.cloud': admissionCode(`The object is a cloud ${PUBLIC_FILES.clouds} carries.`),
+  'mint.local-group': admissionCode(`The object is a galaxy ${PUBLIC_FILES.localGroup} carries.`),
+};
+
 export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   ...OBJECT_OUTCOMES,
   merged: outcomeCode('A SID no object keeps any more merges into the SID of the record its upstream decision names.', 'merge'),
   'merged.same-class': outcomeCode('One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.', 'merge'),
   retired: outcomeCode('A SID no object keeps any more leaves service under its upstream decision\'s code.', 'retire'),
   parked: outcomeCode('A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.', 'park'),
-  'mint.sol-list': admissionCode('The object is a row of data/sid/sol-objects.tsv.'),
-  'mint.shell-list': admissionCode('The object is a row of data/sid/shell-objects.tsv.'),
-  'mint.cloud': admissionCode(`The object is a cloud ${PUBLIC_FILES.clouds} carries.`),
-  'mint.local-group': admissionCode(`The object is a galaxy ${PUBLIC_FILES.localGroup} carries.`),
+  ...ADMISSIONS,
   'legacy.optical-cpm-test': outcomeCode('optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)', 'retire', HISTORICAL),
   'legacy.component-dissolved': outcomeCode('A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.', 'retire', HISTORICAL),
   'legacy.component-parked': outcomeCode('A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.', 'retire', HISTORICAL),
@@ -70,6 +74,14 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
 });
 
 export type AllocationCounts = StageCounts<typeof ALLOCATION_CODES>;
+
+type AdmissionBranch = keyof typeof ADMISSIONS;
+export type AllocationAdmissionCode = StageCode<typeof ALLOCATION_CODES.stage, AdmissionBranch>;
+
+/** The code a declared object is admitted under, typed so no other allocation code can stand in. */
+export function allocationAdmissionCode(branch: AdmissionBranch): AllocationAdmissionCode {
+  return ALLOCATION_CODES.code(branch) as AllocationAdmissionCode;
+}
 
 export function allocationSummary(counts: AllocationCounts, newEvents: number): string {
   const n = codeCount(ALLOCATION_CODES, counts);
