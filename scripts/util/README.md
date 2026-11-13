@@ -192,7 +192,7 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — one rounding, half to even on the double's
-  exact decimal value as a `BigInt`, behind four spellings:
+  exact decimal value as a `BigInt`, behind its spellings:
   `roundHalfEven(x, digits)`, Python's `round`;
   `roundEach`, the same over each element of a tuple;
   `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text (a refresh
@@ -202,7 +202,10 @@ same thing — single-use helpers stay with their consumer.
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
-  whose multiply moves near-ties.
+  whose multiply moves near-ties. Beside them, `formatRepr(x, width)`,
+  Python's `repr(x)` of a double or numpy's `str` of a float32: the
+  shortest digits that read back to `x`, no rounding (a refresh pull's
+  shortest-digits column format).
 - `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
   uniform generator: the synthetic faint catalogue's draws
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
