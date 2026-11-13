@@ -62,11 +62,11 @@ export type FloatWidth = 'double' | 'float32';
 
 const POSITIONAL_BELOW: Record<FloatWidth, number> = { double: 1e16, float32: 1e6 };
 
-/** The fewest significant digits, as `toExponential` text, that read back to `x` at `width`. */
+/** The fewest significant digits, as exponent text, that read back to `x` at `width`; a float32 halfway between two such spellings takes the even one, as numpy does. */
 function shortest(x: number, width: FloatWidth): string {
   if (width === 'double') return x.toExponential();
   for (let digits = 1; ; digits++) {
-    const text = x.toExponential(digits - 1);
+    const text = formatExponent(x, digits - 1);
     if (Math.fround(Number(text)) === x) return text;
   }
 }

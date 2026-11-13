@@ -62,6 +62,10 @@ describe('formatRepr', () => {
     expect(values.map((v) => formatRepr(Math.fround(v), 'float32'))).toEqual(numpy);
   });
 
+  it('breaks a float32 halfway between two shortest spellings to the even digit, as numpy does', () => {
+    expect([50.6328125, 16.2578125, 6.92578125].map((v) => formatRepr(v, 'float32'))).toEqual(['50.632812', '16.257812', '6.9257812']);
+  });
+
   it('reads the archives\' Java-style text back to the same repr', () => {
     expect(['9.045827E-5', '1.0E7', '0.0', '-4.6393E-4'].map((t) => formatRepr(Number(t))))
       .toEqual(['9.045827e-05', '10000000.0', '0.0', '-0.00046393']);
