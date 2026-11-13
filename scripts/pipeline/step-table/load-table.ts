@@ -159,7 +159,7 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
     const { record } = read;
     return [...Object.keys(record.stamp.inputs), ...record.requestFrom].map(tree.abs);
   }
-  return step.language === 'ts' ? options.deriveInputs(tree.abs(step.entry)) : [];
+  return options.deriveInputs(tree.abs(step.entry));
 }
 
 export async function loadTable(table: StepTable, options: LoadOptions): Promise<Loaded> {
