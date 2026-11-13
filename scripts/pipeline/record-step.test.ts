@@ -54,6 +54,8 @@ ${body}`);
   return { name: 'refresh:pull', kind: 'pull', language: 'python', entry: at('steps/pull.py'), outputs: [at('pull.tsv')] };
 }
 
+const pythonBake = (): ManualStep => ({ name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] });
+
 async function record(steps: StepEntry[], name: string, force = false, args: string[] = []): Promise<RecordOutcome> {
   const loaded = await loadTable({ steps, registryFiles: [] }, { root, deriveInputs: async () => [] });
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
@@ -209,7 +211,7 @@ sys.path.insert(0, ${JSON.stringify(root)})
 import helper
 Path(${JSON.stringify(at('baked.bin'))}).write_bytes(Path(${JSON.stringify(at('src.png'))}).read_bytes())
 `);
-    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    const step = pythonBake();
     await record([step], step.name);
     expect(Object.keys(stamp(step.name).inputs).sort()).toEqual(['helper.py', 'src.png', 'steps/bake.py']);
     write('helper.py', 'VALUE = 2\n');
@@ -227,7 +229,7 @@ import model
 rungs = Path(${JSON.stringify(at('ladder.ts'))}).read_text().split("[")[1].split("]")[0]
 Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
 `);
-    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    const step = pythonBake();
     await record([step], step.name);
     write('model.py', '"""Cloud model."""\n\n# Doubles.\ndef scale(x):\n    """Twice x."""\n    return x * 2  # exact\n');
     write('ladder.ts', '/** Rungs. */\nexport const LADDER = [1, 2]; // generated\n');
@@ -295,7 +297,7 @@ from pathlib import Path
 ${body}
 Path(${JSON.stringify(at('baked.bin'))}).write_text("baked")
 `);
-    return { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    return pythonBake();
   }
   const lists = (dir: string): string => `os.listdir(${JSON.stringify(at(dir))})`;
 
