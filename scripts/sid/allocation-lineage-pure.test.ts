@@ -4,7 +4,8 @@ import { allocate, type SidObject } from './allocate-pure';
 import {
   ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
 } from './allocation-lineage-pure';
-import { stageLineageLine } from '../catalog/lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
+import { foldStageLines, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 
 const objects: SidObject[] = [
   { designations: ['hip:1'], kind: 'star', label: 'a', origin: 'spine:1', admission: { kind: 'lineage' } },
@@ -52,6 +53,22 @@ describe('allocation lineage', () => {
     for (const branch of ['mint.sol-list', 'mint.shell-list', 'mint.cloud', 'mint.local-group'] as const) {
       expect(ALLOCATION_CODES.onRows(ALLOCATION_CODES.code(branch))).toBe(false);
     }
+  });
+
+  it('folds its rows into its count block, a minted row once whatever its route', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    expect(foldStageLines(ALLOCATION_CODES, lines)).toEqual({
+      'allocation.resolved': 1, 'allocation.minted': 2, 'allocation.reinstated': 0, 'allocation.merged': 0,
+      'allocation.merged.same-class': 0, 'allocation.retired': 0, 'allocation.parked': 1,
+    });
+  });
+
+  it('fails its snapshot check on a new code until the snapshot is refreshed', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    const { drift, refreshed } = seededCodeCheck(ALLOCATION_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`allocation.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 
   it('round-trips its identity file, key to SID', () => {

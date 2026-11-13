@@ -55,7 +55,9 @@ allocate-pure.ts (+ test) allocate: every object resolved, minted or
 allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
   (+ test)                codes (live, the mint.* admission codes no row
                           carries, and the historical legacy.*
-                          codes the migrated retirement rows carry), the
+                          codes the migrated retirement rows carry;
+                          AllocationCounts, the count block over its
+                          row codes), the
                           one serialiser over its outcomes, and
                           allocation.sids (key -> SID), its own codec.
                           objectOutcomeCodes / objectOutcomeRows: the

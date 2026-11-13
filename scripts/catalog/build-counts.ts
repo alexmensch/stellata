@@ -20,6 +20,7 @@ import type { MultiplicityCounts } from './multiplicity/multiplicity-stage-pure.
 import type { RecordsCounts } from './record/records-stage-pure.ts';
 import type { NamingCounts } from './naming/naming-lineage-pure.ts';
 import type { NamingDerivedCounts } from './naming/display-names.ts';
+import type { AllocationCounts } from '../sid/allocation-lineage-pure.ts';
 
 /** Repo-relative path of the snapshot `BuildCounts` is pinned against, so the
  *  build and every consumer that reads the shipped figures back resolve one
@@ -33,13 +34,13 @@ export function committedBuildCounts(): BuildCounts {
 
 /** Every count the snapshot holds, by name: each stage's count block. */
 export type BuildCounts = InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
-  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & NamingCounts
-  & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
+  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & AllocationCounts
+  & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
   'inputs', 'placement', 'brightness-colour', 'coherence', 'promotion',
-  'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
+  'multiplicity', 'gcvs', 'allocation', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
 

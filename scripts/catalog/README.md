@@ -216,7 +216,8 @@ comes from the last `build:membership` (`build/lineage/`, declared in
 placement's and promotion's from this run.
 
 New ledger rows and events land in the catalogue's partition with the rest
-of the outputs (`registryTexts`), and allocation's lineage beside the other stages'. A
+of the outputs (`registryTexts`), and allocation's lineage beside the other stages';
+its fold over its row codes is the count snapshot's `allocation` stage. A
 failed allocation — an orphan no decision explains, a new record no stage
 admits — throws before anything is staged, so nothing lands.
 `scripts/sid/README.md` carries the review side.

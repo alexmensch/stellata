@@ -679,7 +679,7 @@ export async function main() {
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
-  const allocationLineage = stageLineage({
+  const allocationLineage = countedStageLineage({
     layout: LINEAGE_LAYOUT,
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,
@@ -694,7 +694,7 @@ export async function main() {
     invariants: [],
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
-  });
+  }, ALLOCATION_CODES);
   const files = {
     manifest: manifestJson,
     constellations: constellationsJson,
@@ -730,6 +730,7 @@ export async function main() {
         { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+        { stage: 'allocation', block: { kind: 'counted', counts: allocationLineage.counts } },
         { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
         { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
         { stage: 'records', block: { kind: 'counted', counts: records } },

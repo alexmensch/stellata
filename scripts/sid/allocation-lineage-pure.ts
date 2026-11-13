@@ -69,6 +69,8 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   'legacy.astrometry-request-restored': outcomeCode('A component that promotes again once its blend-mate\'s Gaia source is in the binaries astrometry request, so its pair emits on gaia_5p.', 'none', HISTORICAL),
 });
 
+export type AllocationCounts = Readonly<Record<(typeof ALLOCATION_CODES.live)[number], number>>;
+
 type Branch = Parameters<typeof ALLOCATION_CODES.code>[0];
 
 type ParamsOf<B extends Branch> =
