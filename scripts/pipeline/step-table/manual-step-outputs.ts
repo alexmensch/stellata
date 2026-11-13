@@ -1,6 +1,5 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
-import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import {
   DUST_CHUNK, DUST_MANIFEST, PUBLIC_FILES, TEXTURE_MEMBERS,
 } from '../../../src/catalog-format/public-artifacts/public-artifacts';
@@ -32,7 +31,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:gaia-tyc', 'scripts/refresh/gaia-whole-table/refresh-gaia-tyc-xmatch.ts',
     'scripts/refresh/gaia-whole-table/gaia-whole-table-outputs.ts', 'GAIA_TYC_XMATCH_OUTPUTS',
   ),
-  pull('refresh:gaia-nss', 'refresh-gaia-nss.py', [DATA_FILES.gaiaNssTwoBody]),
+  tsManual(
+    { kind: 'pull' }, 'refresh:gaia-nss', 'scripts/refresh/gaia-whole-table/refresh-gaia-nss.ts',
+    'scripts/refresh/gaia-whole-table/gaia-whole-table-outputs.ts', 'GAIA_NSS_OUTPUTS',
+  ),
   tsManual(
     { kind: 'pull' }, 'refresh:gaia-astrometry', 'scripts/refresh/gaia-request/refresh-gaia-astrometry.ts',
     'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_OUTPUTS',

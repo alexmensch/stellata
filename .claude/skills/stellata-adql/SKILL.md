@@ -117,9 +117,7 @@ read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
 table past a mirror's limit is cut into committed `source_id` ranges
 ([Sliced scope](/scripts/refresh/pull/README.md#sliced-scope)); ESA answered
 a 24,000-row range of `tycho2tdsc_merge_best_neighbour` in 75 s
-(2026-11-06). The Python Gaia pulls' MAXREC sizing rules are in
-[Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
-never replace one with a bare literal.
+(2026-11-06).
 
 MAXREC is not load-bearing on CDS, whose default is ~1e9; there the row-count
 band is what catches an upstream row loss. SIMBAD's is: its default is 50,000
