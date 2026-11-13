@@ -58,6 +58,56 @@ export function formatExponent(x: number, digits: number): string {
   return `${signOf(x)}${point}e${exponent < 0 ? '-' : '+'}${String(Math.abs(exponent)).padStart(2, '0')}`;
 }
 
+export type FloatWidth = 'double' | 'float32';
+
+const POSITIONAL_BELOW: Record<FloatWidth, number> = { double: 1e16, float32: 1e6 };
+
+function exponentText(sign: string, mantissa: bigint, exponent: number, digits: number): string {
+  const top = 10n ** BigInt(digits);
+  if (mantissa === top) return exponentText(sign, top / 10n, exponent + 1, digits);
+  if (mantissa < top / 10n) return exponentText(sign, mantissa * 10n + 9n, exponent - 1, digits);
+  const text = mantissa.toString();
+  return `${sign}${text[0]}${digits === 1 ? '' : `.${text.slice(1)}`}e${exponent}`;
+}
+
+/**
+ * The fewest significant digits, as exponent text, that read back to `x` at `width`; a float32 halfway between two
+ * such spellings takes the even one, as numpy does. At a power of two the values reading back to `x` reach twice as
+ * far above it as below, so when the nearest spelling falls short below, its neighbour above may still read back.
+ */
+function shortest(x: number, width: FloatWidth): string {
+  if (width === 'double') return x.toExponential();
+  const readsBack = (text: string): boolean => Math.fround(Number(text)) === x;
+  for (let digits = 1; ; digits++) {
+    const nearest = formatExponent(x, digits - 1);
+    if (readsBack(nearest)) return nearest;
+    const [lead, exponent] = nearest.split('e');
+    const sign = lead.startsWith('-') ? '-' : '';
+    const mantissa = BigInt(lead.replace(/^-/, '').replace('.', ''));
+    const neighbour = [mantissa + 1n, mantissa - 1n]
+      .map((m) => exponentText(sign, m, Number(exponent), digits))
+      .find(readsBack);
+    if (neighbour !== undefined) return neighbour;
+  }
+}
+
+/** Python's `repr(x)` of a double, or numpy's `str` of `x` as a float32: shortest round-trip digits, positional from 1e-4 up to 1e16 (float32: 1e6), else `d.ddde±XX`. */
+export function formatRepr(x: number, width: FloatWidth = 'double'): string {
+  if (!Number.isFinite(x)) throw new Error(`formatRepr: ${x} is not finite`);
+  const value = width === 'float32' ? Math.fround(x) : x;
+  if (value === 0) return Object.is(value, -0) ? '-0.0' : '0.0';
+  const [mantissa, exponent] = shortest(value, width).split('e');
+  const sign = value < 0 ? '-' : '';
+  const digits = mantissa.replace(/^-/, '').replace('.', '');
+  const e = Number(exponent);
+  if (Math.abs(value) < 1e-4 || Math.abs(value) >= POSITIONAL_BELOW[width]) {
+    const lead = digits.length === 1 ? digits : `${digits[0]}.${digits.slice(1)}`;
+    return `${sign}${lead}e${e < 0 ? '-' : '+'}${String(Math.abs(e)).padStart(2, '0')}`;
+  }
+  if (e < 0) return `${sign}0.${'0'.repeat(-e - 1)}${digits}`;
+  return `${sign}${digits.slice(0, e + 1).padEnd(e + 1, '0')}.${digits.slice(e + 1) || '0'}`;
+}
+
 /** Each element through roundHalfEven, keeping a tuple's length in its type. */
 export function roundEach<T extends readonly number[]>(v: T, digits: number): { -readonly [I in keyof T]: number } {
   return v.map((x) => roundHalfEven(x, digits)) as { -readonly [I in keyof T]: number };

@@ -12,13 +12,15 @@ below are not guessable — every one is verified against the live service.
 Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only) and the
 `refresh_lib` docstrings. This file is the query-language layer above it.
 
-## Reach the services through `refresh_lib`, never a bare POST
+## Reach the services through a client, never a bare POST
 
-`rl.gaia_sync_client(maxrec)` for `gaiadr3.*` (ESA, ARI Heidelberg fallback),
+`gaiadr3.*` goes through the TypeScript backend: `tapClient` over `GAIA` (ESA,
+ARI Heidelberg fallback) in `scripts/refresh/pull/tap-pure.ts`, which refuses
+overflow by row count and a query fault by the archive's message
+([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
 `rl.cds_client()` for VizieR-only tables (CDS alone, no fallback),
-`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback). All three retry and
-surface the archive's `QUERY_STATUS` message; only the Gaia client also detects
-overflow and fails fast on a parse complaint, both below. An ad-hoc probe gets them by adding `scripts/refresh` to `sys.path` and
+`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback): both retry and
+surface the archive's `QUERY_STATUS` message. An ad-hoc Python probe gets them by adding `scripts/refresh` to `sys.path` and
 importing `refresh_lib` — cheaper than re-deriving any of it, and a probe that
 works becomes a pull without a rewrite.
 
@@ -117,9 +119,7 @@ read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
 table past a mirror's limit is cut into committed `source_id` ranges
 ([Sliced scope](/scripts/refresh/pull/README.md#sliced-scope)); ESA answered
 a 24,000-row range of `tycho2tdsc_merge_best_neighbour` in 75 s
-(2026-11-06). The Python Gaia pulls' MAXREC sizing rules are in
-[Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only);
-never replace one with a bare literal.
+(2026-11-06).
 
 MAXREC is not load-bearing on CDS, whose default is ~1e9; there the row-count
 band is what catches an upstream row loss. SIMBAD's is: its default is 50,000
