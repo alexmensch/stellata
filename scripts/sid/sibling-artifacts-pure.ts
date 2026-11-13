@@ -17,8 +17,8 @@ export interface SiblingArtifactSpec<S extends string = string> {
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
   ns: SiblingPartition;
   kind: SidKind;
-  /** pnpm script that emits `file` and allocates `ns`. */
-  buildHint: string;
+  /** The pnpm script that emits the artifact and allocates `ns`. */
+  step: string;
   /** The allocation code a new object of this artifact mints under. */
   mintCode: string;
   /** The `<source>` its artifact's records are cited under: `<rowId>:<slug>`. */
@@ -32,7 +32,7 @@ export const SIBLING_ARTIFACTS = {
   clouds: {
     ns: CLOUD_PARTITION,
     kind: 'cloud',
-    buildHint: 'pnpm run build:clouds',
+    step: 'build:clouds',
     mintCode: ALLOCATION_CODES.code('mint.cloud'),
     rowId: 'clouds',
     lineage: CLOUDS_ALLOCATION_LINEAGE,
@@ -41,13 +41,17 @@ export const SIBLING_ARTIFACTS = {
   'local-group': {
     ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',
-    buildHint: 'pnpm run build:local-group',
+    step: 'build:local-group',
     mintCode: ALLOCATION_CODES.code('mint.local-group'),
     rowId: 'local-group',
     lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),
   },
 } as const satisfies Record<string, SiblingArtifactSpec>;
+
+export function siblingBuildHint(spec: Pick<SiblingArtifactSpec, 'step'>): string {
+  return `pnpm run ${spec.step}`;
+}
 
 export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
 type UnclaimedPartition = Exclude<SiblingPartition, (typeof SIBLING_ARTIFACTS)[SiblingName]['ns']>;
