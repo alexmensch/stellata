@@ -76,7 +76,7 @@ script directly writes no record, so the build then stops on that pull.
 |---|---|---|---|
 | `refresh:gaia-hip` | `gaia-whole-table/refresh-gaia-hip-xmatch.ts` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
 | `refresh:gaia-tyc` | `gaia-whole-table/refresh-gaia-tyc-xmatch.ts` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
-| `refresh:gaia-nss` | `refresh-gaia-nss.py` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
+| `refresh:gaia-nss` | `gaia-whole-table/refresh-gaia-nss.ts` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
 | `refresh:gaia-astrometry` | `gaia-request/refresh-gaia-astrometry.ts` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
 | `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the union of four contributions ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks and `multiples.tsv`'s kept pairs, which Stage 5 decides from `gaia_dr3_astrometry.tsv`, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc` and a `build:binaries` that follows `refresh:gaia-astrometry`. |
 | `refresh:gaia-astrometry-catalog` | `gaia-request/refresh-gaia-astrometry-catalog.ts` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
@@ -273,10 +273,27 @@ The in-memory TAP backend every non-network suite here uses (`FakeTable`,
 Every `gaiadr3.*` pull asks a `/sync` endpoint — ESA primary, ARI Heidelberg
 fallback, both hosting the identical `gaiadr3.*` schema. The ESA archive's
 ASYNC path intermittently 500s on result retrieval while its sync endpoint
-stays healthy, so nothing reaches Gaia any other way. The TypeScript pulls do
-it through `pull/`'s backend ([The TAP backend](pull/README.md#the-tap-backend));
-`refresh-gaia-nss.py`, the one Python Gaia pull left, through
-`refresh_lib.gaia_sync_client()`.
+stays healthy, so nothing reaches Gaia any other way. The pulls do
+it through `pull/`'s backend ([The TAP backend](pull/README.md#the-tap-backend)),
+and every one is TypeScript.
+
+Check ESA's
+`external.*` schema before concluding a catalogue is VizieR-only:
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
+both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
+VizieR's because only the Gaia archives join it to a magnitude, and ESA's
+alone (`GAIA_ESA`) because one query names one of the two archives' table
+names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
+
+**MAXREC is load-bearing.** A truncated CSV sync reply is HTTP 200 with
+exactly MAXREC rows and no status at all, so the backend asks for one row more
+than it will accept and refuses by row count
+([The TAP backend](pull/README.md#the-tap-backend)), reading each mirror's
+hard output limit from its `/capabilities` and routing around it; the
+whole-table and magnitude-bounded pulls are sliced to fit ESA's 50,000
+([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
+
+### The Python TAP clients (CDS, SIMBAD)
 
 The Python `TapClient` moves whichever backend answered to the front, so a
 mirror that is down costs its retry schedule (about 5 min of connect
@@ -292,34 +309,6 @@ would fail with a misleading "table not found";
 `cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
-Check ESA's
-`external.*` schema before concluding a catalogue is VizieR-only:
-[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
-both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
-VizieR's because only the Gaia archives join it to a magnitude, and ESA's
-alone (`GAIA_ESA`) because one query names one of the two archives' table
-names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
-
-**MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
-truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
-MAXREC below the result size would silently short a pull. The Python pull's
-sizing rule below may not be replaced with a bare literal.
-**ESA's `/capabilities` declares a hard output limit of 50,000 rows** (ARI
-10,000,000; measured 2026-11-05), and a mirror truncates at its own hard
-limit whatever MAXREC asks. Whether ESA flags that truncation as a
-`QUERY_STATUS` overflow, which `refresh_lib` raises on, is unmeasured, so a
-Python query ESA answers past 50,000 rows may come back short with only its
-row band to catch it. The TypeScript runtime reads each mirror's limit and
-routes around it ([The TAP backend](pull/README.md#the-tap-backend)); the
-cross-walk and magnitude-bounded pulls are TypeScript and sliced to fit ESA
-([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
-
-- `refresh-gaia-nss.py`, the one Python whole-table pull, calls
-  `whole_table_sync_maxrec(EXPECTED_ROW_COUNT_MAX)` — double the pinned
-  ceiling, clamped to `GAIA_SYNC_MAX_ROWS` (3 M, not ESA's limit). It exits
-  rather than clamp below the ceiling. Its 440,000–446,000-row band is past
-  ESA's limit, so only ARI can answer it whole; an ESA answer is left to the
-  row band to refuse.
 
 ### Magnitude-bounded pulls
 
