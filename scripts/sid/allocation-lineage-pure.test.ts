@@ -44,6 +44,16 @@ describe('allocation lineage', () => {
     for (const r of rows) stageLineageLine(ALLOCATION_CODES, r);
   });
 
+  it('keys its counts on its row codes; the mint codes are admission codes, a minted row\'s route', () => {
+    expect(ALLOCATION_CODES.live).toEqual([
+      'allocation.resolved', 'allocation.minted', 'allocation.reinstated', 'allocation.merged',
+      'allocation.merged.same-class', 'allocation.retired', 'allocation.parked',
+    ]);
+    for (const branch of ['mint.sol-list', 'mint.shell-list', 'mint.cloud', 'mint.local-group'] as const) {
+      expect(ALLOCATION_CODES.onRows(ALLOCATION_CODES.code(branch))).toBe(false);
+    }
+  });
+
   it('round-trips its identity file, key to SID', () => {
     const rows = allocationSidRows(objects, allocation.outcomes);
     const text = allocationSidsText(rows);

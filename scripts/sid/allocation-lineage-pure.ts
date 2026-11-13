@@ -2,7 +2,7 @@
 
 import { sortUtf8, stageRow, type LineageParams, type LineageRow, type RowCoder } from '../catalog/lineage/lineage-row-pure';
 import {
-  HISTORICAL, outcomeCode, stageCodes, type StageCodes,
+  HISTORICAL, admissionCode, outcomeCode, stageCodes, type StageCodes,
 } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
@@ -32,10 +32,10 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   'merged.same-class': outcomeCode('One record now carries the keys of two SIDs in service and no stage decided the merge, so the same-as class is the decision: the SID that loses the canonical-key ladder merges into the one that wins.', 'merge'),
   retired: outcomeCode('A SID no object keeps any more leaves service under its upstream decision\'s code.', 'retire'),
   parked: outcomeCode('A SID no object keeps any more stays in service, absent from this build, under its upstream decision\'s code.', 'park'),
-  'mint.sol-list': outcomeCode('The object is a row of data/sid/sol-objects.tsv.'),
-  'mint.shell-list': outcomeCode('The object is a row of data/sid/shell-objects.tsv.'),
-  'mint.cloud': outcomeCode(`The object is a cloud ${PUBLIC_FILES.clouds} carries.`),
-  'mint.local-group': outcomeCode(`The object is a galaxy ${PUBLIC_FILES.localGroup} carries.`),
+  'mint.sol-list': admissionCode('The object is a row of data/sid/sol-objects.tsv.'),
+  'mint.shell-list': admissionCode('The object is a row of data/sid/shell-objects.tsv.'),
+  'mint.cloud': admissionCode(`The object is a cloud ${PUBLIC_FILES.clouds} carries.`),
+  'mint.local-group': admissionCode(`The object is a galaxy ${PUBLIC_FILES.localGroup} carries.`),
   'legacy.optical-cpm-test': outcomeCode('optical companion rejected by the Stage 5 WDS epoch-baseline CPM test (background star, not a physical companion)', 'retire', HISTORICAL),
   'legacy.component-dissolved': outcomeCode('A component the July 2026 re-pulls and promotion gates stopped emitting or promoting (re-paired, subsumed into an unpromoted aggregate, or its system no longer emitted), leaving no successor key.', 'retire', HISTORICAL),
   'legacy.component-parked': outcomeCode('A component whose record left the build while SIMBAD xids still name its own Gaia source: a presence gap filed as a retirement.', 'retire', HISTORICAL),

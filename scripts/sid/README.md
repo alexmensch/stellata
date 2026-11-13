@@ -53,7 +53,8 @@ allocate-pure.ts (+ test) allocate: every object resolved, minted or
                           new object no stage admits each fail
                           closed. A failed allocation is its own variant.
 allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
-  (+ test)                codes (live, plus the historical legacy.*
+  (+ test)                codes (live, the mint.* admission codes no row
+                          carries, and the historical legacy.*
                           codes the migrated retirement rows carry), the
                           one serialiser over its outcomes, and
                           allocation.sids (key -> SID), its own codec.

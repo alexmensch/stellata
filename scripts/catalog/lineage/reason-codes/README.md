@@ -8,11 +8,12 @@ declarations. The row contract the codes sit in is [../README.md](../README.md#r
 
 ```
 scripts/catalog/lineage/reason-codes/
-  reason-codes-pure.ts           stageCodes: a stage's codes, its live ones
-                                 typed apart (`liveCode` looks one up as a
-                                 count-block key), with their
-                                 effect, role and status; outcomeCode and
-                                 refusalCode, the two declaration shapes;
+  reason-codes-pure.ts           stageCodes: a stage's codes, the live ones
+                                 a line can carry typed apart (`liveCode`
+                                 looks one up as a count-block key), with
+                                 their effect, role and status;
+                                 outcomeCode, refusalCode and
+                                 admissionCode, the declaration shapes;
                                  retired, a retired code's status;
                                  codeCount, a count block read by live
                                  branch (LiveBranchOf), as each stage's log
@@ -55,6 +56,11 @@ scripts/catalog/lineage/reason-codes/
   the version that retired it) or `historical`, declared beside the code as
   a closed union. Historical codes carry legacy causes and are never mapped
   onto live ones.
+- An **admission code** (`admissionCode`) names why an object entered the
+  registry — a `mint` or `reinstate` event's code, a minted row's `route` —
+  and is never a row's own code: `stageLineageLine` refuses a row carrying
+  one, and it is no key of the stage's count block. Listed in the `outcome`
+  role. Allocation's `allocation.mint.*` codes are the four.
 - Codes are added and marked retired, never edited or reused. A behaviour
   change — the rule now picks different records — mints a new code; a fix
   that leaves the picked set unchanged keeps its code. CI diffs the
