@@ -53,10 +53,6 @@ export const SIBLING_ARTIFACTS = {
   },
 } as const satisfies Record<string, SiblingArtifactSpec>;
 
-export function siblingBuildHint(spec: Pick<SiblingArtifactSpec, 'step'>): string {
-  return `pnpm run ${spec.step}`;
-}
-
 export type SiblingName = keyof typeof SIBLING_ARTIFACTS;
 type UnclaimedPartition = Exclude<SiblingPartition, (typeof SIBLING_ARTIFACTS)[SiblingName]['ns']>;
 /** Fails typecheck while a sibling partition has no artifact; nothing reads it. */

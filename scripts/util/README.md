@@ -325,6 +325,9 @@ same thing — single-use helpers stay with their consumer.
 - `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
   against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
   README.
+- `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
+  spelling of a step's command, for the runner's refusals, the snapshot
+  refresh hint and every artifact or registry hint naming its writer.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
