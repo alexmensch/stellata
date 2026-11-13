@@ -13,7 +13,7 @@ import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
 import { countedStageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
 import { allocate, type Upstream } from './allocate-pure';
-import { objectOutcomeRows } from './allocation-lineage-pure';
+import { objectOutcomeRows, type ObjectOutcomeCodes } from './allocation-lineage-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
 import { inPartition } from './registry-partitions-pure';
 import {
@@ -29,7 +29,6 @@ export const SIBLING_LINEAGE_BUDGET: LineageBudget = { gzipBytes: 1_900, writeMs
 export interface SiblingAllocation<N extends SiblingPartition> {
   /** Parallel to the items allocated. */
   readonly sids: readonly number[];
-  readonly minted: number;
   /** The partition's files, or null when the allocation appended nothing, so such a run rewrites no registry file. */
   readonly registry: Readonly<Record<RegistryKey<N>, string>> | null;
   /** One row per object, under its origin. */
@@ -62,7 +61,6 @@ export function allocateSibling<N extends SiblingPartition, I extends string>(
   const appended = allocation.minted.length > 0 || allocation.events.length > 0;
   return {
     sids: allocation.outcomes.map((o) => o.sid),
-    minted: allocation.minted.length,
     registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : null,
     lines: objectOutcomeRows(spec.codes, objects, allocation.outcomes).map((row) => stageLineageLine(spec.codes, row)),
     identity: objects.map(({ origin, designations }) => ({
@@ -80,7 +78,7 @@ export function siblingLineage<S extends string>(
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
   snapshotPath: string = resolve(REPO_ROOT, spec.countsSnapshot),
-): StageLineageEmission<SiblingStem<S>, S> {
+): StageLineageEmission<SiblingStem<S>, S> & { readonly counts: Readonly<Record<ObjectOutcomeCodes['live'][number], number>> } {
   const { stage } = spec.lineage;
   const { counts, ...emission } = countedStageLineage({
     layout,
@@ -103,7 +101,7 @@ export function siblingLineage<S extends string>(
     failureLabel: `${spec.step} count`,
     script: spec.step,
   });
-  return { ...emission, checks: [...emission.checks, countsCheck] };
+  return { ...emission, counts, checks: [...emission.checks, countsCheck] };
 }
 
 /** Lands the artifact and its lineage, and the registry partition when the allocation appended, in one emitArtifacts call. */

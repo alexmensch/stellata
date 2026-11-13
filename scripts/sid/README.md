@@ -57,7 +57,8 @@ allocation-lineage-pure.ts  Allocation as a lineage stage: its reason
                           carries, and the historical legacy.*
                           codes the migrated retirement rows carry;
                           AllocationCounts, the count block over its
-                          row codes), the
+                          row codes, and allocationSummary, its log
+                          line read off that block), the
                           one serialiser over its outcomes, and
                           allocation.sids (key -> SID), its own codec.
                           objectOutcomeCodes / objectOutcomeRows: the
@@ -178,8 +179,10 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           appended, so a run that mints nothing rewrites
                           no registry file (null otherwise, never a
                           partial set); siblingLineage, its stage's
-                          emission, its count block checked against
-                          the spec's count snapshot; emitSibling, the artifact, that
+                          emission and count block, the block checked
+                          against the spec's count snapshot (each build's
+                          log reads its minted figure off the block);
+                          emitSibling, the artifact, that
                           emission and those files in one emitArtifacts
                           call. Called by build:local-group and
                           build:clouds.

@@ -2,6 +2,7 @@
 // layer. See scripts/local-group/README.md for inputs, output schema,
 // idempotency, and the LVDB-refresh protocol.
 
+import { codeCount } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { sweepStaged } from '../util/emit-artifacts';
@@ -97,10 +98,12 @@ export async function main(): Promise<void> {
   // byte-identical artifacts.
   objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
 
-  const allocation = allocateSibling(SIBLING_ARTIFACTS['local-group'], LOCAL_GROUP_JSON, objects);
+  const spec = SIBLING_ARTIFACTS['local-group'];
+  const allocation = allocateSibling(spec, LOCAL_GROUP_JSON, objects);
+  const lineage = siblingLineage(spec, allocation);
   emitSibling(
     LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(localGroupPayload(objects, allocation.sids)) }, allocation,
-    siblingLineage(SIBLING_ARTIFACTS['local-group'], allocation),
+    lineage,
   );
 
   console.log(
@@ -109,6 +112,6 @@ export async function main(): Promise<void> {
     `${lvdbDefaultHits} LVDB-only, ${standaloneHits} standalone override; ` +
     `${skippedNoStructure} LVDB rows skipped — no structural data; ` +
     `${skippedOutOfRange} standalone overrides skipped — past MAX_DISTANCE_PC; ` +
-    `${allocation.minted} lg SIDs minted)`,
+    `${codeCount(spec.codes, lineage.counts)('minted')} lg SIDs minted)`,
   );
 }

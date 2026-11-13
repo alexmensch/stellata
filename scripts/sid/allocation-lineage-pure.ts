@@ -2,7 +2,7 @@
 
 import { sortUtf8, stageRow, type LineageParams, type LineageRow, type RowCoder } from '../catalog/lineage/lineage-row-pure';
 import {
-  HISTORICAL, admissionCode, outcomeCode, stageCodes, type StageCodes,
+  HISTORICAL, admissionCode, codeCount, outcomeCode, stageCodes, type StageCodes,
 } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
@@ -70,6 +70,14 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
 });
 
 export type AllocationCounts = Readonly<Record<(typeof ALLOCATION_CODES.live)[number], number>>;
+
+export function allocationSummary(counts: AllocationCounts, newEvents: number): string {
+  const n = codeCount(ALLOCATION_CODES, counts);
+  const objects = n('resolved') + n('minted') + n('reinstated');
+  return `SID allocation: ${objects} objects, ${n('minted')} minted, ${n('reinstated')} reinstated; `
+    + `${n('parked')} parked, ${n('retired')} retired, ${n('merged')} merged, ${n('merged.same-class')} merged by same-as class; `
+    + `${newEvents} new event(s)`;
+}
 
 type Branch = Parameters<typeof ALLOCATION_CODES.code>[0];
 

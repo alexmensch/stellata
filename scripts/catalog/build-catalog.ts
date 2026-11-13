@@ -150,7 +150,7 @@ import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
-  allocationLineageRows,
+  allocationLineageRows, allocationSummary,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
 import { inPartition } from '../sid/registry-partitions-pure';
@@ -479,13 +479,6 @@ export async function main() {
     console.log(`ambiguous (dropped): ${designation} names ${objects.length} objects — ${objects.map((i) => sidObjects[i].label).join(' | ')}`);
   }
   const recordSids = allocation.outcomes.slice(0, stars.length).map((o) => o.sid);
-  const removedBy = (kind: string): number => allocation.removals.filter((r) => r.kind === kind).length;
-  console.log(
-    `SID allocation: ${sidObjects.length} objects, ${allocation.minted.length} minted, `
-      + `${allocation.outcomes.filter((o) => o.kind === 'reinstated').length} reinstated; `
-      + `${removedBy('parked')} parked, ${removedBy('retired')} retired, ${removedBy('merged')} merged; `
-      + `${allocation.events.length} new event(s)`,
-  );
 
   // Naming ladder, composition half. Runs here because it needs every
   // record final: the promoted companions exist, indices are sorted, each
@@ -690,6 +683,7 @@ export async function main() {
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   }, ALLOCATION_CODES);
+  console.log(allocationSummary(allocationLineage.counts, allocation.events.length));
   const files = {
     manifest: manifestJson,
     constellations: constellationsJson,

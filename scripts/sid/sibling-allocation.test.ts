@@ -36,7 +36,6 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
   it('resolves every committed slug to its SID and rewrites no registry file', () => {
     const allocation = allocateSibling(spec, LOCAL_GROUP_JSON, committed);
     expect(allocation.sids).toEqual(liveRows.map((r) => r.sid));
-    expect(allocation.minted).toBe(0);
     expect(allocation.registry).toBeNull();
   });
 
@@ -52,7 +51,6 @@ describe.skipIf(committed.length === 0)('allocateSibling over the committed regi
 
   it('mints a new slug past the union and returns all three partition files', () => {
     const allocation = allocateSibling(spec, LOCAL_GROUP_JSON, [...committed, { id: 'probe-new-slug' }]);
-    expect(allocation.minted).toBe(1);
     expect(allocation.lines).toContain(
       'allocation-local-group\tlocal-group:probe-new-slug\toutcome\tallocation-local-group.minted\t'
         + '{"canonical_key":"lg:probe-new-slug","route":"allocation.mint.local-group"}\t',
@@ -92,11 +90,12 @@ describe('siblingLineage', () => {
   }));
 
   it('renders the stage file and its identity file, each decoding back to what the allocation held', () => {
-    const { files, checks } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {}, snapshot);
+    const { files, checks, counts } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {}, snapshot);
     const text = (key: keyof typeof files): string => gunzipSync(files[key] as Uint8Array).toString('utf8');
     expect([...lineageRows(text(`lineage:${stage}`), 'fixture')].map((r) => r.code)).toEqual([`${stage}.resolved`]);
     expect([...identityRows(text(`lineage:${stage}.identity`), 'fixture')]).toEqual(identity);
     expect(checks.map((c) => c.kind)).toEqual(['pass', 'pass']);
+    expect(counts).toEqual({ [`${stage}.resolved`]: 1, [`${stage}.minted`]: 0, [`${stage}.reinstated`]: 0 });
   });
 
   it('checks its count block against the build\'s snapshot, failing on drift and naming the refresh', () => {
@@ -142,7 +141,7 @@ describe('emitSibling', () => {
   const none = { lines: [], identity: [] };
 
   it('lands only the artifact and its lineage when the allocation appended nothing', () => {
-    emitSibling(outputs, { localGroup: 'x' }, { sids: [], minted: 0, registry: null, ...none }, lineage);
+    emitSibling(outputs, { localGroup: 'x' }, { sids: [], registry: null, ...none }, lineage);
     expect(landed()).toEqual(['lineage', 'local-group.json']);
     expect(readdirSync(join(dir, 'lineage')).sort()).toEqual([
       'allocation-local-group.header.json', 'allocation-local-group.identity.tsv.gz', 'allocation-local-group.tsv.gz',
@@ -151,7 +150,7 @@ describe('emitSibling', () => {
 
   it('lands the artifact, its lineage and all three partition files when it appended', () => {
     const registry = { [keys.ledger]: 'l', [keys.events]: 'e', [keys.head]: 'h' };
-    emitSibling(outputs, { localGroup: 'y' }, { sids: [], minted: 1, registry, ...none }, lineage);
+    emitSibling(outputs, { localGroup: 'y' }, { sids: [], registry, ...none }, lineage);
     expect(landed()).toEqual(['events-lg.tsv', 'ledger-head-lg.json', 'ledger-lg.tsv', 'lineage', 'local-group.json']);
     expect(readFileSync(join(dir, 'ledger-lg.tsv'), 'utf8')).toBe('l');
   });

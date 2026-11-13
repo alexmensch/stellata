@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { allocate, type SidObject } from './allocate-pure';
 import {
-  ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
+  ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows, allocationSummary,
 } from './allocation-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
 import { foldStageLines, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
@@ -61,6 +61,13 @@ describe('allocation lineage', () => {
       'allocation.resolved': 1, 'allocation.minted': 2, 'allocation.reinstated': 0, 'allocation.merged': 0,
       'allocation.merged.same-class': 0, 'allocation.retired': 0, 'allocation.parked': 1,
     });
+  });
+
+  it('summarises its count block for the build log, each merge code apart', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    expect(allocationSummary(foldStageLines(ALLOCATION_CODES, lines), 2)).toBe(
+      'SID allocation: 3 objects, 2 minted, 0 reinstated; 1 parked, 0 retired, 0 merged, 0 merged by same-as class; 2 new event(s)',
+    );
   });
 
   it('fails its snapshot check on a new code until the snapshot is refreshed', () => {
