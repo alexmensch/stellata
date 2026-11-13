@@ -62,12 +62,32 @@ export type FloatWidth = 'double' | 'float32';
 
 const POSITIONAL_BELOW: Record<FloatWidth, number> = { double: 1e16, float32: 1e6 };
 
-/** The fewest significant digits, as exponent text, that read back to `x` at `width`; a float32 halfway between two such spellings takes the even one, as numpy does. */
+function exponentText(sign: string, mantissa: bigint, exponent: number, digits: number): string {
+  const top = 10n ** BigInt(digits);
+  if (mantissa === top) return exponentText(sign, top / 10n, exponent + 1, digits);
+  if (mantissa < top / 10n) return exponentText(sign, mantissa * 10n + 9n, exponent - 1, digits);
+  const text = mantissa.toString();
+  return `${sign}${text[0]}${digits === 1 ? '' : `.${text.slice(1)}`}e${exponent}`;
+}
+
+/**
+ * The fewest significant digits, as exponent text, that read back to `x` at `width`; a float32 halfway between two
+ * such spellings takes the even one, as numpy does. At a power of two the values reading back to `x` reach twice as
+ * far above it as below, so when the nearest spelling falls short below, its neighbour above may still read back.
+ */
 function shortest(x: number, width: FloatWidth): string {
   if (width === 'double') return x.toExponential();
+  const readsBack = (text: string): boolean => Math.fround(Number(text)) === x;
   for (let digits = 1; ; digits++) {
-    const text = formatExponent(x, digits - 1);
-    if (Math.fround(Number(text)) === x) return text;
+    const nearest = formatExponent(x, digits - 1);
+    if (readsBack(nearest)) return nearest;
+    const [lead, exponent] = nearest.split('e');
+    const sign = lead.startsWith('-') ? '-' : '';
+    const mantissa = BigInt(lead.replace(/^-/, '').replace('.', ''));
+    const neighbour = [mantissa + 1n, mantissa - 1n]
+      .map((m) => exponentText(sign, m, Number(exponent), digits))
+      .find(readsBack);
+    if (neighbour !== undefined) return neighbour;
   }
 }
 

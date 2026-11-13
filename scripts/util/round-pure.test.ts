@@ -66,6 +66,10 @@ describe('formatRepr', () => {
     expect([50.6328125, 16.2578125, 6.92578125].map((v) => formatRepr(v, 'float32'))).toEqual(['50.632812', '16.257812', '6.9257812']);
   });
 
+  it('takes the neighbour above at a power of two when the nearest spelling falls short below, as numpy does', () => {
+    expect([2 ** 87, 2 ** 90, 2 ** -96].map((v) => formatRepr(v, 'float32'))).toEqual(['1.5474251e+26', '1.2379401e+27', '1.2621775e-29']);
+  });
+
   it('rounds a double to float32 itself before spelling it', () => {
     expect([0.1, 1 / 3].map((v) => formatRepr(v, 'float32'))).toEqual(['0.1', '0.33333334']);
   });
