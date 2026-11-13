@@ -133,7 +133,9 @@ The workflow's own `GITHUB_TOKEN` is held at `contents: read`, so the App
 token is the only writer. **The mint step references
 `actions/create-github-app-token` by commit SHA, not a version tag**: it
 is handed the App's private key, which can rewrite workflows, and a tag
-can be repointed at other code. `deploy-workflow.test.ts` pins all four:
+can be repointed at other code. Dependabot (`.github/dependabot.yml`)
+proposes the pin's bumps, with every other action's, weekly, labelled
+`skip-version-bump`. `deploy-workflow.test.ts` pins all four:
 `publish`'s `GH_TOKEN` is that step's output, the step asks for those
 three permissions, its action is SHA-pinned, and `GITHUB_TOKEN` stays
 read-only.
