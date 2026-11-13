@@ -24,7 +24,6 @@ export interface RecordedReads {
 export interface Stamp {
   readonly inputs: FileHashes;
   readonly outputs: FileHashes;
-  readonly recorded?: RecordedReads;
 }
 
 export type Hasher = (paths: readonly string[], root?: string) => FileHashes;
@@ -74,9 +73,7 @@ export function readStampJson(stamp: string): Readonly<Record<string, unknown>> 
 export function asStamp(json: Readonly<Record<string, unknown>>): Stamp | null {
   const parsed = json as Partial<Stamp>;
   if (!parsed.inputs || !parsed.outputs) return null;
-  return parsed.recorded
-    ? { inputs: parsed.inputs, outputs: parsed.outputs, recorded: parsed.recorded }
-    : { inputs: parsed.inputs, outputs: parsed.outputs };
+  return { inputs: parsed.inputs, outputs: parsed.outputs };
 }
 
 /** The subset of `paths` git ignores under `root`, each spelled as given. */
@@ -138,14 +135,14 @@ export function writeStamp(
   stamp: string,
   inputs: FileHashes,
   outputs: readonly string[],
-  { recorded, root = REPO_ROOT }: { readonly recorded?: RecordedReads; readonly root?: string } = {},
+  root: string = REPO_ROOT,
 ): void {
   const outputHashes = fileHashes(outputs, root);
   const missing = Object.keys(outputHashes).filter((p) => outputHashes[p] === null);
   if (outputs.length === 0 || missing.length > 0) {
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
   }
-  const record: Stamp = recorded ? { inputs, outputs: outputHashes, recorded } : { inputs, outputs: outputHashes };
+  const record: Stamp = { inputs, outputs: outputHashes };
   writeStaged(stamp, `${JSON.stringify(record, null, 2)}\n`);
   landStaged(stamp);
 }

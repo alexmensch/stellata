@@ -2,7 +2,7 @@
 
 The table half of the pipeline model ([../README.md](../README.md)): the
 entries, what a step declares against what the runner derives, how a Python
-step's run is recorded and checked, and the rules that reject a table before
+pull's or bake's run is recorded and checked, and the rules that reject a table before
 anything runs. The runner, freshness and `record.ts` stay in the parent
 folder and import from here.
 
@@ -23,12 +23,12 @@ reads it from `steps.ts`.
 
 What each step **declares** and what the runner **derives**:
 
-| Fact | TypeScript step | Python step |
+| Fact | TypeScript step | Python step (a pull or bake) |
 |---|---|---|
 | outputs | its `declareOutputs` constant, exported from a side-effect-free module (see Load-time rules) | declared in the table entry, checked against the run's recorded writes |
 | code inputs | the esbuild import closure plus siblings (`util/import-closure.ts`), computed before the run | every `scripts/` module the process loaded, recorded during the run (`build_stamp.py`) |
 | data inputs | the `defineSource` / `defineArtifact` constants reachable in that closure (the input-boundary design: typed readers, then source declarations) | every repo file the process opened for reading, recorded through Python's audit hook |
-| order | derived: B runs after A when B reads a file A declares | declared as `after: [steps]`, checked after each run |
+| order | derived: B runs after A when B reads a file A declares | derived the same way, from the files its committed record names |
 
 A `defineArtifact` is both the writer's output and the readers' source, so
 `multiples.tsv` is registered once.
@@ -40,7 +40,7 @@ reads. So each `defineSource` / `defineArtifact` lives in a leaf module that
 only code reading that file through its typed reader imports, and a test over
 each step's closure holds every reached source to a call of its reader.
 
-The runner starts a Python step as `run_python_step.py <root> <record> <entry>`,
+`record.ts` starts a Python step as `run_python_step.py <root> <record> <entry>`,
 which runs the entry under `build_stamp.record_run`
 ([util/README.md](../../util/README.md)); the step needs no code of its own to be
 recorded.
@@ -67,20 +67,9 @@ raises no event. Two reads open no file, so they need their own record:
 **A Python step's declarations cannot drift silently.** The audit hook also
 records what the process writes: the target of every `os.rename` /
 `os.replace` (so a temp-then-rename write counts as its target, not its temp
-file) and every path opened for writing. A step on the runner writes no stamp
-of its own: the runner writes it, so a stamp write is an undeclared one. A count
-snapshot the step rewrites under `--update-snapshots` is named in its own
-table field, never an output and never an ordering edge. After a Python step runs,
-the runner fails the run when a recorded write is not a declared output, or
-when a recorded input that another step declares as output is not covered by
-`after` (directly or transitively). A pull named in `after` whose edge closes
-a loop is a kept loop ([Loops through committed files](../README.md#loops-through-committed-files))
-and covers its own outputs only, never a step
-reached through it. The converse fails it too: an `after` entry none of
-whose outputs the run read, listed or probed is a false ordering edge
-(Reachable must mean read, above). No step on the table is a Python
-`build` step today; retiring the variant and these checks is
-`stellata-hhaw.45.43.1`.
+file) and every path opened for writing. `record.ts` fails the run, and
+leaves the record as it was, when a recorded write is neither a declared
+output nor a file git ignores (scratch).
 
 ## Load-time rules
 
@@ -138,9 +127,8 @@ the others once, and that rebuild appends nothing.
   variant per kind and language), the load-time rules that need no disk
   (one writer per output, files against families included, and two families
   in one folder only when both list names and none is shared; a build-step
-  cycle; an `after` naming no step), and `deriveGraph`: edges (`reads`, a
-  reader's files, or `after`, a Python step's declaration), the
-  registry edges set aside, a manual step's back edges kept as loops, and
+  cycle), and `deriveGraph`: edges (a writer, its reader and the files
+  between them), the registry edges set aside, a manual step's back edges kept as loops, and
   the run order (table order breaks ties). `selectSteps` is a target plus
   everything upstream, kept loops included; `writersOf` names the steps a
   step takes shared locks on.

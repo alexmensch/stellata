@@ -82,7 +82,8 @@ same thing — single-use helpers stay with their consumer.
   `stamp-path-pure.ts` names the files: `stampPath(name, root)` is
   `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
   a step's lock too).
-  A stamp the runner writes for a Python step also carries `recorded`: the
+  A Python pull's or bake's committed record (`../pipeline/record-step.ts`)
+  also carries `recorded`: the
   folders it listed (`listingHash`, over the sorted names git does not
   ignore, so a local cache in a listed folder reads the same in every
   checkout) and the paths it probed, which `recordedChanges` re-checks; a
@@ -90,19 +91,18 @@ same thing — single-use helpers stay with their consumer.
   slash, so a `.ckpt` folder the pull deleted before exiting still matches
   its directory-only pattern). `ignoredPaths` is the one `git check-ignore`
   call, which `listingHash`, `ignoredDirs` and `../pipeline/record-step.ts` make.
-  `record_run` is how the runner runs a Python step
+  `record_run` is how `record.ts` runs a Python pull or bake
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
   (a file the step wrote before reading it is not an input), every
-  directory it lists (its sorted names, which the runner hashes; the import
+  directory it lists (its sorted names, which `record.ts` hashes; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
   deleted — plus each module the step loaded (not those already loaded
   when the recording began: the recorder's own `run_python_step.py`,
   `build_stamp.py`, `stamp_hash.py` and `paths.py`, so editing the recorder stales no
   step), nothing under `.venv` or `__pycache__` included, into a JSON
-  record the runner turns
-  into the step's stamp. An existence check opens nothing, so a step probes
+  record `record.ts` turns into the step's committed record. An existence check opens nothing, so a step probes
   through `probe(path)`, which records the answer. `report_service(name)`
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
