@@ -106,11 +106,9 @@ through the step table's runner ([pipeline/README.md](pipeline/README.md)):
 each `package.json` target is `run.ts <step>`, which runs that step and every
 step upstream of it in data-flow order, and skips each on a **content-hash
 stamp**, never on mtimes. A stamp (`build/stamps/<step>.json`, written by the
-runner alone) records every input the step read — for a TypeScript step its
-esbuild import closure (`src/client/` modules included), the snapshots beside
-it and every declared source it reads; for a
-Python step every repo file the process opened, recorded as it ran — and every
-output it wrote, and the step is fresh while both re-hash the same. The stamp
+runner alone) records every input the step read — its esbuild import closure
+(`src/client/` modules included), the snapshots beside it and every declared
+source it reads — and every output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
 declared outputs in place, so a failed or interrupted build always reruns.
 Unstamped families (the lineage baseline and diff) are never recorded. A

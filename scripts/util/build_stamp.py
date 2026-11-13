@@ -1,5 +1,5 @@
-"""Records what a Python step reads, lists, probes and writes, for the runner
-to stamp. See scripts/util/README.md."""
+"""Records what a Python pull or bake reads, lists, probes and writes, for
+record.ts to turn into its committed record. See scripts/util/README.md."""
 
 from __future__ import annotations
 
@@ -118,7 +118,7 @@ _recorder: Optional[_Recorder] = None
 
 
 def probe(path: Path) -> bool:
-    """`path.exists()` for a step running under the runner, which records the
+    """`path.exists()` for a step running under record.ts, which records the
     answer as an input: an existence check opens no file, so the audit hook
     cannot see it."""
     exists = path.exists()
@@ -131,7 +131,7 @@ def probe(path: Path) -> bool:
 
 def report_service(name: str) -> None:
     """Records that the service `name` answered one of this step's network
-    queries, in first-answer order; outside the runner it records nothing."""
+    queries, in first-answer order; outside record.ts it records nothing."""
     if _recorder is not None and name not in _recorder.services:
         _recorder.services.append(name)
 

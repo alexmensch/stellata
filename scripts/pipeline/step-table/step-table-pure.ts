@@ -15,20 +15,10 @@ interface StepBase {
   readonly entry: string;
 }
 
-export interface TsBuildStep extends StepBase {
+export interface BuildStep extends StepBase {
   readonly kind: 'build';
   readonly language: 'ts';
   readonly outputs: OutputsRef;
-}
-
-export interface PythonBuildStep extends StepBase {
-  readonly kind: 'build';
-  readonly language: 'python';
-  readonly outputs: readonly string[];
-  readonly after: readonly string[];
-  /** Count snapshots the step rewrites under `--update-snapshots`: neither
-   *  outputs nor ordering edges. */
-  readonly snapshots: readonly string[];
 }
 
 /** A pull always describes itself; a bake does only when it reads a file
@@ -53,7 +43,6 @@ export type ManualStep = PythonManualStep | TsManualStep;
 
 export const describesItself = (step: ManualStep): boolean => step.kind === 'pull' || step.describes;
 
-export type BuildStep = TsBuildStep | PythonBuildStep;
 export type StepEntry = BuildStep | ManualStep;
 
 export interface StepTable {
@@ -67,19 +56,19 @@ export interface OutputClaims {
 }
 
 /** A step with every path absolute: its declared outputs and the files it is
- *  known to read (a TypeScript build's derived inputs, a manual step's recorded
- *  ones; a Python build's order comes from `after` instead). */
+ *  known to read (a build's derived inputs, a manual step's recorded ones). */
 export interface ResolvedStep {
   readonly step: StepEntry;
   readonly outputs: OutputClaims;
   readonly reads: readonly string[];
 }
 
-export type Edge =
-  | { readonly kind: 'reads'; readonly from: string; readonly to: string; readonly files: readonly string[] }
-  | { readonly kind: 'after'; readonly from: string; readonly to: string };
-
-export type ReadsEdge = Extract<Edge, { kind: 'reads' }>;
+/** `to` reads `files`, which `from` declares. */
+export interface Edge {
+  readonly from: string;
+  readonly to: string;
+  readonly files: readonly string[];
+}
 
 export interface StepGraph {
   /** Step names in run order. */
@@ -87,7 +76,7 @@ export interface StepGraph {
   readonly edges: readonly Edge[];
   /** Back edges from a manual step's output that would close a loop. */
   readonly keptLoops: readonly Edge[];
-  readonly registryEdges: readonly ReadsEdge[];
+  readonly registryEdges: readonly Edge[];
 }
 
 export type Derived =
@@ -130,26 +119,16 @@ export function outputConflicts(steps: readonly ResolvedStep[]): string[] {
   return problems;
 }
 
-function readEdges(steps: readonly ResolvedStep[]): { edges: Edge[]; problems: string[] } {
-  const byName = new Map(steps.map((s) => [s.step.name, s]));
+function readEdges(steps: readonly ResolvedStep[]): Edge[] {
   const edges: Edge[] = [];
-  const problems: string[] = [];
   for (const reader of steps) {
-    const { step } = reader;
-    if (step.kind === 'build' && step.language === 'python') {
-      for (const name of step.after) {
-        if (byName.has(name)) edges.push({ kind: 'after', from: name, to: step.name });
-        else problems.push(`${step.name} runs after ${name}, which is not a step`);
-      }
-      continue;
-    }
     for (const writer of steps) {
       if (writer === reader) continue;
       const files = reader.reads.filter((p) => claims(writer.outputs, p));
-      if (files.length > 0) edges.push({ kind: 'reads', from: writer.step.name, to: step.name, files });
+      if (files.length > 0) edges.push({ from: writer.step.name, to: reader.step.name, files });
     }
   }
-  return { edges, problems };
+  return edges;
 }
 
 export function reaches(edges: readonly Edge[], from: string, to: string): boolean {
@@ -213,15 +192,15 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
   const kindOf = new Map(steps.map((s) => [s.step.name, s.step.kind]));
   const files = names.map(stepFileName);
   const duplicates = names.filter((_, i) => files.indexOf(files[i]) !== i);
-  const { edges: all, problems } = readEdges(steps);
-  problems.unshift(
+  const all = readEdges(steps);
+  const problems = [
     ...duplicates.map((n) => `${n} shares its stamp and lock file ${stepFileName(n)} with an earlier step`),
     ...outputConflicts(steps),
-  );
+  ];
 
   const registry = new Set(registryFiles);
-  const isRegistryEdge = (e: Edge): e is ReadsEdge => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'
-    && e.kind === 'reads' && e.files.every((f) => registry.has(f));
+  const isRegistryEdge = (e: Edge): boolean => kindOf.get(e.from) === 'build' && kindOf.get(e.to) === 'build'
+    && e.files.every((f) => registry.has(f));
   const registryEdges = all.filter(isRegistryEdge);
   const remaining = all.filter((e) => !isRegistryEdge(e));
   const fromManual = (e: Edge): boolean => kindOf.get(e.from) !== 'build';

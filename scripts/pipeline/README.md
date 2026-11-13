@@ -57,8 +57,8 @@ That read is the registry loop ([Load-time rules](step-table/README.md#load-time
 ## The step table
 
 [step-table/README.md](step-table/README.md): what each step declares and
-what the runner derives, how a Python step's run is recorded and checked
-(listings, probes, writes, `after`), and the load-time rules, the kept-loop
+what the runner derives, how a Python pull's or bake's run is recorded and
+checked (listings, probes, writes), and the load-time rules, the kept-loop
 back edges and the registry loop among them.
 
 ## Freshness — one mechanism
@@ -69,8 +69,8 @@ hashes as its token stream without comments or docstrings
 (`util/code-identity.ts`), so an edit that cannot change
 what a step computes leaves it fresh; an output hashes as bytes. A step is fresh when
 its input set re-hashes the same and every recorded output re-hashes the
-same. For a TypeScript step the input set is computed now; for a Python step
-it is the recorded set, re-hashed. A missing or unparseable stamp is stale.
+same. For a build step the input set is computed now; for a manual step it
+is the recorded set, re-hashed. A missing or unparseable stamp is stale.
 Hashing costs about a second per gigabyte on a warm page cache, measured over
 today's stamped steps (about 1.1 GB) on a fast workstation. The runner also
 re-hashes every manual step's record (`data/` is about 1.5 GB) and starts the
@@ -278,7 +278,8 @@ Hand-kept lists become derivations over the table:
 
 The table's own files are in [step-table/](step-table/README.md#files).
 
-- `run_python_step.py` — a Python step's command line under the recorder.
+- `run_python_step.py` — a Python pull's or bake's command line under the
+  recorder.
 - `locks.ts` (+ test) / `lock_holder.py` — `holdLocks` starts a
   `lock_holder.py` child that takes each `flock` (Node has none) in
   step-name order and holds them until its stdin closes, so the locks go
@@ -288,9 +289,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   for the runner and `record.ts` alike. A lock
   file is `build/locks/<step>`, `:` written `-` (`util/stamp-path-pure.ts`'s
   `stepFileName`, which names the step's stamp too).
-- `freshness.ts` (+ test) — the one stamp test per kind: a TypeScript
-  build's inputs derived now, a Python build's recorded inputs, listings and
-  probes re-hashed, a manual step's committed record plus, for a step that
+- `freshness.ts` (+ test) — the one stamp test per kind: a build's inputs
+  derived now, a manual step's committed record (its inputs, and a Python
+  step's listings and probes, re-hashed) plus, for a step that
   describes itself (every pull, and a bake that reads a projection), its
   `--describe` (`describeStep`: `python3 -I -S`, or `tsx` for a TypeScript
   step), parsed into a `Description` and hashed as `pullQueryHash` (query text
@@ -299,17 +300,12 @@ The table's own files are in [step-table/](step-table/README.md#files).
   from the record. `buildFreshness` is a build step's verdict, the runner's
   and `tests/artifact-freshness.test.ts`'s alike. `writeManualRecord` is
   `readManualRecord`'s encoder, the one writer of `data/stamps/`.
-- `python-run-pure.ts` (tested through `runner.test.ts`) — `recordProblems`: a
-  write outside the declared outputs and snapshots, or a read, listing or
-  probe of another step's output with no path from that step in the graph
-  and no kept loop from it straight to the reader, or an `after` entry the
-  run touched none of the outputs of.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
   `failed`, `skipped`) matched exhaustively, and the exit status. The runner
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
-  under `--update-snapshots`, all of a TypeScript step's) re-hashed after
+  under `--update-snapshots`, all of them) re-hashed after
   (`stampedInputMap`, `../util/step-input-hashes.ts`).
   `pipeline-tree.ts` is the run's one root: table paths resolve against it,
   stamp keys are relative to it, and a step's build stamp (through
@@ -340,14 +336,15 @@ The table's own files are in [step-table/](step-table/README.md#files).
   one (`record-step.test.ts`, `../catalog/columns/catalog-columns.test.ts`).
 - `processes.ts` — how the runner and `record.ts` start a step: `runTs`, a
   TypeScript step under `tsx`, handed the input hashes taken before it
-  started (`util/step-input-hashes.ts`), or `runRecorded`, a Python step
-  under the recorder, whose run record is read only when it exits 0.
+  started (`util/step-input-hashes.ts`), or `runRecorded`, a Python pull or
+  bake under the recorder, whose `RunRecord` is read only when it exits 0.
 
 ## Design pass
 
 - **Q1, one owner per fact.** Step order: the data flow. Outputs: each step's
-  declaration. Code inputs: the import closure (TS) or the run record
-  (Python). Data inputs: the source constants (TS) or the run record (Python).
+  declaration. Code inputs: the import closure (TS) or the run record (a
+  Python pull or bake). Data inputs: the source constants (TS) or the run
+  record (Python).
   Freshness, locally and in CI's cache: the stamp. Force, snapshot updating
   and committed-output verification: three runner flags.
 - **Q2, wrong states.** Fresh, stale, failed and skipped-behind-a-stale-or-

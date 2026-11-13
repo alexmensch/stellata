@@ -5,7 +5,7 @@ import { existsSync } from 'node:fs';
 
 import {
   asStamp, changedSince, fileHashes, inputHashes, readStamp, readStampJson, recordedChanges,
-  type FileHashes, type Stamp,
+  type FileHashes, type RecordedReads, type Stamp,
 } from '../util/build-stamp';
 import { launchArgs, TSX } from './processes';
 import { stampedMembers, type Projection, type PullDescription } from '../util/emit-artifacts';
@@ -13,29 +13,29 @@ import { landStaged, writeStaged } from '../util/staged-write';
 import { hashBytes } from '../util/stamp-hash';
 import type { PipelineTree } from './pipeline-tree';
 import {
-  describesItself, type BuildStep, type ManualStep, type OutputClaims, type PythonBuildStep, type ResolvedStep,
-  type TsBuildStep,
+  describesItself, type BuildStep, type ManualStep, type OutputClaims, type ResolvedStep,
 } from './step-table/step-table-pure';
 
 export type Freshness =
   | { readonly kind: 'fresh' }
   | { readonly kind: 'stale'; readonly changed: readonly string[] };
 
-interface Projected {
+interface RecordFields {
+  readonly stamp: Stamp;
+  readonly recorded?: RecordedReads;
   readonly request?: string;
   readonly requestFrom: readonly string[];
 }
 
 /** A manual step's committed record, by the step's kind. */
 export type ManualRecord =
-  | ({ readonly kind: 'bake'; readonly stamp: Stamp } & Projected)
+  | ({ readonly kind: 'bake' } & RecordFields)
   | ({
     readonly kind: 'pull';
-    readonly stamp: Stamp;
     readonly query: string;
     readonly answeredBy: readonly string[];
     readonly release?: string;
-  } & Projected);
+  } & RecordFields);
 
 export type ManualRead =
   | { readonly kind: 'absent' }
@@ -66,57 +66,49 @@ function stampChanges(stamp: Stamp, outputs: OutputClaims, tree: PipelineTree): 
   return [
     ...changedSince(stamp.outputs, fileHashes, tree.root),
     ...outputs.files.map(tree.rel).filter((p) => !(p in stamp.outputs)),
-    ...(stamp.recorded ? recordedChanges(stamp.recorded, tree.root) : []),
   ];
 }
 
-export function derivedFreshness(stampFile: string, outputs: OutputClaims, inputs: FileHashes, tree: PipelineTree): Freshness {
-  const stamp = readStamp(stampFile);
-  if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  const keys = new Set([...Object.keys(inputs), ...Object.keys(stamp.inputs)]);
-  return verdict([...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, outputs, tree)]);
+/** A build step's verdict, with the input hashes it was judged on, which its stamp records if it runs. */
+export interface BuildFreshness {
+  readonly inputs: FileHashes;
+  readonly freshness: Freshness;
 }
-
-export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree: PipelineTree): Freshness {
-  const stamp = readStamp(stampFile);
-  if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  return verdict([...changedSince(stamp.inputs, inputHashes, tree.root), ...stampChanges(stamp, outputs, tree)]);
-}
-
-export type BuildFreshness =
-  | { readonly language: 'ts'; readonly step: TsBuildStep; readonly inputs: FileHashes; readonly freshness: Freshness }
-  | { readonly language: 'python'; readonly step: PythonBuildStep; readonly freshness: Freshness };
 
 export function buildFreshness(step: BuildStep, resolved: ResolvedStep, tree: PipelineTree): BuildFreshness {
-  const stampFile = tree.buildStamp(step.name);
-  if (step.language === 'python') return { language: 'python', step, freshness: recordedFreshness(stampFile, resolved.outputs, tree) };
   const inputs = inputHashes([...resolved.reads], tree.root);
-  return { language: 'ts', step, inputs, freshness: derivedFreshness(stampFile, resolved.outputs, inputs, tree) };
+  const stamp = readStamp(tree.buildStamp(step.name));
+  if (stamp === null) return { inputs, freshness: { kind: 'stale', changed: ['(no stamp)'] } };
+  const keys = new Set([...Object.keys(inputs), ...Object.keys(stamp.inputs)]);
+  const changed = [...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, resolved.outputs, tree)];
+  return { inputs, freshness: verdict(changed) };
 }
 
 const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
 const optionalString = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined);
+const isRecordedReads = (value: unknown): value is RecordedReads => typeof value === 'object' && value !== null
+  && typeof (value as Partial<RecordedReads>).listings === 'object' && typeof (value as Partial<RecordedReads>).probes === 'object';
 
 export function readManualRecord(step: ManualStep, stampFile: string): ManualRead {
   const json = readStampJson(stampFile);
   if (json === null) return { kind: existsSync(stampFile) ? 'unreadable' : 'absent' };
   const stamp = asStamp(json);
-  const { requestFrom = [], answeredBy = [] } = json;
-  if (stamp === null || !isStrings(requestFrom)) return { kind: 'unreadable' };
-  const projected = { request: optionalString(json.request), requestFrom };
-  if (step.kind === 'bake') return { kind: 'read', record: { kind: 'bake', stamp, ...projected } };
+  const { requestFrom = [], answeredBy = [], recorded } = json;
+  if (stamp === null || !isStrings(requestFrom) || (recorded !== undefined && !isRecordedReads(recorded))) return { kind: 'unreadable' };
+  const projected = { stamp, recorded, request: optionalString(json.request), requestFrom };
+  if (step.kind === 'bake') return { kind: 'read', record: { kind: 'bake', ...projected } };
   if (typeof json.query !== 'string' || !isStrings(answeredBy)) return { kind: 'unreadable' };
   return {
     kind: 'read',
-    record: { kind: 'pull', stamp, query: json.query, answeredBy, release: optionalString(json.release), ...projected },
+    record: { kind: 'pull', query: json.query, answeredBy, release: optionalString(json.release), ...projected },
   };
 }
 
 /** The committed form `readManualRecord` reads back; landed by rename, so a
  *  record on disk is whole or absent. */
 export function writeManualRecord(stampFile: string, record: ManualRecord): void {
-  const { kind: _, stamp, ...fields } = record;
-  writeStaged(stampFile, `${JSON.stringify({ ...stamp, ...fields }, null, 2)}\n`);
+  const { kind: _, stamp, recorded, ...fields } = record;
+  writeStaged(stampFile, `${JSON.stringify({ ...stamp, recorded, ...fields }, null, 2)}\n`);
   landStaged(stampFile);
 }
 
@@ -156,7 +148,11 @@ export function manualFreshness(step: ManualStep, outputs: OutputClaims, tree: P
   const read = readManualRecord(step, tree.manualStamp(step.name));
   if (read.kind !== 'read') return { kind: 'stale', changed: [`(${read.kind === 'absent' ? 'no' : 'unreadable'} stamp)`] };
   const { record } = read;
-  const changed = [...changedSince(record.stamp.inputs, inputHashes, tree.root), ...stampChanges(record.stamp, outputs, tree)];
+  const changed = [
+    ...changedSince(record.stamp.inputs, inputHashes, tree.root),
+    ...stampChanges(record.stamp, outputs, tree),
+    ...(record.recorded ? recordedChanges(record.recorded, tree.root) : []),
+  ];
   if (now !== null) {
     if (now.kind === 'pull' && record.kind === 'pull' && pullQueryHash(now) !== record.query) changed.push('(query)');
     if ((now.request ? requestHash(now.request) : undefined) !== record.request) changed.push('(request)');

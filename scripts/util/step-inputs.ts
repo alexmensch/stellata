@@ -8,12 +8,12 @@ import { entryClosure, packageScripts, trackedFiles } from './import-closure';
 import { REPO_ROOT } from './paths';
 import { declaredFiles, declaredInputs, isRead } from './sources/declared-inputs';
 
-/** Repo-relative: a table step's TypeScript entry, or every tsx entry an
+/** Repo-relative: a build step's entry, or every tsx entry an
  *  off-table package.json script chains. */
 export function stepEntries(name: string): string[] {
   const step = STEPS.steps.find((s) => s.name === name);
   if (step === undefined) return tsxEntries(packageScripts(), name);
-  return step.kind === 'build' && step.language === 'ts' ? [step.entry] : [];
+  return step.kind === 'build' ? [step.entry] : [];
 }
 
 /** Absolute paths. */

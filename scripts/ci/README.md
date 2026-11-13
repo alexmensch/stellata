@@ -77,8 +77,7 @@ return the PR's own newest entry, however stale.
 A stamp hashes every file the step reads as data or code and every file it writes, so a
 step hits on whatever build last made it from the same inputs, whatever
 commit that was, and a file no step reads that way (a workflow, a
-`package.json` script, a README) moves nothing. Python steps are covered the
-same way, through their recorded inputs. Build provenance is not an input:
+`package.json` script, a README) moves nothing. Build provenance is not an input:
 the release and HEAD that lineage and registry headers record
 (`releaseAt()` in `../util/release-version.ts`, `../util/git-provenance.ts`)
 name the build that made a reused output, not
