@@ -20,6 +20,11 @@ function publishToken(): string | null {
   return field(stepWhere(/^name: Publish releases$/m), 'GH_TOKEN');
 }
 
+function mintStep(): string {
+  const id = publishToken()?.match(/steps\.([\w-]+)\.outputs/)?.[1];
+  return stepWhere(new RegExp(`^\\s*id: ${id}$`, 'm'));
+}
+
 describe('deploy.yml Publish releases token', () => {
   it('is a GitHub App token minted in this job, never GITHUB_TOKEN', () => {
     const token = publishToken();
@@ -28,12 +33,14 @@ describe('deploy.yml Publish releases token', () => {
   });
 
   it('carries contents and workflows write, and pull-requests read for the notes', () => {
-    const id = publishToken()?.match(/steps\.([\w-]+)\.outputs/)?.[1];
-    const mint = stepWhere(new RegExp(`^\\s*id: ${id}$`, 'm'));
-    expect(field(mint, 'uses')).toMatch(/^actions\/create-github-app-token@/);
+    const mint = mintStep();
     expect(field(mint, 'permission-contents')).toBe('write');
     expect(field(mint, 'permission-workflows')).toBe('write');
     expect(field(mint, 'permission-pull-requests')).toBe('read');
+  });
+
+  it('mints with create-github-app-token pinned to a commit, since the step holds the App key', () => {
+    expect(field(mintStep(), 'uses')).toMatch(/^actions\/create-github-app-token@[0-9a-f]{40}(\s|$)/);
   });
 
   it('leaves GITHUB_TOKEN read-only, so the App token is the one writer', () => {

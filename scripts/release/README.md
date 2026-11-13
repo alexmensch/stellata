@@ -130,9 +130,13 @@ before `publish`, scoped to Contents and Workflows write and Pull requests
 read (the notes read each PR's body); the App and its secrets are in
 [Required repository secrets](/RELEASING.md#what-the-deploy-workflow-does).
 The workflow's own `GITHUB_TOKEN` is held at `contents: read`, so the App
-token is the only writer. `deploy-workflow.test.ts` pins all three:
+token is the only writer. **The mint step references
+`actions/create-github-app-token` by commit SHA, not a version tag**: it
+is handed the App's private key, which can rewrite workflows, and a tag
+can be repointed at other code. `deploy-workflow.test.ts` pins all four:
 `publish`'s `GH_TOKEN` is that step's output, the step asks for those
-three permissions, and `GITHUB_TOKEN` stays read-only.
+three permissions, its action is SHA-pinned, and `GITHUB_TOKEN` stays
+read-only.
 
 ## The pre-traffic check
 
