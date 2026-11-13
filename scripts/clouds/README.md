@@ -52,7 +52,10 @@ entry's import closure, its sibling files and the declarations it reads,
 One `emitArtifacts` call lands `clouds.json`, `zucker-profiled.json`, the
 `allocation-clouds` lineage stage (`build/lineage/`,
 [SID events](/scripts/sid/README.md#sid-events)) and, on a run that mints,
-the `cloud` SID registry partition.
+the `cloud` SID registry partition. Its check includes the step's count
+snapshot, `build-clouds-expected.json`: the allocation stage's count block,
+keyed on its reason codes ([The staged snapshot](../util/counts/README.md#the-staged-snapshot));
+`pnpm run build:clouds --update-snapshots` refreshes it.
 
 `zucker-profiled.json` (committed; name and version are `artifacts.zuckerProfiled`
 in `src/astro-core/baker-constants.json`) is

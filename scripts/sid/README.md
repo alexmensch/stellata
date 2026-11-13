@@ -178,12 +178,13 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           appended, so a run that mints nothing rewrites
                           no registry file (null otherwise, never a
                           partial set); siblingLineage, its stage's
-                          emission; emitSibling, the artifact, that
+                          emission, its count block checked against
+                          the spec's count snapshot; emitSibling, the artifact, that
                           emission and those files in one emitArtifacts
                           call. Called by build:local-group and
                           build:clouds.
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (ns / kind / step /
-                          mint code / rowId / lineage stage and its
+                          mint code / rowId / count snapshot / lineage stage and its
                           codes per sibling) + siblingArtifactObjects,
                           each object founded on its record of the
                           artifact the caller hands in, so the

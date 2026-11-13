@@ -1,12 +1,18 @@
 // One sibling artifact's namespace allocated over the committed registry: each record's SID, its partition's registry files, and its allocation stage's lineage. See README.md#sibling-artifact-stamping.
 
+import { resolve } from 'node:path';
+
 import type { FileHashes } from '../util/build-stamp';
+import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
+import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
+import { REPO_ROOT } from '../util/paths';
+import { snapshotCheck } from '../util/snapshot-check';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
-import { stageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
+import { countedStageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
 import { allocate, type Upstream } from './allocate-pure';
 import { objectOutcomeRows } from './allocation-lineage-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
@@ -68,15 +74,16 @@ export function allocateSibling<N extends SiblingPartition, I extends string>(
 
 type SiblingStem<S extends string> = S | `${S}.identity`;
 
-/** The sibling's allocation stage, ready for emitSibling: header, baseline, diff and budget as every stage has them. */
+/** The sibling's allocation stage, ready for emitSibling. See README.md (sibling-allocation.ts entry). */
 export function siblingLineage<S extends string>(
   spec: SiblingArtifactSpec<S>,
   allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
+  snapshotPath: string = resolve(REPO_ROOT, spec.countsSnapshot),
 ): StageLineageEmission<SiblingStem<S>, S> {
   const { stage } = spec.lineage;
-  return stageLineage<SiblingStem<S>, S>({
+  const { counts, ...emission } = countedStageLineage({
     layout,
     spec: spec.lineage,
     inputs,
@@ -90,7 +97,15 @@ export function siblingLineage<S extends string>(
     budget: SIBLING_LINEAGE_BUDGET,
     invariants: [],
     argv: process.argv.slice(2),
+  }, spec.codes);
+  const countsCheck = snapshotCheck<StagedCounts>({
+    snapshotPath,
+    actual: nestByStage([stage], [{ stage, block: { kind: 'counted', counts } }]),
+    compare: compareCountSnapshot,
+    failureLabel: `${spec.step} count`,
+    script: spec.step,
   });
+  return { ...emission, checks: [...emission.checks, countsCheck] };
 }
 
 /** Lands the artifact and its lineage, and the registry partition when the allocation appended, in one emitArtifacts call. */

@@ -26,6 +26,8 @@ export interface SiblingArtifactSpec<S extends string = string> {
   /** The build's own allocation stage. */
   lineage: StageLineageSpec<S | `${S}.identity`, S>;
   codes: ObjectOutcomeCodes;
+  /** Repo-relative path of the build's count snapshot, which holds its allocation stage's count block. */
+  countsSnapshot: string;
 }
 
 export const SIBLING_ARTIFACTS = {
@@ -37,6 +39,7 @@ export const SIBLING_ARTIFACTS = {
     rowId: 'clouds',
     lineage: CLOUDS_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
+    countsSnapshot: 'scripts/clouds/build-clouds-expected.json',
   },
   'local-group': {
     ns: LOCAL_GROUP_PARTITION,
@@ -46,6 +49,7 @@ export const SIBLING_ARTIFACTS = {
     rowId: 'local-group',
     lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),
+    countsSnapshot: 'scripts/local-group/build-local-group-expected.json',
   },
 } as const satisfies Record<string, SiblingArtifactSpec>;
 

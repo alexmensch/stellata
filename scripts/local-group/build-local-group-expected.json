@@ -1,0 +1,9 @@
+{
+  "stages": {
+    "allocation-local-group": {
+      "allocation-local-group.resolved": 123,
+      "allocation-local-group.minted": 0,
+      "allocation-local-group.reinstated": 0
+    }
+  }
+}

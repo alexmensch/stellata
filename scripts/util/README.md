@@ -338,7 +338,9 @@ same thing — single-use helpers stay with their consumer.
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
-  (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
+  (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
+  allocation counts of `build:clouds` and `build:local-group`
+  (`sid/sibling-allocation.ts`). The count
   snapshots all pass `compareCountSnapshot` (`counts/compare-counts-pure.ts`) as
   the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,

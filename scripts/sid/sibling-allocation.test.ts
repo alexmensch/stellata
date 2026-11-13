@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gunzipSync } from 'node:zlib';
@@ -11,6 +11,7 @@ import { artifactText, isReadable, readArtifact } from '../util/sources/source';
 import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
+import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
 import { identityRows } from '../catalog/lineage/identity-pure';
 import { lineageRows, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LOCAL_GROUP_JSON } from '../local-group/local-group-json';
@@ -85,12 +86,39 @@ describe('siblingLineage', () => {
   })];
   const identity = [{ key: 'local-group:a', tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations: ['lg:a'] }];
 
+  const snapshot = join(dir, 'expected.json');
+  writeFileSync(snapshot, JSON.stringify({
+    stages: { [stage]: { [`${stage}.resolved`]: 1, [`${stage}.minted`]: 0, [`${stage}.reinstated`]: 0 } },
+  }));
+
   it('renders the stage file and its identity file, each decoding back to what the allocation held', () => {
-    const { files, checks } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {});
+    const { files, checks } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {}, snapshot);
     const text = (key: keyof typeof files): string => gunzipSync(files[key] as Uint8Array).toString('utf8');
     expect([...lineageRows(text(`lineage:${stage}`), 'fixture')].map((r) => r.code)).toEqual([`${stage}.resolved`]);
     expect([...identityRows(text(`lineage:${stage}.identity`), 'fixture')]).toEqual(identity);
-    expect(checks.map((c) => c.kind)).toEqual(['pass']);
+    expect(checks.map((c) => c.kind)).toEqual(['pass', 'pass']);
+  });
+
+  it('checks its count block against the build\'s snapshot, failing on drift and naming the refresh', () => {
+    const minted = [...lines, stageLineageLine(spec.codes, {
+      stage, key: 'local-group:b', role: 'outcome', code: spec.codes.code('minted'), params: '', evidence: [],
+    })];
+    const [, counts] = siblingLineage(spec, { lines: minted, identity }, lineageLayout(dir), {}, snapshot).checks;
+    expect(counts.kind).toBe('fail');
+    expect(counts.kind === 'fail' && counts.report).toContain(`${stage}.minted`);
+    expect(counts.kind === 'fail' && counts.message).toContain('build:local-group');
+  });
+
+  it('fails its snapshot check on a new code until the snapshot is refreshed, for each sibling', () => {
+    for (const sibling of Object.values(SIBLING_ARTIFACTS)) {
+      const row = stageLineageLine(sibling.codes, {
+        stage: sibling.lineage.stage, key: 'x:a', role: 'outcome', code: sibling.codes.code('resolved'), params: '', evidence: [],
+      });
+      const { drift, refreshed } = seededCodeCheck(sibling.codes, [row]);
+      expect(drift.drifted).toBe(true);
+      expect(drift.report).toContain(`${sibling.lineage.stage}.${SEEDED_BRANCH}`);
+      expect(refreshed.drifted).toBe(false);
+    }
   });
 });
 

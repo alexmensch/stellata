@@ -2,6 +2,8 @@ import { resolve } from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
+import { BUILD_COUNTS_EXPECTED_FILE } from '../catalog/build-counts';
+import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
 import { entryClosure } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { stepEntries, stepInputPaths } from '../util/step-inputs';
@@ -24,5 +26,10 @@ describe('stepInputPaths(build:local-group)', () => {
     expect(inputs).toContain(abs('data/local-group/lvdb-snapshot.csv'));
     expect(inputs).toContain(abs('data/local-group/overrides.tsv'));
     expect(inputs).toContain(abs('data/local-group/aliases.tsv'));
+  });
+
+  it('keys its own count snapshot and no other build\'s', () => {
+    expect(inputs).toContain(abs(SIBLING_ARTIFACTS['local-group'].countsSnapshot));
+    expect(inputs).not.toContain(abs(BUILD_COUNTS_EXPECTED_FILE));
   });
 });
