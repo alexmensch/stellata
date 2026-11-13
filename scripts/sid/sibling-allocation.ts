@@ -11,6 +11,7 @@ import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
+import type { StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { countedStageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
 import { allocate, type Upstream } from './allocate-pure';
 import { objectOutcomeRows, type ObjectOutcomeCodes } from './allocation-lineage-pure';
@@ -77,7 +78,7 @@ export function siblingLineage<S extends string>(
   allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
-):StageLineageEmission<SiblingStem<S>, S> & { readonly counts: Readonly<Record<ObjectOutcomeCodes['live'][number], number>> } {
+): StageLineageEmission<SiblingStem<S>, S> & { readonly counts: StageCounts<ObjectOutcomeCodes> } {
   const { stage } = spec.lineage;
   const { counts, ...emission } = countedStageLineage({
     layout,

@@ -15,6 +15,7 @@ scripts/catalog/lineage/reason-codes/
                                  outcomeCode, refusalCode and
                                  admissionCode, the declaration shapes;
                                  retired, a retired code's status;
+                                 StageCounts, a stage's count block type;
                                  codeCount, a count block read by live
                                  branch (LiveBranchOf), as each stage's log
                                  summary reads it.

@@ -2,7 +2,7 @@
 
 import { sortUtf8, stageRow, type LineageParams, type LineageRow, type RowCoder } from '../catalog/lineage/lineage-row-pure';
 import {
-  HISTORICAL, admissionCode, codeCount, outcomeCode, stageCodes, type StageCodes,
+  HISTORICAL, admissionCode, codeCount, outcomeCode, stageCodes, type StageCodes, type StageCounts,
 } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { readTable, type TableSpec } from '../util/tsv/table-pure';
 import type { Allocation, ObjectOutcome, SidObject } from './allocate-pure';
@@ -69,7 +69,7 @@ export const ALLOCATION_CODES = stageCodes(ALLOCATION_LINEAGE.stage, {
   'legacy.astrometry-request-restored': outcomeCode('A component that promotes again once its blend-mate\'s Gaia source is in the binaries astrometry request, so its pair emits on gaia_5p.', 'none', HISTORICAL),
 });
 
-export type AllocationCounts = Readonly<Record<(typeof ALLOCATION_CODES.live)[number], number>>;
+export type AllocationCounts = StageCounts<typeof ALLOCATION_CODES>;
 
 export function allocationSummary(counts: AllocationCounts, newEvents: number): string {
   const n = codeCount(ALLOCATION_CODES, counts);

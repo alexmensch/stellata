@@ -3,7 +3,7 @@
 import { fold } from '../../util/counts/tally-pure';
 import { compareCodeUnits } from '../../util/tsv/artifact-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
-import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
+import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
 export type LineageRole = (typeof LINEAGE_ROLES)[number];
@@ -194,7 +194,7 @@ export function lineageLineParams(line: LineageLine): string {
 /** see README.md#counts-fold-from-lineage */
 export function foldStageLines<B extends string, S extends string, L extends B>(
   codes: StageCodes<B, S, L>, lines: Iterable<LineageLine>,
-): Record<StageCode<S, L>, number> {
+): StageCounts<StageCodes<B, S, L>> {
   return fold(codes.live, lines, (line) => {
     const code = lineageLineCode(line);
     if (codes.has(code)) assertDeclaredRole(codes, code, lineCell(line, 'role'), lineageLineKey(line));

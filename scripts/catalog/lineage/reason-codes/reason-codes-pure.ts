@@ -72,6 +72,9 @@ export interface StageCodes<B extends string, S extends string = string, L exten
 /** The live branches of a stage's codes. */
 export type LiveBranchOf<C> = C extends StageCodes<string, string, infer L> ? L : never;
 
+/** A stage's count block: one count per live code a line can carry. */
+export type StageCounts<C> = Readonly<Record<C extends { readonly live: readonly (infer K extends string)[] } ? K : never, number>>;
+
 /** A count block read by live branch: `codeCount(codes, counts)('v.none')`. */
 export function codeCount<B extends string, S extends string, L extends B>(
   codes: StageCodes<B, S, L>, counts: Readonly<Record<StageCode<S, NoInfer<L>>, number>>,

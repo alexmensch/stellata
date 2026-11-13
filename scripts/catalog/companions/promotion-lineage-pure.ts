@@ -5,7 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity-pure';
 import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { codeEffects, outcomeCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import type {
@@ -74,7 +74,6 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
 type LiveBranch = Parameters<typeof PROMOTION_CODES.liveCode>[0];
-type LiveCode = (typeof PROMOTION_CODES.live)[number];
 
 const PROMOTION_EFFECTS = codeEffects([PROMOTION_CODES]);
 
@@ -159,7 +158,7 @@ export function decisionRows(d: PromotionDecision): LineageRow[] {
 }
 
 /** Promotion's lines folded per live code. */
-export type PromotionCounts = Readonly<Record<LiveCode, number>>;
+export type PromotionCounts = StageCounts<typeof PROMOTION_CODES>;
 
 export const familyTotal = (counts: PromotionCounts, family: string): number => {
   const prefix = `${PROMOTION_CODES.stage}.${family}.`;

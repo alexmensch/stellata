@@ -18,7 +18,7 @@ import { readStageHeader, stageEmission, stageProvenance, streamLineage } from '
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { phaseClock } from './phase-clock-pure';
 import { foldStageLines, sortLineageLines, type LineageLine } from './lineage-row-pure';
-import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
+import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -202,8 +202,8 @@ export function stageLineage<F extends string, S extends string>(
 /** stageLineage, plus the stage's count block folded from the same lines inside the timed window. See README.md#counts-fold-from-lineage. */
 export function countedStageLineage<F extends string, S extends string, B extends string, L extends B>(
   run: StageLineageRun<F, S>, codes: StageCodes<B, S, L>,
-): StageLineageEmission<F, S> & { readonly counts: Readonly<Record<StageCode<S, L>, number>> } {
-  let counts: Record<StageCode<S, L>, number> | undefined;
+): StageLineageEmission<F, S> & { readonly counts: StageCounts<StageCodes<B, S, L>> } {
+  let counts: StageCounts<StageCodes<B, S, L>> | undefined;
   const emission = stageLineage({
     ...run,
     lines: () => {

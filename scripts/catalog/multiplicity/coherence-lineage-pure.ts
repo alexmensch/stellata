@@ -3,7 +3,7 @@
 import {
   evidenceTexts, stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, stageCodes, retired } from '../lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes, retired, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
@@ -49,7 +49,7 @@ type Branch = Parameters<typeof COHERENCE_CODES.code>[0];
 type LiveCode = (typeof COHERENCE_CODES.live)[number];
 
 /** Coherence's count block: its lines folded per live code. */
-export type CoherenceCounts = Readonly<Record<LiveCode, number>>;
+export type CoherenceCounts = StageCounts<typeof COHERENCE_CODES>;
 
 const FIGURES = ['systems', 'repositioned', 'memberAnchorWins', 'precisionVetoed', 'depthKept', 'anchorInconsistent'] as const;
 type Figure = (typeof FIGURES)[number];
