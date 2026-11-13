@@ -188,15 +188,10 @@ scripts/catalog/
                                   every consumer of the pinned figures.
                                   The file is staged
                                   (../util/counts/README.md#the-staged-snapshot):
-                                  BuildCounts is FiledCounts plus each
-                                  composed stage's count block, typed and
-                                  owned by the stage that tallies it;
-                                  CATALOG_COUNT_STAGE files each
-                                  filed count under the step that computes
-                                  it, typed over every FiledCounts key, so
-                                  a new one without a stage fails to
-                                  compile; CATALOG_COUNT_STAGES is the
-                                  stage order, pinned to LINEAGE_STAGES'.
+                                  BuildCounts is every stage's count block,
+                                  typed and owned by the stage that tallies
+                                  it; CATALOG_COUNT_STAGES is the stage
+                                  order, pinned to LINEAGE_STAGES'.
                                   Generic over
                                   the count record: compareCountSnapshot is
                                   the compare every count snapshot passes

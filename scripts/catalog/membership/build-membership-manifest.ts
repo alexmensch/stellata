@@ -120,7 +120,7 @@ export async function main(): Promise<void> {
     members: lineage.members,
     checks: [...lineage.checks, heap.check(), snapshotCheck<StagedCounts>({
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
-      actual: nestByStage({}, { order: MEMBERSHIP_COUNT_STAGES, of: {} }, [
+      actual: nestByStage(MEMBERSHIP_COUNT_STAGES, [
         { stage: 'magnitude-term', block: magnitudeBlock },
         { stage: 'membership', block: { kind: 'counted', counts: lineage.counts } },
         { stage: derivedStage('membership'), block: { kind: 'counted', counts: result.derived } },

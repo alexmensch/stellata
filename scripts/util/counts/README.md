@@ -37,17 +37,14 @@ instead of a drift failure. A lineage stage folds its lines through it
 
 ## The staged snapshot
 
-`{"stages": {<stage>: {<count>: …}}}`. A stage reaches it one of two ways.
-A **count block** (`CountBlock`) is a stage's own typed record — a lineage
-stage's is its fold over its live codes
+`{"stages": {<stage>: {<count>: …}}}`. A stage reaches it as a **count
+block** (`CountBlock`), its own typed record — a lineage stage's is its fold
+over its live codes
 ([Counts fold from lineage](../../catalog/lineage/README.md#counts-fold-from-lineage)) —
-handed over as a `StageBlock`, so a composed key's stage is the block that
-returns it and needs no row in a key → stage table. A stage not yet
-composed files its flat keys through that table (`{order, of}`).
-`nestByStage(flat, {order, of}, blocks)` lays both out in the declared
-pipeline order, a stage nothing reaches left out, and throws on a block for
-an undeclared stage, a stage composed twice, or a flat key filed under a
-composed stage.
+handed over as a `StageBlock`, so a key's stage is the block that returns
+it. `nestByStage(order, blocks)` lays the blocks out in the declared
+pipeline order, a stage no block reaches left out, and throws on a block
+for an undeclared stage or a stage composed twice.
 
 - **Derived counts** — a stage's counts with no per-row decision (relational
   across records, a post-pass tally) — are a block of their own under

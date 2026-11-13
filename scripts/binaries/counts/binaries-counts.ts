@@ -28,7 +28,7 @@ function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, 
   _everyKeyOnce: [Unfiled<T>] extends [never] ? true : Unfiled<T>,
 ): StagedCounts<number> {
   const blocks = BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted' as const, counts: stages[stage] } }));
-  return nestByStage<never, BinariesStage, number>({}, { order: BINARIES_STAGES, of: {} }, blocks);
+  return nestByStage<BinariesStage, number>(BINARIES_STAGES, blocks);
 }
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {

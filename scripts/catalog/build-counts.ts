@@ -31,14 +31,10 @@ export function committedBuildCounts(): BuildCounts {
   return flattenStages(JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_COUNTS_EXPECTED_FILE), 'utf8'))) as BuildCounts;
 }
 
-/** Every count the snapshot holds, by name: the filed counts and each composed stage's block. */
-export type BuildCounts = FiledCounts & InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
+/** Every count the snapshot holds, by name: each stage's count block. */
+export type BuildCounts = InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
   & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & NamingCounts
   & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
-
-/** The counts of the stages not yet composed of a count block, each filed under its stage by CATALOG_COUNT_STAGE. */
-export interface FiledCounts {
-}
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
@@ -46,10 +42,6 @@ export const CATALOG_COUNT_STAGES = [
   'multiplicity', 'gcvs', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];
-
-/** The stage each filed count sits under in the snapshot: the step that computes it. */
-export const CATALOG_COUNT_STAGE: Readonly<Record<keyof FiledCounts, CatalogCountStage>> = {
-};
 
 export type CountDiff =
   | { key: string; status: 'match'; value: number }

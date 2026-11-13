@@ -241,7 +241,7 @@ same thing — single-use helpers stay with their consumer.
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `counts/` — the one tally (`fold`) and the staged count snapshot
-  (`nestByStage` over flat keys and count blocks, `flattenStages`). Own README.
+  (`nestByStage` over count blocks, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never

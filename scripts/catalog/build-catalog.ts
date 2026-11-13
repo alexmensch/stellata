@@ -38,11 +38,9 @@ import {
 } from './companions/overlap-gate-pure';
 import {
   BUILD_COUNTS_EXPECTED_FILE,
-  CATALOG_COUNT_STAGE,
   CATALOG_COUNT_STAGES,
   compareCountSnapshot,
   type CatalogCountStage,
-  type FiledCounts,
 } from './build-counts';
 import {
   buildRegressionReport,
@@ -299,9 +297,6 @@ export async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
-
-  const counts: FiledCounts = {
-  };
 
   const inputs = await loadReadStarsInputs();
   const {
@@ -729,7 +724,7 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck(counts, [
+      buildCountsCheck([
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
         { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
@@ -751,10 +746,10 @@ export async function main() {
   });
 }
 
-function buildCountsCheck(counts: FiledCounts, blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
+function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
   return snapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }, blocks),
+    actual: nestByStage(CATALOG_COUNT_STAGES, blocks),
     compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',

@@ -11,7 +11,7 @@ export const SEEDED_BRANCH = 'seeded';
  *  the snapshot committed before it (`drift`), and after the refresh (`refreshed`). */
 export function seededCodeCheck(codes: StageCodes<string>, lines: readonly LineageLine[]) {
   const snapshot = (counts: Readonly<Record<string, number>>) => nestByStage(
-    {}, { order: [codes.stage], of: {} }, [{ stage: codes.stage, block: { kind: 'counted', counts } }],
+    [codes.stage], [{ stage: codes.stage, block: { kind: 'counted', counts } }],
   );
   const committed = snapshot(foldStageLines(codes, lines));
   const seeded = stageCodes(codes.stage, { ...codes.declarations, [SEEDED_BRANCH]: outcomeCode('A new rule.') });
