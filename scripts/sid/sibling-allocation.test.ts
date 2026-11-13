@@ -85,12 +85,13 @@ describe('siblingLineage', () => {
   const identity = [{ key: 'local-group:a', tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations: ['lg:a'] }];
 
   const snapshot = join(dir, 'expected.json');
+  const pinned = { ...spec, countsSnapshot: snapshot };
   writeFileSync(snapshot, JSON.stringify({
     stages: { [stage]: { [`${stage}.resolved`]: 1, [`${stage}.minted`]: 0, [`${stage}.reinstated`]: 0 } },
   }));
 
   it('renders the stage file and its identity file, each decoding back to what the allocation held', () => {
-    const { files, checks, counts } = siblingLineage(spec, { lines, identity }, lineageLayout(dir), {}, snapshot);
+    const { files, checks, counts } = siblingLineage(pinned, { lines, identity }, lineageLayout(dir), {});
     const text = (key: keyof typeof files): string => gunzipSync(files[key] as Uint8Array).toString('utf8');
     expect([...lineageRows(text(`lineage:${stage}`), 'fixture')].map((r) => r.code)).toEqual([`${stage}.resolved`]);
     expect([...identityRows(text(`lineage:${stage}.identity`), 'fixture')]).toEqual(identity);
@@ -102,7 +103,7 @@ describe('siblingLineage', () => {
     const minted = [...lines, stageLineageLine(spec.codes, {
       stage, key: 'local-group:b', role: 'outcome', code: spec.codes.code('minted'), params: '', evidence: [],
     })];
-    const [, counts] = siblingLineage(spec, { lines: minted, identity }, lineageLayout(dir), {}, snapshot).checks;
+    const [, counts] = siblingLineage(pinned, { lines: minted, identity }, lineageLayout(dir), {}).checks;
     expect(counts.kind).toBe('fail');
     expect(counts.kind === 'fail' && counts.report).toContain(`${stage}.minted`);
     expect(counts.kind === 'fail' && counts.message).toContain('build:local-group');

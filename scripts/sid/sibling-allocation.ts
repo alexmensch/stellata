@@ -77,8 +77,7 @@ export function siblingLineage<S extends string>(
   allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
-  snapshotPath: string = resolve(REPO_ROOT, spec.countsSnapshot),
-): StageLineageEmission<SiblingStem<S>, S> & { readonly counts: Readonly<Record<ObjectOutcomeCodes['live'][number], number>> } {
+):StageLineageEmission<SiblingStem<S>, S> & { readonly counts: Readonly<Record<ObjectOutcomeCodes['live'][number], number>> } {
   const { stage } = spec.lineage;
   const { counts, ...emission } = countedStageLineage({
     layout,
@@ -96,7 +95,7 @@ export function siblingLineage<S extends string>(
     argv: process.argv.slice(2),
   }, spec.codes);
   const countsCheck = countSnapshotCheck<StagedCounts>({
-    snapshotPath,
+    snapshotPath: resolve(REPO_ROOT, spec.countsSnapshot),
     actual: nestByStage([stage], [{ stage, block: { kind: 'counted', counts } }]),
     failureLabel: `${spec.step} count`,
     script: spec.step,
