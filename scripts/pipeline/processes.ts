@@ -10,7 +10,6 @@ import { LAUNCHER } from '../util/import-closure-pure';
 import { REPO_ROOT } from '../util/paths';
 import { STEP_INPUTS_ENV, writeStepInputs } from '../util/step-input-hashes';
 import type { PipelineTree } from './pipeline-tree';
-import type { RunRecord } from './python-run-pure';
 
 export const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
 /** `tsx`'s arguments for a TypeScript entry: through the launcher, which runs its `main`. */
@@ -37,11 +36,20 @@ export async function runTs(
   }
 }
 
+/** What `build_stamp.record_run` writes; every path absolute. */
+export interface RunRecord {
+  readonly reads: Readonly<Record<string, string | null>>;
+  readonly listings: Readonly<Record<string, readonly string[]>>;
+  readonly probes: Readonly<Record<string, boolean>>;
+  readonly services: readonly string[];
+  readonly writes: readonly string[];
+}
+
 export type RecordedRun =
   | { readonly kind: 'exited'; readonly code: number | null }
   | { readonly kind: 'ran'; readonly run: RunRecord };
 
-/** A Python step run under `build_stamp.record_run`; its record is read only when it exits 0. */
+/** A Python manual step run under `build_stamp.record_run`; its record is read only when it exits 0. */
 export async function runRecorded(
   tree: PipelineTree, name: string, entry: string, args: readonly string[], env: NodeJS.ProcessEnv,
 ): Promise<RecordedRun> {

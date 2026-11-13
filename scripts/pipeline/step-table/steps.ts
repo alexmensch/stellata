@@ -1,11 +1,11 @@
 // The step table: one entry per producer of a file the build or a pull depends on. See README.md#the-step-table--stepsts.
 
 import { MANUAL_STEPS } from './manual-step-outputs';
-import type { StepTable, TsBuildStep } from './step-table-pure';
+import type { StepTable, BuildStep } from './step-table-pure';
 import { registryPaths, REGISTRY_PARTITIONS } from '../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** A `data/<layer>` → `public/` copy: `scripts/<layer>/sync-<layer>.ts` over its `<layer>-mirror-outputs.ts`. */
-const mirrorStep = (layer: string): TsBuildStep => ({
+const mirrorStep = (layer: string): BuildStep => ({
   name: `build:${layer}-sync`,
   kind: 'build',
   language: 'ts',
@@ -13,7 +13,7 @@ const mirrorStep = (layer: string): TsBuildStep => ({
   outputs: { module: `scripts/${layer}/${layer}-mirror-outputs.ts`, name: 'MIRROR_OUTPUTS' },
 });
 
-export const MIRROR_STEPS: readonly TsBuildStep[] = ['dust', 'probes', 'ephemerides', 'local-bubble', 'cloud-surfaces', 'textures'].map(mirrorStep);
+export const MIRROR_STEPS: readonly BuildStep[] = ['dust', 'probes', 'ephemerides', 'local-bubble', 'cloud-surfaces', 'textures'].map(mirrorStep);
 
 export const STEPS: StepTable = {
   steps: [

@@ -15,8 +15,7 @@ import {
 import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { runRecorded, runTs } from './processes';
-import { undeclaredWrites, type RunRecord } from './python-run-pure';
+import { runRecorded, runTs, type RunRecord } from './processes';
 import {
   claims, isBuild,
   type ManualStep, type ResolvedStep,
@@ -71,14 +70,15 @@ function recordedReads(run: RunRecord, keep: (path: string) => boolean, tree: Pi
 }
 
 function manualRecord(step: ManualStep, described: Description | null, reads: Reads, outputs: FileHashes): ManualRecord {
-  const stamp = reads.recorded ? { inputs: reads.inputs, outputs, recorded: reads.recorded } : { inputs: reads.inputs, outputs };
   const projected = {
+    stamp: { inputs: reads.inputs, outputs },
+    recorded: reads.recorded,
     request: described?.request ? requestHash(described.request) : undefined,
     requestFrom: described?.requestFrom ?? [],
   };
-  if (step.kind === 'bake') return { kind: 'bake', stamp, ...projected };
+  if (step.kind === 'bake') return { kind: 'bake', ...projected };
   if (described?.kind !== 'pull') throw new Error(`${step.name} is a pull, so it must describe itself`);
-  return { kind: 'pull', stamp, query: pullQueryHash(described), answeredBy: reads.services, release: described.release, ...projected };
+  return { kind: 'pull', query: pullQueryHash(described), answeredBy: reads.services, release: described.release, ...projected };
 }
 
 async function runAndRead(
@@ -106,8 +106,8 @@ async function runAndRead(
   const { run } = recorded;
   const touched = [...Object.keys(run.reads), ...Object.keys(run.probes), ...run.writes];
   const scratch = ignoredPaths(touched, tree.root);
-  const problems = undeclaredWrites(resolved, run.writes.filter((p) => !scratch.has(p)));
-  if (problems.length > 0) return problems.join('; ');
+  const undeclared = run.writes.filter((p) => !scratch.has(p) && !claims(resolved.outputs, p));
+  if (undeclared.length > 0) return undeclared.map((p) => `${step.name} wrote ${p}, which it does not declare`).join('; ');
   return recordedReads(run, inputFilter(resolved, described, scratch, tree), tree);
 }
 

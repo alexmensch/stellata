@@ -13,14 +13,6 @@ function ts(name: string, outputs: string[], reads: string[] = []): ResolvedStep
   };
 }
 
-function py(name: string, outputs: string[], after: string[]): ResolvedStep {
-  return {
-    step: { name, kind: 'build', language: 'python', entry: `/r/${name}.py`, outputs, after, snapshots: [] },
-    outputs: { files: outputs, families: [] },
-    reads: [],
-  };
-}
-
 function pull(name: string, outputs: string[], reads: string[]): ResolvedStep {
   return {
     step: { name, kind: 'pull', language: 'python', entry: `/r/${name}.py`, outputs },
@@ -43,17 +35,11 @@ describe('deriveGraph', () => {
   it('orders a reader after the step that declares the file it reads, whatever the table order', () => {
     const g = ordered(deriveGraph([ts('b', ['/r/b.out'], ['/r/a.out']), ts('a', ['/r/a.out'])], []));
     expect(g.order).toEqual(['a', 'b']);
-    expect(g.edges).toEqual([{ kind: 'reads', from: 'a', to: 'b', files: ['/r/a.out'] }]);
+    expect(g.edges).toEqual([{ from: 'a', to: 'b', files: ['/r/a.out'] }]);
   });
 
   it('keeps table order between steps with no edge between them', () => {
     expect(ordered(deriveGraph([ts('z', ['/r/z']), ts('a', ['/r/a'])], [])).order).toEqual(['z', 'a']);
-  });
-
-  it('orders a Python build step by its declared after', () => {
-    const g = ordered(deriveGraph([py('p', ['/r/p.out'], ['a']), ts('a', ['/r/a.out'])], []));
-    expect(g.order).toEqual(['a', 'p']);
-    expect(g.edges).toEqual([{ kind: 'after', from: 'a', to: 'p' }]);
   });
 
   it('matches a read against a declared output family', () => {
@@ -100,18 +86,13 @@ describe('deriveGraph', () => {
       .toEqual(['a-b shares its stamp and lock file a-b with an earlier step']);
   });
 
-  it('rejects an after naming no step', () => {
-    expect(problems(deriveGraph([py('p', ['/r/p'], ['ghost'])], [])))
-      .toEqual(['p runs after ghost, which is not a step']);
-  });
-
   it('drops exactly the registry edges between allocating steps, and no other edge of the loop', () => {
     const cat = ts('build:catalog', ['/r/sid/ledger.tsv', '/r/catalog.bin'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
     const clouds = ts('build:clouds', ['/r/sid/cloud-ledger.tsv', '/r/clouds.json'], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']);
     const g = ordered(deriveGraph([cat, clouds], ['/r/sid/ledger.tsv', '/r/sid/cloud-ledger.tsv']));
     expect(g.registryEdges).toEqual([
-      { kind: 'reads', from: 'build:clouds', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
-      { kind: 'reads', from: 'build:catalog', to: 'build:clouds', files: ['/r/sid/ledger.tsv'] },
+      { from: 'build:clouds', to: 'build:catalog', files: ['/r/sid/cloud-ledger.tsv'] },
+      { from: 'build:catalog', to: 'build:clouds', files: ['/r/sid/ledger.tsv'] },
     ]);
     expect(g.edges).toEqual([]);
   });
@@ -135,7 +116,7 @@ describe('deriveGraph', () => {
     const membership = ts('build:membership', ['/r/manifest.json'], ['/r/sptype.tsv']);
     const p = pull('simbad-sptype', ['/r/sptype.tsv'], ['/r/manifest.json']);
     const g = ordered(deriveGraph([p, membership], []));
-    expect(g.keptLoops).toEqual([{ kind: 'reads', from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
+    expect(g.keptLoops).toEqual([{ from: 'simbad-sptype', to: 'build:membership', files: ['/r/sptype.tsv'] }]);
     expect(g.order).toEqual(['build:membership', 'simbad-sptype']);
   });
 });

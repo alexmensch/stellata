@@ -126,7 +126,7 @@ function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
 
 async function outputClaims(step: StepEntry, tree: PipelineTree): Promise<OutputClaims> {
   if (step.language === 'python') {
-    const families = step.kind === 'build' ? [] : (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
+    const families = (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
     return { files: step.outputs.map(tree.abs), families };
   }
   return claimsOf(await loadDeclaredOutputs(step.outputs, tree));
@@ -159,7 +159,7 @@ async function readsOf(step: StepEntry, tree: PipelineTree, options: LoadOptions
     const { record } = read;
     return [...Object.keys(record.stamp.inputs), ...record.requestFrom].map(tree.abs);
   }
-  return step.language === 'ts' ? options.deriveInputs(tree.abs(step.entry)) : [];
+  return options.deriveInputs(tree.abs(step.entry));
 }
 
 export async function loadTable(table: StepTable, options: LoadOptions): Promise<Loaded> {
