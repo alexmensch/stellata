@@ -71,15 +71,16 @@ function shortest(x: number, width: FloatWidth): string {
   }
 }
 
-/** Python's `repr(x)` of a double, or numpy's `str` of a float32 (`x` already `Math.fround`ed): shortest round-trip digits, positional from 1e-4 up to 1e16 (float32: 1e6), else `d.ddde±XX`. */
+/** Python's `repr(x)` of a double, or numpy's `str` of `x` as a float32: shortest round-trip digits, positional from 1e-4 up to 1e16 (float32: 1e6), else `d.ddde±XX`. */
 export function formatRepr(x: number, width: FloatWidth = 'double'): string {
   if (!Number.isFinite(x)) throw new Error(`formatRepr: ${x} is not finite`);
-  if (x === 0) return Object.is(x, -0) ? '-0.0' : '0.0';
-  const [mantissa, exponent] = shortest(x, width).split('e');
-  const sign = x < 0 ? '-' : '';
+  const value = width === 'float32' ? Math.fround(x) : x;
+  if (value === 0) return Object.is(value, -0) ? '-0.0' : '0.0';
+  const [mantissa, exponent] = shortest(value, width).split('e');
+  const sign = value < 0 ? '-' : '';
   const digits = mantissa.replace(/^-/, '').replace('.', '');
   const e = Number(exponent);
-  if (Math.abs(x) < 1e-4 || Math.abs(x) >= POSITIONAL_BELOW[width]) {
+  if (Math.abs(value) < 1e-4 || Math.abs(value) >= POSITIONAL_BELOW[width]) {
     const lead = digits.length === 1 ? digits : `${digits[0]}.${digits.slice(1)}`;
     return `${sign}${lead}e${e < 0 ? '-' : '+'}${String(Math.abs(e)).padStart(2, '0')}`;
   }

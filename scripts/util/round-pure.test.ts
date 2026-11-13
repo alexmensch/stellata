@@ -66,6 +66,10 @@ describe('formatRepr', () => {
     expect([50.6328125, 16.2578125, 6.92578125].map((v) => formatRepr(v, 'float32'))).toEqual(['50.632812', '16.257812', '6.9257812']);
   });
 
+  it('rounds a double to float32 itself before spelling it', () => {
+    expect([0.1, 1 / 3].map((v) => formatRepr(v, 'float32'))).toEqual(['0.1', '0.33333334']);
+  });
+
   it('reads the archives\' Java-style text back to the same repr', () => {
     expect(['9.045827E-5', '1.0E7', '0.0', '-4.6393E-4'].map((t) => formatRepr(Number(t))))
       .toEqual(['9.045827e-05', '10000000.0', '0.0', '-0.00046393']);
