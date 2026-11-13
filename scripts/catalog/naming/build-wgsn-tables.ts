@@ -6,7 +6,7 @@ import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { snapshotCheck } from '../../util/snapshot-check';
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { WGSN_FAINTS } from './wgsn-faints-source';
 import { WGSN_NEC } from './wgsn-nec-source';
 import {

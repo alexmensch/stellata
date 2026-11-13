@@ -181,8 +181,7 @@ scripts/catalog/
                                   `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/trace/README.md).
-  build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
-                                  comparator, pinned by
+  build-counts.ts (+ test)        The build's count snapshot,
                                   build-catalog-expected.json, which
                                   committedBuildCounts reads back for
                                   every consumer of the pinned figures.
@@ -191,12 +190,8 @@ scripts/catalog/
                                   BuildCounts is every stage's count block,
                                   typed and owned by the stage that tallies
                                   it; CATALOG_COUNT_STAGES is the stage
-                                  order, pinned to LINEAGE_STAGES'.
-                                  Generic over
-                                  the count record: compareCountSnapshot is
-                                  the compare every count snapshot passes
-                                  (consumer list: the snapshot-check.ts
-                                  entry of ../util/README.md).
+                                  order, pinned to LINEAGE_STAGES'. The
+                                  comparator is ../util/counts/'s.
 ```
 
 ## SID allocation

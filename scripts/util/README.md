@@ -339,7 +339,7 @@ same thing — single-use helpers stay with their consumer.
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
   (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
-  snapshots all pass `compareCountSnapshot` (`catalog/build-counts.ts`) as
+  snapshots all pass `compareCountSnapshot` (`counts/compare-counts-pure.ts`) as
   the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan

@@ -8,7 +8,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';

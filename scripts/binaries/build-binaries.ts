@@ -2,7 +2,7 @@
 
 import { resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../catalog/build-counts';
+import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { emitArtifacts } from '../util/emit-artifacts';

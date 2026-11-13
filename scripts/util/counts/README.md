@@ -1,10 +1,10 @@
 # Counts — the one tally and the staged count snapshot
 
-How a build step counts its outcomes, and the shape its committed count
-snapshot takes. Both modules are pure leaves: they import nothing. The
-snapshot check that reads the files is the parent folder's
-`snapshot-check.ts` ([Util](../README.md)); the count comparator is
-`../../catalog/build-counts.ts`'s `compareCountSnapshot`.
+How a build step counts its outcomes, the shape its committed count
+snapshot takes, and how a build's counts are compared with it. Every module
+is pure and imports nothing outside this folder. The snapshot check that
+reads the files is the parent folder's `snapshot-check.ts`
+([Util](../README.md)); every count snapshot hands it `compareCountSnapshot`.
 
 ```
 tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
@@ -19,7 +19,17 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
 count-stages-pure.ts (+ test)   The staged snapshot: CountBlock and
                                 StageBlock, nestByStage, flattenStages,
                                 isStaged, stageOfCounts, absentStages.
+compare-counts-pure.ts (+ test) The comparator: compareBuildCounts, its
+                                CountDiff rows, formatCountDiff, and
+                                compareCountSnapshot, the `compare` every
+                                count snapshot passes to snapshotCheck.
 ```
+
+Every build's count check imports the comparator from here, never from a
+build's own folder: a build's step inputs take in each non-code file
+beside a module it imports (the `*-expected.json` snapshots among them),
+so a comparator in another build's folder would make that build's
+snapshot an input of this one.
 
 ## The tally
 
@@ -66,3 +76,14 @@ the doc figures' snapshot load and `../../site/site-metrics.ts` all flatten
 first. The stage still counts as drift: when both sides are staged, a count
 filed under another stage than the snapshot's is `moved`
 (`stageOfCounts`), in that comparator.
+
+## Comparing counts
+
+`compareBuildCounts(expected, actual)` walks the union of both sides' rows:
+a count the build stopped producing is as much drift as one the snapshot
+never had. A partition-valued count (a `Record<tier, number>`) expands to
+one `parent.bucket` row each, so a single drifting bucket names itself.
+Rows come in the actual object's order, then the snapshot-only ones. It is
+generic over the count record: each value need only be a number or a flat
+number partition. `formatCountDiff` lists only the drifted rows, so a fatal
+exit keeps the actionable ones on screen.

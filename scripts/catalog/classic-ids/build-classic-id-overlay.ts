@@ -2,7 +2,7 @@
 // designation overlay. See README.md.
 import { resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';

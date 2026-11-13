@@ -2,7 +2,7 @@
 
 import { relative, resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../catalog/build-counts';
+import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
 import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalog-row-index-map-source';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';

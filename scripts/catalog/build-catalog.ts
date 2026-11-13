@@ -36,12 +36,7 @@ import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
 } from './companions/overlap-gate-pure';
-import {
-  BUILD_COUNTS_EXPECTED_FILE,
-  CATALOG_COUNT_STAGES,
-  compareCountSnapshot,
-  type CatalogCountStage,
-} from './build-counts';
+import { BUILD_COUNTS_EXPECTED_FILE, CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
 import {
   buildRegressionReport,
   compareRegressionReports,
@@ -148,6 +143,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
 import { snapshotCheck } from '../util/snapshot-check';
+import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
 import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';

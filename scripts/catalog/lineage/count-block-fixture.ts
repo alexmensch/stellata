@@ -1,6 +1,6 @@
 // Test-only: a stage's count block checked against a snapshot before and after a code is seeded into its declarations.
 
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { nestByStage } from '../../util/counts/count-stages-pure';
 import { foldStageLines, type LineageLine } from './lineage-row-pure';
 import { outcomeCode, stageCodes, type StageCodes } from './reason-codes/reason-codes-pure';

@@ -22,7 +22,7 @@ import {
   multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { snapshotCheck } from '../../util/snapshot-check';
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';

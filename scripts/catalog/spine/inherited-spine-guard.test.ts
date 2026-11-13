@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 
-import { compareCountSnapshot } from '../build-counts';
+import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { GAIA_ASTROMETRY } from '../sources/gaia-astrometry-source';
 import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
