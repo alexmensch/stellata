@@ -282,3 +282,63 @@ export async function main(): Promise<void> { await writeFile(${JSON.stringify(a
     expect((await recording).kind).toBe('recorded');
   });
 });
+
+describe('recordStep — what a Python step listed and probed', () => {
+  function bake(body: string): ManualStep {
+    write('steps/bake.py', `
+import os
+from pathlib import Path
+${body}
+Path(${JSON.stringify(at('baked.bin'))}).write_text("baked")
+`);
+    return { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+  }
+  const lists = (dir: string): string => `os.listdir(${JSON.stringify(at(dir))})`;
+
+  it('stales the step when a folder it listed gains a file', async () => {
+    write('folder/one', '');
+    const step = bake(lists('folder'));
+    await record([step], step.name);
+    expect(fresh(step)).toBe('fresh');
+    write('folder/two', '');
+    expect(fresh(step)).toBe('stale');
+  });
+
+  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens the step', async () => {
+    write('.gitignore', 'folder/.cache*\n');
+    write('folder/one', '');
+    write('folder/.cache-a', '');
+    const step = bake(lists('folder'));
+    await record([step], step.name);
+    rmSync(at('folder/.cache-a'));
+    write('folder/.cache-b', '');
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('records no input for a listed folder git ignores', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const step = bake(lists('scratch'));
+    await record([step], step.name);
+    expect(stamp(step.name).recorded.listings).toEqual({});
+    write('scratch/two', '');
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('records no input for a git-ignored folder the step listed and then deleted', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const step = bake(`${lists('scratch')}\nimport shutil\nshutil.rmtree(${JSON.stringify(at('scratch'))})`);
+    await record([step], step.name);
+    expect(stamp(step.name).recorded.listings).toEqual({});
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('stales the step when a path it probed appears', async () => {
+    const step = bake(`from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`);
+    await record([step], step.name);
+    expect(fresh(step)).toBe('fresh');
+    write('maybe.txt', '');
+    expect(fresh(step)).toBe('stale');
+  });
+});
