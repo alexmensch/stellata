@@ -4,7 +4,7 @@ import { FLAG_IS_SOL } from '../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../catalog/parse/stars-parse';
 import { sourceRowRef, sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { SidObject } from './allocate-pure';
-import { ALLOCATION_CODES } from './allocation-lineage-pure';
+import { allocationAdmissionCode } from './allocation-lineage-pure';
 import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
 import { starDesignations } from './sid-pure';
 
@@ -25,14 +25,14 @@ export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
     kind: row.kind,
     label: `sol ${row.key}`,
     origin: sourceRowRefText(sourceRowRef(SOL_OBJECTS, row)),
-    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.sol-list') },
+    admission: { kind: 'declared', code: allocationAdmissionCode('mint.sol-list') },
   }));
   const shell = SHELL_OBJECTS.read().map((row): SidObject => ({
     designations: [`shell:${row.key}`],
     kind: row.kind,
     label: `shell ${row.key}`,
     origin: sourceRowRefText(sourceRowRef(SHELL_OBJECTS, row)),
-    admission: { kind: 'declared', code: ALLOCATION_CODES.code('mint.shell-list') },
+    admission: { kind: 'declared', code: allocationAdmissionCode('mint.shell-list') },
   }));
   return [...records, ...sol, ...shell];
 }

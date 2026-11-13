@@ -218,8 +218,9 @@ A stage's count-snapshot keys are its reason codes, so the code list is the
 one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
 stage's lines per live code, every live code present, typed
-`Record<code, number>` from the stage's `live` codes — a retired or
-historical code is no key, and a line carrying one throws; each code is declared in
+`Record<code, number>` from the stage's `live` codes — a retired,
+historical or admission code ([Reason codes](reason-codes/README.md#the-rules))
+is no key, and a line carrying one throws; each code is declared in
 one role, so a stage's outcomes and refusals fold into one record and no
 code is counted in both. A line of another stage, or in a role its code is
 not declared in, throws. `countedStageLineage` (`stage-lineage.ts`) is

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 
 import type { EventRow } from './events-pure';
 import { partitionOf, registryHint } from './registry-partitions-pure';
-import { SIBLING_ARTIFACTS } from './sibling-artifacts-pure';
 import {
   registryAppendOnly, unionLedger, unionLedgerLines, validateRegistry, type PartitionLines, type PartitionRows,
 } from './registry-pure';
@@ -39,9 +38,9 @@ describe('registry partitions', () => {
     expect(new Set(paths).size).toBe(REGISTRY_PARTITIONS.length * 3);
   });
 
-  it('name the command that grows each partition, a sibling\'s from its own build hint', () => {
+  it('name the command that grows each partition, a sibling\'s from its own step', () => {
     expect(registryHint(CATALOG_PARTITION)).toContain('pnpm run build:catalog');
-    expect(registryHint('lg')).toContain(SIBLING_ARTIFACTS['local-group'].buildHint);
+    expect(registryHint('lg')).toContain('pnpm run build:local-group');
   });
 
   it('refuse, at compile time, a partition no step allocates', () => {

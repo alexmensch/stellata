@@ -29,38 +29,23 @@ export interface StageBlock<S extends string, V extends CountValue = number> {
   readonly block: CountBlock<string, V>;
 }
 
-/** Where each flat count of a staged snapshot is filed: the stages in pipeline order, and each key's stage. */
-export interface CountStages<K extends string, S extends string> {
-  readonly order: readonly S[];
-  readonly of: Readonly<Record<K, S>>;
-}
-
 /** see README.md#the-staged-snapshot */
-export function nestByStage<K extends string, S extends string, V, B extends CountValue = number>(
-  flat: Readonly<Record<K, V>>,
-  stages: CountStages<K, S>,
-  blocks: readonly StageBlock<S, B>[] = [],
-): StagedCounts<V | B> {
-  const nested = new Map<string, Record<string, V | B> | typeof ABSENT_STAGE>(
-    stages.order.flatMap((stage) => [[stage, {}], [derivedStage(stage), {}]]),
+export function nestByStage<S extends string, B extends CountValue = number>(
+  order: readonly S[],
+  blocks: readonly StageBlock<S, B>[],
+): StagedCounts<B> {
+  const nested = new Map<string, Record<string, B> | typeof ABSENT_STAGE | null>(
+    order.flatMap((stage) => [[stage, null], [derivedStage(stage), null]]),
   );
-  const composed = new Set<string>();
   for (const { stage, block } of blocks) {
     if (!nested.has(stage)) throw new Error(`count block ${stage} is not a declared stage`);
-    if (composed.has(stage)) throw new Error(`count block ${stage} is composed twice`);
-    composed.add(stage);
+    if (nested.get(stage) !== null) throw new Error(`count block ${stage} is composed twice`);
     nested.set(stage, block.kind === 'absent' ? ABSENT_STAGE : { ...block.counts });
   }
-  for (const [key, value] of Object.entries(flat) as [K, V][]) {
-    const stage = stages.of[key];
-    if (stage === undefined) throw new Error(`count ${key} has no stage`);
-    const counts = nested.get(stage);
-    if (counts === undefined) throw new Error(`count ${key} is filed under ${stage}, which is not a declared stage`);
-    if (composed.has(stage)) throw new Error(`count ${key} is filed under ${stage}, which a count block composes`);
-    (counts as Record<string, V>)[key] = value;
-  }
+  const filed = (counts: Record<string, B> | typeof ABSENT_STAGE | null): counts is Record<string, B> | typeof ABSENT_STAGE =>
+    counts === ABSENT_STAGE || (counts !== null && Object.keys(counts).length > 0);
   return {
-    stages: Object.fromEntries([...nested].filter(([, counts]) => counts === ABSENT_STAGE || Object.keys(counts).length > 0)),
+    stages: Object.fromEntries([...nested].filter((e): e is [string, Record<string, B> | typeof ABSENT_STAGE] => filed(e[1]))),
   };
 }
 

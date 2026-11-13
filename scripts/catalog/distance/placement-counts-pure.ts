@@ -1,7 +1,7 @@
 // Placement's two count blocks — its codes' fold, and the shipped tiers folded off each placed row — and their build-log summary. See README.md#placement-counts.
 
 import type { DistVia } from '../../../src/catalog-format/record/catalog-pure';
-import { codeCount, type LiveBranchOf } from '../lineage/reason-codes/reason-codes-pure';
+import { codeCount, type LiveBranchOf, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { emptyTallyPartition, formatPartition, percentOf, prefixed, renamed } from '../../util/counts/tally-pure';
 import { isLowPrecisionParallax } from './parallax/parallax-cascade';
 import {
@@ -12,7 +12,7 @@ import {
 import { VELOCITY_VIA_VALUES, type VelocityVia } from './velocity';
 
 /** Placement's count block: its lines folded per live code. */
-export type PlacementCounts = Readonly<Record<(typeof PLACEMENT_CODES.live)[number], number>>;
+export type PlacementCounts = StageCounts<typeof PLACEMENT_CODES>;
 
 type Branch = LiveBranchOf<typeof PLACEMENT_CODES>;
 

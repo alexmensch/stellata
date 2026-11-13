@@ -3,7 +3,7 @@
 import {
   evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { codeCount, outcomeCode, refusalCode, stageCodes, retired } from '../lineage/reason-codes/reason-codes-pure';
+import { codeCount, outcomeCode, refusalCode, stageCodes, retired, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { percentOf } from '../../util/counts/tally-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
@@ -122,7 +122,7 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 
 /** Brightness-colour's count block: its lines folded per live code. */
-export type BrightnessColourCounts = Readonly<Record<(typeof BRIGHTNESS_COLOUR_CODES.live)[number], number>>;
+export type BrightnessColourCounts = StageCounts<typeof BRIGHTNESS_COLOUR_CODES>;
 
 export function brightnessColourSummary(counts: BrightnessColourCounts): string {
   const n = codeCount(BRIGHTNESS_COLOUR_CODES, counts);

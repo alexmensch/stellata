@@ -2,11 +2,10 @@
 
 import { relative, resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../catalog/build-counts';
 import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalog-row-index-map-source';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { snapshotCheck } from '../util/snapshot-check';
+import { countSnapshotCheck } from '../util/snapshot-check';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import { readArtifact } from '../util/sources/source';
@@ -41,10 +40,9 @@ export function main(): void {
     files: { binaries: bytes },
     checks: [
       multiplesHandshake(map.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
-      snapshotCheck<StagedCounts>({
+      countSnapshotCheck<StagedCounts>({
         snapshotPath: EXPECTED_COUNTS,
         actual: { stages: { encode: c } },
-        compare: compareCountSnapshot,
         failureLabel: 'build-runtime-binaries count',
         script: 'build:binaries-runtime',
       }),

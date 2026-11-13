@@ -36,14 +36,7 @@ import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
 } from './companions/overlap-gate-pure';
-import {
-  BUILD_COUNTS_EXPECTED_FILE,
-  CATALOG_COUNT_STAGE,
-  CATALOG_COUNT_STAGES,
-  compareCountSnapshot,
-  type CatalogCountStage,
-  type FiledCounts,
-} from './build-counts';
+import { BUILD_COUNTS_EXPECTED_FILE, CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
 import {
   buildRegressionReport,
   compareRegressionReports,
@@ -149,7 +142,7 @@ import {
 import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
-import { snapshotCheck } from '../util/snapshot-check';
+import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
 import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
@@ -157,7 +150,7 @@ import { sidSuccessorPairs } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
-  allocationLineageRows,
+  allocationLineageRows, allocationSummary,
 } from '../sid/allocation-lineage-pure';
 import { catalogSidObjects } from '../sid/catalog-objects';
 import { inPartition } from '../sid/registry-partitions-pure';
@@ -299,9 +292,6 @@ export async function main() {
   const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
-
-  const counts: FiledCounts = {
-  };
 
   const inputs = await loadReadStarsInputs();
   const {
@@ -489,13 +479,6 @@ export async function main() {
     console.log(`ambiguous (dropped): ${designation} names ${objects.length} objects — ${objects.map((i) => sidObjects[i].label).join(' | ')}`);
   }
   const recordSids = allocation.outcomes.slice(0, stars.length).map((o) => o.sid);
-  const removedBy = (kind: string): number => allocation.removals.filter((r) => r.kind === kind).length;
-  console.log(
-    `SID allocation: ${sidObjects.length} objects, ${allocation.minted.length} minted, `
-      + `${allocation.outcomes.filter((o) => o.kind === 'reinstated').length} reinstated; `
-      + `${removedBy('parked')} parked, ${removedBy('retired')} retired, ${removedBy('merged')} merged; `
-      + `${allocation.events.length} new event(s)`,
-  );
 
   // Naming ladder, composition half. Runs here because it needs every
   // record final: the promoted companions exist, indices are sorted, each
@@ -684,7 +667,7 @@ export async function main() {
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   });
-  const allocationLineage = stageLineage({
+  const allocationLineage = countedStageLineage({
     layout: LINEAGE_LAYOUT,
     spec: ALLOCATION_LINEAGE,
     inputs: inputHashesAtStart,
@@ -699,7 +682,8 @@ export async function main() {
     invariants: [],
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
-  });
+  }, ALLOCATION_CODES);
+  console.log(allocationSummary(allocationLineage.counts, allocation.events.length));
   const files = {
     manifest: manifestJson,
     constellations: constellationsJson,
@@ -729,12 +713,13 @@ export async function main() {
     checks: [
       ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
       ...namingEmission.checks,
-      buildCountsCheck(counts, [
+      buildCountsCheck([
         { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
         { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
         { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
         { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
         { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+        { stage: 'allocation', block: { kind: 'counted', counts: allocationLineage.counts } },
         { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
         { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
         { stage: 'records', block: { kind: 'counted', counts: records } },
@@ -751,11 +736,10 @@ export async function main() {
   });
 }
 
-function buildCountsCheck(counts: FiledCounts, blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
-  return snapshotCheck<StagedCounts>({
+function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
+  return countSnapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
-    actual: nestByStage(counts, { order: CATALOG_COUNT_STAGES, of: CATALOG_COUNT_STAGE }, blocks),
-    compare: compareCountSnapshot,
+    actual: nestByStage(CATALOG_COUNT_STAGES, blocks),
     failureLabel: 'build-catalog count',
     script: 'build:catalog',
   });

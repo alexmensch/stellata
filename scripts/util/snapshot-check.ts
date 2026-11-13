@@ -1,7 +1,9 @@
 // Snapshot checks for emitArtifacts. See scripts/util/README.md (snapshot-check.ts entry).
 import { existsSync, readFileSync } from 'node:fs';
 
+import { compareCountSnapshot } from './counts/compare-counts-pure';
 import type { Check } from './emit-artifacts';
+import { rerunCommand } from './step-command-pure';
 
 /** Set to '1' to rewrite every snapshot instead of asserting against it; the
  *  runner's `--update-snapshots` sets it for each step it runs. */
@@ -12,8 +14,8 @@ export const UPDATE_SNAPSHOTS_ENV = 'UPDATE_SNAPSHOTS';
 export const PIPELINE_STEP_ENV = 'PIPELINE_STEP';
 
 const refreshCommand = (script: string): string => (process.env[PIPELINE_STEP_ENV] === undefined
-  ? `${UPDATE_SNAPSHOTS_ENV}=1 pnpm run ${script}`
-  : `pnpm run ${script} --update-snapshots`);
+  ? `${UPDATE_SNAPSHOTS_ENV}=1 ${rerunCommand(script)}`
+  : `${rerunCommand(script)} --update-snapshots`);
 
 export interface SnapshotCheckSpec<T> {
   snapshotPath: string;
@@ -25,6 +27,13 @@ export interface SnapshotCheckSpec<T> {
   failureLabel: string;
   /** The `package.json` script the refresh message names. */
   script: string;
+}
+
+/** A count snapshot's check: snapshotCheck with compareCountSnapshot as its compare. */
+export function countSnapshotCheck<T extends object>(
+  opts: Omit<SnapshotCheckSpec<T>, 'compare' | 'refreshTransform'>,
+): Check {
+  return snapshotCheck<T>({ ...opts, compare: compareCountSnapshot });
 }
 
 /** A missing snapshot fails: only the env var writes one. */

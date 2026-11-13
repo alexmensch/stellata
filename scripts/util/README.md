@@ -244,7 +244,7 @@ same thing — single-use helpers stay with their consumer.
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `counts/` — the one tally (`fold`) and the staged count snapshot
-  (`nestByStage` over flat keys and count blocks, `flattenStages`). Own README.
+  (`nestByStage` over count blocks, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
@@ -328,6 +328,9 @@ same thing — single-use helpers stay with their consumer.
 - `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
   against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
   README.
+- `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
+  spelling of a step's command, for the runner's refusals, the snapshot
+  refresh hint and every artifact or registry hint naming its writer.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
@@ -341,9 +344,12 @@ same thing — single-use helpers stay with their consumer.
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
-  (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
-  snapshots all pass `compareCountSnapshot` (`catalog/build-counts.ts`) as
-  the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
+  (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
+  allocation counts of `build:clouds` and `build:local-group`
+  (`sid/sibling-allocation.ts`). Every count snapshot goes through
+  `countSnapshotCheck`, which takes no `compare` and fixes it to
+  `compareCountSnapshot` (`counts/compare-counts-pure.ts`).
+  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; `presentFiles`, the names

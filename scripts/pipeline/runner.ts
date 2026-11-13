@@ -6,6 +6,7 @@ import { existsSync } from 'node:fs';
 import { clearStamp, inputHashes, writeStamp, type FileHashes } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import { stampedInputMap } from '../util/step-input-hashes';
+import { rerunCommand } from '../util/step-command-pure';
 import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
 import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
@@ -133,7 +134,6 @@ function movedCommittedOutputs(tree: PipelineTree, outputs: OutputClaims): strin
   return diff.split('\0').filter((p) => p !== '' && claims(outputs, tree.abs(p)));
 }
 
-export const rerunCommand = (name: string): string => `pnpm run ${name}`;
 
 function describeVerdict(name: string, verdict: Verdict): string {
   switch (verdict.kind) {

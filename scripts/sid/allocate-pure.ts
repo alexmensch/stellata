@@ -1,7 +1,7 @@
 // SID allocation: every object resolved, minted or reinstated against the ledger, every SID no object reaches settled by the upstream decision that removed it, a SID whose class another holds merged into it, and the events that follow. See /docs/sid.md#44-allocation.
 
 import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { ALLOCATION_CODES } from './allocation-lineage-pure';
+import { ALLOCATION_CODES, type AllocationAdmissionCode } from './allocation-lineage-pure';
 import { retiredSids, type EventRow } from './events-pure';
 import {
   canonicalKeyOf, parseDesignation, sameAsClasses,
@@ -11,7 +11,7 @@ import {
 /** How the object came to be in the build: through a lineage stage's admission row, or by a list the allocating step owns. */
 export type Admission =
   | { readonly kind: 'lineage' }
-  | { readonly kind: 'declared'; readonly code: string };
+  | { readonly kind: 'declared'; readonly code: AllocationAdmissionCode };
 
 export interface SidObject {
   readonly designations: readonly string[];

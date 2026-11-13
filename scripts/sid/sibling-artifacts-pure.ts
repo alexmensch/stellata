@@ -3,7 +3,9 @@
 // /scripts/sid/README.md#sibling-artifact-stamping.
 
 import type { SidObject } from './allocate-pure';
-import { ALLOCATION_CODES, objectOutcomeCodes, type ObjectOutcomeCodes } from './allocation-lineage-pure';
+import {
+  allocationAdmissionCode, objectOutcomeCodes, type AllocationAdmissionCode, type ObjectOutcomeCodes,
+} from './allocation-lineage-pure';
 import type { SidKind } from './sid-pure';
 import { sourceRowRef, sourceRowRefText, type RowKeyed } from '../util/sources/row-ref-pure';
 import {
@@ -17,35 +19,39 @@ export interface SiblingArtifactSpec<S extends string = string> {
   /** Designation namespace the ledger keys these objects on (/docs/sid.md#3-designation-namespaces). */
   ns: SiblingPartition;
   kind: SidKind;
-  /** pnpm script that emits `file` and allocates `ns`. */
-  buildHint: string;
+  /** The pnpm script that emits the artifact and allocates `ns`. */
+  step: string;
   /** The allocation code a new object of this artifact mints under. */
-  mintCode: string;
+  mintCode: AllocationAdmissionCode;
   /** The `<source>` its artifact's records are cited under: `<rowId>:<slug>`. */
   rowId: string;
   /** The build's own allocation stage. */
   lineage: StageLineageSpec<S | `${S}.identity`, S>;
   codes: ObjectOutcomeCodes;
+  /** Repo-relative path of the build's count snapshot, which holds its allocation stage's count block. */
+  countsSnapshot: string;
 }
 
 export const SIBLING_ARTIFACTS = {
   clouds: {
     ns: CLOUD_PARTITION,
     kind: 'cloud',
-    buildHint: 'pnpm run build:clouds',
-    mintCode: ALLOCATION_CODES.code('mint.cloud'),
+    step: 'build:clouds',
+    mintCode: allocationAdmissionCode('mint.cloud'),
     rowId: 'clouds',
     lineage: CLOUDS_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(CLOUDS_ALLOCATION_LINEAGE.stage),
+    countsSnapshot: 'scripts/clouds/build-clouds-expected.json',
   },
   'local-group': {
     ns: LOCAL_GROUP_PARTITION,
     kind: 'galaxy',
-    buildHint: 'pnpm run build:local-group',
-    mintCode: ALLOCATION_CODES.code('mint.local-group'),
+    step: 'build:local-group',
+    mintCode: allocationAdmissionCode('mint.local-group'),
     rowId: 'local-group',
     lineage: LOCAL_GROUP_ALLOCATION_LINEAGE,
     codes: objectOutcomeCodes(LOCAL_GROUP_ALLOCATION_LINEAGE.stage),
+    countsSnapshot: 'scripts/local-group/build-local-group-expected.json',
   },
 } as const satisfies Record<string, SiblingArtifactSpec>;
 

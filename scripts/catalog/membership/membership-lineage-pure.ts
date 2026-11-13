@@ -9,7 +9,7 @@ import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import {
-  outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration, type StageCodes,
+  outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration, type StageCodes, type StageCounts,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
 import type { ClassicalCell } from '../spine/primaries-audit-pure';
@@ -578,7 +578,7 @@ export function membershipLedgers(
 }
 
 /** Membership's count block: its lines folded per live code. */
-export type MembershipCounts = Readonly<Record<(typeof MEMBERSHIP_CODES.live)[number], number>>;
+export type MembershipCounts = StageCounts<typeof MEMBERSHIP_CODES>;
 
 /** see README.md#membership-lineage */
 export type MembershipDerivedCounts = Readonly<Record<

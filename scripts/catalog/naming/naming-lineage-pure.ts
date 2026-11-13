@@ -2,7 +2,7 @@
 
 import { paramsOf, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow } from '../lineage/lineage-row-pure';
 import {
-  outcomeCode, refusalCode, retired, stageCodes, type CodeDeclaration, type LIVE,
+  outcomeCode, refusalCode, retired, stageCodes, type CodeDeclaration, type LIVE, type StageCounts,
 } from '../lineage/reason-codes/reason-codes-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import type { NamedRecord, NamingDerivedCounts } from './display-names';
@@ -184,7 +184,7 @@ export function* namingLineageRows(
 type LiveCode = (typeof NAMING_CODES.live)[number];
 
 /** Naming's lines folded per live code. */
-export type NamingCodeCounts = Readonly<Record<LiveCode, number>>;
+export type NamingCodeCounts = StageCounts<typeof NAMING_CODES>;
 
 /** Naming's count block: its code counts and the authority pass's tally, which has no codes. */
 export type NamingCounts = NamingCodeCounts & StarNamingCounts;

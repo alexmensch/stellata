@@ -7,7 +7,7 @@ import { describe, it, expect } from 'vitest';
 
 import { buildFreshness, manualFreshness, readManualRecord } from '../scripts/pipeline/freshness';
 import { pipelineTree } from '../scripts/pipeline/pipeline-tree';
-import { rerunCommand } from '../scripts/pipeline/runner';
+import { rerunCommand } from '../scripts/util/step-command-pure';
 import { loadedRepoTable } from '../scripts/pipeline/step-table/repo-table';
 import { isBuild, type ManualStep } from '../scripts/pipeline/step-table/step-table-pure';
 import { isLfsPointerFile, REPO_ROOT } from '../scripts/util/paths';
