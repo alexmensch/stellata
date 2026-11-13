@@ -3,10 +3,9 @@
 import { resolve } from 'node:path';
 
 import type { FileHashes } from '../util/build-stamp';
-import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
 import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
 import { REPO_ROOT } from '../util/paths';
-import { snapshotCheck } from '../util/snapshot-check';
+import { countSnapshotCheck } from '../util/snapshot-check';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
@@ -98,10 +97,9 @@ export function siblingLineage<S extends string>(
     invariants: [],
     argv: process.argv.slice(2),
   }, spec.codes);
-  const countsCheck = snapshotCheck<StagedCounts>({
+  const countsCheck = countSnapshotCheck<StagedCounts>({
     snapshotPath,
     actual: nestByStage([stage], [{ stage, block: { kind: 'counted', counts } }]),
-    compare: compareCountSnapshot,
     failureLabel: `${spec.step} count`,
     script: spec.step,
   });

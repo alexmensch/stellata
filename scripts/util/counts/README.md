@@ -4,7 +4,8 @@ How a build step counts its outcomes, the shape its committed count
 snapshot takes, and how a build's counts are compared with it. Every module
 is pure and imports nothing outside this folder. The snapshot check that
 reads the files is the parent folder's `snapshot-check.ts`
-([Util](../README.md)); every count snapshot hands it `compareCountSnapshot`.
+([Util](../README.md)), whose `countSnapshotCheck` compares every count
+snapshot through `compareCountSnapshot`.
 
 ```
 tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;

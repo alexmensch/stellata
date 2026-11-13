@@ -5,8 +5,7 @@ import { resolve } from 'node:path';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { snapshotCheck } from '../../util/snapshot-check';
-import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
+import { countSnapshotCheck } from '../../util/snapshot-check';
 import { WGSN_FAINTS } from './wgsn-faints-source';
 import { WGSN_NEC } from './wgsn-nec-source';
 import {
@@ -137,10 +136,9 @@ export async function main(): Promise<void> {
       names: WGSN_NAMES.serialize(nameRows),
       designations: WGSN_DESIGNATIONS.serialize(designations),
     },
-    checks: [snapshotCheck<WgsnCounts>({
+    checks: [countSnapshotCheck<WgsnCounts>({
       snapshotPath: SNAPSHOT,
       actual: counts,
-      compare: compareCountSnapshot,
       failureLabel: 'WGSN table counts',
       script: 'build:wgsn',
     })],

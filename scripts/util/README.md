@@ -340,9 +340,10 @@ same thing — single-use helpers stay with their consumer.
   overlay, membership and WGSN builds, `build:binaries`' counts
   (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
   allocation counts of `build:clouds` and `build:local-group`
-  (`sid/sibling-allocation.ts`). The count
-  snapshots all pass `compareCountSnapshot` (`counts/compare-counts-pure.ts`) as
-  the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
+  (`sid/sibling-allocation.ts`). Every count snapshot goes through
+  `countSnapshotCheck`, which takes no `compare` and fixes it to
+  `compareCountSnapshot` (`counts/compare-counts-pure.ts`).
+  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; `presentFiles`, the names

@@ -21,8 +21,7 @@ import {
   MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, identityLookup, membershipSummary,
   multiplesComponentJoin,
 } from './membership-lineage-pure';
-import { snapshotCheck } from '../../util/snapshot-check';
-import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
+import { countSnapshotCheck } from '../../util/snapshot-check';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
@@ -118,14 +117,13 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, heap.check(), snapshotCheck<StagedCounts>({
+    checks: [...lineage.checks, heap.check(), countSnapshotCheck<StagedCounts>({
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
       actual: nestByStage(MEMBERSHIP_COUNT_STAGES, [
         { stage: 'magnitude-term', block: magnitudeBlock },
         { stage: 'membership', block: { kind: 'counted', counts: lineage.counts } },
         { stage: derivedStage('membership'), block: { kind: 'counted', counts: result.derived } },
       ]),
-      compare: compareCountSnapshot,
       failureLabel: 'membership-manifest count',
       script: 'build:membership',
     })],

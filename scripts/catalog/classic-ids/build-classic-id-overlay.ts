@@ -2,7 +2,6 @@
 // designation overlay. See README.md.
 import { resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -19,7 +18,7 @@ import { CLASSIC_ID_OVERLAY, overlayRows } from './classic-id-overlay-tsv';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
-import { snapshotCheck } from '../../util/snapshot-check';
+import { countSnapshotCheck } from '../../util/snapshot-check';
 
 const {
   overlay: OUT_OVERLAY, disagreements: OUT_DISAGREEMENTS, rejected: OUT_REJECTED,
@@ -75,10 +74,9 @@ export async function main(): Promise<void> {
         gMag: r.gMag, reason: r.reason, designations: r.designations,
       }))),
     },
-    checks: [snapshotCheck<OverlayJoinCounts>({
+    checks: [countSnapshotCheck<OverlayJoinCounts>({
       snapshotPath: EXPECTED_COUNTS,
       actual: joinCounts,
-      compare: compareCountSnapshot,
       failureLabel: 'classic-id-overlay count',
       script: 'build:classic-ids',
     })],

@@ -142,8 +142,7 @@ import {
 import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check,
 } from '../util/emit-artifacts';
-import { snapshotCheck } from '../util/snapshot-check';
-import { compareCountSnapshot } from '../util/counts/compare-counts-pure';
+import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
 import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
@@ -744,10 +743,9 @@ export async function main() {
 }
 
 function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
-  return snapshotCheck<StagedCounts>({
+  return countSnapshotCheck<StagedCounts>({
     snapshotPath: EXPECTED_COUNTS,
     actual: nestByStage(CATALOG_COUNT_STAGES, blocks),
-    compare: compareCountSnapshot,
     failureLabel: 'build-catalog count',
     script: 'build:catalog',
   });

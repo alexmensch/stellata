@@ -1,6 +1,7 @@
 // Snapshot checks for emitArtifacts. See scripts/util/README.md (snapshot-check.ts entry).
 import { existsSync, readFileSync } from 'node:fs';
 
+import { compareCountSnapshot } from './counts/compare-counts-pure';
 import type { Check } from './emit-artifacts';
 
 /** Set to '1' to rewrite every snapshot instead of asserting against it; the
@@ -25,6 +26,13 @@ export interface SnapshotCheckSpec<T> {
   failureLabel: string;
   /** The `package.json` script the refresh message names. */
   script: string;
+}
+
+/** A count snapshot's check: snapshotCheck with compareCountSnapshot as its compare. */
+export function countSnapshotCheck<T extends object>(
+  opts: Omit<SnapshotCheckSpec<T>, 'compare' | 'refreshTransform'>,
+): Check {
+  return snapshotCheck<T>({ ...opts, compare: compareCountSnapshot });
 }
 
 /** A missing snapshot fails: only the env var writes one. */
