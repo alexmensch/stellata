@@ -70,14 +70,15 @@ function recordedReads(run: RunRecord, keep: (path: string) => boolean, tree: Pi
 }
 
 function manualRecord(step: ManualStep, described: Description | null, reads: Reads, outputs: FileHashes): ManualRecord {
-  const stamp = reads.recorded ? { inputs: reads.inputs, outputs, recorded: reads.recorded } : { inputs: reads.inputs, outputs };
   const projected = {
+    stamp: { inputs: reads.inputs, outputs },
+    recorded: reads.recorded,
     request: described?.request ? requestHash(described.request) : undefined,
     requestFrom: described?.requestFrom ?? [],
   };
-  if (step.kind === 'bake') return { kind: 'bake', stamp, ...projected };
+  if (step.kind === 'bake') return { kind: 'bake', ...projected };
   if (described?.kind !== 'pull') throw new Error(`${step.name} is a pull, so it must describe itself`);
-  return { kind: 'pull', stamp, query: pullQueryHash(described), answeredBy: reads.services, release: described.release, ...projected };
+  return { kind: 'pull', query: pullQueryHash(described), answeredBy: reads.services, release: described.release, ...projected };
 }
 
 async function runAndRead(
