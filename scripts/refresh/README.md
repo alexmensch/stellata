@@ -277,6 +277,24 @@ stays healthy, so nothing reaches Gaia any other way. The pulls do
 it through `pull/`'s backend ([The TAP backend](pull/README.md#the-tap-backend)),
 and every one is TypeScript.
 
+Check ESA's
+`external.*` schema before concluding a catalogue is VizieR-only:
+[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
+both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
+VizieR's because only the Gaia archives join it to a magnitude, and ESA's
+alone (`GAIA_ESA`) because one query names one of the two archives' table
+names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
+
+**MAXREC is load-bearing.** A truncated CSV sync reply is HTTP 200 with
+exactly MAXREC rows and no status at all, so the backend asks for one row more
+than it will accept and refuses by row count
+([The TAP backend](pull/README.md#the-tap-backend)), reading each mirror's
+hard output limit from its `/capabilities` and routing around it; the
+whole-table and magnitude-bounded pulls are sliced to fit ESA's 50,000
+([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
+
+### The Python TAP clients (CDS, SIMBAD)
+
 The Python `TapClient` moves whichever backend answered to the front, so a
 mirror that is down costs its retry schedule (about 5 min of connect
 timeouts) once per run, not once per batch. It reports each answering backend
@@ -291,23 +309,6 @@ would fail with a misleading "table not found";
 `cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
-Check ESA's
-`external.*` schema before concluding a catalogue is VizieR-only:
-[Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
-both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
-VizieR's because only the Gaia archives join it to a magnitude, and ESA's
-alone (`GAIA_ESA`) because one query names one of the two archives' table
-names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
-
-**MAXREC is load-bearing.** A sync endpoint answers HTTP 200 and flags
-truncation in a VOTable `QUERY_STATUS` INFO rather than erroring, so a
-MAXREC below the result size would silently short a pull.
-**ESA's `/capabilities` declares a hard output limit of 50,000 rows** (ARI
-10,000,000; measured 2026-11-05), and a mirror truncates at its own hard
-limit whatever MAXREC asks. The TypeScript runtime reads each mirror's limit
-and routes around it ([The TAP backend](pull/README.md#the-tap-backend)); the
-whole-table and magnitude-bounded pulls are sliced to fit ESA
-([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
 
 ### Magnitude-bounded pulls
 
