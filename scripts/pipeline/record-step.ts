@@ -15,8 +15,7 @@ import {
 import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { runRecorded, runTs } from './processes';
-import { undeclaredWrites, type RunRecord } from './python-run-pure';
+import { runRecorded, runTs, type RunRecord } from './processes';
 import {
   claims, isBuild,
   type ManualStep, type ResolvedStep,
@@ -106,8 +105,8 @@ async function runAndRead(
   const { run } = recorded;
   const touched = [...Object.keys(run.reads), ...Object.keys(run.probes), ...run.writes];
   const scratch = ignoredPaths(touched, tree.root);
-  const problems = undeclaredWrites(resolved, run.writes.filter((p) => !scratch.has(p)));
-  if (problems.length > 0) return problems.join('; ');
+  const undeclared = run.writes.filter((p) => !scratch.has(p) && !claims(resolved.outputs, p));
+  if (undeclared.length > 0) return undeclared.map((p) => `${step.name} wrote ${p}, which it does not declare`).join('; ');
   return recordedReads(run, inputFilter(resolved, described, scratch, tree), tree);
 }
 

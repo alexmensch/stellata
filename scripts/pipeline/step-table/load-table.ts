@@ -126,7 +126,7 @@ function isDeclaredOutputs(value: unknown): value is DeclaredOutputs {
 
 async function outputClaims(step: StepEntry, tree: PipelineTree): Promise<OutputClaims> {
   if (step.language === 'python') {
-    const families = step.kind === 'build' ? [] : (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
+    const families = (step.families ?? []).map((f) => ({ ...f, dir: tree.abs(f.dir) }));
     return { files: step.outputs.map(tree.abs), families };
   }
   return claimsOf(await loadDeclaredOutputs(step.outputs, tree));

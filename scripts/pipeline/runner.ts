@@ -3,17 +3,14 @@
 import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
-import {
-  clearStamp, inputHashes, listingHashes, recordedInputs, writeStamp, type FileHashes, type RecordedReads,
-} from '../util/build-stamp';
+import { clearStamp, inputHashes, writeStamp, type FileHashes } from '../util/build-stamp';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import { stampedInputMap } from '../util/step-input-hashes';
 import { buildFreshness, manualDescription, manualFreshness, stampedOutputs } from './freshness';
 import type { LoadedTable } from './step-table/load-table';
 import { holdStepLocks } from './locks';
 import { pipelineTree, type PipelineTree } from './pipeline-tree';
-import { runRecorded, runTs } from './processes';
-import { recordProblems } from './python-run-pure';
+import { runTs } from './processes';
 import {
   claims, isBuild, selectSteps,
   type BuildStep, type OutputClaims, type ResolvedStep, type StepGraph,
@@ -106,23 +103,10 @@ class Run {
     const env: NodeJS.ProcessEnv = { ...process.env, [PIPELINE_STEP_ENV]: step.name };
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
-    const entry = tree.abs(step.entry);
-    if (judged.language === 'ts') {
-      const { inputs } = judged;
-      const code = await runTs(tree, step.name, entry, [], inputs, env);
-      if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
-      return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
-    }
-    const recorded = await runRecorded(tree, step.name, entry, [], env);
-    if (recorded.kind === 'exited') return { kind: 'failed', reason: `exited ${recorded.code}` };
-    const { run } = recorded;
-    const snapshots = judged.step.snapshots.map(tree.abs);
-    const problems = recordProblems(resolved, snapshots, run, this.loaded.steps.values(), this.graph);
-    if (problems.length > 0) return { kind: 'failed', reason: problems.join('; ') };
-    return this.land(stampFile, resolved, rehashed(recordedInputs(tree.rekey(run.reads), tree.root), run.writes, tree), {
-      listings: tree.rekey(listingHashes(run.listings, tree.root)),
-      probes: tree.rekey(run.probes),
-    });
+    const { inputs } = judged;
+    const code = await runTs(tree, step.name, tree.abs(step.entry), [], inputs, env);
+    if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
+    return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
   }
 
   private verifyCommitted(name: string, outputs: OutputClaims, verdict: Verdict): Verdict {
@@ -133,10 +117,10 @@ class Run {
     };
   }
 
-  private land(stampFile: string, resolved: ResolvedStep, inputs: FileHashes, recorded?: RecordedReads): Verdict {
+  private land(stampFile: string, resolved: ResolvedStep, inputs: FileHashes): Verdict {
     const missing = resolved.outputs.files.filter((p) => !existsSync(p));
     if (missing.length > 0) return { kind: 'failed', reason: `declared outputs not written: ${missing.map(this.tree.rel).join(', ')}` };
-    writeStamp(stampFile, inputs, stampedOutputs(resolved.outputs), { recorded, root: this.tree.root });
+    writeStamp(stampFile, inputs, stampedOutputs(resolved.outputs), this.tree.root);
     return { kind: 'built' };
   }
 }
@@ -162,10 +146,7 @@ function describeVerdict(name: string, verdict: Verdict): string {
 }
 
 function keptLoopLines(graph: StepGraph, tree: PipelineTree): string[] {
-  return graph.keptLoops.map((e) => {
-    const via = e.kind === 'reads' ? `through ${e.files.map(tree.rel).join(', ')}` : 'via an after entry';
-    return `kept loop: ${e.from} → ${e.to} ${via}`;
-  });
+  return graph.keptLoops.map((e) => `kept loop: ${e.from} → ${e.to} through ${e.files.map(tree.rel).join(', ')}`);
 }
 
 export async function runSteps(loaded: LoadedTable, options: RunOptions): Promise<{ verdicts: ReadonlyMap<string, Verdict>; status: number }> {

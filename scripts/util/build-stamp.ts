@@ -138,14 +138,14 @@ export function writeStamp(
   stamp: string,
   inputs: FileHashes,
   outputs: readonly string[],
-  { recorded, root = REPO_ROOT }: { readonly recorded?: RecordedReads; readonly root?: string } = {},
+  root: string = REPO_ROOT,
 ): void {
   const outputHashes = fileHashes(outputs, root);
   const missing = Object.keys(outputHashes).filter((p) => outputHashes[p] === null);
   if (outputs.length === 0 || missing.length > 0) {
     throw new Error(`writeStamp(${stamp}): outputs missing or none given: ${missing.join(', ')}`);
   }
-  const record: Stamp = recorded ? { inputs, outputs: outputHashes, recorded } : { inputs, outputs: outputHashes };
+  const record: Stamp = { inputs, outputs: outputHashes };
   writeStaged(stamp, `${JSON.stringify(record, null, 2)}\n`);
   landStaged(stamp);
 }

@@ -269,8 +269,12 @@ export async function main(): Promise<void> { await writeFile(${JSON.stringify(a
 
   it('holds a first record behind the build writing the file its describe projects, though no record names that file yet', async () => {
     write('clouds.json', '{"shape": "ellipse"}');
+    write('steps/writer-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('clouds.json'))} });
+`);
     const writer: StepEntry = {
-      name: 'build:writer', kind: 'build', language: 'python', entry: at('steps/writer.py'), outputs: [at('clouds.json')], after: [], snapshots: [],
+      name: 'build:writer', kind: 'build', language: 'ts', entry: at('steps/writer.ts'), outputs: { module: at('steps/writer-outputs.ts'), name: 'OUT' },
     };
     const fixture = await projectingBake([writer]);
     const building = await holdLocks(pipelineTree(root).locks, { step: 'build:writer', exclusive: true, shared: [] }, () => {});

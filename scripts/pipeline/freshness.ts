@@ -13,8 +13,7 @@ import { landStaged, writeStaged } from '../util/staged-write';
 import { hashBytes } from '../util/stamp-hash';
 import type { PipelineTree } from './pipeline-tree';
 import {
-  describesItself, type BuildStep, type ManualStep, type OutputClaims, type PythonBuildStep, type ResolvedStep,
-  type TsBuildStep,
+  describesItself, type BuildStep, type ManualStep, type OutputClaims, type ResolvedStep,
 } from './step-table/step-table-pure';
 
 export type Freshness =
@@ -70,28 +69,19 @@ function stampChanges(stamp: Stamp, outputs: OutputClaims, tree: PipelineTree): 
   ];
 }
 
-export function derivedFreshness(stampFile: string, outputs: OutputClaims, inputs: FileHashes, tree: PipelineTree): Freshness {
-  const stamp = readStamp(stampFile);
-  if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  const keys = new Set([...Object.keys(inputs), ...Object.keys(stamp.inputs)]);
-  return verdict([...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, outputs, tree)]);
+/** A build step's verdict, with the input hashes it was judged on, which its stamp records if it runs. */
+export interface BuildFreshness {
+  readonly inputs: FileHashes;
+  readonly freshness: Freshness;
 }
-
-export function recordedFreshness(stampFile: string, outputs: OutputClaims, tree: PipelineTree): Freshness {
-  const stamp = readStamp(stampFile);
-  if (stamp === null) return { kind: 'stale', changed: ['(no stamp)'] };
-  return verdict([...changedSince(stamp.inputs, inputHashes, tree.root), ...stampChanges(stamp, outputs, tree)]);
-}
-
-export type BuildFreshness =
-  | { readonly language: 'ts'; readonly step: TsBuildStep; readonly inputs: FileHashes; readonly freshness: Freshness }
-  | { readonly language: 'python'; readonly step: PythonBuildStep; readonly freshness: Freshness };
 
 export function buildFreshness(step: BuildStep, resolved: ResolvedStep, tree: PipelineTree): BuildFreshness {
-  const stampFile = tree.buildStamp(step.name);
-  if (step.language === 'python') return { language: 'python', step, freshness: recordedFreshness(stampFile, resolved.outputs, tree) };
   const inputs = inputHashes([...resolved.reads], tree.root);
-  return { language: 'ts', step, inputs, freshness: derivedFreshness(stampFile, resolved.outputs, inputs, tree) };
+  const stamp = readStamp(tree.buildStamp(step.name));
+  if (stamp === null) return { inputs, freshness: { kind: 'stale', changed: ['(no stamp)'] } };
+  const keys = new Set([...Object.keys(inputs), ...Object.keys(stamp.inputs)]);
+  const changed = [...[...keys].filter((k) => inputs[k] !== stamp.inputs[k]), ...stampChanges(stamp, resolved.outputs, tree)];
+  return { inputs, freshness: verdict(changed) };
 }
 
 const isStrings = (value: unknown): value is string[] => Array.isArray(value) && value.every((v) => typeof v === 'string');
