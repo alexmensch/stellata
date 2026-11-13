@@ -12,9 +12,7 @@ a: [What each route decides](#what-each-route-decides).
 
 ```
 scripts/binaries/orbits/
-  nss-elements-pure.ts (+ test)  OrbitElements; NSS_SOLUTION_KINDS, one
-                                 table naming what each solution type's
-                                 columns constrain; thieleInnesToCampbell;
+  nss-elements-pure.ts (+ test)  OrbitElements; thieleInnesToCampbell;
                                  nssToCanonicalElements; nssInRegime, the
                                  detectability regime (P < 3 yr or a0 < 1″).
   nss-fixture.ts                 Test-only: tiFromCampbell (the forward
@@ -71,10 +69,13 @@ committed count snapshot, as Stage 3's are
   derived from `../../catalog/distance/`'s `GAIA_DR3_REF_EPOCH`.
 - **`aAu` is always null** for an NSS solution: Stage 6 estimates it from
   Kepler's third law.
-- **A solution type the table does not name converts to null**, and a row
-  stating neither a period nor a Thiele-Innes quartet is outside the regime.
+- **A solution type `NSS_SOLUTION_TYPES` (`../load/gaia-pure.ts`) does not
+  name converts to null**, and a row stating neither a period nor a
+  Thiele-Innes quartet is outside the regime.
 - **Ties**: among one grade band, the most recent ref year and then the
-  first row; among MSC rows, the most complete and then the last.
+  first row; among MSC rows, the most complete and then the last. A source
+  reaches this stage with one NSS solution, already picked
+  ([Gaia NSS: one solution per source](../load/README.md#gaia-nss-one-solution-per-source)).
 
 ## What each route decides
 

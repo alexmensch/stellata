@@ -34,7 +34,8 @@ why:
 
 1. [`load/`](load/README.md) — every reference catalogue read, the
    magnitude gate, the blank-components rescue and the synthesized ORB6
-   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)).
+   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)),
+   and the one Gaia NSS solution kept per source ([Gaia NSS: one solution per source](load/README.md#gaia-nss-one-solution-per-source)).
 2. [`resolve/`](resolve/README.md) — each WDS component bound to a Gaia DR3
    source and / or a HIP ([What each tier decides](resolve/README.md#what-each-tier-decides)),
    then the binding-integrity audit.
