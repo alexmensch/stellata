@@ -31,7 +31,9 @@ import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
-import { MULTIPLES_TSV, type MultiplesRecord, type PhotometryVia } from '../../binaries/multiples-tsv';
+import {
+  MULTIPLES_TSV, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia,
+} from '../../binaries/multiples-tsv';
 import {
   canonicalCompLetter, composeSyntheticId, isMoreCanonicalAnchor, parentComponentToken, wdsRootOf,
 } from '../../binaries/component-tokens-pure';
@@ -59,7 +61,7 @@ const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([
   'hip2_long_baseline',
 ]);
 
-export type MultiplesTsvRow = Omit<MultiplesRecord, 'anchorSepArcsec' | 'anchorPaDeg'> & {
+export type MultiplesTsvRow = Omit<MultiplesRecordFields, 'anchorSepArcsec' | 'anchorPaDeg'> & GaiaFields & HipFields & {
   anchorOffset: Stage6Offset;
 };
 
