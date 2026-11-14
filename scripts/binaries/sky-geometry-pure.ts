@@ -1,6 +1,6 @@
 // Sky geometry the binaries stages share: tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
-import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
+import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR, RAD_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition, UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
 import { pyMod } from '../../src/astro-core/angles';
@@ -25,6 +25,20 @@ export interface TangentOffset {
 export function polarToTangent(rhoArcsec: number, thetaDeg: number): TangentOffset {
   const theta = thetaDeg * DEG_TO_RAD;
   return { eastArcsec: rhoArcsec * Math.sin(theta), northArcsec: rhoArcsec * Math.cos(theta) };
+}
+
+export interface PolarOffset {
+  readonly sepArcsec: number;
+  readonly paDeg: number;
+}
+
+/** The inverse of `polarToTangent`, the angle through `pyMod`: a tiny negative
+ *  reads 360, not 0. */
+export function tangentToPolar({ eastArcsec, northArcsec }: TangentOffset): PolarOffset {
+  return {
+    sepArcsec: Math.hypot(eastArcsec, northArcsec),
+    paDeg: pyMod(Math.atan2(eastArcsec, northArcsec) * RAD_TO_DEG, 360),
+  };
 }
 
 /** Small-angle tangent-plane offset of `pos` from `ref`, RA wrapped to ±180°. */

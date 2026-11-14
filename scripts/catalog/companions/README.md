@@ -37,11 +37,11 @@ scripts/catalog/companions/
                                   promotion's WDS-root anchor, or null where
                                   Stage 6 reached either from no measured
                                   geometry, the two coincide, or the row is
-                                  the chaining letter itself. Its position
-                                  angle wraps through astro-core's pyMod, as
-                                  Stage 6's sibling
-                                  (../../binaries/multiples/anchor-offsets-pure.ts)
-                                  does.
+                                  the chaining letter itself. Offsets
+                                  convert through
+                                  ../../binaries/sky-geometry-pure.ts's
+                                  polarToTangent / tangentToPolar, the pair
+                                  Stage 6 writes them with.
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
     (+ test)                      codes and count block, the serialiser over
                                   RowOutcome, promotionSummary, and
