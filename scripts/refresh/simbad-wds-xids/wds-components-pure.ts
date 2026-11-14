@@ -1,6 +1,6 @@
 // The WDS components the pull asks SIMBAD about, and the ident each is stored under. See README.md#the-request.
 
-import { compareCodeUnits } from '../../util/tsv/artifact-pure';
+import { compareCodeUnits } from '../../util/order-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 
 export interface WdsComponent {
