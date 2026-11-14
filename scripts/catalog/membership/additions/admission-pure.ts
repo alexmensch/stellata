@@ -3,13 +3,13 @@
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
 import type { LabelMergeRecord } from '../../classic-ids/label-merge/label-merge-pure';
-import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
   type HdAddition,
   type HipAddition,
   type PrimaryIndex,
   type PrimaryTables,
+  type SpineKeys,
 } from '../../spine/primaries-audit-pure';
 import { UnionFind, compareDesignations } from '../../../sid/sid-pure';
 import { nullableCell } from '../../../util/tsv/artifact-pure';
@@ -390,8 +390,8 @@ export interface AdditionsPhase {
 export function admitAdditions(input: {
   tables: PrimaryTables;
   idx: PrimaryIndex;
-  /** The spine as the corrections leave it, which the cohorts are measured against. */
-  kept: readonly SpineRow[];
+  /** The keys of the spine as the corrections leave it, which the cohorts are measured against. */
+  spineKeys: SpineKeys;
   /** The spine side's label-merged records: the claims admission starts from. */
   spineRecords: readonly LabelMergeRecord[];
   derive: RowDeriver;
@@ -400,7 +400,7 @@ export function admitAdditions(input: {
 }): AdditionsPhase {
   const { tables, idx, derive, keys } = input;
   const claims = spineClaims(input.spineRecords);
-  const items: AdditionItem[] = additionCohortItems(tables, input.kept, idx).map((i) => ({
+  const items: AdditionItem[] = additionCohortItems(tables, input.spineKeys, idx).map((i) => ({
     ...i, derived: derive(additionCells([i])).derived,
   }));
   const index = indexAdditions(tables);

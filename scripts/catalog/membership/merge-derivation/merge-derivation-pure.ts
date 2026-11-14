@@ -4,7 +4,7 @@ import {
   linkTablesFrom, partitionRow, type KeyCell, type LinkTables,
 } from '../../spine/association-audit-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
-import { spineKeys, type PrimaryTables, type SpineKeys } from '../../spine/primaries-audit-pure';
+import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 
 /** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
@@ -30,10 +30,6 @@ export interface MergeLinks {
   links: LinkTables;
   /** Tycho-2's own `hip` column, inverted: every entry naming the HIP. */
   hipEntries: ReadonlyMap<number, readonly string[]>;
-  tycHip: (tyc: string) => number | null;
-  tycHds: ReadonlyMap<string, readonly number[]>;
-  /** I/239's `HD` column and IV/27A, HIP → HD. */
-  hipHds: ReadonlyMap<number, ReadonlySet<number>>;
   hdHr: ReadonlyMap<number, number>;
   /** CNS5's rows by their `hip`, as `GJ <number><comp>`. */
   cns5ByHip: ReadonlyMap<number, readonly string[]>;
@@ -48,13 +44,11 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   else list.push(value);
 }
 
-export function mergeLinksFrom(tables: PrimaryTables, spine: readonly SpineRow[]): MergeLinks {
+export function mergeLinksFrom(tables: PrimaryTables, held: SpineKeys): MergeLinks {
   const links = linkTablesFrom(tables);
   const hipEntries = new Map<number, string[]>();
   for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
   for (const entries of hipEntries.values()) entries.sort();
-  const tycHds = new Map<string, number[]>();
-  for (const [tyc, hds] of links.tycHd) tycHds.set(tyc, [...hds].sort((a, b) => a - b));
   const cns5ByHip = new Map<number, string[]>();
   for (const r of tables.cns5) if (r.hip !== null) push(cns5ByHip, r.hip, `GJ ${r.gj}${r.gjComp ?? ''}`);
   const v70aByHd = new Map<number, string[]>();
@@ -62,13 +56,10 @@ export function mergeLinksFrom(tables: PrimaryTables, spine: readonly SpineRow[]
   return {
     links,
     hipEntries,
-    tycHip: (tyc) => tables.tycho2.get(tyc)?.hip ?? null,
-    tycHds,
-    hipHds: links.hipHd,
     hdHr: new Map([...links.hrHd].map(([hr, hd]) => [hd, hr])),
     cns5ByHip,
     v70aByHd,
-    held: spineKeys(spine),
+    held,
   };
 }
 
@@ -106,7 +97,7 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
   const spineHip = intOf(row.hip);
   let hip = spineHip;
   if (row.tyc !== '') {
-    const tycho2Hip = m.tycHip(row.tyc);
+    const tycho2Hip = m.links.tycHip.get(row.tyc) ?? null;
     const pairHip = spineHip ?? tycho2Hip;
     const entries = pairHip === null ? [] : m.hipEntries.get(pairHip) ?? [];
     if (pairHip !== null && entries.length > 1 && entries.includes(row.tyc)) {
@@ -124,8 +115,8 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
   }
 
   const hd = intOf(row.hd);
-  const hds = new Set<number>(row.tyc === '' ? [] : m.tycHds.get(row.tyc) ?? []);
-  if (hip !== null) for (const d of m.hipHds.get(hip) ?? []) hds.add(d);
+  const hds = new Set<number>(row.tyc === '' ? [] : m.links.tycHd.get(row.tyc) ?? []);
+  if (hip !== null) for (const d of m.links.hipHd.get(hip) ?? []) hds.add(d);
   if (hd !== null) hds.add(hd);
   const derivedOnly = (cell: DerivedOnlyCell, values: Iterable<string>, isHeld: (v: string) => boolean): void => {
     for (const value of [...new Set(values)].sort()) {

@@ -7,7 +7,7 @@ import type { IdentityRow } from '../lineage/identity-pure';
 import { identityRow } from '../lineage/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import type { SpineRow } from '../spine/inherited-spine-pure';
-import { indexPrimaries, type PrimaryTables } from '../spine/primaries-audit-pure';
+import { indexPrimaries, spineKeys, type PrimaryTables } from '../spine/primaries-audit-pure';
 import { admitAdditions } from './additions/admission-pure';
 import type { BindingEvidence } from './binding/binding-gate-pure';
 import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
@@ -88,13 +88,14 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     kept, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
     siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
   });
-  const mergeLinks = mergeLinksFrom(tables, kept);
+  const keptKeys = spineKeys(kept);
+  const mergeLinks = mergeLinksFrom(tables, keptKeys);
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks).map(
     (divergence) => ({ key: keyOf(i), outcome: { kind: 'merge', divergence } }),
   ));
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);
   const additions = admitAdditions({
-    tables, idx, kept, spineRecords: spine.records, derive, keys,
+    tables, idx, spineKeys: keptKeys, spineRecords: spine.records, derive, keys,
     publishesGaiaParallax: input.publishesGaiaParallax,
   });
   const primariesRows = [...spine.rows, ...additions.rows];

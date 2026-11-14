@@ -16,7 +16,7 @@ const B = '1-1-2';
 
 function links(tycSources: Record<string, string>, hipSource: string | null = 'S1'): LinkTables {
   return {
-    tycHd: new Map([[B, new Set([100])]]),
+    tycHd: new Map([[B, new Set([100])], ['2-2-2', new Set([300])]]),
     tycHip: new Map([[A, 10], [B, 10], ['2-2-2', 20]]),
     hipHd: new Map([[10, new Set([100])]]),
     hrHd: new Map([[7, 100]]),
@@ -35,9 +35,6 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
   return {
     links: l,
     hipEntries: new Map([[10, [A, B]], [20, ['2-2-2']]]),
-    tycHip: (tyc) => ({ [A]: 10, [B]: 10, '2-2-2': 20 } as Record<string, number>)[tyc] ?? null,
-    tycHds: new Map([[B, [100]], ['2-2-2', [300]]]),
-    hipHds: l.hipHd,
     hdHr: new Map([[100, 7], [300, 9]]),
     cns5ByHip: new Map([[20, ['GJ 1234']]]),
     v70aByHd: new Map([[300, ['NN 1234']]]),
