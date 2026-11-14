@@ -8,6 +8,7 @@ import {
 } from './binding-audit-pure';
 import { componentsOf } from './components-pure';
 import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, ids, type BiRow } from './resolve-fixture';
+import { OWN } from '../multiples-tsv';
 
 describe('bfsOffset', () => {
   const edge = (eastArcsec: number, epoch: number): Edge => ({ eastArcsec, northArcsec: 0, epoch });
@@ -154,7 +155,7 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia?.value).toBe(SA);
+    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN });
     expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
@@ -260,7 +261,9 @@ describe('enforceBindingVerdicts', () => {
   it('keeps a loser\'s independently distinct HIP for Stage 3', () => {
     const { audited, idx } = audit(rows(99, null), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(ids(after.find((c) => c.component === 'C'))).toMatchObject({ gaiaSourceId: null, hip: 99 });
+    const c = after.find((x) => x.component === 'C');
+    expect(c?.gaia).toBeNull();
+    expect(c?.hip).toEqual({ value: 99, origin: OWN });
   });
 });
 

@@ -9,6 +9,7 @@ import {
 } from './cascade-pure';
 import { componentsOf } from './components-pure';
 import { alone, athygAt, decomposed, indices, lone, pairAt, ids, resolved, xid } from './resolve-fixture';
+import { OWN } from '../multiples-tsv';
 
 const orb6 = (wdsId: string, components: string, hip: number | null): Orb6Entry =>
   orb6Entry({ wdsId, components, hip, grade: 5 });
@@ -125,6 +126,7 @@ describe('resolveViaSimbad', () => {
   it('binds gaia and HIP when SIMBAD carries both', () => {
     const r = run(resolved({ wdsId: '00491+5749', discoverer: 'STF   60' }), one('00491+5749', 'A', xid('00491+5749', 'A', '425040000962559616', 3821)));
     expect(ids(r)).toMatchObject({ resolveVia: 'simbad_xid', gaiaSourceId: '425040000962559616', hip: 3821 });
+    expect([r.gaia?.origin, r.hip?.origin]).toEqual([OWN, OWN]);
   });
 
   it('binds the HIP alone when SIMBAD has no DR3 source (α Cen A)', () => {
@@ -276,6 +278,7 @@ describe('resolveViaPosition', () => {
     const athyg = [athygAt({ ra: 217.4296, dec: -62.6795, gaia: '5853498713190525696' })];
     const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {} })], athyg);
     expect(ids(r.primary)).toMatchObject({ resolveVia: 'athyg_gaia_native', gaiaSourceId: '5853498713190525696' });
+    expect([r.primary.gaia?.origin, r.primary.athyg?.origin]).toEqual([OWN, OWN]);
   });
 
   it('binds a secondary at its predicted position', () => {
