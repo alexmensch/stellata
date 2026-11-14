@@ -62,9 +62,9 @@ function nssRoute(
   p: DecomposedPair, plxMas: number | null, systemParallaxMas: number | null, srcToNss: ReadonlyMap<string, NssOrbitRow>,
 ): OrbitElements | null {
   for (const [side, other] of [[p.primary, p.secondary], [p.secondary, p.primary]] as const) {
-    const source = side.gaiaSourceId;
-    if (source === null) continue;
-    if (other.gaiaSourceId !== null && other.gaiaSourceId !== source) continue;
+    if (side.gaia === null) continue;
+    const source = side.gaia.value;
+    if (other.gaia !== null && other.gaia.value !== source) continue;
     const row = srcToNss.get(source);
     if (row === undefined || !nssInRegime(row)) continue;
     if (!nssSeparationConsistent(row, p.pair.rhoLast, plxMas ?? systemParallaxMas)) continue;

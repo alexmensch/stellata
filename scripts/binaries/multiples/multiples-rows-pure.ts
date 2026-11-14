@@ -10,9 +10,12 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
-import { ORBIT_VIA_PROPERTIES, type AstrometryVia, type MultiplesRecord, type PhotometryVia } from '../multiples-tsv';
+import {
+  ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields,
+  type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia,
+} from '../multiples-tsv';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
-import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
+import { valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import { propagatePosition } from '../sky-geometry-pure';
 import type { AnchorOffsets } from './anchor-offsets-pure';
 import { gaiaPhotometryAbsmagCi } from './gaia-photometry-pure';
@@ -85,10 +88,10 @@ function pairSide(c: ResolvedComponent, astrometry: ComponentAstrometry, indices
 }
 
 type ComponentFields = Pick<
-  MultiplesRecord,
-  'comp' | 'hip' | 'gaiaSourceId' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
+  MultiplesRecordFields,
+  'comp' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
   | 'source' | 'resolveVia' | 'astrometryVia' | 'spectVia' | 'photometryVia'
->;
+> & GaiaFields & HipFields;
 
 /** `primaryAthyg` is null on the primary's own row. */
 function componentFields(
@@ -101,9 +104,10 @@ function componentFields(
   let ci = athyg?.ci ?? null;
   let photometryVia: PhotometryVia = athyg === null ? 'none'
     : isPrimary || athyg !== primaryAthyg ? 'athyg_own' : 'athyg_system_inherited';
-  const sharesAthygPartnerSource = partner.hasAthyg && partner.gaiaSourceId !== null && partner.gaiaSourceId === c.gaiaSourceId;
-  if (athyg === null && astrometryVia === 'gaia_5p' && c.gaiaSourceId !== null && !sharesAthygPartnerSource) {
-    const gaia = indices.srcToAstrometry.get(c.gaiaSourceId);
+  const gaiaSourceId = valueOf(c.gaia);
+  const sharesAthygPartnerSource = partner.hasAthyg && partner.gaiaSourceId !== null && partner.gaiaSourceId === gaiaSourceId;
+  if (athyg === null && astrometryVia === 'gaia_5p' && gaiaSourceId !== null && !sharesAthygPartnerSource) {
+    const gaia = indices.srcToAstrometry.get(gaiaSourceId);
     const derived = gaia === undefined ? null : gaiaPhotometryAbsmagCi(gaia);
     if (derived !== null) {
       ({ absmag, ci } = derived);
@@ -111,7 +115,7 @@ function componentFields(
     }
   }
   return {
-    comp: c.component, hip: c.hip, gaiaSourceId: c.gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
+    comp: c.component, ...hipFields(c.hip), ...gaiaFields(c.gaia), hd: athyg?.hd ?? c.hd, ...positionFields(position),
     absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
     resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
   };
@@ -187,10 +191,10 @@ export function pairRows(
   if (systemAnchor === null && ps.own === null && ss.own === null) return null;
   const { wdsId } = p.pair;
   const pri = componentFields(wdsId, ps, systemAnchor, null, true, {
-    gaiaSourceId: p.secondary.gaiaSourceId, hasAthyg: ss.athyg !== null,
+    gaiaSourceId: valueOf(p.secondary.gaia), hasAthyg: ss.athyg !== null,
   }, indices);
   const sec = componentFields(wdsId, ss, systemAnchor, ps.athyg, false, {
-    gaiaSourceId: p.primary.gaiaSourceId, hasAthyg: ps.athyg !== null,
+    gaiaSourceId: valueOf(p.primary.gaia), hasAthyg: ps.athyg !== null,
   }, indices);
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);
@@ -219,7 +223,9 @@ export function standaloneRow(
   const { position, astrometryVia } = place(own, gaia === undefined ? 'unresolved' : 'gaia_5p', systemAnchor);
   const { spect, spectVia } = resolveSpect(xid.wdsId, xid.component, null, indices);
   return {
-    systemId: `${xid.wdsId}-_${xid.component}`, comp: xid.component, hip: xid.hip, gaiaSourceId: xid.gaiaSourceId, hd: null,
+    systemId: `${xid.wdsId}-_${xid.component}`, comp: xid.component, hd: null,
+    ...hipFields(xid.hip === null ? null : { value: xid.hip, origin: OWN }),
+    ...gaiaFields(xid.gaiaSourceId === null ? null : { value: xid.gaiaSourceId, origin: OWN }),
     ...positionFields(position), absmag: null, ci: null, spect, name: xid.simbadMainId, source: 'simbad', regime: 0,
     resolveVia: 'simbad_xid', astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
     ...NO_ORBIT_FIELDS,
