@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
-import { stageLineageLine } from '../lineage/lineage-row-pure';
+import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
 import { bindingEvidence } from '../membership/binding/binding-gate-pure';
 import { NO_PRINTED_V, printedVOf } from '../photometry/photometry-fixture';
 import { CLASSIC_ID_CODES, CLASSIC_ID_INVARIANTS, classicIdLineage, rejectedBindingsView, routeDisagreementsView } from './classic-id-lineage-pure';
@@ -91,6 +92,25 @@ describe('classicIdLineage', () => {
 
   it('writes only codes it declares, each in its declared role', () => {
     for (const row of lineageOf(toliman())) expect(() => stageLineageLine(CLASSIC_ID_CODES, row)).not.toThrow();
+  });
+});
+
+describe('the classic-ids count block', () => {
+  const lines = lineageOf(toliman()).map((r) => stageLineageLine(CLASSIC_ID_CODES, r));
+
+  it('folds one count per live code, zeros included', () => {
+    const counts = foldStageLines(CLASSIC_ID_CODES, lines);
+    expect(Object.keys(counts)).toEqual(CLASSIC_ID_CODES.live);
+    expect(counts['classic-ids.gate-mag']).toBe(4);
+    expect(counts['classic-ids.route.agree']).toBe(1);
+    expect(counts['classic-ids.hd.bound']).toBe(0);
+  });
+
+  it('a new code reaches the snapshot as a key, and fails the check until the snapshot is refreshed', () => {
+    const { drift, refreshed } = seededCodeCheck(CLASSIC_ID_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`classic-ids.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 });
 

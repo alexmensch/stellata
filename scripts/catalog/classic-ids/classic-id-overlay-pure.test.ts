@@ -74,13 +74,16 @@ describe('buildClassicIdOverlay', () => {
   it('leaves a source with no resolvable TYC out of the overlay entirely', () => {
     // Gaia saturates near G=3, so the brightest stars are absent from both
     // cross-walks — no overlay row, labels come from the inherited spine.
-    const { overlay, counts } = buildClassicIdOverlay(
+    const { overlay, reaches } = buildClassicIdOverlay(
       input({ tycToSource: new Map([['3105-2070-1', VEGA_SRC]]) }),
     );
     expect(overlay.has(SIRIUS_SRC)).toBe(false);
-    expect(counts.bsc5HrUnkeyed).toBe(1);
-    expect(counts.crossIndexBayerUnkeyed).toBe(1);
-    expect(counts.crossIndexFlamsteedUnkeyed).toBe(1);
+    expect(reaches.filter((r) => 'reach' in r && r.reach.kind === 'unreached')).toEqual([
+      { kind: 'hd', hd: 48915, tycs: ['5949-2777-1'], reach: { kind: 'unreached' } },
+      { kind: 'bayer', hd: 48915, hip: 32349, value: 'alf CMa', reach: { kind: 'unreached' } },
+      { kind: 'flamsteed', hd: 48915, hip: 32349, value: '9 CMa', reach: { kind: 'unreached' } },
+      { kind: 'hr', hr: 2491, hd: 48915, reach: { kind: 'unreached' } },
+    ]);
   });
 
   it('attaches an ambiguous designation to every matching record', () => {
@@ -100,11 +103,9 @@ describe('buildClassicIdOverlay', () => {
 
   it('records a HIP-route disagreement instead of overriding the HD route', () => {
     const other = '9999999999999999';
-    const { overlay, counts, routeChecks } = buildClassicIdOverlay(
+    const { overlay, routeChecks } = buildClassicIdOverlay(
       input({ hipToSource: new Map([[91262, other]]) }),
     );
-    expect(counts.hdHipRouteDisagree).toBe(1);
-    expect(counts.hdHipRouteAgree).toBe(0);
     expect(routeChecks).toEqual([{
       hd: 172167, hip: 91262, hdRouteSourceIds: [VEGA_SRC], hipRouteSourceId: other, outcome: 'disagree',
     }]);
@@ -117,23 +118,22 @@ describe('buildClassicIdOverlay', () => {
   });
 
   it('routes a CNS5 row with no EDR3 id through its HIP', () => {
-    const { overlay, counts } = buildClassicIdOverlay(
+    const { overlay, reaches } = buildClassicIdOverlay(
       input({
         cns5: [cns5Row({ gj: '721', hip: 91262 })],
       }),
     );
     expect(overlay.get(VEGA_SRC)!.gj).toEqual(['721']);
-    expect(counts.cns5GjViaHip).toBe(1);
-    expect(counts.cns5GjUnkeyed).toBe(0);
+    expect(reaches.find((r) => r.kind === 'gj')).toMatchObject({ reach: { kind: 'reached', route: 'hip', sources: [VEGA_SRC] } });
   });
 
-  it('counts a CNS5 row reachable by neither route as unkeyed', () => {
-    const { counts } = buildClassicIdOverlay(
+  it('leaves a CNS5 row reachable by neither route unreached', () => {
+    const { reaches } = buildClassicIdOverlay(
       input({
         cns5: [cns5Row({ gj: '9848' })],
       }),
     );
-    expect(counts.cns5GjUnkeyed).toBe(1);
+    expect(reaches.find((r) => r.kind === 'gj')).toMatchObject({ reach: { kind: 'unreached' } });
   });
 });
 

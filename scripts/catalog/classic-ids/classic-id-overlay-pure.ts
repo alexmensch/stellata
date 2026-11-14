@@ -119,6 +119,7 @@ export function applyBindingGate(
   return { refused, skippedNoPrintedV, unpulled, skippedNullGMag, gateableVia, magnitudeWeighed };
 }
 
+/** see README.md#counts-and-the-parity-measurement */
 export interface OverlayJoinCounts {
   tyc2HdRows: number;
   tyc2HdDistinctTyc: number;
@@ -160,21 +161,6 @@ export interface OverlayJoinCounts {
    *  accepted, but no request can fix it — the residual the gate's reach simply
    *  does not cover. */
   gateSkippedNullGMag: number;
-
-  hdHipRouteAgree: number;
-  hdHipRouteDisagree: number;
-  /** IV/27A rows whose HIP resolves but whose HD reaches no source_id — the
-   *  HIP route is the only one that keys them. */
-  hdHipRouteHipOnly: number;
-
-  /** Upstream designations no route keys to a source_id. They are not lost
-   *  records: their labels ride the inherited spine (/docs/catalog-driver.md#1-the-driver-model), which is why the
-   *  overlay is a union term rather than the label authority. */
-  crossIndexBayerUnkeyed: number;
-  crossIndexFlamsteedUnkeyed: number;
-  bsc5HrUnkeyed: number;
-  cns5GjUnkeyed: number;
-  cns5GjViaHip: number;
 }
 
 export interface OverlayJoin {
@@ -203,10 +189,7 @@ function addValue<T>(list: T[], value: T): void {
  *  reach before any gate weighs a row. */
 type OverlayRouteCounts = Pick<OverlayJoinCounts,
   | 'tyc2HdRows' | 'tyc2HdDistinctTyc' | 'tyc2HdAmbiguousRows' | 'tycResolvedToSource'
-  | 'tycUnresolved' | 'crossIndexRows' | 'bsc5Rows' | 'cns5Rows' | 'hipXmatchEntries'
-  | 'hdHipRouteAgree' | 'hdHipRouteDisagree' | 'hdHipRouteHipOnly'
-  | 'crossIndexBayerUnkeyed' | 'crossIndexFlamsteedUnkeyed' | 'bsc5HrUnkeyed'
-  | 'cns5GjUnkeyed' | 'cns5GjViaHip'>;
+  | 'tycUnresolved' | 'crossIndexRows' | 'bsc5Rows' | 'cns5Rows' | 'hipXmatchEntries'>;
 
 /** The sources a designation's route reached before the gate, or none. */
 export type Reach<R extends string> =
@@ -291,10 +274,6 @@ function overlayOf(reaches: readonly DesignationReach[]): ClassicIdOverlay {
   return overlay;
 }
 
-function unreached(reaches: readonly DesignationReach[], kind: DesignationReach['kind']): number {
-  return reaches.filter((r) => r.kind === kind && 'reach' in r && r.reach.kind === 'unreached').length;
-}
-
 export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
   const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource } = walks;
   const reaches: DesignationReach[] = [];
@@ -368,7 +347,6 @@ export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
     reaches.push({ kind: 'gj', cns5: row.cns5, gj: `${row.gj}${row.gjComp ?? ''}`, hip: row.hip, reach });
   }
 
-  const checked = (o: RouteCheck['outcome']): number => routeChecks.filter((c) => c.outcome === o).length;
   return {
     overlay: overlayOf(reaches),
     tycsBySource,
@@ -385,14 +363,6 @@ export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
       bsc5Rows: bsc5.length,
       cns5Rows: cns5.length,
       hipXmatchEntries: hipToSource.size,
-      hdHipRouteAgree: checked('agree'),
-      hdHipRouteDisagree: checked('disagree'),
-      hdHipRouteHipOnly: checked('hip-only'),
-      crossIndexBayerUnkeyed: unreached(reaches, 'bayer'),
-      crossIndexFlamsteedUnkeyed: unreached(reaches, 'flamsteed'),
-      bsc5HrUnkeyed: unreached(reaches, 'hr'),
-      cns5GjUnkeyed: unreached(reaches, 'gj'),
-      cns5GjViaHip: reaches.filter((r) => r.kind === 'gj' && r.reach.kind === 'reached' && r.reach.route === 'hip').length,
     },
   };
 }

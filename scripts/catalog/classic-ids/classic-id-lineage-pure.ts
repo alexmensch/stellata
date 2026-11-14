@@ -10,6 +10,9 @@ import type { RejectedBindingRow } from './rejected-bindings-tsv';
 import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
+/** The snapshot's one stage; its `-derived` slot holds the counts no row decides. */
+export const CLASSIC_ID_COUNT_STAGES = [CLASSIC_IDS_LINEAGE.stage] as const;
+
 export const CLASSIC_ID_LINEAGE_BUDGET = { gzipBytes: 9_800_000, writeMs: 10_000 };
 
 const KEPT = 'and the binding gate keeps at least one.';

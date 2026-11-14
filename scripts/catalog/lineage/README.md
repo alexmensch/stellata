@@ -15,7 +15,10 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are placement's,
+which act on records, file a derived block), and so are classic-ids' (beside
+a derived block of the overlay's sizes,
+[Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
+and placement's,
 beside a derived block of the shipped tiers
 ([Placement counts](../distance/README.md#placement-counts)).
 

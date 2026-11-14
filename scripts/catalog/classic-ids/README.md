@@ -380,13 +380,19 @@ constellation out of the designation string and loses only its expanded alias
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareCountSnapshot` / `UPDATE_SNAPSHOTS` machinery
 `build-catalog.ts` uses (`snapshotCheck` in
-`../../util/snapshot-check.ts`). Three groups:
+`../../util/snapshot-check.ts`), staged
+([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)).
+Stage `classic-ids` is the stage's lines folded per live code
+([Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)):
+where each designation went, the HIP-route agree / disagree / HIP-only split,
+and the gate's refusals per designation key. `classic-ids-derived` holds
+what no row decides, in three groups:
 
-- **Input + route sizes** — upstream row counts, how many Tycho ids
-  resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.
+- **Input + route sizes** — upstream row counts and how many Tycho ids
+  resolve. Pre-gate.
 - **Overlay sizes** — rows, and per-identifier how many sources carry
   each designation, plus the multi-valued cardinalities. Post-gate.
-- **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
+- **`gate*`** — sources dropped per gate, `gateableVia` per printed tier, and
   `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
   That last one is the count to watch alongside `../membership/`'s
   `membership.overlay.bright.no-entry` — <!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> rows the printed-V cascade puts

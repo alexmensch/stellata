@@ -160,12 +160,12 @@ gaia_source_id  hd  hr  hip  gj  bayer  flamsteed
 - Rows are sorted by numeric source_id (ids exceed 2^53, so the sort is
   BigInt, matching the astrometry request files).
 
-`hd_hip_route_disagreements.tsv` enumerates the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> IV/27A rows whose
+`hd_hip_route_disagreements.tsv` enumerates the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> IV/27A rows whose
 HD→TYC→source_id and HIP→source_id routes land on different sources
 (every pair differs only in its low digits — resolved close pairs where
 the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
-resolution. All <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> are disposed `no-identity-event` in
+resolution. All <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> are disposed `no-identity-event` in
 `hd_hip_route_disagreements_review.tsv`: in every row one spine record
 holds both designations, so the disagreement is over which component's
 source the walks bound, never over which record the star is
@@ -211,8 +211,8 @@ row no printed tier reaches). `v_via` says which printed tier the rejection rest
 218 printed_hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
-routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
-route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> disagreements.
+routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/classic-ids.route.agree -->2,635<!-- /count -->
+route agreements, not the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> disagreements.
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
