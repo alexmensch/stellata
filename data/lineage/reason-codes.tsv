@@ -354,6 +354,9 @@ promotion.brightness.inherited-twin	promotion	none	outcome	live		7.1.20	The mint
 promotion.brightness.own	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the row's own photometry.
 promotion.brightness.spectral	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its per-component spectral type's absolute magnitude.
 promotion.brightness.wds-mag	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the row's own WDS magnitude at the system's distance.
+promotion.colour.none	promotion	none	outcome	live		7.1.21	The minted record has no colour of its own and no derivable spectral class, so it bakes the solar B−V.
+promotion.colour.own	promotion	none	outcome	live		7.1.21	The minted record's B−V is the row's own observed colour.
+promotion.colour.spectral-derived	promotion	none	outcome	live		7.1.21	The minted record's B−V is the intrinsic colour of its spectral class (Ballesteros 2012, /data/papers/index.md#ballesteros2012), the row carrying no colour of its own.
 promotion.constellation.split-from-anchor	promotion	none	outcome	live		7.1.20	The minted record's position falls in another IAU constellation than its anchor's.
 promotion.desig-con.from-anchor	promotion	none	outcome	live		7.1.20	The adopted record carried no designation constellation and takes its anchor's.
 promotion.dropped.anchor-is-component	promotion	merge	outcome	live		7.1.6	The row's ids resolve to its anchor's record, which the naming authority already letters as this component, so that record is the component.
@@ -366,6 +369,10 @@ promotion.dropped.no-position	promotion	retire	outcome	live		7.1.6	The row has n
 promotion.dropped.parked-record	promotion	park	outcome	retired	7.1.20	7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
 promotion.dropped.parked-record.gaia-5p	promotion	park	outcome	live		7.1.20	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record; the row's astrometry route is gaia_5p.
 promotion.dropped.parked-record.other-route	promotion	park	outcome	live		7.1.20	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record; the row's astrometry route is not gaia_5p.
+promotion.dust.edenhofer2024.absmag-and-ci	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from absmag, and A_V/R_V from the observed B−V.
+promotion.dust.edenhofer2024.absmag-only	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from absmag; the B−V is intrinsic, so it is left as it is.
+promotion.dust.edenhofer2024.ci-only	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position, as A_V/R_V, is subtracted from the observed B−V; the absmag is its spectral class's, intrinsic, so it is left as it is.
+promotion.dust.edenhofer2024.not-applied	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from neither value: the absmag is its spectral class's and the B−V intrinsic.
 promotion.fit.owned	promotion	none	outcome	live		7.1.20	The refused row carries a per-component fit on an identifier of its own.
 promotion.minted	promotion	none	outcome	retired	7.1.20	7.1.6	The row becomes a new catalogue record.
 promotion.minted.keyed	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, keyed on a Gaia source or HIP of its own.

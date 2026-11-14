@@ -209,6 +209,9 @@ export type RowOutcome =
 export interface MintedBrightness {
   source: CompanionAbsmagSource;
   spectMsFromOwnAbsmag: boolean;
+  ci: CompanionCiVia;
+  /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
+  av: number;
 }
 
 
@@ -1170,8 +1173,13 @@ function registerExistingMemberForAnchorDim(
 /** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
  *  raymarch re-adds it without double-counting; a spectral-derived one
  *  (class→M_V) is already intrinsic. */
+/** False for a class→M_V absmag, which is intrinsic already. */
+export function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
+  return source !== 'spectral';
+}
+
 function deExtinctCompanionAbsmag(imputed: CompanionAbsmag, av: number): number {
-  return imputed.source === 'spectral' ? imputed.absmag : imputed.absmag - av;
+  return companionAbsmagIsObserved(imputed.source) ? imputed.absmag - av : imputed.absmag;
 }
 
 /** The two tiers that place a record ON its own Gaia 5p solution. */
@@ -1443,8 +1451,10 @@ function promoteRow(
   if (spectMsFromOwnAbsmag) {
     spectral = { info: spectralFromAbsmag(absmag), display: null };
   }
-  const brightness: MintedBrightness = { source: imputed.source, spectMsFromOwnAbsmag };
   const ci = companionCi(row, spectral.info, av);
+  const brightness: MintedBrightness = {
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av,
+  };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
   // Velocity and the DESIGNATION constellation are the two inherited fields

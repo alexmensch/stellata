@@ -161,7 +161,10 @@ const MINTED = '6000000000000000001';
 const PROMOTION = [
   'stage\tkey\trole\tcode\tparams\tevidence',
   'promotion\tmultiples:S-AB/A\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:3',
-  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:3',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.brightness.dmag-imputed\t\t',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.colour.spectral-derived\t\t',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.dust.edenhofer2024.absmag-only\t{"av":"0.0123"}\t',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted.keyed\t{"via":"secondary"}\tspine:3',
   'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:9|spine:3',
   'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
   'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted\t{"via":"secondary"}\tspine:99',
@@ -190,7 +193,10 @@ describe('traceRecords over a promoted system', () => {
   it('finds a minted companion through the identity row promotion writes for it', () => {
     const [minted] = traceSystem(MINTED);
     expect(minted.key).toBe('multiples:S-AB/B');
-    expect(minted.rows.map((r) => r.code)).toEqual(['promotion.minted']);
+    expect(minted.rows.map((r) => r.code)).toEqual([
+      'promotion.brightness.dmag-imputed', 'promotion.colour.spectral-derived',
+      'promotion.dust.edenhofer2024.absmag-only', 'promotion.minted.keyed',
+    ]);
   });
 });
 
@@ -277,6 +283,13 @@ describe('pnpm run trace', () => {
 
   it('reads the promotion stage and its identity file', () => {
     expect(run(MINTED).split('\n')[0]).toBe('multiples:S-AB/B');
+  });
+
+  it('prints a minted companion\'s V, colour and A_V provenance', () => {
+    const out = run(MINTED);
+    expect(out).toMatch(/promotion\.brightness\.dmag-imputed/);
+    expect(out).toMatch(/promotion\.colour\.spectral-derived/);
+    expect(out).toMatch(/promotion\.dust\.edenhofer2024\.absmag-only +\{"av":"0\.0123"\}/);
   });
 
   it('finds a cloud by its slug and prints its allocation row', () => {

@@ -593,9 +593,22 @@ duplicate labels that survive the ladder are data findings, enumerated in
 `RowOutcome` ([above](#companion-promotion-from-databinariesmultiplestsv)) through an exhaustive `switch`: the
 outcome row (a mint is `promotion.minted.keyed` or `.synthetic`, a refused
 parked record `.gaia-5p` or `.other-route` by route), then a facet row, effect
-`none` and no params or evidence, per flag the outcome carries
-(`promotion.brightness.*`, `spectral.*`, `constellation.*`, `desig-con.*`,
-`fit.owned`), so every per-row count is a code's line count. A
+`none` and no evidence, per flag the outcome carries
+(`promotion.brightness.*`, `spectral.*`, `colour.*`, `dust.*`,
+`constellation.*`, `desig-con.*`, `fit.owned`), so every per-row count is a
+code's line count.
+
+A mint's facets are its brightness lineage, since the record walk's
+[brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
+never sees it: the absmag source (`brightness.*`), the B−V's (`colour.own`,
+the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
+`companionCi`), and one dust row naming which of the two the A_V at the
+minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
+`.absmag-only`, `.ci-only`, `.not-applied`: a class→M_V absmag and a derived
+B−V are intrinsic), its `params.av` in brightness-colour's format
+(`dustParams`), the only facet with params. Their evidence is the outcome
+row's: the photometry is the row's own, and the anchor a Δmag reads is cited
+there. A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
 to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:

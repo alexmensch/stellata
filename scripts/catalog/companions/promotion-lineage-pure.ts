@@ -8,8 +8,11 @@ import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '..
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
-import type {
-  CompanionAbsmagSource, MultiplesTsvRow, PromotedRow, PromotionDerivedCounts, RowOutcome,
+import { dustParams, EDENHOFER_AV } from '../photometry/brightness-colour-lineage-pure';
+import {
+  companionAbsmagIsObserved,
+  type CompanionAbsmagSource, type CompanionCiVia, type MintedBrightness, type MultiplesTsvRow, type PromotedRow,
+  type PromotionDerivedCounts, type RowOutcome,
 } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -23,6 +26,10 @@ const BRIGHTNESS_CODES = {
   inherited_twin: 'inherited-twin', anchor_collocated: 'anchor-collocated',
 } as const satisfies Record<CompanionAbsmagSource, string>;
 
+const COLOUR_CODES = {
+  own: 'colour.own', spectral_derived: 'colour.spectral-derived', none: 'colour.none',
+} as const satisfies Record<CompanionCiVia, string>;
+
 const FACET_CODES = {
   'brightness.dmag-imputed': outcomeCode('The minted record\'s absolute magnitude is its anchor\'s absolute magnitude plus the pair\'s magnitude difference.'),
   'brightness.own': outcomeCode('The minted record\'s absolute magnitude is the row\'s own photometry.'),
@@ -30,6 +37,13 @@ const FACET_CODES = {
   'brightness.spectral': outcomeCode('The minted record\'s absolute magnitude is its per-component spectral type\'s absolute magnitude.'),
   'brightness.inherited-twin': outcomeCode('The minted record\'s absolute magnitude is the primary\'s inherited magnitude, kept because the pair has a renderable orbit.'),
   'brightness.anchor-collocated': outcomeCode('The minted record\'s absolute magnitude is its anchor\'s magnitude, the last resort for a pair\'s primary promoted as the anchor\'s companion.'),
+  'colour.own': outcomeCode('The minted record\'s B−V is the row\'s own observed colour.'),
+  'colour.spectral-derived': outcomeCode('The minted record\'s B−V is the intrinsic colour of its spectral class (Ballesteros 2012, /data/papers/index.md#ballesteros2012), the row carrying no colour of its own.'),
+  'colour.none': outcomeCode('The minted record has no colour of its own and no derivable spectral class, so it bakes the solar B−V.'),
+  'dust.edenhofer2024.absmag-and-ci': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from absmag, and A_V/R_V from the observed B−V.`),
+  'dust.edenhofer2024.absmag-only': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from absmag; the B−V is intrinsic, so it is left as it is.`),
+  'dust.edenhofer2024.ci-only': outcomeCode(`${EDENHOFER_AV} at the minted position, as A_V/R_V, is subtracted from the observed B−V; the absmag is its spectral class\'s, intrinsic, so it is left as it is.`),
+  'dust.edenhofer2024.not-applied': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from neither value: the absmag is its spectral class\'s and the B−V intrinsic.`),
   'spectral.ms-from-own-absmag': outcomeCode('The minted record\'s spectral class is a main-sequence estimate from its own absolute magnitude, the row\'s type being its primary\'s or blank.'),
   'constellation.split-from-anchor': outcomeCode('The minted record\'s position falls in another IAU constellation than its anchor\'s.'),
   'desig-con.from-anchor': outcomeCode('The adopted record carried no designation constellation and takes its anchor\'s.'),
@@ -37,7 +51,14 @@ const FACET_CODES = {
 };
 type Facet = keyof typeof FACET_CODES;
 
-const brightnessFacet = (source: CompanionAbsmagSource): Facet => `brightness.${BRIGHTNESS_CODES[source]}`;
+const brightnessFacet = (source: CompanionAbsmagSource): `brightness.${(typeof BRIGHTNESS_CODES)[CompanionAbsmagSource]}` => `brightness.${BRIGHTNESS_CODES[source]}`;
+
+function dustFacet(b: MintedBrightness): Extract<Facet, `dust.${string}`> {
+  const absmag = companionAbsmagIsObserved(b.source);
+  const ci = b.ci === 'own';
+  if (absmag) return ci ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only';
+  return ci ? 'dust.edenhofer2024.ci-only' : 'dust.edenhofer2024.not-applied';
+}
 
 export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'dropped.compound-comp': outcomeCode('The row\'s component letter is an unresolved aggregate of components that have rows of their own, so it is not one star.', 'retire'),
@@ -91,6 +112,16 @@ type ParamsOf<B extends Branch> =
   : B extends `adopted.${string}` ? Via & { record: string; recurated?: string }
   : Via;
 
+type FacetParamsOf<F extends Facet> =
+  F extends `dust.${string}` ? { av: string }
+  : Record<string, never>;
+
+type FacetEntry = readonly [Facet, LineageParams];
+type BareFacet = { [F in Facet]: FacetParamsOf<F> extends Record<string, never> ? F : never }[Facet];
+
+const facet = <F extends Facet>(f: F, params: FacetParamsOf<F>): FacetEntry => [f, params];
+const flag = (on: boolean, f: BareFacet): FacetEntry | false => on && [f, {}];
+
 export function promotionOriginKey(row: Pick<MultiplesTsvRow, 'systemId' | 'comp'>): string {
   return rowKeyText(MULTIPLES_ROW_KEY, row);
 }
@@ -110,16 +141,16 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
   const row = <B extends Exclude<Branch, Facet>>(branch: B, params: ParamsOf<B>): LineageRow => (
     stageRow(PROMOTION_CODES, key, branch, params as LineageParams, evidence)
   );
-  const decided = (outcome: LineageRow, facets: readonly (Facet | false)[] = []): PromotionDecision => ({
+  const decided = (outcome: LineageRow, facets: readonly (FacetEntry | false)[] = []): PromotionDecision => ({
     outcome,
-    facets: facets.flatMap((f) => (f === false ? [] : [stageRow(PROMOTION_CODES, key, f, {}, [])])),
+    facets: facets.flatMap((f) => (f === false ? [] : [stageRow(PROMOTION_CODES, key, f[0], f[1], [])])),
   });
   switch (o.kind) {
     case 'dropped':
       if (o.reason === 'parked-record') {
         return decided(
           row(o.viaGaia5p ? 'dropped.parked-record.gaia-5p' : 'dropped.parked-record.other-route', { via }),
-          [o.ownedFit && 'fit.owned'],
+          [flag(o.ownedFit, 'fit.owned')],
         );
       }
       if (o.reason === 'anchor-is-component') {
@@ -132,13 +163,15 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
         row(`adopted.${o.via}`, {
           via, record: recordKey(o.idx), ...(o.recurated === null ? {} : { recurated: o.recurated }),
         }),
-        [o.desigConFromAnchor && 'desig-con.from-anchor'],
+        [flag(o.desigConFromAnchor, 'desig-con.from-anchor')],
       );
     case 'minted':
       return decided(row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }), [
-        brightnessFacet(o.brightness.source),
-        o.brightness.spectMsFromOwnAbsmag && 'spectral.ms-from-own-absmag',
-        o.constellationSplit && 'constellation.split-from-anchor',
+        flag(true, brightnessFacet(o.brightness.source)),
+        flag(o.brightness.spectMsFromOwnAbsmag, 'spectral.ms-from-own-absmag'),
+        flag(true, COLOUR_CODES[o.brightness.ci]),
+        facet(dustFacet(o.brightness), dustParams(o.brightness.av)),
+        flag(o.constellationSplit, 'constellation.split-from-anchor'),
       ]);
     case 'primary-unresolved':
       return decided(row('parked.primary-unresolved', { via }));
