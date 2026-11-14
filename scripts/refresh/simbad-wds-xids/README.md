@@ -50,11 +50,12 @@ changed override stales the record.
    its stored spelling (`HD  48915B`) and matches whatever the spacing
    ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)),
    so a reply joins back by what it names (`replyKey`): an HD or HIP reply by
-   its number and letter, a CCDM one by `identKey`. That is what refuses a
-   digit component: Algol's `2` on `HD 19356` asks `HD 193562`, which SIMBAD
-   answers as that other star, a bare number with no letter. The 22 components
-   named `2` reached 4 such stars on 2026-11-14. An HD or HIP reply the
-   namespace rules cannot read fails the parse ledger.
+   its number and letter, a CCDM one by `identKey`. An HD or HIP id is asked
+   only when the namespace rules read it back as that number and letter, so
+   a component they cannot letter (`2`, `Aa1`, `S17`) asks CCDM only: glued
+   on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
+   components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
+   reply the namespace rules cannot read fails the parse ledger.
    An answered WDS ident naming no asked component fails the pull. An alias naming an
    object the lookup already found names that object again and is dropped;
    aliases naming different objects for one component bind it to none, and

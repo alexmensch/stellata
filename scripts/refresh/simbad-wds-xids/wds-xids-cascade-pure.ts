@@ -1,7 +1,7 @@
 // The HD / CCDM / HIP alias cascade for WDS components SIMBAD holds under no WDS ident, and the HIP an object's aliases name. See README.md#the-run.
 
 import type { ParseLedger } from '../simbad/simbad-fetch-pure';
-import { HD, HIP, compose, identKey, parseIdent, type Namespace } from '../simbad/simbad-specs-pure';
+import { HD, HIP, compose, identKey, parseIdent, type Namespace, type ParsedIdent } from '../simbad/simbad-specs-pure';
 import { componentId, type WdsComponent } from './wds-components-pure';
 
 export const CASCADE_STRATEGIES = ['HD', 'CCDM', 'HIP'] as const;
@@ -38,17 +38,20 @@ export interface CascadeCandidate {
 
 const LETTERED = [HD, HIP] as const;
 
-const letteredKey = (ns: Namespace, number: string, letter: string): string => `${ns.name} ${number} ${letter}`;
+/** The number and letter a parsed HD or HIP id names; null for a bare number or an id the namespace rules cannot read. */
+const letteredKey = (ns: Namespace, parsed: ParsedIdent): string | null =>
+  parsed.kind === 'component' ? `${ns.name} ${parsed.number} ${parsed.letter}` : null;
 
-/** An HD or HIP id by the number and letter it names, so `HD 193562` never answers `HD 19356` + `2`; a bare or unreadable one (which fails `ledger`) by none; any other id by `identKey`. */
+/** An HD or HIP id by the number and letter it names, so `HD 193562` never answers `HD 19356` + `2`, and an unreadable one fails `ledger`; any other id by `identKey`. */
 export function replyKey(id: string, ledger: ParseLedger): string | null {
   const ns = LETTERED.find((n) => id.startsWith(n.prefix));
   if (ns === undefined) return identKey(id);
-  const alias = catalogueAlias(ns, id, ledger);
-  return alias === null || alias.letter === null ? null : letteredKey(ns, alias.number, alias.letter);
+  const parsed = parseIdent(ns, id);
+  ledger.note(parsed);
+  return letteredKey(ns, parsed);
 }
 
-/** Each unresolved component's CCDM id, and its letter on every HD and HIP a resolved sibling holds, by the key a reply joins on. An id two components would ask keeps the first. */
+/** Each unresolved component's CCDM id, and its letter on every HD and HIP a resolved sibling holds, by the key a reply joins on; a component no HD or HIP id can letter (`2`, `Aa1`) asks CCDM only. An id two components would ask keeps the first. */
 export function cascadeCandidates(
   unresolved: readonly WdsComponent[],
   siblingOids: ReadonlyMap<string, readonly number[]>,
@@ -60,7 +63,10 @@ export function cascadeCandidates(
     if (!out.has(key)) out.set(key, { id, component, strategy });
   };
   const addLettered = (ns: Namespace, number: string | undefined, component: WdsComponent): void => {
-    if (number !== undefined) add(letteredKey(ns, number, component.component), compose(ns, `${number}${component.component}`), component, ns === HD ? 'HD' : 'HIP');
+    if (number === undefined) return;
+    const id = compose(ns, `${number}${component.component}`);
+    const key = letteredKey(ns, parseIdent(ns, id));
+    if (key !== null) add(key, id, component, ns === HD ? 'HD' : 'HIP');
   };
   for (const c of unresolved) {
     const ccdm = `CCDM J${c.wdsId}${c.component}`;

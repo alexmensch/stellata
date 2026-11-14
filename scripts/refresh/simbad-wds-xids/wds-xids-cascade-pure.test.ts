@@ -65,6 +65,14 @@ describe('cascadeCandidates', () => {
     expect(out.get(key('HIP 32349 B') ?? '')?.strategy).toBe('HIP');
   });
 
+  it('asks a component no HD or HIP id can letter under its CCDM id only, so Algol\'s 2 never asks HD 193562', () => {
+    for (const component of ['2', 'Aa1']) {
+      const c = { wdsId: '03082+4057', component };
+      const out = cascadeCandidates([c], new Map([[c.wdsId, [1]]]), new Map([[1, '19356']]), new Map([[1, '14576']]));
+      expect(asked(out)).toEqual([`CCDM J03082+4057${component}`]);
+    }
+  });
+
   it('asks an id two components share once, and only CCDM where no sibling holds an HD or HIP', () => {
     const shared = cascadeCandidates([siriusB, { wdsId: SIRIUS, component: 'B' }], new Map([[SIRIUS, [1]]]), new Map([[1, '48915']]), new Map());
     expect(asked(shared)).toEqual(['CCDM J06451-1643B', 'HD 48915B']);
@@ -83,12 +91,9 @@ describe('cascadeRecoveries', () => {
     expect(out.hits).toEqual({ HD: 1, CCDM: 0, HIP: 0 });
   });
 
-  it('refuses an HD reply naming another number, which a digit component fused onto the asked one spells', () => {
-    const algol = { wdsId: '03082+4057', component: '2' };
-    const asked = cascadeCandidates([algol], new Map([[algol.wdsId, [1]]]), new Map([[1, '19356']]), new Map());
-    expect([...asked.values()].map((c) => c.id)).toContain('HD 193562');
+  it('refuses an HD reply naming a bare number', () => {
     const ledger = parseLedger();
-    expect(cascadeRecoveries([{ id: 'HD 193562', oid: 2577251 }], asked, new Set(), ledger).recoveries.size).toBe(0);
+    expect(cascadeRecoveries([{ id: 'HD 12345', oid: 111 }], candidates, new Set(), ledger).recoveries.size).toBe(0);
     expect(ledger.check('t').kind).toBe('pass');
   });
 
