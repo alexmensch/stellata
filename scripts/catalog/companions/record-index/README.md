@@ -57,8 +57,9 @@ AB already resolved B. Where a component carries no identifier of its own
 AND its parent does, the re-home is the only thing that resolves the pair at
 all: WDS 02536-6420's Ba resolves to nothing while B (HD 18341, an addition)
 and synth Bb both ship, and `binaries.bin` renders the pair through B. A
-parent slot that resolves to nothing leaves the primary on its own resolve. `rendered` carries the result; `own` keeps each
-end's own resolve for the readers that ask which records a row backs.
+parent slot that resolves to nothing leaves the primary on its own resolve.
+`rendered` carries the result; `own` keeps each end's own resolve for the
+readers that ask which records a row backs.
 
 ## The sidecar and how a component resolves
 
@@ -92,7 +93,8 @@ file through.
 `resolvePairs` is the one walk over the pairs, and every reader takes its
 answer: the wings pass, the overlap gate's exemption, the multiplicity member
 set, the component designations, and — through `catalog-pair-ends.json` —
-the `binaries.bin` writer (`/scripts/binaries/runtime-binaries-pure.ts`). `/tests/integration/multi-star-regression.test.ts`
+the `binaries.bin` writer (`/scripts/binaries/runtime-binaries-pure.ts`).
+`/tests/integration/multi-star-regression.test.ts`
 still pins the baked catalogue against the real artifact.
 
 **`bySynth` also carries bridged keys.** A component whose row carries no
