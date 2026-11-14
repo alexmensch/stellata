@@ -210,8 +210,7 @@ export interface BindingVerdict {
 }
 
 export type VerdictAction =
-  /** Every instance of the letter rebinds to the source, under the tier an
-   *  instance of the letter already holding it carries. */
+  /** Every instance of the letter: README.md#choices-the-outputs-rest-on */
   | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia }
   | { readonly kind: 'unbind'; readonly targets: readonly UnbindTarget[] };
 
