@@ -9,4 +9,10 @@ describe('ascending', () => {
     expect(['b', 'B', 'a'].sort(compareCodeUnits)).toEqual(['B', 'a', 'b']);
     expect(ascending(7, 7)).toBe(0);
   });
+
+  it('refuses at compile time to order strings against numbers', () => {
+    const mixed: (string | number)[] = ['10', 9];
+    // @ts-expect-error a string never orders against a number
+    mixed.sort(ascending);
+  });
 });

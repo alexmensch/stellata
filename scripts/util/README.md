@@ -29,7 +29,8 @@ same thing — single-use helpers stay with their consumer.
   list or set per map key, created on first use, in first-seen key order.
   The binaries stages' indexes and grids group through it.
 - `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
-  comparator (numbers and bigints by value, strings by code unit), and
+  comparator (numbers and bigints by value, strings by code unit; a string
+  against a number does not compile), and
   `compareCodeUnits`, its string case: the same order on every machine,
   unlike `localeCompare`.
 

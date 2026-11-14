@@ -1,7 +1,9 @@
 // The one ascending three-way comparator, and its string case. See README.md.
 
 /** Ascending order by `<`: numeric for numbers and bigints, code-unit for strings. */
-export function ascending<T extends string | number | bigint>(a: T, b: T): number {
+export function ascending(a: string, b: string): number;
+export function ascending(a: number | bigint, b: number | bigint): number;
+export function ascending(a: string | number | bigint, b: string | number | bigint): number {
   return a < b ? -1 : a > b ? 1 : 0;
 }
 
