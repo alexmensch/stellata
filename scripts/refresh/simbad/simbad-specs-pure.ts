@@ -28,8 +28,26 @@ export type LadderName = (typeof WIDENING_LADDER)[number]['name'];
 
 export const compose = (ns: Namespace, suffix: string): string => `${ns.prefix}${suffix}`;
 
-/** What SIMBAD matches an id on: README.md#two-invariants-the-adql-depends-on. */
+/** An id without its whitespace, case kept: the key a reply asked whole joins back to its request on (README.md#two-invariants-the-adql-depends-on). */
 export const identKey = (id: string): string => id.replace(/\s+/g, '');
+const fold = (key: string): string => key.toLowerCase();
+/** What SIMBAD matches an id on: whitespace dropped and case folded (README.md#two-invariants-the-adql-depends-on). */
+export const simbadMatchKey = (id: string): string => fold(identKey(id));
+
+export type ReplyJoin<T> =
+  | { readonly kind: 'asked'; readonly value: T }
+  | { readonly kind: 'folded' }
+  | { readonly kind: 'unasked' };
+
+/** A reply's key against the keys asked: `folded` when it equals one only case-folded, so names another id than any asked (README.md#two-invariants-the-adql-depends-on). */
+export function replyJoiner<T>(asked: ReadonlyMap<string, T>): (key: string) => ReplyJoin<T> {
+  const folded = new Set([...asked.keys()].map(fold));
+  return (key) => {
+    const value = asked.get(key);
+    if (value !== undefined) return { kind: 'asked', value };
+    return folded.has(fold(key)) ? { kind: 'folded' } : { kind: 'unasked' };
+  };
+}
 export const likePattern = (ns: Namespace): string => `${ns.prefix}%`;
 
 /** A numeric namespace's id with a component letter after its number (`HIP 55203A`, `HIP 12345 A`): SIMBAD also holds the bare number for the same object. */

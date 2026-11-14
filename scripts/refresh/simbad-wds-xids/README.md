@@ -42,17 +42,31 @@ changed override stales the record.
 
 1. **Ident lookup.** Each component's ident against SIMBAD's `ident` table,
    `SIMBAD_BATCH_SIZE` per query. An ident SIMBAD answers under two objects
-   fails the pull: an id names one object.
+   fails the pull: an id names one object. SIMBAD matches ids case-folded,
+   so asking `…Ab` can answer the stored `…AB`: an answer naming an asked
+   component only case-folded (`simbadMatchKey`) names another component,
+   is dropped and printed in the run log, and the asked one goes on to the
+   cascade. An answer naming no asked component even case-folded fails the
+   pull.
 2. **The cascade**, only for a component the lookup missed in a system where
    it found another. The found siblings' HD and HIP numbers (the first of
    each in id order), then the missed component's letter on each, plus its
    CCDM id: `HD 48915B`, `HIP 32349B`, `CCDM J06451-1643B`. SIMBAD answers in
-   its stored spelling (`HD  48915B`), so a reply joins back on `identKey`
-   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)).
-   An answered WDS ident naming no asked component fails the pull. An alias naming an
-   object the lookup already found names that object again and is dropped;
-   two aliases naming different objects keep the first in SIMBAD's id
-   order, and the run log prints each such conflict.
+   its stored spelling (`HD  48915B`) and matches whatever the spacing
+   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)),
+   so a reply joins back by what it names (`replyKey`): an HD or HIP reply by
+   its number and letter, a CCDM one by `identKey`. An HD or HIP id is asked
+   only when the namespace rules read it back as that number and letter, so
+   a component they cannot letter (`2`, `Aa1`, `S17`) asks CCDM only: glued
+   on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
+   components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
+   reply the namespace rules cannot read fails the parse ledger. A reply
+   naming an asked alias only case-folded is dropped and printed in the run
+   log, and one naming none even so fails the pull, as in the lookup. An alias
+   naming an object the lookup already found names that object again and is
+   dropped; aliases naming different objects for one component bind it to
+   none, and the run log prints each such conflict, so neither the reply
+   order nor where a batch boundary falls decides a binding.
 3. **Overrides** replace whatever the first two found.
 4. **Cross-IDs** for every object: `main_id` from `basic`, the HIP and Gaia
    DR3 ids from `ident`. A bare HIP wins; a lettered one (`HIP 55203B`)
@@ -61,6 +75,10 @@ changed override stales the record.
    for is still written, with those cells empty: α Cen A and B.
 
 ## The request and the gates
+
+Every guard here and in [Overrides](#overrides) fails the pull rather than
+skip: a skipped id, override or file loses a binding with nothing in the
+output to show it.
 
 - **Band**: between `MIN_COMPONENT_REACH` (36%) of the components and all of
   them, since each binds at most one object; measured 2026-11-09, 23,669 of
@@ -78,7 +96,9 @@ changed override stales the record.
 `data/simbad/wds_xids_overrides.tsv` (`wds_id`, `component`, `simbad_oid`,
 `reason`, `#` comments) pins an object for a component neither the lookup
 nor the cascade reaches; [Provenance](/data/simbad/README.md#provenance)
-names today's rows. Every cell is required and one component takes one row.
+names today's rows. Every cell is required, `simbad_oid` is plain digits,
+and one component takes one row. The file is required too: no overrides is
+the header alone.
 
 ## The committed table
 
