@@ -137,8 +137,9 @@ explains the expectation, it does not excuse a miss.
 J1991.25 to the WDS coordinate epoch first, then as stored: AT-HYG's HIP rows
 sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under propagation).
 With propagation the grid search widens a cell each way so a high-PM star
-stored in a neighbouring cell is still a candidate. Stage 2 calls
-`pairAthygMatches` without blend inheritance; Stage 3 calls it with.
+stored in a neighbouring cell is still a candidate. A secondary whose own
+match misses rides its primary's row, the match's origin `blend`; Stage 2
+binds only `own` matches, Stage 3 takes both.
 
 ## The binding-integrity audit
 
@@ -213,12 +214,11 @@ The two stages compose:
 - **Stage 2** binds identifiers — sets `athyg` always on match,
   and surfaces `gaia` / `hip` from the row when the row carries them
   (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
-  Opts OUT of secondary blend-inheritance because copying the
-  primary's AT-HYG row to the secondary slot would also propagate the
-  primary's Gaia source onto the secondary.
+  Binds only `own` matches: a `blend` match would carry the primary's
+  AT-HYG row, and with it the primary's Gaia source, onto the secondary.
 - **Stage 3** synthesizes astrometry — `routePairs`
   routes any remaining `unresolved` component through the same
-  cascade, opting INTO blend-inheritance so Hipparcos-unresolved
+  cascade, taking `blend` matches too, so Hipparcos-unresolved
   pairs (A, B sharing one AT-HYG row at sub-AU separation) both
   emit `astrometry_via=athyg_position`.
 

@@ -44,13 +44,10 @@ describe('pairAthygMatches', () => {
   const pairs = [decomposed(pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 0.0, thetaLast: 0 }), { primary: {}, secondary: {} })];
   const athyg = [athygAt({ ra: 100, dec: 0, gaia: '111' })];
 
-  it('gives a ρ = 0 secondary its primary\'s row only when blend inheritance is allowed', () => {
-    const allowed = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: true });
-    expect(allowed.matches).toEqual([
+  it('gives a ρ = 0 secondary its primary\'s row, inherited as a blend', () => {
+    expect(pairAthygMatches(pairs, athyg, { skip: () => false }).matches).toEqual([
       { componentIdx: 0, athygIdx: 0, origin: OWN },
       { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'blend') },
     ]);
-    const refused = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: false });
-    expect(refused.matches).toEqual([{ componentIdx: 0, athygIdx: 0, origin: OWN }]);
   });
 });

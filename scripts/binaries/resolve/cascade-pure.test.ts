@@ -286,6 +286,13 @@ describe('resolveViaPosition', () => {
     expect(ids(r.secondary)).toMatchObject({ gaiaSourceId: '222', resolveVia: 'athyg_gaia_native' });
   });
 
+  it('binds no ρ = 0 secondary to its primary\'s row: the primary\'s source would bind to it too', () => {
+    const pair = pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 0, thetaLast: 0 });
+    const { pairs: [r] } = resolveViaPosition([decomposed(pair, { primary: {}, secondary: {} })], [athygAt({ ra: 100, dec: 0, gaia: '111' })]);
+    expect(r.primary.gaia?.value).toBe('111');
+    expect([r.secondary.gaia, r.secondary.athyg]).toEqual([null, null]);
+  });
+
   it('leaves a bound component alone', () => {
     const pair = pairAt({ components: 'AB', ra: 100, dec: 0 });
     const { pairs: [r] } = resolveViaPosition(

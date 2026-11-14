@@ -121,7 +121,7 @@ export function routePairs(pairs: readonly DecomposedPair[], indices: Identifier
   const routed = components.map((c) => routeAstrometry(c, c.gaia === null ? null : minRho.get(c.gaia.value) ?? null, indices));
   const athygRows = components.map((c) => c.athyg);
   const fallback = pairAthygMatches(pairs, athyg, {
-    skip: (i) => routed[i].astrometryVia !== 'unresolved', allowBlendInherit: true,
+    skip: (i) => routed[i].astrometryVia !== 'unresolved',
   });
   for (const m of fallback.matches) {
     const synth = fromAthygPosition(athyg[m.athygIdx]);

@@ -95,8 +95,6 @@ export interface SiblingClaimedMatch {
 export interface AthygMatchOptions {
   /** Components that take no part. */
   readonly skip: (i: number, c: ResolvedComponent) => boolean;
-  /** Stage 3 opts in; Stage 2 does not, since the row's Gaia source would bind to the secondary too. */
-  readonly allowBlendInherit: boolean;
 }
 
 /** Primaries match the pair's precise coord; secondaries the (ρ, θ)-predicted
@@ -150,7 +148,7 @@ export function pairAthygMatches(
       matches.push({ componentIdx: i, athygIdx: match, origin: OWN });
       return;
     }
-    if (opts.allowBlendInherit && primaryIdx !== null) {
+    if (primaryIdx !== null) {
       matches.push({ componentIdx: i, athygIdx: primaryIdx, origin: inheritedFrom(primaryToken, 'blend') });
     }
   });

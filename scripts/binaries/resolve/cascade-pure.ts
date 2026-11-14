@@ -276,13 +276,11 @@ export function resolveViaCcdm(
 export function resolveViaPosition(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
 ): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
-  const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, {
-    skip: (_i, c) => c.gaia !== null,
-    allowBlendInherit: false,
-  });
+  const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, { skip: (_i, c) => c.gaia !== null });
   const w = working(pairs);
   const out = w.components;
   for (const m of matches) {
+    if (m.origin.kind !== 'own') continue;
     const c = out[m.componentIdx];
     const row = athyg[m.athygIdx];
     if (c.athyg === null) c.athyg = own(row);
