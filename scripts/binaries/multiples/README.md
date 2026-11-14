@@ -122,7 +122,9 @@ from, blank exactly when the identifier is: `own`, or `<kind>:<token>` for one
 copied from another component of the system — `blend:Aa`, `letter:Aa`,
 `parent:A`, `partner:Ca`. Stage 2 records them as it binds
 ([Identifier origins](../resolve/README.md#identifier-origins)); a standalone
-row's SIMBAD identifiers are `own`.
+row's SIMBAD identifiers are `own`. `resolve_via` is `unresolved` exactly
+when `gaia_source_id` is blank: `GaiaFields` carries the three columns as
+one value, and the codec refuses either other pairing.
 
 `hd` carries the component's own HD number, with the pair primary
 falling back to the coord-validated ORB6 entry's HD (stashed on the

@@ -125,11 +125,6 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
     expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
   });
 
-  it('writes no row with a Gaia source tagged unresolved', () => {
-    const tagged = s6.rows.filter((row) => row.gaiaSourceId !== null && row.resolveVia === 'unresolved');
-    expect(tagged.map((row) => `${row.systemId} ${row.comp}`)).toEqual([]);
-  });
-
   it('hands main frozen rows, and logs the Stage 6 lines', () => {
     expect([Object.isFrozen(s6), Object.isFrozen(s6.rows), Object.isFrozen(s6.rows[0])]).toEqual([true, true, true]);
     expect(log.filter((line) => line.startsWith('multiples.tsv: ') || line.startsWith('spect provenance: '))).toHaveLength(2);

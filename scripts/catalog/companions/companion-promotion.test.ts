@@ -2875,7 +2875,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       const ownFit = blendedRows.map((r) => (r.comp === 'B'
         ? {
           ...r, hip: 7980, hipOrigin: OWN, astrometryVia: 'gaia_5p' as const,
-          gaiaSourceId: '405578335904111745', gaiaOrigin: OWN, ...placement,
+          gaiaSourceId: '405578335904111745', gaiaOrigin: OWN, resolveVia: 'simbad_xid' as const, ...placement,
         }
         : r));
       const { codes } = promote(

@@ -3,7 +3,7 @@
 import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { OWN, RESOLVE_VIA, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
+import { OWN, RESOLVE_VIA, type GaiaVia, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
 /** Lower is stronger evidence. */
@@ -27,8 +27,6 @@ export function own<T>(value: T): Bound<T> {
 export function inheritAs<B extends Bound<unknown>>(b: B, origin: IdOrigin): B {
   return { ...b, origin };
 }
-
-export type GaiaVia = Exclude<ResolveVia, 'unresolved'>;
 
 /** A Gaia source, where the component came by it, and the tier that found it. */
 export interface GaiaBinding extends Bound<string> {

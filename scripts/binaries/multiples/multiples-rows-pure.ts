@@ -12,7 +12,7 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
-import { resolveViaOf, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { ownGaia, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import type { AnchorOffsets } from './anchor-offsets-pure';
 import { gaiaPhotometryAbsmagCi } from './gaia-photometry-pure';
 import { pairMagnitudes, wdsDmag, type PairMagnitudes } from './pair-photometry-pure';
@@ -85,7 +85,7 @@ function pairSide(c: ResolvedComponent, astrometry: ComponentAstrometry, indices
 type ComponentFields = Pick<
   MultiplesRecordFields,
   'comp' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
-  | 'source' | 'resolveVia' | 'astrometryVia' | 'spectVia' | 'photometryVia'
+  | 'source' | 'astrometryVia' | 'spectVia' | 'photometryVia'
 > & GaiaFields & HipFields;
 
 /** `primaryAthyg` is null on the primary's own row. */
@@ -112,7 +112,7 @@ function componentFields(
   return {
     comp: c.component, ...hipFields(c.hip), ...gaiaFields(c.gaia), hd: athyg?.hd ?? c.hd, ...positionFields(position),
     absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
-    resolveVia: resolveViaOf(c), astrometryVia, spectVia, photometryVia,
+    astrometryVia, spectVia, photometryVia,
   };
 }
 
@@ -220,9 +220,9 @@ export function standaloneRow(
   return {
     systemId: `${xid.wdsId}-_${xid.component}`, comp: xid.component, hd: null,
     ...hipFields(xid.hip === null ? null : { value: xid.hip, origin: OWN }),
-    ...gaiaFields(xid.gaiaSourceId === null ? null : { value: xid.gaiaSourceId, origin: OWN }),
+    ...gaiaFields(xid.gaiaSourceId === null ? null : ownGaia(xid.gaiaSourceId, 'simbad_xid')),
     ...positionFields(position), absmag: null, ci: null, spect, name: xid.simbadMainId, source: 'simbad', regime: 0,
-    resolveVia: xid.gaiaSourceId === null ? 'unresolved' : 'simbad_xid', astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
+    astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
     ...NO_ORBIT_FIELDS,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null, dmag: null, magPri: null, magSec: null,
     ...anchorFields(xid.wdsId, xid.component, anchors),
