@@ -62,13 +62,15 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
   it('throws on a gaia_source_id that is not digits, naming the line', () => {
     const text = 'hip\tgaia_source_id\tangular_distance\n9\tnot-a-number\t0.1\n';
     expect(() => parseGaiaHipXmatchTsv(text, FROM)).toThrow(/:2: gaia_source_id: "not-a-number" is not a source_id/);
+    const padded = 'hip\tgaia_source_id\tangular_distance\n9\t000\t0.1\n';
+    expect(() => parseGaiaHipXmatchTsv(padded, FROM)).toThrow(/:2: gaia_source_id: "000" is not a source_id/);
   });
 
-  it('skips partial-numeric hip and all-zero gaia_source_id', () => {
+  it('skips partial-numeric hip and the zero gaia_source_id', () => {
     const text = [
       'hip\tgaia_source_id\tangular_distance',
       '12abc\t111\t0.1', // partial-numeric hip: parseInt would keep 12
-      '13\t000\t0.1', // all-zero gaia_source_id is the "none" sentinel
+      '13\t0\t0.1', // gaia_source_id 0 is the "none" sentinel
       '14\t222\t0.1',
     ].join('\n');
     const m = parseGaiaHipXmatchTsv(text, FROM);
@@ -101,7 +103,7 @@ describe('gaia-xmatch / parseGaiaTycXmatchTsv', () => {
     '1-381-1\t222\t0.050',
     '3105-2070-1\t333\t0.010',
     '\t444\t0.010',
-    '9-9-9\t000\t0.010',
+    '9-9-9\t0\t0.010',
   ].join('\n');
 
   it('keys on the unpadded tyc string and keeps the nearest match', () => {
@@ -110,7 +112,7 @@ describe('gaia-xmatch / parseGaiaTycXmatchTsv', () => {
     expect(m.get('3105-2070-1')).toBe('333');
   });
 
-  it('skips empty tyc and the all-zero gaia_source_id sentinel', () => {
+  it('skips empty tyc and the zero gaia_source_id sentinel', () => {
     expect(parseGaiaTycXmatchTsv(TEXT, FROM).size).toBe(2);
   });
 

@@ -43,7 +43,7 @@ function bestNeighbourAccumulator<K>(
   const fold = (row: TableRow<string>): void => {
     const keyRaw = row.raw(spec.keyColumn);
     const src = row.sourceId(GAIA_COL);
-    if (!keyRaw || src === null || /^0+$/.test(src)) return;
+    if (!keyRaw || src === null || src === '0') return;
     const key = spec.parseKey(keyRaw);
     if (key === null) return;
     if (keep && !keep.has(key)) return;
