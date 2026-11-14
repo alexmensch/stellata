@@ -1,7 +1,7 @@
 // The lineage build:catalog's allocation asks: membership's files from the last build:membership, placement's and promotion's from this build.
 
 import { PROMOTION_ADMISSION_CODES, PROMOTION_CODES } from '../catalog/companions/promotion-lineage-pure';
-import type { IdentityRow } from '../catalog/lineage/identity-pure';
+import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LINEAGE_STAGES } from '../catalog/lineage/lineage-stages';
 import { codeEffects } from '../catalog/lineage/reason-codes/reason-codes-pure';

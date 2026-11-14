@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { IdentityRow } from '../lineage/identity-pure';
+import type { IdentityRow } from '../lineage/identity/identity-pure';
 import { identityLookup, multiplesComponentJoin } from './membership-lineage-pure';
 
 const identity = (key: string, hip: string): IdentityRow =>

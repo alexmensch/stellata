@@ -6,7 +6,7 @@ import {
 } from './parked-ledger-pure';
 import {
   RECORD_KEY_COLUMNS, recordKey, recordKeyCells, rowRecordIdentifiers,
-} from '../../lineage/identity-pure';
+} from '../../lineage/identity/identity-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie

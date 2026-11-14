@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { artifactText, isReadable } from '../../util/sources/source';
-import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
-import { readTable } from '../../util/tsv/table-pure';
-import { INHERITED_SPINE, spineLine } from '../spine/inherited-spine-tsv';
+import { artifactText, isReadable } from '../../../util/sources/source';
+import { sourceRowRef, sourceRowRefText } from '../../../util/sources/row-ref-pure';
+import { readTable } from '../../../util/tsv/table-pure';
+import { INHERITED_SPINE, spineLine } from '../../spine/inherited-spine-tsv';
 
 describe.skipIf(!isReadable(INHERITED_SPINE))('spine origin key', () => {
   it('is each row\'s physical line, as the reader counts it, and no two rows share one', () => {

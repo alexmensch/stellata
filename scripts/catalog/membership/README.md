@@ -165,7 +165,7 @@ gaia_source_id  binding  routes  term  origin_key
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 - `origin_key` is the record's lineage origin key, the same one its lineage
   rows and identity row are keyed on
-  ([Identity](../lineage/README.md#identity--the-origin-source-row)). `readStars`
+  ([Identity](../lineage/identity/README.md)). `readStars`
   carries it onto the record, so a later stage cites a record by it rather
   than re-deriving it from the identifier cells.
 
