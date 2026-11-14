@@ -212,6 +212,8 @@ export interface MintedBrightness {
   ci: CompanionCiVia;
   /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
   av: number;
+  /** False for a class→M_V absmag, which is intrinsic already. */
+  absmagDeExtincted: boolean;
   /** Each post-pass that changed the minted absmag, in the order it ran. */
   adjustments: MintedAdjustment[];
 }
@@ -1183,8 +1185,7 @@ function registerExistingMemberForAnchorDim(
 /** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
  *  raymarch re-adds it without double-counting; a spectral-derived one
  *  (class→M_V) is already intrinsic. */
-/** False for a class→M_V absmag, which is intrinsic already. */
-export function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
+function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
   return source !== 'spectral';
 }
 
@@ -1463,7 +1464,8 @@ function promoteRow(
   }
   const ci = companionCi(row, spectral.info, av);
   const brightness: MintedBrightness = {
-    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustments: [],
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av,
+    absmagDeExtincted: companionAbsmagIsObserved(imputed.source), adjustments: [],
   };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).

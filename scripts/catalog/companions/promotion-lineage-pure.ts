@@ -9,11 +9,9 @@ import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from 
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { dustParams, EDENHOFER_AV } from '../photometry/brightness-colour-lineage-pure';
-import {
-  companionAbsmagIsObserved,
-  type CompanionAbsmagSource, type CompanionCiVia, type MintedAdjustment, type MintedBrightness, type MultiplesTsvRow,
-  type PromotedRow,
-  type PromotionDerivedCounts, type RowOutcome,
+import type {
+  CompanionAbsmagSource, CompanionCiVia, MintedAdjustment, MintedBrightness, MultiplesTsvRow, PromotedRow,
+  PromotionDerivedCounts, RowOutcome,
 } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -57,7 +55,7 @@ type Facet = keyof typeof FACET_CODES;
 const brightnessFacet = (source: CompanionAbsmagSource): `brightness.${(typeof BRIGHTNESS_CODES)[CompanionAbsmagSource]}` => `brightness.${BRIGHTNESS_CODES[source]}`;
 
 function dustFacet(b: MintedBrightness): Extract<Facet, `dust.${string}`> {
-  const absmag = companionAbsmagIsObserved(b.source);
+  const absmag = b.absmagDeExtincted;
   const ci = b.ci === 'own';
   if (absmag) return ci ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only';
   return ci ? 'dust.edenhofer2024.ci-only' : 'dust.edenhofer2024.not-applied';

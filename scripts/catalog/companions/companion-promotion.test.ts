@@ -1204,7 +1204,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   function promoteAt(
     grid: DustGrid,
     rowOverrides: MultiplesRowOverrides,
-  ): Star {
+  ): Star & Pick<ReturnType<typeof promote>, 'codes'> {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
     const primaryRow = multiplesRow({
       comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',
@@ -1215,11 +1215,11 @@ describe('promoteCompanions build-time de-extinction', () => {
       x_pc: pos.x, y_pc: pos.y, z_pc: pos.z, distPc: 40,
       ...rowOverrides,
     });
-    const { newStars } = promote(
+    const { newStars, codes } = promote(
       [primaryRow, secondary], [primaryStar], inputs({ dustGrid: grid }),
     );
     expect(newStars).toHaveLength(1);
-    return newStars[0];
+    return { ...newStars[0], codes };
   }
 
   it('de-extincts observed absmag and de-reddens the row’s own ci', () => {
@@ -1230,6 +1230,7 @@ describe('promoteCompanions build-time de-extinction', () => {
     const noGrid = promoteAt(TRANSPARENT_DUST, observed);
     expect(noGrid.absmag - withGrid.absmag).toBeCloseTo(av, 6);
     expect(noGrid.ci - withGrid.ci).toBeCloseTo(av / R_V, 6);
+    expect(withGrid.codes['promotion.dust.edenhofer2024.absmag-and-ci']).toBe(1);
   });
 
   it('leaves intrinsic spectral-derived absmag and Ballesteros ci untouched', () => {
@@ -1244,6 +1245,7 @@ describe('promoteCompanions build-time de-extinction', () => {
     const noGrid = promoteAt(TRANSPARENT_DUST, intrinsic);
     expect(withGrid.absmag).toBeCloseTo(noGrid.absmag, 6);
     expect(withGrid.ci).toBeCloseTo(noGrid.ci, 6);
+    expect(withGrid.codes['promotion.dust.edenhofer2024.not-applied']).toBe(1);
   });
 });
 
