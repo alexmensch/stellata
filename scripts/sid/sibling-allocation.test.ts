@@ -12,7 +12,7 @@ import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
 import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
-import { identityRows } from '../catalog/lineage/identity-pure';
+import { identityRows } from '../catalog/lineage/identity/identity-pure';
 import { lineageRows, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LOCAL_GROUP_JSON } from '../local-group/local-group-json';
 import { allocateSibling, emitSibling, siblingLineage } from './sibling-allocation';

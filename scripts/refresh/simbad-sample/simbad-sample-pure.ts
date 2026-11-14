@@ -1,5 +1,6 @@
 // The V-stratified SIMBAD sample: its bins, the seeded draw, the derived distance and absolute magnitude, and the pull. See README.md.
 
+import { share } from '../../util/counts/tally-pure';
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
 import { mulberry32 } from '../../util/seeded-random-pure';
 import type { Row } from '../pull/columns-pure';
@@ -7,7 +8,7 @@ import type { SpotRow } from '../pull/gates-pure';
 import type { PhasedPull, Phase, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchIdents, oidOf, parseLedger, simbadPhases } from '../simbad/simbad-fetch-pure';
-import { countFilled, floorCheck, share } from '../simbad/simbad-rows-pure';
+import { countFilled, floorCheck } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, HIP, OID } from '../simbad/simbad-specs-pure';
 import { ascending } from '../../../src/astro-core/order-pure';
 

@@ -1,6 +1,7 @@
 // The SIMBAD value-tier pull: bibcoded rv, parallax, PM, coordinates and B/V fluxes for the value cohort. See README.md.
 
 import type { ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
+import { share } from '../../util/counts/tally-pure';
 import type { Check, DeclaredOutputs, Projection } from '../../util/emit-artifacts';
 import type { PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
@@ -8,7 +9,7 @@ import { GAIA_NATIVE_BINDING, keyedRows, membershipKeys, requestLines, valueCoho
 import { requestReport, resolveMembershipKeys } from '../simbad/resolve-membership-pure';
 import { fetchBasic, fetchFlux, fetchIdents, parseLedger, phaseRecord, simbadPhases } from '../simbad/simbad-fetch-pure';
 import {
-  countFilled, fillLine, floorCheck, fluxBlock, fluxNames, identBlock, identNames, isFilled, share, simbadColumns, simbadRows,
+  countFilled, fillLine, floorCheck, fluxBlock, fluxNames, identBlock, identNames, isFilled, simbadColumns, simbadRows,
 } from '../simbad/simbad-rows-pure';
 import {
   BASIC_BIBCODED_GROUPS, COO_BIBCODE, COO_QUAL, DEC, GAIA_DR3, GJ, HIP, MAIN_ID, OID, PLX_BIBCODE, PLX_ERR, PLX_QUAL,
@@ -44,8 +45,7 @@ export function resolutionChecks(sourceIds: readonly string[], gaiaNative: Reado
   return populations.map(([name, ids]): Check => {
     const label = `Gaia DR3 ident resolution (${name}, ${ids.length} source_ids)`;
     if (ids.length === 0) return { kind: 'pass', report: `${label}: none asked` };
-    const share = ids.filter((sid) => bound.has(sid)).length / ids.length;
-    return floorCheck(label, share, GAIA_RESOLUTION_FLOORS[name], 'the request set or SIMBAD\'s ident table drifted');
+    return floorCheck(label, share(ids.filter((sid) => bound.has(sid)).length, ids.length), GAIA_RESOLUTION_FLOORS[name], 'the request set or SIMBAD\'s ident table drifted');
   });
 }
 

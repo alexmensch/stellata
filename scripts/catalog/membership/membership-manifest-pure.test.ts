@@ -35,7 +35,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { identityRow, recordKey } from '../lineage/identity-pure';
+import { identityRow, recordKey } from '../lineage/identity/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
@@ -1108,6 +1108,13 @@ describe('membership lineage', () => {
     expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
     const fieldLines = summary.split('\n').filter((l) => /^  \S/.test(l)).map((l) => l.trim().split(' ')[0]);
     expect(fieldLines).toEqual([...LABEL_FIELDS]);
+  });
+
+  it('logs a label field no row keys as n/a coverage', () => {
+    const zeroed = Object.fromEntries(Object.keys(result.derived).map((k) => [k, 0])) as MembershipDerivedCounts;
+    const fieldLines = membershipSummary(foldStageLines(MEMBERSHIP_CODES, []), zeroed).split('\n').filter((l) => /^  \S/.test(l));
+    expect(fieldLines).toHaveLength(LABEL_FIELDS.length);
+    for (const line of fieldLines) expect(line).toContain('0 /       0 (n/a)');
   });
 
   it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {

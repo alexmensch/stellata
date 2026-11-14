@@ -1,5 +1,6 @@
 // A pulled table's gates, each an emitArtifacts check: row band, spot rows, coverage and its floor. See README.md#gates.
 
+import { floorVerdict, formatFraction, percentOf, share } from '../../util/counts/tally-pure';
 import type { Check } from '../../util/emit-artifacts';
 import type { Cell } from './columns-pure';
 
@@ -76,17 +77,20 @@ export function spotRowCheck(label: string, cells: Iterable<Cell>, spotRows: rea
 
 /** Each group's and the union's share of `requested`, counted in distinct `idColumn` values, since one id may answer several rows; fails under the floor. */
 export function coverageCheck(label: string, cells: readonly Cell[], idColumn: string, requested: number, coverage: Coverage): Check {
-  const share = (n: number): string => `${n} (${((100 * n) / requested).toFixed(1)}%)`;
+  const reached = (n: number): string => `${n} (${percentOf(n, requested)})`;
   const ids = (has: (cell: Cell) => boolean): number => new Set(cells.filter(has).map((cell) => cell(idColumn))).size;
   const union = ids((cell) => coverage.groups.some((g) => g.has(cell)));
   const report = [
     `${label}: coverage of ${requested} requested`,
-    `  row present ${share(ids(() => true))}`,
-    ...coverage.groups.map((g) => `  ${g.name} ${share(ids(g.has))}`),
-    `  union ${share(union)}`,
+    `  row present ${reached(ids(() => true))}`,
+    ...coverage.groups.map((g) => `  ${g.name} ${reached(ids(g.has))}`),
+    `  union ${reached(union)}`,
   ].join('\n');
   const floor = coverage.floor;
-  return floor === undefined || union >= floor * requested
-    ? pass(report)
-    : fail(`${label}: coverage ${share(union)} is under the floor ${floor}`, report);
+  if (floor === undefined) return pass(report);
+  switch (floorVerdict(share(union, requested), floor)) {
+    case 'meets': return pass(report);
+    case 'under': return fail(`${label}: coverage ${reached(union)} is under the floor ${formatFraction(floor, 0)}`, report);
+    case 'no-denominator': return fail(`${label}: no ids requested, so nothing to rate against the floor ${formatFraction(floor, 0)}`, report);
+  }
 }

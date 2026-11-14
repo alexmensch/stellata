@@ -3,8 +3,8 @@
 import type { ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
 import type { LabelMergeCounts, LabelOverrides } from '../classic-ids/label-merge/label-merge-pure';
 import { fold, prefixed } from '../../util/counts/tally-pure';
-import type { IdentityRow } from '../lineage/identity-pure';
-import { identityRow } from '../lineage/identity-pure';
+import type { IdentityRow } from '../lineage/identity/identity-pure';
+import { identityRow } from '../lineage/identity/identity-pure';
 import type { LineageRow } from '../lineage/lineage-row-pure';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import { indexPrimaries, type PrimaryTables } from '../spine/primaries-audit-pure';

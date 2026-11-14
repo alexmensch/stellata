@@ -3,6 +3,7 @@
 // variable-star samples, space-motion velocity coverage.
 
 import { HEADER_SIZE, RECORD_SIZE } from '../../../src/catalog-format/record/catalog-pure';
+import { percentOf } from '../../util/counts/tally-pure';
 import { KM_S_TO_PC_YR, VELOCITY_SANITY_CEILING_KM_S } from '../distance/velocity';
 import {
   type CatalogRecord,
@@ -13,6 +14,7 @@ import {
 
 const catalog = await loadCatalog({ withSearchIndex: true });
 const { magic, version, count, nameTableOffset, nameTableLength } = catalog.header;
+const ofAll = (n: number): string => `${n} / ${count} (${percentOf(n, count)})`;
 
 console.log(`magic=${magic} version=${version} count=${count} recordSize=${RECORD_SIZE}`);
 console.log(`nameTableOffset=${nameTableOffset} nameTableLength=${nameTableLength}`);
@@ -46,11 +48,10 @@ console.log('\nGaia DR3 Apsis coverage:');
       matched++;
     }
   }
-  const pct = (n: number) => ((n / count) * 100).toFixed(1);
-  console.log(`  any Apsis field: ${matched} / ${count} (${pct(matched)}%)`);
-  console.log(`  Teff gspphot:    ${teffGspphot} / ${count} (${pct(teffGspphot)}%)`);
-  console.log(`  Teff gspspec:    ${teffGspspec} / ${count} (${pct(teffGspspec)}%)`);
-  console.log(`  Teff either:     ${teffEither} / ${count} (${pct(teffEither)}%)`);
+  console.log(`  any Apsis field: ${ofAll(matched)}`);
+  console.log(`  Teff gspphot:    ${ofAll(teffGspphot)}`);
+  console.log(`  Teff gspspec:    ${ofAll(teffGspspec)}`);
+  console.log(`  Teff either:     ${ofAll(teffEither)}`);
 }
 
 console.log('\nSpace-motion velocity coverage:');
@@ -66,8 +67,7 @@ console.log('\nSpace-motion velocity coverage:');
       fastest = r;
     }
   }
-  const pct = ((moving / count) * 100).toFixed(1);
-  console.log(`  non-zero velocity: ${moving} / ${count} (${pct}%)`);
+  console.log(`  non-zero velocity: ${ofAll(moving)}`);
   if (fastest) {
     console.log(
       `  fastest: ${fastest.name ?? `#${fastest.i}`} at ` +
@@ -92,9 +92,8 @@ console.log('\nMultiplicity status coverage:');
     if (r.multiplicityStatus === 1) resolved++;
     else if (r.multiplicityStatus === 2) unresolved++;
   }
-  const pct = (n: number) => ((n / count) * 100).toFixed(1);
-  console.log(`  resolved:   ${resolved} / ${count} (${pct(resolved)}%)`);
-  console.log(`  unresolved: ${unresolved} / ${count} (${pct(unresolved)}%)`);
+  console.log(`  resolved:   ${ofAll(resolved)}`);
+  console.log(`  unresolved: ${ofAll(unresolved)}`);
   console.log(`  single:     ${count - resolved - unresolved} / ${count}`);
 }
 

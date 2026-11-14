@@ -8,7 +8,7 @@ import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
-import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
+import { identityText, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
