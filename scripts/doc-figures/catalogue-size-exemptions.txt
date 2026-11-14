@@ -24,7 +24,6 @@ src/client/loaders/README.md	388,071	history
 src/client/util/README.md	983,068	history
 src/client/webgpu/extinction/README.md	388,071	history
 src/client/webgpu/extinction/dispatch-order/README.md	983,068	history
-scripts/catalog/membership/magnitude-term/README.md	973,595	other-count
 scripts/catalog/membership/magnitude-term/README.md	595,002	other-count
 scripts/catalog/membership/magnitude-term/README.md	594,998	other-count
 scripts/perf/synthetic-catalog/README.md	312k	other-count

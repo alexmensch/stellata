@@ -447,7 +447,7 @@ describe('binary-flags-pure / hasGaiaQualityDistance', () => {
   it('rejects every tier resting on someone else\'s measurement', () => {
     for (const via of [
       'hip2_parallax', 'cns5_plx', 'gliese_plx', 'simbad_plx',
-      'pair_member_parallax', 'lmc_kinematic', 'curated', 'none',
+      'pair_member_parallax', 'lmc_kinematic', 'curated',
     ] as const) {
       expect(hasGaiaQualityDistance(via), via).toBe(false);
     }

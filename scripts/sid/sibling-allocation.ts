@@ -1,14 +1,20 @@
 // One sibling artifact's namespace allocated over the committed registry: each record's SID, its partition's registry files, and its allocation stage's lineage. See README.md#sibling-artifact-stamping.
 
+import { resolve } from 'node:path';
+
 import type { FileHashes } from '../util/build-stamp';
+import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
+import { REPO_ROOT } from '../util/paths';
+import { countSnapshotCheck } from '../util/snapshot-check';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
-import { stageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
+import type { StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { countedStageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
 import { allocate, type Upstream } from './allocate-pure';
-import { objectOutcomeRows } from './allocation-lineage-pure';
+import { objectOutcomeRows, type ObjectOutcomeCodes } from './allocation-lineage-pure';
 import { allocationRun, loadRegistry, registryTexts } from './registry-io';
 import { inPartition } from './registry-partitions-pure';
 import {
@@ -24,7 +30,6 @@ export const SIBLING_LINEAGE_BUDGET: LineageBudget = { gzipBytes: 1_900, writeMs
 export interface SiblingAllocation<N extends SiblingPartition> {
   /** Parallel to the items allocated. */
   readonly sids: readonly number[];
-  readonly minted: number;
   /** The partition's files, or null when the allocation appended nothing, so such a run rewrites no registry file. */
   readonly registry: Readonly<Record<RegistryKey<N>, string>> | null;
   /** One row per object, under its origin. */
@@ -57,7 +62,6 @@ export function allocateSibling<N extends SiblingPartition, I extends string>(
   const appended = allocation.minted.length > 0 || allocation.events.length > 0;
   return {
     sids: allocation.outcomes.map((o) => o.sid),
-    minted: allocation.minted.length,
     registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : null,
     lines: objectOutcomeRows(spec.codes, objects, allocation.outcomes).map((row) => stageLineageLine(spec.codes, row)),
     identity: objects.map(({ origin, designations }) => ({
@@ -68,15 +72,15 @@ export function allocateSibling<N extends SiblingPartition, I extends string>(
 
 type SiblingStem<S extends string> = S | `${S}.identity`;
 
-/** The sibling's allocation stage, ready for emitSibling: header, baseline, diff and budget as every stage has them. */
+/** The sibling's allocation stage, ready for emitSibling. See README.md (sibling-allocation.ts entry). */
 export function siblingLineage<S extends string>(
   spec: SiblingArtifactSpec<S>,
   allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
-): StageLineageEmission<SiblingStem<S>, S> {
+): StageLineageEmission<SiblingStem<S>, S> & { readonly counts: StageCounts<ObjectOutcomeCodes> } {
   const { stage } = spec.lineage;
-  return stageLineage<SiblingStem<S>, S>({
+  const { counts, ...emission } = countedStageLineage({
     layout,
     spec: spec.lineage,
     inputs,
@@ -90,7 +94,14 @@ export function siblingLineage<S extends string>(
     budget: SIBLING_LINEAGE_BUDGET,
     invariants: [],
     argv: process.argv.slice(2),
+  }, spec.codes);
+  const countsCheck = countSnapshotCheck<StagedCounts>({
+    snapshotPath: resolve(REPO_ROOT, spec.countsSnapshot),
+    actual: nestByStage([stage], [{ stage, block: { kind: 'counted', counts } }]),
+    failureLabel: `${spec.step} count`,
+    script: spec.step,
   });
+  return { ...emission, counts, checks: [...emission.checks, countsCheck] };
 }
 
 /** Lands the artifact and its lineage, and the registry partition when the allocation appended, in one emitArtifacts call. */

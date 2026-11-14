@@ -23,7 +23,7 @@ describe('ORBIT_VIA_PROPERTIES', () => {
 describe('multiples.tsv codec', () => {
   const header = MULTIPLES_COLUMNS.join('\t');
   const cells = (over: Record<string, string>) => MULTIPLES_COLUMNS.map((c) => over[c] ?? ({
-    source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'gaia_5p', orbit_via: 'none',
+    system_id: '00001+0001-AB', comp: 'A', source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'gaia_5p', orbit_via: 'none',
     spect_via: 'none', photometry_via: 'none', a_via: 'none', orbit_role: 'primary',
   } as Record<string, string>)[c] ?? '').join('\t');
 
@@ -40,6 +40,13 @@ describe('multiples.tsv codec', () => {
   it('rejects a source_id that is not digits', () => {
     expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ gaia_source_id: '12a' })}\n`))
       .toThrow(/multiples\.tsv:2: gaia_source_id: "12a" is not a source_id/);
+  });
+
+  it('rejects a row no synthetic key composes from', () => {
+    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ system_id: '03082+4057-AB', comp: ' ' })}\n`))
+      .toThrow(/comp is empty/);
+    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ system_id: 'NODASH', comp: 'A' })}\n`))
+      .toThrow(/system_id "NODASH" names no WDS id/);
   });
 
   it('rejects orbital elements no bound orbit has', () => {

@@ -18,7 +18,7 @@ import type { LoadedTable } from './load-table';
 import { MANUAL_STEPS } from './manual-step-outputs';
 import { pipelineTree } from '../pipeline-tree';
 import { loadedRepoTable } from './repo-table';
-import { describesItself, isBuild, selectSteps, type Edge, type ReadsEdge } from './step-table-pure';
+import { describesItself, isBuild, selectSteps, type Edge } from './step-table-pure';
 import { MIRROR_STEPS, STEPS } from './steps';
 
 const SLOW_TIMEOUT_MS = 60_000;
@@ -32,7 +32,7 @@ beforeAll(async () => {
 }, SLOW_TIMEOUT_MS);
 
 const edgeFiles = (from: string, to: string): string[] => loaded.graph.edges
-  .filter((e: Edge): e is ReadsEdge => e.kind === 'reads' && e.from === from && e.to === to)
+  .filter((e: Edge) => e.from === from && e.to === to)
   .flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)));
 
 const isBuildStep = (name: string): boolean => isBuild(loaded.steps.get(name)!.step);

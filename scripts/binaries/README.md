@@ -34,7 +34,8 @@ why:
 
 1. [`load/`](load/README.md) — every reference catalogue read, the
    magnitude gate, the blank-components rescue and the synthesized ORB6
-   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)).
+   orphan and MSC inner pairs ([Sub-pair synthesis](load/README.md#sub-pair-synthesis)),
+   and the one Gaia NSS solution kept per source ([Gaia NSS: one solution per source](load/README.md#gaia-nss-one-solution-per-source)).
 2. [`resolve/`](resolve/README.md) — each WDS component bound to a Gaia DR3
    source and / or a HIP ([What each tier decides](resolve/README.md#what-each-tier-decides)),
    then the binding-integrity audit.
@@ -88,7 +89,10 @@ scripts/binaries/
                                   orbit route's elements, regime and
                                   Stage 6 estimates), per-column
                                   decimal places,
-                                  P and a positive and 0 ≤ e < 1 — and
+                                  P and a positive and 0 ≤ e < 1, a
+                                  comp and a WDS id on every row, so
+                                  every row composes a synthetic key —
+                                  and
                                   the only parse of the file. Its test
                                   round-trips the committed file byte for
                                   byte. Its rowKey cites a row by

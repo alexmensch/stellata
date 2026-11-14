@@ -3,7 +3,8 @@
 import {
   evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes, retired, type StageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import { codeCount, outcomeCode, refusalCode, stageCodes, retired, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
+import { percentOf } from '../../util/counts/tally-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { CascadeRefusal } from '../cascade-result';
 import type { ColourIndexResolution, CiVia } from './colour-index-pure';
@@ -121,17 +122,15 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];
 
 /** Brightness-colour's count block: its lines folded per live code. */
-export type BrightnessColourCounts = Readonly<Record<(typeof BRIGHTNESS_COLOUR_CODES.live)[number], number>>;
-
-type LiveBranch = typeof BRIGHTNESS_COLOUR_CODES extends StageCodes<string, string, infer L> ? L : never;
+export type BrightnessColourCounts = StageCounts<typeof BRIGHTNESS_COLOUR_CODES>;
 
 export function brightnessColourSummary(counts: BrightnessColourCounts): string {
-  const n = (branch: LiveBranch): number => counts[`${BRIGHTNESS_COLOUR_CODES.stage}.${branch}`];
+  const n = codeCount(BRIGHTNESS_COLOUR_CODES, counts);
   const simbad = (ns: SimbadNamespace): number => n(SPECTRAL_SIMBAD_BRANCHES[ns]);
   const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
   const tycho2Total = TYCHO2_RANGE_SIDES.reduce((sum, side) => sum + n(V_TYCHO2_BRANCHES[side]), 0);
   const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
-  const pct = (k: number): string => `${((k / records) * 100).toFixed(1)}%`;
+  const pct = (k: number): string => percentOf(k, records);
   return [
     `  V cascade: gaia_riello ${n('v.gaia-riello')}, printed_hip ${n('v.printed-hip')}, `
       + `tycho2 ${tycho2Total} `

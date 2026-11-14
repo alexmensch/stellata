@@ -9,16 +9,15 @@ folder's code is built to.
 A stage returns a typed outcome per record; lineage is those outcomes
 serialised. The target is that a stage's count snapshot folds from its
 lineage lines, keyed on its reason codes ([Counts fold from lineage](#counts-fold-from-lineage)),
-so the snapshot is a projection of lineage, never kept in step with it. Membership is part-way there:
-its review-queue and label-drop counts fold from the outcomes, while the
-derivation, admission and component counters are still kept by hand beside
-them (stellata-hhaw.45.23). Promotion's per-row counters all fold from its
-outcomes; its post-passes act on records and keep their own. Coherence's,
-brightness-colour's and naming's snapshot keys are their codes, folded from
-their lines (naming's beside a code-less authority tally,
-[Naming lineage](../naming/README.md#naming-lineage)). The record walk's placement
-counts fold from each row's outcome (`../parse/walk-stats-pure.ts`), still
-under their old keys (stellata-hhaw.45.23).
+so the snapshot is a projection of lineage, never kept in step with it. Membership's
+keys are its codes, beside a derived block
+([Membership lineage](../membership/README.md#membership-lineage)). Coherence's,
+brightness-colour's, promotion's and naming's snapshot keys are their codes,
+folded from their lines (naming's beside a code-less authority tally,
+[Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
+which act on records, file a derived block), and so are placement's,
+beside a derived block of the shipped tiers
+([Placement counts](../distance/README.md#placement-counts)).
 
 ## Files in this area
 
@@ -208,8 +207,7 @@ which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
-Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude` row whose
-`own_candidate` is outside `ALLOWED_OWN_CANDIDATE_REASONS`
+Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
 ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
@@ -220,8 +218,9 @@ A stage's count-snapshot keys are its reason codes, so the code list is the
 one owner of every counted tier. `foldStageLines(codes, lines)`
 (`lineage-row-pure.ts`, over `../../util/counts/tally-pure.ts`'s `fold`) counts a
 stage's lines per live code, every live code present, typed
-`Record<code, number>` from the stage's `live` codes — a retired or
-historical code is no key, and a line carrying one throws; each code is declared in
+`Record<code, number>` from the stage's `live` codes — a retired,
+historical or admission code ([Reason codes](reason-codes/README.md#the-rules))
+is no key, and a line carrying one throws; each code is declared in
 one role, so a stage's outcomes and refusals fold into one record and no
 code is counted in both. A line of another stage, or in a role its code is
 not declared in, throws. `countedStageLineage` (`stage-lineage.ts`) is
@@ -253,13 +252,14 @@ one build's worth in.
 
 The real stages' write time and disk are pinned as a budget: each stage
 passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
-it fails its emission. Membership, measured 2026-10-29 on the full tree:
-1,355,182 rows (128 MB plain, 15.1 MB gzipped) plus 976,040 identity rows
-(85 MB, 22.3 MB), 37.4 MB together. The timed window is everything lineage
+it fails its emission. Membership, measured 2026-11-12 on the full tree:
+1,651,103 rows (165 MB plain, 17.4 MB gzipped) plus 975,840 identity rows
+(22.3 MB gzipped), 39.6 MB together, 1.4 MB under its budget: a change that
+adds a row to every record raises the budget with it. The timed window is everything lineage
 adds to the build — the baseline headers' file re-hash, the base's input
 re-hash each verdict asks for, producing the lines (`lines`, a function the
 window calls: a spill reads back there), the diff, rendering,
-gzip and invariants: about 5.8 s with a diff
+gzip and invariants: about 8.2 s with a diff
 against a full baseline. The merge-base input re-hash measured 128 ms for
 membership on a branch where 9 of its 163 inputs differ (2026-11-04,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
@@ -276,12 +276,9 @@ letters; the binding-review columns ride the rows the queue lists — a
 contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
-11.2 s (2026-11-06), against 6.8 s with no diff. Promotion, measured 2026-11-01: <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> rows, one
-per `multiples.tsv` row, plus 31,908 identity rows (<!-- count:build-catalog/companionPromoted -->14,676<!-- /count --> minted companions,
-17,232 rows it retires, parks or merges), 0.95 MB gzipped in 0.2 s;
-`PROMOTION_LINEAGE_BUDGET` pins 1.04 MB and 10 s: a CI run with a diff took
-6.9 s (2026-11-07), almost all of it the baseline phase. Every other stage's
+11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
+[promotion's](../companions/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
 [size's](../spectral/README.md#size-lineage),
@@ -421,28 +418,5 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 
 ## The promotion stage
 
-`build:catalog`'s companion promotion is the stage after coherence
-(`../companions/promotion-lineage-pure.ts`). `promoteCompanions` returns one
-`PromotedRow` per `multiples.tsv` row, keyed on that row
-(`multiples:<system_id>/<comp>`), and `promotionLineageRow` serialises its
-`RowOutcome` (`../companions/README.md`) through an exhaustive `switch`. A
-pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
-A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
-to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
-both park, since promotion ships no record for the star the row names, so a
-SID keyed on its identifiers stays in the ledger with that cause. Each row cites as evidence the record its pair
-resolved to and its WDS root's anchor; every merge-effect row names the
-record it merges into in `params.record`. Both are origin keys: every record
-carries its own from the manifest's `origin_key` column
-(`../membership/README.md#columns`), so these are joins on the origin key.
-
-A minted companion is founded on its row, so promotion writes its identity
-row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
-does every row whose code retires, parks or merges, keyed on the `hip` and
-`gaia_source_id` cells it arrived with and the synthetic key a mint from it
-would carry (`PromotedRow.synthKey`), less any designation a membership
-manifest record or one of promotion's own mints already carries, so an
-orphaned SID keyed on one of them joins to that row's cause and never to a
-row that merely cites another stage's star. A cloud's or Local Group
-object's is its sibling allocation stage's; every other record's is
-membership's.
+`build:catalog`'s companion promotion is the stage after coherence; its
+contract lives beside its module, in [Promotion lineage](../companions/README.md#promotion-lineage).

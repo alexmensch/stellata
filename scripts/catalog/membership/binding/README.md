@@ -86,9 +86,10 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/derivedRejected.mag -->319<!-- /count --> candidates on G − V and <!-- count:membership-manifest/derivedRejected.sibling -->115<!-- /count --> on sibling-letter attribution
-(`derivedRejected`); falling off the end is a derived refusal.
-`derivedUngateable` (<!-- count:membership-manifest/derivedUngateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
+gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->319<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->115<!-- /count --> on sibling-letter attribution
+(`binding.gate-mag`, `binding.gate-sibling`; an addition's refusals are
+`addition-binding.*`); falling off the end is a derived refusal.
+`binding.ungateable` (<!-- count:membership-manifest/membership.binding.ungateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
 under any tier, so only the sibling arm weighs its candidates — the same
 `unweighable: 'no_printed_v'` the overlay gate reaches.
 
@@ -110,7 +111,7 @@ HIP 62686 and HIP 52774 carry only a HIP and a TYC SIMBAD files under B; their
 Hipparcos entry lives on SIMBAD's system object, and `multiples.tsv` anchors
 component A on it. Rescued, the row sat on B's source and companion promotion
 minted a synthetic B beside it — one star drawn twice. 30 rows are that shape;
-they stay refused and count under `magnitudeRowsOwnCandidate.refused_sibling`.
+they stay refused and count under `admit.magnitude.refused-sibling`.
 
 **It never outranks a candidate that passes on its own.** A TYC alone is not a
 component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C
@@ -156,8 +157,8 @@ pulled row — the request under-covering the derivation — fails the build: ea
 derivation hands its `unweighedNoPulledRow` to membership lineage as a
 `binding.unweighed-no-pulled-row` row, one per record and source, citing the
 addition items whose own derivation weighed it, and `MEMBERSHIP_INVARIANTS`
-forbids the code ([Invariants](../../lineage/README.md#invariants)). `derivedWeighedNullGMag` (<!-- count:membership-manifest/derivedWeighedNullGMag -->77<!-- /count -->) is Gaia publishing no G for a
-source it has a row for, which no request can supply.
+forbids the code ([Invariants](../../lineage/README.md#invariants)). `binding.weighed-null-g` (<!-- count:membership-manifest/membership.binding.weighed-null-g -->77<!-- /count -->) is a candidate on a row Gaia
+publishes no G for, which no request can supply.
 
 ## A Gaia id for a bright star is an identity statement, not a data source
 

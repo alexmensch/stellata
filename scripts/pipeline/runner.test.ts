@@ -112,17 +112,6 @@ function writeDerivedStamp(name: string, out: string, manifest: string, request:
   }));
 }
 
-function pyStep(name: string, out: string, body: string, extra: Partial<StepEntry> = {}): StepEntry {
-  write(`steps/${name}.py`, `
-from pathlib import Path
-import os
-${body}
-with open(${JSON.stringify(log())}, "a") as f:
-    f.write(${JSON.stringify(name)} + "\\n")
-`);
-  return { name, kind: 'build', language: 'python', entry: at(`steps/${name}.py`), outputs: [at(out)], after: [], snapshots: [], ...extra } as StepEntry;
-}
-
 async function load(steps: StepEntry[], registryFiles: string[] = []): Promise<Loaded> {
   const table: StepTable = { steps, registryFiles };
   return loadTable(table, { root, deriveInputs: async (entry) => reads.get(entry) ?? [] });
@@ -393,16 +382,6 @@ export const OUT = declareOutputs({}, [{ dir: ${JSON.stringify(at('fam'))}, memb
       reason: 'its committed outputs differ from this build (fam/m-0): run pnpm run f and commit them',
     } satisfies Verdict);
   });
-
-  it('fails a Python step whose committed output its build moved', async () => {
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', `Path(${JSON.stringify(at('p.out'))}).write_text(Path(${JSON.stringify(at('p.in'))}).read_text() + "!")`)];
-    await run(steps, ['p']);
-    commit('p.out');
-    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'fresh' });
-    write('p.in', 'y');
-    expect((await run(steps, ['p'], { verifyCommitted: true })).kinds).toEqual({ p: 'failed' });
-  });
 });
 
 describe('buildFiles', () => {
@@ -542,173 +521,18 @@ if sys.argv[1:] == ["--describe"]:
     expect(result.verdicts.get('astro')).toMatchObject({ kind: 'failed', reason: expect.stringContaining('the file it projects is missing') });
   });
 
+  it('lists a kept loop by the files it runs through', async () => {
+    write('req.tsv', 'r');
+    const steps = [tsStep('request', 'req.tsv', ['astro.tsv']), pullStep('astro', 'astro.tsv', 'req.tsv')];
+    const { lines } = await run(steps, ['request']);
+    expect(lines.filter((l) => l.startsWith('kept loop:'))).toEqual(['kept loop: astro → request through astro.tsv']);
+  });
+
   it('never runs a manual step under --force', async () => {
     write('req.tsv', 'r1');
     const steps = [pullStep('astro', 'astro.tsv', 'req.tsv')];
     expect((await run(steps, ['astro'], { force: true })).kinds).toEqual({ astro: 'fresh' });
     expect(read('astro.tsv')).toBe('pulled');
-  });
-});
-
-describe('runSteps — Python build steps', () => {
-  const rename = (out: string): string => `
-tmp = Path(${JSON.stringify(at(`${out}.tmp`))})
-tmp.write_text(Path(${JSON.stringify(at('p.in'))}).read_text() + "!")
-os.replace(tmp, ${JSON.stringify(at(out))})
-`;
-
-  it('stamps what the run read and finds it fresh until an input moves', async () => {
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', rename('p.out'))];
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
-    expect(read('p.out')).toBe('x!');
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-    write('p.in', 'y');
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
-  });
-
-  it('stales a step when a folder it listed gains a file', async () => {
-    write('folder/one', '');
-    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('folder'))})`;
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', listing)];
-    await run(steps, ['p']);
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-    write('folder/two', '');
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'built' });
-  });
-
-  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens a step', async () => {
-    write('.gitignore', 'folder/.cache*\n');
-    write('folder/one', '');
-    write('folder/.cache-a', '');
-    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('folder'))})`;
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', listing)];
-    await run(steps, ['p']);
-    rmSync(at('folder/.cache-a'));
-    write('folder/.cache-b', '');
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-  });
-
-  it('records no input for a listed folder git ignores', async () => {
-    write('.gitignore', 'scratch/\n');
-    write('scratch/one', '');
-    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('scratch'))})`;
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', listing)];
-    await run(steps, ['p']);
-    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('p'), 'utf8'));
-    expect(stamp.recorded.listings).toEqual({});
-    write('scratch/two', '');
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-  });
-
-  it('records no input for a git-ignored folder the step listed and then deleted', async () => {
-    write('.gitignore', 'scratch/\n');
-    write('scratch/one', '');
-    const listing = `${rename('p.out')}\nos.listdir(${JSON.stringify(at('scratch'))})\nimport shutil\nshutil.rmtree(${JSON.stringify(at('scratch'))})`;
-    write('p.in', 'x');
-    const steps = [pyStep('p', 'p.out', listing)];
-    await run(steps, ['p']);
-    const stamp = JSON.parse(readFileSync(pipelineTree(root).buildStamp('p'), 'utf8'));
-    expect(stamp.recorded.listings).toEqual({});
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-  });
-
-  it('stales a step when a path it probed appears', async () => {
-    write('p.in', 'x');
-    const body = `${rename('p.out')}\nfrom scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`;
-    const steps = [pyStep('p', 'p.out', body)];
-    await run(steps, ['p']);
-    expect((await run(steps, ['p'])).kinds).toEqual({ p: 'fresh' });
-    write('maybe.txt', '');
-    expect((await run(steps, ['p'])).verdicts.get('p')).toEqual({ kind: 'built' });
-  });
-
-  it('fails a run that writes its own stamp, which only the runner writes', async () => {
-    write('p.in', 'x');
-    const stamp = pipelineTree(root).buildStamp('p');
-    const body = `${rename('p.out')}\nPath(${JSON.stringify(stamp)}).parent.mkdir(parents=True, exist_ok=True)\nPath(${JSON.stringify(stamp)}).write_text("{}")`;
-    const result = await run([pyStep('p', 'p.out', body)], ['p']);
-    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: `p wrote ${stamp}, which it does not declare` });
-  });
-
-  it('fails a run that writes a file it does not declare', async () => {
-    write('p.in', 'x');
-    const body = `${rename('p.out')}\nPath(${JSON.stringify(at('stray.txt'))}).write_text("s")`;
-    const result = await run([pyStep('p', 'p.out', body)], ['p']);
-    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: `p wrote ${at('stray.txt')}, which it does not declare` });
-  });
-
-  it('fails a run that reads another step\'s output without running after it', async () => {
-    write('a.in', 'x');
-    write('a.out', 'stale copy');
-    const body = `Path(${JSON.stringify(at('a.out'))}).read_text()\nPath(${JSON.stringify(at('p.out'))}).write_text("p")`;
-    const result = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body)], ['p', 'a']);
-    expect(result.verdicts.get('p')).toMatchObject({ kind: 'failed' });
-    const covered = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body, { after: ['a'] } as Partial<StepEntry>)], ['p']);
-    expect(covered.kinds).toEqual({ a: 'fresh', p: 'built' });
-  });
-
-  it('fails a run that names a step in after but reads none of its outputs', async () => {
-    write('a.in', 'x');
-    const body = `Path(${JSON.stringify(at('p.out'))}).write_text("p")`;
-    const result = await run([tsStep('a', 'a.out', ['a.in']), pyStep('p', 'p.out', body, { after: ['a'] } as Partial<StepEntry>)], ['p']);
-    expect(result.verdicts.get('p')).toEqual({ kind: 'failed', reason: 'p runs after a but read none of its outputs' });
-  });
-
-  it('counts a pull it runs after as covered when that edge closes a kept loop, and no other step through the loop', async () => {
-    write('req.tsv', 'r');
-    write('w.in', 'x');
-    write('w.out', 'w(x)');
-    const body = [
-      `Path(${JSON.stringify(at('astro.tsv'))}).read_text()`,
-      `Path(${JSON.stringify(at('req.tsv'))}).write_text("r")`,
-    ].join('\n');
-    const loop = (extraRead = ''): StepEntry[] => [
-      tsStep('w', 'w.out', ['w.in']),
-      pyStep('p', 'req.tsv', `${extraRead}${body}`, { after: ['astro'] } as Partial<StepEntry>),
-      pullStep('astro', 'astro.tsv', 'req.tsv', 'SELECT *', ['w.out']),
-    ];
-    const kept = await run(loop(), ['p', 'astro']);
-    expect(kept.kinds).toEqual({ w: 'built', p: 'built', astro: 'fresh' });
-
-    const throughLoop = await run(loop(`Path(${JSON.stringify(at('w.out'))}).read_text()\n`), ['p']);
-    expect(throughLoop.verdicts.get('p')).toEqual({
-      kind: 'failed', reason: `p read ${at('w.out')}, an output of w, without running after it`,
-    });
-  });
-
-  it('lists a kept loop by the files it runs through, or by the after entry that declares it', async () => {
-    write('req.tsv', 'r');
-    write('sptype-req.tsv', 's');
-    const steps = [
-      tsStep('request', 'req.tsv', ['astro.tsv']),
-      pullStep('astro', 'astro.tsv', 'req.tsv'),
-      pyStep('binaries', 'sptype-req.tsv', `Path(${JSON.stringify(at('sptype-req.tsv'))}).write_text("s")`, { after: ['sptype'] } as Partial<StepEntry>),
-      pullStep('sptype', 'sptype.tsv', 'sptype-req.tsv'),
-    ];
-    const { lines } = await run(steps, ['request', 'binaries']);
-    expect(lines.filter((l) => l.startsWith('kept loop:'))).toEqual([
-      'kept loop: astro → request through astro.tsv',
-      'kept loop: sptype → binaries via an after entry',
-    ]);
-  });
-
-  it.each([
-    ['lists', `os.listdir(${JSON.stringify('OUTDIR')})`],
-    ['probes', `from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify('OUTFILE')}))`],
-  ])('fails a run that %s another step\'s output without running after it', async (how, probeLine) => {
-    write('a.in', 'x');
-    write('made/a.out', 'stale copy');
-    const line = probeLine.replace('"OUTDIR"', JSON.stringify(at('made'))).replace('"OUTFILE"', JSON.stringify(at('made/a.out')));
-    const body = `${line}\nPath(${JSON.stringify(at('p.out'))}).write_text("p")`;
-    const result = await run([tsStep('a', 'made/a.out', ['a.in']), pyStep('p', 'p.out', body)], ['p', 'a']);
-    expect(result.verdicts.get('p')).toEqual({
-      kind: 'failed',
-      reason: `p read ${at(how === 'lists' ? 'made' : 'made/a.out')}, an output of a, without running after it`,
-    });
   });
 });
 

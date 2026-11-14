@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { allocate, type SidObject } from './allocate-pure';
+import { allocate, type Admission, type SidObject } from './allocate-pure';
 import {
-  ALLOCATION_CODES, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
+  ALLOCATION_CODES, allocationAdmissionCode, allocationSids, allocationSidRows, allocationSidsText, allocationLineageRows,
+  allocationSummary,
 } from './allocation-lineage-pure';
-import { stageLineageLine } from '../catalog/lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
+import { foldStageLines, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 
 const objects: SidObject[] = [
   { designations: ['hip:1'], kind: 'star', label: 'a', origin: 'spine:1', admission: { kind: 'lineage' } },
@@ -42,6 +44,48 @@ describe('allocation lineage', () => {
       ['spine:7', 'allocation.parked', '{"sid":"2","canonical_key":"gaia_dr3:2","cause":"placement.park.no-position"}'],
     ]);
     for (const r of rows) stageLineageLine(ALLOCATION_CODES, r);
+  });
+
+  it('keys its counts on its row codes; the mint codes are admission codes, a minted row\'s route', () => {
+    expect(ALLOCATION_CODES.live).toEqual([
+      'allocation.resolved', 'allocation.minted', 'allocation.reinstated', 'allocation.merged',
+      'allocation.merged.same-class', 'allocation.retired', 'allocation.parked',
+    ]);
+    for (const branch of ['mint.sol-list', 'mint.shell-list', 'mint.cloud', 'mint.local-group'] as const) {
+      expect(ALLOCATION_CODES.onRows(allocationAdmissionCode(branch))).toBe(false);
+    }
+  });
+
+  it('admits a declared object only under an admission code, in the type', () => {
+    const admitted: Admission = { kind: 'declared', code: allocationAdmissionCode('mint.cloud') };
+    // @ts-expect-error a row code is no admission code
+    const refused: Admission = { kind: 'declared', code: ALLOCATION_CODES.code('resolved') };
+    // @ts-expect-error a row code is no admission branch
+    const unreachable = () => allocationAdmissionCode('resolved');
+    expect([admitted.kind, refused.kind, typeof unreachable]).toEqual(['declared', 'declared', 'function']);
+  });
+
+  it('folds its rows into its count block, a minted row once whatever its route', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    expect(foldStageLines(ALLOCATION_CODES, lines)).toEqual({
+      'allocation.resolved': 1, 'allocation.minted': 2, 'allocation.reinstated': 0, 'allocation.merged': 0,
+      'allocation.merged.same-class': 0, 'allocation.retired': 0, 'allocation.parked': 1,
+    });
+  });
+
+  it('summarises its count block for the build log, each merge code apart', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    expect(allocationSummary(foldStageLines(ALLOCATION_CODES, lines), 2)).toBe(
+      'SID allocation: 3 objects, 2 minted, 0 reinstated; 1 parked, 0 retired, 0 merged, 0 merged by same-as class; 2 new event(s)',
+    );
+  });
+
+  it('fails its snapshot check on a new code until the snapshot is refreshed', () => {
+    const lines = allocationLineageRows(objects, allocation).map((r) => stageLineageLine(ALLOCATION_CODES, r));
+    const { drift, refreshed } = seededCodeCheck(ALLOCATION_CODES, lines);
+    expect(drift.drifted).toBe(true);
+    expect(drift.report).toContain(`allocation.${SEEDED_BRANCH}`);
+    expect(refreshed.drifted).toBe(false);
   });
 
   it('round-trips its identity file, key to SID', () => {

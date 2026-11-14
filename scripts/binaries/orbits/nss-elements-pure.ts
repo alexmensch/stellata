@@ -3,7 +3,7 @@
 import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
-import type { NssOrbitRow } from '../load/gaia-pure';
+import { NSS_SOLUTION_TYPES, type NssOrbitRow } from '../load/gaia-pure';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
@@ -28,26 +28,6 @@ export interface OrbitElements {
   readonly q: number | null;
   readonly distancePc: number | null;
 }
-
-/** What a solution type's columns constrain: `thiele_innes` the photocentre
- *  orbit's A, B, F, G; `eclipsing` a stored inclination and ω; `spectroscopic`
- *  ω at most. */
-export type NssSolutionKind = 'thiele_innes' | 'eclipsing' | 'spectroscopic';
-
-export const NSS_SOLUTION_KINDS: ReadonlyMap<string, NssSolutionKind> = new Map([
-  ['Orbital', 'thiele_innes'],
-  ['OrbitalAlternative', 'thiele_innes'],
-  ['OrbitalAlternativeValidated', 'thiele_innes'],
-  ['OrbitalTargetedSearch', 'thiele_innes'],
-  ['OrbitalTargetedSearchValidated', 'thiele_innes'],
-  ['AstroSpectroSB1', 'thiele_innes'],
-  ['EclipsingBinary', 'eclipsing'],
-  ['EclipsingSpectro', 'eclipsing'],
-  ['SB1', 'spectroscopic'],
-  ['SB1C', 'spectroscopic'],
-  ['SB2', 'spectroscopic'],
-  ['SB2C', 'spectroscopic'],
-]);
 
 export interface Campbell {
   readonly aMas: number;
@@ -95,7 +75,7 @@ const degToRad = (deg: number | null): number | null => (deg === null ? null : d
 
 /** README.md#conventions-the-outputs-rest-on */
 export function nssToCanonicalElements(row: NssOrbitRow, plxMas: number | null): OrbitElements | null {
-  const kind = NSS_SOLUTION_KINDS.get(row.solutionType);
+  const kind = NSS_SOLUTION_TYPES.get(row.solutionType)?.kind;
   if (kind === undefined) return null;
   const angles = ((): Pick<OrbitElements, 'iRad' | 'periastronRad' | 'nodeRad'> => {
     switch (kind) {
@@ -124,7 +104,7 @@ export function nssToCanonicalElements(row: NssOrbitRow, plxMas: number | null):
 /** Period under 3 yr, or a photocentre orbit under 1″; a row stating neither is outside. */
 export function nssInRegime(row: NssOrbitRow): boolean {
   if (row.period !== null && row.period < NSS_PERIOD_THRESHOLD_DAYS) return true;
-  if (NSS_SOLUTION_KINDS.get(row.solutionType) !== 'thiele_innes') return false;
+  if (NSS_SOLUTION_TYPES.get(row.solutionType)?.kind !== 'thiele_innes') return false;
   const c = rowCampbell(row);
   return c !== null && c.aMas < NSS_SEPARATION_THRESHOLD_MAS;
 }

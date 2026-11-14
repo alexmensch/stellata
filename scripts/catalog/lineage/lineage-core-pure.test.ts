@@ -5,7 +5,7 @@ import {
   compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
   paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes } from './reason-codes/reason-codes-pure';
+import { admissionCode, outcomeCode, refusalCode, stageCodes } from './reason-codes/reason-codes-pure';
 
 const CODES = stageCodes('demo', {
   also: outcomeCode('also'),
@@ -62,6 +62,18 @@ describe('foldStageLines', () => {
     expect(counts['demo.gone']).toBeUndefined();
     const retired = stageLineageLine(codes, row('spine:2', 'demo.gone'));
     expect(() => foldStageLines(codes, [retired])).toThrow(/"demo.gone" is not one of the declared variants/);
+  });
+
+  it('keys no admission code, and no row may carry one', () => {
+    const codes = stageCodes('demo', { kept: outcomeCode('kept'), 'mint.list': admissionCode('a listed object') });
+    expect(codes.live).toEqual(['demo.kept']);
+    expect(codes.onRows('demo.mint.list')).toBe(false);
+    const counts = foldStageLines(codes, [stageLineageLine(codes, row('spine:1'))]);
+    expect(counts).toEqual({ 'demo.kept': 1 });
+    // @ts-expect-error an admission code is not a key of the stage's counts
+    expect(counts['demo.mint.list']).toBeUndefined();
+    expect(() => stageLineageLine(codes, row('spine:2', 'demo.mint.list')))
+      .toThrow(/demo.mint.list is an admission code, which no row carries \(key spine:2\)/);
   });
 });
 

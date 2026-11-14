@@ -129,7 +129,7 @@ reaches or agrees with, and 233 empty cells a raw walk would fill. **233 is the
 walk-only figure.** The derivation adds SIMBAD's cross-IDs as a fourth source,
 which settles 11,687 of the 11,721 the walks cannot reach and takes the fills
 to 940 ungated, 791 after both gates — a reader scoping off 233 under-budgets
-by four. The manifest's `derivationOutcome` count carries what the derivation
+by four. The membership stage's `binding.*` codes carry what the derivation
 reaches; nothing compares it against the frozen column any more
 ([The spine side](../membership/README.md#the-spine-side)).
 
@@ -148,9 +148,9 @@ moved that is not a retired gate traces to these four**:
 | `spectralBySimbad` / `spectralFallback` | +4 / −4 | all four: a source_id at walk time resolves SIMBAD sp_type in the walk instead of in a re-classification after it |
 | `ciSpectralDerived` (now `ciVia.spectral_derived`) | +2 | ξ Sco and ξ UMa B — the two with an empty printed `ci` and no Apsis Teff, so the now-parseable class supplied the colour where classIdx=8 had fallen through to solar. **At the swap only:** `stellata-3bsf.12` put a Gaia relation above that tier and the same pull reached these sources, so both now route `ciVia.gaia_relation` and neither is in the 279 ([The ci cascade](../photometry/README.md#the-ci-cascade)) |
 | `vPrintedHip` / `vCatalogued` | +3 / −3 | the three primaries: a HIP reaches the V cascade's printed tier |
-| `companionAlreadyInCatalog` | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
-| `companionRepositionedCollocatedDouble` | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
-| `companionAbsmagWdsMagDerived` | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |
+| `companionAlreadyInCatalog` (now the sum of the `promotion.adopted.*` codes) | +1 | ξ UMa B: its record now carries the source_id, so `findExisting` hits and the pair row returns early |
+| `companionRepositionedCollocatedDouble` (now a build failure, [Collocated-double refusal](../companions/README.md#collocated-double-refusal)) | 1 → 0 | ξ UMa B: that early return precedes the collocated-double merge, which is what used to write the source_id |
+| `companionAbsmagWdsMagDerived` (now `promotion.brightness.wds-mag`) | −1 | ξ UMa B: the early return also precedes `imputeCompanionAbsmag` |
 | `systemCoherenceSystems` (now the sum of the `coherence.anchor.*` codes) | +1 | ξ UMa B: the coherence pass resolves members by source_id then HIP, so B used to collapse onto A's record on the shared HIP 55203 and the root never reached two members |
 | `bjEligible` | −1 | none of the four — the one `tooFar` row the old walk counted as eligible before dropping it; the spine never carried it |
 
@@ -386,7 +386,7 @@ That baseline also predates the four manifest-derived re-pulls
 ([The staleness gate](../../refresh/README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator)), so a move below carries both
 the new binding and the table row it can now reach; two records whose binding
 never changed move for the second reason alone.
-Pins: `derivationOutcome`, `derivedVia` and the review counts in
+Pins: the `membership.binding.*` and `membership.disposition.*` codes in
 `../membership/membership-manifest-expected.json`; per-tier routing in
 `../build-catalog-expected.json`.
 

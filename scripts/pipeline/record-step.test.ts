@@ -54,6 +54,8 @@ ${body}`);
   return { name: 'refresh:pull', kind: 'pull', language: 'python', entry: at('steps/pull.py'), outputs: [at('pull.tsv')] };
 }
 
+const pythonBake = (): ManualStep => ({ name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] });
+
 async function record(steps: StepEntry[], name: string, force = false, args: string[] = []): Promise<RecordOutcome> {
   const loaded = await loadTable({ steps, registryFiles: [] }, { root, deriveInputs: async () => [] });
   if (loaded.kind !== 'loaded') throw new Error(loaded.problems.join('; '));
@@ -209,7 +211,7 @@ sys.path.insert(0, ${JSON.stringify(root)})
 import helper
 Path(${JSON.stringify(at('baked.bin'))}).write_bytes(Path(${JSON.stringify(at('src.png'))}).read_bytes())
 `);
-    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    const step = pythonBake();
     await record([step], step.name);
     expect(Object.keys(stamp(step.name).inputs).sort()).toEqual(['helper.py', 'src.png', 'steps/bake.py']);
     write('helper.py', 'VALUE = 2\n');
@@ -227,7 +229,7 @@ import model
 rungs = Path(${JSON.stringify(at('ladder.ts'))}).read_text().split("[")[1].split("]")[0]
 Path(${JSON.stringify(at('baked.bin'))}).write_text(f"{model.scale(1)} {rungs}")
 `);
-    const step: ManualStep = { name: 'build:bake', kind: 'bake', describes: false, language: 'python', entry: at('steps/bake.py'), outputs: [at('baked.bin')] };
+    const step = pythonBake();
     await record([step], step.name);
     write('model.py', '"""Cloud model."""\n\n# Doubles.\ndef scale(x):\n    """Twice x."""\n    return x * 2  # exact\n');
     write('ladder.ts', '/** Rungs. */\nexport const LADDER = [1, 2]; // generated\n');
@@ -269,8 +271,12 @@ export async function main(): Promise<void> { await writeFile(${JSON.stringify(a
 
   it('holds a first record behind the build writing the file its describe projects, though no record names that file yet', async () => {
     write('clouds.json', '{"shape": "ellipse"}');
+    write('steps/writer-outputs.ts', `
+import { declareOutputs } from ${JSON.stringify(join(REPO_ROOT, 'scripts/util/emit-artifacts'))};
+export const OUT = declareOutputs({ out: ${JSON.stringify(at('clouds.json'))} });
+`);
     const writer: StepEntry = {
-      name: 'build:writer', kind: 'build', language: 'python', entry: at('steps/writer.py'), outputs: [at('clouds.json')], after: [], snapshots: [],
+      name: 'build:writer', kind: 'build', language: 'ts', entry: at('steps/writer.ts'), outputs: { module: at('steps/writer-outputs.ts'), name: 'OUT' },
     };
     const fixture = await projectingBake([writer]);
     const building = await holdLocks(pipelineTree(root).locks, { step: 'build:writer', exclusive: true, shared: [] }, () => {});
@@ -280,5 +286,65 @@ export async function main(): Promise<void> { await writeFile(${JSON.stringify(a
     expect(settled).toBe(false);
     await building.release();
     expect((await recording).kind).toBe('recorded');
+  });
+});
+
+describe('recordStep — what a Python step listed and probed', () => {
+  function bake(body: string): ManualStep {
+    write('steps/bake.py', `
+import os
+from pathlib import Path
+${body}
+Path(${JSON.stringify(at('baked.bin'))}).write_text("baked")
+`);
+    return pythonBake();
+  }
+  const lists = (dir: string): string => `os.listdir(${JSON.stringify(at(dir))})`;
+
+  it('stales the step when a folder it listed gains a file', async () => {
+    write('folder/one', '');
+    const step = bake(lists('folder'));
+    await record([step], step.name);
+    expect(fresh(step)).toBe('fresh');
+    write('folder/two', '');
+    expect(fresh(step)).toBe('stale');
+  });
+
+  it('leaves a git-ignored name out of a listing, so a local cache neither stales nor freshens the step', async () => {
+    write('.gitignore', 'folder/.cache*\n');
+    write('folder/one', '');
+    write('folder/.cache-a', '');
+    const step = bake(lists('folder'));
+    await record([step], step.name);
+    rmSync(at('folder/.cache-a'));
+    write('folder/.cache-b', '');
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('records no input for a listed folder git ignores', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const step = bake(lists('scratch'));
+    await record([step], step.name);
+    expect(stamp(step.name).recorded.listings).toEqual({});
+    write('scratch/two', '');
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('records no input for a git-ignored folder the step listed and then deleted', async () => {
+    write('.gitignore', 'scratch/\n');
+    write('scratch/one', '');
+    const step = bake(`${lists('scratch')}\nimport shutil\nshutil.rmtree(${JSON.stringify(at('scratch'))})`);
+    await record([step], step.name);
+    expect(stamp(step.name).recorded.listings).toEqual({});
+    expect(fresh(step)).toBe('fresh');
+  });
+
+  it('stales the step when a path it probed appears', async () => {
+    const step = bake(`from scripts.util.build_stamp import probe\nprobe(Path(${JSON.stringify(at('maybe.txt'))}))`);
+    await record([step], step.name);
+    expect(fresh(step)).toBe('fresh');
+    write('maybe.txt', '');
+    expect(fresh(step)).toBe('stale');
   });
 });

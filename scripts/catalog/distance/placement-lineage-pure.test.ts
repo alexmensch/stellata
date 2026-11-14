@@ -8,7 +8,7 @@ import { HIP2 } from '../sources/hip2-source';
 import { BAILER_JONES } from './refinement/bailer-jones-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { encodeLineageLine, stageLineageLine } from '../lineage/lineage-row-pure';
-import type { DirectionSolution } from './direction-cascade';
+import type { DirectionSolution, Tycho2SolutionKind } from './direction-cascade';
 import type { ParkedLedgerEntry } from './parallax/parked-ledger-pure';
 import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
@@ -42,7 +42,7 @@ describe('placementLineageRows', () => {
       },
       pmRescue: null,
       bailerJones: { kind: 'override', ref: BJ },
-      lmc: 'not_member',
+      lmc: 'outside_cone',
       rv: {
         kind: 'kept',
         rv: {
@@ -52,7 +52,7 @@ describe('placementLineageRows', () => {
           refusals: [],
         },
       },
-      velocityClamped: false,
+      speed: 'bound',
     };
     expect(placementLineageRows(p)).toEqual([
       {
@@ -72,7 +72,7 @@ describe('placementLineageRows', () => {
         params: '', evidence: [`i352:${SOURCE}`],
       },
       {
-        stage: 'placement', key: 'spine:12', role: 'outcome', code: 'placement.rv.simbad',
+        stage: 'placement', key: 'spine:12', role: 'outcome', code: 'placement.rv.simbad.literature',
         params: '', evidence: ['simbad:9'],
       },
     ]);
@@ -98,13 +98,73 @@ describe('placementLineageRows', () => {
       direction: { via, value: SOLUTION, evidence: [GAIA], refusals: [] },
       pmRescue: { via: 'none', refusals: [] },
       bailerJones: { kind: 'not-applied' },
-      lmc: 'not_member',
+      lmc: 'outside_cone',
       rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
-      velocityClamped: false,
+      speed: 'bound',
     });
     expect(codes(placed('gaia_2p'))).toContain('outcome placement.direction.gaia-2p');
     expect(codes(placed('gaia_5p'))).toContain('outcome placement.direction.gaia-5p');
-    expect(codes(placed('gaia_2p'))).toContain('outcome placement.pm-rescue.none');
+    expect(codes(placed('gaia_2p'))).toContain('outcome placement.pm-rescue.none.unreached');
+  });
+
+  it('codes the Tycho-2 solution, the rescue outcome, the rv band or citation, and the speed band', () => {
+    const base: PlacedPlacement = {
+      kind: 'placed',
+      key: 'spine:1',
+      parallax: { via: 'pair_member_parallax', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+      direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
+      pmRescue: null,
+      bailerJones: { kind: 'not-applied' },
+      lmc: 'outside_cone',
+      rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
+      speed: 'bound',
+    };
+    const tycho2 = (tycho2Solution: Tycho2SolutionKind): PlacedPlacement => (
+      { ...base, direction: { via: 'tycho2', value: { ...SOLUTION, tycho2Solution }, evidence: [], refusals: [] } }
+    );
+    expect(codes(tycho2('mean'))).toContain('outcome placement.direction.tycho2.mean');
+    expect(codes(tycho2('photocentre'))).toContain('outcome placement.direction.tycho2.photocentre');
+    expect(codes(tycho2('observed'))).toContain('outcome placement.direction.tycho2.observed');
+
+    const refusedPm = { tier: 'simbad', reason: 'gaia_release', ref: SIMBAD } as const;
+    expect(codes({ ...base, pmRescue: { via: 'none', refusals: [refusedPm] } }))
+      .toContain('outcome placement.pm-rescue.none.gaia-release-refused');
+
+    const gaiaRv = (errorKmS: number): PlacedPlacement => (
+      { ...base, rv: { kind: 'kept', rv: { via: 'gaia_dr3', value: { kmS: 1, errorKmS }, evidence: [GAIA], refusals: [] } } }
+    );
+    expect(codes(gaiaRv(1))).toContain('outcome placement.rv.gaia-dr3.error-le1');
+    expect(codes(gaiaRv(20.01))).toContain('outcome placement.rv.gaia-dr3.error-gt20');
+    const simbadRv: PlacedPlacement = {
+      ...base,
+      rv: { kind: 'kept', rv: { via: 'simbad', value: { kmS: 1, bibcode: '2022yCat.1355....0G', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] } },
+    };
+    expect(codes(simbadRv)).toContain('outcome placement.rv.simbad.gaia-release');
+
+    expect(codes(base).filter((c) => c.includes('.velocity.'))).toEqual([]);
+    expect(codes({ ...base, speed: 'above_escape' })).toContain('outcome placement.velocity.above-escape');
+    expect(codes({ ...base, speed: 'clamped' })).toContain('outcome placement.velocity.clamped');
+  });
+
+  it('writes the LMC step for every in-cone row and none outside the cone', () => {
+    const placed = (lmc: Extract<Placement, { kind: 'placed' }>['lmc']): Placement => ({
+      kind: 'placed',
+      key: 'spine:1',
+      parallax: { via: 'pair_member_parallax', value: { mas: 2, errMas: 0.1 }, evidence: [GAIA], refusals: [] },
+      direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
+      pmRescue: null,
+      bailerJones: { kind: 'not-applied' },
+      lmc,
+      rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
+      speed: 'bound',
+    });
+    const lmcCodes = (lmc: Parameters<typeof placed>[0]): string[] =>
+      codes(placed(lmc)).filter((c) => c.includes('.lmc-'));
+    expect(lmcCodes('outside_cone')).toEqual([]);
+    expect(lmcCodes('snap')).toEqual(['outcome placement.distance.lmc-kinematic']);
+    expect(lmcCodes('parallax_rules_out')).toEqual(['refused placement.distance.lmc-refused-by-own-parallax']);
+    expect(lmcCodes('pm_outside_gate')).toEqual(['refused placement.distance.lmc-refused-pm-outside-gate']);
+    expect(lmcCodes('no_pm')).toEqual(['refused placement.distance.lmc-refused-no-pm']);
   });
 
   it('writes a rejected radial term as its own outcome, and the steps that only fire when they do', () => {
@@ -120,7 +180,7 @@ describe('placementLineageRows', () => {
         kind: 'rejected',
         rv: { via: 'simbad', value: { kmS: 6824.7, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] },
       },
-      velocityClamped: true,
+      speed: 'clamped',
     };
     expect(codes(p)).toEqual([
       'outcome placement.parallax.curated',
@@ -203,9 +263,9 @@ describe('PLACEMENT_INVARIANTS', () => {
     direction: { via: 'gaia_5p', value: SOLUTION, evidence: [GAIA], refusals: [] },
     pmRescue: null,
     bailerJones,
-    lmc: 'not_member',
+    lmc: 'outside_cone',
     rv: { kind: 'kept', rv: { via: 'none', refusals: [] } },
-    velocityClamped: false,
+    speed: 'bound',
   });
 
   it('names the record whose Bailer-Jones posterior the pull lacks, and passes one it covers', () => {
@@ -229,12 +289,12 @@ describe('the shipped tiers read off a placed row', () => {
     direction: { via: 'gaia_2p', value: { ...SOLUTION, velVia: 'zero' }, evidence: [GAIA], refusals: [] },
     pmRescue: { via: 'tycho2', value: { pmRaMasyr: 1, pmDecMasyr: 1 }, evidence: [], refusals: [] },
     bailerJones: { kind: 'override', ref: BJ },
-    lmc: 'not_member',
+    lmc: 'outside_cone',
     rv: {
       kind: 'kept',
       rv: { via: 'simbad', value: { kmS: 12, bibcode: 'x', ref: SIMBAD }, evidence: [SIMBAD], refusals: [] },
     },
-    velocityClamped: false,
+    speed: 'bound',
   };
 
   it('takes the distance from the last layer that moved it', () => {
@@ -247,11 +307,11 @@ describe('the shipped tiers read off a placed row', () => {
 
   it('credits the rescue for the motion, and nothing once the velocity is zeroed', () => {
     expect(shippedVelocityVia(placed)).toBe('tycho2_pm');
-    expect(shippedVelocityVia({ ...placed, pmRescue: null, direction: { ...placed.direction, value: SOLUTION } }))
+    expect(shippedVelocityVia({ ...placed, pmRescue: null, direction: { via: 'gaia_2p', value: SOLUTION, evidence: [GAIA], refusals: [] } }))
       .toBe('gaia_pm');
-    expect(shippedVelocityVia({ ...placed, velocityClamped: true })).toBe('zero');
+    expect(shippedVelocityVia({ ...placed, speed: 'clamped' })).toBe('zero');
     expect(radialVelocityApplied(placed)).toBe(true);
-    expect(radialVelocityApplied({ ...placed, velocityClamped: true })).toBe(false);
+    expect(radialVelocityApplied({ ...placed, speed: 'clamped' })).toBe(false);
     expect(radialVelocityApplied({ ...placed, rv: { kind: 'kept', rv: { via: 'none', refusals: [] } } })).toBe(false);
   });
 });

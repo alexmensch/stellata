@@ -2,12 +2,11 @@
 
 import { resolve } from 'node:path';
 
-import { compareCountSnapshot } from '../catalog/build-counts';
 import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
-import { snapshotCheck } from '../util/snapshot-check';
+import { countSnapshotCheck } from '../util/snapshot-check';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
 import { binariesCounts } from './counts/binaries-counts';
 import { MULTIPLES_TSV } from './multiples-tsv';
@@ -68,10 +67,9 @@ export async function main(): Promise<void> {
     },
     checks: [
       ...reference.checks,
-      snapshotCheck<StagedCounts>({
+      countSnapshotCheck<StagedCounts>({
         snapshotPath: EXPECTED_COUNTS,
         actual: binariesCounts(results),
-        compare: compareCountSnapshot,
         failureLabel: 'build-binaries count',
         script: 'build:binaries',
       }),

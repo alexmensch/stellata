@@ -25,7 +25,6 @@ export const DIST_VIA_VALUES = [
   'pair_member_parallax',
   'gliese_photometric_plx',
   'curated',
-  'none',
 ] as const;
 
 export type DistVia = (typeof DIST_VIA_VALUES)[number];

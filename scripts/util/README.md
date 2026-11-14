@@ -82,7 +82,8 @@ same thing — single-use helpers stay with their consumer.
   `stamp-path-pure.ts` names the files: `stampPath(name, root)` is
   `build/stamps/<name>.json` with `:` written `-` (`stepFileName`, which names
   a step's lock too).
-  A stamp the runner writes for a Python step also carries `recorded`: the
+  A Python pull's or bake's committed record (`../pipeline/record-step.ts`)
+  also carries `recorded`: the
   folders it listed (`listingHash`, over the sorted names git does not
   ignore, so a local cache in a listed folder reads the same in every
   checkout) and the paths it probed, which `recordedChanges` re-checks; a
@@ -90,19 +91,18 @@ same thing — single-use helpers stay with their consumer.
   slash, so a `.ckpt` folder the pull deleted before exiting still matches
   its directory-only pattern). `ignoredPaths` is the one `git check-ignore`
   call, which `listingHash`, `ignoredDirs` and `../pipeline/record-step.ts` make.
-  `record_run` is how the runner runs a Python step
+  `record_run` is how `record.ts` runs a Python pull or bake
   (`../pipeline/run_python_step.py`): Python's audit hook records, under a
   root, every file the process opens for reading, hashed at its first read
   (a file the step wrote before reading it is not an input), every
-  directory it lists (its sorted names, which the runner hashes; the import
+  directory it lists (its sorted names, which `record.ts` hashes; the import
   system's own scans of `sys.path` are not listings), and every file it
   writes — a rename's target, not its temp file, and not a scratch file it
   deleted — plus each module the step loaded (not those already loaded
   when the recording began: the recorder's own `run_python_step.py`,
   `build_stamp.py`, `stamp_hash.py` and `paths.py`, so editing the recorder stales no
   step), nothing under `.venv` or `__pycache__` included, into a JSON
-  record the runner turns
-  into the step's stamp. An existence check opens nothing, so a step probes
+  record `record.ts` turns into the step's committed record. An existence check opens nothing, so a step probes
   through `probe(path)`, which records the answer. `report_service(name)`
   records which network service answered, once each in first-answer order
   (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
@@ -192,7 +192,7 @@ same thing — single-use helpers stay with their consumer.
   (`/tests/README.md#pipeline-viewer-boundary`) and the step table's
   outputs-module walk ([Load-time rules](../pipeline/step-table/README.md#load-time-rules)) read.
 - `round-pure.ts` (+ test) — one rounding, half to even on the double's
-  exact decimal value as a `BigInt`, behind four spellings:
+  exact decimal value as a `BigInt`, behind its spellings:
   `roundHalfEven(x, digits)`, Python's `round`;
   `roundEach`, the same over each element of a tuple;
   `formatFixed(x, digits)`, Python's `f"{x:.{digits}f}"` text (a refresh
@@ -202,7 +202,10 @@ same thing — single-use helpers stay with their consumer.
   `roundSignificant(v, digits)`, significant figures through
   `toPrecision`. Every number a TypeScript build rounds into a JSON
   artifact goes through one of them, never `Math.round(x · 10ⁿ) / 10ⁿ`,
-  whose multiply moves near-ties.
+  whose multiply moves near-ties. Beside them, `formatRepr(x, width)`,
+  Python's `repr(x)` of a double or numpy's `str` of a float32: the
+  shortest digits that read back to `x`, no rounding (a refresh pull's
+  shortest-digits column format).
 - `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
   uniform generator: the synthetic faint catalogue's draws
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
@@ -241,7 +244,7 @@ same thing — single-use helpers stay with their consumer.
   `pnpm run identity:snapshot` / `identity:diff`, the byte-identity check in
   [Proving a restructuring byte-identical](#proving-a-restructuring-byte-identical).
 - `counts/` — the one tally (`fold`) and the staged count snapshot
-  (`nestByStage` over flat keys and count blocks, `flattenStages`). Own README.
+  (`nestByStage` over count blocks, `flattenStages`). Own README.
 - `staged-write.ts` — the one stage-then-rename: `writeStaged` writes
   `<path>.staged` beside its target (same filesystem, so the rename is
   atomic) — the bytes given, or a copy of `{copyFrom}`'s file, which never
@@ -325,6 +328,9 @@ same thing — single-use helpers stay with their consumer.
 - `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
   against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
   README.
+- `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
+  spelling of a step's command, for the runner's refusals, the snapshot
+  refresh hint and every artifact or registry hint naming its writer.
 - `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
   snapshot against its committed JSON, answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
@@ -338,9 +344,12 @@ same thing — single-use helpers stay with their consumer.
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
   `build-catalog.ts` (build counts and distance outliers), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
-  (`binaries/counts/`) and `build:binaries-runtime`'s pair counts. The count
-  snapshots all pass `compareCountSnapshot` (`catalog/build-counts.ts`) as
-  the compare. `snapshot-check.test.ts` pins pass, drift, missing and refresh.
+  (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
+  allocation counts of `build:clouds` and `build:local-group`
+  (`sid/sibling-allocation.ts`). Every count snapshot goes through
+  `countSnapshotCheck`, which takes no `compare` and fixes it to
+  `compareCountSnapshot` (`counts/compare-counts-pure.ts`).
+  `snapshot-check.test.ts` pins pass, drift, missing and refresh.
 - <a id="git-files"></a>`git-files.ts` — `gitFiles(root, pathspecs, { untracked })`,
   git's file list (tracked, optionally untracked-but-not-ignored), for a scan
   whose scope is the repo rather than a folder list; `presentFiles`, the names

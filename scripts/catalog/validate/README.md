@@ -100,9 +100,9 @@ Three tiers, all snapshot-pinned:
   earn wings, never a variable ring), with Algol as the named showcase.
   Column contract + per-row tolerance discipline live in the TSV header.
 - **Tier B — population statistics.**
-  `scripts/catalog/build-counts.ts` (`compareBuildCounts`) + the two
-  per-build snapshot JSONs gate every absolute count and rate the build
-  emits; `build:binaries` passes its counts through the same
+  `scripts/util/counts/compare-counts-pure.ts` (`compareBuildCounts`) against
+  `build-catalog-expected.json` gates every absolute count and rate the build
+  emits; every other count snapshot passes its counts through the same
   `compareCountSnapshot`. A `BuildCounts` entry is
   either a scalar or a per-tier partition (`emptyTallyPartition`); the latter
   diffs as one `parent.bucket` row per bucket, so a single drifting population

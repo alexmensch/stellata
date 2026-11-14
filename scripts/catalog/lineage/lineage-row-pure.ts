@@ -3,7 +3,7 @@
 import { fold } from '../../util/counts/tally-pure';
 import { compareCodeUnits } from '../../util/tsv/artifact-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
-import type { StageCode, StageCodes } from './reason-codes/reason-codes-pure';
+import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 
 export const LINEAGE_ROLES = ['outcome', 'refused'] as const;
 export type LineageRole = (typeof LINEAGE_ROLES)[number];
@@ -112,13 +112,16 @@ export function stageRow<B extends string>(
   return { stage: codes.stage, key, role: codes.roleOf(code), code, params: paramsText(params), evidence };
 }
 
-/** The row's line, refused when the stage does not write it, does not declare its code, or declares it in another role. */
+/** The row's line, refused when the stage does not write it, does not declare its code, declares it an admission code, or declares it in another role. */
 export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): LineageLine {
   if (row.stage !== codes.stage) {
     throw new Error(`lineage: a row of stage ${row.stage} in the ${codes.stage} file (key ${row.key})`);
   }
   if (!codes.has(row.code)) {
     throw new Error(`lineage: ${row.code} is not a declared ${codes.stage} code (key ${row.key})`);
+  }
+  if (!codes.onRows(row.code)) {
+    throw new Error(`lineage: ${row.code} is an admission code, which no row carries (key ${row.key})`);
   }
   assertDeclaredRole(codes, row.code, row.role, row.key);
   return encodeLineageLine(row) as LineageLine;
@@ -191,7 +194,7 @@ export function lineageLineParams(line: LineageLine): string {
 /** see README.md#counts-fold-from-lineage */
 export function foldStageLines<B extends string, S extends string, L extends B>(
   codes: StageCodes<B, S, L>, lines: Iterable<LineageLine>,
-): Record<StageCode<S, L>, number> {
+): StageCounts<StageCodes<B, S, L>> {
   return fold(codes.live, lines, (line) => {
     const code = lineageLineCode(line);
     if (codes.has(code)) assertDeclaredRole(codes, code, lineCell(line, 'role'), lineageLineKey(line));

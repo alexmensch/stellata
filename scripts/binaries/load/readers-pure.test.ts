@@ -109,17 +109,67 @@ describe('parseGaiaAstrometry', () => {
 
 describe('parseNssOrbits', () => {
   const header = 'source_id\tnss_solution_type\tperiod\tt_periastron\teccentricity\ta_thiele_innes\tb_thiele_innes'
-    + '\tf_thiele_innes\tg_thiele_innes\tinclination\targ_periastron\tmass_ratio';
+    + '\tf_thiele_innes\tg_thiele_innes\tinclination\targ_periastron\tmass_ratio\tsignificance';
+  const solution = (type: string, period: number, significance: string, sourceId = '7'): string =>
+    `${sourceId}\t${type}\t${period}\t\t\t\t\t\t\t\t\t\t${significance}`;
+  const pick = (...rows: string[]) => parseNssOrbits(tsv([header, ...rows].join('\n')));
 
   it('throws on a renamed column rather than reading every orbit without it', () => {
-    expect(() => parseNssOrbits(tsv(`${header.replace('\tperiod\t', '\torbital_period\t')}\n1\tSB1\t9.1\t\t\t\t\t\t\t\t\t\n`)))
+    expect(() => parseNssOrbits(tsv(`${header.replace('\tperiod\t', '\torbital_period\t')}\n1\tSB1\t9.1\t\t\t\t\t\t\t\t\t\t\n`)))
       .toThrow(/missing required columns: period/);
   });
 
-  it('reads the orbit columns; a repeated source keeps its last solution', () => {
-    const m = parseNssOrbits(tsv(`${header}\n33711199137024\tOrbital\t773.09\t143.0\t0.33\t-0.83\t-0.69\t0.45\t-0.99\t\t\t\n33711199137024\tSB1\t916.98\t443.9\t0.09\t\t\t\t\t\t266.5\t\n`));
-    expect(m.size).toBe(1);
-    expect(m.get('33711199137024')).toMatchObject({ solutionType: 'SB1', period: 916.98, argPeriastron: 266.5, aThieleInnes: null });
+  it('reads the orbit columns', () => {
+    const m = parseNssOrbits(tsv(`${header}\n33711199137024\tOrbital\t773.09\t143.0\t0.33\t-0.83\t-0.69\t0.45\t-0.99\t\t\t\t41.2\n`));
+    expect(m.get('33711199137024')).toMatchObject({
+      solutionType: 'Orbital', period: 773.09, tPeriastron: 143.0, eccentricity: 0.33, gThieleInnes: -0.99, argPeriastron: null,
+    });
+  });
+
+  it('keeps a source\'s best-tier solution, in either file order', () => {
+    const tiers: Array<[string, string]> = [
+      ['SB1', 'EclipsingBinary'], ['SB2', 'SB1C'], ['EclipsingSpectro', 'SB1'], ['SB2C', 'EclipsingBinary'],
+      ['Orbital', 'SB2'], ['AstroSpectroSB1', 'SB1'], ['OrbitalTargetedSearchValidated', 'EclipsingSpectro'],
+    ];
+    for (const [better, worse] of tiers) {
+      const rows = [solution(better, 1, '5'), solution(worse, 2, '90')];
+      expect(pick(...rows).get('7')?.solutionType).toBe(better);
+      expect(pick(...rows.reverse()).get('7')?.solutionType).toBe(better);
+    }
+  });
+
+  it('breaks a tie within a tier on the greater significance, in either file order', () => {
+    const rows = [solution('AstroSpectroSB1', 1, '12.5'), solution('OrbitalTargetedSearch', 2, '30.1'), solution('Orbital', 3, '20')];
+    expect(pick(...rows).get('7')?.period).toBe(2);
+    expect(pick(...rows.reverse()).get('7')?.period).toBe(2);
+  });
+
+  it('picks, or refuses, a three-solution source the same way in all six file orders', () => {
+    const orders = (rows: string[]): string[][] => [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
+      .map((order) => order.map((i) => rows[i]));
+    const orderable = [solution('SB1', 1, '5'), solution('Orbital', 2, '9'), solution('SB2', 3, '50')];
+    for (const rows of orders(orderable)) expect(pick(...rows).get('7')?.period).toBe(2);
+    const tied = [solution('Orbital', 1, '9'), solution('SB1', 2, '5'), solution('SB1C', 3, '5')];
+    for (const rows of orders(tied)) expect(() => pick(...rows)).toThrow(/share a tier with no greater significance/);
+  });
+
+  it('keeps each source\'s first position in the map', () => {
+    expect([...pick(solution('SB1', 1, '1', '9'), solution('SB1', 1, '1', '3'), solution('Orbital', 2, '1', '9')).keys()])
+      .toEqual(['9', '3']);
+  });
+
+  it('refuses a pair of solutions the rule cannot order, naming the line', () => {
+    expect(() => pick(solution('SB1', 1, '8'), solution('SB1C', 2, '8'))).toThrow(/:3: source 7 .* no greater significance/);
+    expect(() => pick(solution('Orbital', 1, ''), solution('Orbital', 2, '8'))).toThrow(/no greater significance/);
+    expect(() => pick(solution('SB1', 1, '8'), solution('SB3', 2, '9'))).toThrow(/"SB3" is not a known nss_solution_type/);
+  });
+
+  it('refuses a row with no solution type, naming the line', () => {
+    expect(() => pick(solution('', 1, '5'))).toThrow(/:2: nss_solution_type is empty/);
+  });
+
+  it('reads a lone solution of a type it does not know, for Stage 4 to convert to nothing', () => {
+    expect(pick(solution('SB3', 1, '')).get('7')?.solutionType).toBe('SB3');
   });
 });
 

@@ -181,27 +181,17 @@ scripts/catalog/
                                   `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/trace/README.md).
-  build-counts.ts (+ test)        Per-strategy / per-tier count snapshot
-                                  comparator, pinned by
+  build-counts.ts (+ test)        The build's count snapshot,
                                   build-catalog-expected.json, which
                                   committedBuildCounts reads back for
                                   every consumer of the pinned figures.
                                   The file is staged
                                   (../util/counts/README.md#the-staged-snapshot):
-                                  BuildCounts is FiledCounts plus each
-                                  composed stage's count block, typed and
-                                  owned by the stage that tallies it;
-                                  CATALOG_COUNT_STAGE files each
-                                  filed count under the step that computes
-                                  it, typed over every FiledCounts key, so
-                                  a new one without a stage fails to
-                                  compile; CATALOG_COUNT_STAGES is the
-                                  stage order, pinned to LINEAGE_STAGES'.
-                                  Generic over
-                                  the count record: compareCountSnapshot is
-                                  the compare every count snapshot passes
-                                  (consumer list: the snapshot-check.ts
-                                  entry of ../util/README.md).
+                                  BuildCounts is every stage's count block,
+                                  typed and owned by the stage that tallies
+                                  it; CATALOG_COUNT_STAGES is the stage
+                                  order, pinned to LINEAGE_STAGES'. The
+                                  comparator is ../util/counts/'s.
 ```
 
 ## SID allocation
@@ -221,7 +211,8 @@ comes from the last `build:membership` (`build/lineage/`, declared in
 placement's and promotion's from this run.
 
 New ledger rows and events land in the catalogue's partition with the rest
-of the outputs (`registryTexts`), and allocation's lineage beside the other stages'. A
+of the outputs (`registryTexts`), and allocation's lineage beside the other stages';
+its fold over its row codes is the count snapshot's `allocation` stage. A
 failed allocation — an orphan no decision explains, a new record no stage
 admits — throws before anything is staged, so nothing lands.
 `scripts/sid/README.md` carries the review side.

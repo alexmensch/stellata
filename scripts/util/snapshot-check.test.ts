@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
-  PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV as ENV, snapshotCheck, type SnapshotCheckSpec,
+  PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV as ENV, countSnapshotCheck, snapshotCheck, type SnapshotCheckSpec,
 } from './snapshot-check';
 
 describe('snapshotCheck', () => {
@@ -67,5 +67,14 @@ describe('snapshotCheck', () => {
     writeFileSync(path, JSON.stringify({ n: 1 }));
     expect(snapshotCheck(spec({ n: 2 }))).toMatchObject({ kind: 'refresh' });
     expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ n: 1 });
+  });
+
+  it('compares a count snapshot by its counts, naming the drifted one', () => {
+    writeFileSync(path, JSON.stringify({ stages: { read: { rows: 3 } } }));
+    const check = (rows: number) => countSnapshotCheck({
+      snapshotPath: path, actual: { stages: { read: { rows } } }, failureLabel: 'test', script: 'build',
+    });
+    expect(check(3).kind).toBe('pass');
+    expect(check(4)).toMatchObject({ kind: 'fail', report: expect.stringContaining('rows') });
   });
 });
