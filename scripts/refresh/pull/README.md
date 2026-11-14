@@ -98,27 +98,28 @@ hold over all its queries (a static table's is its band's `max`), and `ask`
 refuses it, naming the count, once its rows pass that. So it holds at most
 `min(query count × limit, maxRows + limit)` rows, and `runPull` refuses,
 before any query, one whose held rows × column count could exceed
-`MAX_TABLE_CELLS` (48,000,000). A request-scoped table is not bounded this
+`MAX_TABLE_CELLS` (60,000,000). A request-scoped table is not bounded this
 way. The cap is per phase, but `runPhasedPull` holds every table's rows and
 TSV until the one emission, so a pull's tables share one heap budget: a pull
 with two large phases sums their cells against it.
-Measured 2026-11-14 under Node 26 with a 4,096 MiB heap (the CI runner's):
-each committed table cut into its slices on disk, every slice's CSV reply
-read from disk only when `runPull` asked it, nothing else held, peak live
-heap by `watchHeap` ([CI heap budget](../../util/heap-budget/README.md)).
-"Half" keeps every other row of each slice:
+Measured 2026-11-14 under Node 26: each committed table cut into its slices
+on disk, each cell widened to the archive's own text (a DOUBLE to 16–17
+significant digits, a REAL to its shortest float32 digits — the recorded
+replies run about 1.4× the committed row), every slice's reply read from
+disk only when `runPull` asked it, nothing else held. The figure is the
+smallest `--max-old-space-size` the replay completes in, bisected to about
+20 MiB; "half" keeps every other row of each slice:
 
-| Table | Columns | Cells (full / half) | Peak live heap, full | Half | Per cell | Fixed |
+| Table | Columns | Cells (full / half) | Completes at, full | Half | Per cell | Fixed |
 |---|---|---|---|---|---|---|
-| magnitude | 19 | 23.7 M / 11.8 M | 1,641–1,670 MiB (5 runs) | 821–825 MiB (4) | ~75 B | ~0 |
-| tyc-xmatch | 5 | 12.6 M / 6.3 M | 960–983 MiB (5 of 6) | 554–642 MiB (6) | ~71 B | ~130 MiB |
+| magnitude | 19 | 23.7 M / 11.8 M | 1,313 MiB | 635 MiB | 60 B | ~0 |
+| tyc-xmatch | 5 | 12.6 M / 6.3 M | 762 MiB | 406 MiB | 59 B | ~50 MiB |
 
-One tyc run read 1,227 MiB: `watchHeap` also takes the heap in use when it
-stops, garbage included, so one reading in six lands high. At 75 bytes per
-cell the 3,482 MiB budget holds about 48.9 M cells, so the cap is **48 M**;
-tyc's line holds about 49 M. The heap each run actually needs is lower:
-under `--max-old-space-size` the magnitude run fails at 1,000 MiB and
-completes at 1,150, tyc fails at 600 and completes at 750.
+At 60 bytes per cell the 3,482 MiB budget (0.85 of the runner's 4,096 MiB)
+holds about 60.8 M cells, tyc's line about 60.7 M, so the cap is **60 M**.
+`watchHeap` is not the instrument here: its samples at full collections miss
+the peak between them, reading 815–894 MiB for the magnitude run that needs
+1,313 (stellata-hhaw.45.87).
 Bounds today: magnitude 25.1 M ((1,273,000 + 48,000) × 19), tyc-xmatch
 12.9 M ((2,530,000 + 48,000) × 5). A table with wider text cells costs more
 per cell, so a pull near the cap is re-measured, not assumed.
