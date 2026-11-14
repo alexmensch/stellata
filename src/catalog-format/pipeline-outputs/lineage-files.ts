@@ -26,7 +26,7 @@ export const BINDING_LINEAGE: StageLineageSpec<'component-binding', 'component-b
   files: ['component-binding'],
 };
 
-export const CLASSIC_IDS_LINEAGE:StageLineageSpec<'classic-ids', 'classic-ids'> = {
+export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'> = {
   stage: 'classic-ids',
   files: ['classic-ids'],
 };
