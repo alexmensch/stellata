@@ -24,7 +24,10 @@ scripts/catalog/sources/
   hip2-source.ts (+ test)         HIP2 and Hip2AstrometryRow. The parse also
                                   lists every HIP the table publishes,
                                   positioned or not, for
-                                  ../spine/primaries-tables.ts.
+                                  ../spine/primaries-tables.ts. A HIP on
+                                  two rows stops the read, before
+                                  hip <= 0 is dropped from the
+                                  astrometry map.
   gaia-nss-source.ts (+ test)     GAIA_NSS, a column table
                                   (../../util/tsv/README.md#reading-a-table),
                                   and parseNssIndex: the source_ids carrying
