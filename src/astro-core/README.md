@@ -67,6 +67,10 @@ Each has its own README.
   linear along the tangent basis and renormalised, exact in cos δ and
   stable through the poles, taking a `ProperMotion` whose μ_α* is already
   cos δ-applied; either component missing returns the position unmoved.
+  <a id="proper-motion-accuracy"></a>Its accuracy budget: no radial
+  velocity, so perspective acceleration (≤0.15″ worst case) is omitted, and
+  under 0.002″ error at Barnard's-scale proper motion over the 24.75-yr
+  HIP2 J1991.25→J2016 interval — the longest any caller propagates.
   `skyPositionAtEpoch` is the same read back as (ra, dec), for the binaries
   stages' position matches and audit offsets. `angularSeparationArcsec` is
   the separation between two unit vectors through `angleBetweenRad`, so it
