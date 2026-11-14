@@ -53,8 +53,10 @@ describe('deploy.yml Publish releases token', () => {
     expect(field(mint, 'permission-pull-requests')).toBe('read');
   });
 
-  it('mints with create-github-app-token pinned to a commit, since the step holds the App key', () => {
-    expect(field(mintStep(), 'uses')).toMatch(/^actions\/create-github-app-token@[0-9a-f]{40}(\s|$)/);
+  it('pins every action in the publish job to a commit, since the job holds the App key', () => {
+    const uses = stepsOf(publishJob()).map((step) => field(step, 'uses')).filter((use) => use !== null);
+    expect(uses).toHaveLength(3);
+    for (const use of uses) expect(use).toMatch(/^[\w-]+\/[\w-]+@[0-9a-f]{40}(\s|$)/);
   });
 
   it('leaves GITHUB_TOKEN read-only, so the App token is the one writer', () => {

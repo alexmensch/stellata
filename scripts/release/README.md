@@ -135,16 +135,17 @@ The workflow's own `GITHUB_TOKEN` is held at `contents: read`, so the App
 token is the only writer. **The token and the App key live on a runner
 that runs no dependency code**: mint and `publish` are their own job,
 `publish-releases`, after `deploy`, which checks out only `scripts/release`
-and `scripts/util` (credentials not persisted), sets up Node and installs
-nothing — `cut-releases.ts` runs on `node:` builtins alone (above). The
-plan reaches it as the `plan-releases` job's output. **The mint step references
-`actions/create-github-app-token` by commit SHA, not a version tag**: it
-is handed the App's private key, which can rewrite workflows, and a tag
+and `scripts/util` (plus the root files cone-mode sparse checkout always
+brings, `.nvmrc` among them; credentials not persisted), sets up Node and
+installs nothing — `cut-releases.ts` runs on `node:` builtins alone
+(above). The plan reaches it as the `plan-releases` job's output. **Every
+action in that job is referenced by commit SHA, not a version tag**: the
+job holds the App's private key, which can rewrite workflows, and a tag
 can be repointed at other code. Dependabot (`.github/dependabot.yml`)
-proposes the pin's bumps, with every other action's, weekly, labelled
+proposes the pins' bumps, with every other action's, weekly, labelled
 `skip-version-bump`. `deploy-workflow.test.ts` pins all of it:
 `publish`'s `GH_TOKEN` is the mint step's output in the same job, the step
-asks for those three permissions, its action is SHA-pinned, `GITHUB_TOKEN`
+asks for those three permissions, the job's actions are SHA-pinned, `GITHUB_TOKEN`
 stays read-only, and the job needs `deploy`, uses only checkout,
 setup-node and the mint action, names no package manager, and checks out
 just those two folders.
