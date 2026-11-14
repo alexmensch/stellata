@@ -135,7 +135,7 @@ export function brightnessColourSummary(counts: BrightnessColourCounts): string 
   const simbadTotal = SIMBAD_NAMESPACE_VALUES.reduce((sum, ns) => sum + simbad(ns), 0);
   const tycho2Total = TYCHO2_RANGE_SIDES.reduce((sum, side) => sum + n(V_TYCHO2_BRANCHES[side]), 0);
   const records = n('spectral.curated') + simbadTotal + n('spectral.gspspec') + n('spectral.none');
-  const pct = (k: number): string => percentOf(k, records);
+  const ofRecords = (k: number): string => percentOf(k, records);
   return [
     `  V cascade: gaia_riello ${n('v.gaia-riello')}, printed_hip ${n('v.printed-hip')}, `
       + `tycho2 ${tycho2Total} `
@@ -143,10 +143,10 @@ export function brightnessColourSummary(counts: BrightnessColourCounts): string 
       + `curated ${n('v.curated')}, none ${n('v.none')}`,
     `  ci cascade: gaia_relation ${n('ci.gaia-relation')}, printed_hip_bv ${n('ci.printed-hip-bv')}, `
       + `gspc ${n('ci.gspc')}, spectral_derived ${n('ci.spectral-derived')}, solar_fallback ${n('ci.none')}`,
-    `  spectral classification: curated ${n('spectral.curated')}, SIMBAD ${simbadTotal} (${pct(simbadTotal)}; `
+    `  spectral classification: curated ${n('spectral.curated')}, SIMBAD ${simbadTotal} (${ofRecords(simbadTotal)}; `
       + `by source_id ${simbad('source_id')}, HIP ${simbad('hip')}, TYC ${simbad('tyc')}, GJ ${simbad('gj')}), `
-      + `GSP-Spec ${n('spectral.gspspec')} (${pct(n('spectral.gspspec'))}), `
-      + `unknown ${n('spectral.none')} (${pct(n('spectral.none'))})`,
+      + `GSP-Spec ${n('spectral.gspspec')} (${ofRecords(n('spectral.gspspec'))}), `
+      + `unknown ${n('spectral.none')} (${ofRecords(n('spectral.none'))})`,
   ].join('\n');
 }
 

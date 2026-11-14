@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Share } from '../util/counts/tally-pure';
 import { R0_PC } from '../../src/astro-core/galactic-coords';
 import { bulgeDensity, discDensity } from '../../src/astro-core/milkyway/column/milkyway-column-pure';
 import {
@@ -135,7 +136,7 @@ describe('hole cells on the table’s own edges', () => {
   it('clamps a cell the catalogue outshines to wholly resolved', () => {
     const [cell] = buildHoleCells(stars([[12, 0, 0, -10]]), IDENTITY, COARSE);
     expect(cell.catalogue).toBeGreaterThan(cell.model);
-    expect(resolvedShare(cell)).toBe(1);
+    expect(resolvedShare(cell)).toEqual({ kind: 'rated', value: 1 });
   });
 
   it('removes the whole cell at a table of ones and nothing at zeros', () => {
@@ -157,10 +158,7 @@ describe('the table from the cells', () => {
     );
     const table = resolvedHoleTableFromCells(own);
     expect(table.values[resolvedHoleIndex(10, 2)]).toBeCloseTo(0.25, 12);
-    expect(table.values[resolvedHoleIndex(10, 3)]).toBeCloseTo(
-      resolvedShare(shellTotals(own)[10]),
-      12,
-    );
+    expect(table.values[resolvedHoleIndex(10, 3)]).toBeCloseTo(rated(resolvedShare(shellTotals(own)[10])), 12);
   });
 
   it('gives a thin cell its shell’s all-sky share instead', () => {
@@ -170,9 +168,22 @@ describe('the table from the cells', () => {
         : c,
     );
     const table = resolvedHoleTableFromCells(thin);
-    const shellShare = resolvedShare(shellTotals(thin)[10]);
+    const shellShare = rated(resolvedShare(shellTotals(thin)[10]));
     expect(shellShare).toBeGreaterThan(0);
     expect(shellShare).toBeLessThan(0.25);
     expect(table.values[resolvedHoleIndex(10, 2)]).toBeCloseTo(shellShare, 12);
   });
+
+  it('has no share where the model has no light, and refuses to bake one', () => {
+    expect(resolvedShare({ catalogue: 0, model: 0 })).toEqual({ kind: 'no-denominator' });
+    const dark = cells.map((c) => (c.shell === 10 ? { ...c, model: 0 } : c));
+    expect(() => resolvedHoleTableFromCells(dark)).toThrow('resolved-hole table: shell 10 has no model light to take a share of');
+    const darkCell = cells.map((c) => (c.shell === 10 && c.band === 2 ? { ...c, stars: MIN_STARS_PER_CELL, model: 0 } : c));
+    expect(() => resolvedHoleTableFromCells(darkCell)).toThrow('resolved-hole table: shell 10 band 2 has no model light to take a share of');
+  });
 });
+
+function rated(s: Share): number {
+  if (s.kind !== 'rated') throw new Error('expected a rated share');
+  return s.value;
+}

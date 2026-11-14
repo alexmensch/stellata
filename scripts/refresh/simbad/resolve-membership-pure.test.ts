@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { MembershipKeys, Designations } from './membership-keys-pure';
-import { coverage, resolveMembershipKeys, wideningLabel } from './resolve-membership-pure';
+import { requestReport, resolveMembershipKeys, wideningLabel, type OidRequest } from './resolve-membership-pure';
 import { fakeAsk } from './simbad-fake-pure';
 import { parseLedger, simbadPhases } from './simbad-fetch-pure';
 import { GAIA_DR3, GJ, HIP, OID, TYC } from './simbad-specs-pure';
@@ -88,7 +88,20 @@ describe('resolveMembershipKeys', () => {
     expect(request.oids).toEqual(new Set([100, 200, 300]));
     expect(request.bindings.get(GAIA_DR3.name)).toEqual(new Map([['1', 100]]));
     expect(request.bindings.get(HIP.name)).toEqual(new Map([['7', 200], ['8', 300]]));
-    expect(coverage(request, GAIA_DR3.name)).toBe(0.5);
-    expect(coverage(request, HIP.name)).toBe(1);
+    expect([request.resolved.get(GAIA_DR3.name), request.requested.get(GAIA_DR3.name)]).toEqual([1, 2]);
+    expect([request.resolved.get(HIP.name), request.requested.get(HIP.name)]).toEqual([1, 1]);
+  });
+});
+
+describe('requestReport', () => {
+  it('prints a pass that asked nothing as n/a, never 0.0%', () => {
+    const request: OidRequest = {
+      oids: new Set(), requested: new Map([['gaia', 4], ['hip', 0]]), resolved: new Map([['gaia', 3], ['hip', 0]]),
+      bindings: new Map(), gainedByWidening: new Map(), verdicts: new Map(),
+    };
+    expect(requestReport(request)).toEqual([
+      '  gaia           requested       4 → resolved       3 (75.0%)',
+      '  hip            requested       0 → resolved       0 (n/a)',
+    ]);
   });
 });

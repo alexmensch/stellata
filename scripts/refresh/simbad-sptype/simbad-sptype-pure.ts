@@ -1,6 +1,7 @@
 // The manifest-keyed SIMBAD spectral-type pull: Phase A, the basic table, the value-keyed union, cross-IDs. See README.md.
 
 import type { ManifestRecord, MembershipTerm } from '../../catalog/membership/membership-manifest-tsv';
+import { share } from '../../util/counts/tally-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import type { PhasedPull, WrittenTable } from '../pull/pull';
 import type { SpotRow } from '../pull/gates-pure';
@@ -54,7 +55,7 @@ export function typedByTerm(
     const label = `sp_type coverage (${term}, ${oids.size} objects)`;
     if (oids.size === 0) return { kind: 'pass', report: `${label}: none bound` };
     const typed = countFilled(oids, (oid) => isFilled(cells.get(oid)?.[SP_TYPE.column]));
-    return floorCheck(label, typed / oids.size, SP_TYPE_FLOORS[term], 'SIMBAD\'s reply shape or the column list drifted');
+    return floorCheck(label, share(typed, oids.size), SP_TYPE_FLOORS[term], 'SIMBAD\'s reply shape or the column list drifted');
   });
 }
 
