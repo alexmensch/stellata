@@ -417,8 +417,10 @@ cross-IDs under that source — leaves **136** rows whose association only
 AT-HYG makes. Both witnesses key on `tyc`, `hip` and `gl` alone, so the `hd`
 and `hr` rows below carry the `published` verdict unchanged rather than one
 the witnesses reached; the identifier pull `17.4` turns on would change that
-if it carries an HD cross-ID column. Those 136 are the retirement's whole
-curation surface for the merge decisions:
+if it carries an HD cross-ID column. Those 136 are the **connectivity**
+residual — rows whose cells nothing but AT-HYG joins — not the whole
+merge-decision surface, which the next paragraph widens. Today's tables leave
+<!-- count:membership-manifest/membership.merge.unlinked -->135<!-- /count --> of them (`membership.merge.unlinked`, over the corrected rows):
 
 | Pattern | Rows | What is unlinked | Witness left |
 |---|---|---|---|
@@ -431,10 +433,12 @@ curation surface for the merge decisions:
 Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 
 **Connected is not unique, so the 136 is not the whole surface.** Tycho-2's
-own `hip` column gives 539 spine HIPs to two entries of a resolved pair, so a
-row carrying either entry connects, and only the spine says which entry is the
-HIP's record. The primaries disagree with it there: IV/25 gives the HD to the
-other entry on 451 (measured over the uncorrected spine), while over the
+own `hip` column gives 539 spine HIPs (the sum of the `membership.merge.pair.*`
+codes) to two entries of a resolved pair, so a row carrying either entry
+connects, and only the spine says which entry is the HIP's record. The
+primaries disagree with it there: IV/25 gives the HD to the other entry on 451
+(a one-off measurement over the uncorrected spine, 2026-11-14, not
+regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
 entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->274<!-- /count -->, on the other for <!-- count:membership-manifest/membership.merge.pair.moves -->176<!-- /count --> and on no single entry for
 the rest. The rule
@@ -442,8 +446,8 @@ the rest. The rule
 own Gaia source sits on takes the HIP and its HD; with no such entry the row
 is queued and the spine's choice ships meanwhile
 ([The pair rule](/scripts/catalog/membership/merge-derivation/README.md#connected-is-not-unique--the-pair-rule)).
-The cells a primary fills where the spine row leaves them empty are on the same
-surface. `build:membership` measures all of it in a shadow that moves no row
+The cells a primary fills where the spine row leaves them empty, and the filled
+cells a primary's link fills with other values, are on the same surface. `build:membership` measures all of it in a shadow that moves no row
 and writes `data/membership/merge-divergence.tsv`, counts pinned under
 `membership.merge.*` ([The divergence ledger](/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger)).
 
@@ -501,7 +505,7 @@ step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-t
 (376,909) and their binding classes hold across the epic except as this
 paragraph enumerates. `17.6` moved none of them, as predicted. Merge
 decisions: `17.2` moves nothing; `17.11` moves exactly the rows of
-`merge-divergence.tsv` it settles — the 136 unlinked cells each re-attested by
+`merge-divergence.tsv` it settles — the <!-- count:membership-manifest/membership.merge.unlinked -->135<!-- /count --> unlinked rows each re-attested by
 the positional witness, corrected with evidence, or on a ledger row, and the
 records the pair rule moves onto the other entry of their Tycho-2 pair, each
 keeping its SID (they key on HIP or HD) while its TYC, position, V, proper
@@ -524,7 +528,7 @@ component-letter names compose; the 12 alias-only names drop to a ledger.
 Whatever the pull does not reach goes through the two seams that exist:
 `data/naming/name_overrides.tsv` for a hand-cited name, and
 `spine-corrections.tsv` generalised into the evidenced merge table for the
-136.
+rows of `data/membership/merge-divergence.tsv`.
 
 **The licence does not leave with the spine.** `scripts/binaries/build-binaries.ts`
 Stages 1–3 parse `data/athyg/athyg_33_classic_ids.csv` on the `build:binaries`
