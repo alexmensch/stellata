@@ -73,7 +73,7 @@ export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Resul
   };
 }
 
-/** The rates-snapshot keys over `stage3Counts`. */
+/** Stage 3's build-log rates over `stage3Counts`. */
 export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', Share> {
   const total = counts.components_total;
   const anchored = RESOLVE_VIA.filter((tier) => RESOLVE_VIA_ANCHORS_SOURCE_ID[tier]).reduce((n, tier) => n + counts[`resolution_${tier}`], 0);
