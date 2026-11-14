@@ -86,6 +86,8 @@ the 1-minute load is below the core count
   `run_in_background`.
 - **Coordinator:** `build:seed` queues itself; start it as below. Its
   `heavy: running` line marks the build starting.
+- **Landing subagent:** `stellata-pr-cleanup`'s gates already run the
+  suite through it.
 
 The gate knows nothing of perf runs: the pause above stays the message
 protocol.
