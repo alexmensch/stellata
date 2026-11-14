@@ -33,7 +33,10 @@ export function parseHip2Tsv(text: string, from: Declared & RowKeyed<number>): H
   const hips = new Set<number>();
   for (const row of readTable({ ...from, columns: HIP2_COLUMNS }, text)) {
     const hip = row.int('hip');
-    if (hip !== null) hips.add(hip);
+    if (hip !== null) {
+      if (hips.has(hip)) row.fail(`HIP ${hip} has more than one row; which was meant is not the reader's to guess`);
+      hips.add(hip);
+    }
     if (hip === null || hip <= 0) continue;
     const raDeg = row.float('ra_icrs');
     const decDeg = row.float('de_icrs');
