@@ -68,7 +68,9 @@ describe('deploy.yml Publish releases token', () => {
 
 describe('deploy.yml publish job', () => {
   it('runs after the deploy job, so a failed deploy publishes nothing', () => {
-    expect(field(publishJob(), 'needs')).toMatch(/\bdeploy\b/);
+    const job = publishJob();
+    expect(field(job, 'needs')).toMatch(/\bdeploy\b/);
+    expect(job).not.toMatch(/^ {4}if:/m);
   });
 
   it('installs nothing, so no dependency code shares a runner with the App key', () => {
