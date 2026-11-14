@@ -47,8 +47,14 @@ changed override stales the record.
    it found another. The found siblings' HD and HIP numbers (the first of
    each in id order), then the missed component's letter on each, plus its
    CCDM id: `HD 48915B`, `HIP 32349B`, `CCDM J06451-1643B`. SIMBAD answers in
-   its stored spelling (`HD  48915B`), so a reply joins back on `identKey`
-   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)).
+   its stored spelling (`HD  48915B`) and matches whatever the spacing
+   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)),
+   so a reply joins back by what it names (`replyKey`): an HD or HIP reply by
+   its number and letter, a CCDM one by `identKey`. That is what refuses a
+   digit component: Algol's `2` on `HD 19356` asks `HD 193562`, which SIMBAD
+   answers as that other star, a bare number with no letter. The 22 components
+   named `2` reached 4 such stars on 2026-11-14. An HD or HIP reply the
+   namespace rules cannot read fails the parse ledger.
    An answered WDS ident naming no asked component fails the pull. An alias naming an
    object the lookup already found names that object again and is dropped;
    two aliases naming different objects keep the first in SIMBAD's id

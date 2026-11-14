@@ -30,13 +30,25 @@ export function resolveHip(aliases: readonly CatalogueAlias[], letters: Readonly
 }
 
 export interface CascadeCandidate {
-  /** The id asked; SIMBAD answers in its stored spelling, so a reply joins back on `identKey`. */
+  /** The id asked; SIMBAD answers in its stored spelling, so a reply joins back on `replyKey`. */
   readonly id: string;
   readonly component: WdsComponent;
   readonly strategy: CascadeStrategy;
 }
 
-/** Each unresolved component's CCDM id, and its letter on every HD and HIP a resolved sibling holds, by `identKey`. An id two components would ask keeps the first. */
+const LETTERED = [HD, HIP] as const;
+
+const letteredKey = (ns: Namespace, number: string, letter: string): string => `${ns.name} ${number} ${letter}`;
+
+/** An HD or HIP id by the number and letter it names, so `HD 193562` never answers `HD 19356` + `2`; a bare or unreadable one (which fails `ledger`) by none; any other id by `identKey`. */
+export function replyKey(id: string, ledger: ParseLedger): string | null {
+  const ns = LETTERED.find((n) => id.startsWith(n.prefix));
+  if (ns === undefined) return identKey(id);
+  const alias = catalogueAlias(ns, id, ledger);
+  return alias === null || alias.letter === null ? null : letteredKey(ns, alias.number, alias.letter);
+}
+
+/** Each unresolved component's CCDM id, and its letter on every HD and HIP a resolved sibling holds, by the key a reply joins on. An id two components would ask keeps the first. */
 export function cascadeCandidates(
   unresolved: readonly WdsComponent[],
   siblingOids: ReadonlyMap<string, readonly number[]>,
@@ -44,17 +56,18 @@ export function cascadeCandidates(
   hipByOid: ReadonlyMap<number, string>,
 ): Map<string, CascadeCandidate> {
   const out = new Map<string, CascadeCandidate>();
-  const add = (id: string, component: WdsComponent, strategy: CascadeStrategy): void => {
-    const key = identKey(id);
+  const add = (key: string, id: string, component: WdsComponent, strategy: CascadeStrategy): void => {
     if (!out.has(key)) out.set(key, { id, component, strategy });
   };
+  const addLettered = (ns: Namespace, number: string | undefined, component: WdsComponent): void => {
+    if (number !== undefined) add(letteredKey(ns, number, component.component), compose(ns, `${number}${component.component}`), component, ns === HD ? 'HD' : 'HIP');
+  };
   for (const c of unresolved) {
-    add(`CCDM J${c.wdsId}${c.component}`, c, 'CCDM');
+    const ccdm = `CCDM J${c.wdsId}${c.component}`;
+    add(identKey(ccdm), ccdm, c, 'CCDM');
     for (const oid of siblingOids.get(c.wdsId) ?? []) {
-      const hd = hdByOid.get(oid);
-      if (hd !== undefined) add(compose(HD, `${hd}${c.component}`), c, 'HD');
-      const number = hipByOid.get(oid);
-      if (number !== undefined) add(compose(HIP, `${number}${c.component}`), c, 'HIP');
+      addLettered(HD, hdByOid.get(oid), c);
+      addLettered(HIP, hipByOid.get(oid), c);
     }
   }
   return out;
@@ -79,12 +92,14 @@ export function cascadeRecoveries(
   hits: readonly CascadeHit[],
   candidates: ReadonlyMap<string, CascadeCandidate>,
   resolvedOids: ReadonlySet<number>,
+  ledger: ParseLedger,
 ): CascadeResult {
   const recoveries = new Map<string, { component: WdsComponent; oid: number }>();
   const counts: Record<CascadeStrategy, number> = { HD: 0, CCDM: 0, HIP: 0 };
   const conflicts: string[] = [];
   for (const { id, oid } of hits) {
-    const candidate = candidates.get(identKey(id));
+    const asked = replyKey(id, ledger);
+    const candidate = asked === null ? undefined : candidates.get(asked);
     if (candidate === undefined || resolvedOids.has(oid)) continue;
     const key = componentId(candidate.component);
     const held = recoveries.get(key);

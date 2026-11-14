@@ -121,7 +121,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const candidates = cascadeCandidates(unresolved, siblings, numbers.hd, numbers.hip);
         const ids = [...candidates.values()].map((cand) => cand.id).sort();
         const rows = await ask(XIDS_PHASES.cascade, ids.map((id) => `'${id}'`));
-        const cascade = cascadeRecoveries(rows.map(([oid, id]) => ({ id: id ?? '', oid: oidOf(oid) })), candidates, new Set(oids.values()));
+        const cascade = cascadeRecoveries(rows.map(([oid, id]) => ({ id: id ?? '', oid: oidOf(oid) })), candidates, new Set(oids.values()), ledger);
         for (const [key, { oid }] of cascade.recoveries) oids.set(key, oid);
         log(`cascade: ${ids.length} candidates, ${cascade.recoveries.size} components recovered (alias hits HD ${cascade.hits.HD}, CCDM ${cascade.hits.CCDM}, HIP ${cascade.hits.HIP})`);
         for (const conflict of cascade.conflicts) log(`  cascade kept the first of two objects for ${conflict}`);

@@ -85,11 +85,14 @@ half off Gaia's own table is what recovers them.
 spelling.** It pads some fields — `TYC 144-1004-1` is stored as
 `TYC  144-1004-1`, an HD number right-aligned in seven characters
 (`HD  48915B`) — yet `HD48915B`, `HD 48915B` and `HIP  55203B` each find the
-stored id (measured on SIMBAD-Harvard, 2026-11-09). Anything joining a
+stored id (measured on SIMBAD-Harvard, 2026-11-09). It ignores case too:
+`CCDM J00023+3257Ab` answers as the stored `CCDM J00023+3257AB` (201 such
+asks on 2026-11-14). Anything joining a
 returned id back to its request goes through `parseIdent` (Python:
 `IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
-drops all whitespace as SIMBAD does; keying on the raw returned id silently
-loses those rows. The fake matches the same way.
+drops all whitespace as SIMBAD does but keeps case, so a component letter
+differing only in case is refused; keying on the raw returned id silently
+loses those rows. The fake matches whitespace the same way.
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
