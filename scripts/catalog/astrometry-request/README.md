@@ -1,8 +1,8 @@
-# Full-catalog astrometry request
+# The astrometry request
 
-The source_id list the Gaia 5p pull is made against. `pnpm run
+The source_id list the one Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
-— **383,058** ids, the union of four contributions the table's four
+— **388,982** ids, the union of four contributions the table's
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -13,10 +13,12 @@ which is why it sits beside the record build rather than inside it
 ```
 scripts/catalog/astrometry-request/
   export-astrometry-request.ts    The generator. Unions both gates'
-                                  candidates, the bound-pair siblings and the
-                                  review dispositions' kept ids, sorts, and
-                                  emits the request through emitArtifacts.
-                                  Reads no build:membership output.
+                                  candidates, the binaries' Stage 2
+                                  candidates (Stages 1–2 run in-process) and
+                                  the review dispositions' kept ids, sorts,
+                                  and emits the request through
+                                  emitArtifacts. Reads no build:membership or
+                                  build:binaries output.
   astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
                                   file as the generator's emitArtifacts
                                   declaration (../../util/README.md).
@@ -27,8 +29,8 @@ scripts/catalog/astrometry-request/
                                   in sortSourceIdsNumeric's order, over
                                   ../../util/tsv/'s compareSourceIds) and
                                   readSourceIdRequest, the one parse of
-                                  every such file (this one, the binaries
-                                  request, the DR2 risk set). Also used by
+                                  every such file (this one and the DR2 risk
+                                  set). Also used by
                                   scripts/sid/export-dr-risk-set.ts and the
                                   membership gate test, whose coverage
                                   filter, unrequestedBindings, lives here.
@@ -43,14 +45,12 @@ Each contribution lives with the consumer that defines it, not here — this
 folder decides what to *request*, not what a route may propose:
 `magnitudeWeighableSourceIds` in `../classic-ids/classic-id-overlay-pure.ts`,
 `derivationCandidateSourceIds` in `../membership/binding/binding-derivation-pure.ts`,
-`pairMemberSourceIds` in `../distance/parallax/pair-member-parallax.ts`, and
+`astrometryRequestIds` in `../../binaries/resolve/resolve-pairs.ts`, and
 `data/membership/binding-review-dispositions.tsv` itself for the kept ids.
 
 **source_ids exceed 2^53.** A lexicographic sort misorders unequal-length
 ids and a `Number` sort collides them, so `BigInt` is the only correct
-comparator — and it is what matches the ordering
-`write_astrometry_request` gives the binaries-scope request file. Every
-codec that orders by source_id shares the one comparator,
+comparator. Every codec that orders by source_id shares the one comparator,
 `compareSourceIds` (`../../util/tsv/table-pure.ts`).
 
 ## The record build's sources are covered by measurement
@@ -74,14 +74,14 @@ and requesting them would re-pull 598,464 rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **four** consumers wanting
+`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **four** contributors wanting
 different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
 |---|---|---|
 | `../classic-ids/`' binding-gate candidates | 354,987 | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 375,976, +21,231 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
-| `multiples.tsv`' kept-physical pair members | 16,110, +6,810 beyond the two above | the parallax cascade's `pair_member_parallax` tier |
+| `../membership/`' binding-derivation candidates | 376,305, +21,556 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
+| `../../binaries/`' Stage 2 candidates | 24,512, +12,409 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
 | `binding-review-dispositions.tsv`' `keep_source_id` column | 53, +30 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
 
 `build:astrometry-request` prints every figure in this table — each
@@ -101,23 +101,37 @@ the generator fail on any candidate it weighs with no pulled row, as the
 overlay's `gateSkippedNoGMag` pins at zero. A disposition can keep an id no
 candidate walk reaches, so the kept ids are requested on their own.
 
-**The pair-member one is the same shape as the gate's**, and arrived the same way —
-by a consumer being added without the request following. A bound pair's member
-is routinely not a manifest row (a component Gaia resolved that no primary
-indexes), and the tier lends that member's parallax to the sibling Gaia fitted
-none for. Its coverage now fails the build on its own: a sibling source this
-pull holds no row for is named with its `multiples.tsv` row, and it is the
-only reason the tier misses one that a re-pull can fix
+**The binaries' one covers the pair members the parallax cascade reads.**
+Every `multiples.tsv` `gaia_source_id` is a Stage 2 binding, so the
+contribution holds every kept-physical pair member, a member that is not a
+manifest row (a component Gaia resolved that no primary indexes) included;
+the tier lends that member's parallax to the sibling Gaia fitted none for.
+Its coverage still fails the build on its own: a sibling source this pull
+holds no row for is named with its `multiples.tsv` row, and it is the only
+reason the tier misses one that a re-pull can fix
 ([The tier's reach is bounded by measurement quality](../distance/parallax/README.md#the-tiers-reach-is-bounded-by-measurement-quality-not-by-our-request)).
 Every other refusal there is a measurement, and
 `pairMemberSiblingNotAnchorGrade` — the anchor gate on fit quality alone —
 dominates them.
 
-It asks for every kept-physical pair member rather than only the roots holding
-a parked row. Which rows park is an *output* of the build this request feeds,
-so keying the request on it would leave the two defining each other and the set
-unstable under any cascade change (`pairMemberSourceIds` says so at the
-definition).
+It asks for every candidate Stage 2 weighs rather than only the members of
+kept pairs. Which pairs Stage 5 keeps is an *output* of the build this request
+feeds, so keying the request on it would leave the two defining each other and
+the set unstable under any cascade change.
+
+## The binaries' share closes a loop through the pull
+
+The generator runs the binaries' Stages 1–2 itself (`loadReferenceCatalogs`,
+`resolveStage2`) rather than reading an id list `build:binaries` writes, so
+one function, `astrometryRequestIds`, decides that share and no second file
+carries it. Stage 1's magnitude gate reads this pull — a cross-walk or AT-HYG
+binding whose `G` disagrees with its V is refused — so the request depends on
+the pull it requests: a kept loop
+([Loops through committed files](../../pipeline/README.md#loops-through-committed-files)).
+The stale-pull stop is its convergence check. The share keeps a refused
+candidate as well as the binding that replaces it, so a re-pull can only add
+rows the gate then weighs: the request grows rather than oscillates, and a
+second pass over the re-pulled table reproduces it byte for byte.
 
 **The gate's one is not optional, and a membership-only request silently
 breaks the gate.** The gate vets a *candidate* — whatever source a cross-walk
@@ -156,8 +170,8 @@ pull, so a request that quietly stops covering them fails the build instead of
 silently accepting bindings: the overlay through `gateSkippedNoGMag`, pinned at
 **0**, and the derivation through membership lineage's
 `binding.unweighed-no-pulled-row` invariant, which names each record and
-source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 383,056 rows against the request's
-383,058: 2 requested ids have no row, and both are reviewed bindings rather
+source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 388,980 rows against the request's
+388,982: 2 requested ids have no row, and both are reviewed bindings rather
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 HD 2094 B's source, which only the spine's uncorrected TYC reached
@@ -173,7 +187,9 @@ What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/
 The request drives `refresh:gaia-astrometry-catalog`
 (`scripts/refresh/gaia-request/`) →
 the astrometry catalog, which is tier 1 of the direction cascade and the rv
-cascade, the source of the BP/RP the V and ci cascades transform, and both
-gates' evidence above. `pnpm run build:classic-ids` and `pnpm run
+cascade, the source of the BP/RP the V and ci cascades transform, both
+gates' evidence above, and the binaries' per-component astrometry.
+`refresh:gaia-gspc`, `refresh:gaia-apsis` and `refresh:bailer-jones` read the
+same request. `pnpm run build:classic-ids` and `pnpm run
 build:membership` — CI asserts both artifacts byte-identical — are what prove a
 change to this request did not move either gate.

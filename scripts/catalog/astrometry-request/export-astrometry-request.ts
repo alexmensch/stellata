@@ -8,8 +8,8 @@ import {
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
 import { loadHipVMag } from '../membership/binding/binding-evidence';
-import { readMultiplesTsv } from '../companions/companion-promotion';
-import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
+import { loadReferenceCatalogs } from '../../binaries/load/reference-catalogs';
+import { astrometryRequestIds, resolveStage2 } from '../../binaries/resolve/resolve-pairs';
 import {
   derivationCandidateSourceIds,
   indexSimbadSources,
@@ -59,9 +59,10 @@ export async function main(): Promise<void> {
   for (const id of derivation) ids.add(id);
   const afterDerivation = ids.size;
 
-  const siblings = pairMemberSourceIds(readMultiplesTsv());
-  for (const id of siblings) ids.add(id);
-  const afterSiblings = ids.size;
+  const reference = await loadReferenceCatalogs();
+  const binaries = astrometryRequestIds(resolveStage2(reference), reference.indices);
+  for (const id of binaries) ids.add(id);
+  const afterBinaries = ids.size;
 
   const reviewed = new Set(
     [...BINDING_REVIEW_DISPOSITIONS.read().values()]
@@ -80,12 +81,12 @@ export async function main(): Promise<void> {
       `(+${afterDerivation - candidates.size} beyond the gate's)`,
   );
   console.log(
-    `bound-pair siblings: ${siblings.size} ` +
-      `(+${afterSiblings - afterDerivation} beyond the two above)`,
+    `binaries candidates: ${binaries.size} ` +
+      `(+${afterBinaries - afterDerivation} beyond the two above)`,
   );
   console.log(
     `reviewed bindings kept: ${reviewed.size} ` +
-      `(+${ids.size - afterSiblings} beyond the three above)`,
+      `(+${ids.size - afterBinaries} beyond the three above)`,
   );
   console.log(`wrote ${OUT} (${ids.size} source_ids)`);
 }

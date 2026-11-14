@@ -11,6 +11,7 @@ import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifes
 import { entryClosure, packageScripts } from '../../util/import-closure';
 import { LAUNCHER } from '../../util/import-closure-pure';
 import { lfsContentReadable, publicRepoPath, PUBLIC_DIR, REPO_ROOT } from '../../util/paths';
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
 import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { describeStep, readManualRecord } from '../freshness';
@@ -84,6 +85,16 @@ describe('the step table', () => {
     expect(loaded.graph.registryEdges.map((e) => `${e.from} → ${e.to}`).sort()).toEqual(
       allocating.flatMap((from) => allocating.filter((to) => to !== from).map((to) => `${from} → ${to}`)).sort(),
     );
+  });
+
+  it('keeps the astrometry request ↔ pull loop, and reads the pull into binaries on a plain edge', () => {
+    const astrometry = DATA_FILES.gaiaAstrometryCatalog;
+    expect(loaded.graph.keptLoops
+      .filter((e) => e.from === 'refresh:gaia-astrometry-catalog' && e.to === 'build:astrometry-request')
+      .flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)))).toEqual([astrometry]);
+    expect(edgeFiles('build:astrometry-request', 'refresh:gaia-astrometry-catalog'))
+      .toEqual([DATA_FILES.astrometryRequest]);
+    expect(edgeFiles('refresh:gaia-astrometry-catalog', 'build:binaries')).toEqual([astrometry]);
   });
 
   it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:data never reads a stale row-index map', () => {

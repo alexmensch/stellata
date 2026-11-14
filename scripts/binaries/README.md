@@ -200,10 +200,11 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    cross-IDs + SIMBAD per-component spectra + the MSC. Emits
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
-   reach — with the Gaia astrometry request
-   (`data/gaia/gaia_astrometry_source_id_request.tsv`) and the
-   binding-integrity verdicts (`build/binding-integrity-verdicts.tsv`, a
-   gitignored review surface). All three land through `emitArtifacts`
+   reach — with the binding-integrity verdicts
+   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface).
+   The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
+   runs Stages 1–2 itself and unions them into the one astrometry request
+   (`../catalog/astrometry-request/`). Both land through `emitArtifacts`
    only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).

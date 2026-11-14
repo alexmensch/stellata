@@ -9,12 +9,11 @@ import { HIP2 } from '../catalog/sources/hip2-source';
 import { HIP_CCDM } from '../catalog/multiplicity/hip-ccdm-source';
 import { ATHYG_CLASSIC_IDS } from '../catalog/spine/athyg-classic-ids-source';
 import { SIMBAD_WDS_XIDS } from '../catalog/membership/binding/simbad-wds-xids-source';
-import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
-import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import { isReadable } from '../util/sources/source';
 import { columnTable } from '../util/tsv/table-pure';
 import { componentKey } from './component-tokens-pure';
-import { BINARIES_ASTROMETRY } from './load/binaries-astrometry-source';
+import { GAIA_ASTROMETRY } from '../catalog/sources/gaia-astrometry-source';
+import { CATALOG_ASTROMETRY_REQUEST } from '../refresh/gaia-request/catalog-astrometry-request-source';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './load/curated-source';
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
@@ -34,17 +33,16 @@ import { ORB6, WDS_SUMM } from '../wds/wds-source';
 
 const INPUTS = [
   WDS_SUMM, ORB6, ORB6_COMPONENT_OVERRIDES, COMPONENT_SPTYPE_OVERRIDES, ASTROMETRY_EXCLUSIONS,
-  MSC_SYSTEMS, MSC_ORBITS, MSC_COMPONENTS, BINARIES_ASTROMETRY, SIMBAD_WDS_SPTYPE, SIMBAD_WDS_XIDS,
+  MSC_SYSTEMS, MSC_ORBITS, MSC_COMPONENTS, GAIA_ASTROMETRY, SIMBAD_WDS_SPTYPE, SIMBAD_WDS_XIDS,
   ATHYG_CLASSIC_IDS, HIP_CCDM, HIP2, GAIA_HIP_XMATCH, GAIA_TYC_XMATCH, GAIA_NSS,
 ];
 
-const REQUEST = { file: DATA_FILES.binariesAstrometryRequest, hint: 'Re-run `pnpm run build:binaries`.' };
 const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 
 const snapshotText = (file: string): string => readFileSync(resolve(__dirname, file), 'utf8');
 const asWritten = (snapshot: unknown): string => `${JSON.stringify(snapshot, null, 2)}\n`;
 
-describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
+describe.skipIf(![...INPUTS, CATALOG_ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
   let r: Stage2Result;
   let s3: Stage3Result;
@@ -82,8 +80,9 @@ describe.skipIf(![...INPUTS, REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable)
     expect(c.indices.msc.orbitsByPair.get(mscPairKey('23300+5833', 'Aa', 'Ab'))?.rows.map((r) => r.per)).toEqual([6.0663]);
   });
 
-  it('requests exactly the committed Gaia astrometry request', () => {
-    expect(serialiseSourceIdRequest(astrometryRequestIds(r, c.indices)) === readRepoFile(REQUEST.file)).toBe(true);
+  it('finds every id it would weigh in the committed astrometry request', () => {
+    const requested = new Set(CATALOG_ASTROMETRY_REQUEST.read().map(String));
+    expect([...astrometryRequestIds(r, c.indices)].filter((id) => !requested.has(id))).toEqual([]);
   });
 
   it('meets every row of the spot-check ground truth', () => {

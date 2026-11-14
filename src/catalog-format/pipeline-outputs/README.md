@@ -17,11 +17,10 @@ repo-relative, so an outputs module passes them as they are.
   component cross-IDs (which a pull writes and two sources read) and the
   WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
-  tables, `build:binaries`' `multiples.tsv`, the two Gaia astrometry requests
-  (the catalogue's, and the one `build:binaries` writes), the three
+  tables, `build:binaries`' `multiples.tsv`, the Gaia astrometry request, the three
   whole-table Gaia pulls' tables (HIP and TYC cross-matches, NSS two-body
-  orbits), the four request-scoped Gaia pulls' tables (both astrometry
-  scopes, GSPC synthetic photometry and the DR2 neighbourhood), the three
+  orbits), the three request-scoped Gaia pulls' tables (astrometry, GSPC
+  synthetic photometry and the DR2 neighbourhood), the three
   magnitude-sliced pulls' tables (the magnitude pull, Apsis and
   Bailer-Jones), the generated
   reason-code list, and the Vaidman 2025 reference table the hand-run

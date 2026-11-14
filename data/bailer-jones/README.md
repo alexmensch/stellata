@@ -9,7 +9,7 @@ fails.
 
 ```
 bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
-                       1,273,967 rows.
+                       1,277,736 rows.
 ```
 
 ## Provenance
@@ -69,7 +69,7 @@ to the build and is gone from the ESA-side write.
 
 `pnpm run refresh:bailer-jones` →
 [`scripts/refresh/magnitude/refresh-bailer-jones.ts`](../../scripts/refresh/magnitude/README.md).
-Two legs — every source at `G ≤ 11`, plus what the exported catalog request
+Two legs — every source at `G ≤ 11`, plus what the astrometry request
 adds below that floor — per [The deep population](/scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
 Runs AFTER `pnpm run build:astrometry-request`. Every answered query is
 checkpointed, so a failed run resumes rather than restarting

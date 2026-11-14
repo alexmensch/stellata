@@ -26,8 +26,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   cascade's curated tier reads. The on-disk contract itself is
   `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
-  gates' candidates (overlay and derivation), the bound-pair siblings and the
-  review dispositions' kept ids. Input prep, off `build:catalog`.
+  gates' candidates (overlay and derivation), the binaries' Stage 2
+  candidates and the review dispositions' kept ids. Input prep, off
+  `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`) and reference-catalogue
   parsers. Its `gcvs/` subfolder owns the
   variable-star parsing and the variability cross-match; `constellations/`

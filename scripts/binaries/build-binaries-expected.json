@@ -4,8 +4,8 @@
       "wds_pairs_total": 158360,
       "wds_duplicate_pair_rows_dropped": 1,
       "msc_orbits_unmapped": 326,
-      "xwalk_hip_mag_rejected": 63,
-      "athyg_gaia_mag_rejected": 81
+      "xwalk_hip_mag_rejected": 162,
+      "athyg_gaia_mag_rejected": 241
     },
     "subdivide": {
       "synthesized_orb6_orphan_pairs": 33,

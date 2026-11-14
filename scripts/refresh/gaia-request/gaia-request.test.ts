@@ -7,7 +7,7 @@ import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { queryLimit } from '../pull/pull';
 import { committedRows, recordedTableCases } from '../pull/recorded-reply';
 import {
-  BINARIES_ASTROMETRY_SPOTS, CATALOG_ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
+  ASTROMETRY_SPOTS, DR2_ROWS_PER_ID, astrometryTable, dr2NeighbourhoodTable, gspcTable,
 } from './gaia-request-pure';
 
 /** Replies recorded from ESA on 2026-11-08 for each table's spot rows; ARI answered the same text except the boolean, written 1/0. */
@@ -20,9 +20,6 @@ const ASTROMETRY_REPLY = [
   '594599568167552,46.34790554492768,0.15961675,1.6353693937702984,0.16575596,10.491703175442018,0.18460374,44.048527237771225,0.24517998,-53.99990757405283,0.23253892,2016.0,0.9749684,1,17.316568,,,,',
   '4040814466068502656,268.26935637201575,0.04159869,-34.76115485446878,0.03327472,3.491053586328345,0.045627993,2.675863237154372,0.04859462,-5.678956016980035,0.032416336,2016.0,1.369661,0,8.888946,8.972153,8.711436,,',
 ];
-
-const CATALOG_ONLY = ['7632157690368,', '4472832130942575872,', '4040814466068502656,'];
-const BINARIES_ASTROMETRY_REPLY = ASTROMETRY_REPLY.filter((line) => !CATALOG_ONLY.some((id) => line.startsWith(id)));
 
 const GSPC_REPLY = [
   '4472832130942575872,11.249152,2.0508753E-15,1.6823492E-17,0,9.555117,5.540044E-15,2.7624626E-17,0',
@@ -44,8 +41,7 @@ const DR2_REPLY_ARI = DR2_REPLY_ESA.map((line) => line.replace(/true$/, '1').rep
 const NO_IDS: readonly bigint[] = [];
 
 const TABLES = [
-  { name: 'binaries astrometry', table: astrometryTable(NO_IDS, BINARIES_ASTROMETRY_SPOTS), file: DATA_FILES.gaiaAstrometry, reply: BINARIES_ASTROMETRY_REPLY },
-  { name: 'catalogue astrometry', table: astrometryTable(NO_IDS, CATALOG_ASTROMETRY_SPOTS), file: DATA_FILES.gaiaAstrometryCatalog, reply: ASTROMETRY_REPLY },
+  { name: 'astrometry', table: astrometryTable(NO_IDS, ASTROMETRY_SPOTS), file: DATA_FILES.gaiaAstrometryCatalog, reply: ASTROMETRY_REPLY },
   { name: 'gspc', table: gspcTable(NO_IDS), file: DATA_FILES.gaiaGspc, reply: GSPC_REPLY },
   { name: 'dr2 neighbourhood (ESA)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ESA },
   { name: 'dr2 neighbourhood (ARI)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ARI },
@@ -55,7 +51,7 @@ describe.each(TABLES)('$name', ({ name, table, file, reply }) => recordedTableCa
 
 describe('the request queries', () => {
   it('ask at most 20,000 rows each, so ESA\'s 50,000-row hard limit holds every batch', () => {
-    expect(TABLES.map(({ table }) => queryLimit(table))).toEqual([10_000, 10_000, 10_000, 20_000, 20_000]);
+    expect(TABLES.map(({ table }) => queryLimit(table))).toEqual([10_000, 10_000, 20_000, 20_000]);
   });
 
   it.skipIf(!lfsContentReadable(join(REPO_ROOT, DATA_FILES.gaiaDr2Neighbourhood)))(
@@ -75,6 +71,6 @@ describe('the request queries', () => {
 describe('the astrometry schema', () => {
   it('carries the 0.95 coverage floor in its band: at least ceil(0.95 n) rows, at most n', () => {
     const ids = Array.from({ length: 383_059 }, (_, i) => BigInt(i + 1));
-    expect(astrometryTable(ids, CATALOG_ASTROMETRY_SPOTS).band).toEqual({ min: 363_907, max: 383_059 });
+    expect(astrometryTable(ids, ASTROMETRY_SPOTS).band).toEqual({ min: 363_907, max: 383_059 });
   });
 });

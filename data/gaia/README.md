@@ -11,20 +11,18 @@ membership's second term.
 ```
 gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
-gaia_dr3_astrometry.tsv                ~1.2 MB, LFS. 5p astrometry for the
-                                       binaries request below.
 gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
-                                       catalog source_id, both binding gates'
-                                       candidates and the bound-pair
-                                       siblings (383,056 rows) — tier 1 of
-                                       the direction, rv, V and ci cascades,
-                                       the G evidence the overlay gate and the
-                                       membership derivation weigh, and the
-                                       parallax cascade's sibling tier.
+                                       requested source_id (388,980
+                                       rows) — tier 1 of the direction, rv, V
+                                       and ci cascades, the G evidence the
+                                       overlay gate and the membership
+                                       derivation weigh, the parallax
+                                       cascade's sibling tier, and the
+                                       binaries' per-component astrometry.
 gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
                                        G <= 11 (1,247,240) on the SAME schema
-                                       as the two astrometry pulls — the
+                                       as the astrometry pull — the
                                        magnitude term of membership
                                        (/docs/catalog-driver.md#1-the-driver-model), floor-
                                        agnostic below V <= 11. Not keyed on a
@@ -33,25 +31,22 @@ gaia_dr3_magnitude_pull.tsv            ~200 MB, LFS. Every gaia_source row at
 gaia_dr3_nss_two_body.tsv              ~90 MB, LFS. NSS two-body orbits.
 gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
                                        Teff/logg/[M/H]/A0 + spectraltype_esphs,
-                                       over the deep population (1,284,985).
+                                       over the deep population (1,288,721).
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
-                                       per-band validated-range flag. 346,758
-                                       rows, pulled against the catalog request
-                                       at 383,058 ids — the ci
+                                       per-band validated-range flag. 351,497
+                                       rows, pulled against the astrometry
+                                       request at 388,982 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
-gaia_astrometry_source_id_request.tsv  ~440 KB, LFS. Stage 2 → Stage 3 deduped
-                                       source_id request list (build:binaries output;
-                                       astrometryRequestIds owns its contents).
-gaia_catalog_source_id_request.tsv     ~7.2 MB, LFS. Full-catalog deduped
-                                       source_id request list — the classic-ID
+gaia_catalog_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
+                                       source_id request — the classic-ID
                                        binding gate's candidates UNION the
                                        membership derivation's candidates UNION
-                                       the kept-physical multiples.tsv pair
-                                       members UNION the binding review
-                                       dispositions' kept ids, 383,058 ids
+                                       the binaries' Stage 2 candidates UNION
+                                       the binding review dispositions' kept
+                                       ids, 388,982 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
@@ -84,10 +79,8 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   endpoints — [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only)):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
   - `gaia_dr3_tyc_xmatch.tsv` ← `tycho2tdsc_merge_best_neighbour`.
-  - `gaia_dr3_astrometry.tsv` ← `gaia_source` (binaries subset queried
-    by deduped source_id).
-  - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (full-catalog
-    subset — same schema, same query, wider source_id list).
+  - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (queried by the
+    deduped source_id request).
   - `gaia_dr3_magnitude_pull.tsv` ← `gaia_source` (same schema again,
     selected on `phot_g_mean_mag` rather than on a source_id list).
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
@@ -95,7 +88,7 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
     gspspec; scoped like the magnitude pull plus the catalog request —
     [The deep population](../../scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)).
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
-    same catalog source_id request the astrometry pull reads).
+    same source_id request the astrometry pull reads).
   - `gaia_dr2_neighbourhood.tsv` ← `dr2_neighbourhood` (the DPAC
     DR2→(E)DR3 cross-match, [Torra 2021](/data/papers/index.md#torra2021); queried by
     dr3_source_id).
@@ -322,7 +315,8 @@ re-deriving:
   cascade's tier below the Table-5.9 relation, for the red and saturated
   rows the relation's colour bound excludes.
 - `scripts/binaries/build-binaries.ts` Stages 1–4 — HIP/Tyc
-  cross-walks, per-component 5p astrometry, NSS orbital elements.
+  cross-walks, per-component 5p astrometry (the same
+  `gaia_dr3_astrometry_catalog.tsv`), NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays
   the request + neighbourhood pair as the [§ 6.2](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) dry run;
   `scripts/sid/dr-reconcile-pure.test.ts` pins that classification
@@ -335,17 +329,15 @@ science-side rationale.
 
 ## Refresh
 
-`pnpm run refresh:gaia-{hip,tyc,astrometry,astrometry-catalog,nss,apsis,gspc,magnitude,dr2-neighbourhood}` →
+`pnpm run refresh:gaia-{hip,tyc,astrometry-catalog,nss,apsis,gspc,magnitude,dr2-neighbourhood}` →
 [`scripts/refresh/`](../../scripts/refresh/README.md). DR4 transition
 order is documented there. `refresh:gaia-magnitude` has no input beyond its
 own magnitude bound, so it runs at any point in that order. The pulls that
 read a source_id request file run after whatever writes it —
 `refresh:gaia-gspc`, `refresh:gaia-apsis` and `refresh:bailer-jones` read the
-same `gaia_catalog_source_id_request.tsv` as the catalog astrometry pull, so
+same `gaia_catalog_source_id_request.tsv` as the astrometry pull, so
 they share its ordering constraint:
 
-- `refresh:gaia-astrometry` reads `gaia_astrometry_source_id_request.tsv`,
-  so it must run **after** a fresh `pnpm run build:binaries`.
 - `refresh:gaia-astrometry-catalog` reads
   `gaia_catalog_source_id_request.tsv`, so it must run **after**
   `pnpm run build:astrometry-request` — which reads both cross-walks, so it

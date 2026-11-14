@@ -1,14 +1,13 @@
 # Request-scoped Gaia DR3 pulls
 
-The four pulls that ask `gaiadr3.*` for a list of ids rather than a whole
+The three pulls that ask `gaiadr3.*` for a list of ids rather than a whole
 table, on the TypeScript runtime's `request` scope
 ([pull/README.md](../pull/README.md)):
 
 | Step | Table | Request | Output |
 |---|---|---|---|
-| `refresh:gaia-astrometry` | `gaia_source` | `gaia_astrometry_source_id_request.tsv` (`build:binaries`) | `gaia_dr3_astrometry.tsv` |
 | `refresh:gaia-astrometry-catalog` | `gaia_source` | `gaia_catalog_source_id_request.tsv` (`build:astrometry-request`) | `gaia_dr3_astrometry_catalog.tsv` |
-| `refresh:gaia-gspc` | `synthetic_photometry_gspc` | the catalogue request | `gaia_dr3_gspc.tsv` |
+| `refresh:gaia-gspc` | `synthetic_photometry_gspc` | the same request | `gaia_dr3_gspc.tsv` |
 | `refresh:gaia-dr2-neighbourhood` | `dr2_neighbourhood` | `gaia_dr2_neighbourhood_request.tsv` (frozen) | `gaia_dr2_neighbourhood.tsv` |
 
 Every file is under `data/gaia/`; output and request paths are `DATA_FILES`'
@@ -21,13 +20,13 @@ of the frozen dry-run pair.
 ## Files
 
 - `gaia-request-pure.ts` — the `PullTable`s: `ASTROMETRY_COLUMNS`, the one
-  astrometry schema both scopes and the magnitude pull (`../magnitude/`) write, each scope's spot rows, GSPC's and
+  astrometry schema this pull and the magnitude pull (`../magnitude/`) write, its spot rows, GSPC's and
   the DR2 neighbourhood's tables, batch sizes and reach floors.
-- `binaries-astrometry-request-source.ts`, `catalog-astrometry-request-source.ts`
-  — one request declaration each, so an entry reaches only the request it
-  reads ([Reached means read](../../util/sources/README.md#reached-means-read)).
-- `gaia-request-outputs.ts` — the four `declareOutputs`.
-- `refresh-gaia-{astrometry,astrometry-catalog,gspc,dr2-neighbourhood}.ts` —
+- `catalog-astrometry-request-source.ts` — the astrometry request's
+  declaration, in a leaf of its own so an entry reaches it only when it reads
+  it ([Reached means read](../../util/sources/README.md#reached-means-read)).
+- `gaia-request-outputs.ts` — the three `declareOutputs`.
+- `refresh-gaia-{astrometry-catalog,gspc,dr2-neighbourhood}.ts` —
   one entry per step, each building its `Pull` over its request.
 - `gaia-request.test.ts` — replies recorded from ESA on 2026-11-08 for each
   table's spot rows, and ARI's for the DR2 boolean: each formats to lines of
@@ -60,18 +59,18 @@ Measured on ESA and ARI, which answer the same CSV text but for a BOOLEAN:
   key on `dr3_source_id` with `dr2_source_id` pinned: a same-id carry-forward
   and both DR3 halves of a DR2 source the release split.
 
-Both request files are ascending source_id, so the astrometry and GSPC
+Both request files are in ascending source_id, so the astrometry and GSPC
 tables sort by `source_id` as an integer; the DR2 neighbourhood by
 (`dr3_source_id` integer, `angular_distance` decimal).
 
 | Table | Batch | Rows per id | Band | Coverage floor |
 |---|---|---|---|---|
-| astrometry, both scopes | 5,000 | 1 | [⌈0.95 n⌉, n] for a request of n | none: the band carries it |
+| astrometry | 5,000 | 1 | [⌈0.95 n⌉, n] for a request of n | none: the band carries it |
 | GSPC | 5,000 | 1 | 320,000 – 370,000 | none |
 | DR2 neighbourhood | 2,500 | 4 | 5,700 – 6,100 | 0.97 of distinct DR3 ids |
 
 GSPC exists only for sources with published BP/RP spectra and drops this
-catalogue's hot-blue and very-red bright ends, so it reaches about 87.6% of
+catalogue's hot-blue and very-red bright ends, so it reaches about 90.4% of
 the request; its band is the gate, and coverage reports the share with B and
 V both present and both in validated range, never floored — the
 validated-range share is a property of how bright the catalogue is, not of

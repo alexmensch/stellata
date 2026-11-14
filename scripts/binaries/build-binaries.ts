@@ -2,7 +2,6 @@
 
 import { resolve } from 'node:path';
 
-import { serialiseSourceIdRequest } from '../catalog/astrometry-request/export-astrometry-request-pure';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
@@ -20,7 +19,7 @@ import { attachStage6, type Stage6Result } from './multiples/attach-multiples';
 import { stage6Report } from './multiples/stage6-report-pure';
 import { attachStage5, type Stage5Result } from './optical/attach-optical';
 import { stage5Report } from './optical/stage5-report-pure';
-import { astrometryRequestIds, resolveStage2, type Stage2Result } from './resolve/resolve-pairs';
+import { resolveStage2, type Stage2Result } from './resolve/resolve-pairs';
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
 import { stage4Report } from './orbits/stage4-report-pure';
@@ -62,7 +61,6 @@ export async function main(): Promise<void> {
     outputs: BINARIES_OUTPUTS,
     files: {
       multiples: MULTIPLES_TSV.serialize(multiples.rows),
-      astrometryRequest: serialiseSourceIdRequest(astrometryRequestIds(resolved, reference.indices)),
       bindingVerdicts: BINDING_VERDICTS_TSV.serialize(resolved.verdicts.map(bindingVerdictRow)),
     },
     checks: [
