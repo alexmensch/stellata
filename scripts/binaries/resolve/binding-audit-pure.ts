@@ -6,6 +6,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
+import { compareCodeUnits } from '../../util/tsv/artifact-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
@@ -138,7 +139,7 @@ export function walk<E, V>(
   for (let head = 0; head < queue.length; head++) {
     const tok = queue[head];
     const nbrs = [...(adj.get(tok) ?? [])];
-    if (order === 'token') nbrs.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (order === 'token') nbrs.sort(([a], [b]) => compareCodeUnits(a, b));
     for (const [nbr, edge] of nbrs) {
       if (out.has(nbr)) continue;
       out.set(nbr, step(out.get(tok)!, edge));
