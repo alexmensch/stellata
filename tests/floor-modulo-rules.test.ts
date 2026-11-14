@@ -10,11 +10,13 @@ const RULES: ReadonlyArray<LineRule> = [
   { name: '((x % m) + m) % m', re: new RegExp(String.raw`%\s*${M}\s*\)?\s*\+\s*\1\s*\)\s*%\s*\1\b`) },
   { name: '(x + m) % m', re: new RegExp(String.raw`\+\s*${M}\s*\)\s*%\s*\1\b`) },
   { name: 'x < 0 ? x + m : x', re: new RegExp(String.raw`${M}\s*<\s*0\s*\?\s*\1\s*\+\s*[\w.]+\s*:\s*\1\b`) },
+  { name: 'if (x < 0) x += m', re: new RegExp(String.raw`if\s*\(\s*${M}\s*<\s*0\s*\)\s*\{?\s*\1\s*\+=`) },
 ];
 
 const HAND_ROLLED_ALLOWED: ReadonlyMap<string, number> = new Map([
   ['src/client/attitude/attitude-ball.ts', 1],
   ['src/client/debug/perf-hud.ts', 1],
+  ['src/client/format/velocity-format.ts', 1],
   ['src/client/galactic/coord-spheres/coord-sphere-frames.ts', 2],
   ['src/client/solar-system/ephemerides/lunar-theory-pure.ts', 1],
   ['src/client/solar-system/planets/rotation/earth-orientation-pure.ts', 1],
@@ -35,6 +37,8 @@ describe('floor-modulo shapes', () => {
       ['this.setHover((this.hoverIdx - 1 + this.results.length) % this.results.length);', '(x + m) % m'],
       ['return w < 0 ? w + 360 : w;', 'x < 0 ? x + m : x'],
       ['const a = lon < 0 ? lon + TWO_PI : lon;', 'x < 0 ? x + m : x'],
+      ['if (lDeg < 0) lDeg += 360;', 'if (x < 0) x += m'],
+      ['if (a < 0) { a += TWO_PI; }', 'if (x < 0) x += m'],
     ] as const) {
       expect(firstRule(line, RULES), line).toBe(rule);
     }

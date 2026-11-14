@@ -645,8 +645,9 @@ inside a chain (`a.n - b.n || …`) is not matched.
 
 `floor-modulo-rules.test.ts` scans every non-test, non-declaration
 TypeScript file under `src/` and `scripts/` and fails on a floor modulo
-spelled by hand: `((x % m) + m) % m`, `(x + m) % m`, or
-`x < 0 ? x + m : x`, where every `m` is the same token. Each goes through
+spelled by hand: `((x % m) + m) % m`, `(x + m) % m`,
+`x < 0 ? x + m : x`, or `if (x < 0) x += m`, where every repeated token is
+the same. Each goes through
 `pyMod` in `/src/astro-core/angles.ts`, the one file exempt
 ([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
 `(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
