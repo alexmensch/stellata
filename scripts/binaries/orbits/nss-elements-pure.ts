@@ -4,7 +4,7 @@ import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astron
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
 import { NSS_SOLUTION_TYPES, type NssOrbitRow } from '../load/gaia-pure';
-import { pyMod } from '../python-float-pure';
+import { pyMod } from '../../../src/astro-core/angles';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
