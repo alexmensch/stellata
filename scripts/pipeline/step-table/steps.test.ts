@@ -50,8 +50,8 @@ describe('the step table', () => {
 
   it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
-      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:binaries',
-      'build:astrometry-request', 'build:classic-ids', 'build:membership', 'build:probes-sync', 'build:ephemerides-sync',
+      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:astrometry-request',
+      'build:binaries', 'build:classic-ids', 'build:membership', 'build:probes-sync', 'build:ephemerides-sync',
       'build:catalog', 'build:binaries-runtime', 'build:dust-sync', 'build:local-bubble-sync', 'build:cloud-surfaces-sync',
       'build:textures-sync',
     ]);
