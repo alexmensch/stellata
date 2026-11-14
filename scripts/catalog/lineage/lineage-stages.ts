@@ -2,6 +2,7 @@
 
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
+import { CLASSIC_ID_CODES } from '../classic-ids/classic-id-lineage-pure';
 import { PROMOTION_CODES } from '../companions/promotion-lineage-pure';
 import { PLACEMENT_CODES } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
@@ -11,7 +12,7 @@ import { BRIGHTNESS_COLOUR_CODES } from '../photometry/brightness-colour-lineage
 import { SIZE_CODES } from '../spectral/size-lineage-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
-  ALLOCATION_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
+  ALLOCATION_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
   NAMING_LINEAGE, SIZE_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -22,6 +23,7 @@ export interface LineageStage {
 }
 
 export const LINEAGE_STAGES: readonly LineageStage[] = [
+  { codes: CLASSIC_ID_CODES, spec: CLASSIC_IDS_LINEAGE },
   { codes: MEMBERSHIP_CODES, spec: MEMBERSHIP_LINEAGE },
   { codes: PLACEMENT_CODES, spec: PLACEMENT_LINEAGE },
   { codes: BRIGHTNESS_COLOUR_CODES, spec: BRIGHTNESS_COLOUR_LINEAGE },

@@ -5,7 +5,8 @@ limit as an `emitArtifacts` check (`../emit-artifacts.ts`).
 
 - `heap-budget.ts` — `watchHeap(step)`, started first thing in a step's
   `main`, and its `check()`, the step's peak live heap against the CI
-  runner's. `build:catalog` and `build:membership` carry it.
+  runner's. `build:catalog`, `build:membership` and `build:classic-ids`
+  carry it.
 - `heap-budget-pure.ts` (+ test) — `CI_HEAP_LIMIT_BYTES`,
   `CI_HEAP_HEADROOM`, `peakLiveHeap` and `heapBudgetCheck`, the verdict.
 

@@ -36,7 +36,10 @@ name.
    every row that names it in `params` or `evidence` — a source a gate
    weighed and refused, or only cited, sits on no identity row — and every
    row that cites one of those identity-row records by origin key, as a
-   companion's promotion row cites its anchor. Identity rows come from every
+   companion's promotion row cites its anchor. `classic-ids` rows are keyed
+   on the catalogue row stating a designation, not on a record, so they are
+   found this way: by the designation in their params (`hd:128621`) or by a
+   Gaia id they reached or refused. Identity rows come from every
    stage that writes them (`StageLineageSpec.identity`,
    [Identity](../README.md#identity--the-origin-source-row)). No index is
    kept: trace streams the stage files twice, once to find the keys and once
@@ -49,6 +52,8 @@ name.
    (`LINEAGE_STAGES`, `../lineage-stages.ts`).
 
 `trace.test.ts` runs the command over a small committed fixture: it finds a
+designation's classic-id rows with the binding the gate refused (α Cen B's
+HD 128621 and HR 5460 on the background source beside it), a
 record the catalogue parks, prints a record's placement,
 brightness-colour and size rows with their refused tiers, finds the record that
 refused a source no identity row carries, every component row of a promoted system from its anchor's

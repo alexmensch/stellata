@@ -2,13 +2,14 @@
 
 import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type ComponentKey } from '../component-tokens-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import { skyPositionAtEpoch } from '../../../src/astro-core/equatorial-basis';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareCodeUnits } from '../../util/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
-import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
+import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
@@ -160,7 +161,7 @@ export function bfsOffset(adj: SystemContext['adj'], start: string, goal: string
 
 function sourceOffset(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, epoch: number | null): TangentOffset {
   if (epoch === null) return tangentOffset({ raDeg: src.raDeg, decDeg: src.decDeg }, { raDeg: ref.raDeg, decDeg: ref.decDeg });
-  const at = (r: GaiaAstrometryRow) => propagatePosition(
+  const at = (r: GaiaAstrometryRow) => skyPositionAtEpoch(
     { raDeg: r.raDeg, decDeg: r.decDeg }, { pmRaMasyr: r.pmraMasyr, pmDecMasyr: r.pmdecMasyr }, r.refEpoch, epoch,
   );
   return tangentOffset(at(src), at(ref));
