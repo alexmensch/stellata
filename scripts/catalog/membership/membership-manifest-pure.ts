@@ -449,34 +449,36 @@ function settleBinding(
   return { value: keep, binding: 'reviewed', asserted };
 }
 
-/** Empty the spine-label cells no primary attests — the Flamsteed number, and
- *  the HD number with its aliases — into label-parity ledger rows (/docs/catalog-driver.md#62-label-parity) keyed on the row as
- *  it stands afterwards, so each joins the manifest row it left. Returns the
- *  attestation of the row it leaves behind, which is the one `routesCell`
- *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
- *  against an HD no HD primary attests. */
-function dropUnattestedLabels(
-  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex, key: string, into: KeyedOutcome[],
-): RowAttestation {
-  const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
+interface LabelDrop {
+  cell: 'hd' | 'flam';
+  value: string;
+  reason: LabelDropReason;
+}
+
+/** The spine-label cells a row keeps once those no primary attests leave it —
+ *  the Flamsteed number, and the HD number with its aliases — each drop a
+ *  label-parity ledger row (/docs/catalog-driver.md#62-label-parity), and the
+ *  kept row's attestation, which `routesCell` needs. The HD drop runs first
+ *  because IV/27A can publish a Flamsteed number against an HD no HD primary
+ *  attests. */
+function attestedLabels(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): {
+  kept: Pick<ManifestRecord, 'hd' | 'hdAlt' | 'flam'>;
+  drops: LabelDrop[];
+  attestation: RowAttestation;
+} {
+  const drops: LabelDrop[] = [];
   const hds = row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt];
-  const kept = hds.filter((hd) => {
+  const attestedHds = hds.filter((hd) => {
     if (attestHd(hd, idx, tables) !== null) return true;
-    dropped.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
+    drops.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
     return false;
   });
-  row.hd = kept[0] ?? null;
-  row.hdAlt = kept.slice(1);
-  let attestation = attestRecord(row, tables, idx);
-  if (row.flam !== null && attestation.attestation.flam === null) {
-    dropped.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
-    row.flam = null;
-    attestation = attestRecord(row, tables, idx);
-  }
-  for (const d of dropped) {
-    into.push({ key, outcome: { kind: 'label-drop', reason: d.reason, cell: d.cell, value: d.value } });
-  }
-  return attestation;
+  const hdKept = { hd: attestedHds[0] ?? null, hdAlt: attestedHds.slice(1), flam: row.flam };
+  const attestation = attestRecord({ ...row, ...hdKept }, tables, idx);
+  if (row.flam === null || attestation.attestation.flam !== null) return { kept: hdKept, drops, attestation };
+  drops.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
+  const kept = { ...hdKept, flam: null };
+  return { kept, drops, attestation: attestRecord({ ...row, ...kept }, tables, idx) };
 }
 
 function attestRecord(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): RowAttestation {
@@ -835,7 +837,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const key = row.originKey;
     for (const cell of unattested) {
       if (cell === 'hd' || cell === 'flam') {
-        throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${cells[cell]}); dropUnattestedLabels empties it on spine rows and additions take it from the primaries`);
+        throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${cells[cell]}); attestedLabels drops it on spine rows and additions take it from the primaries`);
       }
       outcomes.push({ key, outcome: { kind: 'unattested', cell, value: cells[cell] } });
     }
@@ -925,9 +927,14 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       outcomes.push({ key: spineKey(i), outcome: { kind: 'bright', overlayEntry: !noEntry } });
     }
-    const row = manifestRowFromRecord(kept[i], record, settled[i].binding, spineKey(i));
+    const merged = manifestRowFromRecord(kept[i], record, settled[i].binding, spineKey(i));
+    const labels = attestedLabels(merged, tables, idx);
+    for (const d of labels.drops) {
+      outcomes.push({ key: spineKey(i), outcome: { kind: 'label-drop', ...d } });
+    }
+    const row = { ...merged, ...labels.kept };
     spineManifestRows.push(row);
-    attest(row, dropUnattestedLabels(row, tables, idx, spineKey(i), outcomes));
+    attest(row, labels.attestation);
   });
   const keyBySource = new Map<string, string>();
   records.forEach((r, i) => {
