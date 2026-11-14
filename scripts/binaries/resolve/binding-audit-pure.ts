@@ -6,7 +6,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
-import { compareCodeUnits } from '../../util/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
@@ -277,7 +277,7 @@ function clusterError(
 
 /** Error ascending; Infinity last. */
 export const byError = (a: BindingCandidate, b: BindingCandidate): number =>
-  (a.errArcsec < b.errArcsec ? -1 : a.errArcsec > b.errArcsec ? 1 : 0);
+  ascending(a.errArcsec, b.errArcsec);
 
 function refuted(c: BindingCandidate): boolean {
   return Number.isFinite(c.errArcsec) && c.errArcsec > ARBITRATION_ABS_TOLERANCE_ARCSEC;

@@ -25,9 +25,9 @@ Cloudflare Worker entry, browser client, and the public content site.
   `site/pages.ts`'s.
 - `client/` — browser app, served at `/app`. Built by `vite.config.ts`;
   `client/app/README.md` is why that path and not `/`.
-- `astro-core/` — shared physics both `client/` and the build pipeline
-  (`/scripts/`) import: constants, frames, orbits, photometric models. It
-  imports neither of them.
+- `astro-core/` — shared physics and the primitives under it, which both
+  `client/` and the build pipeline (`/scripts/`) import: constants, frames,
+  orbits, photometric models, the sort order. It imports neither of them.
 - `catalog-format/` — what the pipeline writes and `client/` reads: the
   record layout and codec, artefact schemas, and the naming and spectral
   rules both apply. `client/` reaches pipeline code only through it.

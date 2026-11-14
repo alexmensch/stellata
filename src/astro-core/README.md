@@ -1,8 +1,9 @@
 # astro-core
 
-Shared physics: constants, angles, coordinate frames, orbits and the
-photometric models both the build pipeline (`scripts/`) and the viewer
-(`src/client/`) compute with. Neither side owns it; both import it.
+Shared physics — constants, angles, coordinate frames, orbits and the
+photometric models — and the primitives under them that both the build
+pipeline (`scripts/`) and the viewer (`src/client/`) compute with, such as
+the sort order. Neither side owns it; both import it.
 
 **It imports nothing outside itself** but npm packages — no `scripts/`, no
 `src/client/`, no `src/catalog-format/`. That is what lets a constant or a
@@ -25,6 +26,13 @@ Each has its own README.
 
 ## Files
 
+- `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
+  comparator (numbers and bigints by value, strings by code unit; a string
+  against a number does not compile), and `compareCodeUnits`, its string
+  case: the same order on every machine, unlike `localeCompare`. Any
+  order that reaches a written or committed output sorts through them;
+  `localeCompare` is for a list people read, such as the constellation
+  typeahead.
 - `equinoctial-pure.ts` (+ test) — the non-singular equinoctial element
   representation and the classical round trip; the Horizons element fetch
   and the viewer's planet ephemeris both express their elements in it
@@ -33,7 +41,11 @@ Each has its own README.
   wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
   a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
   clock's bounds and a loop would iterate millions of times to bring that
-  back. Also `angleBetweenRad`, the unsigned angle between two
+  back. `pyMod(x, m)`, the one floor modulo: `%` with the divisor's sign,
+  as Python computes it, so a tiny negative `x` rounds up to `m` rather
+  than wrapping to 0 — the edge `multiples.tsv`'s bytes rest on. Write no
+  `((x % m) + m) % m`: it rounds before the remainder and wraps that edge
+  the other way. Also `angleBetweenRad`, the unsigned angle between two
   unnormalised vectors as `atan2(|a×b|, a·b)` — **the small-angle-safe
   form, and the reason it is not `phaseAngleFromLegs`**: the cosine is
   flat near zero, so at 1e-6 rad the normalised dot rounds to 1 and

@@ -4,6 +4,7 @@
 
 import type { Declared } from '../util/sources/source';
 import { readTable } from '../util/tsv/table-pure';
+import { ascending } from '../../src/astro-core/order-pure';
 
 /** Acceptance radius for a cross-match candidate (/docs/sid.md#61-procedure). */
 export const ACCEPT_MAS = 400;
@@ -113,7 +114,7 @@ export function classifyDrTransition(
     if (ids.length > 1) sharedCandidateGroups.push({ candidateId, riskIds: ids });
   }
 
-  const distances = carried.map((m) => m.angularDistanceMas).sort((a, b) => a - b);
+  const distances = carried.map((m) => m.angularDistanceMas).sort(ascending);
   return {
     carried,
     carriedSameId: carried.filter((m) => m.riskId === m.candidateId).length,

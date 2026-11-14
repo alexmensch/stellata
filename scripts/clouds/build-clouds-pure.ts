@@ -24,6 +24,7 @@ import {
 import { siblingSlug } from '../sid/sibling-artifacts-pure';
 import { roundEach, roundHalfEven } from '../util/round-pure';
 import type { Sightline, Z2021Extent, Z2021Mass } from './zucker-parse';
+import { compareCodeUnits } from '../../src/astro-core/order-pure';
 
 /** Singleton Zucker 2020 sightlines: the small end of the 5–30 pc effective radii of local SF clouds. */
 export const DEFAULT_SPHERE_RADIUS_PC = 5.0;
@@ -219,7 +220,7 @@ export function buildClouds(t: ZuckerTables): { clouds: CloudRow[]; ellipsoids: 
   const clouds = [...byId.values()];
   applyAltNames(clouds);
   const key = (c: CloudRow): string => c.name.toLowerCase();
-  clouds.sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+  clouds.sort((a, b) => compareCodeUnits(key(a), key(b)));
   return { clouds, ellipsoids: ellipsoids.length, spheres: spheres.length };
 }
 

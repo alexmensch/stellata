@@ -2,6 +2,7 @@
 import { Lexer, walkTokens } from 'marked';
 import { escapeRegExp } from '../util/escape-regexp';
 import { roundSignificant } from '../util/round-pure';
+import { ascending } from '../../src/astro-core/order-pure';
 
 export type FigureFormat =
   | { kind: 'exact' }
@@ -218,7 +219,7 @@ export function unmarkedSnapshotCopies(
   for (const l of leaves) byValue.set(l.value, [...(byValue.get(l.value) ?? []), l]);
   const lines = blankMarkers(scannableText).split('\n');
   const copies: FigureCopy[] = [];
-  for (const n of [...addedLines].sort((a, b) => a - b)) {
+  for (const n of [...addedLines].sort(ascending)) {
     const text = lines[n - 1];
     if (text === undefined) continue;
     const near = lines.slice(Math.max(0, n - 1 - KEY_NEIGHBOURHOOD), n + KEY_NEIGHBOURHOOD).join('\n');

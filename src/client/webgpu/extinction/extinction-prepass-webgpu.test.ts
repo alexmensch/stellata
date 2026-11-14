@@ -19,6 +19,7 @@ import { mortonDispatchOrder } from './dispatch-order/dispatch-order-pure';
 import { composeViewProjectionAbs, countInFrameAbs } from './refill/refill-decision-pure';
 import { refillWorklistLength } from './refill/refill-buckets-pure';
 import { REFILL_SLICES } from './refill/refill-slices-pure';
+import { ascending } from '../../../astro-core/order-pure';
 
 /** A renderer whose readbacks resolve only when the test says so — the
  *  frame-decoupled semantics a cold read has to live with. */
@@ -873,8 +874,8 @@ describe('dispose', () => {
     const positions = released.find((a) => a.itemSize === 4)!;
     expect(positions.count).toBe(COUNT);
     const uints = released.filter((a) => a.array instanceof Uint32Array);
-    expect(uints.map((u) => u.count).sort((a, b) => a - b))
-      .toEqual([COUNT, COUNT, COUNT + refillWorklistLength(COUNT)].sort((a, b) => a - b));
+    expect(uints.map((u) => u.count).sort(ascending))
+      .toEqual([COUNT, COUNT, COUNT + refillWorklistLength(COUNT)].sort(ascending));
   });
 
   // The buffer and the parity check's CPU copy are one array, so releasing

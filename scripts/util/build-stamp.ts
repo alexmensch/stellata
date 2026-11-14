@@ -9,6 +9,7 @@ import { CODE_FILE } from './import-closure-pure';
 import { REPO_ROOT } from './paths';
 import { discardStaged, landStaged, writeStaged } from './staged-write';
 import { hashBytes, hashFile } from './stamp-hash';
+import { compareCodeUnits } from '../../src/astro-core/order-pure';
 
 /** Repo-relative path → sha1 of its content, or null when the file is absent. */
 export type FileHashes = Readonly<Record<string, string | null>>;
@@ -42,7 +43,7 @@ export const inputHashes: Hasher = (paths, root = REPO_ROOT) => {
   const code = new Set(paths.filter((p) => CODE_FILE.test(p) && existsSync(p)));
   const identities = Object.entries(codeIdentities([...code])).map(([p, identity]) => [relative(root, p), identity]);
   const bytes = Object.entries(fileHashes(paths.filter((p) => !code.has(p)), root));
-  return Object.fromEntries([...bytes, ...identities].sort(([a], [b]) => (a < b ? -1 : 1)));
+  return Object.fromEntries([...bytes, ...identities].sort(([a], [b]) => compareCodeUnits(a, b)));
 };
 
 /** A recorded run's reads, hashed as bytes at first read, as input hashes. A code file

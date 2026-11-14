@@ -50,8 +50,9 @@ import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/desi
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
-  parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,
+  parseStage6Offset, rebasedAnchorOffset, type Stage6Offset,
 } from './anchor-offset-pure';
+import { polarToTangent } from '../../binaries/sky-geometry-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -145,9 +146,9 @@ export function projectFromSepPa(
   const at = equatorialTangentBasisAt(primaryX, primaryY, primaryZ);
   if (at === null) return null;
   const { basis: { east, north }, rPc: distPc } = at;
-  const offset = tangentOffset(sepArcsec, paDeg);
-  const offsetN = offset.north * ARCSEC_TO_RAD;
-  const offsetE = offset.east * ARCSEC_TO_RAD;
+  const offset = polarToTangent(sepArcsec, paDeg);
+  const offsetN = offset.northArcsec * ARCSEC_TO_RAD;
+  const offsetE = offset.eastArcsec * ARCSEC_TO_RAD;
   // Small-angle: linear in parsecs at the primary's distance.
   const cx = primaryX + (offsetN * north.x + offsetE * east.x) * distPc;
   const cy = primaryY + (offsetN * north.y + offsetE * east.y) * distPc;

@@ -5,6 +5,7 @@
 import type { SimbadSampleRow } from '../../validate/simbad-sample-parse';
 import type { Star } from '../../parse/stars-parse';
 import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
+import { compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 // Only an override layer moves a record off its own inversion. Bailer-Jones
 // legitimately re-anchors the low-S/N tail of Gaia parallaxes, so that tier
@@ -145,8 +146,8 @@ export function buildRegressionReport(
     const sb = detectSimbadOutlier(star, simbadSample);
     if (sb) simbad.push(sb);
   }
-  selfConsistency.sort((a, b) => a.id.localeCompare(b.id));
-  simbad.sort((a, b) => a.id.localeCompare(b.id));
+  selfConsistency.sort((a, b) => compareCodeUnits(a.id, b.id));
+  simbad.sort((a, b) => compareCodeUnits(a.id, b.id));
   return { selfConsistency, simbad };
 }
 

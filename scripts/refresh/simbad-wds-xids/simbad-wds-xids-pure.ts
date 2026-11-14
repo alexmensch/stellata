@@ -11,6 +11,7 @@ import {
   cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
 } from './wds-xids-cascade-pure';
 import { assertOverridesOnComponents, type WdsXidOverride } from './wds-xids-overrides-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The least share of the WDS components that must reach an object (README.md#the-request-and-the-gates). */
 export const MIN_COMPONENT_REACH = 0.36;
@@ -127,7 +128,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
       }
       const unresolved = components.filter((c) => !oids.has(componentId(c)) && siblings.has(c.wdsId));
       if (unresolved.length > 0) {
-        const primaries = [...new Set(unresolved.flatMap((c) => siblings.get(c.wdsId) ?? []))].sort((a, b) => a - b);
+        const primaries = [...new Set(unresolved.flatMap((c) => siblings.get(c.wdsId) ?? []))].sort(ascending);
         const numbers = firstNumbers(await ask(XIDS_PHASES.aliases, primaries.map(String)), ledger);
         log(`aliases: ${numbers.hd.size} HD and ${numbers.hip.size} HIP over ${primaries.length} resolved siblings of ${unresolved.length} unresolved components`);
         const candidates = cascadeCandidates(unresolved, siblings, numbers.hd, numbers.hip);
@@ -146,7 +147,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const oid = oids.get(componentId(c));
         if (oid !== undefined) letters.set(oid, (letters.get(oid) ?? new Set()).add(c.component));
       }
-      const unique = [...letters.keys()].sort((a, b) => a - b);
+      const unique = [...letters.keys()].sort(ascending);
       const basic = await fetchBasic(ask, CORE, unique);
       const hipAliases = new Map<number, CatalogueAlias[]>();
       const gaia = new Map<number, string>();
