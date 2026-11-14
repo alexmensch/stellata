@@ -600,9 +600,8 @@ code's line count.
 
 A mint's facets are its brightness lineage, since the record walk's
 [brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
-never sees it: the absmag source (`brightness.*`), then each post-pass that
-changed that absmag after the mint, blend split before anchor dimming
-(`brightness.blend-split`, `params.n` the records sharing the source;
+never sees it: the absmag source (`brightness.*`), a row for each post-pass
+that changed that absmag after the mint (`brightness.blend-split`, `params.n` the records sharing the source;
 `brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
 already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
 the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
@@ -612,7 +611,8 @@ minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
 B−V are intrinsic), its `params.av` in brightness-colour's format
 (`dustParams`). Their evidence is the outcome
 row's: the photometry is the row's own, and the anchor a Δmag reads is cited
-there. A
+there. A key's rows are a set, ordered as every stage file is
+([SourceRowRef](../lineage/README.md#sourcerowref)). A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
 to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
