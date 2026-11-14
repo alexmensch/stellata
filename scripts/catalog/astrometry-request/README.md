@@ -18,7 +18,10 @@ scripts/catalog/astrometry-request/
                                   the review dispositions' kept ids, sorts,
                                   and emits the request through
                                   emitArtifacts. Reads no build:membership or
-                                  build:binaries output.
+                                  build:binaries output. Carries the CI heap
+                                  check (../../util/heap-budget/): 2,161 MiB
+                                  peak live heap of a 3,482 MiB budget,
+                                  measured 2026-11-14.
   astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
                                   file as the generator's emitArtifacts
                                   declaration (../../util/README.md).
