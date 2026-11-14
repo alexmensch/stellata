@@ -5,7 +5,7 @@ import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchBasic, identPhase, oidOf, parseLedger, resolveOids, simbadPhases, type ParseLedger } from '../simbad/simbad-fetch-pure';
-import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, compose, identKey, parseIdent } from '../simbad/simbad-specs-pure';
+import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, compose, identKey, parseIdent, simbadMatchKey } from '../simbad/simbad-specs-pure';
 import { componentId, identSuffix, type WdsComponent } from './wds-components-pure';
 import {
   cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
@@ -54,16 +54,28 @@ export interface XidsInputs {
 
 const share = (n: number, of: number): string => `${n}/${of} (${of === 0 ? '0.0' : ((100 * n) / of).toFixed(1)}%)`;
 
-/** Each component's object by its WDS ident: Phase A. An answer naming no asked component is refused, never dropped. */
-async function resolveByIdent(ask: Ask, components: readonly WdsComponent[], ledger: ParseLedger): Promise<Map<string, number>> {
-  const byKey = new Map(components.map((c) => [identKey(compose(WDS, identSuffix(c))), c]));
+interface IdentResolution {
+  /** By `componentId`. */
+  readonly oids: Map<string, number>;
+  /** Answers naming an asked component only case-folded (`…AB` for `…Ab`): another component, so bound to none. */
+  readonly folded: readonly string[];
+}
+
+/** Each component's object by its WDS ident: Phase A. An answer naming an asked component only under SIMBAD's case-folded match is dropped; one naming none even so is refused. */
+async function resolveByIdent(ask: Ask, components: readonly WdsComponent[], ledger: ParseLedger): Promise<IdentResolution> {
+  const ident = (c: WdsComponent): string => compose(WDS, identSuffix(c));
+  const byKey = new Map(components.map((c) => [identKey(ident(c)), c]));
+  const foldedKeys = new Set(components.map((c) => simbadMatchKey(ident(c))));
   const oids = new Map<string, number>();
+  const folded: string[] = [];
   for (const [suffix, oid] of await resolveOids(ask, CORE, WDS, components.map(identSuffix), ledger)) {
-    const c = byKey.get(identKey(compose(WDS, suffix)));
-    if (c === undefined) throw new Error(`SIMBAD answered ${compose(WDS, suffix)}, which names no component the request asked`);
-    oids.set(componentId(c), oid);
+    const id = compose(WDS, suffix);
+    const c = byKey.get(identKey(id));
+    if (c !== undefined) oids.set(componentId(c), oid);
+    else if (foldedKeys.has(simbadMatchKey(id))) folded.push(`${id} → ${oid}`);
+    else throw new Error(`SIMBAD answered ${id}, which names no component the request asked`);
   }
-  return oids;
+  return { oids, folded: folded.sort() };
 }
 
 /** Each HD and HIP number an object holds, the first in id order; a lettered alias gives its number too. */
@@ -104,8 +116,9 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
     request: { request, requestFrom: inputs.requestFrom },
     async run(ask, log) {
       const ledger = parseLedger();
-      const oids = await resolveByIdent(ask, components, ledger);
+      const { oids, folded } = await resolveByIdent(ask, components, ledger);
       log(`WDS idents: ${share(oids.size, components.length)} components matched`);
+      for (const answer of folded) log(`  WDS ident answered only case-folded, bound to none: ${answer}`);
 
       const siblings = new Map<string, number[]>();
       for (const c of components) {

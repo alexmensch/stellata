@@ -42,7 +42,12 @@ changed override stales the record.
 
 1. **Ident lookup.** Each component's ident against SIMBAD's `ident` table,
    `SIMBAD_BATCH_SIZE` per query. An ident SIMBAD answers under two objects
-   fails the pull: an id names one object.
+   fails the pull: an id names one object. SIMBAD matches ids case-folded,
+   so asking `…Ab` can answer the stored `…AB`: an answer naming an asked
+   component only case-folded (`simbadMatchKey`) names another component,
+   is dropped and printed in the run log, and the asked one goes on to the
+   cascade. An answer naming no asked component even case-folded fails the
+   pull.
 2. **The cascade**, only for a component the lookup missed in a system where
    it found another. The found siblings' HD and HIP numbers (the first of
    each in id order), then the missed component's letter on each, plus its
@@ -56,7 +61,7 @@ changed override stales the record.
    on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
    components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
    reply the namespace rules cannot read fails the parse ledger.
-   An answered WDS ident naming no asked component fails the pull. An alias naming an
+   An alias naming an
    object the lookup already found names that object again and is dropped;
    aliases naming different objects for one component bind it to none, and
    the run log prints each such conflict, so neither the reply order nor
