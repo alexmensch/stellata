@@ -11,6 +11,7 @@ import { OVERLAY_VALUE_SEPARATOR, type DesignationReach, type GateRefusal, type 
 import type { RejectedBindingRow } from './rejected-bindings-tsv';
 import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The snapshot's one stage; its `-derived` slot holds the counts no row decides. */
 export const CLASSIC_ID_COUNT_STAGES = [CLASSIC_IDS_LINEAGE.stage] as const;
@@ -256,7 +257,7 @@ export function classicIdLineage(
 /** The text `rejected_bindings.tsv` names a source's designations by, in its fixed order. */
 function designationSummary(of: ReadonlyMap<DesignationKind, ReadonlySet<string>>): string {
   const values = (k: DesignationKind): string[] => [...of.get(k) ?? []];
-  const numbers = (k: 'hd' | 'hr'): number[] => values(k).map((v) => designationNumber(v, k)).sort((a, b) => a - b);
+  const numbers = (k: 'hd' | 'hr'): number[] => values(k).map((v) => designationNumber(v, k)).sort(ascending);
   const parts: string[] = [];
   const hd = numbers('hd');
   const hr = numbers('hr');

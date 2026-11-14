@@ -5,6 +5,7 @@ import { fetchReleaseIds, resolveOids, type ParseLedger, type SimbadPhases } fro
 import type { MembershipKeys } from './membership-keys-pure';
 import { percent, share } from './simbad-rows-pure';
 import { GAIA_DR3, WIDENING_LADDER, type Namespace } from './simbad-specs-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export interface Verdicts {
   corroborated: number;
@@ -64,7 +65,7 @@ export async function corroborate(
   const verdicts: Verdicts = { corroborated: 0, vetoed: 0, uncorroborated: 0 };
   const kept = new Map<string, number>();
   if (bound.size === 0) return { kept, verdicts };
-  const gaiaIds = await fetchReleaseIds(ask, phases, [...new Set(bound.values())].sort((a, b) => a - b), ledger);
+  const gaiaIds = await fetchReleaseIds(ask, phases, [...new Set(bound.values())].sort(ascending), ledger);
   for (const [suffix, oid] of bound) {
     const releases = gaiaIds.get(oid) ?? new Map<string, Set<string>>();
     const asking = askingIds.get(suffix) ?? null;

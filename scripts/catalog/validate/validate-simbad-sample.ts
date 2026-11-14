@@ -22,6 +22,7 @@ import {
 import { REPO_ROOT } from '../../util/paths';
 import { artifactRows } from '../../util/sources/source';
 import { SIMBAD_SAMPLE } from './simbad-sample-source';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 
@@ -95,7 +96,7 @@ export interface PercentileStats {
  *  empty so callers can branch cleanly. */
 export function quantile(values: readonly number[], q: number): number {
   if (values.length === 0) return NaN;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = [...values].sort(ascending);
   const idx = (sorted.length - 1) * q;
   const lo = Math.floor(idx);
   const hi = Math.ceil(idx);

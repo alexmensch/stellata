@@ -13,6 +13,7 @@ import {
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import { computeFloorMs, cpuFloorMs, dwellFloorMs } from '../floors/floors';
 import type { ScenarioName } from '../scenarios';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export const DEFAULT_DWELL_FRAMES = 240;
 
@@ -189,7 +190,7 @@ export interface SampleClasses {
  */
 export function sampleClasses(samples: readonly number[] | null | undefined): SampleClasses | null {
   if (samples == null || samples.length < 2) return null;
-  const sorted = [...samples].sort((a, b) => a - b);
+  const sorted = [...samples].sort(ascending);
   const minCount = Math.max(1, Math.ceil(CLASS_MIN_SHARE * sorted.length));
   let widest = 0;
   let at = 0;

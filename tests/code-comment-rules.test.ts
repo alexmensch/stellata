@@ -8,6 +8,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { walkFiles } from './walk-files';
 import { loadCommentRules } from '../scripts/hooks/commit-sweep/comment-rules';
+import { compareCodeUnits } from '../src/astro-core/order-pure';
 
 const ROOT = resolve(__dirname, '..');
 const SCAN_DIRS = ['src', 'scripts', 'tests'];
@@ -191,8 +192,7 @@ describe('forbidden code-comment patterns', () => {
   it('no bead-IDs, PR refs, or memory-key wikilinks in any scanned source', () => {
     const violations = collectAllViolations();
     if (violations.length === 0) return;
-    violations.sort((a, b) =>
-      a.file === b.file ? a.line - b.line : a.file.localeCompare(b.file));
+    violations.sort((a, b) => compareCodeUnits(a.file, b.file) || a.line - b.line);
     const formatted = violations
       .map(v => `  ${v.file}:${v.line} [${v.pattern}]\n    ${v.text}`)
       .join('\n');
@@ -388,7 +388,7 @@ describe('module docstring length', () => {
       }
     }
     if (offenders.length === 0) return;
-    offenders.sort((a, b) => a.file.localeCompare(b.file));
+    offenders.sort((a, b) => compareCodeUnits(a.file, b.file));
     const formatted = offenders
       .map(o => `  ${o.file}: ${o.lines} lines (max ${MAX_LINES})`)
       .join('\n');

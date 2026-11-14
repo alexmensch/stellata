@@ -13,6 +13,7 @@ import {
   type ClassicIdOverlay,
   type OverlayEntry,
 } from '../classic-id-overlay-pure';
+import { ascending } from '../../../../src/astro-core/order-pure';
 
 export const LABEL_FIELDS = ['hip', 'hd', 'hr', 'gl', 'flam'] as const;
 export type LabelField = (typeof LABEL_FIELDS)[number];
@@ -165,7 +166,7 @@ function numericSpec(
     write: (r, value) => {
       r[field] = Number(value);
     },
-    candidates: (e) => [...candidates(e)].sort((a, b) => a - b).map(String),
+    candidates: (e) => [...candidates(e)].sort(ascending).map(String),
     same: (value) => value,
     writeAlt,
   };
@@ -207,7 +208,7 @@ export const LABEL_FIELD_SPECS: readonly FieldSpec[] = [
       const nums = e.flamsteed
         .map(flamsteedNumber)
         .filter((n): n is number => n !== null);
-      return [...new Set(nums)].sort((a, b) => a - b).map(String);
+      return [...new Set(nums)].sort(ascending).map(String);
     },
     same: (value) => value,
   },

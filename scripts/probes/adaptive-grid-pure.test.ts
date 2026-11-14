@@ -12,6 +12,7 @@ import {
   planEpochRequests,
   type VectorRow,
 } from './adaptive-grid-pure';
+import { ascending } from '../../src/astro-core/order-pure';
 
 /** A row on a circle of radius `r` AU in the xy plane, angle `theta`,
  *  travelling at `speed` AU/day — a stand-in for the curving inner-system
@@ -148,7 +149,7 @@ describe('planEpochRequests', () => {
     const mus = Array.from({ length: 150 }, (_, i) => i * i * 1000);
     const plan = planEpochRequests(mus, 2000, 70);
     expect(plan.every((r) => r.kind === 'list' && r.mus.length <= 70)).toBe(true);
-    expect(plan.flatMap(epochsOf).sort((a, b) => a - b)).toEqual(mus);
+    expect(plan.flatMap(epochsOf).sort(ascending)).toEqual(mus);
   });
 
   it('covers every requested epoch exactly once across a mixed round', () => {
@@ -159,7 +160,7 @@ describe('planEpochRequests', () => {
       99_000_000,
     ];
     const covered = planEpochRequests(mus, 2000, 70).flatMap(epochsOf);
-    expect(covered.sort((a, b) => a - b)).toEqual(mus);
+    expect(covered.sort(ascending)).toEqual(mus);
   });
 
   it('has nothing to ask for when the round is empty', () => {

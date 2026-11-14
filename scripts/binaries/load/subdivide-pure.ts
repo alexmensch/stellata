@@ -7,6 +7,7 @@ import {
 } from '../component-tokens-pure';
 import { mscRenderable, type MscLookup, type MscPairOrbits } from './msc-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export const SYNTH_MSC_DISCOVERER = 'MSC';
 
@@ -118,10 +119,9 @@ function unorderedPairKey(a: string, b: string): string {
 }
 
 function compareMscPairs(a: MscPairOrbits, b: MscPairOrbits): number {
-  for (const [x, y] of [[a.wdsId, b.wdsId], [a.primary, b.primary], [a.secondary, b.secondary]]) {
-    if (x !== y) return x < y ? -1 : 1;
-  }
-  return 0;
+  return compareCodeUnits(a.wdsId, b.wdsId)
+    || compareCodeUnits(a.primary, b.primary)
+    || compareCodeUnits(a.secondary, b.secondary);
 }
 
 /** README.md#sub-pair-synthesis */
