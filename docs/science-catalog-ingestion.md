@@ -540,9 +540,8 @@ p(t) = p(J2016) + v·(t − 2016.0)                  [pc, t in Julian yr]
 ```
 
 with `û` the unit direction, `ê`/`n̂` the local east/north tangent
-basis (the same basis `directionAtEpoch` in
-`scripts/catalog/distance/direction-cascade.ts` assembles — second usage,
-so the basis math extracts into a shared helper), `d` the final
+basis (`equatorialTangentBasis`, the basis `directionAtEpoch` in
+`src/astro-core/equatorial-basis.ts` advances along), `d` the final
 stack distance, and `v_r` in pc/yr via 1 km/s = 1.0227×10⁻⁶ pc/yr.
 μ_α* is the cos δ-applied rate — never divide by cos δ. This is uniform
 space motion, the rigorous epoch-transformation model of
