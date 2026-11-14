@@ -222,7 +222,7 @@ export function standaloneRow(
     ...hipFields(xid.hip === null ? null : { value: xid.hip, origin: OWN }),
     ...gaiaFields(xid.gaiaSourceId === null ? null : { value: xid.gaiaSourceId, origin: OWN }),
     ...positionFields(position), absmag: null, ci: null, spect, name: xid.simbadMainId, source: 'simbad', regime: 0,
-    resolveVia: 'simbad_xid', astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
+    resolveVia: xid.gaiaSourceId === null ? 'unresolved' : 'simbad_xid', astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
     ...NO_ORBIT_FIELDS,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null, dmag: null, magPri: null, magSec: null,
     ...anchorFields(xid.wdsId, xid.component, anchors),

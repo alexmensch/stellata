@@ -221,7 +221,9 @@ Three system-level mechanisms run at emit time:
   `(wds_id, component)` SIMBAD has a cross-ID for that isn't already
   emitted gets a standalone row with `orbit_role = standalone` and
   `system_id` prefixed `-_<comp>`. Captures SIMBAD-known components
-  WDS doesn't enumerate as a side of any decomposing pair.
+  WDS doesn't enumerate as a side of any decomposing pair. Its
+  `resolve_via` is `simbad_xid` when SIMBAD gives a Gaia source, else
+  `unresolved` (a HIP alone binds no tier, as on a pair row).
 - **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
   no `q` (visual ORB6 with no spectroscopic counterpart),
   `massRatioFromComponents` in `../masses/mass-estimate-pure.ts`
