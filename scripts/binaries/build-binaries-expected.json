@@ -2,7 +2,6 @@
   "stages": {
     "ingest": {
       "wds_pairs_total": 158360,
-      "wds_duplicate_pair_rows_dropped": 1,
       "msc_orbits_unmapped": 326,
       "xwalk_hip_mag_rejected": 162,
       "athyg_gaia_mag_rejected": 241
@@ -14,7 +13,6 @@
     },
     "resolve": {
       "blank_components_rescued": 2111,
-      "blank_components_deferred": 112810,
       "ccdm_sibling_owned_rejected": 456,
       "athyg_match_sibling_claimed_rejected": 252,
       "decomposing_pairs": 45538,
@@ -48,24 +46,9 @@
       "orbit_msc": 393,
       "orbit_none": 41145
     },
-    "optical": {
-      "optical_wds_notes_kept": 5871,
-      "optical_wds_notes_rejected": 5677,
-      "optical_orbit_kept": 4240,
-      "optical_sep_limit_rejected": 4915,
-      "optical_gaia_kept": 3447,
-      "optical_gaia_rejected": 617,
-      "optical_asymm_kept": 42,
-      "optical_asymm_rejected": 0,
-      "optical_cpm_baseline_kept": 101,
-      "optical_cpm_baseline_rejected": 417,
-      "optical_mag_heuristic_kept": 14459,
-      "optical_mag_heuristic_rejected": 5752
-    },
     "multiples": {
       "msc_pair_mags_filled": 497,
       "multiples_rows_emitted": 47021,
-      "multiples_pairs_dropped_no_position": 9490,
       "multiples_astrometry_system_inherited": 11243,
       "multiples_standalone_emitted": 9681,
       "multiples_hd_populated": 15994,

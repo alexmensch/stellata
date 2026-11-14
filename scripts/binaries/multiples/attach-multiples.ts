@@ -69,7 +69,6 @@ export function stage6Counts(result: Stage6Result) {
   return {
     msc_pair_mags_filled: result.mscMagFills.length,
     multiples_rows_emitted: rows.length,
-    multiples_pairs_dropped_no_position: result.droppedNoPosition.length,
     multiples_astrometry_system_inherited: fold(ASTROMETRY_VIA, rows, (r) => r.astrometryVia).system_inherited,
     multiples_standalone_emitted: fold(ORBIT_ROLES, rows, (r) => r.orbitRole).standalone,
     multiples_hd_populated: populated(rows, (r) => r.hd),

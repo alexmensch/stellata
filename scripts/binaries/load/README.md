@@ -233,5 +233,5 @@ identified by `wds_id` alone (`dedupWdsPairRows` keys on discoverer
 and runs upstream, so it can't collapse two of them), at most one `AB`
 row is promoted per system — a system any discoverer already enumerates
 as `AB`, or that the pass already rescued, is skipped so nothing
-double-emits. Counted `blank_components_rescued` /
-`blank_components_deferred` in the Stage-7 snapshot.
+double-emits. Counted `blank_components_rescued` in the Stage-7 snapshot;
+each deferred row is a `pairs.blank-deferred` lineage row ([Pairs lineage](../README.md#pairs-lineage)).

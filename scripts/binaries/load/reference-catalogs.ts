@@ -33,7 +33,7 @@ import {
   type MscSynthesisOutcome, type Orb6OverrideOutcome,
 } from './subdivide-pure';
 import {
-  WDS_DEDUP_OUTCOMES, dedupWdsPairRows, type Orb6Entry, type Orb6GradeOutcome, type Orb6Parse, type WdsDedupDecision,
+  dedupWdsPairRows, type Orb6Entry, type Orb6GradeOutcome, type Orb6Parse, type WdsDedupDecision,
   type WdsPair,
 } from '../../wds/wds-pure';
 import { ORB6, WDS_SUMM } from '../../wds/wds-source';
@@ -180,13 +180,11 @@ export function stage1Counts(c: ReferenceCatalogs) {
   const rescue = fold(BLANK_RESCUE_OUTCOMES, c.blankRescue, (d) => d.outcome);
   const msc = fold(MSC_SYNTHESIS_OUTCOMES, c.mscSynthesis, (o) => o);
   return {
-    wds_duplicate_pair_rows_dropped: fold(WDS_DEDUP_OUTCOMES, c.wdsDedup, (d) => d.outcome).dropped,
     msc_orbits_unmapped: c.indices.msc.nOrbitsUnmapped,
     xwalk_hip_mag_rejected: c.indices.xwalkMagRejected.length,
     athyg_gaia_mag_rejected: c.indices.athygGaiaMagRejected.length,
     synthesized_orb6_orphan_pairs: c.synthesizedOrb6Pairs.length,
     synthesized_msc_inner_pairs: msc.synthesized,
     blank_components_rescued: rescue.rescued,
-    blank_components_deferred: rescue.deferred,
   };
 }

@@ -1,6 +1,6 @@
 // Stage 5: every pair classified physical or optical, keyed by DecomposedPair, and the counts it completes. See README.md.
 
-import { fold, prefixed, share, sumOf, type Share } from '../../util/counts/tally-pure';
+import { fold, share, sumOf, type Share } from '../../util/counts/tally-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { systemParallaxAnchors, systemPmAnchors } from '../astrometry/system-anchors-pure';
@@ -42,18 +42,11 @@ export function opticalTally(result: Stage5Result): Record<OpticalVia, number> {
   return fold(OPTICAL_VIA, result.optical.values(), (v) => v);
 }
 
-export type Stage5Counts = Record<`optical_${OpticalVia}`, number>;
-
-export function stage5Counts(result: Stage5Result): Stage5Counts {
-  return prefixed('optical_', opticalTally(result));
-}
-
-export function opticalRejected(counts: Stage5Counts): number {
-  return sumOf(counts, 'optical_', OPTICAL_REJECT_VIA);
+export function opticalRejected(tally: Record<OpticalVia, number>): number {
+  return sumOf<'', OpticalVia>(tally, '', OPTICAL_REJECT_VIA);
 }
 
 /** The share of pairs Stage 5 rejected. */
-export function stage5Rates(counts: Stage5Counts): Record<'optical_rejected_rate', Share> {
-  const total = sumOf(counts, 'optical_', OPTICAL_VIA);
-  return { optical_rejected_rate: share(opticalRejected(counts), total) };
+export function stage5Rates(tally: Record<OpticalVia, number>): Record<'optical_rejected_rate', Share> {
+  return { optical_rejected_rate: share(opticalRejected(tally), sumOf<'', OpticalVia>(tally, '', OPTICAL_VIA)) };
 }

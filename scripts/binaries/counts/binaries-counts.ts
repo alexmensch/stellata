@@ -5,7 +5,6 @@ import { stage3Counts } from '../astrometry/attach-astrometry';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
-import { stage5Counts } from '../optical/attach-optical';
 import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
 import type { PairsCounts } from '../pairs-lineage-pure';
@@ -14,9 +13,9 @@ import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipe
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
-  & ReturnType<typeof stage4Counts> & ReturnType<typeof stage5Counts> & ReturnType<typeof stage6Counts>
+  & ReturnType<typeof stage4Counts> & ReturnType<typeof stage6Counts>
 );
-const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'optical', 'multiples'] as const;
+const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'multiples'] as const;
 type BinariesStage = (typeof BINARIES_STAGES)[number];
 const SNAPSHOT_STAGES = [...BINARIES_STAGES, BINDING_LINEAGE.stage, PAIRS_LINEAGE.stage] as const;
 type SnapshotStage = (typeof SNAPSHOT_STAGES)[number];
@@ -52,7 +51,6 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
   const stages = filed({
     ingest: {
       wds_pairs_total: s3.wds_pairs_total,
-      wds_duplicate_pair_rows_dropped: s1.wds_duplicate_pair_rows_dropped,
       msc_orbits_unmapped: s1.msc_orbits_unmapped,
       xwalk_hip_mag_rejected: s1.xwalk_hip_mag_rejected,
       athyg_gaia_mag_rejected: s1.athyg_gaia_mag_rejected,
@@ -64,7 +62,6 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
     },
     resolve: {
       blank_components_rescued: s1.blank_components_rescued,
-      blank_components_deferred: s1.blank_components_deferred,
       ccdm_sibling_owned_rejected,
       athyg_match_sibling_claimed_rejected: s3.athyg_match_sibling_claimed_rejected,
       decomposing_pairs: s3.decomposing_pairs,
@@ -74,7 +71,6 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
     },
     astrometry: withPrefix(s3, 'astrometry_'),
     orbits: stage4Counts(r.orbits),
-    optical: stage5Counts(r.optical),
     multiples: stage6Counts(r.multiples),
   }, true);
   return nestByStage<SnapshotStage, number>(SNAPSHOT_STAGES, [

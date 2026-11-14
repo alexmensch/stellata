@@ -65,14 +65,12 @@ describe('assembleReferenceCatalogs', () => {
 
   it('counts its snapshot keys from the outcomes', () => {
     expect(stage1Counts(c)).toEqual({
-      wds_duplicate_pair_rows_dropped: 1,
       msc_orbits_unmapped: 0,
       xwalk_hip_mag_rejected: 0,
       athyg_gaia_mag_rejected: 1,
       synthesized_orb6_orphan_pairs: 1,
       synthesized_msc_inner_pairs: 1,
       blank_components_rescued: 1,
-      blank_components_deferred: 0,
     });
   });
 

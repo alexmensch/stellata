@@ -6,7 +6,7 @@ import { gaia5pRow } from '../load/load-fixture';
 import { NO_ORBIT } from '../orbits/select-orbit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, indices } from '../resolve/resolve-fixture';
-import { attachStage5, stage5Counts, stage5Rates } from './attach-optical';
+import { attachStage5, opticalTally, stage5Rates } from './attach-optical';
 import { stage5Report } from './stage5-report-pure';
 
 const W = '22039-2451';
@@ -41,12 +41,12 @@ describe('attachStage5', () => {
     expect(run([ac], [1.2]).optical.get(ac)).toBe('gaia_rejected');
   });
 
-  it('counts every tag, zeros included, and rates the rejections over every pair', () => {
-    const counts = stage5Counts(run([ac], [1.2]));
-    expect(counts.optical_gaia_rejected).toBe(1);
-    expect(counts.optical_mag_heuristic_kept).toBe(0);
-    expect(Object.keys(counts)).toHaveLength(12);
-    expect(stage5Rates(counts).optical_rejected_rate).toEqual({ kind: 'rated', value: 1 });
+  it('tallies every tag, zeros included, and rates the rejections over every pair', () => {
+    const tally = opticalTally(run([ac], [1.2]));
+    expect(tally.gaia_rejected).toBe(1);
+    expect(tally.mag_heuristic_kept).toBe(0);
+    expect(Object.keys(tally)).toHaveLength(12);
+    expect(stage5Rates(tally).optical_rejected_rate).toEqual({ kind: 'rated', value: 1 });
   });
 
   it('logs the rejected rate as n/a when no pair was classified', () => {

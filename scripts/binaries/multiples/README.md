@@ -137,10 +137,10 @@ Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
 (`dedupWdsPairRows`, most-observed row wins — Pismis 24 CD carried
-two contradictory geometries; counted
-`wds_duplicate_pair_rows_dropped`), and Stage-5-kept pairs with no
-astrometry and no system anchor — which never reach the TSV — are
-counted `multiples_pairs_dropped_no_position` with a capped
+two contradictory geometries; a `pairs.duplicate-row` lineage row), and
+Stage-5-kept pairs with no astrometry and no system anchor — which never
+reach the TSV — are each a `pairs.no-position` lineage row
+([Pairs lineage](../README.md#pairs-lineage)), with a capped
 `droppedPairSample` build-log sample, mirroring the Stage-5
 separation-limit audit line.
 
