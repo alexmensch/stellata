@@ -20,6 +20,8 @@ import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages, type StageResults } from './build-binaries';
 import type { Stage3Result } from './astrometry/attach-astrometry';
 import { binariesCounts } from './counts/binaries-counts';
+import { foldStageLines } from '../catalog/lineage/lineage-row-pure';
+import { BINDING_CODES, bindingLineageLines } from './resolve/binding-lineage-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage4Result } from './orbits/attach-orbits';
 import type { Stage5Result } from './optical/attach-optical';
@@ -131,7 +133,8 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   });
 
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
-    expect(asWritten(binariesCounts(results)) === snapshotText('build-binaries-expected.json')).toBe(true);
+    const binding = foldStageLines(BINDING_CODES, bindingLineageLines(results.multiples.rows));
+    expect(asWritten(binariesCounts(results, binding)) === snapshotText('build-binaries-expected.json')).toBe(true);
   });
 });
 

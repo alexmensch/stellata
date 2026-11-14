@@ -82,6 +82,20 @@
       "spect_msc": 3811,
       "spect_athyg": 9399,
       "spect_none": 22646
+    },
+    "binding": {
+      "binding.gaia.own": 31540,
+      "binding.gaia.inherited.blend": 757,
+      "binding.gaia.inherited.letter": 68,
+      "binding.gaia.inherited.parent": 1101,
+      "binding.gaia.inherited.partner": 101,
+      "binding.gaia.unbound": 13454,
+      "binding.hip.own": 14017,
+      "binding.hip.inherited.blend": 819,
+      "binding.hip.inherited.letter": 127,
+      "binding.hip.inherited.parent": 385,
+      "binding.hip.inherited.partner": 43,
+      "binding.hip.unbound": 31630
     }
   }
 }

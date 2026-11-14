@@ -42,6 +42,9 @@ scripts/binaries/resolve/
                                build/binding-integrity-verdicts.tsv, and
                                bindingVerdictRow.
   stage2-report-pure.ts        The build-log lines, read off the result.
+  binding-lineage-pure.ts      BINDING_CODES and bindingLineageLines: the
+    (+ test)                   origins as the binding lineage stage
+                               (#binding-lineage).
   spot-check-pure.ts (+ test)  The spot-check's ground-truth rows and its
                                check (#the-spot-check).
   spot-check-source.ts         SPOT_CHECK_GROUND_TRUTH
@@ -91,6 +94,25 @@ token of the same system. Every tier binds `own`; a rebind by the audit is
 The same-letter smear across a letter's rows copies the origin unchanged:
 one letter is one star, so its binding is its own on every row or inherited
 on every row. A copy names its immediate donor, never the donor's donor.
+
+## Binding lineage
+
+`build:binaries` writes the Gaia and HIP origins of every `multiples.tsv`
+row as the `binding` lineage stage, the first in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-binding-stage)).
+Two rows per component, keyed on its row (`multiples:<system_id>/<comp>`,
+the key promotion's rows use): `binding.<gaia|hip>.own`,
+`.inherited.<kind>` with the donor token in `params.from`, or `.unbound`.
+`params` carries the Gaia source bare and the HIP as its `hip:` designation,
+the forms trace matches a query on. They are read off the Stage 6 records,
+so they and the `gaia_origin` / `hip_origin` columns are one value written
+twice. The stage covers Gaia and HIP only, since the binaries pipeline's
+AT-HYG binding retires with its AT-HYG read (stellata-hooj.17). The counts
+fold into the snapshot's `binding` stage ([Composition, not counting](../counts/README.md#composition-not-counting)).
+
+`BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s: 94,042 rows for 47,021
+components came to 898 KB gzipped in 386 ms with no baseline to diff
+(2026-11-14).
 
 ## Choices the outputs rest on
 

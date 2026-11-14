@@ -32,6 +32,7 @@ exists, so its rows are keyed on the catalogue row stating each designation
 | an addition group | the group anchor's source row — its IV/25 star, else its I/239 HIP, else its CNS5 row; the other members are evidence |
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
+| (no record) a `multiples.tsv` component's binding | its row, the same `(system_id, comp)` |
 | a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
 | (no record) a same-class SID merge whose key only a stored same-as edge carries | that edge: `sameas:` followed by its two designations ([SID events](/scripts/sid/README.md#sid-events)) |
 

@@ -8,6 +8,8 @@ import { stage6Counts } from '../multiples/attach-multiples';
 import { stage5Counts } from '../optical/attach-optical';
 import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
+import type { BindingCounts } from '../resolve/binding-lineage-pure';
+import { BINDING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
@@ -26,16 +28,20 @@ type Unfiled<T> =
 function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, number>>>>>(
   stages: T,
   _everyKeyOnce: [Unfiled<T>] extends [never] ? true : Unfiled<T>,
+  binding: BindingCounts,
 ): StagedCounts<number> {
   const blocks = BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted' as const, counts: stages[stage] } }));
-  return nestByStage<BinariesStage, number>(BINARIES_STAGES, blocks);
+  return nestByStage<BinariesStage | typeof BINDING_LINEAGE.stage, number>(
+    [...BINARIES_STAGES, BINDING_LINEAGE.stage],
+    [...blocks, { stage: BINDING_LINEAGE.stage, block: { kind: 'counted', counts: binding } }],
+  );
 }
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {
   return Object.fromEntries(Object.entries<number>(counts).filter(([key]) => key.startsWith(prefix))) as Record<Extract<K, `${P}${string}`>, number>;
 }
 
-export function binariesCounts(r: StageResults): StagedCounts<number> {
+export function binariesCounts(r: StageResults, binding: BindingCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
   const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = stage2Counts(r.resolved);
   const s3 = stage3Counts(r.reference, r.resolved, r.astrometry);
@@ -66,5 +72,5 @@ export function binariesCounts(r: StageResults): StagedCounts<number> {
     orbits: stage4Counts(r.orbits),
     optical: stage5Counts(r.optical),
     multiples: stage6Counts(r.multiples),
-  }, true);
+  }, true, binding);
 }

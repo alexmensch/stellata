@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are classic-ids' (beside
+which act on records, file a derived block), and so are binding's and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -229,7 +229,8 @@ contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
-measured budget sits beside its contract: [classic-ids'](../classic-ids/README.md#classic-id-lineage),
+measured budget sits beside its contract: [binding's](/scripts/binaries/resolve/README.md#binding-lineage),
+[classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
@@ -298,12 +299,14 @@ and count against the [CI heap budget](../../util/heap-budget/README.md):
 
 ## Cross-stage joins
 
-Every join is on the origin key, never a re-derivation. The binaries
-`Binding` provenance type must carry a component's `(system_id, comp)` and
-its HIP, which is what the membership change report joins a re-bound row
-onto; until that type lands, the join reads `multiples.tsv`'s existing
-columns, through the record's HIP on the identity row — the current build's, or
-the baseline's for a key the build removed.
+Every join is on the origin key, never a re-derivation. The binding stage's
+rows carry a component's `(system_id, comp)` as their key and its HIP and
+Gaia source in `params`, so trace reaches them from a catalogue record's
+designations and a promoted companion's own key. The membership change
+report joins a re-bound row onto `multiples.tsv`'s columns, through the
+record's HIP on the identity row — the current build's, or the baseline's
+for a key the build removed; those columns carry the same identifiers and
+origins the binding rows do ([Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage)).
 
 ## Committed ledgers become views
 
@@ -327,9 +330,16 @@ one row type. Every one is a view now: the first four of membership's
 classic-ID queues of `classic-ids`' ([Classic-ID lineage](../classic-ids/README.md#classic-id-lineage)),
 and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.md#placement-lineage)).
 
+## The binding stage
+
+`build:binaries` is the first stage, run before classic-ids: each
+`multiples.tsv` component's Gaia and HIP binding, its own or copied from a
+named token of its system. Its contract lives beside its module, in
+[Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
+
 ## The classic-ids stage
 
-`build:classic-ids` is the first stage, run before membership; its contract
+`build:classic-ids` is the stage after binding, run before membership; its contract
 lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage
