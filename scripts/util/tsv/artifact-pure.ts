@@ -1,6 +1,7 @@
 // A self-written TSV's codec: exact header, one decoder for its readers, and
 // one serializer as its only writer. See README.md#artifact-codecs.
 
+import { compareCodeUnits } from '../order-pure';
 import type { Declaration, RowKey, RowKeyOf } from '../sources/row-ref-pure';
 import {
   readTable, tableLineReader, type TableLineReader, type TableRow, type TableSpec,
@@ -20,11 +21,6 @@ export function tsvLine(file: string, columns: readonly string[], cells: readonl
 
 export function tsvText(columns: readonly string[], lines: readonly string[]): string {
   return `${[columns.join('\t'), ...lines].join('\n')}\n`;
-}
-
-/** Code-unit order: the same on every machine, unlike `localeCompare`. */
-export function compareCodeUnits(a: string, b: string): number {
-  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 export function byText<R>(text: (r: R) => string): (a: R, b: R) => number {

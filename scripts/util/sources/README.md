@@ -153,7 +153,9 @@ or a wrongly typed row. Every declaration also carries a type-only brand
 `multiples.tsv` (`multiples:<system_id>/<comp>`), the magnitude pull
 (`gaia-dr3:<source_id>`), the three tables an addition group is
 founded on — IV/25 (`iv25:<tyc>`), I/239 (`i239:<hip>`) and CNS5
-(`cns5:<cns5 id>`) — and the tables placement cites: the Gaia DR3
+(`cns5:<cns5 id>`) — the tables classic-ID lineage keys a designation on,
+V/50 (`v50:<hr>`), IV/27A (`iv27a:<hd>`) and Gaia's HIP cross-match
+(`gaia-dr3-hip:<hip>`), and the tables placement cites: the Gaia DR3
 astrometry catalogue (`gaia-dr3-astrometry:<source_id>`) and NSS two-body
 table (`gaia-dr3-nss:<source_id>`), HIP2 (`i311:<hip>`), Tycho-2
 (`i259:<tyc>`), V/70A (`v70a:<number+comp>`), SIMBAD's values pull

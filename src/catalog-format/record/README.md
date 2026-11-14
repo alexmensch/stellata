@@ -23,7 +23,8 @@ src/catalog-format/record/
 
 The build-side halves stay in `/scripts/catalog/record/`: the record-order
 key and Sol's place first (`record-order-pure.ts`, [Record order](#record-order)), the
-search index's build (`search-index-pure.ts`) and the `GAIA_APSIS` source.
+record encoder (`encode-catalog-pure.ts`), the search index's build
+(`search-index-pure.ts`) and the `GAIA_APSIS` source.
 
 ## Record order
 
@@ -210,7 +211,7 @@ eclipsers clip but those render imperceptibly slowly anyway).
 The byte plan above is encoded once in `src/catalog-format/record/catalog-pure.ts` as
 `HEADER_LAYOUT`, `RECORD_LAYOUT`, `RECORD_FIELD_KINDS`, `HEADER_SIZE`,
 `RECORD_SIZE`, `MAGIC`, `BINARY_VERSION`, `NO_COMPANION`, and `NO_APSIS`.
-Writer (`../../../scripts/catalog/build-catalog.ts`), runtime reader
+Writer (`../../../scripts/catalog/record/encode-catalog-pure.ts`), runtime reader
 (`src/client/loaders/catalog-loader.ts`), and the verify tool
 (`../../../scripts/catalog/validate/verify-catalog.ts`) all index off those constants —
 there are no inline byte offsets to drift apart. If you add fields,
@@ -222,7 +223,7 @@ consumer spells out a `view.get*` / `view.set*` byte read of its own:
 
 | Direction | Surface | Consumers |
 | --- | --- | --- |
-| write | `writeStarRecord`, `writeCatalogHeader`, `encodeNameTable` | `../../../scripts/catalog/build-catalog.ts`, loader round-trip tests |
+| write | `writeStarRecord`, `writeCatalogHeader`, `encodeNameTable` | `../../../scripts/catalog/record/encode-catalog-pure.ts`, loader round-trip tests |
 | read, one record | `readRecordField`, `readRecordFieldBig` | `../../../scripts/catalog/catalog-lookup.ts` (AoS) |
 | read, one column × all records | `decodeRecordColumn`, `decodeRecordColumnBig` | `catalog-loader.ts` (SoA), `../../../scripts/catalog/columns/catalog-columns.ts` |
 | read, header / name table | `readCatalogHeader`, `readNameTable` | both readers |
@@ -385,7 +386,7 @@ fallback carries the rest at no wire cost. The cascade behind the field:
 [The designation constellation](../../../scripts/catalog/naming/README.md#the-designation-constellation).
 
 Field shape pinned in `src/catalog-format/record/catalog-pure.ts` as the `SearchEntry`
-interface — the writer (`../../../scripts/catalog/build-catalog.ts`) and the reader
+interface — the writer (`../../../scripts/catalog/record/search-index-pure.ts`) and the reader
 (`src/client/typeahead/search.ts`) both import it; drift = compile error.
 
 Which forms dispatch to an exact-match map and which are Fuse-fuzzy, and

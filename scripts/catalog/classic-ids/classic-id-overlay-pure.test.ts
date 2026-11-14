@@ -74,13 +74,16 @@ describe('buildClassicIdOverlay', () => {
   it('leaves a source with no resolvable TYC out of the overlay entirely', () => {
     // Gaia saturates near G=3, so the brightest stars are absent from both
     // cross-walks — no overlay row, labels come from the inherited spine.
-    const { overlay, counts } = buildClassicIdOverlay(
+    const { overlay, reaches } = buildClassicIdOverlay(
       input({ tycToSource: new Map([['3105-2070-1', VEGA_SRC]]) }),
     );
     expect(overlay.has(SIRIUS_SRC)).toBe(false);
-    expect(counts.bsc5HrUnkeyed).toBe(1);
-    expect(counts.crossIndexBayerUnkeyed).toBe(1);
-    expect(counts.crossIndexFlamsteedUnkeyed).toBe(1);
+    expect(reaches.filter((r) => 'reach' in r && r.reach.kind === 'unreached')).toEqual([
+      { kind: 'hd', hd: 48915, tycs: ['5949-2777-1'], reach: { kind: 'unreached' } },
+      { kind: 'bayer', hd: 48915, hip: 32349, value: 'alf CMa', reach: { kind: 'unreached' } },
+      { kind: 'flamsteed', hd: 48915, hip: 32349, value: '9 CMa', reach: { kind: 'unreached' } },
+      { kind: 'hr', hr: 2491, hd: 48915, reach: { kind: 'unreached' } },
+    ]);
   });
 
   it('attaches an ambiguous designation to every matching record', () => {
@@ -100,14 +103,12 @@ describe('buildClassicIdOverlay', () => {
 
   it('records a HIP-route disagreement instead of overriding the HD route', () => {
     const other = '9999999999999999';
-    const { overlay, counts, disagreements } = buildClassicIdOverlay(
+    const { overlay, routeChecks } = buildClassicIdOverlay(
       input({ hipToSource: new Map([[91262, other]]) }),
     );
-    expect(counts.hdHipRouteDisagree).toBe(1);
-    expect(counts.hdHipRouteAgree).toBe(0);
-    expect(disagreements[0]).toEqual({
-      hd: 172167, hip: 91262, hdRouteSourceIds: [VEGA_SRC], hipRouteSourceId: other,
-    });
+    expect(routeChecks).toEqual([{
+      hd: 172167, hip: 91262, hdRouteSourceIds: [VEGA_SRC], hipRouteSourceId: other, outcome: 'disagree',
+    }]);
     // The HD route still owns the label; the HIP-route source keeps only the
     // HIP the cross-walk gave it.
     expect(overlay.get(VEGA_SRC)!.bayer).toEqual(['alf Lyr']);
@@ -117,23 +118,22 @@ describe('buildClassicIdOverlay', () => {
   });
 
   it('routes a CNS5 row with no EDR3 id through its HIP', () => {
-    const { overlay, counts } = buildClassicIdOverlay(
+    const { overlay, reaches } = buildClassicIdOverlay(
       input({
         cns5: [cns5Row({ gj: '721', hip: 91262 })],
       }),
     );
     expect(overlay.get(VEGA_SRC)!.gj).toEqual(['721']);
-    expect(counts.cns5GjViaHip).toBe(1);
-    expect(counts.cns5GjUnkeyed).toBe(0);
+    expect(reaches.find((r) => r.kind === 'gj')).toMatchObject({ reach: { kind: 'reached', route: 'hip', sources: [VEGA_SRC] } });
   });
 
-  it('counts a CNS5 row reachable by neither route as unkeyed', () => {
-    const { counts } = buildClassicIdOverlay(
+  it('leaves a CNS5 row reachable by neither route unreached', () => {
+    const { reaches } = buildClassicIdOverlay(
       input({
         cns5: [cns5Row({ gj: '9848' })],
       }),
     );
-    expect(counts.cns5GjUnkeyed).toBe(1);
+    expect(reaches.find((r) => r.kind === 'gj')).toMatchObject({ reach: { kind: 'unreached' } });
   });
 });
 
@@ -160,18 +160,17 @@ describe('applyBindingGate', () => {
   }
 
   it('drops the whole row, not just its hip, when G−V rejects the binding', () => {
-    const { overlay, counts, rejectedBindings } = tolimanOverlay();
+    const { overlay, counts, refused } = tolimanOverlay();
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(false);
     expect(counts.overlayRows).toBe(0);
     expect(counts.gateRejectedMag).toBe(1);
     expect(counts.gateRejectedSibling).toBe(0);
-    expect(rejectedBindings).toEqual([{
+    expect(refused).toEqual([{
       sourceId: TOLIMAN_BAD_SRC,
       hip: TOLIMAN_HIP,
       printedV: { vVia: 'printed_hip', vMag: 1.33, key: TOLIMAN_HIP, ref: sourceRowRef(HIP_PHOTOMETRY, TOLIMAN_HIP) },
       gMag: 20.95,
       reason: 'mag',
-      designations: 'HD 128621 · HR 5460 · alf Cen',
     }]);
   });
 
@@ -211,22 +210,23 @@ describe('applyBindingGate', () => {
   });
 
   it('counts a row with no printed V as unvettable rather than passing it', () => {
-    const { counts } = tolimanOverlay(bindingEvidence(
+    const { counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map([[TOLIMAN_BAD_SRC, 20.95]]),
       null,
       NO_PRINTED_V,
     ));
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(1);
-    expect(counts.gateSkippedNoGMag).toBe(0);
+    expect(unpulled.size).toBe(0);
   });
 
   // The fault the union request exists to prevent: no G means the magnitude
   // check has nothing to compare and PASSES, so the binding ships unvetted.
-  // gateSkippedNoGMag is the only signal that happened — pinned at 0 on the
-  // real build, where it says the pull still covers every candidate.
-  it('counts a candidate absent from the pull as silently accepted, not rejected', () => {
-    const { overlay, counts } = tolimanOverlay(bindingEvidence(
+  // `unpulled` is the only signal that happened — an invariant over the
+  // stage's lineage on the real build, where it says the pull still covers
+  // every candidate.
+  it('names a candidate absent from the pull as silently accepted, not refused', () => {
+    const { overlay, counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map(),
       null,
       printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
@@ -234,21 +234,21 @@ describe('applyBindingGate', () => {
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(0);
-    expect(counts.gateSkippedNoGMag).toBe(1);
+    expect([...unpulled]).toEqual([TOLIMAN_BAD_SRC]);
     expect(counts.gateSkippedNullGMag).toBe(0);
   });
 
   // Same pass-by-default, different cause and different remedy: the pull has
   // the row, Gaia just publishes no G. Splitting them is what keeps the
-  // request-coverage count pinnable at zero.
+  // request-coverage invariant at zero.
   it('separates a pulled row with a null G from one the pull never returned', () => {
-    const { counts } = tolimanOverlay(bindingEvidence(
+    const { counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map(),
       null,
       printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
       new Set([TOLIMAN_BAD_SRC]),
     ));
-    expect(counts.gateSkippedNoGMag).toBe(0);
+    expect(unpulled.size).toBe(0);
     expect(counts.gateSkippedNullGMag).toBe(1);
   });
 
@@ -260,7 +260,7 @@ describe('applyBindingGate', () => {
     const overlay = new Map([[src, {
       hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
     }]]);
-    const { rejected } = applyBindingGate(overlay, bindingEvidence(
+    const { refused } = applyBindingGate(overlay, bindingEvidence(
       new Map([[src, 5.9]]),
       {
         bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
@@ -269,8 +269,8 @@ describe('applyBindingGate', () => {
       },
       printedVOf({ hip: new Map([[hip, 5.7]]) }),
     ), new Map());
-    expect(rejected).toHaveLength(1);
-    expect(rejected[0].reason).toBe('sibling');
+    expect(refused).toHaveLength(1);
+    expect(refused[0].reason).toBe('sibling');
     expect(overlay.has(src)).toBe(false);
   });
 
@@ -282,7 +282,7 @@ describe('applyBindingGate', () => {
     const overlay = new Map([[src, {
       hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
     }]]);
-    const { rejected, skippedNoPrintedV } = applyBindingGate(overlay, bindingEvidence(
+    const { refused, skippedNoPrintedV } = applyBindingGate(overlay, bindingEvidence(
       new Map([[src, 5.9]]),
       {
         bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
@@ -291,22 +291,22 @@ describe('applyBindingGate', () => {
       },
       NO_PRINTED_V,
     ), new Map());
-    expect(rejected).toEqual([expect.objectContaining({
+    expect(refused).toEqual([expect.objectContaining({
       hip, printedV: null, reason: 'sibling',
     })]);
     expect(skippedNoPrintedV).toBe(1);
     expect(overlay.has(src)).toBe(false);
   });
 
-  // gateSkippedNoGMag is the zero-pinned alarm that the pull stopped covering
-  // a candidate; a sibling refusal of the same candidate must not hide it.
-  it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
+  // `unpulled` is the alarm that the pull stopped covering a candidate; a
+  // sibling refusal of the same candidate must not hide it.
+  it('names an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
     const src = '663434291018997248';
     const hip = 41098;
     const overlay = new Map([[src, {
       hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
     }]]);
-    const { rejected, skippedNoGMag } = applyBindingGate(overlay, bindingEvidence(
+    const { refused, unpulled } = applyBindingGate(overlay, bindingEvidence(
       new Map(),
       {
         bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
@@ -315,8 +315,8 @@ describe('applyBindingGate', () => {
       },
       printedVOf({ hip: new Map([[hip, 5.7]]) }),
     ), new Map());
-    expect(rejected.map((r) => r.reason)).toEqual(['sibling']);
-    expect(skippedNoGMag).toBe(1);
+    expect(refused.map((r) => r.reason)).toEqual(['sibling']);
+    expect([...unpulled]).toEqual([src]);
   });
 });
 
@@ -336,29 +336,29 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
 
   it('rejects on a Tycho-2 V where the row carries no HIP', () => {
     const overlay = hdOnlyOverlay();
-    const { rejected, gateableVia } = applyBindingGate(
+    const { refused, gateableVia } = applyBindingGate(
       overlay,
       bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, printedVOf({ tycho2: { [TYC]: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected).toHaveLength(1);
-    expect(rejected[0]).toMatchObject({ hip: null, printedV: { vMag: 1.33, vVia: 'tycho2' }, reason: 'mag' });
+    expect(refused).toHaveLength(1);
+    expect(refused[0]).toMatchObject({ hip: null, printedV: { vMag: 1.33, vVia: 'tycho2' }, reason: 'mag' });
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 1, gliese: 0 });
     expect(overlay.has(BAD_SRC)).toBe(false);
   });
 
   it('falls to Gliese only where no Tycho entry answers', () => {
-    const { rejected, gateableVia } = applyBindingGate(
+    const { refused, gateableVia } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, printedVOf({ gliese: { 9848: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected[0]).toMatchObject({ printedV: { vVia: 'gliese' }, reason: 'mag' });
+    expect(refused[0]).toMatchObject({ printedV: { vVia: 'gliese' }, reason: 'mag' });
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 1 });
   });
 
   it('prefers Tycho-2 over Gliese, as the V cascade orders them', () => {
-    const { rejected } = applyBindingGate(
+    const { refused } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(
         new Map([[BAD_SRC, 20.95]]),
@@ -367,13 +367,13 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+    expect(refused[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
   });
 
   it('takes the brightest of the Tycho entries IV/25 routes to one source', () => {
     // Saturation is a property of the brightest component of a blend, so a
     // second entry must not raise the V the gate answers for.
-    const { rejected } = applyBindingGate(
+    const { refused } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(
         new Map([[BAD_SRC, 20.95]]),
@@ -382,28 +382,28 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[BAD_SRC, [TYC, '9007-5849-2']]]),
     );
-    expect(rejected[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
+    expect(refused[0].printedV).toMatchObject({ vMag: 1.33, vVia: 'tycho2' });
   });
 
   it('keeps a no-HIP row whose Tycho-2 V agrees with its G', () => {
     const overlay = hdOnlyOverlay();
-    const { rejected, gateableVia } = applyBindingGate(
+    const { refused, gateableVia } = applyBindingGate(
       overlay,
       bindingEvidence(new Map([[BAD_SRC, 1.7]]), null, printedVOf({ tycho2: { [TYC]: 1.33 } })),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected).toHaveLength(0);
+    expect(refused).toHaveLength(0);
     expect(gateableVia.tycho2).toBe(1);
     expect(overlay.has(BAD_SRC)).toBe(true);
   });
 
   it('leaves a row no tier reaches unvettable rather than passing it silently', () => {
-    const { rejected, skippedNoPrintedV, gateableVia } = applyBindingGate(
+    const { refused, skippedNoPrintedV, gateableVia } = applyBindingGate(
       hdOnlyOverlay(),
       bindingEvidence(new Map([[BAD_SRC, 20.95]]), null, NO_PRINTED_V),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected).toHaveLength(0);
+    expect(refused).toHaveLength(0);
     expect(skippedNoPrintedV).toBe(1);
     expect(gateableVia).toEqual({ printed_hip: 0, tycho2: 0, gliese: 0 });
   });
@@ -411,7 +411,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
   // The sibling arm reads only null as "no HIP"; any number is looked up.
   it('passes a missing HIP through as null, so the sibling arm cannot fire on it', () => {
     const overlay = hdOnlyOverlay();
-    const { rejected } = applyBindingGate(
+    const { refused } = applyBindingGate(
       overlay,
       bindingEvidence(
         new Map([[BAD_SRC, 1.7]]),
@@ -424,7 +424,7 @@ describe('applyBindingGate — the tiers below Hipparcos', () => {
       ),
       new Map([[BAD_SRC, [TYC]]]),
     );
-    expect(rejected).toHaveLength(0);
+    expect(refused).toHaveLength(0);
     expect(overlay.has(BAD_SRC)).toBe(true);
   });
 

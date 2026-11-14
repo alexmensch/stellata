@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { ascending } from '../../util/order-pure';
 import { cellReader, checkedRows, formatTsv, sortRows, type Column, type Row } from './columns-pure';
 import { spotRowCheck } from './gates-pure';
 import type { WrittenTable } from './pull';
@@ -46,7 +47,7 @@ export function oversizedSlices<T extends SliceKey>(
   const keys = lines.map((line) => parse(line.split('\t')[at]));
   return {
     over: sliceCounts(keys, edges).filter((n) => n > sliceRows),
-    recut: () => cutEdges(keys.sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)), sliceRows),
+    recut: () => cutEdges(keys.sort(ascending), sliceRows),
   };
 }
 

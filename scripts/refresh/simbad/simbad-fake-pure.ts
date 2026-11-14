@@ -3,7 +3,7 @@
 import type { Row } from '../pull/columns-pure';
 import { phaseTemplate, type Ask, type Phase } from '../pull/pull';
 import type { HttpReply, TapClientDeps } from '../pull/tap-pure';
-import { identKey } from './simbad-specs-pure';
+import { simbadMatchKey } from './simbad-specs-pure';
 
 /** The tables a fake answers from: each object's ids, its basic cells by SIMBAD column, its flux rows. */
 export interface FakeSimbad {
@@ -27,8 +27,8 @@ export function answer(fake: FakeSimbad, phase: Phase, ids: readonly string[] | 
   const asked = ids ?? [];
   const names = phase.columns.map((c) => c.name);
   if (phase.from === 'ident' && phase.scope.key === 'id') {
-    const wanted = new Set(asked.map((id) => identKey(literal(id))));
-    return fake.idents.filter((i) => wanted.has(identKey(i.id))).map((i) => [String(i.oid), i.id]);
+    const wanted = new Set(asked.map((id) => simbadMatchKey(literal(id))));
+    return fake.idents.filter((i) => wanted.has(simbadMatchKey(i.id))).map((i) => [String(i.oid), i.id]);
   }
   const oids = new Set(asked.map(Number));
   if (phase.from === 'ident') {

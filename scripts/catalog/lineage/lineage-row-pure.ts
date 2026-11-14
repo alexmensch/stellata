@@ -1,7 +1,7 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { fold } from '../../util/counts/tally-pure';
-import { compareCodeUnits } from '../../util/tsv/artifact-pure';
+import { compareCodeUnits } from '../../util/order-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 

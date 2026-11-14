@@ -60,6 +60,13 @@ describe('the phases', () => {
   });
 });
 
+describe('the fake SIMBAD', () => {
+  it('matches an asked id whatever its whitespace or case, answering in the stored spelling', async () => {
+    const { ask } = fakeAsk(simbad({ 1511726: ['CCDM J00023+3257AB'], 6384906: ['TYC  144-1004-1'] }));
+    expect(await ask(PHASES.resolve, ["'CCDM J00023+3257Ab'", "'TYC 144-1004-1'"])).toEqual([['1511726', 'CCDM J00023+3257AB'], ['6384906', 'TYC  144-1004-1']]);
+  });
+});
+
 describe('resolveOids', () => {
   it('keys each suffix to its oid, a padded stored id joining its unpadded request', async () => {
     const { ask, asked } = fakeAsk(simbad({ 100: ['Gaia DR3 12345'], 200: ['Gaia DR3 67890'], 6384906: ['TYC  144-1004-1'] }));

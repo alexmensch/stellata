@@ -28,8 +28,10 @@ export type LadderName = (typeof WIDENING_LADDER)[number]['name'];
 
 export const compose = (ns: Namespace, suffix: string): string => `${ns.prefix}${suffix}`;
 
-/** What SIMBAD matches an id on: README.md#two-invariants-the-adql-depends-on. */
+/** An id without its whitespace, case kept: the key a reply asked whole joins back to its request on (README.md#two-invariants-the-adql-depends-on). */
 export const identKey = (id: string): string => id.replace(/\s+/g, '');
+/** What SIMBAD matches an id on: whitespace dropped and case folded (README.md#two-invariants-the-adql-depends-on). */
+export const simbadMatchKey = (id: string): string => identKey(id).toLowerCase();
 export const likePattern = (ns: Namespace): string => `${ns.prefix}%`;
 
 /** A numeric namespace's id with a component letter after its number (`HIP 55203A`, `HIP 12345 A`): SIMBAD also holds the bare number for the same object. */

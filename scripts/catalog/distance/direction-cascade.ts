@@ -2,13 +2,10 @@
 // HIP2 → Tycho-2 → CNS5 → SIMBAD, with proper-motion propagation to the
 // J2016.0 scene epoch. See ./README.md#direction-resolution.
 
-import {
-  equatorialTangentBasis,
-  type UnitVector,
-} from '../../../src/astro-core/equatorial-basis';
+import { directionAtEpoch, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import { gaia5pUnreliable, gaiaHas5pSolution } from './gaia-distrust';
 import { type VelocityVia } from './velocity';
-import { HIPPARCOS_EPOCH_JYEAR, MAS_TO_RAD } from '../../../src/astro-core/astronomy-constants';
+import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constants';
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
@@ -108,33 +105,6 @@ export type DirectionResolution = CascadeResult<
   DirectionRefusal
 >;
 
-/** Sky direction at `toEpoch` for a source measured at `fromEpoch` —
- *  RV-free linear space-motion form (accuracy budget + the
- *  perspective-acceleration omission are in ./README.md#direction-resolution).
- *
- *  `pmraMasyr` is the tier's own μ_α* — the cos δ-applied east-component
- *  rate. Do NOT divide by cos δ before calling. Either PM component
- *  missing → the measured position is returned unpropagated (best
- *  available estimate, as the binaries pipeline's propagatePosition does). */
-export function directionAtEpoch(
-  raDeg: number,
-  decDeg: number,
-  pmraMasyr: number | null,
-  pmdecMasyr: number | null,
-  fromEpoch: number,
-  toEpoch: number,
-): UnitVector {
-  const { u, east, north } = equatorialTangentBasis(raDeg, decDeg);
-  if (pmraMasyr === null || pmdecMasyr === null) return u;
-  const dEast = pmraMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
-  const dNorth = pmdecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
-  const x = u.x + dEast * east.x + dNorth * north.x;
-  const y = u.y + dEast * east.y + dNorth * north.y;
-  const z = u.z + dEast * east.z + dNorth * north.z;
-  const norm = Math.hypot(x, y, z);
-  return { x: x / norm, y: y / norm, z: z / norm };
-}
-
 /** A tier's position advanced to the scene epoch on the motion the row ends up
  *  with — the tier's own where its solution states one, `pm-rescue/`'s where it
  *  does not. The cascade's ONE propagation call site, and the reason
@@ -148,7 +118,8 @@ export function directionOnPm(
   pmdecMasyr: number | null,
 ): UnitVector {
   return directionAtEpoch(
-    solution.srcRaDeg, solution.srcDecDeg, pmraMasyr, pmdecMasyr,
+    { raDeg: solution.srcRaDeg, decDeg: solution.srcDecDeg },
+    { pmRaMasyr: pmraMasyr, pmDecMasyr: pmdecMasyr },
     solution.srcEpoch, CATALOG_SCENE_EPOCH,
   );
 }

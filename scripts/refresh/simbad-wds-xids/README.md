@@ -47,12 +47,20 @@ changed override stales the record.
    it found another. The found siblings' HD and HIP numbers (the first of
    each in id order), then the missed component's letter on each, plus its
    CCDM id: `HD 48915B`, `HIP 32349B`, `CCDM J06451-1643B`. SIMBAD answers in
-   its stored spelling (`HD  48915B`), so a reply joins back on `identKey`
-   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)).
+   its stored spelling (`HD  48915B`) and matches whatever the spacing
+   ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)),
+   so a reply joins back by what it names (`replyKey`): an HD or HIP reply by
+   its number and letter, a CCDM one by `identKey`. An HD or HIP id is asked
+   only when the namespace rules read it back as that number and letter, so
+   a component they cannot letter (`2`, `Aa1`, `S17`) asks CCDM only: glued
+   on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
+   components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
+   reply the namespace rules cannot read fails the parse ledger.
    An answered WDS ident naming no asked component fails the pull. An alias naming an
    object the lookup already found names that object again and is dropped;
-   two aliases naming different objects keep the first in SIMBAD's id
-   order, and the run log prints each such conflict.
+   aliases naming different objects for one component bind it to none, and
+   the run log prints each such conflict, so neither the reply order nor
+   where a batch boundary falls decides a binding.
 3. **Overrides** replace whatever the first two found.
 4. **Cross-IDs** for every object: `main_id` from `basic`, the HIP and Gaia
    DR3 ids from `ident`. A bare HIP wins; a lettered one (`HIP 55203B`)

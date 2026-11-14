@@ -262,8 +262,8 @@ Hand-kept lists become derivations over the table:
   today's code, adopting today's committed outputs as fresh. The lineage
   invariants (`../catalog/lineage/README.md#invariants`) vouch for
   Bailer-Jones (`placement.distance.bailer-jones-absent`) and the
-  derivation's candidates (`membership.binding.unweighed-no-pulled-row`), and
-  the `gateSkippedNoGMag` zero-pin for the overlay gate's; Apsis and GSPC carry residual pins, which cannot
+  derivation's candidates (`membership.binding.unweighed-no-pulled-row`) and
+  the overlay gate's (`classic-ids.unweighed-no-pulled-row`); Apsis and GSPC carry residual pins, which cannot
   show a stale request, and the SIMBAD, Tycho-2, binaries-astrometry and DR2
   neighbourhood pulls carry none, so those are adopted unverified. A baker's first
   record takes its inputs from today's hand list; its next run replaces them
