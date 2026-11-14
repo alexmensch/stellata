@@ -51,7 +51,9 @@ scripts/catalog/lineage/
                                  a record (parked, additions, label drops)
                                  spells its columns from, and its typed
                                  form RecordIdentifiers with the cell
-                                 codec those ledgers share.
+                                 codec those ledgers share and recordKey,
+                                 the joined tuple a ledger row and a
+                                 manifest row match on.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
                                  code generator and trace/ read, and the

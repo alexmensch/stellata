@@ -31,9 +31,8 @@ scripts/catalog/membership/
                                   primariesManifestRecord and
                                   magnitudeManifestRecord are the generator's,
                                   which meets cells only through encode.
-                                  manifestKey, the five-cell tuple a ledger
-                                  row joins on. Leaf: readers import it, not
-                                  the generator module.
+                                  Leaf: readers import it, not the generator
+                                  module.
   additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts

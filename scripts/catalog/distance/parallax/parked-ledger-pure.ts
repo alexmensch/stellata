@@ -2,9 +2,7 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
-import {
-  RECORD_KEY_COLUMNS, recordKeyCells, type IdentityCells, type RecordIdentifiers,
-} from '../../lineage/identity-pure';
+import type { RecordIdentifiers } from '../../lineage/identity-pure';
 
 /** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
@@ -43,14 +41,3 @@ export interface ParkedRecord extends ParkedLedgerEntry {
   originKey: string;
 }
 
-/** The five identifier cells, joined — the manifest carries all of them under
- *  the same names, so the parity gate matches ledger row to manifest row on the
- *  whole tuple rather than guessing which id is the one that identifies. */
-export function parkedRecordKey(cells: IdentityCells): string {
-  return RECORD_KEY_COLUMNS.map((c) => cells[c]).join('\t');
-}
-
-/** `parkedRecordKey` over a typed ledger row. */
-export function identifiersKey(ids: RecordIdentifiers): string {
-  return parkedRecordKey(recordKeyCells(ids));
-}

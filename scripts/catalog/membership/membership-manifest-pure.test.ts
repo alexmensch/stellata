@@ -30,13 +30,12 @@ import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
-  manifestKey,
   manifestDesignations,
   manifestRecord,
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { identifiersKey } from '../distance/parallax/parked-ledger-pure';
+import { recordKey } from '../lineage/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
@@ -620,13 +619,13 @@ describe('buildMembership — the additions', () => {
   });
 
   it('ledgers each admitted row under the record-parity reason its designation earns', () => {
-    const reasons = new Map(result.ledger.map((l) => [identifiersKey(l), l.reason]));
-    expect(reasons.get(manifestKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
-    expect(reasons.get(manifestKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
+    const reasons = new Map(result.ledger.map((l) => [recordKey(l), l.reason]));
+    expect(reasons.get(recordKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
+    expect(reasons.get(recordKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
     const hip40 = result.rows.find((r) => r.hip === 40)!;
-    expect(reasons.get(manifestKey(hip40))).toBe('admitted:hip_omitted');
+    expect(reasons.get(recordKey(hip40))).toBe('admitted:hip_omitted');
     const gj = result.rows.find((r) => r.gl === 'GJ 10001')!;
-    expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
+    expect(reasons.get(recordKey(gj))).toBe('admitted:cns5_census');
     expect(gj.gaiaSourceId).toBe('555');
     expect(totals(result).additionsByReason).toEqual({
       'admitted:hd_link_gap': 8, 'admitted:hd_omitted': 1,
@@ -901,7 +900,7 @@ describe('codecs', () => {
       .toEqual(result.bindingReview);
     const ledger = ADDITIONS_LEDGER.parse(ADDITIONS_LEDGER.serialize(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
-    expect(new Set(ledger.map(identifiersKey))).toEqual(new Set(result.ledger.map(identifiersKey)));
+    expect(new Set(ledger.map(recordKey))).toEqual(new Set(result.ledger.map(recordKey)));
     const drops = LABEL_DROPS.parse(LABEL_DROPS.serialize(result.labelDrops));
     expect(new Set(drops.map((d) => JSON.stringify(d))))
       .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));

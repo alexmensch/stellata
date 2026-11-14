@@ -43,6 +43,13 @@ export function recordKeyCells(ids: RecordIdentifiers): IdentityCells {
   };
 }
 
+/** The five cells joined: what a ledger row and a manifest row match on, the
+ *  whole tuple rather than whichever id happens to identify. */
+export function recordKey(ids: RecordIdentifiers): string {
+  const cells = recordKeyCells(ids);
+  return RECORD_KEY_COLUMNS.map((c) => cells[c]).join('\t');
+}
+
 /** Throws on a malformed cell. */
 export function recordIdentifiersOf(cells: IdentityCells): RecordIdentifiers {
   return {

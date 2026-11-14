@@ -2,9 +2,11 @@
 
 import { defineArtifact } from '../../../util/tsv/artifact-pure';
 import {
-  PARKED_REASONS, parkedRecordKey, type ParkedLedgerEntry, type ParkedReason,
+  PARKED_REASONS, type ParkedLedgerEntry, type ParkedReason,
 } from './parked-ledger-pure';
-import { RECORD_KEY_COLUMNS, recordKeyCells, rowRecordIdentifiers } from '../../lineage/identity-pure';
+import {
+  RECORD_KEY_COLUMNS, recordKey, recordKeyCells, rowRecordIdentifiers,
+} from '../../lineage/identity-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
@@ -28,7 +30,7 @@ export interface ParkedLedgerRow {
 
 export function parseParkedRecordsTsv(text: string): ParkedLedgerRow[] {
   return PARKED_LEDGER.parse(text).map((e) => ({
-    recordKey: parkedRecordKey(PARKED_LEDGER.encode(e)),
+    recordKey: recordKey(e),
     reason: e.reason,
   }));
 }

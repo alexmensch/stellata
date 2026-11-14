@@ -7,7 +7,6 @@ import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { BINDING_CLASSES, type BindingClass } from './ledger-rows-pure';
 import type { LabelMergeRecord } from '../classic-ids/label-merge/label-merge-pure';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
@@ -187,9 +186,3 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     origin_key: r.originKey,
   }),
 });
-
-/** The identifier tuple a ledger row and a manifest row share — the same five
- *  cells the parked ledger keys on. */
-export function manifestKey(record: ManifestRecord): string {
-  return parkedRecordKey(MEMBERSHIP_MANIFEST.encode(record));
-}
