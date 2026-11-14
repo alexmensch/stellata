@@ -66,4 +66,12 @@ describe('coverageCheck', () => {
     expect(check.kind).toBe('fail');
     expect(check.kind === 'fail' && check.report).toBe('t: coverage of 2 requested\n  row present 1 (50.0%)\n  geo 1 (50.0%)\n  union 1 (50.0%)');
   });
+
+  it('reports an empty request as n/a, and fails it against a floor', () => {
+    const report = 't: coverage of 0 requested\n  row present 0 (n/a)\n  geo 0 (n/a)\n  union 0 (n/a)';
+    expect(coverageCheck('t', [], 'id', 0, { groups: [groups[0]] })).toEqual({ kind: 'pass', report });
+    expect(coverageCheck('t', [], 'id', 0, { groups: [groups[0]], floor: 0.5 })).toEqual({
+      kind: 'fail', message: 't: no ids requested, so nothing to rate against the floor 0.5', report,
+    });
+  });
 });
