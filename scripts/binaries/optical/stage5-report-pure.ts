@@ -7,7 +7,7 @@ import { opticalRejected, opticalTally, stage5Counts, stage5Rates, type Stage5Re
 export function stage5Report(result: Stage5Result): string[] {
   const counts = stage5Counts(result);
   const rate = stage5Rates(counts).optical_rejected_rate;
-  const sepLimit = [...result.optical].flatMap(([p, via]) => (via === 'sep_limit_rejected' ? [`${p.pair.wdsId}${p.pair.components}`] : []));
+  const sepLimit = [...result.optical].flatMap(([p, via]) => (via === 'sep_limit_rejected' ? [p] : []));
   return [
     `optical-pair cascade: ${countsListed(opticalTally(result))}`,
     `optical rejected rate: ${formatShare(rate)} (${count(opticalRejected(counts))} / ${count(result.optical.size)})`,

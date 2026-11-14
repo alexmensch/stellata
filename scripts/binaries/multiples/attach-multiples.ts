@@ -1,6 +1,7 @@
 // Stage 6: the multiples.tsv records, kept pairs then standalone components, and the counts it completes. See README.md.
 
 import { fold, prefixed } from '../../util/counts/tally-pure';
+import { pairLabel } from '../build-log-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { firstPerSystem } from '../astrometry/system-anchors-pure';
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
@@ -35,7 +36,6 @@ export function attachStage6(
   const emitted = new Set<ComponentKey>();
   for (const p of stage3.pairs) {
     if (!OPTICAL_VIA_PROPERTIES[stage5.optical.get(p)!].physical) continue;
-    const label = `${p.pair.wdsId}${p.pair.components}`;
     const built = pairRows(
       p, stage3.astrometry.get(p)!, stage4.orbits.get(p)!, systemAnchors.get(p.pair.wdsId) ?? null, { indices, anchors },
     );
@@ -44,7 +44,7 @@ export function attachStage6(
       continue;
     }
     rows.push(...built.rows);
-    if (built.mscMags) mscMagFills.push(label);
+    if (built.mscMags) mscMagFills.push(pairLabel(p));
     emitted.add(componentKey(p.pair.wdsId, p.primary.component));
     emitted.add(componentKey(p.pair.wdsId, p.secondary.component));
   }

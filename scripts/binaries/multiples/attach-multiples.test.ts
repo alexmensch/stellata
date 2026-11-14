@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { pairLabel } from '../build-log-pure';
 
 import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
@@ -32,7 +33,7 @@ describe('attachStage6 — the pair walk', () => {
 
   it('drops, and records, a pair with no position on either side and no system anchor', () => {
     const result = runStage6([{ ...sides('1', '2'), astrometry: UNRESOLVED_PAIR }]);
-    expect([result.rows, result.droppedNoPosition.map((p) => `${p.pair.wdsId}${p.pair.components}`)]).toEqual([[], ['WDS-1AB']]);
+    expect([result.rows, result.droppedNoPosition.map(pairLabel)]).toEqual([[], ['WDS-1AB']]);
   });
 
   it('surfaces the HD of the component\'s AT-HYG row (ξ UMa)', () => {

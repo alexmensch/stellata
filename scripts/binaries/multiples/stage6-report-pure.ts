@@ -13,7 +13,7 @@ export function stage6Report(result: Stage6Result): string[] {
     `filled pair mags from MSC pair-side V magnitudes on ${count(counts.msc_pair_mags_filled)} pairs`,
     ...droppedPairSample(
       'position-less pair drops: kept pairs with no astrometry and no system anchor never reach multiples.tsv',
-      result.droppedNoPosition.map((p) => `${p.pair.wdsId}${p.pair.components}`),
+      result.droppedNoPosition,
     ),
     `multiples.tsv: ${count(counts.multiples_rows_emitted)} component rows (${count(pairs)} physical pairs + ${count(standalone)} standalone rows)`,
     `spect provenance: ${countsListed(fold(SPECT_VIA, result.rows, (r) => r.spectVia))}`,

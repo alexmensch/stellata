@@ -158,7 +158,8 @@ scripts/binaries/
                                   (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
-                                  every stage's report; and
+                                  every stage's report; pairLabel
+                                  (<wds_id><components>); and
                                   droppedPairSample, the capped sample of
                                   a gate's dropped pairs.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
