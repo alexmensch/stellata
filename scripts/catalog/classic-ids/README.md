@@ -267,8 +267,11 @@ several), `.gated` where the gate refused every source it reached, or
 route reaches, Sirius's HD 48915 among the stars too bright for Gaia, has a
 row of its own. Params carry the designation in trace's form (`hd:128621`)
 and the cells its route read. A source the gate refused gets one `refused`
-row (`gate-mag` / `gate-sibling`: `source_id`, `via`, then the gate's facts,
-membership's refused-binding shape) under every key reaching it, and each
+row (`gate-mag` / `gate-sibling`: `source_id`, `via`, the designation that
+reached it with its `kind`, then the gate's facts, membership's
+refused-binding shape) for every designation reaching it, under that
+designation's key — which can state two designations (197 IV/25 Tycho-2 ids
+carry two HDs), so the row names its own. Each
 IV/27A row whose HIP resolves gets a `route.agree`, `route.disagree` or
 `route.hip-only` row. A source the astrometry pull holds no row for gets an
 `unweighed-no-pulled-row` row the same way, which `CLASSIC_ID_INVARIANTS`
@@ -276,7 +279,7 @@ fails the build on ([The gate's evidence has to be pulled](#the-gates-evidence-h
 
 **The two gate queues are views of these rows, and nothing else writes
 them**: `rejectedBindingsView` groups the refused rows by source and names
-each by every designation reaching it; `routeDisagreementsView` is the
+each by the designations its refused rows carry; `routeDisagreementsView` is the
 `route.disagree` rows. Both regenerate byte-identical and stay under CI's
 regenerate-and-diff; `hd_hip_route_disagreements_review.tsv` stays
 hand-curated.

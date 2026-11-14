@@ -34,18 +34,19 @@ const summary = (input: OverlayInput) => lineageOf(input).map((r) => `${r.key} $
   r.evidence.length > 0 ? ` ${r.evidence.join('|')}` : ''}`).sort();
 
 describe('classicIdLineage', () => {
-  it('writes each designation\'s outcome on its own catalogue row, and a refused row per key reaching a gated source', () => {
-    const refused = `{"source_id":"${BACKGROUND}","via":"%s","hip":"71681","v_mag":"1.33","v_via":"printed_hip","g_mag":"20.95"}`;
+  it('writes each designation\'s outcome on its own catalogue row, and a refused row per designation reaching a gated source', () => {
+    const refused = (via: string, kind: string, designation: string) => `{"source_id":"${BACKGROUND}","via":"${via}",`
+      + `"kind":"${kind}","designation":"${designation}","hip":"71681","v_mag":"1.33","v_via":"printed_hip","g_mag":"20.95"}`;
     expect(summary(toliman())).toEqual([
       'gaia-dr3-hip:71681 outcome classic-ids.hip.gated {"hip":"hip:71681"}',
-      `gaia-dr3-hip:71681 refused classic-ids.gate-mag ${refused.replace('%s', 'xmatch')}`,
+      `gaia-dr3-hip:71681 refused classic-ids.gate-mag ${refused('xmatch', 'hip', 'hip:71681')}`,
       'iv25:9007-5849-1 outcome classic-ids.hd.gated {"hd":"hd:128621"}',
-      `iv25:9007-5849-1 refused classic-ids.gate-mag ${refused.replace('%s', 'tyc')}`,
+      `iv25:9007-5849-1 refused classic-ids.gate-mag ${refused('tyc', 'hd', 'hd:128621')}`,
       'iv27a:128621 outcome classic-ids.bayer.hd-route.gated {"bayer":"alf Cen","hd":"hd:128621","hip":"hip:71681"}',
       `iv27a:128621 outcome classic-ids.route.agree {"hd":"hd:128621","hip":"hip:71681","hd_route_source_ids":"${BACKGROUND}","hip_route_source_id":"${BACKGROUND}"}`,
-      `iv27a:128621 refused classic-ids.gate-mag ${refused.replace('%s', 'hd')}`,
+      `iv27a:128621 refused classic-ids.gate-mag ${refused('hd', 'bayer', 'alf Cen')}`,
       'v50:5460 outcome classic-ids.hr.gated {"hr":"hr:5460","hd":"hd:128621"}',
-      `v50:5460 refused classic-ids.gate-mag ${refused.replace('%s', 'hd')}`,
+      `v50:5460 refused classic-ids.gate-mag ${refused('hd', 'hr', 'hr:5460')}`,
     ].sort());
   });
 
@@ -68,8 +69,27 @@ describe('classicIdLineage', () => {
     }));
     expect(rows.filter((r) => r.key === 'iv25:9007-5849-1').map((r) => [r.code, r.params, r.evidence])).toEqual([
       ['classic-ids.hd.bound', `{"hd":"hd:128621","source_ids":"${kept}"}`, ['iv25:9007-5849-2']],
-      ['classic-ids.gate-mag', `{"source_id":"${BACKGROUND}","via":"tyc","v_mag":"1.33","v_via":"tycho2","g_mag":"20.95"}`, []],
+      ['classic-ids.gate-mag', `{"source_id":"${BACKGROUND}","via":"tyc","kind":"hd","designation":"hd:128621","v_mag":"1.33","v_via":"tycho2","g_mag":"20.95"}`, []],
     ]);
+  });
+
+  it('names a refused source by the designation that reached it, where two HDs share one Tycho-2 id', () => {
+    const refusedSource = '222222222222222222';
+    const rows = lineageOf(toliman({
+      tyc2Hd: [
+        { tyc: '1-1-1', hd: 100, nHd: 2, nTyc: 2 },
+        { tyc: '1-1-2', hd: 100, nHd: 1, nTyc: 2 },
+        { tyc: '1-1-1', hd: 200, nHd: 2, nTyc: 1 },
+      ],
+      crossIndex: [],
+      bsc5: [],
+      tycToSource: new Map([['1-1-1', BACKGROUND], ['1-1-2', refusedSource]]),
+      hipToSource: new Map(),
+      evidence: bindingEvidence(
+        new Map([[BACKGROUND, 5.0], [refusedSource, 19.0]]), null, printedVOf({ tycho2: { '1-1-1': 5.0, '1-1-2': 5.0 } }),
+      ),
+    }));
+    expect(rejectedBindingsView(rows).map((r) => [r.sourceId, r.designations])).toEqual([[refusedSource, 'HD 100']]);
   });
 
   it('gives a designation no route reaches a row of its own', () => {
@@ -129,7 +149,7 @@ describe('CLASSIC_ID_INVARIANTS', () => {
     expect(check.kind).toBe('fail');
     const message = check.kind === 'fail' ? check.message : '';
     expect(message).toMatch(/^invariant broken by 4 classic-ids\.unweighed-no-pulled-row rows/);
-    expect(message).toContain(`iv25:9007-5849-1\tclassic-ids.unweighed-no-pulled-row\t{"source_id":"${BACKGROUND}","via":"tyc"}`);
+    expect(message).toContain(`iv25:9007-5849-1\tclassic-ids.unweighed-no-pulled-row\t{"source_id":"${BACKGROUND}","via":"tyc","kind":"hd","designation":"hd:128621"}`);
     expect(message).toContain('gaia-dr3-hip:71681\t');
     expect(message).toContain('iv27a:128621\t');
     expect(message).toContain('v50:5460\t');

@@ -69,13 +69,15 @@ interface DesignationParams {
 type KindOf<B extends DesignationBranch> = B extends `${infer K extends DesignationKind}.${string}` ? K : never;
 type BranchOf<K extends DesignationKind> = Extract<DesignationBranch, `${K}.${string}`>;
 
-/** A refused source's gate facts: the same on every row refusing it. */
-type RefusedParams = { source_id: string; via: string; hip?: string; v_mag?: string; v_via?: string; g_mag?: string };
+/** A source a designation reached, named by that designation: a key can state two (two HDs on one Tycho-2 id). */
+type ReachedParams = { source_id: string; via: string; kind: DesignationKind; designation: string };
+/** The gate's facts on a refused source: the same on every row refusing it. */
+type RefusedParams = ReachedParams & { hip?: string; v_mag?: string; v_via?: string; g_mag?: string };
 
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends GateBranch ? RefusedParams
-  : B extends 'unweighed-no-pulled-row' ? { source_id: string; via: string }
+  : B extends 'unweighed-no-pulled-row' ? ReachedParams
   : B extends RouteBranch ? { hd: string; hip: string; hd_route_source_ids?: string; hip_route_source_id: string }
   : B extends DesignationBranch ? DesignationParams[KindOf<B>] & (B extends `${string}.bound` ? { source_ids: string } : unknown)
   : never;
@@ -122,6 +124,8 @@ function designationNumber(value: string, ns: 'hd' | 'hip' | 'hr'): number {
 interface Designation<K extends DesignationKind> {
   readonly key: string;
   readonly evidence: readonly string[];
+  /** The designation as `params` states it, in the form trace matches. */
+  readonly designation: string;
   readonly params: DesignationParams[K];
 }
 
@@ -131,6 +135,7 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
   readonly row: LineageRow;
   readonly via: string;
   readonly sources: readonly string[];
+  readonly designation: string;
 } {
   const designated = <K extends DesignationKind>(d: Designation<K>, branch: BranchOf<K>, params: LineageParams) => (
     stageRow(CLASSIC_ID_CODES, d.key, branch, params, d.evidence)
@@ -142,44 +147,48 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
     const built = kept.length > 0
       ? designated(d, bound, { ...d.params as LineageParams, source_ids: kept.join(OVERLAY_VALUE_SEPARATOR) })
       : designated(d, gated, d.params as LineageParams);
-    return { key: d.key, row: built, via, sources };
+    return { key: d.key, row: built, via, sources, designation: d.designation };
   };
   const none = <K extends DesignationKind>(d: Designation<K>, branch: BranchOf<K>) => (
-    { key: d.key, row: designated(d, branch, d.params as LineageParams), via: '', sources: [] }
+    { key: d.key, row: designated(d, branch, d.params as LineageParams), via: '', sources: [], designation: d.designation }
   );
   switch (r.kind) {
     case 'hd': {
       const [anchor, ...rest] = [...r.tycs].sort();
-      const d = { key: keys.iv25(anchor), evidence: rest.map(keys.iv25), params: { hd: hdText(r.hd) } };
+      const hd = hdText(r.hd);
+      const d = { key: keys.iv25(anchor), evidence: rest.map(keys.iv25), designation: hd, params: { hd } };
       return r.reach.kind === 'reached'
         ? outcome(d, r.reach.route, r.reach.sources, 'hd.bound', 'hd.gated')
         : none(d, 'hd.no-source');
     }
-    case 'hip':
+    case 'hip': {
+      const hip = hipText(r.hip);
       return outcome(
-        { key: keys.hipXmatch(r.hip), evidence: [], params: { hip: hipText(r.hip) } }, 'xmatch', [r.source], 'hip.bound', 'hip.gated',
+        { key: keys.hipXmatch(r.hip), evidence: [], designation: hip, params: { hip } }, 'xmatch', [r.source], 'hip.bound', 'hip.gated',
       );
+    }
     case 'bayer': {
-      const d = { key: keys.iv27a(r.hd), evidence: [], params: { bayer: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
+      const d = { key: keys.iv27a(r.hd), evidence: [], designation: r.value, params: { bayer: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
       if (r.reach.kind === 'unreached') return none(d, 'bayer.no-source');
       return r.reach.route === 'hd'
         ? outcome(d, 'hd', r.reach.sources, 'bayer.hd-route.bound', 'bayer.hd-route.gated')
         : outcome(d, 'hip', r.reach.sources, 'bayer.hip-route.bound', 'bayer.hip-route.gated');
     }
     case 'flamsteed': {
-      const d = { key: keys.iv27a(r.hd), evidence: [], params: { flamsteed: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
+      const d = { key: keys.iv27a(r.hd), evidence: [], designation: r.value, params: { flamsteed: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
       if (r.reach.kind === 'unreached') return none(d, 'flamsteed.no-source');
       return r.reach.route === 'hd'
         ? outcome(d, 'hd', r.reach.sources, 'flamsteed.hd-route.bound', 'flamsteed.hd-route.gated')
         : outcome(d, 'hip', r.reach.sources, 'flamsteed.hip-route.bound', 'flamsteed.hip-route.gated');
     }
     case 'hr': {
-      const d = { key: keys.v50(r.hr), evidence: [], params: { hr: `hr:${r.hr}`, ...(r.hd === null ? {} : { hd: hdText(r.hd) }) } };
+      const hr = `hr:${r.hr}`;
+      const d = { key: keys.v50(r.hr), evidence: [], designation: hr, params: { hr, ...(r.hd === null ? {} : { hd: hdText(r.hd) }) } };
       if (r.reach.kind === 'reached') return outcome(d, r.reach.route, r.reach.sources, 'hr.bound', 'hr.gated');
       return none(d, r.hd === null ? 'hr.no-hd' : 'hr.no-source');
     }
     case 'gj': {
-      const d = { key: keys.cns5(r.cns5), evidence: [], params: { gj: r.gj, ...optionalHip(r.hip) } };
+      const d = { key: keys.cns5(r.cns5), evidence: [], designation: r.gj, params: { gj: r.gj, ...optionalHip(r.hip) } };
       if (r.reach.kind === 'unreached') return none(d, 'gj.no-source');
       return r.reach.route === 'edr3'
         ? outcome(d, 'edr3', r.reach.sources, 'gj.edr3.bound', 'gj.edr3.gated')
@@ -192,8 +201,8 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
   }
 }
 
-function refusedRow(key: string, via: string, r: GateRefusal): LineageRow {
-  const params: RefusedParams = { source_id: r.sourceId, via };
+function refusedRow(key: string, reached: ReachedParams, r: GateRefusal): LineageRow {
+  const params: RefusedParams = { ...reached };
   if (r.hip !== null) params.hip = String(r.hip);
   if (r.printedV !== null) {
     params.v_mag = String(r.printedV.vMag);
@@ -203,7 +212,7 @@ function refusedRow(key: string, via: string, r: GateRefusal): LineageRow {
   return row(key, `gate-${r.reason}`, params);
 }
 
-/** One outcome row per designation the join reads, one per IV/27A route check, and one refused or unweighed row per gated or unpulled source on each key reaching it. */
+/** One outcome row per designation the join reads, one per IV/27A route check, and one refused or unweighed row per gated or unpulled source each designation reached. */
 export function classicIdLineage(
   { reaches, routeChecks, refused, unpulled }: {
     readonly reaches: readonly DesignationReach[];
@@ -215,20 +224,14 @@ export function classicIdLineage(
 ): LineageRow[] {
   const refusals = new Map(refused.map((r) => [r.sourceId, r]));
   const rows: LineageRow[] = [];
-  const written = new Set<string>();
-  const once = (line: LineageRow): void => {
-    const text = `${line.key}\t${line.code}\t${line.params}`;
-    if (written.has(text)) return;
-    written.add(text);
-    rows.push(line);
-  };
   for (const reach of reaches) {
     const d = designationRow(reach, refusals, keys);
     rows.push(d.row);
     for (const s of d.sources) {
+      const reached: ReachedParams = { source_id: s, via: d.via, kind: reach.kind, designation: d.designation };
       const refusal = refusals.get(s);
-      if (refusal !== undefined) once(refusedRow(d.key, d.via, refusal));
-      if (unpulled.has(s)) once(row(d.key, 'unweighed-no-pulled-row', { source_id: s, via: d.via }));
+      if (refusal !== undefined) rows.push(refusedRow(d.key, reached, refusal));
+      if (unpulled.has(s)) rows.push(row(d.key, 'unweighed-no-pulled-row', reached));
     }
   }
   for (const c of routeChecks) {
@@ -240,14 +243,6 @@ export function classicIdLineage(
     }));
   }
   return rows;
-}
-
-const DESIGNATION_KINDS = ['hd', 'hip', 'bayer', 'flamsteed', 'hr', 'gj'] as const satisfies readonly DesignationKind[];
-const STAGE_PREFIX = `${CLASSIC_ID_CODES.stage}.`;
-
-function kindOf(code: string): DesignationKind | null {
-  const kind = code.slice(STAGE_PREFIX.length).split('.')[0];
-  return (DESIGNATION_KINDS as readonly string[]).includes(kind) ? kind as DesignationKind : null;
 }
 
 /** The text `rejected_bindings.tsv` names a source's designations by, in its fixed order. */
@@ -278,45 +273,34 @@ function vViaOf(v: string | undefined): PrintedVVia | null {
   return v as PrintedVVia;
 }
 
-/** `rejected_bindings.tsv`: the refused rows grouped by source, each named by every designation reaching it. */
+/** `rejected_bindings.tsv`: the refused rows grouped by source, each named by every designation its rows carry. */
 export function rejectedBindingsView(rows: readonly LineageRow[]): RejectedBindingRow[] {
-  const designations = new Map<string, Map<DesignationKind, Set<string>>>();
-  const bySource = new Map<string, { row: Omit<RejectedBindingRow, 'designations'>; keys: string[] }>();
+  const bySource = new Map<string, {
+    row: Omit<RejectedBindingRow, 'designations'>;
+    keys: string[];
+    named: Map<DesignationKind, Set<string>>;
+  }>();
   for (const r of rows) {
     const refusal = refusalBranchOf.get(r.code);
-    if (refusal !== undefined) {
-      const p = paramsAs(r, refusal[0]);
-      const facts: Omit<RejectedBindingRow, 'designations'> = {
-        sourceId: p.source_id,
-        hip: p.hip === undefined ? null : Number(p.hip),
-        vMag: floatOf(p.v_mag),
-        vVia: vViaOf(p.v_via),
-        gMag: floatOf(p.g_mag),
-        reason: refusal[1],
-      };
-      const held = bySource.get(p.source_id);
-      if (held === undefined) bySource.set(p.source_id, { row: facts, keys: [r.key] });
-      else if (JSON.stringify(held.row) !== JSON.stringify(facts)) {
-        throw new Error(`classic-ids lineage: ${p.source_id} is refused on different gate facts under ${held.keys[0]} and ${r.key}`);
-      } else held.keys.push(r.key);
-      continue;
+    if (refusal === undefined) continue;
+    const p = paramsAs(r, refusal[0]);
+    const facts: Omit<RejectedBindingRow, 'designations'> = {
+      sourceId: p.source_id,
+      hip: p.hip === undefined ? null : Number(p.hip),
+      vMag: floatOf(p.v_mag),
+      vVia: vViaOf(p.v_via),
+      gMag: floatOf(p.g_mag),
+      reason: refusal[1],
+    };
+    let held = bySource.get(p.source_id);
+    if (held === undefined) bySource.set(p.source_id, held = { row: facts, keys: [], named: new Map() });
+    else if (JSON.stringify(held.row) !== JSON.stringify(facts)) {
+      throw new Error(`classic-ids lineage: ${p.source_id} is refused on different gate facts under ${held.keys[0]} and ${r.key}`);
     }
-    const kind = kindOf(r.code);
-    if (kind === null || kind === 'hip') continue;
-    const value = (paramsOf(r) as Record<string, string>)[kind];
-    const byKind = designations.get(r.key) ?? new Map<DesignationKind, Set<string>>();
-    designations.set(r.key, byKind);
-    byKind.set(kind, (byKind.get(kind) ?? new Set()).add(value));
+    held.keys.push(r.key);
+    held.named.set(p.kind, (held.named.get(p.kind) ?? new Set()).add(p.designation));
   }
-  return [...bySource.values()].map(({ row: facts, keys }) => {
-    const named = new Map<DesignationKind, Set<string>>();
-    for (const key of keys) {
-      for (const [kind, values] of designations.get(key) ?? []) {
-        named.set(kind, new Set([...named.get(kind) ?? [], ...values]));
-      }
-    }
-    return { ...facts, designations: designationSummary(named) };
-  });
+  return [...bySource.values()].map(({ row: facts, named }) => ({ ...facts, designations: designationSummary(named) }));
 }
 
 /** `hd_hip_route_disagreements.tsv`: the IV/27A route checks that disagree. */
