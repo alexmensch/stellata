@@ -14,7 +14,6 @@ const RULES: ReadonlyArray<LineRule> = [
 ];
 
 const HAND_ROLLED_ALLOWED: ReadonlyMap<string, number> = new Map([
-  ['src/client/debug/perf-hud.ts', 1],
   ['src/client/typeahead/typeahead.ts', 1],
 ]);
 
