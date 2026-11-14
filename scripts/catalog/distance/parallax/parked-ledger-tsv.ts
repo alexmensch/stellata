@@ -4,7 +4,7 @@ import { defineArtifact } from '../../../util/tsv/artifact-pure';
 import {
   PARKED_REASONS, parkedRecordKey, type ParkedLedgerEntry, type ParkedReason,
 } from './parked-ledger-pure';
-import { RECORD_KEY_COLUMNS, recordIdentifiersOf, recordKeyCells } from '../../lineage/identity-pure';
+import { RECORD_KEY_COLUMNS, recordKeyCells, rowRecordIdentifiers } from '../../lineage/identity-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
@@ -15,13 +15,7 @@ export const PARKED_LEDGER = defineArtifact({
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',
   decode: (row): ParkedLedgerEntry => ({
-    ...recordIdentifiersOf({
-      tyc: row.raw('tyc'),
-      hip: row.raw('hip'),
-      hd: row.raw('hd'),
-      gl: row.raw('gl'),
-      gaia_source_id: row.raw('gaia_source_id'),
-    }),
+    ...rowRecordIdentifiers(row),
     reason: row.oneOf('reason', PARKED_REASONS),
   }),
   encode: (e: ParkedLedgerEntry) => ({ ...recordKeyCells(e), reason: e.reason }),

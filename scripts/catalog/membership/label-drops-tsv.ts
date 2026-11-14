@@ -1,7 +1,9 @@
 // Codec for data/membership/label-drops.tsv. See README.md#the-unattested-labels-leave-the-row.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
+import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity-pure';
 import {
+  LABEL_DROP_CELLS,
   LABEL_DROP_COLUMNS,
   LABEL_DROP_REASONS,
   type LabelDropRow,
@@ -13,10 +15,11 @@ export const LABEL_DROPS = defineArtifact({
   columns: LABEL_DROP_COLUMNS,
   hint: 'Re-run `pnpm run build:membership`.',
   order: 'by-line',
-  decode: (row): LabelDropRow => {
-    row.oneOf('reason', LABEL_DROP_REASONS);
-    row.sourceId('gaia_source_id');
-    return row.cells();
-  },
-  encode: (r) => r,
+  decode: (row): LabelDropRow => ({
+    ...rowRecordIdentifiers(row),
+    cell: row.oneOf('cell', LABEL_DROP_CELLS),
+    value: row.requiredId('value'),
+    reason: row.oneOf('reason', LABEL_DROP_REASONS),
+  }),
+  encode: (r) => ({ ...recordKeyCells(r), cell: r.cell, value: String(r.value), reason: r.reason }),
 });

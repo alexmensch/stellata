@@ -4,7 +4,8 @@ import {
   LABEL_DISPOSITIONS, LABEL_FIELDS, dispositionFields,
   type AliasDisposition, type AliasField, type LabelDisposition, type LabelField, type LabelFlip,
 } from '../classic-ids/label-merge/label-merge-pure';
-import type { IdentityRow } from '../lineage/identity-pure';
+import { recordIdentifiersOf, type IdentityRow } from '../lineage/identity-pure';
+import { idCell } from '../../util/tsv/table-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
@@ -18,10 +19,10 @@ import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure'
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
 import {
   BINDING_REVIEW_COLUMNS, COMPONENT_REASON_PREFIX,
-  ADDITION_REASONS, BINDING_CLASSES, BINDING_REVIEW_VERDICTS, LABEL_DROP_REASONS,
+  ADDITION_REASONS, BINDING_CLASSES, BINDING_REVIEW_VERDICTS, LABEL_DROP_CELLS, LABEL_DROP_REASONS,
   type BindingClass,
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
-  type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
+  type LabelDropCell, type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { sumOf } from '../../util/counts/tally-pure';
@@ -392,7 +393,7 @@ export type MembershipOutcome =
   | {
     readonly kind: 'label-drop';
     readonly reason: LabelDropReason;
-    readonly cell: string;
+    readonly cell: LabelDropCell;
     readonly value: string;
   };
 
@@ -552,9 +553,12 @@ export function membershipLedgers(
     if (id === undefined) throw new Error(`membership lineage: ${key} has no identity row`);
     return id;
   };
-  const tuple = (id: IdentityRow) => ({
-    tyc: id.tyc, hip: id.hip, hd: id.hd, gl: id.gl, gaia_source_id: id.gaia_source_id,
-  });
+  const tuple = (id: IdentityRow) => recordIdentifiersOf(id);
+  const dropCell = (cell: string): LabelDropCell => {
+    const typed = LABEL_DROP_CELLS.find((c) => c === cell);
+    if (typed === undefined) throw new Error(`membership lineage: label-drop cell "${cell}" is not one of ${LABEL_DROP_CELLS.join(' | ')}`);
+    return typed;
+  };
 
   const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [] };
   const review = new Map<string, BindingReviewRow>();
@@ -573,7 +577,9 @@ export function membershipLedgers(
       out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${designation}` });
     } else if (drop !== undefined) {
       const { cell, value } = paramsAs(r, drop[1]);
-      out.labelDrops.push({ ...tuple(of(r.key)), cell, value, reason: drop[0] });
+      const number = idCell(value);
+      if (number === null) throw new Error(`membership lineage: ${r.key} drops an empty ${cell} label`);
+      out.labelDrops.push({ ...tuple(of(r.key)), cell: dropCell(cell), value: number, reason: drop[0] });
     } else if (flip !== undefined) {
       out.flips.push({
         sourceId: of(r.key).gaia_source_id, field: flip.field, ...paramsAs(r, flip.branch), disposition: flip.disposition,

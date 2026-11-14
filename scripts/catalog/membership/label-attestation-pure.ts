@@ -8,12 +8,12 @@ import {
   type PrimaryTables,
   type RowAttestation,
 } from '../spine/primaries-audit-pure';
-import type { LabelDropReason } from './ledger-rows-pure';
+import type { LabelDropCell, LabelDropReason } from './ledger-rows-pure';
 import type { KeyedOutcome } from './membership-lineage-pure';
 import { MEMBERSHIP_MANIFEST, joinManifestValues, type ManifestRecord } from './membership-manifest-tsv';
 
 export interface LabelDrop {
-  cell: 'hd' | 'flam';
+  cell: LabelDropCell;
   value: string;
   reason: LabelDropReason;
 }

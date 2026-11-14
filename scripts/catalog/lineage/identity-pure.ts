@@ -1,7 +1,9 @@
 // Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md#identity--the-origin-source-row.
 
 import { nullableCell } from '../../util/tsv/artifact-pure';
-import { intCell, readTable, sourceIdCell, textCell, type TableSpec } from '../../util/tsv/table-pure';
+import {
+  intCell, readTable, sourceIdCell, textCell, type TableRow, type TableSpec,
+} from '../../util/tsv/table-pure';
 import { sortUtf8 } from './lineage-row-pure';
 
 /** The five identifier cells a record's ledger rows and its identity row carry. */
@@ -50,6 +52,17 @@ export function recordIdentifiersOf(cells: IdentityCells): RecordIdentifiers {
     gl: textCell(cells.gl),
     gaiaSourceId: sourceIdCell(cells.gaia_source_id),
   };
+}
+
+/** A ledger row's five key cells, failing on a malformed one with the row's file and line. */
+export function rowRecordIdentifiers<C extends string>(
+  row: TableRow<C | (typeof RECORD_KEY_COLUMNS)[number]>,
+): RecordIdentifiers {
+  try {
+    return recordIdentifiersOf(row.cells());
+  } catch (e) {
+    return row.fail((e as Error).message);
+  }
 }
 
 export function identityRow(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {

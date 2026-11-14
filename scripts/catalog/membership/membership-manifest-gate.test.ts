@@ -29,7 +29,7 @@ import { loadCatalog } from '../catalog-lookup';
 import {
   FLAG_BINARY_COMPANION_ONLY, type SearchEntry, CATALOG_MANIFEST_FILENAME,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
+import { identifiersKey } from '../distance/parallax/parked-ledger-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   spineDesignations,
@@ -184,7 +184,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       .filter((i) => manifest[i].term === 'primaries')
       .map((i) => manifestKey(manifest[i]))
       .sort();
-    expect(admitted.map(parkedRecordKey).sort()).toEqual(unreachedKeys);
+    expect(admitted.map(identifiersKey).sort()).toEqual(unreachedKeys);
     for (const l of admitted) {
       expect((ADDITION_REASONS as readonly string[]).includes(l.reason), l.reason).toBe(true);
     }
@@ -197,8 +197,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const designations = new Set(manifest.flatMap(manifestDesignations));
     expect(components).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('component')]);
     for (const c of components) {
-      expect(manifestKeys.has(parkedRecordKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
-      if (c.tyc !== '') expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
+      expect(manifestKeys.has(identifiersKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
+      if (c.tyc !== null) expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
       const anchor = c.reason.slice(COMPONENT_REASON_PREFIX.length);
       expect(designations.has(anchor), `anchor ${anchor} is a manifest designation`).toBe(true);
     }
@@ -306,7 +306,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS.file), 'utf-8'));
     const manifestKeys = new Set(manifest.map(manifestKey));
     for (const d of drops) {
-      expect(manifestKeys.has(parkedRecordKey(d)), `label drop keys a manifest row: ${parkedRecordKey(d)}`).toBe(true);
+      expect(manifestKeys.has(identifiersKey(d)), `label drop keys a manifest row: ${identifiersKey(d)}`).toBe(true);
       expect(['hd', 'flam']).toContain(d.cell);
     }
     const byReason = new Map<string, number>();
@@ -326,11 +326,11 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const moved: string[] = [];
     for (const d of drops) {
       if (d.cell === 'flam') {
-        expect(manifestDesignations(byKey.get(parkedRecordKey(d))!)
+        expect(manifestDesignations(byKey.get(identifiersKey(d))!)
           .some((x) => x.startsWith('flam:'))).toBe(false);
         continue;
       }
-      const key = canonicalKeyOf(manifestDesignations(byKey.get(parkedRecordKey(d))!));
+      const key = canonicalKeyOf(manifestDesignations(byKey.get(identifiersKey(d))!));
       if (compareDesignations(key, `hd:${d.value}`) >= 0) moved.push(`${key} vs hd:${d.value}`);
     }
     expect(moved).toEqual([]);

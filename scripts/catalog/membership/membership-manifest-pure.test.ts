@@ -36,7 +36,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
+import { identifiersKey } from '../distance/parallax/parked-ledger-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
@@ -464,7 +464,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: 70003 });
     expect(promoted.labelDrops).toContainEqual(expect.objectContaining({
-      cell: 'hd', value: '70002', reason: 'hd_unattested',
+      cell: 'hd', value: 70002, reason: 'hd_unattested',
     }));
   });
 
@@ -472,8 +472,8 @@ describe('buildMembership — the spine side', () => {
     const row = result.rows.find((r) => r.hip === 70)!;
     expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
     expect(result.labelDrops).toEqual([
-      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
-      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
+      { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested' },
+      { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
     expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
   });
@@ -620,7 +620,7 @@ describe('buildMembership — the additions', () => {
   });
 
   it('ledgers each admitted row under the record-parity reason its designation earns', () => {
-    const reasons = new Map(result.ledger.map((l) => [parkedRecordKey(l), l.reason]));
+    const reasons = new Map(result.ledger.map((l) => [identifiersKey(l), l.reason]));
     expect(reasons.get(manifestKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
     expect(reasons.get(manifestKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
     const hip40 = result.rows.find((r) => r.hip === 40)!;
@@ -643,7 +643,7 @@ describe('buildMembership — the additions', () => {
   it('resolves a TYC carrying only a spine record\'s HD onto that record, not into a row', () => {
     expect(byTyc.has('2-3-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-3-1', hip: '', hd: '100001', gl: '', gaia_source_id: '', reason: 'component:hd:100001',
+      tyc: '2-3-1', hip: null, hd: 100001, gl: null, gaiaSourceId: null, reason: 'component:hd:100001',
     });
     expect(codes(result).component).toBe(4);
   });
@@ -654,7 +654,7 @@ describe('buildMembership — the additions', () => {
   it('admits one record per designation when two groups arrive with the same HD', () => {
     expect(byTyc.has('2-6-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-6-1', hip: '', hd: '60', gl: '', gaia_source_id: '', reason: 'component:hd:60',
+      tyc: '2-6-1', hip: null, hd: 60, gl: null, gaiaSourceId: null, reason: 'component:hd:60',
     });
     expect(byTyc.get('2-1-1')?.hd).toBe(60);
     expect(result.derived.sharedDesignations).toBe(0);
@@ -666,7 +666,7 @@ describe('buildMembership — the additions', () => {
     expect(byTyc.get('2-8-1')).toMatchObject({ hd: 70, gaiaSourceId: '1010' });
     expect(byTyc.has('2-7-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-7-1', hip: '', hd: '70', gl: '', gaia_source_id: '', reason: 'component:hd:70',
+      tyc: '2-7-1', hip: null, hd: 70, gl: null, gaiaSourceId: null, reason: 'component:hd:70',
     });
   });
 
@@ -702,7 +702,7 @@ describe('buildMembership — the additions', () => {
   it('resolves a second census row under one GJ onto the first', () => {
     expect(result.rows.filter((r) => r.gl === 'GJ 10002')).toHaveLength(1);
     expect(result.ledger).toContainEqual({
-      tyc: '', hip: '', hd: '', gl: 'GJ 10002', gaia_source_id: '',
+      tyc: null, hip: null, hd: null, gl: 'GJ 10002', gaiaSourceId: null,
       reason: 'component:gl:GJ_10002',
     });
   });
@@ -901,7 +901,7 @@ describe('codecs', () => {
       .toEqual(result.bindingReview);
     const ledger = ADDITIONS_LEDGER.parse(ADDITIONS_LEDGER.serialize(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
-    expect(new Set(ledger.map(parkedRecordKey))).toEqual(new Set(result.ledger.map(parkedRecordKey)));
+    expect(new Set(ledger.map(identifiersKey))).toEqual(new Set(result.ledger.map(identifiersKey)));
     const drops = LABEL_DROPS.parse(LABEL_DROPS.serialize(result.labelDrops));
     expect(new Set(drops.map((d) => JSON.stringify(d))))
       .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));
