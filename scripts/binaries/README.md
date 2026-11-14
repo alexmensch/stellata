@@ -131,7 +131,7 @@ scripts/binaries/
                                   tangentOffset, polarToTangent (a WDS
                                   ρ, θ as an east / north offset),
                                   distancePc (1000 /
-                                  parallax), chordSq / positionsWithin
+                                  parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
                                   offset), and the AT-HYG / WDS

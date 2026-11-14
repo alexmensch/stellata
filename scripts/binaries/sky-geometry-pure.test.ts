@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { unitVectorFromRaDec } from '../../src/astro-core/equatorial-basis';
 import {
-  chordSqForTolerance, distancePc, positionsWithin, predictSecondaryPosition,
+  chordSqForTolerance, directionsWithin, distancePc, predictSecondaryPosition,
   polarToTangent, tangentOffset,
 } from './sky-geometry-pure';
 
@@ -41,12 +42,12 @@ describe('predictSecondaryPosition', () => {
   });
 });
 
-describe('positionsWithin', () => {
+describe('directionsWithin', () => {
   it('compares the chord against the tolerance\'s chord', () => {
-    const at = { raDeg: 100, decDeg: 20 };
-    const east = (arcsec: number) => ({ raDeg: 100 + arcsec / 3600 / Math.cos((20 * Math.PI) / 180), decDeg: 20 });
-    expect(positionsWithin(at, east(1), 2)).toBe(true);
-    expect(positionsWithin(at, east(5), 2)).toBe(false);
+    const at = unitVectorFromRaDec(100, 20);
+    const east = (arcsec: number) => unitVectorFromRaDec(100 + arcsec / 3600 / Math.cos((20 * Math.PI) / 180), 20);
+    expect(directionsWithin(at, east(1), 2)).toBe(true);
+    expect(directionsWithin(at, east(5), 2)).toBe(false);
     expect(chordSqForTolerance(0)).toBe(0);
   });
 });

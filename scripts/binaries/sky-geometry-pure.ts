@@ -1,7 +1,7 @@
 // Sky geometry the binaries stages share: tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
-import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../src/astro-core/equatorial-basis';
+import type { SkyPosition, UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
 import { pyMod } from './python-float-pure';
 
@@ -38,11 +38,6 @@ export function tangentOffset(pos: SkyPosition, ref: SkyPosition): TangentOffset
 
 /** Squared chord between two directions on the unit sphere: monotone in
  *  their angular separation, so it compares against a tolerance without trig. */
-export function chordSq(a: SkyPosition, b: SkyPosition): number {
-  return unitChordSq(unitVectorFromRaDec(a.raDeg, a.decDeg), unitVectorFromRaDec(b.raDeg, b.decDeg));
-}
-
-/** `chordSq` for directions already on the unit sphere. */
 export function unitChordSq(u: UnitVector, v: UnitVector): number {
   const dx = u.x - v.x;
   const dy = u.y - v.y;
@@ -55,8 +50,8 @@ export function chordSqForTolerance(toleranceArcsec: number): number {
   return (2 * Math.sin(((toleranceArcsec / ARCSEC_PER_DEG) * DEG_TO_RAD) / 2)) ** 2;
 }
 
-export function positionsWithin(a: SkyPosition, b: SkyPosition, toleranceArcsec: number): boolean {
-  return chordSq(a, b) <= chordSqForTolerance(toleranceArcsec);
+export function directionsWithin(a: UnitVector, b: UnitVector, toleranceArcsec: number): boolean {
+  return unitChordSq(a, b) <= chordSqForTolerance(toleranceArcsec);
 }
 
 /** `primary` offset by a WDS (ρ, θ): θ east of north, ρ in arcsec, small-angle. */

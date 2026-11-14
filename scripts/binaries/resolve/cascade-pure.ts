@@ -1,6 +1,8 @@
 // The Stage 2 cascade's tiers: ORB6 HIP, AT-HYG-native, SIMBAD cross-ID, CCDM sibling, AT-HYG position. See README.md.
 
-import { skyPositionAtEpoch, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
+import {
+  directionAtEpoch, unitVectorFromRaDec, type SkyPosition, type UnitVector,
+} from '../../../src/astro-core/equatorial-basis';
 import {
   canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, type ComponentKey, type PairRowKey,
 } from '../component-tokens-pure';
@@ -9,9 +11,9 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '../../wds/wds-pure';
 import {
-  WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition,
+  WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, directionsWithin, predictSecondaryPosition, unitChordSq,
 } from '../sky-geometry-pure';
-import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
+import { athygDirectionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
   findOwningPair, own, pairRows, pairsByDiscoverer, unresolvedComponent, working,
@@ -45,13 +47,13 @@ function gaiaFromAthygViaHip(hip: number, indices: IdentifierIndices): string | 
 export const ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC = 300.0;
 
 /** The HIP's AT-HYG row, else its Gaia source, at the WDS coordinate epoch. */
-function hipSkyPosition(hip: number, indices: IdentifierIndices): SkyPosition | null {
+function hipDirection(hip: number, indices: IdentifierIndices): UnitVector | null {
   const row = indices.hipToAthyg.get(hip);
-  if (row !== undefined) return athygPositionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+  if (row !== undefined) return athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
   const gaia = indices.hipToGaia.get(hip);
   const astro = gaia === undefined ? undefined : indices.srcToAstrometry.get(gaia);
   if (astro === undefined) return null;
-  return skyPositionAtEpoch(
+  return directionAtEpoch(
     { raDeg: astro.raDeg, decDeg: astro.decDeg },
     { pmRaMasyr: astro.pmraMasyr, pmDecMasyr: astro.pmdecMasyr },
     astro.refEpoch, WDS_PRECISE_COORD_EPOCH,
@@ -61,8 +63,10 @@ function hipSkyPosition(hip: number, indices: IdentifierIndices): SkyPosition | 
 /** Only a positive mismatch refutes: no pair coord or no HIP position trusts ORB6. */
 function orb6HipMatchesPairCoord(hip: number, pair: WdsPair, indices: IdentifierIndices): boolean {
   if (pair.precise === null) return true;
-  const pos = hipSkyPosition(hip, indices);
-  return pos === null || positionsWithin(pos, pair.precise, ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC);
+  const dir = hipDirection(hip, indices);
+  return dir === null || directionsWithin(
+    dir, unitVectorFromRaDec(pair.precise.raDeg, pair.precise.decDeg), ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC,
+  );
 }
 
 /** The HIP-anchored prefix: `orb6_hip` (primaries only — ORB6's one HIP per
@@ -146,13 +150,13 @@ export function buildSystemLetterPositions(
 }
 
 function siblingLetterOwnsCandidate(
-  cand: SkyPosition, queryChordSq: number, token: string, partner: string,
+  cand: UnitVector, queryChordSq: number, token: string, partner: string,
   letterPositions: ReadonlyMap<string, SkyPosition>,
 ): boolean {
   const decisivenessSq = CCDM_SIBLING_OWNERSHIP_DECISIVENESS * CCDM_SIBLING_OWNERSHIP_DECISIVENESS;
   for (const [letter, pos] of letterPositions) {
     if (tokensShareIdentity(letter, token) || tokensShareIdentity(letter, partner)) continue;
-    if (chordSq(pos, cand) * decisivenessSq < queryChordSq) return true;
+    if (unitChordSq(unitVectorFromRaDec(pos.raDeg, pos.decDeg), cand) * decisivenessSq < queryChordSq) return true;
   }
   return false;
 }
@@ -172,13 +176,14 @@ function ccdmCandidateHip(
   claims: HipClaims, rejected: SiblingRejection[],
 ): number | null {
   const threshold = chordSqForTolerance(CCDM_POSITION_MATCH_TOLERANCE_ARCSEC);
+  const target = unitVectorFromRaDec(q.target.raDeg, q.target.decDeg);
   let bestHip: number | null = null;
   let best = Infinity;
   for (const hip of q.candidates) {
     const row = indices.hipToAthyg.get(hip);
     if (row === undefined) continue;
-    const cand = athygPositionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
-    const d = chordSq(cand, q.target);
+    const cand = athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+    const d = unitChordSq(cand, target);
     if (d > threshold) continue;
     const owned = (letterPositions !== undefined && siblingLetterOwnsCandidate(cand, d, q.token, q.partner, letterPositions))
       || hipClaimedByDisjointLetter(claims, q.wdsId, hip, q.token, q.partner);

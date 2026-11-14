@@ -72,7 +72,7 @@ Each has its own README.
   under 0.002″ error at Barnard's-scale proper motion over the 24.75-yr
   HIP2 J1991.25→J2016 interval — the longest any caller propagates.
   `skyPositionAtEpoch` is the same read back as (ra, dec), for the binaries
-  stages' position matches and audit offsets. `angularSeparationArcsec` is
+  binding audit's tangent-plane offsets. `angularSeparationArcsec` is
   the separation between two unit vectors through `angleBetweenRad`, so it
   resolves micro-arcseconds where an `acos` of the dot product reads 0.
   Shared by the catalog build's
