@@ -44,6 +44,10 @@ scripts/catalog/companions/
                                   the identity rows of the records it mints
                                   and the rows it removes or merges
                                   (#promotion-lineage).
+  companion-dust-pure.ts (+ test) Which of a companion's absmag and B−V are
+                                  observed, so carry the A_V that
+                                  de-extinction subtracts: read by the mint
+                                  and by promotion's dust row.
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit
                                   chain separates. See Overlap gate below.

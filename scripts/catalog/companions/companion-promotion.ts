@@ -40,7 +40,8 @@ import {
 } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
-import { companionAbsmagIsObserved, promotionOriginKey } from './promotion-lineage-pure';
+import { promotionOriginKey } from './promotion-lineage-pure';
+import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
@@ -552,13 +553,10 @@ export function companionCi(
   spectralInfo: SpectralInfo,
   av: number,
 ): CompanionCi {
-  if (companionCiIsObserved(secondary)) {
-    return { value: (secondary.ci as number) - av / R_V, via: 'own' };
-  }
-  return {
-    value: spectralClassCi(spectralInfo),
-    via: spectralClassColorIsDerivable(spectralInfo) ? 'spectral_derived' : 'none',
-  };
+  const via: CompanionCiVia = companionCiIsObserved(secondary) ? 'own'
+    : spectralClassColorIsDerivable(spectralInfo) ? 'spectral_derived' : 'none';
+  const value = via === 'own' ? secondary.ci as number : spectralClassCi(spectralInfo);
+  return { value: companionCiIsObservedVia(via) ? value - av / R_V : value, via };
 }
 
 

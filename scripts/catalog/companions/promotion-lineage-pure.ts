@@ -9,6 +9,7 @@ import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from 
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { dustParams, EDENHOFER_AV } from '../photometry/brightness-colour-lineage-pure';
+import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type {
   CompanionAbsmagSource, CompanionCiVia, MintedAdjustment, MintedBrightness, MultiplesTsvRow, PromotedRow,
   PromotionDerivedCounts, RowOutcome,
@@ -54,16 +55,9 @@ type Facet = keyof typeof FACET_CODES;
 
 const brightnessFacet = (source: CompanionAbsmagSource): `brightness.${(typeof BRIGHTNESS_CODES)[CompanionAbsmagSource]}` => `brightness.${BRIGHTNESS_CODES[source]}`;
 
-/** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
- *  raymarch re-adds it without double-counting; a spectral-derived one
- *  (class→M_V) is already intrinsic. */
-export function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
-  return source !== 'spectral';
-}
-
 function dustFacet(b: MintedBrightness): Extract<Facet, `dust.${string}`> {
   const absmag = companionAbsmagIsObserved(b.source);
-  const ci = b.ci === 'own';
+  const ci = companionCiIsObservedVia(b.ci);
   if (absmag) return ci ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only';
   return ci ? 'dust.edenhofer2024.ci-only' : 'dust.edenhofer2024.not-applied';
 }
