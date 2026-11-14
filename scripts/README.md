@@ -187,7 +187,7 @@ load check is the second gate, for work started outside it (a dev server,
 another session); after `HEAVY_LOAD_WAIT_S` (default 600 s) of load at or
 above the cores, the command runs anyway. The exit status is the command's;
 TERM, INT or HUP stops the command and frees the ticket. Who runs what
-through it: `.claude/skills/stellata-pickup-epic/SKILL.md` § Heavy commands.
+through it: `.claude/skills/stellata-pickup-epic/SKILL.md` § Heavy commands share the CPU.
 `scripts/heavy.test.ts` pins the slots, the order, the dead-ticket clear and
 the load condition.
 

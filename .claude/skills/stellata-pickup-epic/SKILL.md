@@ -1,6 +1,6 @@
 ---
 name: stellata-pickup-epic
-description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), derived versions, `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
+description: Stellata's extension of the user-level `pickup-epic` skill, for the coordinator and for every `pickup-task` worker it launches — the GPU pause protocol (a worker, or any session that finds the coordinator's field, pauses the whole pipeline for a perf run so the machine is idle), the machine-wide gate every build and full test run goes through, derived versions, `build:seed` as the post-landing step, and what a stellata `SMOKE:` line names. `pickup-epic` and coordinated `pickup-task` load it in stellata; load it directly only if one of them is already in context without it.
 ---
 
 # Coordinating a stellata epic
@@ -30,7 +30,7 @@ busy-session warning, so keep it current.
 | `PAUSE` | coordinator → every other worker | on a `GPU_REQUEST` |
 | `HOLD` | coordinator → the landing subagent, if one is running | on a `GPU_REQUEST`; the hold in `pickup-epic`'s Land step, unchanged |
 | `PAUSED` | worker → coordinator | its current command has finished and it will start nothing heavier than reading files — no build, test run, `pnpm run perf`, `survivors`, or data pull |
-| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, no worker is in a pull wait (as `pickup-epic`'s run state defines it), the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running |
+| `GPU_GRANTED` | coordinator → requester | every other worker has replied `PAUSED` or is idle, no worker is in a pull wait (as `pickup-epic`'s run state defines it), the landing subagent, if one is running, has replied to `HOLD`, and no `build:seed` is running or queued |
 | `GPU_DONE` | requester → coordinator | the runner has exited, whatever its result; or `GPU_DONE unarmed` when `await-go.sh` timed out with no arm |
 | `RESUME` | coordinator → every paused worker and the held landing subagent | on `GPU_DONE` |
 
@@ -64,7 +64,31 @@ send `GPU_DONE` when no further run is planned. `await-go.sh` gives up after
 15 minutes unarmed (`PERF_GO_WAIT_S`): send `GPU_DONE unarmed`, carry on with
 work that needs no run, and send a new `GPU_REQUEST` when the owner says
 they are ready. On `PAUSE`, reply `PAUSED` once the current command ends —
-never kill a build part-way.
+never kill a build part-way. A command still queued in `heavy.sh` has not
+started: stop it (the queue frees its ticket), reply `PAUSED`, and rerun it
+at `RESUME`.
+
+## Heavy commands share the CPU
+
+Several workers building or testing at once push the load past the core
+count, and `build:catalog`'s per-stage time budgets then fail with nothing
+written. Every heavy command goes through `scripts/heavy.sh`, which admits
+one once it holds one of two machine-wide slots, taken in arrival order, and
+the 1-minute load is below the core count
+([Heavy commands](/scripts/README.md#heavy-commands--heavysh)).
+
+- **Gated:** every `pnpm run build` / `build:*` target, a worktree's artifact
+  rebuild among them, and the full `pnpm test`. A data pull is network-bound
+  and runs ungated, as does a single test file.
+- **Worker:** `bash scripts/heavy.sh pnpm test`,
+  `bash scripts/heavy.sh pnpm run build:catalog`. The queue can outlast a
+  foreground command's timeout, so start a gated build with
+  `run_in_background`.
+- **Coordinator:** `build:seed` queues itself; start it as below. Its
+  `heavy: running` line marks the build starting.
+
+The gate knows nothing of perf runs: the pause above stays the message
+protocol.
 
 ## Versions are derived
 
@@ -80,12 +104,14 @@ level label ([Version policy](/RELEASING.md#version-policy)).
 checkout, run without piping its output, started in the background right
 after each landing
 ([Rebuild main's artifacts](/.claude/skills/stellata-pr-cleanup/SKILL.md#rebuild-mains-artifacts--last-in-the-background)).
-A launch waits only while it runs. Stellata's seeding detects a main
+A launch waits only while it runs — from its `heavy: running` line to its
+exit — never while it is queued. Stellata's seeding detects a main
 checkout one landing behind
 ([Building in a worktree](/scripts/README.md#building-in-a-worktree)), so
 `pickup-epic`'s Launch rule applies unnarrowed.
-It is heavy: never from a `GPU_REQUEST` until `GPU_DONE`; a landing that
-finishes in that window starts it at `RESUME`.
+It is heavy: never from a `GPU_REQUEST` until `GPU_DONE`; one still queued
+at a `GPU_REQUEST` is stopped, and a landing that finishes in that window
+starts it at `RESUME`.
 
 ## The `SMOKE:` line
 
