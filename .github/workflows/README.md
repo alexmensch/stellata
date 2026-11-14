@@ -20,9 +20,11 @@ upload`), checks it on its preview URL, then moves traffic to it
 custom domain (`wrangler triggers deploy`). A failed check leaves the
 previous version live and pushes no tag
 ([The pre-traffic check](/scripts/release/README.md#the-pre-traffic-check)).
-Last, `cut-releases.ts publish` creates each GitHub release, and its tag
-with it, carrying the `## Release notes` block from its own PR body in
-place of the flat auto-generated notes.
+Last, the `publish-releases` job runs `cut-releases.ts publish`, which
+creates each GitHub release, and its tag with it, carrying the `## Release
+notes` block from its own PR body in place of the flat auto-generated
+notes, on a GitHub App token minted in that job, which installs nothing
+([The publish token](/scripts/release/README.md#the-publish-token)).
 
 The range can hold several releasing commits — a failed deploy leaves its
 commit untagged for the next push's run — and each releases at its own
