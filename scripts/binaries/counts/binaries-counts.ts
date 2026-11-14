@@ -8,8 +8,9 @@ import { stage6Counts } from '../multiples/attach-multiples';
 import { stage5Counts } from '../optical/attach-optical';
 import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
+import type { PairsCounts } from '../pairs-lineage-pure';
 import type { BindingCounts } from '../resolve/binding-lineage-pure';
-import { BINDING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
@@ -17,7 +18,7 @@ type StageCountKey = keyof (
 );
 const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'optical', 'multiples'] as const;
 type BinariesStage = (typeof BINARIES_STAGES)[number];
-const SNAPSHOT_STAGES = [...BINARIES_STAGES, BINDING_LINEAGE.stage] as const;
+const SNAPSHOT_STAGES = [...BINARIES_STAGES, BINDING_LINEAGE.stage, PAIRS_LINEAGE.stage] as const;
 type SnapshotStage = (typeof SNAPSHOT_STAGES)[number];
 type SnapshotBlock = StageBlock<SnapshotStage>;
 
@@ -39,7 +40,12 @@ function withPrefix<K extends string, P extends string>(counts: Readonly<Record<
   return Object.fromEntries(Object.entries<number>(counts).filter(([key]) => key.startsWith(prefix))) as Record<Extract<K, `${P}${string}`>, number>;
 }
 
-export function binariesCounts(r: StageResults, binding: BindingCounts): StagedCounts<number> {
+export interface LineageCounts {
+  readonly binding: BindingCounts;
+  readonly pairs: PairsCounts;
+}
+
+export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
   const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = stage2Counts(r.resolved);
   const s3 = stage3Counts(r.reference, r.resolved, r.astrometry);
@@ -72,6 +78,8 @@ export function binariesCounts(r: StageResults, binding: BindingCounts): StagedC
     multiples: stage6Counts(r.multiples),
   }, true);
   return nestByStage<SnapshotStage, number>(SNAPSHOT_STAGES, [
-    ...stages, { stage: BINDING_LINEAGE.stage, block: { kind: 'counted', counts: binding } },
+    ...stages,
+    { stage: BINDING_LINEAGE.stage, block: { kind: 'counted', counts: lineage.binding } },
+    { stage: PAIRS_LINEAGE.stage, block: { kind: 'counted', counts: lineage.pairs } },
   ]);
 }

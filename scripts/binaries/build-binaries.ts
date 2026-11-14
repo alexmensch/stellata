@@ -1,4 +1,4 @@
-// build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the verdicts and the binding lineage. See README.md#pipeline-at-a-glance.
+// build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the verdicts and the binding and pairs lineage. See README.md#pipeline-at-a-glance.
 
 import { resolve } from 'node:path';
 
@@ -8,9 +8,11 @@ import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
-import { stageLineageText } from '../catalog/lineage/lineage-row-pure';
-import { countedStageLineage } from '../catalog/lineage/stage-lineage';
+import { stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
+import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { countedStageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
+import { PAIRS_CODES, PAIRS_LINEAGE_BUDGET, pairsLineageLines } from './pairs-lineage-pure';
 import { binariesCounts } from './counts/binaries-counts';
 import { MULTIPLES_TSV } from './multiples-tsv';
 import { BINDING_VERDICTS_TSV, bindingVerdictRow } from './resolve/binding-verdicts-tsv';
@@ -28,7 +30,7 @@ import { BINDING_CODES, BINDING_LINEAGE_BUDGET, bindingLineageLines } from './re
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
 import { stage4Report } from './orbits/stage4-report-pure';
-import { BINDING_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import { BINDING_LINEAGE, PAIRS_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
@@ -60,35 +62,49 @@ const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-binaries-expe
 
 const log = (line: string): void => console.log(`[build-binaries] ${line}`);
 
-export async function main(): Promise<void> {
-  const results = await runStages(log);
-  const { reference, resolved, multiples } = results;
-  const lineage = countedStageLineage({
+/** A one-file stage of this step, diffed on its own file. */
+function binariesStageLineage<S extends string, B extends string, L extends B>(
+  spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>, lines: () => readonly LineageLine[], budget: LineageBudget,
+) {
+  return countedStageLineage({
     layout: LINEAGE_LAYOUT,
-    spec: BINDING_LINEAGE,
+    spec,
     inputs: stepInputHashes(),
-    diffed: BINDING_LINEAGE.stage,
-    lines: () => bindingLineageLines(multiples.rows),
-    render: (sorted) => ({ [BINDING_LINEAGE.stage]: stageLineageText(BINDING_CODES, sorted) }),
+    diffed: spec.stage,
+    lines,
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted) }) as Record<S, Uint8Array>,
     joins: () => [],
-    budget: BINDING_LINEAGE_BUDGET,
+    budget,
     invariants: [],
     argv: process.argv.slice(2),
-  }, BINDING_CODES);
+  }, codes);
+}
+
+export async function main(): Promise<void> {
+  const results = await runStages(log);
+  const { reference, resolved, optical, multiples } = results;
+  const binding = binariesStageLineage(
+    BINDING_LINEAGE, BINDING_CODES, () => bindingLineageLines(multiples.rows), BINDING_LINEAGE_BUDGET,
+  );
+  const pairs = binariesStageLineage(
+    PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
+  );
   emitArtifacts({
     outputs: BINARIES_OUTPUTS,
     files: {
       multiples: MULTIPLES_TSV.serialize(multiples.rows),
       bindingVerdicts: BINDING_VERDICTS_TSV.serialize(resolved.verdicts.map(bindingVerdictRow)),
-      ...lineage.files,
+      ...binding.files,
+      ...pairs.files,
     },
-    members: lineage.members,
+    members: new Map([...binding.members, ...pairs.members]),
     checks: [
       ...reference.checks,
-      ...lineage.checks,
+      ...binding.checks,
+      ...pairs.checks,
       countSnapshotCheck<StagedCounts>({
         snapshotPath: EXPECTED_COUNTS,
-        actual: binariesCounts(results, lineage.counts),
+        actual: binariesCounts(results, { binding: binding.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',
         script: 'build:binaries',
       }),

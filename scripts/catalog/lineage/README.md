@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are component-binding's and classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs' and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -230,6 +230,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
+[pairs'](/scripts/binaries/README.md#pairs-lineage),
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/README.md#promotion-lineage),
@@ -300,7 +301,9 @@ and count against the [CI heap budget](../../util/heap-budget/README.md):
 ## Cross-stage joins
 
 One stage's rows join another's on the origin key, never on a
-re-derivation. A `multiples.tsv` component founds no record, so its
+re-derivation. A `pairs` row is keyed on its pair's founding row, which no
+other stage keys on; trace reaches it through the Gaia sources and `hip:`
+designations its `params` carry. A `multiples.tsv` component founds no record, so its
 component-binding rows are keyed on its row (`multiples:<system_id>/<comp>`,
 a promoted companion's own key) and reached, as classic-ids' rows are, by the
 designations their `params` carry
@@ -340,9 +343,17 @@ and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.m
 named token of its system. Its contract lives beside its module, in
 [Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
 
+## The pairs stage
+
+`build:binaries` writes it too, after component-binding: every WDS pair row
+the binaries stages decide — a duplicate, a blank row left out, each Stage 5
+verdict, a position-less drop — keyed on the row that founded the pair. Its
+contract lives beside its module, in
+[Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
+
 ## The classic-ids stage
 
-`build:classic-ids` is the stage after component-binding, run before membership; its contract
+`build:classic-ids` is the stage after pairs, run before membership; its contract
 lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage

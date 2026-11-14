@@ -52,7 +52,9 @@ through the one tally helper; `stage5Rates` derives `optical_rejected_rate`,
 the rejecting tags over every classified pair, through `share`
 (`no-denominator` when none was classified), which `stage5Report` logs,
 `n/a` when absent. The keys are held to the committed count snapshot, as
-Stage 4's are ([Counts](../orbits/README.md#counts)).
+Stage 4's are ([Counts](../orbits/README.md#counts)). Each tag is also a
+`pairs.optical.<tag>` lineage code, its underscores as dashes, written per
+pair ([Pairs lineage](../README.md#pairs-lineage)).
 
 ## Choices the outputs rest on
 

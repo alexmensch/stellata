@@ -14,8 +14,8 @@ them and nothing pins them.
 ```
 scripts/binaries/counts/
   binaries-counts.ts   binariesCounts, over the shell's StageResults and
-                       the component-binding stage's count
-                       block.
+                       the component-binding and pairs stages' count
+                       blocks.
 ```
 
 The real-data case is the parent folder's `build-binaries.test.ts`: the
@@ -39,11 +39,14 @@ the stages with a second argument that is `true` only when they are exactly
 once, so a key left out, invented or filed twice, or a stage outside the list,
 fails to compile, naming it.
 
-`SNAPSHOT_STAGES` is `BINARIES_STAGES` then the `component-binding` lineage
-stage, whose block is keyed on its reason codes: `binariesCounts` takes it as
-the shell's `countedStageLineage` folded it from the stage's lines
-([Binding lineage](../resolve/README.md#binding-lineage)), beside `filed`'s
-checked blocks.
+`SNAPSHOT_STAGES` is `BINARIES_STAGES` then the `component-binding` and
+`pairs` lineage stages, whose blocks are keyed on their reason codes:
+`binariesCounts` takes each as the shell's `countedStageLineage` folded it
+from the stage's lines ([Binding lineage](../resolve/README.md#binding-lineage),
+[Pairs lineage](../README.md#pairs-lineage)), beside `filed`'s checked
+blocks. The `pairs` block re-counts what `ingest`, `resolve`, `optical` and
+`multiples` already pin — the duplicate row, the deferred blanks, every
+optical tag, the position-less drops — so the two always move together.
 
 A rate with an empty denominator is `no-denominator`, never 0
 (`../../util/counts/tally-pure.ts`'s `share`), and its report line prints
