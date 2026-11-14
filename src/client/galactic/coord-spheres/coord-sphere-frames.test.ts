@@ -275,6 +275,7 @@ describe('label formatters', () => {
     expect(fmtLonDeg(350)).toBe('350°');
     expect(fmtLonDeg(360)).toBe('0°');
     expect(fmtLonDeg(-10)).toBe('350°');
+    expect(fmtLonDeg(-0.4)).toBe('0°');
   });
 
   it('keeps galactic latitude signed and whole-degree', () => {
@@ -290,6 +291,7 @@ describe('label formatters', () => {
     expect(fmtRaHours(345)).toBe('23h');
     expect(fmtRaHours(360)).toBe('0h');
     expect(fmtRaHours(-15)).toBe('23h');
+    expect(fmtRaHours(-7)).toBe('0h');
   });
 
   it('signs declination explicitly so it never reads as a longitude', () => {
