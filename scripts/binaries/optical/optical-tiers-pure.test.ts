@@ -12,7 +12,7 @@ import type { OrbitVia } from '../multiples-record-pure';
 import { NO_ORBIT, type PairOrbit } from '../orbits/select-orbit-pure';
 import type { OrbitElements } from '../orbits/nss-elements-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
-import { decomposed, indices } from '../resolve/resolve-fixture';
+import { decomposed, indices, sourced } from '../resolve/resolve-fixture';
 import {
   bothGaiaVerdict, CIRCULAR_KM_S_1AU_1MSUN, classifyPairOptical, cpmBaselineVerdict, escapeVelocityKmS, OPTICAL_REJECT_VIA,
   pairBeyondSeparationLimit, separationAu, separationExceedsLimit, transverseVelocityKmS, type PairContext,
@@ -51,7 +51,7 @@ interface Case {
 function classify(c: Case = {}) {
   const pair = c.pair ?? wdsPair({ notes: c.notes ?? '    ', magPri: c.magPri ?? null, magSec: c.magSec ?? null, rhoLast: c.rhoLast === undefined ? 5.0 : c.rhoLast });
   const side = (gaia: string | null | undefined, hip: number | null | undefined) => ({
-    gaiaSourceId: gaia ?? null, hip: hip ?? null, resolveVia: gaia ? 'orb6_hip' as const : 'unresolved' as const,
+    ...sourced(gaia ?? null), hip: hip ?? null,
   });
   const p = decomposed(pair, { primary: side(c.primaryGaia, c.primaryHip), secondary: side(c.secondaryGaia, c.secondaryHip) });
   const ix = indices({
@@ -232,7 +232,7 @@ describe('cpmBaselineVerdict (61 Cyg: 5.2″/yr over a century)', () => {
 describe('pairBeyondSeparationLimit', () => {
   const ANCHOR = plx(96.5, 0.3);
   const run = (rows: readonly GaiaAstrometryRow[], p: string | null, s: string | null, anchor: Parallax | null, rho: number) => {
-    const pair = decomposed(wdsPair(), { primary: { gaiaSourceId: p, resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: s, resolveVia: 'orb6_hip' } });
+    const pair = decomposed(wdsPair(), { primary: sourced(p), secondary: sourced(s) });
     return pairBeyondSeparationLimit(pair.primary, pair.secondary, anchor, rho, indices({ srcToAstrometry: new Map(rows.map((r) => [r.ref.row, r])) }));
   };
 

@@ -5,16 +5,13 @@ import { componentKey } from '../component-tokens-pure';
 import { athygRow, gaia5pRow } from '../load/load-fixture';
 import { mscPairKey } from '../load/msc-pure';
 import { ORBIT_VIA_ON_FILE, type MultiplesRecord } from '../multiples-record-pure';
-import { indices, xid } from '../resolve/resolve-fixture';
+import { indices, sourced, xid } from '../resolve/resolve-fixture';
 import { stage6Counts } from './attach-multiples';
 import { stage6Report } from './stage6-report-pure';
 import { elements, measured, runStage6 } from './stage6-fixture';
 
 const UNRESOLVED_PAIR = [UNRESOLVED_ASTROMETRY, UNRESOLVED_ASTROMETRY] as const;
-const sides = (p: string | null, s: string | null) => ({
-  primary: { gaiaSourceId: p, resolveVia: 'orb6_hip' as const },
-  secondary: { gaiaSourceId: s, resolveVia: 'orb6_hip' as const },
-});
+const sides = (p: string | null, s: string | null) => ({ primary: sourced(p), secondary: sourced(s) });
 const row = (rows: readonly MultiplesRecord[], systemId: string, comp: string): MultiplesRecord =>
   rows.find((r) => r.systemId === systemId && r.comp === comp)!;
 

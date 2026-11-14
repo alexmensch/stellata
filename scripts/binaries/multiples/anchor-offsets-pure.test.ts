@@ -7,7 +7,8 @@ import { mscPairKey, type MscLookup, type MscPairMags } from '../load/msc-pure';
 import type { OpticalVia } from '../optical/optical-tiers-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed } from '../resolve/resolve-fixture';
-import { addSiblingEdge, computeAnchorOffsets, photocentreOffsets, type AnchorOffset, type SiblingAdj } from './anchor-offsets-pure';
+import { addSiblingEdge, computeAnchorOffsets, photocentreOffsets, type SiblingAdj } from './anchor-offsets-pure';
+import type { PolarOffset } from '../sky-geometry-pure';
 
 const W = 'WDS-1';
 type Spec = readonly [components: string, rho: number | null, theta: number | null, kept: boolean];
@@ -39,15 +40,15 @@ function offsets(specs: readonly Spec[], mags: Record<string, Mags> = {}, lookup
   return computeAnchorOffsets(pairs, optical, lookup).offsets;
 }
 
-const at = (out: ReadonlyMap<string, AnchorOffset>, tok: string): AnchorOffset => out.get(componentKey(W, tok))!;
+const at = (out: ReadonlyMap<string, PolarOffset>, tok: string): PolarOffset => out.get(componentKey(W, tok))!;
 
-function expectOffsetEN(out: ReadonlyMap<string, AnchorOffset>, tok: string, east: number, north: number): void {
+function expectOffsetEN(out: ReadonlyMap<string, PolarOffset>, tok: string, east: number, north: number): void {
   const { sepArcsec, paDeg } = at(out, tok);
   expect(sepArcsec * Math.sin(paDeg * DEG_TO_RAD)).toBeCloseTo(east, 6);
   expect(sepArcsec * Math.cos(paDeg * DEG_TO_RAD)).toBeCloseTo(north, 6);
 }
 
-function expectSepPa(out: ReadonlyMap<string, AnchorOffset>, tok: string, sep: number, pa: number): void {
+function expectSepPa(out: ReadonlyMap<string, PolarOffset>, tok: string, sep: number, pa: number): void {
   expect(at(out, tok).sepArcsec).toBeCloseTo(sep, 7);
   expect(at(out, tok).paDeg).toBeCloseTo(pa, 7);
 }

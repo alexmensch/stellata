@@ -9,8 +9,8 @@ import { athygRow, gaia5pRow } from '../load/load-fixture';
 import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { componentsOf, valueOf, type Bound, type DecomposedPair, type ResolvedComponent } from './components-pure';
-import { OWN, type IdOrigin } from '../multiples-record-pure';
+import { componentsOf, resolveViaOf, valueOf, type Bound, type DecomposedPair, type GaiaBinding, type ResolvedComponent } from './components-pure';
+import { OWN, type GaiaVia, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
@@ -57,13 +57,16 @@ export function indices(over: {
 export function ids(c: ResolvedComponent | undefined): Side | undefined {
   if (c === undefined) return undefined;
   const { gaia, hip, athyg, ...rest } = c;
-  return { ...rest, gaiaSourceId: valueOf(gaia), hip: valueOf(hip), athygRow: valueOf(athyg) };
+  return { ...rest, gaiaSourceId: valueOf(gaia), resolveVia: resolveViaOf(c), hip: valueOf(hip), athygRow: valueOf(athyg) };
 }
 
+const FIXTURE_GAIA_VIA: GaiaVia = 'simbad_xid';
+
 /** A component's fields, its identifiers given bare; each binds under its
- *  `*Origin`, else as the component's own. */
+ *  `*Origin`, else as the component's own, a Gaia source by FIXTURE_GAIA_VIA. */
 export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & {
   gaiaSourceId?: string | null;
+  resolveVia?: ResolveVia;
   hip?: number | null;
   athygRow?: AthygRow | null;
   gaiaOrigin?: IdOrigin;
@@ -71,16 +74,30 @@ export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & 
   athygOrigin?: IdOrigin;
 };
 
+function bindGaia(id: string | null | undefined, via: ResolveVia | undefined, origin: IdOrigin | undefined): GaiaBinding | null {
+  if (id === null || id === undefined) {
+    if (via !== undefined && via !== 'unresolved') throw new Error(`fixture: tier ${via} without a Gaia source`);
+    return null;
+  }
+  if (via === 'unresolved') throw new Error(`fixture: Gaia source ${id} tagged unresolved`);
+  return { value: id, origin: origin ?? OWN, via: via ?? FIXTURE_GAIA_VIA };
+}
+
 function bind<T>(value: T | null | undefined, origin: IdOrigin | undefined): Bound<T> | null {
   return value === null || value === undefined ? null : { value, origin: origin ?? OWN };
 }
 
+/** A side bound to `gaiaSourceId` by `via`, or to nothing. */
+export function sourced(gaiaSourceId: string | null, via: GaiaVia = FIXTURE_GAIA_VIA): Side {
+  return gaiaSourceId === null ? { gaiaSourceId } : { gaiaSourceId, resolveVia: via };
+}
+
 export function resolved(over: Side = {}): ResolvedComponent {
-  const { gaiaSourceId, hip, athygRow, gaiaOrigin, hipOrigin, athygOrigin, ...rest } = over;
+  const { gaiaSourceId, resolveVia, hip, athygRow, gaiaOrigin, hipOrigin, athygOrigin, ...rest } = over;
   return {
-    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true, resolveVia: 'unresolved', hd: null,
+    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true, hd: null,
     ...rest,
-    gaia: bind(gaiaSourceId, gaiaOrigin), hip: bind(hip, hipOrigin), athyg: bind(athygRow, athygOrigin),
+    gaia: bindGaia(gaiaSourceId, resolveVia, gaiaOrigin), hip: bind(hip, hipOrigin), athyg: bind(athygRow, athygOrigin),
   };
 }
 
@@ -137,8 +154,8 @@ export function biPair(wdsId: string, components: string, rho: number | null, th
   });
 }
 
-function biSide(gaia: string | null, hip: number | null): Side {
-  return { gaiaSourceId: gaia, resolveVia: gaia === null ? 'unresolved' : 'simbad_xid', hip };
+function biSide([gaia, hip, via]: BiSide): Side {
+  return { gaiaSourceId: gaia, resolveVia: via, hip };
 }
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
@@ -148,15 +165,17 @@ export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): Gai
   });
 }
 
+/** A side's Gaia source, HIP, and the source's tier. */
+type BiSide = readonly [gaia: string | null, hip: number | null, via?: ResolveVia];
+
 export type BiRow = readonly [
-  components: string, rho: number | null, theta: number | null,
-  primary: readonly [string | null, number | null], secondary: readonly [string | null, number | null],
+  components: string, rho: number | null, theta: number | null, primary: BiSide, secondary: BiSide,
 ];
 
 /** One WDS system's pairs, each side bound as the row gives it. */
 export function biSystem(rows: readonly BiRow[], wdsId = BI_WDS): DecomposedPair[] {
   return rows.map(([comps, rho, theta, p, s]) =>
-    decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p[0], p[1]), secondary: biSide(s[0], s[1]) }));
+    decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p), secondary: biSide(s) }));
 }
 
 export function astrometryMap(rows: readonly GaiaAstrometryRow[]): Map<string, GaiaAstrometryRow> {

@@ -17,7 +17,10 @@ scripts/binaries/resolve/
                                alone), Stage2Result, astrometryRequestIds,
                                stage2Counts.
   components-pure.ts           ResolvedComponent, DecomposedPair, Bound
-                               (an identifier and its origin), decompose
+                               (an identifier and its origin),
+                               GaiaBinding (a Gaia source's Bound plus the
+                               tier that found it; resolveViaOf reads
+                               `unresolved` off a null one), decompose
                                (the split), working (a pass's copy),
                                findOwningPair, RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
@@ -125,9 +128,12 @@ cleaner one would move a row; changing one is a correctness item of its own:
   `A`. The CCDM, position and seeding passes look pairs up this way.
 - **Gaia source_ids sort numerically** (`compareSourceIds`): the audit's
   source order, a contested label, the request file.
-- **A rebind keeps the instance's tier.** An instance an earlier verdict
-  unbound, which a later verdict rebinds, ends bound with `resolve_via`
-  `unresolved` — one component today (05371+2655 A), `stellata-hhaw.45.17.9`.
+- **A rebind takes its donor's tier.** Every instance of the rebound letter
+  carries the strongest `resolve_via` among the letter's instances already
+  bound to the winning source, read before enforcement, so the tag names the
+  tier that found the source it now holds. An identity refutation whose
+  SIMBAD source no instance of the letter holds rebinds under `simbad_xid`,
+  the tier that supplied it.
 - **The audit's verdicts are all computed before any is applied.** Every
   verdict reads the per-system context built before enforcement, never a
   component, so the order verdicts apply in never changes one; the
@@ -179,8 +185,9 @@ conflict).
 Every WDS pair row decomposes into a primary and a secondary letter
 (`AB` → `A`+`B`, `Aa,Ab` → `Aa`+`Ab`); each letter resolves through a
 strict-priority cascade (`cascade-pure.ts`). The
-canonical tag set is `RESOLVE_VIA`. Every tag but `unresolved` is set only
-when its tier binds a Gaia source, so `gaia_resolve_rate`
+canonical tag set is `RESOLVE_VIA`. A component's tag is its
+`GaiaBinding`'s `via`, or `unresolved` with no source bound, so no
+component carries a source without a tier, and `gaia_resolve_rate`
 ([Counts](../astrometry/README.md#counts)) counts every other tier:
 
 | Tag | When it fires |

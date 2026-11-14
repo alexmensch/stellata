@@ -100,6 +100,11 @@ describe('region decomposition', () => {
     expect(constellationEdgeCodeAt(grid, { ...orion, raDeg: orion.raDeg + 360 })).toBe('ORI');
     expect(constellationEdgeCodeAt(grid, { ...orion, raDeg: orion.raDeg - 360 })).toBe('ORI');
   });
+
+  it('resolves a position a rounding unit west of RA 0 west of the wall there', () => {
+    expect(constellationEdgeCodeAt(grid, { raDeg: 0, decDeg: 11.9 })).toBe('PSC');
+    expect(constellationEdgeCodeAt(grid, { raDeg: -1e-20, decDeg: 11.9 })).toBe('PEG');
+  });
 });
 
 describe('region label anchors', () => {

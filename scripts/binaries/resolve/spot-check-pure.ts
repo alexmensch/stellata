@@ -3,7 +3,7 @@
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
 import { RESOLVE_VIA } from '../multiples-record-pure';
 import type { TableRow } from '../../util/tsv/table-pure';
-import { priorityOf, valueOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { priorityOf, resolveViaOf, valueOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import type { ResolveVia } from '../multiples-record-pure';
 
 export const SPOT_CHECK_COLUMNS = [
@@ -42,7 +42,7 @@ export function strongestComponents(pairs: readonly DecomposedPair[]): Map<Compo
     for (const c of [p.primary, p.secondary]) {
       const key = componentKey(c.wdsId, c.component);
       const prev = best.get(key);
-      if (prev === undefined || priorityOf(c.resolveVia) < priorityOf(prev.resolveVia)) best.set(key, c);
+      if (prev === undefined || priorityOf(resolveViaOf(c)) < priorityOf(resolveViaOf(prev))) best.set(key, c);
     }
   }
   return best;
@@ -53,12 +53,12 @@ export function strongestComponents(pairs: readonly DecomposedPair[]): Map<Compo
 export function spotCheckProblems(row: TruthRow, best: ReadonlyMap<ComponentKey, ResolvedComponent>): string[] {
   const got = best.get(row.key);
   if (row.expected === EXPECTED_ABSENT) {
-    return got === undefined ? [] : [`expected NO component, got (${valueOf(got.gaia)}, ${got.resolveVia})`];
+    return got === undefined ? [] : [`expected NO component, got (${valueOf(got.gaia)}, ${resolveViaOf(got)})`];
   }
   const { via, gaiaSourceId } = row.expected;
   if (got === undefined) return [`expected (${gaiaSourceId}, ${via}), got no component at all`];
   const problems: string[] = [];
-  if (got.resolveVia !== via) problems.push(`resolve_via: expected ${via}, got ${got.resolveVia}`);
+  if (resolveViaOf(got) !== via) problems.push(`resolve_via: expected ${via}, got ${resolveViaOf(got)}`);
   const gotSource = valueOf(got.gaia);
   if (gotSource !== gaiaSourceId) problems.push(`gaia_source_id: expected ${gaiaSourceId}, got ${gotSource}`);
   return problems;
