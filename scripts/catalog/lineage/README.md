@@ -299,14 +299,17 @@ and count against the [CI heap budget](../../util/heap-budget/README.md):
 
 ## Cross-stage joins
 
-Every join is on the origin key, never a re-derivation. The component-binding
-stage's rows carry a component's `(system_id, comp)` as their key and its HIP and
-Gaia source in `params`, so trace reaches them from a catalogue record's
-designations and a promoted companion's own key. The membership change
-report joins a re-bound row onto `multiples.tsv`'s columns, through the
-record's HIP on the identity row — the current build's, or the baseline's
-for a key the build removed; those columns carry the same identifiers and
-origins the binding rows do ([Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage)).
+One stage's rows join another's on the origin key, never on a
+re-derivation. A `multiples.tsv` component founds no record, so its
+component-binding rows are keyed on its row (`multiples:<system_id>/<comp>`,
+a promoted companion's own key) and reached, as classic-ids' rows are, by the
+designations their `params` carry
+([Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage)).
+The membership change report's `multiples` column is a match by value: the
+record's HIP on the identity row — the current build's, or the baseline's for
+a key the build removed — against the committed `multiples.tsv`'s `hip`
+column, which carries the same identifiers and origins the component-binding
+rows do.
 
 ## Committed ledgers become views
 
