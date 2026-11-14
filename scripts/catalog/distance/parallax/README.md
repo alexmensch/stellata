@@ -31,8 +31,9 @@ scripts/catalog/distance/parallax/
                                 ../../validate/validate-simbad-sample.ts.
   parked-ledger-pure.ts         The /docs/catalog-driver.md#61-record-parity dropped list's closed
     (+ test)
-                                reason enum and the identifier key the parity
-                                gate matches it on.
+                                reason enum and its row. The parity gate
+                                matches a row on recordKey
+                                (../../lineage/identity-pure.ts).
   parked-ledger-tsv.ts          Its codec (PARKED_LEDGER), apart so a module
                                 needing only the enum reaches no file. The
                                 rows are a view of placement lineage's park

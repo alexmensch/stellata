@@ -42,7 +42,7 @@ import {
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { resolveParallax } from '../distance/parallax/parallax-cascade';
-import type { ParkedIdentifiers } from '../distance/parallax/parked-ledger-pure';
+import type { RecordIdentifiers } from '../lineage/identity-pure';
 import {
   shippedDistVia,
   type BailerJonesStep,
@@ -354,7 +354,7 @@ export function rowResolver({
       : null;
     const glieseRow = lookupGliese(gliese, simbadKeys.gl);
     const key = row.originKey;
-    const ids: ParkedIdentifiers = { tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId };
+    const ids: RecordIdentifiers = { tyc: simbadKeys.tyc, hip, hd: row.hd, gl: simbadKeys.gl, gaiaSourceId };
 
     // Every distance inverts a parallax this build pulled itself. See
     // ../distance/parallax/README.md.

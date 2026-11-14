@@ -26,12 +26,13 @@ scripts/catalog/membership/
                                   the columns, the term set, and
                                   ManifestRecord — typed ids, alias lists,
                                   binding and term checked against their
-                                  sets, isSol. manifestRecord is the one
-                                  constructor, shared by the file decoder and
-                                  the generator, which assembles rows as
-                                  spine-shaped cells and types them at the
-                                  end. Leaf: readers import it, not the
-                                  generator module.
+                                  sets, isSol. manifestRecord is the file
+                                  decoder's constructor;
+                                  primariesManifestRecord and
+                                  magnitudeManifestRecord are the generator's,
+                                  which meets cells only through encode.
+                                  Leaf: readers import it, not the generator
+                                  module.
   additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts
@@ -48,6 +49,8 @@ scripts/catalog/membership/
   origin-keys.ts                  ORIGIN_KEYS: each record's origin key,
                                   built from the declarations it is founded
                                   on; the build and the unit suite share it.
+                                  Its interface, OriginKeys, is the lineage
+                                  module's, so no phase reaches a declaration.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
     (+ test)                      outcome union and its serialiser, the
                                   four ledgers as views of it
@@ -57,11 +60,24 @@ scripts/catalog/membership/
                                   report's multiples join, which reads the
                                   baseline's identity file only for a key
                                   the build lacks.
-  membership-manifest-pure.ts     Row assembly (spine side, additions), the
-    (+ test)                      review queue and the dispositions settling
-                                  it, the admission rule, the label drops, and
-                                  the spine ↔ manifest matcher the gate runs.
-                                  Pure.
+  membership-manifest-pure.ts     buildMembership: wiring only. Applies the
+    (+ test)                      corrections, then runs each phase in order
+                                  — binding/spine-settle, spine side, the
+                                  fold check, additions/admission, the
+                                  magnitude rows — and joins their rows,
+                                  outcomes and identity rows. The test
+                                  covers every phase through it. Pure.
+  spine-side-pure.ts              The spine side: the label merge on the
+                                  settled bindings, the unattested labels
+                                  dropped, one manifest row per kept spine
+                                  row, the label flips' outcomes. Pure.
+  label-attestation-pure.ts       Which labels a row keeps
+                                  (attestedLabels, the kept row with its own
+                                  attestation) and its routes column with
+                                  the unattested outcomes (routedRow), for
+                                  spine rows and additions alike. Pure.
+  spine-match-pure.ts             matchSpineToManifest, the parity gate's
+                                  spine ↔ manifest matcher. Pure.
   binding-review-dispositions-    The dispositions' columns, closed bases and
     pure.ts                       reader, on the same terms.
   binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated

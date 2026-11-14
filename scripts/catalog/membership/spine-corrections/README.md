@@ -14,6 +14,12 @@ scripts/catalog/membership/spine-corrections/
     (+ test)                      applySpineCorrections; what a correction
                                   does to the manifest is tested through
                                   ../membership-manifest-pure.test.ts.
+                                  build:astrometry-request reads it too, so
+                                  it reaches no manifest declaration.
+  fold-check-pure.ts              foldOutcomes: each fold's lineage and
+                                  identity rows, and the check that the
+                                  survivor answers to every designation the
+                                  folded row did.
 ```
 
 ## Correcting a merge decision
