@@ -601,7 +601,7 @@ code's line count.
 A mint's facets are its brightness lineage, since the record walk's
 [brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
 never sees it: the absmag source (`brightness.*`), then each post-pass that
-changed that absmag after the mint, in the order it ran
+changed that absmag after the mint, blend split before anchor dimming
 (`brightness.blend-split`, `params.n` the records sharing the source;
 `brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
 already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
