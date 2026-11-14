@@ -366,9 +366,9 @@ walk-files.ts            Not a test — file enumeration the scanners above
                          A scan whose scope is the repo rather than a
                          folder list takes git's list instead,
                          /scripts/util/README.md#git-files.
-                         Also `isProductionTs`, the include predicate the
-                         TSL scanners share: a .ts that is neither a test
-                         nor an ambient declaration.
+                         Also `isProductionTs`, the include predicate for
+                         scans of production TypeScript: a .ts that is
+                         neither a test nor an ambient declaration.
                          webgpu-import-boundary.test.ts keeps
                          its own broader `isClientSource` — a declaration
                          file can carry an import, so that corpus wants
