@@ -280,7 +280,8 @@ function additionGroupOrder(
 }
 
 function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
-  if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
+  const byTyc = compareCodeUnits(a.tyc, b.tyc);
+  if (byTyc !== 0) return byTyc;
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
   if (hipA !== hipB) return hipA - hipB;

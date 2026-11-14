@@ -129,7 +129,7 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
   const pool = bare.length > 0 ? bare : rows;
   return [...pool].sort((a, b) =>
     a.name.length - b.name.length || compareCodeUnits(a.name, b.name)
-    || (a.srcId < b.srcId ? -1 : 1))[0];
+    || compareCodeUnits(a.srcId, b.srcId))[0];
 }
 
 /** Several Bayer rows can reach one record, and the choice is not
@@ -146,7 +146,7 @@ export function pickBayerRow(
     (a.component === null ? 0 : 1) - (b.component === null ? 0 : 1)
     || (a.sup === null ? 1 : 0) - (b.sup === null ? 1 : 0)
     || (a.sup ?? 0) - (b.sup ?? 0)
-    || ((a.letter ?? '') < (b.letter ?? '') ? -1 : 1))[0];
+    || compareCodeUnits(a.letter ?? '', b.letter ?? ''))[0];
 }
 
 export function pickGouldRow(
@@ -155,7 +155,7 @@ export function pickGouldRow(
   return [...rows].sort((a, b) =>
     (a.num ?? 0) - (b.num ?? 0)
     || compareCodeUnits(a.dc, b.dc)
-    || ((a.half ?? '') < (b.half ?? '') ? -1 : 1))[0];
+    || compareCodeUnits(a.half ?? '', b.half ?? ''))[0];
 }
 
 export interface WgsnIndex {

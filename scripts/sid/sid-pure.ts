@@ -148,7 +148,7 @@ export function compareDesignations(a: string, b: string): number {
     const ta = trailingInt(da.ns);
     const tb = trailingInt(db.ns);
     if (ta !== null && tb !== null && ta !== tb) return ta - tb;
-    return da.ns < db.ns ? -1 : 1;
+    return compareCodeUnits(da.ns, db.ns);
   }
   if (DIGITS_RE.test(da.key) && DIGITS_RE.test(db.key)) {
     return ascending(BigInt(da.key), BigInt(db.key));
