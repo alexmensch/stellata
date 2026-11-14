@@ -197,8 +197,9 @@ pr-body-guard.test.ts    Behavioural pins for scripts/hooks/pr-body-guard.sh
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
 rate-denominators.test.ts
                          No production module under scripts/ divides by
-                         `Math.max(1, …)`, which reads an empty whole as a
-                         rate of 0; rates go through tally-pure's `share`
+                         `Math.max(1, …)` or guards a ratio with
+                         `> 0 ? … / … : 0`, either of which reads an empty
+                         whole as a rate of 0; rates go through tally-pure's `share`
                          (/scripts/util/counts/README.md). Flag and pass
                          cases on synthetic lines.
 readme-size.test.ts      450-line cap per folder README — length is a tax
