@@ -43,7 +43,7 @@ repo-relative, so an outputs module passes them as they are.
   pins it as the list's only production entry.
 - `build-files.ts` — `BUILD_FILES`, the build-only hand-offs under
   `build/` a declaration and its readers both name: the catalogue's
-  row-index map and the binaries binding audit's verdicts.
+  row-index map and pair ends, and the binaries binding audit's verdicts.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
   is the checkout's own), each stage's spec (`CLASSIC_IDS_LINEAGE`, `MEMBERSHIP_LINEAGE`,

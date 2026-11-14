@@ -80,6 +80,7 @@ import {
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
 import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
+import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pure';
 import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -627,14 +628,16 @@ function catalogEmission({
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(
-    handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap,
-    new Map(resolvedPairs.map((r) => [r.pair.systemId, r.rendered])),
+  const multiplesSha1 = handedFileHash(inputHashes, MULTIPLES_TSV.file);
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(multiplesSha1, rowIndexMap);
+  const pairEndsJson = serializeCatalogPairEnds(
+    multiplesSha1, new Map(resolvedPairs.map((r) => [r.pair.systemId, r.rendered])),
   );
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
-      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries, ${resolvedPairs.length} resolved pairs)`,
+      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries); ` +
+      `pair ends ${CATALOG_OUTPUTS.files.pairEnds} (${resolvedPairs.length} pairs)`,
   );
 
   const figures = figuresCounts(figureLines);
@@ -660,6 +663,7 @@ function catalogEmission({
       boundaries: boundaries.json,
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
+      pairEnds: pairEndsJson,
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,

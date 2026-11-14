@@ -26,10 +26,16 @@ scripts/catalog/companions/record-index/
                              synthSlotIdx (the blended-sibling retry): how
                              one multiples.tsv component resolves to a
                              record; the file's serializer and its parse,
-                             which throws on a missing section or sha1, a
-                             non-index entry or a malformed pair cell.
+                             which throws on a missing section or sha1 or a
+                             non-index entry; readMultiplesSha1, both
+                             files' sha1 check.
   catalog-row-index-map-source.ts
                              CATALOG_ROW_INDEX_MAP, the sidecar declared.
+  pair-ends-pure.ts (+ test) PairEnds, and catalog-pair-ends.json's
+                             serializer and parse, which throws on a
+                             missing section or sha1 or a malformed cell.
+  catalog-pair-ends-source.ts
+                             CATALOG_PAIR_ENDS, that file declared.
   pair-resolution-pure.ts (+ test)
                              resolvePairs: each multiples.tsv pair's two
                              ends as records — `own`, each end through its
@@ -56,16 +62,22 @@ end's own resolve for the readers that ask which records a row backs.
 
 ## The sidecar and how a component resolves
 
-`buildCatalogRowIndexMap` runs after the sort, and the build emits
-`build/catalog-row-index-map.json` with three lookup sections — `byGaia`,
-`byHip`, `bySynth` — plus `pairs`, each pair's `rendered` ends keyed by
-system_id (`[primary, secondary]`, `null` where an end addresses no record),
-and `multiplesSha1`, the sha1 of the `multiples.tsv` the build consumed,
-taken from the runner's handed input map. `build:binaries-runtime` reads
-`pairs` alone and resolves nothing. Record indices are only true for that
-copy of the file, so it refuses to emit unless the `multiples.tsv` it reads
-has the same sha1; the lookup sections stay for the golden's fixture cut
-(`/scripts/binaries/golden/README.md`).
+`buildCatalogRowIndexMap` runs after the sort, and the build emits two
+files, each carrying `multiplesSha1`, the sha1 of the `multiples.tsv` the
+build consumed, taken from the runner's handed input map:
+
+- `build/catalog-row-index-map.json`, the three lookup sections — `byGaia`,
+  `byHip`, `bySynth` — read by the naming-parity build, the frozen corpora
+  and the golden's fixture cut (`/scripts/binaries/golden/README.md`).
+- `build/catalog-pair-ends.json`, each pair's `rendered` ends keyed by
+  system_id (`[primary, secondary]`, `null` where an end addresses no
+  record; `pair-ends-pure.ts`, declared as `CATALOG_PAIR_ENDS` in
+  `catalog-pair-ends-source.ts`). `build:binaries-runtime` reads this file
+  alone and resolves nothing.
+
+Record indices are only true for that copy of `multiples.tsv`, so
+`build:binaries-runtime` refuses to emit unless the one it reads has the
+same sha1.
 `catalog-row-index-map-pure.ts` is how one
 `multiples.tsv` component resolves through it, and `resolvePairs` is its one
 caller: `resolveMultiplesIdx` walks gaia → hip → synth, then
@@ -79,7 +91,7 @@ file through.
 
 `resolvePairs` is the one walk over the pairs, and every reader takes its
 answer: the wings pass, the overlap gate's exemption, the multiplicity member
-set, the component designations, and — through the sidecar's `pairs` —
+set, the component designations, and — through `catalog-pair-ends.json` —
 the `binaries.bin` writer (`/scripts/binaries/runtime-binaries-pure.ts`). `/tests/integration/multi-star-regression.test.ts`
 still pins the baked catalogue against the real artifact.
 

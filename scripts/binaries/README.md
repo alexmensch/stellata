@@ -160,7 +160,7 @@ scripts/binaries/
                                   (promotion's origin keys), so it never
                                   reaches the codec.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
-                                  the catalogue sidecar's resolved pairs →
+                                  the catalogue's pair ends →
                                   public/binaries.bin through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
@@ -202,7 +202,7 @@ curated `component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
-`build/catalog-row-index-map.json` as hand-offs:
+`build/catalog-pair-ends.json` as hand-offs:
 
 1. **Binary-system pipeline** (`build-binaries.ts`). Reads WDS + ORB6 +
    AT-HYG + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS
@@ -222,7 +222,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
-   `catalog-row-index-map.json`. `pnpm run build:catalog`.
+   `catalog-row-index-map.json` + `catalog-pair-ends.json`. `pnpm run build:catalog`.
 
    The seam that consumes this pipeline's output is companion promotion
    — it adds first-class catalog records for the secondary of every
@@ -232,7 +232,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
 3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.ts`). Reads
-   multiples.tsv + the `pairs` section of `catalog-row-index-map.json` —
+   multiples.tsv + `build/catalog-pair-ends.json` —
    each pair's two ends as catalogue records, already resolved by the
    catalogue build ([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home),
    [The sidecar and how a component resolves](../catalog/companions/record-index/README.md#the-sidecar-and-how-a-component-resolves))
@@ -240,8 +240,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    fixed-size record per physical pair carrying Kepler elements + sep/PA
    + a hierarchical parent-relation index, in the layout
    `/src/catalog-format/binaries/` owns. It resolves nothing itself, so a
-   pair the section does not carry throws, and it refuses to emit when the
-   map's `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue
+   pair the file does not carry throws, and it refuses to emit when the
+   file's `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue
    built from another copy). `pnpm run build:binaries-runtime`; loaded by
    `src/client/binaries/binaries-loader.ts`.
 

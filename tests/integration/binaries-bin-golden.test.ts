@@ -1,4 +1,4 @@
-// binaries.bin golden: the runtime encoder on a committed fixture, byte for byte. See /scripts/binaries/golden/README.md.
+// binaries.bin golden: the pair resolution and the runtime encoder on a committed fixture, byte for byte. See /scripts/binaries/golden/README.md.
 
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -10,9 +10,10 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import { MULTIPLES_TSV } from '../../scripts/binaries/multiples-tsv';
 import { encodeRuntimeBinaries, type RuntimeBinaries } from '../../scripts/binaries/runtime-binaries-pure';
+import { parseCatalogRowIndexMap } from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
 import {
-  parseCatalogRowIndexMap, type CatalogRowIndexSidecar,
-} from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
+  parseCatalogPairEnds, serializeCatalogPairEnds,
+} from '../../scripts/catalog/companions/record-index/pair-ends-pure';
 import { resolvePairs } from '../../scripts/catalog/companions/record-index/pair-resolution-pure';
 import { pairsFromRows } from '../../scripts/binaries/pairs-pure';
 import { REPO_ROOT } from '../../scripts/util/paths';
@@ -58,18 +59,13 @@ function describeFirstDifference(actual: Uint8Array, golden: Uint8Array): string
 }
 
 describe('binaries.bin golden', () => {
-  let rows: ReturnType<typeof MULTIPLES_TSV.parse>;
-  let sidecar: CatalogRowIndexSidecar;
   let encoded: RuntimeBinaries;
   beforeAll(() => {
-    rows = MULTIPLES_TSV.parse(readFileSync(FIXTURE_MULTIPLES, 'utf8'));
-    sidecar = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
-    encoded = encodeRuntimeBinaries(rows, sidecar.pairs);
-  });
-
-  it('the fixture pairs are what the pair resolution makes of the fixture map', () => {
-    const resolved = resolvePairs(pairsFromRows(rows), sidecar);
-    expect(new Map(resolved.map((r) => [r.pair.systemId, r.rendered]))).toEqual(sidecar.pairs);
+    const rows = MULTIPLES_TSV.parse(readFileSync(FIXTURE_MULTIPLES, 'utf8'));
+    const map = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
+    const rendered = new Map(resolvePairs(pairsFromRows(rows), map).map((r) => [r.pair.systemId, r.rendered]));
+    const pairEnds = parseCatalogPairEnds(serializeCatalogPairEnds(map.multiplesSha1, rendered));
+    encoded = encodeRuntimeBinaries(rows, pairEnds.pairs);
   });
 
   it('the fixture exercises every count', () => {
@@ -91,7 +87,8 @@ describe('binaries.bin golden', () => {
   });
 
   it('the fixture map was built from the fixture multiples.tsv', () => {
-    expect(sidecar.multiplesSha1).toBe(hashBytes(readFileSync(FIXTURE_MULTIPLES)));
+    const map = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
+    expect(map.multiplesSha1).toBe(hashBytes(readFileSync(FIXTURE_MULTIPLES)));
   });
 
   it('the loader parses the golden', () => {

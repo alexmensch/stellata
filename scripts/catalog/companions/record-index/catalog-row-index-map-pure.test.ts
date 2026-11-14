@@ -12,43 +12,28 @@ const MAP: CatalogRowIndexMap = {
 };
 const SYNTH = 'synth-03082+4057-Ab';
 const SHA1 = 'da39a3ee5e6b4b0d3255bfef95601890afd80709';
-const PAIRS = new Map([
-  ['03082+4057-Aa,Ab', { primary: 300, secondary: 400 }],
-  ['03082+4057-AB', { primary: 300, secondary: null }],
-]);
-const SIDECAR = { multiplesSha1: SHA1, ...MAP, pairs: PAIRS };
-const SIDECAR_JSON = { multiplesSha1: SHA1, ...MAP, pairs: { '03082+4057-AB': [300, null] } };
+const SIDECAR = { multiplesSha1: SHA1, ...MAP };
 
 describe('parseCatalogRowIndexMap', () => {
   it('reads back what the serializer writes', () => {
-    expect(parseCatalogRowIndexMap(serializeCatalogRowIndexSidecar(SHA1, MAP, PAIRS))).toEqual(SIDECAR);
+    expect(parseCatalogRowIndexMap(serializeCatalogRowIndexSidecar(SHA1, MAP))).toEqual(SIDECAR);
   });
 
   it('throws on a missing section, never reading it as empty', () => {
     expect(() => parseCatalogRowIndexMap(JSON.stringify({ multiplesSha1: SHA1, byGaia: {}, byHip: {} })))
       .toThrow(/bySynth is missing/);
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, pairs: undefined })))
-      .toThrow(/pairs is missing/);
   });
 
   it('throws on a missing or malformed multiplesSha1', () => {
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, multiplesSha1: undefined })))
-      .toThrow(/multiplesSha1/);
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, multiplesSha1: 'x' }))).toThrow(/multiplesSha1/);
+    expect(() => parseCatalogRowIndexMap(JSON.stringify(MAP))).toThrow(/multiplesSha1/);
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...MAP, multiplesSha1: 'x' }))).toThrow(/multiplesSha1/);
   });
 
   it('throws on an entry that is not a record index', () => {
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, byHip: { 1: -1 } })))
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR, byHip: { 1: -1 } })))
       .toThrow(/byHip\[1\]/);
-    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, byGaia: { 1: '7' } })))
+    expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR, byGaia: { 1: '7' } })))
       .toThrow(/byGaia\[1\]/);
-  });
-
-  it('throws on a pair cell that is not two record indices or nulls', () => {
-    for (const cell of [[1], [1, 2, 3], [-1, 2], ['1', 2], 5]) {
-      expect(() => parseCatalogRowIndexMap(JSON.stringify({ ...SIDECAR_JSON, pairs: { 'X-AB': cell } })))
-        .toThrow(/pairs\[X-AB\]/);
-    }
   });
 });
 

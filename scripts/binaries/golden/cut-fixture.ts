@@ -9,9 +9,6 @@ import { REPO_ROOT } from '../../util/paths';
 import { hashBytes } from '../../util/stamp-hash';
 import { FIXTURE_SYSTEMS, cutMultiples, cutRowIndexMap } from './cut-fixture-pure';
 import { BUILD_FILES } from '../../../src/catalog-format/pipeline-outputs/build-files';
-import {
-  parseCatalogRowIndexMap, serializeCatalogRowIndexSidecar,
-} from '../../catalog/companions/record-index/catalog-row-index-map-pure';
 
 const HERE = resolve(REPO_ROOT, 'scripts/binaries/golden');
 
@@ -19,11 +16,10 @@ const multiples = cutMultiples(
   readArtifact(MULTIPLES_TSV), FIXTURE_SYSTEMS,
 );
 const multiplesTsv = MULTIPLES_TSV.serialize(multiples);
-const cut = cutRowIndexMap(
-  parseCatalogRowIndexMap(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf8')),
-  multiples, FIXTURE_SYSTEMS, hashBytes(multiplesTsv),
+const map = cutRowIndexMap(
+  JSON.parse(readFileSync(resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap), 'utf8')), multiples, FIXTURE_SYSTEMS,
+  hashBytes(multiplesTsv),
 );
-const sidecarJson = JSON.parse(serializeCatalogRowIndexSidecar(cut.multiplesSha1, cut, cut.pairs)) as unknown;
 writeFileSync(resolve(HERE, 'fixture-multiples.tsv'), multiplesTsv);
-writeFileSync(resolve(HERE, 'fixture-row-index-map.json'), `${JSON.stringify(sidecarJson, null, 1)}\n`);
+writeFileSync(resolve(HERE, 'fixture-row-index-map.json'), `${JSON.stringify(map, null, 1)}\n`);
 console.log(`cut ${FIXTURE_SYSTEMS.length} systems`);

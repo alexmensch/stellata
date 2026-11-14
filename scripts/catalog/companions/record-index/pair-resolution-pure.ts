@@ -6,12 +6,7 @@ import {
   assignParentRelations, topologicalWalkOrder, type MultiplesPair,
 } from '../../../binaries/pairs-pure';
 import { resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap } from './catalog-row-index-map-pure';
-
-/** A pair's two ends as record indices; null where an end addresses no record. */
-export interface PairEnds {
-  readonly primary: number | null;
-  readonly secondary: number | null;
-}
+import type { PairEnds } from './pair-ends-pure';
 
 export interface ResolvedPair {
   readonly pair: MultiplesPair;

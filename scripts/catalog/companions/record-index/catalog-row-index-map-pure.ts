@@ -1,6 +1,4 @@
-// The catalogue row-index map, how a multiples.tsv component resolves through it, and the sidecar's codec. See README.md.
-
-import type { PairEnds } from './pair-resolution-pure';
+// The catalogue row-index map, how a multiples.tsv component resolves through it, and the file's codec. See README.md.
 
 export interface CatalogRowIndexMap {
   /** Gaia DR3 source_id (decimal string) → catalog.bin record index. */
@@ -15,43 +13,27 @@ export interface CatalogRowIndexMap {
 /** README.md#the-sidecar-and-how-a-component-resolves. */
 export interface CatalogRowIndexSidecar extends CatalogRowIndexMap {
   readonly multiplesSha1: string;
-  readonly pairs: ReadonlyMap<string, PairEnds>;
 }
 
-export function serializeCatalogRowIndexSidecar(
-  multiplesSha1: string,
-  map: CatalogRowIndexMap,
-  pairs: ReadonlyMap<string, PairEnds>,
-): string {
-  const pairCells = Object.fromEntries([...pairs].map(([systemId, e]) => [systemId, [e.primary, e.secondary]]));
-  return JSON.stringify({
-    multiplesSha1, byGaia: map.byGaia, byHip: map.byHip, bySynth: map.bySynth, pairs: pairCells,
-  }) + '\n';
+export function serializeCatalogRowIndexSidecar(multiplesSha1: string, map: CatalogRowIndexMap): string {
+  return JSON.stringify({ multiplesSha1, byGaia: map.byGaia, byHip: map.byHip, bySynth: map.bySynth }) + '\n';
 }
 
-const isRecordIndex = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
+export const isRecordIndex = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
 
-function parsePairs(value: unknown): Map<string, PairEnds> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    throw new Error('catalog row-index map: section pairs is missing');
+/** Throws unless a build/ hand-off's `multiplesSha1` is a sha1. */
+export function readMultiplesSha1(raw: Record<string, unknown>, file: string): string {
+  const { multiplesSha1 } = raw;
+  if (typeof multiplesSha1 !== 'string' || !/^[0-9a-f]{40}$/.test(multiplesSha1)) {
+    throw new Error(`${file}: multiplesSha1 is ${JSON.stringify(multiplesSha1)}, not a sha1`);
   }
-  const pairs = new Map<string, PairEnds>();
-  for (const [systemId, cell] of Object.entries(value)) {
-    if (!Array.isArray(cell) || cell.length !== 2 || !cell.every((v) => v === null || isRecordIndex(v))) {
-      throw new Error(`catalog row-index map: pairs[${systemId}] is ${JSON.stringify(cell)}, not two record indices or nulls`);
-    }
-    pairs.set(systemId, { primary: cell[0], secondary: cell[1] });
-  }
-  return pairs;
+  return multiplesSha1;
 }
 
 /** Throws on a missing section or sha1, or an entry that is not a record index. */
 export function parseCatalogRowIndexMap(text: string): CatalogRowIndexSidecar {
   const raw = JSON.parse(text) as Record<string, unknown>;
-  const { multiplesSha1 } = raw;
-  if (typeof multiplesSha1 !== 'string' || !/^[0-9a-f]{40}$/.test(multiplesSha1)) {
-    throw new Error(`catalog row-index map: multiplesSha1 is ${JSON.stringify(multiplesSha1)}, not a sha1`);
-  }
+  const multiplesSha1 = readMultiplesSha1(raw, 'catalog row-index map');
   const section = (name: keyof CatalogRowIndexMap): Record<string, number> => {
     const value = raw[name];
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
@@ -64,10 +46,7 @@ export function parseCatalogRowIndexMap(text: string): CatalogRowIndexSidecar {
     }
     return value as Record<string, number>;
   };
-  return {
-    multiplesSha1, byGaia: section('byGaia'), byHip: section('byHip'), bySynth: section('bySynth'),
-    pairs: parsePairs(raw.pairs),
-  };
+  return { multiplesSha1, byGaia: section('byGaia'), byHip: section('byHip'), bySynth: section('bySynth') };
 }
 
 /** gaia → hip → synth, the first section that holds the component's key. */

@@ -26,24 +26,18 @@ describe('cutMultiples', () => {
 });
 
 describe('cutRowIndexMap', () => {
-  it('keeps the ids the cut rows carry, and the synth keys and pairs of the named systems', () => {
-    const sidecar = {
-      multiplesSha1: '0'.repeat(40),
+  it('keeps the ids the cut rows carry and the synth keys of the named systems', () => {
+    const map = {
       byGaia: { 100: 1, 101: 2, 200: 3 },
       byHip: { 10: 4, 12: 5, 20: 6 },
       bySynth: { 'synth-00001+0001-B': 7, 'synth-00002-0002-B': 8 },
-      pairs: new Map([
-        ['00001+0001-AB', { primary: 1, secondary: 7 }],
-        ['00002-0002-AB', { primary: 3, secondary: null }],
-      ]),
     };
     const cut = cutMultiples(RECORDS, ['00001+0001']);
-    expect(cutRowIndexMap(sidecar, cut, ['00001+0001'], 'f'.repeat(40))).toEqual({
+    expect(cutRowIndexMap(map, cut, ['00001+0001'], 'f'.repeat(40))).toEqual({
       multiplesSha1: 'f'.repeat(40),
       byGaia: { 100: 1, 101: 2 },
       byHip: { 10: 4, 12: 5 },
       bySynth: { 'synth-00001+0001-B': 7 },
-      pairs: new Map([['00001+0001-AB', { primary: 1, secondary: 7 }]]),
     });
   });
 });

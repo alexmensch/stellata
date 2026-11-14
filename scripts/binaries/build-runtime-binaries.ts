@@ -1,8 +1,8 @@
-// Build public/binaries.bin from multiples.tsv and the catalogue row-index map. See README.md#runtime-side-artifact.
+// Build public/binaries.bin from multiples.tsv and the catalogue's pair ends. See README.md#runtime-side-artifact.
 
 import { relative, resolve } from 'node:path';
 
-import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalog-row-index-map-source';
+import { CATALOG_PAIR_ENDS } from '../catalog/companions/record-index/catalog-pair-ends-source';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
@@ -19,9 +19,9 @@ const log = (msg: string): void => console.log(`[build-runtime-binaries] ${msg}`
 
 export function main(): void {
   const rows = readArtifact(MULTIPLES_TSV);
-  const map = CATALOG_ROW_INDEX_MAP.read();
-  log(`row-index map: ${map.pairs.size.toLocaleString()} resolved pairs`);
-  const { bytes, counts: c, nested } = encodeRuntimeBinaries(rows, map.pairs);
+  const pairEnds = CATALOG_PAIR_ENDS.read();
+  log(`pair ends: ${pairEnds.pairs.size.toLocaleString()} resolved pairs`);
+  const { bytes, counts: c, nested } = encodeRuntimeBinaries(rows, pairEnds.pairs);
   log(`${c.pairs_total.toLocaleString()} physical pairs; ${nested.toLocaleString()} nest inside an outer pair`);
   log(`orbit coverage: ${c.pairs_with_orbit.toLocaleString()} with elements (${c.pairs_with_inclination.toLocaleString()} with inclination)`);
   log(
@@ -35,7 +35,7 @@ export function main(): void {
     outputs: RUNTIME_BINARIES_OUTPUTS,
     files: { binaries: bytes },
     checks: [
-      multiplesHandshake(map.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
+      multiplesHandshake(pairEnds.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
       countSnapshotCheck<StagedCounts>({
         snapshotPath: EXPECTED_COUNTS,
         actual: { stages: { encode: c } },

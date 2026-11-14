@@ -4,7 +4,8 @@ import {
   FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
   hasRenderableOrbit, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
-import { distinctEnds, type PairEnds } from '../catalog/companions/record-index/pair-resolution-pure';
+import type { PairEnds } from '../catalog/companions/record-index/pair-ends-pure';
+import { distinctEnds } from '../catalog/companions/record-index/pair-resolution-pure';
 import { compoundContains, relatedHier } from './component-tokens-pure';
 import {
   assignParentRelations, pairsFromRows, topologicalWalkOrder, type MultiplesPair, type PairRow,
@@ -98,14 +99,14 @@ export function planRecords(
   return { records, counts };
 }
 
-/** Fails unless the row-index map was built from the multiples.tsv this run
+/** Fails unless the pair ends were built from the multiples.tsv this run
  *  reads: against another copy, record indices resolve to the wrong stars. */
 export function multiplesHandshake(builtFrom: string, reading: string): Check {
   return builtFrom === reading
     ? { kind: 'pass' }
     : {
         kind: 'fail',
-        message: `the catalogue row-index map was built from multiples.tsv ${builtFrom}, `
+        message: `the catalogue pair ends were built from multiples.tsv ${builtFrom}, `
           + `but this run reads ${reading}. Re-run \`pnpm run build:catalog\`.`,
       };
 }
@@ -126,7 +127,7 @@ export function encodeRuntimeBinaries(
   const parents = assignParentRelations(pairs);
   const ends = pairs.map((p) => {
     const e = pairEnds.get(p.systemId);
-    if (e === undefined) throw new Error(`catalog row-index map: no resolved ends for pair ${p.systemId}`);
+    if (e === undefined) throw new Error(`catalog pair ends: no resolved ends for pair ${p.systemId}`);
     return e;
   });
   const { records, counts } = planRecords(pairs, parents, topologicalWalkOrder(parents), ends);

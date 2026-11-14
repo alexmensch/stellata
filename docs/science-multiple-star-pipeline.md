@@ -658,7 +658,7 @@ consume it in two complementary ways:
    emits `public/binaries.bin` — one record per kept physical pair,
    carrying Kepler elements (when known) plus the sep+PA the
    `BinaryOrbitField` uses for per-frame orbital evaluation.
-   `build/catalog-row-index-map.json` carries each pair's two ends as
+   `build/catalog-pair-ends.json` carries each pair's two ends as
    catalog.bin record indices, resolved by the catalogue build.
 
 Implementation: `scripts/binaries/build-binaries.ts` for the WDS+ORB6
