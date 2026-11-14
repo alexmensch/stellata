@@ -742,8 +742,7 @@ export function identityLookup(
 }
 
 /** The change report's `multiples` column: the multiples.tsv components the
- *  record's HIP names, read off its columns until binaries' Binding
- *  provenance carries the join. */
+ *  record's HIP names. */
 export function multiplesComponentJoin(
   identityOf: (key: string) => IdentityRow | undefined, multiples: readonly MultiplesComponent[],
 ): DiffJoin {
