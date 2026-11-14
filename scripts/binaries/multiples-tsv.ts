@@ -111,12 +111,28 @@ export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];
 
-export interface MultiplesRecord {
+/** An identifier and where the component came by it, or neither. */
+interface IdentifierWithOrigin<T> {
+  readonly value: T;
+  readonly origin: IdOrigin;
+}
+
+/** A DR3 source_id is kept as a string: it exceeds Number.MAX_SAFE_INTEGER. */
+export type GaiaFields = { gaiaSourceId: null; gaiaOrigin: null } | { gaiaSourceId: string; gaiaOrigin: IdOrigin };
+export type HipFields = { hip: null; hipOrigin: null } | { hip: number; hipOrigin: IdOrigin };
+
+export function gaiaFields(id: IdentifierWithOrigin<string> | null): GaiaFields {
+  return id === null ? { gaiaSourceId: null, gaiaOrigin: null } : { gaiaSourceId: id.value, gaiaOrigin: id.origin };
+}
+
+export function hipFields(id: IdentifierWithOrigin<number> | null): HipFields {
+  return id === null ? { hip: null, hipOrigin: null } : { hip: id.value, hipOrigin: id.origin };
+}
+
+/** Every field but the identifiers and their origins. */
+export interface MultiplesRecordFields {
   systemId: string;
   comp: string;
-  hip: number | null;
-  /** Kept as a string: a DR3 source_id exceeds Number.MAX_SAFE_INTEGER. */
-  gaiaSourceId: string | null;
   hd: number | null;
   x_pc: number | null;
   y_pc: number | null;
@@ -128,10 +144,6 @@ export interface MultiplesRecord {
   source: (typeof MULTIPLES_SOURCES)[number];
   regime: number;
   resolveVia: ResolveVia;
-  /** Set exactly when `gaiaSourceId` is. */
-  gaiaOrigin: IdOrigin | null;
-  /** Set exactly when `hip` is. */
-  hipOrigin: IdOrigin | null;
   astrometryVia: AstrometryVia;
   orbitVia: OrbitVia;
   spectVia: SpectVia;
@@ -157,6 +169,8 @@ export interface MultiplesRecord {
   magPri: number | null;
   magSec: number | null;
 }
+
+export type MultiplesRecord = MultiplesRecordFields & GaiaFields & HipFields;
 
 /** Each float column's decimal places, as the Stage 6 writer prints them. */
 const PLACES = {
@@ -192,18 +206,16 @@ export const MULTIPLES_TSV = defineArtifact({
     if (wdsRootOf(systemId) === null) row.fail(`system_id "${systemId}" names no WDS id`);
     const comp = row.raw('comp');
     if (comp.trim() === '') row.fail('comp is empty');
-    const origin = (column: 'gaia_origin' | 'hip_origin', bound: boolean): IdOrigin | null => {
+    const withOrigin = <T>(value: T | null, column: 'gaia_origin' | 'hip_origin'): IdentifierWithOrigin<T> | null => {
       const cell = row.raw(column);
-      if (!bound) return cell === '' ? null : row.fail(`${column} "${cell}" names the origin of no identifier`);
-      return parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`);
+      if (value === null) return cell === '' ? null : row.fail(`${column} "${cell}" names the origin of no identifier`);
+      return { value, origin: parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`) };
     };
-    const hip = row.int('hip');
-    const gaiaSourceId = row.sourceId('gaia_source_id');
     return {
       systemId,
       comp,
-      hip,
-      gaiaSourceId,
+      ...hipFields(withOrigin(row.int('hip'), 'hip_origin')),
+      ...gaiaFields(withOrigin(row.sourceId('gaia_source_id'), 'gaia_origin')),
       hd: row.int('hd'),
       x_pc: row.float('x_pc'),
       y_pc: row.float('y_pc'),
@@ -215,8 +227,6 @@ export const MULTIPLES_TSV = defineArtifact({
       source: row.oneOf('source', MULTIPLES_SOURCES),
       regime,
       resolveVia: row.oneOf('resolve_via', RESOLVE_VIA),
-      gaiaOrigin: origin('gaia_origin', gaiaSourceId !== null),
-      hipOrigin: origin('hip_origin', hip !== null),
       astrometryVia: row.oneOf('astrometry_via', ASTROMETRY_VIA),
       orbitVia: row.oneOf('orbit_via', ORBIT_VIA),
       spectVia: row.oneOf('spect_via', SPECT_VIA),
