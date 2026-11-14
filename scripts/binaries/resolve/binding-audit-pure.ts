@@ -319,13 +319,15 @@ function xidOwnSource(
   return indices.hipToGaia.get(xid.hip) ?? indices.hipToAthyg.get(xid.hip)?.gaia ?? null;
 }
 
+type RebindAction = Extract<VerdictAction, { kind: 'rebind' }>;
+
 /** A measured-pair "blend" where SIMBAD gives exactly one side the contested
  *  source and the other side a different one is a cross-walk mis-match. The
  *  loser must be one token: rebinding re-homes one letter. */
 function refutePhotocentreBlend(
   ctx: SystemContext, cands: readonly BindingCandidate[], src: string,
   indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
-): { owner: BindingCandidate; loserToken: string; loserSource: string } | null {
+): { owner: BindingCandidate; rebind: RebindAction } | null {
   if (cands.length !== 2) return null;
   const own = cands.map((c) => xidOwnSource(ctx.wdsId, c.label, indices, xids));
   if (own.some((o) => o === null)) return null;
@@ -336,13 +338,9 @@ function refutePhotocentreBlend(
   const loser = cands[loserIdx];
   const loserSource = own[loserIdx]!;
   if (loserSource === src || loser.tokens.length !== 1) return null;
-  return { owner, loserToken: loser.tokens[0], loserSource };
-}
-
-function rebind(ctx: SystemContext, letter: string, sourceId: string): VerdictAction {
-  const via = ctx.tokenSources.get(letter)?.get(sourceId);
-  if (via === undefined) throw new Error(`${ctx.wdsId} ${letter}: rebind to ${sourceId}, which no instance of the letter holds`);
-  return { kind: 'rebind', letter, sourceId, via };
+  const letter = loser.tokens[0];
+  const via = ctx.tokenSources.get(letter)?.get(loserSource) ?? 'simbad_xid';
+  return { owner, rebind: { kind: 'rebind', letter, sourceId: loserSource, via } };
 }
 
 function auditSystem(
@@ -392,11 +390,8 @@ function auditSystem(
     } else if (isBlend) {
       const refutation = refutePhotocentreBlend(ctx, cands, src, indices, xids);
       if (refutation !== null) {
-        identityRebound.add(refutation.loserToken);
-        verdict(
-          'source_letters', 'identity_refuted', contested, ref, refutation.owner, cands,
-          rebind(ctx, refutation.loserToken, refutation.loserSource),
-        );
+        identityRebound.add(refutation.rebind.letter);
+        verdict('source_letters', 'identity_refuted', contested, ref, refutation.owner, cands, refutation.rebind);
       } else {
         for (const c of cands) for (const t of c.tokens) blendLetters.add(t);
         verdict('source_letters', 'skipped_photocentre_blend', contested, ref, winner, cands, null);
@@ -408,7 +403,8 @@ function auditSystem(
   }
 
   for (const tok of [...ctx.tokenSources.keys()].sort()) {
-    const sources = [...ctx.tokenSources.get(tok)!.keys()].sort(compareSourceIds);
+    const held = ctx.tokenSources.get(tok)!;
+    const sources = [...held.keys()].sort(compareSourceIds);
     if (sources.length < 2) continue;
     const contested = `${tok}:${sources.join('/')}`;
     if (identityRebound.has(tok)) continue;
@@ -427,7 +423,9 @@ function auditSystem(
     });
     const winner = decide(cands);
     if (winner !== null) {
-      verdict('letter_sources', 'geometric', contested, ref, winner, cands, rebind(ctx, tok, winner.sourceId));
+      verdict('letter_sources', 'geometric', contested, ref, winner, cands, {
+        kind: 'rebind', letter: tok, sourceId: winner.sourceId, via: held.get(winner.sourceId)!,
+      });
     } else {
       verdict('letter_sources', 'unbound_ambiguous', contested, ref, null, cands, {
         kind: 'unbind', targets: sources.map((sourceId) => ({ token: tok, sourceId })),

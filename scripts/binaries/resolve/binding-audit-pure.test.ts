@@ -192,10 +192,13 @@ describe('auditBindingIntegrity', () => {
     expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
-  it('refuses a rebind to a source no instance of the letter holds', () => {
+  it('rebinds under simbad_xid when no instance of the letter holds SIMBAD\'s source', () => {
     const x = xids(xid(BI_WDS, 'A', SA), xid(BI_WDS, 'B', SX));
-    expect(() => audit(blendRows, [biAstro(SX, 0, -6.5), biAstro(SC, 0, 0)], { xids: x }))
-      .toThrow(`${BI_WDS} A: rebind to ${SA}, which no instance of the letter holds`);
+    const blendRowsOrb6: BiRow[] = [['AB', 5.0, 0.0, [SX, null, 'orb6_hip'], [SX, null]], ['AC', 10.0, 0.0, [SX, null, 'orb6_hip'], [SC, null]]];
+    const { verdicts, audited, idx } = audit(blendRowsOrb6, [biAstro(SX, 0, -6.5), biAstro(SC, 0, 0)], { xids: x });
+    expect(ofShape(verdicts, 'source_letters')[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA, via: 'simbad_xid' });
+    const as = componentsOf(enforceBindingVerdicts(audited, idx)).filter((c) => c.component === 'A');
+    expect(as.map((c) => [c.gaia?.value, c.gaia?.via])).toEqual([[SA, 'simbad_xid'], [SA, 'simbad_xid']]);
   });
 
   it('keeps the blend skip when one side has no identity of its own', () => {

@@ -108,8 +108,9 @@ cleaner one would move a row; changing one is a correctness item of its own:
 - **A rebind takes its donor's tier.** Every instance of the rebound letter
   carries the strongest `resolve_via` among the letter's instances already
   bound to the winning source, read before enforcement, so the tag names the
-  tier that found the source it now holds. A rebind to a source no instance
-  of the letter holds throws.
+  tier that found the source it now holds. An identity refutation whose
+  SIMBAD source no instance of the letter holds rebinds under `simbad_xid`,
+  the tier that supplied it.
 - **The audit's verdicts are all computed before any is applied.** Every
   verdict reads the per-system context built before enforcement, never a
   component, so the order verdicts apply in never changes one; the
