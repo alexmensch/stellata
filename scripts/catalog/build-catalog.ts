@@ -117,6 +117,7 @@ import {
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
 import { loadReadStarsInputs, type ReadStarsInputs } from './parse/read-stars-inputs';
+import type { IauConstellationLookup } from '../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { GAIA_HIP_XMATCH } from './parse/gaia-hip-xmatch-source';
 import { STELLARIUM } from './parse/constellations/stellarium-source';
 import { GCVS, GCVS_CROSSID } from './parse/gcvs/gcvs-source';
@@ -504,7 +505,9 @@ export async function main() {
     stars,
     sortedKey: order.map((i) => sortKey[i]),
     encoded,
-    inputs,
+    apsisMap,
+    gspcMap: inputs.gspcMap,
+    conLookup: conAssignment.lookup,
     inputHashes: inputHashesAtStart,
     figureLines,
     componentDesignations,
@@ -550,7 +553,9 @@ interface CatalogEmissionInputs {
   /** Each record's apparent-V sort key, in record order. */
   readonly sortedKey: readonly number[];
   readonly encoded: EncodedCatalog;
-  readonly inputs: ReadStarsInputs;
+  readonly apsisMap: ReadStarsInputs['apsisMap'];
+  readonly gspcMap: ReadStarsInputs['gspcMap'];
+  readonly conLookup: IauConstellationLookup;
   readonly inputHashes: FileHashes;
   readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
@@ -577,7 +582,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, inputs, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
   stageCounts, heap,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -588,7 +593,7 @@ function catalogEmission({
   // the name table's length as well as the chunk target.
   const recordsInFirstChunk = recordsThroughChunk(0);
   assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
-  const records = recordsCounts(stars, inputs.apsisMap, inputs.gspcMap, recordsInFirstChunk);
+  const records = recordsCounts(stars, apsisMap, gspcMap, recordsInFirstChunk);
   // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
   const chunkRows = chunkBytes.map((_, i) => {
     const n = recordsThroughChunk(i);
@@ -615,7 +620,7 @@ function catalogEmission({
 
   // The fade quantiles are measured over the shipped population, so this
   // runs against the same `stars` the binary was written from.
-  const boundaries = renderBoundaryArtifact(stars, inputs.conAssignment.lookup);
+  const boundaries = renderBoundaryArtifact(stars, conLookup);
   console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
   const search = buildSearchIndex(stars, componentDesignations);
