@@ -9,7 +9,7 @@ import { parse } from 'csv-parse/sync';
 import { describe, it, beforeAll, expect } from 'vitest';
 import { type Catalog, type CatalogRecord, loadCatalog, lookupByRef } from '../../scripts/catalog/catalog-lookup';
 import { parseRef, type RecordRef } from '../../scripts/catalog/parse/corpus-tsv';
-import { unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
+import { angularSeparationArcsec, unitVectorFromRaDec, type UnitVector } from '../../src/astro-core/equatorial-basis';
 import { advancePositionsToEpoch } from '../../src/client/loaders/epoch-advance-pure';
 import { publicFile } from '../../scripts/util/paths';
 import { CATALOG_MANIFEST_FILENAME, CATALOG_SCENE_EPOCH } from '../../src/catalog-format/record/catalog-pure';
@@ -59,12 +59,6 @@ function loadCorpus(): CorpusRow[] {
   }));
 }
 
-const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
-
-function angSepArcsec(a: UnitVector, b: UnitVector): number {
-  const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z));
-  return Math.acos(dot) * ARCSEC_PER_RAD;
-}
 
 describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
   let catalog: Catalog;
@@ -94,7 +88,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
         z: rec!.z / dist,
       };
       const published = unitVectorFromRaDec(row.raDegJ2016, row.decDegJ2016);
-      const sep = angSepArcsec(dir, published);
+      const sep = angularSeparationArcsec(dir, published);
       expect(
         sep,
         `${row.name}: catalog direction is ${sep.toFixed(3)}″ from its J2016.0 position`,
@@ -119,7 +113,7 @@ describe.skipIf(!CATALOG_BIN_PRESENT)('sky-position corpus', () => {
       const j2016Dir: UnitVector = normalize(rec!.x, rec!.y, rec!.z);
       advancePositionsToEpoch(pos, vel, ADVANCE_EPOCH_JYR);
       const advancedDir = normalize(pos[0], pos[1], pos[2]);
-      const displacementArcsec = angSepArcsec(j2016Dir, advancedDir);
+      const displacementArcsec = angularSeparationArcsec(j2016Dir, advancedDir);
       const expectedArcsec = (row.totalPmMasyr! / 1000) * dt;
       const relErr = Math.abs(displacementArcsec - expectedArcsec) / expectedArcsec;
       expect(

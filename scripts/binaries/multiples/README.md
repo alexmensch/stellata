@@ -108,8 +108,11 @@ anchor_sep_arcsec, anchor_pa_deg, anchor_comp, mag_pri, mag_sec
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
 `positionPc` PM-propagates each component's direction from its native
 epoch (`MeasuredAstrometry.refEpoch` — Gaia J2016.0, HIP2 J1991.25,
-AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
-cascade in `scripts/catalog/distance/direction-cascade.ts`. This keeps a promoted
+AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH` through `directionAtEpoch`
+(`src/astro-core/equatorial-basis.ts`), the formula the single-star
+cascade in `scripts/catalog/distance/direction-cascade.ts` advances
+through, so a pair and its catalogue record cannot disagree on where a
+star sits. This keeps a promoted
 secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 (epoch gap × systemic PM). See [Reference epoch](/data/README.md#reference-epoch-and-proper-motion).

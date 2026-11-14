@@ -6,7 +6,6 @@ import {
   HIP2_PM_DELTA_THRESHOLD_MASYR,
   HIP2_REF_EPOCH,
   SIMBAD_REF_EPOCH,
-  directionAtEpoch,
   directionOnPm,
   hip2PmDisagrees,
   resolveDirection,
@@ -29,6 +28,8 @@ import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
+  angularSeparationArcsec,
+  directionAtEpoch,
   unitVectorFromRaDec,
   type UnitVector,
 } from '../../../src/astro-core/equatorial-basis';
@@ -37,8 +38,6 @@ const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
 const nssIndex = (sourceId: string): Map<string, SourceRowRef<string>> =>
   new Map([[sourceId, sourceRowRef(GAIA_NSS, sourceId)]]);
-
-const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
 
 // The cascade returns a solution, not a direction — production advances it at
 // the one call site in stars-parse, on the motion the row ends up with. These
@@ -54,11 +53,6 @@ const solve = (
 
 const dirOf = (s: DirectionSolution): UnitVector =>
   directionOnPm(s, s.srcPmraMasyr, s.srcPmdecMasyr);
-
-function angSepArcsec(a: UnitVector, b: UnitVector): number {
-  const dot = Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z));
-  return Math.acos(dot) * ARCSEC_PER_RAD;
-}
 
 function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrometryCatalogRow {
   return gaiaAstrometryRow({
@@ -108,65 +102,7 @@ function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
   };
 }
 
-describe('direction-cascade / directionAtEpoch', () => {
-  it('returns the measured direction unchanged when either PM is missing', () => {
-    const u = directionAtEpoch(100, 20, null, -10, 2016, 2000);
-    const v = directionAtEpoch(100, 20, 10, null, 2016, 2000);
-    const raw = unitVectorFromRaDec(100, 20);
-    expect(angSepArcsec(u, raw)).toBe(0);
-    expect(angSepArcsec(v, raw)).toBe(0);
-  });
-
-  it('positive pmra moves east (+RA), positive pmdec moves north (+Dec)', () => {
-    // 1000 mas/yr over +10 yr = 10″. At (0, 0) east is +y, north is +z.
-    const east = directionAtEpoch(0, 0, 1000, 0, 2000, 2010);
-    expect(east.y).toBeGreaterThan(0);
-    expect(east.z).toBeCloseTo(0, 12);
-    expect(angSepArcsec(east, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
-
-    const north = directionAtEpoch(0, 0, 0, 1000, 2000, 2010);
-    expect(north.z).toBeGreaterThan(0);
-    expect(north.y).toBeCloseTo(0, 12);
-    expect(angSepArcsec(north, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
-  });
-
-  it('backwards propagation (toEpoch < fromEpoch) flips the displacement sign', () => {
-    const fwd = directionAtEpoch(0, 0, 1000, 0, 2000, 2016);
-    const back = directionAtEpoch(0, 0, 1000, 0, 2016, 2000);
-    expect(fwd.y).toBeGreaterThan(0);
-    expect(back.y).toBeLessThan(0);
-  });
-
-  it('pmra is the cos δ-applied on-sky rate: displacement is dec-independent', () => {
-    // If the implementation wrongly divided (or multiplied) by cos δ,
-    // the on-sky displacement at dec 60° would be 2× (or ½×) the
-    // equatorial one.
-    const atEquator = angSepArcsec(
-      directionAtEpoch(0, 0, 500, 0, 2000, 2010),
-      unitVectorFromRaDec(0, 0),
-    );
-    const atDec60 = angSepArcsec(
-      directionAtEpoch(0, 60, 500, 0, 2000, 2010),
-      unitVectorFromRaDec(0, 60),
-    );
-    expect(atDec60).toBeCloseTo(atEquator, 5);
-  });
-
-  it('round-trips through an epoch and back', () => {
-    const there = directionAtEpoch(269.45, 4.74, -801.551, 10362.394, 2016, 2000);
-    // Convert back to (ra, dec) and re-propagate with the same PM.
-    const raBack = (Math.atan2(there.y, there.x) * 180) / Math.PI;
-    const decBack = (Math.asin(there.z) * 180) / Math.PI;
-    const home = directionAtEpoch(raBack, decBack, -801.551, 10362.394, 2000, 2016);
-    expect(angSepArcsec(home, unitVectorFromRaDec(269.45, 4.74))).toBeLessThan(0.001);
-  });
-
-  it('stays finite and unit-length near the celestial pole', () => {
-    const u = directionAtEpoch(10, 89.95, 5000, 2000, 2000, 2016);
-    const norm = Math.hypot(u.x, u.y, u.z);
-    expect(norm).toBeCloseTo(1, 12);
-  });
-
+describe('direction-cascade / tier epochs against SIMBAD', () => {
   it("pins Barnard's Star: Gaia DR3 J2016.0 → J2000.0 vs SIMBAD", () => {
     // Gaia DR3 4472832130942575872 (data/gaia/gaia_dr3_astrometry_catalog.tsv)
     // vs SIMBAD's J2000 ICRS position (itself Gaia-propagated). Pins the
@@ -175,11 +111,11 @@ describe('direction-cascade / directionAtEpoch', () => {
     // CATALOG_SCENE_EPOCH (now J2016.0, where the Gaia tier is a Δt=0
     // no-op and could not exercise the tangent/sign/cos δ math).
     const u = directionAtEpoch(
-      269.448502525, 4.739420051, -801.5510, 10362.3942,
+      { raDeg: 269.448502525, decDeg: 4.739420051 }, { pmRaMasyr: -801.5510, pmDecMasyr: 10362.3942 },
       GAIA_DR3_REF_EPOCH, 2000.0,
     );
     const simbad = unitVectorFromRaDec(269.4520769586187, 4.693364966576667);
-    expect(angSepArcsec(u, simbad)).toBeLessThan(0.1);
+    expect(angularSeparationArcsec(u, simbad)).toBeLessThan(0.1);
   });
 
   it('pins 61 Cyg A: HIP2 J1991.25 → J2000.0 vs SIMBAD', () => {
@@ -189,11 +125,11 @@ describe('direction-cascade / directionAtEpoch', () => {
     // (those are ≥ 10″ at this PM). Target epoch is a literal 2000 —
     // an independent-reference propagation pin, not the scene epoch.
     const u = directionAtEpoch(
-      316.71181137, 38.74149513, 4168.31, 3269.2,
+      { raDeg: 316.71181137, decDeg: 38.74149513 }, { pmRaMasyr: 4168.31, pmDecMasyr: 3269.2 },
       HIP2_REF_EPOCH, 2000.0,
     );
     const simbad = unitVectorFromRaDec(316.7247482895925, 38.74941731943694);
-    expect(angSepArcsec(u, simbad)).toBeLessThan(0.25);
+    expect(angularSeparationArcsec(u, simbad)).toBeLessThan(0.25);
   });
 });
 
@@ -218,10 +154,10 @@ describe('direction-cascade / resolveDirection routing', () => {
     }));
     expect(res?.via).toBe('gaia_5p');
     const expected = directionAtEpoch(
-      g.raDeg, g.decDeg, g.pmraMasyr, g.pmdecMasyr,
+      { raDeg: g.raDeg, decDeg: g.decDeg }, { pmRaMasyr: g.pmraMasyr, pmDecMasyr: g.pmdecMasyr },
       GAIA_DR3_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(dirOf(res!), expected)).toBe(0);
+    expect(angularSeparationArcsec(dirOf(res!), expected)).toBe(0);
   });
 
   it('NSS + unreliable 5p routes gaia_nss_systemic and keeps the Gaia direction', () => {
@@ -234,7 +170,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     const gaia5p = solve(inputs({ sourceId: SID }), sources({
       gaiaAstrometry: new Map([[SID, g]]),
     }));
-    expect(angSepArcsec(dirOf(res!), dirOf(gaia5p!))).toBe(0);
+    expect(angularSeparationArcsec(dirOf(res!), dirOf(gaia5p!))).toBe(0);
   });
 
   it('NSS membership alone (clean 5p) stays gaia_5p', () => {
@@ -253,16 +189,10 @@ describe('direction-cascade / resolveDirection routing', () => {
     }));
     expect(res?.via).toBe('hip2_pm_discrepant');
     const expected = directionAtEpoch(
-      h.raDeg, h.decDeg, h.pmRaMasyr, h.pmDeMasyr,
+      { raDeg: h.raDeg, decDeg: h.decDeg }, { pmRaMasyr: h.pmRaMasyr, pmDecMasyr: h.pmDeMasyr },
       HIP2_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    // Identical inputs → identical direction. Compared component-wise:
-    // angSepArcsec's acos floors at ~0.004″ for a unit vector against
-    // itself (self-dot rounds to 1−1 ULP), which the larger 24.75 yr
-    // HIP2 Δt now surfaces.
-    expect(dirOf(res!).x).toBeCloseTo(expected.x, 12);
-    expect(dirOf(res!).y).toBeCloseTo(expected.y, 12);
-    expect(dirOf(res!).z).toBeCloseTo(expected.z, 12);
+    expect(angularSeparationArcsec(dirOf(res!), expected)).toBe(0);
   });
 
   it('gaia_nss_systemic outranks hip2_pm_discrepant (stage3 priority order)', () => {
@@ -328,7 +258,7 @@ describe('direction-cascade / resolveDirection routing', () => {
       gaiaAstrometry: new Map([[SID, g]]),
     }));
     expect(res?.via).toBe('gaia_2p');
-    expect(angSepArcsec(dirOf(res!), unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
+    expect(angularSeparationArcsec(dirOf(res!), unitVectorFromRaDec(g.raDeg, g.decDeg))).toBe(0);
   });
 
   it('Tycho-2 takes the row Gaia and HIP2 both miss, on its own TYC', () => {
@@ -353,14 +283,10 @@ describe('direction-cascade / resolveDirection routing', () => {
     expect(res.srcEpoch).toBe(TYCHO2_MEAN_EPOCH);
     const advanced = dirOf(res);
     const fromJ2000 = directionAtEpoch(
-      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr,
+      { raDeg: t.raDeg, decDeg: t.decDeg }, { pmRaMasyr: t.pmRaMasyr, pmDecMasyr: t.pmDecMasyr },
       TYCHO2_MEAN_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    // Componentwise: `angSepArcsec` bottoms out around 0.003" on near-parallel
-    // vectors, where acos(1 - eps) loses the difference to cancellation.
-    expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
-    expect(advanced.y).toBeCloseTo(fromJ2000.y, 12);
-    expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
+    expect(angularSeparationArcsec(advanced, fromJ2000)).toBe(0);
     // The fixture's own ep_ra, read as the position's epoch, adds 8.93 yr of
     // this PM. Pinned exactly rather than bounded: a loose floor here would
     // still pass on a one-year epoch error, which is the regression itself.
@@ -368,9 +294,10 @@ describe('direction-cascade / resolveDirection routing', () => {
     // finished angle is atan(d) — at this displacement that compresses the
     // 8.93 degrees rather than losing it. Don't "correct" toward 32148".
     const fromObservationEpoch = directionAtEpoch(
-      t.raDeg, t.decDeg, t.pmRaMasyr, t.pmDecMasyr, 1991.07, CATALOG_SCENE_EPOCH,
+      { raDeg: t.raDeg, decDeg: t.decDeg }, { pmRaMasyr: t.pmRaMasyr, pmDecMasyr: t.pmDecMasyr },
+      1991.07, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(advanced, fromObservationEpoch)).toBeCloseTo(28482.604, 2);
+    expect(angularSeparationArcsec(advanced, fromObservationEpoch)).toBeCloseTo(28482.604, 2);
   });
 
   it("a Tycho-2 row with no PM keeps its position and zeroes the tangential term", () => {
@@ -407,12 +334,10 @@ describe('direction-cascade / resolveDirection routing', () => {
     expect(res.via).toBe('simbad');
     expect(res.velVia).toBe('simbad_pm');
     const expected = directionAtEpoch(
-      simbad.raDeg, simbad.decDeg, simbad.pm.pmRaMasyr, simbad.pm.pmDecMasyr,
+      { raDeg: simbad.raDeg, decDeg: simbad.decDeg }, { pmRaMasyr: simbad.pm.pmRaMasyr, pmDecMasyr: simbad.pm.pmDecMasyr },
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(dirOf(res).x).toBeCloseTo(expected.x, 12);
-    expect(dirOf(res).y).toBeCloseTo(expected.y, 12);
-    expect(dirOf(res).z).toBeCloseTo(expected.z, 12);
+    expect(angularSeparationArcsec(dirOf(res), expected)).toBe(0);
   });
 
   it('a SIMBAD row with a position but no PM keeps the position, zero tangential', () => {
@@ -423,12 +348,7 @@ describe('direction-cascade / resolveDirection routing', () => {
     }), sources())!;
     expect(res.via).toBe('simbad');
     expect(res.velVia).toBe('zero');
-    // Component-wise: angSepArcsec's acos floors near 0.004″ for a unit
-    // vector against itself, as the hip2_pm_discrepant case above notes.
-    const unpropagated = unitVectorFromRaDec(120, 40);
-    expect(dirOf(res).x).toBeCloseTo(unpropagated.x, 12);
-    expect(dirOf(res).y).toBeCloseTo(unpropagated.y, 12);
-    expect(dirOf(res).z).toBeCloseTo(unpropagated.z, 12);
+    expect(angularSeparationArcsec(dirOf(res), unitVectorFromRaDec(120, 40))).toBe(0);
   });
 
   it('no tier reaches the row → null, which the walk counts as a dropped record', () => {
@@ -532,7 +452,7 @@ describe('direction-cascade / directionOnPm', () => {
     expect(res.velVia).toBe('zero');
     const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
     // 24.75 yr of this star's 94.4 mas/yr motion.
-    expect(angSepArcsec(TYCHO2_OBSERVED_DIR, advanced)).toBeCloseTo(2.3367, 3);
+    expect(angularSeparationArcsec(TYCHO2_OBSERVED_DIR, advanced)).toBeCloseTo(2.3367, 3);
   });
 
   it('leaves only the two catalogues frame disagreement, once both reach J2016', () => {
@@ -545,33 +465,33 @@ describe('direction-cascade / directionOnPm', () => {
     const res = noMeanSolution();
     const advanced = directionOnPm(res, RESCUED_PMRA, RESCUED_PMDEC);
     const simbadJ2016 = directionAtEpoch(
-      SIMBAD_J2000_RA, SIMBAD_J2000_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      { raDeg: SIMBAD_J2000_RA, decDeg: SIMBAD_J2000_DEC }, { pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC },
       SIMBAD_REF_EPOCH, CATALOG_SCENE_EPOCH,
     );
     // Tycho-2's own cell carried to J2000 on the same motion, so the two are
     // compared at one epoch rather than across a 8.75 yr gap.
     const tychoAtJ2000 = directionAtEpoch(
-      TYCHO2_OBSERVED_RA, TYCHO2_OBSERVED_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      { raDeg: TYCHO2_OBSERVED_RA, decDeg: TYCHO2_OBSERVED_DEC }, { pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC },
       TYCHO2_ICRS_EPOCH, SIMBAD_REF_EPOCH,
     );
-    const frameDisagreement = angSepArcsec(
+    const frameDisagreement = angularSeparationArcsec(
       tychoAtJ2000, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
     );
     expect(frameDisagreement).toBeCloseTo(0.1313, 3);
     // Exact only to the linear form's second-order term (~5 µas here, since
     // the tangent-plane advance is not an isometry); do not tighten.
-    expect(angSepArcsec(advanced, simbadJ2016)).toBeCloseTo(frameDisagreement, 4);
+    expect(angularSeparationArcsec(advanced, simbadJ2016)).toBeCloseTo(frameDisagreement, 4);
     // Comparing the raw cells across the epoch gap instead reads 0.9475" — 7x
     // the real disagreement, and the number the position-source question was
     // once weighed on.
-    expect(angSepArcsec(
+    expect(angularSeparationArcsec(
       TYCHO2_OBSERVED_DIR, unitVectorFromRaDec(SIMBAD_J2000_RA, SIMBAD_J2000_DEC),
     )).toBeCloseTo(0.9475, 3);
   });
 
   it('is a no-op where the rescue reaches no PM, whatever the tier epoch', () => {
     const res = noMeanSolution();
-    expect(angSepArcsec(TYCHO2_OBSERVED_DIR, directionOnPm(res, null, null)))
+    expect(angularSeparationArcsec(TYCHO2_OBSERVED_DIR, directionOnPm(res, null, null)))
       .toBeCloseTo(0, 9);
   });
 
@@ -583,7 +503,7 @@ describe('direction-cascade / directionOnPm', () => {
       gaiaAstrometry: new Map([['1', g]]),
     }))!;
     expect(res.velVia).toBe('zero');
-    expect(angSepArcsec(
+    expect(angularSeparationArcsec(
       unitVectorFromRaDec(g.raDeg, g.decDeg), directionOnPm(res, 500, -500),
     )).toBeCloseTo(0, 9);
   });
@@ -595,7 +515,7 @@ describe('direction-cascade / directionOnPm', () => {
     expect(res.srcEpoch).toBe(TYCHO2_MEAN_EPOCH);
     const advanced = directionOnPm(res, 0, 3600_000);   // 1 deg/yr in Dec alone
     const fromJ2000 = directionAtEpoch(
-      res.srcRaDeg, res.srcDecDeg, 0, 3600_000,
+      { raDeg: res.srcRaDeg, decDeg: res.srcDecDeg }, { pmRaMasyr: 0, pmDecMasyr: 3600_000 },
       TYCHO2_MEAN_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(advanced.x).toBeCloseTo(fromJ2000.x, 12);
@@ -603,8 +523,9 @@ describe('direction-cascade / directionOnPm', () => {
     expect(advanced.z).toBeCloseTo(fromJ2000.z, 12);
     // Same counter-assertion as the routing suite's, on the rescued-PM path:
     // the rescue must not reintroduce the observation epoch.
-    expect(angSepArcsec(advanced, directionAtEpoch(
-      res.srcRaDeg, res.srcDecDeg, 0, 3600_000, 1991.07, CATALOG_SCENE_EPOCH,
+    expect(angularSeparationArcsec(advanced, directionAtEpoch(
+      { raDeg: res.srcRaDeg, decDeg: res.srcDecDeg }, { pmRaMasyr: 0, pmDecMasyr: 3600_000 },
+      1991.07, CATALOG_SCENE_EPOCH,
     ))).toBeCloseTo(28482.604, 2);
   });
 });
