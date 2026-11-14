@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FLAG_HAS_BAYER,
+  FLAG_HAS_NAME,
   HEADER_SIZE,
+  VAR_TYPE_MIRA,
   NO_COMPANION,
   NO_CONSTELLATION_INDEX,
   NO_SID,
@@ -23,7 +26,10 @@ const APSIS: ApsisRow = {
 };
 const SOL = makeStar({ proper: 'Sol' });
 const STAR = makeStar({
-  x: 1.5, conIndex: 7, proper: 'Fixture', hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
+  x: 1.5, y: -2.25, z: 3.75, vx: 0.125, vy: -0.25, vz: 0.375, absmag: 4.5, ci: 0.625, physicalRadius: 2.5,
+  spectral: { kind: 'mk', letter: 4, subclass: 2, lumClass: 3 },
+  conIndex: 7, flags: FLAG_HAS_NAME | FLAG_HAS_BAYER, varType: VAR_TYPE_MIRA,
+  proper: 'Fixture', hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
   periodDays: 10, amplitudeMag: 0.5,
 });
 
@@ -52,7 +58,16 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, unnamed, 'nameOffset')).toBe(0);
     expect(readRecordFieldBig(view, unnamed, 'gaiaSourceId')).toBe(0n);
     expect(Number.isNaN(readRecordField(view, unnamed, 'teffGspphot'))).toBe(true);
-    expect(readRecordField(view, star, 'x')).toBe(1.5);
+    const floats = ['x', 'y', 'z', 'vx', 'vy', 'vz', 'absmag', 'ci', 'physRadius'] as const;
+    expect(floats.map((f) => readRecordField(view, star, f))).toEqual([1.5, -2.25, 3.75, 0.125, -0.25, 0.375, 4.5, 0.625, 2.5]);
+    expect(readRecordField(view, star, 'spectClass')).toBe(4);
+    expect(readRecordField(view, star, 'lumClass')).toBe(3);
+    expect(readRecordField(view, star, 'conIndex')).toBe(7);
+    expect(readRecordField(view, star, 'flags')).toBe(FLAG_HAS_NAME | FLAG_HAS_BAYER);
+    expect(readRecordField(view, star, 'varType')).toBe(VAR_TYPE_MIRA);
+    const header = readCatalogHeader(buffer);
+    expect(readNameTable(buffer, header.nameTableOffset, header.nameTableLength).get(readRecordField(view, star, 'nameOffset')))
+      .toBe('Fixture');
     expect(readRecordField(view, star, 'companion')).toBe(0);
     expect(readRecordField(view, star, 'hip')).toBe(42);
     expect(readRecordFieldBig(view, star, 'gaiaSourceId')).toBe(BigInt(GAIA_ID));
