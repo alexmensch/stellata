@@ -95,7 +95,11 @@ scripts/catalog/
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
                                   allocates every record's SID, then
-                                  emits the chunked binary, manifests,
+                                  encodes the binary (encodeCatalog,
+                                  record/) and, through catalogEmission,
+                                  the one assembly of every output file,
+                                  family member and check, emits the
+                                  chunked binary, manifests,
                                   both committed ledgers, the SID registry
                                   and placement's, brightness-colour's,
                                   size's, coherence's, promotion's,

@@ -20,7 +20,7 @@ import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, assertSolFirst } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
 import { apsisCoverageSummary, recordsCounts } from './record/records-stage-pure';
-import { encodeCatalog } from './record/encode-catalog-pure';
+import { encodeCatalog, type EncodedCatalog } from './record/encode-catalog-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -64,7 +64,7 @@ import {
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
-  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageRun,
+  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageEmission, type StageLineageRun,
 } from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import {
@@ -74,10 +74,13 @@ import { SIZE_CODES, SIZE_LINEAGE_BUDGET, sizeLineageLines } from './spectral/si
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
+  type ComponentDesignation,
   renderableOrbitRelations,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
-import { serializeCatalogRowIndexSidecar } from './companions/record-index/catalog-row-index-map-pure';
+import {
+  serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
+} from './companions/record-index/catalog-row-index-map-pure';
 import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import {
   applySystemCoherence, systemCoherenceVerdicts, type SystemVerdict,
@@ -113,7 +116,7 @@ import { placementSummary } from './distance/placement-counts-pure';
 import {
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { loadReadStarsInputs } from './parse/read-stars-inputs';
+import { loadReadStarsInputs, type ReadStarsInputs } from './parse/read-stars-inputs';
 import { GAIA_HIP_XMATCH } from './parse/gaia-hip-xmatch-source';
 import { STELLARIUM } from './parse/constellations/stellarium-source';
 import { GCVS, GCVS_CROSSID } from './parse/gcvs/gcvs-source';
@@ -129,13 +132,13 @@ import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
-  emitArtifacts, sweepStaged, type ArtifactContents, type Check,
+  emitArtifacts, sweepStaged, type ArtifactContents, type Check, type Emission,
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
 import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
-import { sidSuccessorPairs } from '../sid/events-pure';
+import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
@@ -155,6 +158,8 @@ import {
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+type CatalogOutputKey = keyof (typeof CATALOG_OUTPUTS)['files'] & string;
 
 const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
 
@@ -478,32 +483,119 @@ export async function main() {
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
 
-  const { buffer: out, recordsOffset, nameTableEntries } = encodeCatalog({
-    stars, apsisMap, sids: recordSids, multiplicityStatus,
+  const promotionEmission = catalogStageLineage({
+    spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
+    siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
+    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
   });
-  const totalLength = out.byteLength;
-  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries };
+  const allocationEmission = catalogCountedStageLineage({
+    spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
+    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    siblings: () => ({ [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)) }),
+    budget: ALLOCATION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+  });
+  console.log(allocationSummary(allocationEmission.counts, allocation.events.length));
+
+  const encoded = encodeCatalog({ stars, apsisMap, sids: recordSids, multiplicityStatus });
+  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(namingEmission.counts, namingDerived));
 
+  emitArtifacts(catalogEmission({
+    stars,
+    sortedKey: order.map((i) => sortKey[i]),
+    encoded,
+    inputs,
+    inputHashes: inputHashesAtStart,
+    figureLines,
+    componentDesignations,
+    rowIndexMap,
+    sidEvents: [...registry.events, ...allocation.events],
+    ledgers: {
+      parkedLedger,
+      simbadSourcedDistances,
+      ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
+    },
+    lineage: {
+      placement: placementEmission,
+      brightnessColour: brightnessEmission,
+      size: sizeEmission,
+      coherence: coherenceEmission,
+      promotion: promotionEmission,
+      allocation: allocationEmission,
+      naming: namingEmission,
+    },
+    stageCounts: [
+      { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+      { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
+      { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
+      { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
+      { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+      { stage: 'allocation', block: { kind: 'counted', counts: allocationEmission.counts } },
+      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
+      { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
+      { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
+      { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
+      { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
+      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
+    ],
+    heap,
+  }));
+}
+
+type EmissionOf<T> = T extends StageLineageSpec<infer F, infer S> ? StageLineageEmission<F, S> : never;
+
+interface CatalogEmissionInputs {
+  /** Sorted: record order. */
+  readonly stars: readonly Star[];
+  /** Each record's apparent-V sort key, in record order. */
+  readonly sortedKey: readonly number[];
+  readonly encoded: EncodedCatalog;
+  readonly inputs: ReadStarsInputs;
+  readonly inputHashes: FileHashes;
+  readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
+  readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
+  readonly rowIndexMap: CatalogRowIndexMap;
+  /** The registry's events and this run's. */
+  readonly sidEvents: readonly EventRow[];
+  readonly ledgers: {
+    readonly parkedLedger: string;
+    readonly simbadSourcedDistances: string;
+  } & ReturnType<typeof registryTexts<typeof CATALOG_PARTITION>>;
+  readonly lineage: {
+    readonly placement: EmissionOf<typeof PLACEMENT_LINEAGE>;
+    readonly brightnessColour: EmissionOf<typeof BRIGHTNESS_COLOUR_LINEAGE>;
+    readonly size: EmissionOf<typeof SIZE_LINEAGE>;
+    readonly coherence: EmissionOf<typeof COHERENCE_LINEAGE>;
+    readonly promotion: EmissionOf<typeof PROMOTION_LINEAGE>;
+    readonly allocation: EmissionOf<typeof ALLOCATION_LINEAGE>;
+    readonly naming: EmissionOf<typeof NAMING_LINEAGE>;
+  };
+  /** Every stage's count block but the four this assembly tallies: records, search, boundaries, figures. */
+  readonly stageCounts: readonly StageBlock<CatalogCountStage, CountValue>[];
+  readonly heap: { check(): Check };
+}
+
+/** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
+function catalogEmission({
+  stars, sortedKey, encoded, inputs, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stageCounts, heap,
+}: CatalogEmissionInputs): Emission<CatalogOutputKey> {
+  const totalLength = encoded.buffer.byteLength;
   const chunkBytes = planCatalogChunks(totalLength);
+  const recordsThroughChunk = (i: number) => recordsInChunkPrefix(chunkBytes, i + 1, encoded.recordsOffset, stars.length);
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
   // the name table's length as well as the chunk target.
-  const recordsInFirstChunk = recordsInChunkPrefix(
-    chunkBytes, 1, recordsOffset, stars.length,
-  );
+  const recordsInFirstChunk = recordsThroughChunk(0);
   assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
-  const records = recordsCounts(stars, apsisMap, inputs.gspcMap, recordsInFirstChunk);
+  const records = recordsCounts(stars, inputs.apsisMap, inputs.gspcMap, recordsInFirstChunk);
   // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
-  const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
-    const n = recordsInChunkPrefix(
-      chunkBytes, i + 1, recordsOffset, stars.length,
-    );
+    const n = recordsThroughChunk(i);
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs([...registry.events, ...allocation.events]);
+  const sidSuccessors = sidSuccessorPairs(sidEvents);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,
@@ -512,34 +604,24 @@ export async function main() {
   const chunks = new Map<string, ArtifactContents>();
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
-    chunks.set(
-      resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)),
-      new Uint8Array(out, chunkOff, chunkBytes[i]),
-    );
+    chunks.set(resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)), new Uint8Array(encoded.buffer, chunkOff, chunkBytes[i]));
     chunkOff += chunkBytes[i];
   }
-  const manifestJson = JSON.stringify(manifest) + '\n';
 
-  // Constellations JSON (unchanged from v1 format).
   const constellationsOut = CONSTELLATIONS.map((c, idx) => {
     const lines = figureLines.get(idx);
     return lines ? { ...c, lines } : { ...c };
   });
-  const constellationsJson = JSON.stringify(constellationsOut) + '\n';
 
-  // Boundary polylines, region label anchors, the runtime membership grid and
-  // the fade-quantile table. The quantiles are keyed to apparent magnitude
-  // and measured over the shipped population, so this runs against the same
-  // `stars` the binary was written from.
-  const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
+  // The fade quantiles are measured over the shipped population, so this
+  // runs against the same `stars` the binary was written from.
+  const boundaries = renderBoundaryArtifact(stars, inputs.conAssignment.lookup);
   console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(
-    handedFileHash(inputHashesAtStart, MULTIPLES_TSV.file), rowIndexMap,
-  );
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap);
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
@@ -558,71 +640,40 @@ export async function main() {
   console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchIndexSummary(search.counts, Buffer.byteLength(searchJson))})`);
   const sol = stars[SOL_RECORD_INDEX];
   console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
-
   console.log(apsisCoverageSummary(records));
 
-  const lineage = catalogStageLineage({
-    spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
-    siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
-    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
-  });
-  const allocationLineage = catalogCountedStageLineage({
-    spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
-    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
-    siblings: () => ({ [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)) }),
-    budget: ALLOCATION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
-  });
-  console.log(allocationSummary(allocationLineage.counts, allocation.events.length));
-  const files = {
-    manifest: manifestJson,
-    constellations: constellationsJson,
-    boundaries: boundaries.json,
-    searchIndex: searchJson,
-    rowIndexMap: rowIndexMapJson,
-    parkedLedger,
-    simbadSourcedDistances,
-    ...placementEmission.files,
-    ...brightnessEmission.files,
-    ...sizeEmission.files,
-    ...coherenceEmission.files,
-    ...lineage.files,
-    ...allocationLineage.files,
-    ...namingEmission.files,
-    ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
-  };
-  const members = new Map([
-    ...chunks, ...placementEmission.members, ...brightnessEmission.members, ...sizeEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
-    ...namingEmission.members,
-  ]);
-
-  emitArtifacts({
+  const stages = Object.values(lineage);
+  return {
     outputs: CATALOG_OUTPUTS,
-    files,
-    members,
+    files: {
+      manifest: JSON.stringify(manifest) + '\n',
+      constellations: JSON.stringify(constellationsOut) + '\n',
+      boundaries: boundaries.json,
+      searchIndex: searchJson,
+      rowIndexMap: rowIndexMapJson,
+      ...ledgers,
+      ...lineage.placement.files,
+      ...lineage.brightnessColour.files,
+      ...lineage.size.files,
+      ...lineage.coherence.files,
+      ...lineage.promotion.files,
+      ...lineage.allocation.files,
+      ...lineage.naming.files,
+    },
+    members: new Map([...chunks, ...stages.flatMap((e) => [...e.members])]),
     checks: [
-      ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
-      ...namingEmission.checks,
+      ...stages.flatMap((e) => e.checks),
       buildCountsCheck([
-        { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
-        { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
-        { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
-        { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
-        { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
-        { stage: 'allocation', block: { kind: 'counted', counts: allocationLineage.counts } },
-        { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
-        { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
+        ...stageCounts,
         { stage: 'records', block: { kind: 'counted', counts: records } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
-        { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
-        { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
-        { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
-        { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
-      ]), distanceOutliersCheck(stars),
+      ]),
+      distanceOutliersCheck(stars),
       heap.check(),
     ],
-  });
+  };
 }
 
 function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
