@@ -4,7 +4,7 @@ import { angularSeparationArcsec, raDecFromUnitVector, unitVectorFromRaDec } fro
 import { WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
 import { athygDirectionAtEpoch, buildAthygGrid, findNearestAthyg, pairAthygMatches } from './athyg-match-pure';
 import { athygAt, decomposed, pairAt } from './resolve-fixture';
-import { OWN, inheritedFrom } from '../multiples-tsv';
+import { OWN, inheritedFrom } from '../multiples-record-pure';
 
 describe('findNearestAthyg', () => {
   const east = (arcsec: number, decDeg: number) => 100 + arcsec / 3600 / Math.cos((decDeg * Math.PI) / 180);

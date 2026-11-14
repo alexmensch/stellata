@@ -11,7 +11,7 @@ import {
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
 } from './components-pure';
-import { OWN, inheritedFrom, type IdOrigin } from '../multiples-tsv';
+import { OWN, inheritedFrom, type IdOrigin } from '../multiples-record-pure';
 import { measuredOffset, splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 import { pushTo } from '../../util/map-buckets-pure';

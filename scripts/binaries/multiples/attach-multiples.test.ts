@@ -4,7 +4,7 @@ import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
 import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
 import { mscPairKey } from '../load/msc-pure';
-import { ORBIT_VIA_ON_FILE, type MultiplesRecord } from '../multiples-tsv';
+import { ORBIT_VIA_ON_FILE, type MultiplesRecord } from '../multiples-record-pure';
 import { indices, xid } from '../resolve/resolve-fixture';
 import { stage6Counts } from './attach-multiples';
 import { stage6Report } from './stage6-report-pure';

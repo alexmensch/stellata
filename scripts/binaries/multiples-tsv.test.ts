@@ -5,10 +5,8 @@ import { describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../util/paths';
 import { MULTIPLES_HEADER, multiplesLine } from './multiples-tsv-fixture';
 import { describeCommittedRoundTrip } from '../util/tsv/committed-round-trip';
-import {
-  INHERITANCE_KINDS, MULTIPLES_TSV, ORBIT_VIA, ORBIT_VIA_ON_FILE, ORBIT_VIA_PROPERTIES, OWN,
-  formatIdOrigin, inheritedFrom, parseIdOrigin,
-} from './multiples-tsv';
+import { MULTIPLES_TSV } from './multiples-tsv';
+import { INHERITANCE_KINDS, ORBIT_VIA, ORBIT_VIA_ON_FILE, ORBIT_VIA_PROPERTIES, OWN, formatIdOrigin, inheritedFrom, parseIdOrigin } from './multiples-record-pure';
 
 describeCommittedRoundTrip(MULTIPLES_TSV);
 

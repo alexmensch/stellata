@@ -60,9 +60,8 @@ rows and is a correctness change, never a refactor.
 scripts/binaries/
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
-                                  multiples.tsv, the Gaia astrometry
-                                  request and the binding verdicts to
-                                  emitArtifacts behind the row bands and
+                                  multiples.tsv and the binding verdicts
+                                  to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
                                   inputs, holds the records to the
@@ -81,14 +80,19 @@ scripts/binaries/
   masses/                         A component's mass from its spectral
                                   type, and each pair's total mass, which
                                   Stage 5 reads. Own README.
+  multiples-record-pure.ts        MultiplesRecord, the closed value sets
+                                  and the properties a set's members
+                                  carry (which resolve tiers anchor on a
+                                  Gaia source_id; each orbit route's
+                                  elements, regime and Stage 6
+                                  estimates), and IdOrigin. The stages
+                                  import these from here, so a step that
+                                  runs a stage without reading the file
+                                  never reaches the codec
+                                  (../pipeline/step-table/README.md).
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the codec for
-                                  multiples.tsv — column roster, closed
-                                  value sets and the properties a set's
-                                  members carry (which resolve tiers
-                                  anchor on a Gaia source_id; each
-                                  orbit route's elements, regime and
-                                  Stage 6 estimates), per-column
-                                  decimal places,
+                                  multiples.tsv — column roster,
+                                  per-column decimal places,
                                   P and a positive and 0 ≤ e < 1, a
                                   comp and a WDS id on every row, so
                                   every row composes a synthetic key —

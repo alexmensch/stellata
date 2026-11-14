@@ -7,7 +7,7 @@ import {
 } from './propagate-pure';
 import { BI_WDS, alone, biPair, decomposed, ids, lone, resolved } from './resolve-fixture';
 import type { ResolvedComponent } from './components-pure';
-import { OWN, inheritedFrom } from '../multiples-tsv';
+import { OWN, inheritedFrom } from '../multiples-record-pure';
 
 const smear = (...cs: ResolvedComponent[]) => lone(propagateWithinSystem(cs.map(alone)));
 

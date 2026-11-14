@@ -8,7 +8,7 @@ import { polarToTangent } from '../sky-geometry-pure';
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
 
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-tsv';
+import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-record-pure';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 

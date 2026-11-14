@@ -10,7 +10,7 @@ import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, valueOf, type Bound, type DecomposedPair, type ResolvedComponent } from './components-pure';
-import { OWN, type IdOrigin } from '../multiples-tsv';
+import { OWN, type IdOrigin } from '../multiples-record-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';

@@ -1,8 +1,8 @@
 # Stage 6 — multiples.tsv records, in TypeScript
 
 The TypeScript Stage 6 of the binaries pipeline: every pair Stage 5 kept
-(`../optical/`) becomes two `MultiplesRecord`s, the shape `../multiples-tsv.ts`
-encodes, then each SIMBAD-known component no kept pair reached becomes one
+(`../optical/`) becomes two `MultiplesRecord`s (`../multiples-record-pure.ts`), the shape
+`../multiples-tsv.ts` encodes, then each SIMBAD-known component no kept pair reached becomes one
 standalone record; `../build-binaries.ts` calls it. What each column carries,
 the anchor offsets and the backstops, and why:
 [What each column carries](#what-each-column-carries).

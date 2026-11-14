@@ -77,7 +77,7 @@ order, primary then secondary, so pairing never rests on position.
 ## Identifier origins
 
 Each of a component's Gaia source, HIP and AT-HYG row is a `Bound`: the value
-and its `IdOrigin` (`../multiples-tsv.ts`), `own` or inherited from a named
+and its `IdOrigin` (`../multiples-record-pure.ts`), `own` or inherited from a named
 token of the same system. Every tier binds `own`; a rebind by the audit is
 `own`. The passes that copy record the kind:
 

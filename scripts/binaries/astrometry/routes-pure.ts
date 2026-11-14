@@ -6,7 +6,7 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { AthygRow } from '../load/athyg-pure';
 
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-tsv';
+import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,

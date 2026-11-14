@@ -8,7 +8,7 @@ import type { Parallax } from '../astrometry/system-anchors-pure';
 
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import { UNKNOWN_COMPONENT_MASS_MSUN } from '../masses/pair-masses';
-import type { OrbitVia } from '../multiples-tsv';
+import type { OrbitVia } from '../multiples-record-pure';
 import { NO_ORBIT, type PairOrbit } from '../orbits/select-orbit-pure';
 import type { OrbitElements } from '../orbits/nss-elements-pure';
 import type { DecomposedPair } from '../resolve/components-pure';

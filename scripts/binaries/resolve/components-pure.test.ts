@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { wdsPair } from '../../wds/wds-fixture';
-import { RESOLVE_VIA } from '../multiples-tsv';
+import { RESOLVE_VIA } from '../multiples-record-pure';
 import { RESOLVE_VIA_PRIORITY, componentsOf, decompose, freezePairs, unresolvedComponent } from './components-pure';
 
 describe('RESOLVE_VIA_PRIORITY', () => {

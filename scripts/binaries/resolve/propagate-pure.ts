@@ -8,7 +8,7 @@ import {
   findOwningPair, inheritAs, pairsByDiscoverer, priorityOf, working,
   type Bound, type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
-import { inheritedFrom, type IdOrigin, type InheritanceKind, type ResolveVia } from '../multiples-tsv';
+import { inheritedFrom, type IdOrigin, type InheritanceKind, type ResolveVia } from '../multiples-record-pure';
 
 interface SourceBinding {
   readonly gaia: Bound<string>;

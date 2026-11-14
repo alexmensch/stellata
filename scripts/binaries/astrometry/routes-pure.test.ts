@@ -8,7 +8,7 @@ import type { AthygRow } from '../load/athyg-pure';
 
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
-import { OWN } from '../multiples-tsv';
+import { OWN } from '../multiples-record-pure';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved, type Side } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
