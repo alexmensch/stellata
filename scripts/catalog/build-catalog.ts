@@ -64,7 +64,7 @@ import {
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
-  countedStageLineage, namedStageRun, stageLineage, upstreamLineage, type LineageBudget, type NamedStage, type StageLineageEmission,
+  countedStageLineage, namedStageRun, stageLineage, upstreamLineage, type NamedStage, type StageLineageEmission,
   type StageLineageRun,
 } from './lineage/stage-lineage';
 import {
