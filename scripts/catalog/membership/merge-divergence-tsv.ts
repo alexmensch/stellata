@@ -1,7 +1,7 @@
 // Codec for data/membership/merge-divergence.tsv. See merge-derivation/README.md#the-divergence-ledger.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity-pure';
+import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity/identity-pure';
 import {
   MERGE_DIVERGENCE_COLUMNS, MERGE_DIVERGENCE_KINDS, type MergeDivergenceRow,
 } from './ledger-rows-pure';

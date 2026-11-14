@@ -10,7 +10,7 @@ import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
-import { identityText } from '../lineage/identity-pure';
+import { identityText } from '../lineage/identity/identity-pure';
 import { KEY_CHANGE_KINDS } from '../lineage/lineage-diff-pure';
 import { readIdentity } from '../lineage/lineage-io';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';

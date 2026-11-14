@@ -1,6 +1,6 @@
 // The membership ledgers' row shapes and the closed sets the generator and its lineage share. See README.md#files-in-this-area.
 
-import { RECORD_KEY_COLUMNS, type RecordIdentifiers } from '../lineage/identity-pure';
+import { RECORD_KEY_COLUMNS, type RecordIdentifiers } from '../lineage/identity/identity-pure';
 
 /** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [

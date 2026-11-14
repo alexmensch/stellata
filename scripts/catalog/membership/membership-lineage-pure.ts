@@ -4,7 +4,7 @@ import {
   LABEL_DISPOSITIONS, LABEL_FIELDS, dispositionFields,
   type AliasDisposition, type AliasField, type LabelDisposition, type LabelField, type LabelFlip,
 } from '../classic-ids/label-merge/label-merge-pure';
-import { recordIdentifiersOf, type IdentityRow } from '../lineage/identity-pure';
+import { recordIdentifiersOf, type IdentityRow } from '../lineage/identity/identity-pure';
 import { idCell, oneOfCell } from '../../util/tsv/table-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
@@ -35,7 +35,7 @@ import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 
-/** The text form of each record's origin SourceRowRef (../lineage/README.md#identity--the-origin-source-row),
+/** The text form of each record's origin SourceRowRef (../lineage/identity/README.md),
  *  built by the caller, which holds the declarations. */
 export interface OriginKeys {
   /** By the row's index in the committed spine. */
@@ -845,8 +845,7 @@ export function identityLookup(
 }
 
 /** The change report's `multiples` column: the multiples.tsv components the
- *  record's HIP names, read off its columns until binaries' Binding
- *  provenance carries the join. */
+ *  record's HIP names. */
 export function multiplesComponentJoin(
   identityOf: (key: string) => IdentityRow | undefined, multiples: readonly MultiplesComponent[],
 ): DiffJoin {

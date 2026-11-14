@@ -1,7 +1,7 @@
 // Codec for data/membership/label-drops.tsv. See README.md#the-unattested-labels-leave-the-row.
 
 import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity-pure';
+import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity/identity-pure';
 import {
   LABEL_DROP_CELLS,
   LABEL_DROP_COLUMNS,
