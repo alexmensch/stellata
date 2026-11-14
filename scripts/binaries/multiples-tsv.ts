@@ -37,18 +37,6 @@ export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 export type ResolveVia = (typeof RESOLVE_VIA)[number];
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];
 
-/** Whether a tier anchors on a Gaia source_id: `ccdm_hip` anchors on a HIP
- *  and reaches the source through it. */
-export const RESOLVE_VIA_ANCHORS_SOURCE_ID: Readonly<Record<ResolveVia, boolean>> = {
-  orb6_hip: true,
-  athyg_gaia_native: true,
-  simbad_xid: true,
-  ccdm_hip: false,
-  position_pm: true,
-  position_nopm: true,
-  unresolved: false,
-};
-
 export type OrbitVia = (typeof ORBIT_VIA)[number];
 
 /** `hasElements`: the route selected orbital elements. `regime`: the legacy
