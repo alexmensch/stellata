@@ -10,7 +10,7 @@
   "request": "e4b2e3bd15214d8cf83be6ed9a2bb9b4561e3795",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
-    "data/gaia/gaia_dr3_astrometry_catalog.tsv",
+    "data/gaia/gaia_dr3_astrometry.tsv",
     "data/gaia/gaia_dr3_magnitude_pull.tsv"
   ]
 }

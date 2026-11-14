@@ -13,7 +13,7 @@ import { isReadable } from '../util/sources/source';
 import { columnTable } from '../util/tsv/table-pure';
 import { componentKey } from './component-tokens-pure';
 import { GAIA_ASTROMETRY } from '../catalog/sources/gaia-astrometry-source';
-import { CATALOG_ASTROMETRY_REQUEST } from '../refresh/gaia-request/catalog-astrometry-request-source';
+import { ASTROMETRY_REQUEST } from '../refresh/gaia-request/astrometry-request-source';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './load/curated-source';
 import { mscPairKey } from './load/msc-pure';
 import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
@@ -42,7 +42,7 @@ const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '
 const snapshotText = (file: string): string => readFileSync(resolve(__dirname, file), 'utf8');
 const asWritten = (snapshot: unknown): string => `${JSON.stringify(snapshot, null, 2)}\n`;
 
-describe.skipIf(![...INPUTS, CATALOG_ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
+describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
   let c: ReferenceCatalogs;
   let r: Stage2Result;
   let s3: Stage3Result;
@@ -81,7 +81,7 @@ describe.skipIf(![...INPUTS, CATALOG_ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH
   });
 
   it('finds every id it would weigh in the committed astrometry request', () => {
-    const requested = new Set(CATALOG_ASTROMETRY_REQUEST.read().map(String));
+    const requested = new Set(ASTROMETRY_REQUEST.read().map(String));
     expect([...astrometryRequestIds(r, c.indices)].filter((id) => !requested.has(id))).toEqual([]);
   });
 

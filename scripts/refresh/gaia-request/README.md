@@ -6,7 +6,7 @@ table, on the TypeScript runtime's `request` scope
 
 | Step | Table | Request | Output |
 |---|---|---|---|
-| `refresh:gaia-astrometry-catalog` | `gaia_source` | `gaia_catalog_source_id_request.tsv` (`build:astrometry-request`) | `gaia_dr3_astrometry_catalog.tsv` |
+| `refresh:gaia-astrometry` | `gaia_source` | `gaia_astrometry_source_id_request.tsv` (`build:astrometry-request`) | `gaia_dr3_astrometry.tsv` |
 | `refresh:gaia-gspc` | `synthetic_photometry_gspc` | the same request | `gaia_dr3_gspc.tsv` |
 | `refresh:gaia-dr2-neighbourhood` | `dr2_neighbourhood` | `gaia_dr2_neighbourhood_request.tsv` (frozen) | `gaia_dr2_neighbourhood.tsv` |
 
@@ -22,7 +22,7 @@ of the frozen dry-run pair.
 - `gaia-request-pure.ts` — the `PullTable`s: `ASTROMETRY_COLUMNS`, the one
   astrometry schema this pull and the magnitude pull (`../magnitude/`) write, its spot rows, GSPC's and
   the DR2 neighbourhood's tables, batch sizes and reach floors.
-- `catalog-astrometry-request-source.ts` — the astrometry request's
+- `astrometry-request-source.ts` — the astrometry request's
   declaration, in a leaf of its own so an entry reaches it only when it reads
   it ([Reached means read](../../util/sources/README.md#reached-means-read)).
 - `gaia-request-outputs.ts` — the three `declareOutputs`.

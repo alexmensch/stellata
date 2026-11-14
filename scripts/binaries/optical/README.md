@@ -110,4 +110,4 @@ parent pair was dropped — see Stage 6.) The separation-limit and
 escape-velocity gates depend on the full Gaia DR3 astrometry pull being
 current — see [`data/gaia/README.md`](../../../data/gaia/README.md) for the
 refresh ordering (`build:astrometry-request` regenerates the request list,
-then `refresh:gaia-astrometry-catalog` re-pulls before the next build).
+then `refresh:gaia-astrometry` re-pulls before the next build).

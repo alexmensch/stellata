@@ -57,7 +57,7 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
   the WDS resolution stage weighs with the catalogue's. Per-source
   RA/Dec/parallax/PM with errors and ref_epoch J2016.0; ~99% coverage on
   resolved WDS components. Committed as
-  `data/gaia/gaia_dr3_astrometry_catalog.tsv`.
+  `data/gaia/gaia_dr3_astrometry.tsv`.
 - **Gaia DR3 NSS two-body orbits** — `gaiadr3.nss_two_body_orbit`,
   the non-single-star catalogue, with Thiele-Innes orbital fits
   ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)). Covers the period regime

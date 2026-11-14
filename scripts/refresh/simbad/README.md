@@ -56,7 +56,7 @@ __init__.py      Package marker.
 
 `valueCohort` takes a set of source_ids and returns the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value-tier
 predicate. The set is `gaiaCompleteSourceIds` over both Gaia 5p tables —
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` for the primaries' sources and
+`data/gaia/gaia_dr3_astrometry.tsv` for the primaries' sources and
 `data/gaia/gaia_dr3_magnitude_pull.tsv` for the magnitude term's, which the
 first does not hold — the ids Gaia states a parallax AND a proper motion AND
 a radial velocity for. A row is OUT of the cohort only where that holds

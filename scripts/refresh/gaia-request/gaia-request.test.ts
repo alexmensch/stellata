@@ -41,7 +41,7 @@ const DR2_REPLY_ARI = DR2_REPLY_ESA.map((line) => line.replace(/true$/, '1').rep
 const NO_IDS: readonly bigint[] = [];
 
 const TABLES = [
-  { name: 'astrometry', table: astrometryTable(NO_IDS, ASTROMETRY_SPOTS), file: DATA_FILES.gaiaAstrometryCatalog, reply: ASTROMETRY_REPLY },
+  { name: 'astrometry', table: astrometryTable(NO_IDS, ASTROMETRY_SPOTS), file: DATA_FILES.gaiaAstrometry, reply: ASTROMETRY_REPLY },
   { name: 'gspc', table: gspcTable(NO_IDS), file: DATA_FILES.gaiaGspc, reply: GSPC_REPLY },
   { name: 'dr2 neighbourhood (ESA)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ESA },
   { name: 'dr2 neighbourhood (ARI)', table: dr2NeighbourhoodTable(NO_IDS), file: DATA_FILES.gaiaDr2Neighbourhood, reply: DR2_REPLY_ARI },

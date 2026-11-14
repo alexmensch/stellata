@@ -88,13 +88,13 @@ describe('the step table', () => {
   });
 
   it('keeps the astrometry request ↔ pull loop, and reads the pull into binaries on a plain edge', () => {
-    const astrometry = DATA_FILES.gaiaAstrometryCatalog;
+    const astrometry = DATA_FILES.gaiaAstrometry;
     expect(loaded.graph.keptLoops
-      .filter((e) => e.from === 'refresh:gaia-astrometry-catalog' && e.to === 'build:astrometry-request')
+      .filter((e) => e.from === 'refresh:gaia-astrometry' && e.to === 'build:astrometry-request')
       .flatMap((e) => e.files.map((f) => relative(REPO_ROOT, f)))).toEqual([astrometry]);
-    expect(edgeFiles('build:astrometry-request', 'refresh:gaia-astrometry-catalog'))
+    expect(edgeFiles('build:astrometry-request', 'refresh:gaia-astrometry'))
       .toEqual([DATA_FILES.astrometryRequest]);
-    expect(edgeFiles('refresh:gaia-astrometry-catalog', 'build:binaries')).toEqual([astrometry]);
+    expect(edgeFiles('refresh:gaia-astrometry', 'build:binaries')).toEqual([astrometry]);
   });
 
   it('selects the whole catalogue chain upstream of build:binaries-runtime, so build:data never reads a stale row-index map', () => {

@@ -14,7 +14,7 @@ scripts/catalog/sources/
   gaia-astrometry-source.ts       GAIA_ASTROMETRY and GaiaAstrometryCatalogRow,
     (+ test)                      the one Gaia DR3 astrometry row fold: the
                                   catalogue table reads it whole
-                                  (parseGaiaAstrometryCatalogTsv), and the
+                                  (parseGaiaAstrometryTsv), and the
                                   magnitude term streams its pull through it
                                   with a keep-set (gaiaAstrometryAccumulator,
                                   `../parse/README.md#streaming-a-committed-table`),

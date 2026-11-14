@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
 import {
-  GAIA_ASTROMETRY, gaiaAstrometryAccumulator, gaiaAstrometryLineReader, parseGaiaAstrometryCatalogTsv,
+  GAIA_ASTROMETRY, gaiaAstrometryAccumulator, gaiaAstrometryLineReader, parseGaiaAstrometryTsv,
 } from './gaia-astrometry-source';
 import { MAGNITUDE_PULL } from '../membership/magnitude-term/magnitude-pull-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 describe('gaia-astrometry-source', () => {
-  it('parseGaiaAstrometryCatalogTsv decodes rows and null cells', () => {
+  it('parseGaiaAstrometryTsv decodes rows and null cells', () => {
     const tsv = [
       'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error',
       '123\t100.5\t0.1\t-20.25\t0.1\t50.0\t0.1\t10.5\t0.1\t-3.5\t0.1\t2016.0\t1.2\t0\t8.0\t8.6\t7.3\t-110.51\t0.22',
       '456\t200.0\t\t30.0\t\t\t\t\t\t\t\t2016.0\t\t\t9.0\t\t\t\t',
       '',
     ].join('\n');
-    const map = parseGaiaAstrometryCatalogTsv(tsv, GAIA_ASTROMETRY);
+    const map = parseGaiaAstrometryTsv(tsv, GAIA_ASTROMETRY);
     expect(map.size).toBe(2);
     expect(map.get('123')).toEqual({
       raDeg: 100.5, decDeg: -20.25,
@@ -39,10 +39,10 @@ describe('gaia-astrometry-source', () => {
     });
   });
 
-  it('parseGaiaAstrometryCatalogTsv skips a row with no position or epoch', () => {
+  it('parseGaiaAstrometryTsv skips a row with no position or epoch', () => {
     const header = 'source_id\tra\tdec\tparallax\tparallax_error\tpmra\tpmdec\tref_epoch\truwe\tipd_frac_multi_peak'
       + '\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error';
-    const map = parseGaiaAstrometryCatalogTsv([
+    const map = parseGaiaAstrometryTsv([
       header,
       '1\t10\t20\t\t\t\t\t2016.0\t\t\t\t\t\t\t',
       '2\t\t20\t\t\t\t\t2016.0\t\t\t\t\t\t\t',
@@ -51,8 +51,8 @@ describe('gaia-astrometry-source', () => {
     expect([...map.keys()]).toEqual(['1']);
   });
 
-  it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {
-    expect(() => parseGaiaAstrometryCatalogTsv('source_id\tra\tdec\n', GAIA_ASTROMETRY)).toThrow(/missing required columns/);
+  it('parseGaiaAstrometryTsv throws on a missing column', () => {
+    expect(() => parseGaiaAstrometryTsv('source_id\tra\tdec\n', GAIA_ASTROMETRY)).toThrow(/missing required columns/);
   });
 
   it('gaiaAstrometryAccumulator keeps only the requested sources', () => {
@@ -77,7 +77,7 @@ describe('gaia-astrometry-source', () => {
     const seen = new Map<string, unknown>();
     const read = gaiaAstrometryLineReader(GAIA_ASTROMETRY, (sourceId, row) => seen.set(sourceId, row));
     for (const line of lines) read(line);
-    expect(seen).toEqual(parseGaiaAstrometryCatalogTsv(lines.join('\n'), GAIA_ASTROMETRY));
+    expect(seen).toEqual(parseGaiaAstrometryTsv(lines.join('\n'), GAIA_ASTROMETRY));
   });
 
   it('gaiaAstrometryAccumulator resolves source_id by name, not by position', () => {

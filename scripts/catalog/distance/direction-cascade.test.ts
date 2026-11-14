@@ -104,7 +104,7 @@ function inputs(overrides: Partial<DirectionInputs> = {}): DirectionInputs {
 
 describe('direction-cascade / tier epochs against SIMBAD', () => {
   it("pins Barnard's Star: Gaia DR3 J2016.0 → J2000.0 vs SIMBAD", () => {
-    // Gaia DR3 4472832130942575872 (data/gaia/gaia_dr3_astrometry_catalog.tsv)
+    // Gaia DR3 4472832130942575872 (data/gaia/gaia_dr3_astrometry.tsv)
     // vs SIMBAD's J2000 ICRS position (itself Gaia-propagated). Pins the
     // propagation formula against an independent J2000 reference, so the
     // target epoch is a literal 2000 here — decoupled from

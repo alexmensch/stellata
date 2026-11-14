@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
+    "data/gaia/gaia_astrometry_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
   },
   "outputs": {
     "data/bailer-jones/bailer-jones-dr3.tsv": "ddccc548c3e54ec938568a967b40eef99db895a7"

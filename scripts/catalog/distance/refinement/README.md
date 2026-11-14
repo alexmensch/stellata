@@ -154,7 +154,7 @@ The posteriors are a required input like every other table. Data refresh:
 **An eligible row cannot legitimately lack a posterior.** Eligibility is
 `gaia_dr3_inversion`, so the row has its own DR3 parallax and the publication
 covers every DR3 source that has one. An absence is this pull's scope — every
-source at `G ≤ 11`, plus the exported catalog request below that floor
+source at `G ≤ 11`, plus the astrometry request below that floor
 ([The deep population](/scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)) — having moved, not a gap
 upstream.
 

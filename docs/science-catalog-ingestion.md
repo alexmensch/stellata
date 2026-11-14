@@ -364,7 +364,7 @@ scales with the row's PM — the implied time offsets spread broadly
 single epoch bug. Worst cases reach tens of arcsec: 40 Eridani (Keid,
 5 pc, PM 4.1″/yr) is ~20″ inconsistent *within its own row*. Direct
 comparison against Gaia DR3 5p positions (local
-`gaia_dr3_astrometry_catalog.tsv`, J2016 back-propagated to J2000) shows the
+`gaia_dr3_astrometry.tsv`, J2016 back-propagated to J2000) shows the
 stored xyz is ~1.5″ (median, high-PM rows) from Gaia truth as well —
 the xyz column matches no single (source, epoch) pair we tested. It
 is a merge artifact without recoverable provenance. Corroborating:
@@ -508,7 +508,7 @@ from the same solution:
 
 1. **Gaia DR3 5p PM** (`pmra` = μ_α*, `pmdec`, mas/yr) — on 311,129
    of the 315,050 pulled source_ids (98.8%);
-   `data/gaia/gaia_dr3_astrometry_catalog.tsv` already carries the
+   `data/gaia/gaia_dr3_astrometry.tsv` already carries the
    columns.
 2. **HIP2 PM** for the rows the cascade routes to HIP2 (2,509
    without usable Gaia parallax + 138 PM-discrepant) —

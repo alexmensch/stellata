@@ -11,7 +11,7 @@ membership's second term.
 ```
 gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
-gaia_dr3_astrometry_catalog.tsv        ~58 MB, LFS. 5p astrometry +
+gaia_dr3_astrometry.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
                                        requested source_id (388,980
                                        rows) — tier 1 of the direction, rv, V
@@ -40,7 +40,7 @@ gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        request at 388,982 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
-gaia_catalog_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
+gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
                                        source_id request — the classic-ID
                                        binding gate's candidates UNION the
                                        membership derivation's candidates UNION
@@ -79,13 +79,13 @@ gaia_dr2_neighbourhood.tsv             ~320 KB, LFS. DR2 ↔ DR3 cross-match
   endpoints — [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only)):
   - `gaia_dr3_hip_xmatch.tsv` ← `hipparcos2_best_neighbour`.
   - `gaia_dr3_tyc_xmatch.tsv` ← `tycho2tdsc_merge_best_neighbour`.
-  - `gaia_dr3_astrometry_catalog.tsv` ← `gaia_source` (queried by the
+  - `gaia_dr3_astrometry.tsv` ← `gaia_source` (queried by the
     deduped source_id request).
   - `gaia_dr3_magnitude_pull.tsv` ← `gaia_source` (same schema again,
     selected on `phot_g_mean_mag` rather than on a source_id list).
   - `gaia_dr3_nss_two_body.tsv` ← `nss_two_body_orbit`.
   - `gaia_dr3_apsis.tsv` ← `astrophysical_parameters` (gspphot ∪
-    gspspec; scoped like the magnitude pull plus the catalog request —
+    gspspec; scoped like the magnitude pull plus the astrometry request —
     [The deep population](../../scripts/refresh/magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg)).
   - `gaia_dr3_gspc.tsv` ← `synthetic_photometry_gspc` (queried by the
     same source_id request the astrometry pull reads).
@@ -306,7 +306,7 @@ re-deriving:
   (`scripts/catalog/astrometry-request/README.md`). Also: Apsis
   Teff/logg/[M/H]/A0 + GSP-Spec
   `spectraltype_esphs` for the six-tier spectral resolver;
-  `gaia_dr3_astrometry_catalog.tsv` as direction-cascade tier 1 and
+  `gaia_dr3_astrometry.tsv` as direction-cascade tier 1 and
   the NSS source_id set for the `gaia_nss_systemic` routing tag
   ([Direction resolution](/scripts/catalog/distance/README.md#direction-resolution)). That same
   table's `phot_{g,bp,rp}_mean_mag` columns are the top tier of the Johnson V
@@ -316,7 +316,7 @@ re-deriving:
   rows the relation's colour bound excludes.
 - `scripts/binaries/build-binaries.ts` Stages 1–4 — HIP/Tyc
   cross-walks, per-component 5p astrometry (the same
-  `gaia_dr3_astrometry_catalog.tsv`), NSS orbital elements.
+  `gaia_dr3_astrometry.tsv`), NSS orbital elements.
 - `scripts/sid/dr-reconcile.ts` (`pnpm run sid:dr-reconcile`) — replays
   the request + neighbourhood pair as the [§ 6.2](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07) dry run;
   `scripts/sid/dr-reconcile-pure.test.ts` pins that classification
@@ -335,11 +335,11 @@ order is documented there. `refresh:gaia-magnitude` has no input beyond its
 own magnitude bound, so it runs at any point in that order. The pulls that
 read a source_id request file run after whatever writes it —
 `refresh:gaia-gspc`, `refresh:gaia-apsis` and `refresh:bailer-jones` read the
-same `gaia_catalog_source_id_request.tsv` as the astrometry pull, so
+same `gaia_astrometry_source_id_request.tsv` as the astrometry pull, so
 they share its ordering constraint:
 
-- `refresh:gaia-astrometry-catalog` reads
-  `gaia_catalog_source_id_request.tsv`, so it must run **after**
+- `refresh:gaia-astrometry` reads
+  `gaia_astrometry_source_id_request.tsv`, so it must run **after**
   `pnpm run build:astrometry-request` — which reads both cross-walks, so it
   runs after `refresh:gaia-hip` / `refresh:gaia-tyc`.
 - `refresh:gaia-dr2-neighbourhood` reads

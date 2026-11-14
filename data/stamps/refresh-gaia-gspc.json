@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "data/gaia/gaia_catalog_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
+    "data/gaia/gaia_astrometry_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
   },
   "outputs": {
     "data/gaia/gaia_dr3_gspc.tsv": "87317f54eb2f46f52a3e40db3e4def4625e9bdc1"

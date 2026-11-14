@@ -1,0 +1,14 @@
+{
+  "inputs": {
+    "data/gaia/gaia_astrometry_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
+  },
+  "outputs": {
+    "data/gaia/gaia_dr3_astrometry.tsv": "44c635c3b67bf96b62e95ee04a10bf29698b54b8"
+  },
+  "query": "f2e070f7d20c5703d4e8a57b397fde4ed4821620",
+  "answeredBy": [
+    "ESA-sync"
+  ],
+  "release": "Gaia DR3",
+  "requestFrom": []
+}

@@ -7,7 +7,7 @@ import {
 } from '../../util/sources/row-ref-pure';
 import { readTable, tableLineReader, type TableRow } from '../../util/tsv/table-pure';
 
-/** 5p astrometry row from `data/gaia/gaia_dr3_astrometry_catalog.tsv`.
+/** 5p astrometry row from `data/gaia/gaia_dr3_astrometry.tsv`.
  *  ra/dec are at J2016.0. `parallaxMas === null` marks a 2p
  *  (position-only) solution — Gaia detected the source but could not
  *  fit parallax + PM. */
@@ -103,7 +103,7 @@ export function gaiaAstrometryAccumulator(
   };
 }
 
-export function parseGaiaAstrometryCatalogTsv(
+export function parseGaiaAstrometryTsv(
   text: string,
   from: Declared & RowKeyed<string>,
 ): Map<string, GaiaAstrometryCatalogRow> {
@@ -114,9 +114,9 @@ export function parseGaiaAstrometryCatalogTsv(
 }
 
 export const GAIA_ASTROMETRY = defineSource({
-  file: DATA_FILES.gaiaAstrometryCatalog,
-  hint: 'Re-run `pnpm run refresh:gaia-astrometry-catalog`.',
+  file: DATA_FILES.gaiaAstrometry,
+  hint: 'Re-run `pnpm run refresh:gaia-astrometry`.',
   rowKey: { id: 'gaia-dr3-astrometry', text: (sourceId: string) => sourceId },
   parse: (input): Map<string, GaiaAstrometryCatalogRow> =>
-    parseGaiaAstrometryCatalogTsv(input.text(), GAIA_ASTROMETRY),
+    parseGaiaAstrometryTsv(input.text(), GAIA_ASTROMETRY),
 });

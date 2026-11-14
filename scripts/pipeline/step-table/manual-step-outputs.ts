@@ -36,8 +36,8 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     'scripts/refresh/gaia-whole-table/gaia-whole-table-outputs.ts', 'GAIA_NSS_OUTPUTS',
   ),
   tsManual(
-    { kind: 'pull' }, 'refresh:gaia-astrometry-catalog', 'scripts/refresh/gaia-request/refresh-gaia-astrometry-catalog.ts',
-    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_CATALOG_OUTPUTS',
+    { kind: 'pull' }, 'refresh:gaia-astrometry', 'scripts/refresh/gaia-request/refresh-gaia-astrometry.ts',
+    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_OUTPUTS',
   ),
   tsManual(
     { kind: 'pull' }, 'refresh:gaia-magnitude', 'scripts/refresh/magnitude/refresh-gaia-magnitude.ts',
