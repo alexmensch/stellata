@@ -107,7 +107,7 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(b)).toBe(false);
   });
 
-  it('adds exactly one glyph per hierarchical system, on the system anchor', () => {
+  it('adds exactly one glyph per hierarchical system, on its brightest drawn-pair end', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
     const b = makeStar({ hip: 200, absmag: 4.0 });
     const c = makeStar({ hip: 300, absmag: 3.0 });
@@ -123,7 +123,7 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(c)).toBe(false);
   });
 
-  it('skips a system that a prior pass already flagged (no second glyph)', () => {
+  it('skips a system a prior pass already flagged on a drawn-pair end', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
     const b = makeStar({ hip: 200, absmag: 4.0, flags: FLAG_BINARY_PRIMARY });
     const rows = [
@@ -148,6 +148,20 @@ describe('wingRenderablePrimaries', () => {
     ];
     expect(wing(rows, [a, b, c])).toBe(1);
     expect([a, b, c].map(isWinged)).toEqual([false, true, false]);
+  });
+
+  it('still wings the drawn pair when a prior pass flagged only a member with no drawn companion', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0, flags: FLAG_BINARY_PRIMARY });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const c = makeStar({ hip: 300, absmag: 6.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'BC', orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W1-BC', comp: 'B', hip: 200, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-BC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b, c])).toBe(1);
+    expect([a, b, c].map(isWinged)).toEqual([true, true, false]);
   });
 
   it('wings no system that draws no pair', () => {
