@@ -9,7 +9,7 @@ import { athygRow, gaia5pRow } from '../load/load-fixture';
 import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { componentsOf, valueOf, type Bound, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { componentsOf, resolveViaOf, valueOf, type Bound, type DecomposedPair, type GaiaBinding, type GaiaVia, type ResolvedComponent } from './components-pure';
 import { OWN, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
@@ -57,13 +57,15 @@ export function indices(over: {
 export function ids(c: ResolvedComponent | undefined): Side | undefined {
   if (c === undefined) return undefined;
   const { gaia, hip, athyg, ...rest } = c;
-  return { ...rest, gaiaSourceId: valueOf(gaia), hip: valueOf(hip), athygRow: valueOf(athyg) };
+  return { ...rest, gaiaSourceId: valueOf(gaia), resolveVia: resolveViaOf(c), hip: valueOf(hip), athygRow: valueOf(athyg) };
 }
 
 /** A component's fields, its identifiers given bare; each binds under its
- *  `*Origin`, else as the component's own. */
+ *  `*Origin`, else as the component's own. A Gaia source's tier defaults to
+ *  `simbad_xid`. */
 export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & {
   gaiaSourceId?: string | null;
+  resolveVia?: ResolveVia;
   hip?: number | null;
   athygRow?: AthygRow | null;
   gaiaOrigin?: IdOrigin;
@@ -71,16 +73,30 @@ export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & 
   athygOrigin?: IdOrigin;
 };
 
+function bindGaia(id: string | null | undefined, via: ResolveVia | undefined, origin: IdOrigin | undefined): GaiaBinding | null {
+  if (id === null || id === undefined) {
+    if (via !== undefined && via !== 'unresolved') throw new Error(`fixture: tier ${via} without a Gaia source`);
+    return null;
+  }
+  if (via === 'unresolved') throw new Error(`fixture: Gaia source ${id} tagged unresolved`);
+  return { value: id, origin: origin ?? OWN, via: via ?? 'simbad_xid' };
+}
+
 function bind<T>(value: T | null | undefined, origin: IdOrigin | undefined): Bound<T> | null {
   return value === null || value === undefined ? null : { value, origin: origin ?? OWN };
 }
 
+/** A side bound to `gaiaSourceId` by `via`, or to nothing. */
+export function sourced(gaiaSourceId: string | null, via: GaiaVia = 'orb6_hip'): Side {
+  return gaiaSourceId === null ? { gaiaSourceId } : { gaiaSourceId, resolveVia: via };
+}
+
 export function resolved(over: Side = {}): ResolvedComponent {
-  const { gaiaSourceId, hip, athygRow, gaiaOrigin, hipOrigin, athygOrigin, ...rest } = over;
+  const { gaiaSourceId, resolveVia, hip, athygRow, gaiaOrigin, hipOrigin, athygOrigin, ...rest } = over;
   return {
-    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true, resolveVia: 'unresolved', hd: null,
+    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true, hd: null,
     ...rest,
-    gaia: bind(gaiaSourceId, gaiaOrigin), hip: bind(hip, hipOrigin), athyg: bind(athygRow, athygOrigin),
+    gaia: bindGaia(gaiaSourceId, resolveVia, gaiaOrigin), hip: bind(hip, hipOrigin), athyg: bind(athygRow, athygOrigin),
   };
 }
 
@@ -138,7 +154,7 @@ export function biPair(wdsId: string, components: string, rho: number | null, th
 }
 
 function biSide([gaia, hip, via]: BiSide): Side {
-  return { gaiaSourceId: gaia, resolveVia: via ?? (gaia === null ? 'unresolved' : 'simbad_xid'), hip };
+  return { gaiaSourceId: gaia, resolveVia: via, hip };
 }
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */

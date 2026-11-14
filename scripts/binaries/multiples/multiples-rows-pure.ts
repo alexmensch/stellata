@@ -12,7 +12,7 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
-import { valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { resolveViaOf, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import type { AnchorOffsets } from './anchor-offsets-pure';
 import { gaiaPhotometryAbsmagCi } from './gaia-photometry-pure';
 import { pairMagnitudes, wdsDmag, type PairMagnitudes } from './pair-photometry-pure';
@@ -112,7 +112,7 @@ function componentFields(
   return {
     comp: c.component, ...hipFields(c.hip), ...gaiaFields(c.gaia), hd: athyg?.hd ?? c.hd, ...positionFields(position),
     absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
-    resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
+    resolveVia: resolveViaOf(c), astrometryVia, spectVia, photometryVia,
   };
 }
 

@@ -26,7 +26,6 @@ import type { Stage5Result } from './optical/attach-optical';
 import type { Stage6Result } from './multiples/attach-multiples';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from './multiples-tsv';
 import { astrometryRequestIds, type Stage2Result } from './resolve/resolve-pairs';
-import { componentsOf } from './resolve/components-pure';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
 import { SIMBAD_WDS_SPTYPE } from './load/simbad-wds-sptype-source';
@@ -94,11 +93,6 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
     expect(misses).toEqual([]);
   });
 
-  it('leaves no component with a Gaia source tagged unresolved', () => {
-    const tagged = componentsOf(r.pairs).filter((x) => x.gaia !== null && x.resolveVia === 'unresolved');
-    expect(tagged.map((x) => `${x.wdsId} ${x.discoverer} ${x.component}`)).toEqual([]);
-  });
-
   it('hands Stage 3 frozen decomposed pairs', () => {
     expect(Object.isFrozen(r.pairs)).toBe(true);
     expect(Object.isFrozen(r.pairs[0])).toBe(true);
@@ -129,6 +123,11 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
 
   it('encodes Stage 6\'s records to the committed multiples.tsv, byte for byte', () => {
     expect(MULTIPLES_TSV.serialize(s6.rows) === readFileSync(MULTIPLES_TSV_PATH, 'utf8')).toBe(true);
+  });
+
+  it('writes no row with a Gaia source tagged unresolved', () => {
+    const tagged = s6.rows.filter((row) => row.gaiaSourceId !== null && row.resolveVia === 'unresolved');
+    expect(tagged.map((row) => `${row.systemId} ${row.comp}`)).toEqual([]);
   });
 
   it('hands main frozen rows, and logs the Stage 6 lines', () => {

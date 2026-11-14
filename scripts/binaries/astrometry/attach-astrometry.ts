@@ -3,7 +3,7 @@
 import { fold, prefixed, share, type Share } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, type ResolveVia } from '../multiples-record-pure';
-import { componentsOf, type DecomposedPair } from '../resolve/components-pure';
+import { componentsOf, resolveViaOf, type DecomposedPair } from '../resolve/components-pure';
 import { siblingRejectionTally, type Stage2Result } from '../resolve/resolve-pairs';
 import { NSS_SYNTHESIS_OUTCOMES, synthesizeNssInnerPairs, type NssSynthesisOutcome } from './nss-inner-pairs-pure';
 import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia, type SiblingClaimedComponent } from './routes-pure';
@@ -45,7 +45,7 @@ export function routeTally(result: Stage3Result): Record<RoutedVia, number> {
 }
 
 export function resolutionTally(result: Stage3Result): Record<ResolveVia, number> {
-  return fold(RESOLVE_VIA, componentsOf(result.pairs), (c) => c.resolveVia);
+  return fold(RESOLVE_VIA, componentsOf(result.pairs), resolveViaOf);
 }
 
 export function nssTally(result: Stage3Result): Record<NssSynthesisOutcome, number> {

@@ -9,8 +9,7 @@ import { fold } from '../../util/counts/tally-pure';
 import { compareCodeUnits } from '../../util/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
-import { own, priorityOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
-import type { ResolveVia } from '../multiples-record-pure';
+import { ownGaia, priorityOf, working, type DecomposedPair, type Draft, type DraftPair, type GaiaVia } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
@@ -78,7 +77,7 @@ export function pairVector(pair: WdsPair): TangentOffset | null {
 export interface SystemContext {
   readonly wdsId: string;
   /** Token → each source bound to it → the strongest tier binding it there. */
-  readonly tokenSources: Map<string, Map<string, ResolveVia>>;
+  readonly tokenSources: Map<string, Map<string, GaiaVia>>;
   readonly tokenMag: Map<string, number>;
   readonly blendPairs: [string, string][];
   /** Sources bound to both sides of a measured pair: Gaia blends. */
@@ -111,7 +110,7 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
     for (const [tok, side, mag] of [[pTok, 'primary', pair.magPri], [sTok, 'secondary', pair.magSec]] as const) {
       pushTo(ctx.instances, tok, { pairIdx, side });
       const c = side === 'primary' ? p : s;
-      if (c.gaia !== null) bindStrongest(ctx.tokenSources, tok, c.gaia.value, c.resolveVia);
+      if (c.gaia !== null) bindStrongest(ctx.tokenSources, tok, c.gaia.value, c.gaia.via);
       if (mag !== null && mag < (ctx.tokenMag.get(tok) ?? Infinity)) ctx.tokenMag.set(tok, mag);
     }
     const v = pairVector(pair);
@@ -120,7 +119,7 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
   return systems;
 }
 
-function bindStrongest(tokenSources: SystemContext['tokenSources'], tok: string, src: string, via: ResolveVia): void {
+function bindStrongest(tokenSources: SystemContext['tokenSources'], tok: string, src: string, via: GaiaVia): void {
   let sources = tokenSources.get(tok);
   if (!sources) tokenSources.set(tok, (sources = new Map()));
   const held = sources.get(src);
@@ -213,7 +212,7 @@ export interface BindingVerdict {
 export type VerdictAction =
   /** Every instance of the letter rebinds to the source, under the tier an
    *  instance of the letter already holding it carries. */
-  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: ResolveVia }
+  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia }
   | { readonly kind: 'unbind'; readonly targets: readonly UnbindTarget[] };
 
 interface Reference {
@@ -479,7 +478,6 @@ function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPa
 function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: IdentifierIndices): void {
   if (c.hip !== null && (indices.hipToGaia.get(c.hip.value) === c.gaia?.value || winner.has(c.hip.value))) c.hip = null;
   c.gaia = null;
-  c.resolveVia = 'unresolved';
 }
 
 export function enforceBindingVerdicts(
@@ -494,9 +492,7 @@ export function enforceBindingVerdicts(
     enforced.add(v.wdsId);
     if (action.kind === 'rebind') {
       for (const i of ctx.instances.get(action.letter) ?? []) {
-        const c = instance(out, i);
-        c.gaia = own(action.sourceId);
-        c.resolveVia = action.via;
+        instance(out, i).gaia = ownGaia(action.sourceId, action.via);
       }
       continue;
     }

@@ -6,7 +6,7 @@ import {
   auditBindingIntegrity, bfsOffset, bindingAuditSourceIds, bindingIntegrityCounts, enforceBindingVerdicts,
   type BindingCandidate, type BindingVerdict, type Edge,
 } from './binding-audit-pure';
-import { componentsOf } from './components-pure';
+import { componentsOf, resolveViaOf } from './components-pure';
 import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, ids, type BiRow } from './resolve-fixture';
 import { OWN } from '../multiples-record-pure';
 
@@ -70,7 +70,7 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].winner?.sourceId).toBe(SB);
     expect(v[0].action).toEqual({ kind: 'rebind', letter: 'B', sourceId: SB, via: 'ccdm_hip' });
     const bs = componentsOf(enforceBindingVerdicts(audited, idx)).filter((c) => c.component === 'B');
-    expect(bs.map((c) => [c.gaia?.value, c.resolveVia])).toEqual([[SB, 'ccdm_hip'], [SB, 'ccdm_hip']]);
+    expect(bs.map((c) => [c.gaia?.value, resolveViaOf(c)])).toEqual([[SB, 'ccdm_hip'], [SB, 'ccdm_hip']]);
   });
 
   it('rebinds under the strongest tier among the letter\'s instances holding the source', () => {
@@ -172,7 +172,7 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA, via: 'simbad_xid' });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN });
+    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN, via: 'simbad_xid' });
     expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
@@ -260,10 +260,10 @@ describe('auditBindingIntegrity', () => {
 
   it('leaves its input as it was', () => {
     const pairs = biSystem([['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]]);
-    const before = componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia]);
+    const before = componentsOf(pairs).map((c) => [c.gaia, c.hip]);
     const idx = indices({ srcToAstrometry: astrometryMap([biAstro(SA, 0, 0), biAstro(SX, 0, 3)]) });
     expect(auditBindingIntegrity(pairs, idx, new Map()).verdicts).toHaveLength(1);
-    expect(componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia])).toEqual(before);
+    expect(componentsOf(pairs).map((c) => [c.gaia, c.hip])).toEqual(before);
   });
 });
 
