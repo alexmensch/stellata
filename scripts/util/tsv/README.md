@@ -135,8 +135,10 @@ and its parse each have one owner.
   column through `oneOf`, so an unknown value fails at the read rather than
   downstream. The spine (`INHERITED_SPINE`, frozen and read verbatim) is the
   one **cell record**, every column the string as written (`row.cells()`);
-  `BINDING_REVIEW` keeps the spine's key cells as written beside its typed
-  verdict, since the curated dispositions join on that text.
+  `BINDING_REVIEW` keeps the spine's key cells and `derived_source_id` as
+  written beside its typed verdict, since the curated dispositions join on
+  that text: the key through `bindingReviewKey`, the id by equality with
+  their own `derived_source_id` cell. Its read still refuses a malformed id.
 - A reader opens the file through `readArtifact` / `streamArtifact`
   (`../sources/`), which fail on a missing file or an LFS pointer before
   decoding. A declared `rowKey` (then required in the artifact's type) lets lineage cite its rows
