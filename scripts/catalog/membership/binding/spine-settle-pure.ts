@@ -97,15 +97,8 @@ function magCell(value: number | null): string {
   return value === null ? '' : value.toFixed(3);
 }
 
-/** Sol derives nothing, so its cells past the spine's own are empty. */
-function bindingReviewCells(row: SpineRow, b: SpineBinding, tables: PrimaryTables): BindingReviewCells {
+function bindingReviewCells(row: SpineRow, b: DerivedSpineBinding, tables: PrimaryTables): BindingReviewCells {
   const spine = { tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl };
-  if (b.outcome === 'sol') {
-    return {
-      ...spine, derived_source_id: '', derived_via: '', candidates: '', rejected: '',
-      v_mag: '', v_via: '', derived_g: '', derived_simbad: '',
-    };
-  }
   const { derived, gate } = b;
   const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
   const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
@@ -130,23 +123,30 @@ function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined
 function spineBindingOutcome(
   row: SpineRow, b: SpineBinding, tables: PrimaryTables, xids: SimbadWdsXidIndex | null,
 ): MembershipOutcome {
-  const derived = b.outcome === 'sol' ? null : b.derived;
-  const sourceId = derived?.sourceId ?? null;
+  const hipLetters = wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1));
+  if (b.outcome === 'sol') {
+    return {
+      kind: 'spine-binding', ...withLead('sol', LED_SPINE_OUTCOMES, [], BINDING_SOURCES),
+      sourceId: '', via: '', sourceLetters: '', hipLetters,
+    };
+  }
+  const { derived } = b;
+  const sourceId = derived.sourceId;
   const letters = {
     sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
-    hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
+    hipLetters,
   };
   if (isQueuedOutcome(b.outcome)) {
     return {
-      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, derived?.via ?? [], CONTESTED_LEADS),
+      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, derived.via, CONTESTED_LEADS),
       review: bindingReviewCells(row, b, tables), ...letters,
     };
   }
   return {
     kind: 'spine-binding',
-    ...withLead(b.outcome === 'bound' && derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, derived?.via ?? [], BINDING_SOURCES),
+    ...withLead(b.outcome === 'bound' && derived.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, derived.via, BINDING_SOURCES),
     sourceId: sourceId ?? '',
-    via: derived?.via.join('+') ?? '',
+    via: derived.via.join('+'),
     ...letters,
   };
 }
