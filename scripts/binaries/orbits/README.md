@@ -55,8 +55,9 @@ refresh carrying one outside the window stops the build at Stage 4.
 
 `stage4Counts` returns the `orbit_*` keys, one per route, folded through the
 one tally helper; `stage4Rates` derives `nss_orbit_rate`, the NSS share of
-the pairs with elements, through the tally module's `share`, which throws
-when no pair has any; `stage4Report` logs it. The keys are held to the
+the pairs with elements, through the tally module's `share`,
+`no-denominator` when no pair has any; `stage4Report` logs it, `n/a` when
+absent. The keys are held to the
 committed count snapshot, as Stage 3's are
 ([Counts](../astrometry/README.md#counts)).
 
@@ -64,7 +65,9 @@ committed count snapshot, as Stage 3's are
 
 - **Ω is folded into 0 ≤ Ω < π**, ω turned by π with it: the algebra cannot tell
   the ascending node from the descending one, and the fold picks one
-  orientation. ω then wraps into 0 ≤ ω < 2π with the divisor's sign (`floorMod`).
+  orientation. ω then wraps into 0 ≤ ω ≤ 2π through `../python-float-pure.ts`'s
+  `pyMod`: a zero remainder is +0, and an ω a rounding unit below zero comes
+  out as exactly 2π (284 committed Thiele-Innes rows, none shipped today).
 - **`t_periastron` counts days from J2016.0**, `GAIA_DR3_REF_EPOCH_JD`,
   derived from `../../catalog/distance/`'s `GAIA_DR3_REF_EPOCH`.
 - **`aAu` is always null** for an NSS solution: Stage 6 estimates it from

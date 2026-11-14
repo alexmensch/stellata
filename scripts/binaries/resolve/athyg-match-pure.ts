@@ -4,12 +4,14 @@ import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/e
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
+import { pyMod } from '../python-float-pure';
 import {
   ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
 } from './components-pure';
+import { OWN, inheritedFrom, type IdOrigin } from '../multiples-tsv';
 import { measuredOffset, splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 import { pushTo } from '../../util/map-buckets-pure';
@@ -52,7 +54,7 @@ export function findNearestAthyg(
   let best = Infinity;
   for (let dDec = -decPad; dDec <= decPad; dDec++) {
     for (let dRa = -raWindow; dRa <= raWindow; dRa++) {
-      const raCell = (((baseRa + dRa) % 360) + 360) % 360;
+      const raCell = pyMod(baseRa + dRa, 360);
       for (const i of grid.get(cellKey(raCell, baseDec + dDec)) ?? []) {
         if (i === excludeIdx) continue;
         const row = athyg[i];
@@ -80,8 +82,8 @@ export interface AthygMatch {
   /** Into `componentsOf(pairs)`. */
   readonly componentIdx: number;
   readonly athygIdx: number;
-  /** A secondary riding its primary's row because its own predicted match missed. */
-  readonly blendInherit: boolean;
+  /** Inherited: a secondary riding its primary's row because its own predicted match missed. */
+  readonly origin: IdOrigin;
 }
 
 /** A matched row whose HIP a disjoint, non-partner letter of the system already binds. */
@@ -93,8 +95,6 @@ export interface SiblingClaimedMatch {
 export interface AthygMatchOptions {
   /** Components that take no part. */
   readonly skip: (i: number, c: ResolvedComponent) => boolean;
-  /** Stage 3 opts in; Stage 2 does not, since the row's Gaia source would bind to the secondary too. */
-  readonly allowBlendInherit: boolean;
 }
 
 /** Primaries match the pair's precise coord; secondaries the (ρ, θ)-predicted
@@ -129,7 +129,7 @@ export function pairAthygMatches(
     const [, partner] = pairComponentTokens(pair.components)!;
     if (claimedBySibling(i, match, c.component, partner)) return;
     primaryIdxByPair.set(pair, match);
-    matches.push({ componentIdx: i, athygIdx: match, blendInherit: false });
+    matches.push({ componentIdx: i, athygIdx: match, origin: OWN });
   });
 
   components.forEach((c, i) => {
@@ -143,15 +143,13 @@ export function pairAthygMatches(
       const predicted = predictSecondaryPosition(pair.precise, offset);
       match = matchAthygEitherEpoch(predicted, grid, athyg, ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC, primaryIdx);
     }
-    if (match !== null) {
-      const [primaryToken] = splitComponents(pair.components)!;
-      if (!claimedBySibling(i, match, canonicalCompLetter(primaryToken, c.component), primaryToken)) {
-        matches.push({ componentIdx: i, athygIdx: match, blendInherit: false });
-        return;
-      }
+    const [primaryToken] = splitComponents(pair.components)!;
+    if (match !== null && !claimedBySibling(i, match, canonicalCompLetter(primaryToken, c.component), primaryToken)) {
+      matches.push({ componentIdx: i, athygIdx: match, origin: OWN });
+      return;
     }
-    if (opts.allowBlendInherit && primaryIdx !== null) {
-      matches.push({ componentIdx: i, athygIdx: primaryIdx, blendInherit: true });
+    if (primaryIdx !== null) {
+      matches.push({ componentIdx: i, athygIdx: primaryIdx, origin: inheritedFrom(primaryToken, pair.rhoLast === 0 ? 'blend' : 'partner') });
     }
   });
 
