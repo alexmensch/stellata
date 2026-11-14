@@ -10,7 +10,7 @@ import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, valueOf, type Bound, type DecomposedPair, type ResolvedComponent } from './components-pure';
-import { OWN, type IdOrigin } from '../multiples-record-pure';
+import { OWN, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
@@ -137,8 +137,8 @@ export function biPair(wdsId: string, components: string, rho: number | null, th
   });
 }
 
-function biSide(gaia: string | null, hip: number | null): Side {
-  return { gaiaSourceId: gaia, resolveVia: gaia === null ? 'unresolved' : 'simbad_xid', hip };
+function biSide([gaia, hip, via]: BiSide): Side {
+  return { gaiaSourceId: gaia, resolveVia: via ?? (gaia === null ? 'unresolved' : 'simbad_xid'), hip };
 }
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
@@ -148,15 +148,17 @@ export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): Gai
   });
 }
 
+/** A side's Gaia source and HIP; its tier defaults to `simbad_xid` when bound. */
+type BiSide = readonly [gaia: string | null, hip: number | null, via?: ResolveVia];
+
 export type BiRow = readonly [
-  components: string, rho: number | null, theta: number | null,
-  primary: readonly [string | null, number | null], secondary: readonly [string | null, number | null],
+  components: string, rho: number | null, theta: number | null, primary: BiSide, secondary: BiSide,
 ];
 
 /** One WDS system's pairs, each side bound as the row gives it. */
 export function biSystem(rows: readonly BiRow[], wdsId = BI_WDS): DecomposedPair[] {
   return rows.map(([comps, rho, theta, p, s]) =>
-    decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p[0], p[1]), secondary: biSide(s[0], s[1]) }));
+    decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p), secondary: biSide(s) }));
 }
 
 export function astrometryMap(rows: readonly GaiaAstrometryRow[]): Map<string, GaiaAstrometryRow> {

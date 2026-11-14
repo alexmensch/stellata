@@ -26,6 +26,7 @@ import type { Stage5Result } from './optical/attach-optical';
 import type { Stage6Result } from './multiples/attach-multiples';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from './multiples-tsv';
 import { astrometryRequestIds, type Stage2Result } from './resolve/resolve-pairs';
+import { componentsOf } from './resolve/components-pure';
 import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pure';
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
 import { SIMBAD_WDS_SPTYPE } from './load/simbad-wds-sptype-source';
@@ -91,6 +92,11 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
     const misses = truth.flatMap((row) => spotCheckProblems(row, best).map((p) => `[${row.category}] ${row.name}: ${p} ${row.note}`));
     expect(truth.length).toBeGreaterThan(0);
     expect(misses).toEqual([]);
+  });
+
+  it('leaves no component with a Gaia source tagged unresolved', () => {
+    const tagged = componentsOf(r.pairs).filter((x) => x.gaia !== null && x.resolveVia === 'unresolved');
+    expect(tagged.map((x) => `${x.wdsId} ${x.discoverer} ${x.component}`)).toEqual([]);
   });
 
   it('hands Stage 3 frozen decomposed pairs', () => {

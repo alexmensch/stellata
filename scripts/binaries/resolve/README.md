@@ -102,9 +102,11 @@ cleaner one would move a row; changing one is a correctness item of its own:
   `A`. The CCDM, position and seeding passes look pairs up this way.
 - **Gaia source_ids sort numerically** (`compareSourceIds`): the audit's
   source order, a contested label, the request file.
-- **A rebind keeps the instance's tier.** An instance an earlier verdict
-  unbound, which a later verdict rebinds, ends bound with `resolve_via`
-  `unresolved` — one component today (05371+2655 A), `stellata-hhaw.45.17.9`.
+- **A rebind takes its donor's tier.** Every instance of the rebound letter
+  carries the strongest `resolve_via` among the letter's instances already
+  bound to the winning source, read before enforcement, so the tag names the
+  tier that found the source it now holds. A rebind to a source no instance
+  of the letter holds throws.
 - **The audit's verdicts are all computed before any is applied.** Every
   verdict reads the per-system context built before enforcement, never a
   component, so the order verdicts apply in never changes one; the
