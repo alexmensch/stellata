@@ -15,7 +15,8 @@ simbad-specs-pure.ts        Namespace (parseIdent: suffix, component-lettered
                             with its number and letter, or unparsed), basic
                             columns, bibcoded groups,
                             flux bands, WIDENING_LADDER, GAIA_RELEASES, HD and
-                            WDS.
+                            WDS; identKey, simbadMatchKey and replyJoiner
+                            (+ test), how a reply joins its request.
 simbad-fetch-pure.ts        The four query shapes as phases (resolve, basic,
                             idents, releases, flux; identPhase builds an
                             idents phase over any namespaces) and their
@@ -91,8 +92,12 @@ asks on 2026-11-14). Anything joining a
 returned id back to its request goes through `parseIdent` (Python:
 `IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
 drops all whitespace as SIMBAD does but keeps case, so a component letter
-differing only in case is refused; keying on the raw returned id silently
-loses those rows. The fake matches the same way (`simbadMatchKey`).
+differing only in case does not join; keying on the raw returned id silently
+loses those rows. `replyJoiner` tells the three cases apart: a key asked,
+one equal to an asked key only case-folded (another id than any asked), and
+one matching nothing; what a caller does with each is its own rule
+([The run](../simbad-wds-xids/README.md#the-run)).
+The fake matches the same way (`simbadMatchKey`).
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
