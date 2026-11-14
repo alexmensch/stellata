@@ -9,6 +9,7 @@ import {
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
   imputeCompanionAbsmag,
+  adjustMinted,
   companionCi,
   isDisjointSingleLetter,
   parseMultiplesTsv,
@@ -16,6 +17,7 @@ import {
   parkedRefusals,
   promoteCompanions,
   recuratedMembers,
+  type MintedBrightness,
   type MultiplesTsvRow,
   type PromotionInputs,
   type PromotionStats,
@@ -1109,6 +1111,15 @@ describe('anchor flux dimming', () => {
     expect(stats.companionBlendDimmedAnchors).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.3078, 4);
     expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(1.5, 9);
+  });
+});
+
+describe('adjustMinted', () => {
+  it('records one post-pass and refuses a second', () => {
+    const b: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0, adjustment: null };
+    adjustMinted(b, { pass: 'blend-split', n: 2 });
+    expect(b.adjustment).toEqual({ pass: 'blend-split', n: 2 });
+    expect(() => adjustMinted(b, { pass: 'anchor-re-split', anchorIdx: 1 })).toThrow(/anchor-re-split after blend-split/);
   });
 });
 

@@ -14,7 +14,7 @@ const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): Prom
   { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', synthKey: 'synth-22266-1645-B', ...anchors }
 );
 const recordKey = (idx: number): string => `spine:${idx}`;
-const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0.12345, adjustments: [] };
+const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0.12345, adjustment: null };
 const rowsOf = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => decisionRows(promotionDecision(promoted(outcome, anchors), recordKey));
 const outcomeRow = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => rowsOf(outcome, anchors)[0];
 
@@ -24,7 +24,7 @@ const OUTCOMES: RowOutcome[] = [
   { kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: false, ownedFit: false },
   { kind: 'adopted', idx: 3, via: 'earlier-mint' },
   { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recurated: null },
-  { kind: 'minted', idx: 5, synthetic: true, brightness: { source: 'wds_mag', spectMsFromOwnAbsmag: true, ci: 'spectral_derived', av: 0.5, adjustments: [] }, constellationSplit: true },
+  { kind: 'minted', idx: 5, synthetic: true, brightness: { source: 'wds_mag', spectMsFromOwnAbsmag: true, ci: 'spectral_derived', av: 0.5, adjustment: null }, constellationSplit: true },
   { kind: 'minted', idx: 6, synthetic: false, brightness: own, constellationSplit: false },
   { kind: 'primary-unresolved' },
   { kind: 'unpaired' },
@@ -70,17 +70,16 @@ describe('promotionDecision', () => {
     ]);
   });
 
-  it('writes each post-pass that changed the minted absmag after its source, in the order it ran', () => {
-    const rows = rowsOf({
-      kind: 'minted', idx: 6, synthetic: false, constellationSplit: false,
-      brightness: {
-        ...own, source: 'dmag_imputed',
-        adjustments: [{ pass: 'blend-split', n: 3 }, { pass: 'anchor-re-split', anchorIdx: 2 }],
-      },
-    });
-    expect(rows.slice(1, 4).map((r) => [r.code, paramsOf(r)])).toEqual([
-      ['promotion.brightness.dmag-imputed', {}],
+  it('writes the post-pass that changed the minted absmag beside its source', () => {
+    const adjusted = (brightness: MintedBrightness) => rowsOf({
+      kind: 'minted', idx: 6, synthetic: false, constellationSplit: false, brightness,
+    }).slice(1, 3).map((r) => [r.code, paramsOf(r)]);
+    expect(adjusted({ ...own, adjustment: { pass: 'blend-split', n: 3 } })).toEqual([
+      ['promotion.brightness.own', {}],
       ['promotion.brightness.blend-split', { n: '3' }],
+    ]);
+    expect(adjusted({ ...own, source: 'dmag_imputed', adjustment: { pass: 'anchor-re-split', anchorIdx: 2 } })).toEqual([
+      ['promotion.brightness.dmag-imputed', {}],
       ['promotion.brightness.anchor-re-split', { record: 'spine:2' }],
     ]);
   });
@@ -88,7 +87,7 @@ describe('promotionDecision', () => {
   it('names which values the A_V corrected: absmag unless class-derived, B−V only when observed', () => {
     const dust = (source: 'own' | 'spectral', ci: 'own' | 'spectral_derived' | 'none'): string | undefined => rowsOf({
       kind: 'minted', idx: 6, synthetic: false, constellationSplit: false,
-      brightness: { source, spectMsFromOwnAbsmag: false, ci, av: 0, adjustments: [] },
+      brightness: { source, spectMsFromOwnAbsmag: false, ci, av: 0, adjustment: null },
     }).find((r) => r.code.startsWith('promotion.dust.'))?.code;
     expect([
       dust('own', 'own'), dust('own', 'none'), dust('spectral', 'own'), dust('spectral', 'spectral_derived'),

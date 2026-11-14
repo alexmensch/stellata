@@ -213,13 +213,21 @@ export interface MintedBrightness {
   ci: CompanionCiVia;
   /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
   av: number;
-  /** Each post-pass that changed the minted absmag, in the order it ran. */
-  adjustments: MintedAdjustment[];
+  /** The post-pass that changed the minted absmag, if one did. */
+  adjustment: MintedAdjustment | null;
 }
 
 export type MintedAdjustment =
   | { pass: 'blend-split'; n: number }
   | { pass: 'anchor-re-split'; anchorIdx: number };
+
+/** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
+export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
+  if (b.adjustment !== null) {
+    throw new Error(`minted record adjusted by ${a.pass} after ${b.adjustment.pass}`);
+  }
+  b.adjustment = a;
+}
 
 
 /** See README.md#promotion-lineage. */
@@ -1444,7 +1452,7 @@ function promoteRow(
   }
   const ci = companionCi(row, spectral.info, av);
   const brightness: MintedBrightness = {
-    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustments: [],
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustment: null,
   };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
@@ -1942,7 +1950,7 @@ export function promoteCompanions(
     const splitMag = 2.5 * Math.log10(bucket.length);
     for (const { star, spectral, brightness } of bucket) {
       star.absmag += splitMag;
-      brightness.adjustments.push({ pass: 'blend-split', n: bucket.length });
+      adjustMinted(brightness, { pass: 'blend-split', n: bucket.length });
       star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
     }
   }
@@ -2126,7 +2134,7 @@ export function promoteCompanions(
     anchor.absmag = absoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
-      cand.minted?.adjustments.push({ pass: 'anchor-re-split', anchorIdx: cand.anchorIdx });
+      if (cand.minted !== null) adjustMinted(cand.minted, { pass: 'anchor-re-split', anchorIdx: cand.anchorIdx });
       cand.member.physicalRadius = physicalRadius(
         cand.member.absmag, cand.memberSpectral,
       ).rSun;

@@ -183,7 +183,7 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
     case 'minted':
       return decided(row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }), [
         flag(true, brightnessFacet(o.brightness.source)),
-        ...o.brightness.adjustments.map((a) => adjustmentFacet(a, recordKey)),
+        o.brightness.adjustment !== null && adjustmentFacet(o.brightness.adjustment, recordKey),
         flag(o.brightness.spectMsFromOwnAbsmag, 'spectral.ms-from-own-absmag'),
         flag(true, COLOUR_CODES[o.brightness.ci]),
         facet(dustFacet(o.brightness), dustParams(o.brightness.av)),
