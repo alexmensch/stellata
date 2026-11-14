@@ -18,6 +18,14 @@ describe('stage3Rates', () => {
       .toEqual({ gaia_resolve_rate: { kind: 'rated', value: 0.375 }, hip2_fallback_rate: { kind: 'rated', value: 0.25 } });
   });
 
+  it('counts the position_pm and position_nopm tiers as Gaia-resolved, and ccdm_hip and unresolved as not', () => {
+    const tiers = {
+      resolution_orb6_hip: 1, resolution_athyg_gaia_native: 1, resolution_simbad_xid: 1,
+      resolution_position_pm: 2, resolution_position_nopm: 3, resolution_ccdm_hip: 4, resolution_unresolved: 4,
+    };
+    expect(stage3Rates(counts({ components_total: 16, ...tiers })).gaia_resolve_rate).toEqual({ kind: 'rated', value: 0.5 });
+  });
+
   it('has no denominator for either rate when there are no components', () => {
     expect(stage3Rates(counts({})))
       .toEqual({ gaia_resolve_rate: { kind: 'no-denominator' }, hip2_fallback_rate: { kind: 'no-denominator' } });

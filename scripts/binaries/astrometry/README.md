@@ -96,8 +96,11 @@ its NSS inner pairs and AT-HYG fallback add to — `wds_pairs_total`,
 pair's children inherit their carrier's tier) and
 `athyg_match_sibling_claimed_rejected` (Stage 2's position tier plus this
 fallback), typed `Stage3Counts` so a key read is a key returned.
-`stage3Rates` derives `gaia_resolve_rate`, over the tiers the codec's
-`RESOLVE_VIA_ANCHORS_SOURCE_ID` marks, and `hip2_fallback_rate`, each through
+`stage3Rates` derives `gaia_resolve_rate`, the share of components bound by a
+tier that anchors on a Gaia source_id — `orb6_hip`, `athyg_gaia_native`,
+`simbad_xid`, `position_pm` and `position_nopm`, as the codec's
+`RESOLVE_VIA_ANCHORS_SOURCE_ID` marks them; `ccdm_hip` reaches its source
+through a HIP and is not counted — and `hip2_fallback_rate`, each through
 `share`, `no-denominator` on zero components; `stage3Report` logs both,
 `n/a` when absent. Every
 key is held exactly to the committed snapshot
