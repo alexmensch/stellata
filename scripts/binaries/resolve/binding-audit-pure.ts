@@ -6,7 +6,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
-import { compareCodeUnits } from '../../util/tsv/artifact-pure';
+import { compareCodeUnits } from '../../util/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';

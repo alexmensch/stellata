@@ -28,6 +28,10 @@ same thing — single-use helpers stay with their consumer.
 - `map-buckets-pure.ts` (+ test) — `groupBy`, `pushTo` and `addTo`: a
   list or set per map key, created on first use, in first-seen key order.
   The binaries stages' indexes and grids group through it.
+- `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
+  comparator (numbers and bigints by value, strings by code unit), and
+  `compareCodeUnits`, its string case: the same order on every machine,
+  unlike `localeCompare`.
 
 - `baker_constants.py` (+ test) — `CONSTANTS`, `src/astro-core/baker-constants.json`
   loaded once: the facts the Python asset bakers share with TypeScript

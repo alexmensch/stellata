@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { ascending, compareCodeUnits, defineArtifact, nullableCell } from './artifact-pure';
+import { defineArtifact, nullableCell } from './artifact-pure';
 import { firstDifferingLine } from './committed-round-trip';
 
 interface Rec { key: string; n: number | null }
@@ -50,15 +50,6 @@ describe('defineArtifact', () => {
     const feed = artifact('as-given').lineReader((r) => seen.push(r));
     for (const line of ['key\tn', 'b\t2', 'a\t']) feed(line);
     expect(seen).toEqual(RECS);
-  });
-});
-
-describe('ascending', () => {
-  it('orders numbers and bigints by value, strings by code unit', () => {
-    expect([10, 9, -1].sort(ascending)).toEqual([-1, 9, 10]);
-    expect([2n ** 60n + 1n, 2n ** 60n, 3n].sort(ascending)).toEqual([3n, 2n ** 60n, 2n ** 60n + 1n]);
-    expect(['b', 'B', 'a'].sort(compareCodeUnits)).toEqual(['B', 'a', 'b']);
-    expect(ascending(7, 7)).toBe(0);
   });
 });
 

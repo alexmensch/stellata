@@ -34,9 +34,9 @@ scripts/util/tsv/
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec;
                               tsvLine / tsvText, its line and file layout,
                               which the refresh pulls' formatter writes
-                              through too; `ascending`, the one three-way
-                              `<` comparator (numbers, bigints, strings),
-                              and `compareCodeUnits`, its string case.
+                              through too; `byText`, a record order by a
+                              text key (`../order-pure.ts`'s
+                              `compareCodeUnits`).
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
                               for byte; a failure names the first line
