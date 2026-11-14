@@ -3,6 +3,7 @@
 // bridge edges for review. See scripts/sid/README.md.
 
 import { sourceIdRequestSource } from '../catalog/astrometry-request/source-id-request-source';
+import { percentOf } from '../util/counts/tally-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { DR_RECONCILE_OUTPUTS } from './dr-reconcile-outputs';
 import {
@@ -55,10 +56,9 @@ export function main(): void {
   const rows = neighbourhood.read(args.riskCol, args.candidateCol);
   const c = classifyDrTransition(riskIds, rows);
 
-  const pct = (n: number) => `${((n / riskIds.length) * 100).toFixed(2)}%`;
   const q = c.distanceQuantiles;
   console.log(`risk set: ${riskIds.length} ids (${args.riskNs}) vs ${rows.length} cross-match rows`);
-  console.log(`  carried 1:1 (unique ≤ ${ACCEPT_MAS} mas): ${c.carried.length} (${pct(c.carried.length)})`);
+  console.log(`  carried 1:1 (unique ≤ ${ACCEPT_MAS} mas): ${c.carried.length} (${percentOf(c.carried.length, riskIds.length, 2)})`);
   console.log(`    same source_id kept: ${c.carriedSameId}`);
   console.log(`    distance p50/p90/p99/max (mas): ${q.p50}/${q.p90}/${q.p99}/${q.max}`);
   console.log(`    |Δmag| > ${MAG_REVIEW_DELTA} review flags: ${c.magFlagged.length}`);

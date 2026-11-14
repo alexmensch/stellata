@@ -16,7 +16,7 @@ import {
 import { athygDirectionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
-  findOwningPair, own, pairRows, pairsByDiscoverer, unresolvedComponent, working,
+  findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import {
@@ -86,12 +86,12 @@ export function resolveComponent(
       candidates.push(e.hip);
       if (!hdByHip.has(e.hip)) hdByHip.set(e.hip, e.hd);
       const gaia = indices.hipToGaia.get(e.hip);
-      if (gaia !== undefined) return { ...base, gaia: own(gaia), resolveVia: 'orb6_hip', hip: own(e.hip), hd: hdByHip.get(e.hip)! };
+      if (gaia !== undefined) return { ...base, gaia: ownGaia(gaia, 'orb6_hip'), hip: own(e.hip), hd: hdByHip.get(e.hip)! };
     }
   }
   for (const hip of candidates) {
     const gaia = gaiaFromAthygViaHip(hip, indices);
-    if (gaia !== null) return { ...base, gaia: own(gaia), resolveVia: 'athyg_gaia_native', hip: own(hip), hd: hdByHip.get(hip)! };
+    if (gaia !== null) return { ...base, gaia: ownGaia(gaia, 'athyg_gaia_native'), hip: own(hip), hd: hdByHip.get(hip)! };
   }
   return candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! };
 }
@@ -107,8 +107,7 @@ export function resolveViaSimbad(
     const xid = xids.get(componentKey(c.wdsId, c.component));
     if (xid === undefined) continue;
     if (xid.gaiaSourceId !== null) {
-      c.gaia = own(xid.gaiaSourceId);
-      c.resolveVia = 'simbad_xid';
+      c.gaia = ownGaia(xid.gaiaSourceId, 'simbad_xid');
     }
     if (c.hip === null && xid.hip !== null) c.hip = own(xid.hip);
   }
@@ -204,8 +203,7 @@ function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
   if (c.hip === null) c.hip = own(hip);
   const gaia = indices.hipToGaia.get(hip) ?? gaiaFromAthygViaHip(hip, indices);
   if (gaia !== null) {
-    c.gaia = own(gaia);
-    c.resolveVia = 'ccdm_hip';
+    c.gaia = ownGaia(gaia, 'ccdm_hip');
   }
 }
 
@@ -291,8 +289,7 @@ export function resolveViaPosition(
     if (c.athyg === null) c.athyg = own(row);
     if (c.hip === null && row.hip !== null) c.hip = own(row.hip);
     if (row.gaia !== null) {
-      c.gaia = own(row.gaia);
-      c.resolveVia = 'athyg_gaia_native';
+      c.gaia = ownGaia(row.gaia, 'athyg_gaia_native');
     }
   }
   const rejected = siblingClaimed.map((s): SiblingRejection => ({

@@ -29,7 +29,7 @@ import { loadCatalog } from '../catalog-lookup';
 import {
   FLAG_BINARY_COMPANION_ONLY, type SearchEntry, CATALOG_MANIFEST_FILENAME,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { recordKey } from '../lineage/identity-pure';
+import { recordKey } from '../lineage/identity/identity-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   spineDesignations,

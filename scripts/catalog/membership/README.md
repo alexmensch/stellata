@@ -33,9 +33,10 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
+  additions-ledger-tsv.ts         The four ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts
+  merge-divergence-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,
                                   apart from the codecs so the row-assembly
                                   rules reach no ledger file. The review
@@ -53,7 +54,7 @@ scripts/catalog/membership/
                                   module's, so no phase reaches a declaration.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
     (+ test)                      outcome union and its serialiser, the
-                                  four ledgers as views of it
+                                  five ledgers as views of it
                                   (#membership-lineage), its count blocks'
                                   types, membershipTotals and the build
                                   log's summary, and the change
@@ -63,8 +64,9 @@ scripts/catalog/membership/
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, then runs each phase in order
                                   — binding/spine-settle, spine side, the
-                                  fold check, additions/admission, the
-                                  magnitude rows — and joins their rows,
+                                  merge-derivation shadow, the fold check,
+                                  additions/admission, the magnitude rows —
+                                  and joins their rows,
                                   outcomes and identity rows. The test
                                   covers every phase through it. Pure.
   spine-side-pure.ts              The spine side: the label merge on the
@@ -124,6 +126,10 @@ scripts/catalog/membership/
   magnitude-term/                 The union's second term — the V floor, its
                                   filter over the Gaia pull and the 5p
                                   astrometry that comes with it. Own README.
+  merge-derivation/               Each spine row's merge decision held
+                                  against what the primaries' own links
+                                  derive, the pair rule, and the divergence
+                                  ledger it writes. Moves no row. Own README.
   spine-corrections/              The curated corrections to AT-HYG's merge
                                   decisions, and the spine they leave. Own
                                   README.
@@ -165,7 +171,7 @@ gaia_source_id  binding  routes  term  origin_key
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 - `origin_key` is the record's lineage origin key, the same one its lineage
   rows and identity row are keyed on
-  ([Identity](../lineage/README.md#identity--the-origin-source-row)). `readStars`
+  ([Identity](../lineage/identity/README.md)). `readStars`
   carries it onto the record, so a later stage cites a record by it rather
   than re-deriving it from the identifier cells.
 
@@ -375,8 +381,10 @@ addition's binding, each label flip and label drop — and
 new variant without a row fails typecheck. `ParamsOf` declares each code's
 params beside the codes; the writer and the views both read through it, so
 a renamed key fails typecheck on both sides. Every record gets an admission
-row. `membershipLedgers` generates the four ledgers from those rows and the
-identity rows alone, byte-identical to the files they replaced as writers.
+row. `membershipLedgers` generates the five ledgers from those rows and the
+identity rows alone; the first four are byte-identical to the files they
+replaced as writers, and `merge-divergence.tsv` was born a view
+([The divergence ledger](merge-derivation/README.md#the-divergence-ledger)).
 
 **The count snapshot is a fold of these rows.** `membership-manifest-expected.json`
 is staged ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)):

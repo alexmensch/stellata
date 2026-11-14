@@ -12,7 +12,7 @@ third is a finding rather than precedent. The WGSN tables
 fixed spelling, so that module splits their lines itself through
 `splitCsvLine` — and parses each cell through this
 folder's strict cell parsers. Record lineage's stage and identity files
-(`../../catalog/lineage/lineage-row-pure.ts`, `identity-pure.ts`) are
+(`../../catalog/lineage/lineage-row-pure.ts`, `identity/identity-pure.ts`) are
 gzipped build artifacts, one per stage, read from whichever directory a
 diff or `trace` names; an artifact codec declares one fixed file, and that
 declaration is what a step's input set is derived from, so they write their

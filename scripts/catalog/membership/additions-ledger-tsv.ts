@@ -2,7 +2,7 @@
 
 import { isValidDesignation } from '../../sid/sid-pure';
 import { defineArtifact } from '../../util/tsv/artifact-pure';
-import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity-pure';
+import { recordKeyCells, rowRecordIdentifiers } from '../lineage/identity/identity-pure';
 import {
   ADDITION_REASONS,
   COMPONENT_REASON_PREFIX,

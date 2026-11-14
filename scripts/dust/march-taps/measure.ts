@@ -6,6 +6,7 @@ import {
   avAlongSegment, sampleEncodedAt, type DustGrid,
 } from '../../catalog/distance/dust/dust-deextinction-pure';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../src/astro-core/galactic-coords';
+import { percentOf } from '../../util/counts/tally-pure';
 import {
   DUST_TAPS_MAX,
   DUST_TAP_PC,
@@ -115,7 +116,7 @@ export async function main(): Promise<void> {
     const lens = stars.map((s) => inCubeLength(pos, s, p.boundsPc));
     const inCube = lens.filter((l) => l !== null).length;
     console.log(
-      `camera: ${name} — ${((inCube / stars.length) * 100).toFixed(1)}% of sightlines cross the cube`,
+      `camera: ${name} — ${percentOf(inCube, stars.length)} of sightlines cross the cube`,
     );
     console.log(
       `  ${'scheme'.padEnd(26)} ${'mean taps'.padStart(9)} ${'p50'.padStart(8)} ` +

@@ -66,6 +66,13 @@ describe('multiples.tsv codec', () => {
     expect(MULTIPLES_TSV.serialize([row])).toBe(text);
   });
 
+  it('rejects a Gaia source tagged unresolved and a tier with no Gaia source', () => {
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ gaia_source_id: '42', resolve_via: 'unresolved' })}\n`))
+      .toThrow(/gaia_source_id 42 with resolve_via unresolved/);
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ hip: '7', resolve_via: 'simbad_xid' })}\n`))
+      .toThrow(/resolve_via simbad_xid with no gaia_source_id/);
+  });
+
   it('rejects an origin without its identifier, an identifier without its origin, and an unknown kind', () => {
     for (const [over, message] of [
       [{ hip_origin: 'own' }, /hip_origin "own" names the origin of no identifier/],

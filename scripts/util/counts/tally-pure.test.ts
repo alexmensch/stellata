@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, formatPartition, formatShare, percentOf, prefixed, renamed, share, sumOf } from './tally-pure';
+import { emptyTallyPartition, fold, formatFraction, formatPartition, floorVerdict, formatShare, percentOf, prefixed, renamed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -98,5 +98,23 @@ describe('percentOf', () => {
   it('rounds to one decimal, and reads an empty whole as n/a', () => {
     expect(percentOf(1, 3)).toBe('33.3%');
     expect(percentOf(0, 0)).toBe('n/a');
+  });
+
+  it('takes a wider precision where a figure needs one', () => {
+    expect(percentOf(1, 3, 2)).toBe('33.33%');
+    expect(formatFraction(0.00125, 2)).toBe('0.13%');
+    expect(percentOf(0, 0, 2)).toBe('n/a');
+  });
+});
+
+describe('floorVerdict', () => {
+  it('meets a rated share at or over the floor and is under for one below it', () => {
+    expect(floorVerdict(share(95, 100), 0.95)).toBe('meets');
+    expect(floorVerdict(share(94, 100), 0.95)).toBe('under');
+  });
+
+  it('never meets with a share that has no denominator, whatever the floor', () => {
+    expect(floorVerdict(share(0, 0), 0.95)).toBe('no-denominator');
+    expect(floorVerdict(share(0, 0), 0)).toBe('no-denominator');
   });
 });

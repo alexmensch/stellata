@@ -56,7 +56,9 @@ describe('coverageCheck', () => {
   });
 
   it('fails under the floor and passes at it', () => {
-    expect(coverageCheck('t', rows, 'id', 4, { groups: [...groups], floor: 0.6 }).kind).toBe('fail');
+    expect(coverageCheck('t', rows, 'id', 4, { groups: [...groups], floor: 0.6 })).toMatchObject({
+      kind: 'fail', message: 't: coverage 2 (50.0%) is under the floor 60%',
+    });
     expect(coverageCheck('t', rows, 'id', 4, { groups: [...groups], floor: 0.5 }).kind).toBe('pass');
   });
 
@@ -65,5 +67,13 @@ describe('coverageCheck', () => {
     const check = coverageCheck('t', many, 'id', 2, { groups: [groups[0]], floor: 0.6 });
     expect(check.kind).toBe('fail');
     expect(check.kind === 'fail' && check.report).toBe('t: coverage of 2 requested\n  row present 1 (50.0%)\n  geo 1 (50.0%)\n  union 1 (50.0%)');
+  });
+
+  it('reports an empty request as n/a, and fails it against a floor', () => {
+    const report = 't: coverage of 0 requested\n  row present 0 (n/a)\n  geo 0 (n/a)\n  union 0 (n/a)';
+    expect(coverageCheck('t', [], 'id', 0, { groups: [groups[0]] })).toEqual({ kind: 'pass', report });
+    expect(coverageCheck('t', [], 'id', 0, { groups: [groups[0]], floor: 0.5 })).toEqual({
+      kind: 'fail', message: 't: no ids requested, so nothing to rate against the floor 50%', report,
+    });
   });
 });

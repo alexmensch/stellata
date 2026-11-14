@@ -452,7 +452,7 @@ export function runDwell(page: Page, params: DwellParams): Promise<DwellRaw> {
       gpuNote,
       passCounts: origSubmit !== null ? perFrame : null,
       passNote,
-      readbackPerFrame: p.frames > 0 ? readbacks / p.frames : 0,
+      readbackPerFrame: readbacks / p.frames,
       effectiveLimitMag,
       dm,
       rateBefore,
