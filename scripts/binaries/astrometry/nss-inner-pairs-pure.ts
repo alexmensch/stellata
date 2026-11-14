@@ -5,7 +5,8 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
-import { componentsOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { componentsOf, inheritAs, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { inheritedFrom } from '../multiples-tsv';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
@@ -33,9 +34,9 @@ function nssCarriers(pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<D
   for (const p of pairs) {
     const a = astrometry.get(p)!;
     for (const [component, ast, partner] of [[p.primary, a.primary, p.secondary], [p.secondary, a.secondary, p.primary]] as const) {
-      const sourceId = component.gaiaSourceId;
+      const sourceId = valueOf(component.gaia);
       if (sourceId === null || !indices.srcToNss.has(sourceId)) continue;
-      if (partner.gaiaSourceId === null || partner.gaiaSourceId === sourceId) continue;
+      if (partner.gaia === null || partner.gaia.value === sourceId) continue;
       const key = `${component.wdsId}\t${sourceId}`;
       const cur = carriers.get(key);
       if (cur === undefined || component.component.length > cur.component.component.length) {
@@ -97,9 +98,12 @@ export function synthesizeNssInnerPairs(
     const pair = subResolutionPair(
       c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
     );
+    const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({
       wdsId: c.wdsId, discoverer: SYNTH_NSS_DISCOVERER, component, isPrimary,
-      gaiaSourceId: carrier.sourceId, resolveVia: c.resolveVia, hip: c.hip, athygRow: c.athygRow, hd: null,
+      gaia: { value: carrier.sourceId, origin: fromCarrier }, resolveVia: c.resolveVia,
+      hip: c.hip === null ? null : inheritAs(c.hip, fromCarrier),
+      athyg: c.athyg === null ? null : inheritAs(c.athyg, fromCarrier), hd: null,
     });
     const inner: DecomposedPair = { pair, tokens: splitComponents(pair.components)!, primary: child(a, true), secondary: child(b, false) };
     out.push(inner);

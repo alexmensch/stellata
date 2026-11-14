@@ -3,7 +3,7 @@
 import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { RESOLVE_VIA, type ResolveVia } from '../multiples-tsv';
+import { OWN, RESOLVE_VIA, type IdOrigin, type ResolveVia } from '../multiples-tsv';
 import { groupBy } from '../../util/map-buckets-pure';
 
 /** Lower is stronger evidence. */
@@ -13,6 +13,25 @@ export function priorityOf(via: ResolveVia): number {
   return RESOLVE_VIA_PRIORITY.get(via) as number;
 }
 
+/** An identifier and where the component came by it. */
+export interface Bound<T> {
+  readonly value: T;
+  readonly origin: IdOrigin;
+}
+
+export function own<T>(value: T): Bound<T> {
+  return { value, origin: OWN };
+}
+
+/** The same identifier, now held under `origin`. */
+export function inheritAs<T>(b: Bound<T>, origin: IdOrigin): Bound<T> {
+  return { value: b.value, origin };
+}
+
+export function valueOf<T>(b: Bound<T> | null): T | null {
+  return b === null ? null : b.value;
+}
+
 /** One side of one decomposing pair row, as Stage 2 bound it. */
 export interface ResolvedComponent {
   readonly wdsId: string;
@@ -20,11 +39,11 @@ export interface ResolvedComponent {
   /** As the components field writes it: a truncated secondary stays `"2"`. */
   readonly component: string;
   readonly isPrimary: boolean;
-  readonly gaiaSourceId: string | null;
+  readonly gaia: Bound<string> | null;
   readonly resolveVia: ResolveVia;
-  readonly hip: number | null;
+  readonly hip: Bound<number> | null;
   /** The position-matched AT-HYG row, for a row whose identifiers no index reaches. */
-  readonly athygRow: AthygRow | null;
+  readonly athyg: Bound<AthygRow> | null;
   /** The coord-validated ORB6 entry's HD, primaries only. */
   readonly hd: number | null;
 }
@@ -34,7 +53,7 @@ export type Draft = { -readonly [K in keyof ResolvedComponent]: ResolvedComponen
 export function unresolvedComponent(pair: WdsPair, component: string, isPrimary: boolean): ResolvedComponent {
   return {
     wdsId: pair.wdsId, discoverer: pair.discoverer, component, isPrimary,
-    gaiaSourceId: null, resolveVia: 'unresolved', hip: null, athygRow: null, hd: null,
+    gaia: null, resolveVia: 'unresolved', hip: null, athyg: null, hd: null,
   };
 }
 

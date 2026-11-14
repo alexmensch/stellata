@@ -4,22 +4,17 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../../util/paths';
 import { readTable } from '../../util/tsv/table-pure';
-import { MULTIPLES_COLUMNS, MULTIPLES_TSV } from '../multiples-tsv';
+import { MULTIPLES_TSV } from '../multiples-tsv';
+import { MULTIPLES_HEADER, multiplesLine } from '../multiples-tsv-fixture';
 import { FIXTURE_SYSTEMS, cutMultiples, cutRowIndexMap } from './cut-fixture-pure';
 import { wdsRootOf } from '../component-tokens-pure';
 
-const DEFAULTS: Record<string, string> = {
-  source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'gaia_5p', orbit_via: 'none',
-  spect_via: 'none', photometry_via: 'none', a_via: 'none', orbit_role: 'primary',
-};
-const line = (cells: Record<string, string>): string =>
-  MULTIPLES_COLUMNS.map((c) => cells[c] ?? DEFAULTS[c] ?? '').join('\t');
 const RECORDS = MULTIPLES_TSV.parse([
-  MULTIPLES_COLUMNS.join('\t'),
-  line({ system_id: '00001+0001-AB', comp: 'A', hip: '10', gaia_source_id: '100' }),
-  line({ system_id: '00001+0001-AB', comp: 'B', gaia_source_id: '101' }),
-  line({ system_id: '00001+0001-_C', comp: 'C', hip: '12', orbit_role: 'standalone' }),
-  line({ system_id: '00002-0002-AB', comp: 'A', hip: '20', gaia_source_id: '200' }),
+  MULTIPLES_HEADER,
+  multiplesLine({ system_id: '00001+0001-AB', comp: 'A', hip: '10', gaia_source_id: '100' }),
+  multiplesLine({ system_id: '00001+0001-AB', comp: 'B', gaia_source_id: '101' }),
+  multiplesLine({ system_id: '00001+0001-_C', comp: 'C', hip: '12', orbit_role: 'standalone' }),
+  multiplesLine({ system_id: '00002-0002-AB', comp: 'A', hip: '20', gaia_source_id: '200' }),
   '',
 ].join('\n'));
 

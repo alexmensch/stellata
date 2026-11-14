@@ -7,7 +7,8 @@ import {
   type BindingCandidate, type BindingVerdict, type Edge,
 } from './binding-audit-pure';
 import { componentsOf } from './components-pure';
-import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, type BiRow } from './resolve-fixture';
+import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, ids, type BiRow } from './resolve-fixture';
+import { OWN } from '../multiples-tsv';
 
 describe('bfsOffset', () => {
   const edge = (eastArcsec: number, epoch: number): Edge => ({ eastArcsec, northArcsec: 0, epoch });
@@ -154,8 +155,8 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
-    expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaiaSourceId).toBe(SX);
+    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN });
+    expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
   it('refutes with a hierarchy cluster as the owner (μ Dra)', () => {
@@ -170,8 +171,8 @@ describe('auditBindingIntegrity', () => {
     expect([...v[0].winner!.tokens].sort()).toEqual(['B', 'Ba', 'Bb']);
     expect(v[0].action).toMatchObject({ kind: 'rebind', letter: 'A' });
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaiaSourceId).toBe(SA);
-    expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaiaSourceId).toBe(SX);
+    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia?.value).toBe(SA);
+    expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
   it('keeps the blend skip when one side has no identity of its own', () => {
@@ -236,10 +237,10 @@ describe('auditBindingIntegrity', () => {
 
   it('leaves its input as it was', () => {
     const pairs = biSystem([['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]]);
-    const before = componentsOf(pairs).map((c) => [c.gaiaSourceId, c.hip, c.resolveVia]);
+    const before = componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia]);
     const idx = indices({ srcToAstrometry: astrometryMap([biAstro(SA, 0, 0), biAstro(SX, 0, 3)]) });
     expect(auditBindingIntegrity(pairs, idx, new Map()).verdicts).toHaveLength(1);
-    expect(componentsOf(pairs).map((c) => [c.gaiaSourceId, c.hip, c.resolveVia])).toEqual(before);
+    expect(componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia])).toEqual(before);
   });
 });
 
@@ -253,14 +254,16 @@ describe('enforceBindingVerdicts', () => {
       rows(55, 55), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)], { hipToGaia: new Map([[55, SX]]) },
     );
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'C')).toMatchObject({ gaiaSourceId: null, hip: null, resolveVia: 'unresolved' });
-    expect(after.find((c) => c.component === 'B')?.gaiaSourceId).toBe(SX);
+    expect(ids(after.find((c) => c.component === 'C'))).toMatchObject({ gaiaSourceId: null, hip: null, resolveVia: 'unresolved' });
+    expect(after.find((c) => c.component === 'B')?.gaia?.value).toBe(SX);
   });
 
   it('keeps a loser\'s independently distinct HIP for Stage 3', () => {
     const { audited, idx } = audit(rows(99, null), [biAstro(SA, 0, 0), biAstro(SX, 0, 3)]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'C')).toMatchObject({ gaiaSourceId: null, hip: 99 });
+    const c = after.find((x) => x.component === 'C');
+    expect(c?.gaia).toBeNull();
+    expect(c?.hip).toEqual({ value: 99, origin: OWN });
   });
 });
 
