@@ -3,6 +3,7 @@
 
 import { applyHoverClass } from './typeahead-util';
 import { escapeHtml } from '../ui/dom-util';
+import { pyMod } from '../../astro-core/angles';
 
 export interface TypeaheadRow {
   /** Primary line text. */
@@ -200,7 +201,7 @@ export class Typeahead<T> {
       this.setHover((this.hoverIdx + 1) % this.results.length);
       e.preventDefault();
     } else if (e.key === 'ArrowUp') {
-      this.setHover((this.hoverIdx - 1 + this.results.length) % this.results.length);
+      this.setHover(pyMod(this.hoverIdx - 1, this.results.length));
       e.preventDefault();
     } else if (e.key === 'Enter') {
       if (this.hoverIdx >= 0) this.pick(this.hoverIdx);
