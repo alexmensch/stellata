@@ -99,8 +99,8 @@ Assertion semantics (the contract the harness implements):
 - Categories group failures by regime; rows inside them were chosen to
   sweep every live resolve tier and every structural shape at least
   once: sub-letter and `Aa1,2` tokens, `BC`/`AB` aggregate tokens with
-  their own SIMBAD objects, CCDM blend-inherit secondaries (id equals
-  the primary's by design), unpaired standalone letters, 2+2
+  their own SIMBAD objects, CCDM partner-exempt secondaries (the
+  primary's id, bound by the tier, so `gaia_origin` is `own`), unpaired standalone letters, 2+2
   quadruples, dense cluster fields, WD / brown-dwarf companions.
 
 Provenance: every `expected_gaia_source_id` was verified against
