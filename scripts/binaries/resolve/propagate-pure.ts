@@ -159,9 +159,10 @@ export function inheritDownwardParentBindings(
   for (const { token, c } of canon) {
     if (c.gaia !== null) continue;
     const parent = parentComponentToken(token);
-    const binding = parent === null ? undefined : bound.get(componentKey(c.wdsId, parent));
+    if (parent === null) continue;
+    const binding = bound.get(componentKey(c.wdsId, parent));
     if (binding === undefined) continue;
-    const origin = inheritedFrom(parent!, 'parent');
+    const origin = inheritedFrom(parent, 'parent');
     c.gaia = inheritAs(binding.gaia, origin);
     c.resolveVia = binding.via;
     if (c.hip === null && binding.hip !== null) c.hip = inheritAs(binding.hip, origin);
