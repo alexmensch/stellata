@@ -29,4 +29,18 @@ describe('hip2-source', () => {
     expect([...astrometry.keys()]).toEqual([32349]);
     expect([...hips]).toEqual([32349, 7]);
   });
+
+  it('parseHip2Tsv stops on a HIP published twice, naming the second row', () => {
+    const tsv = [
+      'hip\tra_icrs\tde_icrs\tplx\te_plx\tpm_ra\tpm_de',
+      '7\t\t\t\t\t\t',
+      '32349\t101.2\t-16.7\t379.21\t1.58\t-546.01\t-1223.07',
+      '7\t1.0\t2.0\t\t\t\t',
+    ].join('\n');
+    expect(() => parseHip2Tsv(tsv, HIP2)).toThrow(
+      `${HIP2.file}:4: HIP 7 has more than one row; which was meant is not the reader's to guess. ${HIP2.hint}`,
+    );
+    const zeros = ['hip\tra_icrs\tde_icrs\tplx\te_plx\tpm_ra\tpm_de', '0\t\t\t\t\t\t', '0\t\t\t\t\t\t'].join('\n');
+    expect(() => parseHip2Tsv(zeros, HIP2)).toThrow(`${HIP2.file}:3: HIP 0 has more than one row`);
+  });
 });

@@ -8,7 +8,7 @@ import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
-import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
+import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
 
@@ -103,10 +103,10 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
     const pTok = p.component;
     const sTok = canonicalCompLetter(pTok, s.component);
     if (pair.rhoLast === null || pair.rhoLast === 0) ctx.blendPairs.push([pTok, sTok]);
-    else if (p.gaiaSourceId !== null && p.gaiaSourceId === s.gaiaSourceId) ctx.blendSources.add(p.gaiaSourceId);
+    else if (p.gaia !== null && p.gaia.value === s.gaia?.value) ctx.blendSources.add(p.gaia.value);
     for (const [tok, side, mag] of [[pTok, 'primary', pair.magPri], [sTok, 'secondary', pair.magSec]] as const) {
       pushTo(ctx.instances, tok, { pairIdx, side });
-      const src = (side === 'primary' ? p : s).gaiaSourceId;
+      const src = valueOf((side === 'primary' ? p : s).gaia);
       if (src !== null) addTo(ctx.tokenSources, tok, src);
       if (mag !== null && mag < (ctx.tokenMag.get(tok) ?? Infinity)) ctx.tokenMag.set(tok, mag);
     }
@@ -450,7 +450,7 @@ function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPa
   for (const tok of v.winner.tokens) {
     for (const i of ctx.instances.get(tok) ?? []) {
       const hip = instance(out, i).hip;
-      if (hip !== null) hips.add(hip);
+      if (hip !== null) hips.add(hip.value);
     }
   }
   return hips;
@@ -459,8 +459,8 @@ function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPa
 /** gaia always clears; a HIP clears only when it cross-walks to the contested
  *  source or the winner carries it too, else the loser would resolve straight back. */
 function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: IdentifierIndices): void {
-  if (c.hip !== null && (indices.hipToGaia.get(c.hip) === c.gaiaSourceId || winner.has(c.hip))) c.hip = null;
-  c.gaiaSourceId = null;
+  if (c.hip !== null && (indices.hipToGaia.get(c.hip.value) === c.gaia?.value || winner.has(c.hip.value))) c.hip = null;
+  c.gaia = null;
   c.resolveVia = 'unresolved';
 }
 
@@ -475,14 +475,14 @@ export function enforceBindingVerdicts(
     if (action === null) continue;
     enforced.add(v.wdsId);
     if (action.kind === 'rebind') {
-      for (const i of ctx.instances.get(action.letter) ?? []) instance(out, i).gaiaSourceId = action.sourceId;
+      for (const i of ctx.instances.get(action.letter) ?? []) instance(out, i).gaia = own(action.sourceId);
       continue;
     }
     const winner = winnerHips(v, ctx, out, indices);
     for (const { token, sourceId } of action.targets) {
       for (const i of ctx.instances.get(token) ?? []) {
         const c = instance(out, i);
-        if (c.gaiaSourceId === sourceId) unbindComponent(c, winner, indices);
+        if (c.gaia?.value === sourceId) unbindComponent(c, winner, indices);
       }
     }
   }

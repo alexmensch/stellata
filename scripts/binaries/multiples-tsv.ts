@@ -5,14 +5,14 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
-import { wdsRootOf } from './component-tokens-pure';
+import { isComponentToken, wdsRootOf } from './component-tokens-pure';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
   'x_pc', 'y_pc', 'z_pc', 'absmag', 'ci', 'spect', 'name',
   'source', 'regime',
-  'resolve_via', 'astrometry_via', 'orbit_via', 'spect_via',
+  'resolve_via', 'gaia_origin', 'hip_origin', 'astrometry_via', 'orbit_via', 'spect_via',
   'photometry_via', 'a_via',
   'orbit_role',
   'P_days', 'T_jd', 'e', 'a_AU', 'i_rad', 'omega_rad', 'Omega_rad', 'q', 'dist_pc',
@@ -70,16 +70,65 @@ export type OrbitViaOnFile = {
 export const ORBIT_VIA_ON_FILE: readonly OrbitViaOnFile[] = ORBIT_VIA.filter(
   (v): v is OrbitViaOnFile => ORBIT_VIA_PROPERTIES[v].hasElements,
 );
+/** How a component came by an identifier another component holds: `blend`, a
+ *  ρ = 0 pair's secondary from its primary; `letter`, a bare letter from its
+ *  sub-letter (A ← Aa); `parent`, a sub-letter from its parent (Aa ← A);
+ *  `partner`, a pair's secondary from its primary at a measured or unmeasured ρ. */
+export const INHERITANCE_KINDS = ['blend', 'letter', 'parent', 'partner'] as const;
+export type InheritanceKind = (typeof INHERITANCE_KINDS)[number];
+
+/** Where one bound identifier came from: earned by the component itself, or
+ *  copied from the component `from` (a WDS token of the same system). */
+export type IdOrigin =
+  | { readonly kind: 'own' }
+  | { readonly kind: 'inherited'; readonly from: string; readonly how: InheritanceKind };
+
+export const OWN: IdOrigin = Object.freeze({ kind: 'own' });
+
+export function inheritedFrom(from: string, how: InheritanceKind): IdOrigin {
+  return Object.freeze({ kind: 'inherited', from, how });
+}
+
+/** `own`, or `<how>:<from>` (`blend:A`, `letter:Aa`). */
+export function formatIdOrigin(origin: IdOrigin): string {
+  return origin.kind === 'own' ? 'own' : `${origin.how}:${origin.from}`;
+}
+
+export function parseIdOrigin(cell: string): IdOrigin | null {
+  if (cell === 'own') return OWN;
+  const colon = cell.indexOf(':');
+  const how = cell.slice(0, colon);
+  const from = cell.slice(colon + 1);
+  if (colon < 0 || !isComponentToken(from) || !(INHERITANCE_KINDS as readonly string[]).includes(how)) return null;
+  return inheritedFrom(from, how as InheritanceKind);
+}
+
 export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];
 
-export interface MultiplesRecord {
+/** An identifier and where the component came by it, or neither. */
+interface IdentifierWithOrigin<T> {
+  readonly value: T;
+  readonly origin: IdOrigin;
+}
+
+/** A DR3 source_id is kept as a string: it exceeds Number.MAX_SAFE_INTEGER. */
+export type GaiaFields = { gaiaSourceId: null; gaiaOrigin: null } | { gaiaSourceId: string; gaiaOrigin: IdOrigin };
+export type HipFields = { hip: null; hipOrigin: null } | { hip: number; hipOrigin: IdOrigin };
+
+export function gaiaFields(id: IdentifierWithOrigin<string> | null): GaiaFields {
+  return id === null ? { gaiaSourceId: null, gaiaOrigin: null } : { gaiaSourceId: id.value, gaiaOrigin: id.origin };
+}
+
+export function hipFields(id: IdentifierWithOrigin<number> | null): HipFields {
+  return id === null ? { hip: null, hipOrigin: null } : { hip: id.value, hipOrigin: id.origin };
+}
+
+/** Every field but the identifiers and their origins. */
+export interface MultiplesRecordFields {
   systemId: string;
   comp: string;
-  hip: number | null;
-  /** Kept as a string: a DR3 source_id exceeds Number.MAX_SAFE_INTEGER. */
-  gaiaSourceId: string | null;
   hd: number | null;
   x_pc: number | null;
   y_pc: number | null;
@@ -117,6 +166,8 @@ export interface MultiplesRecord {
   magSec: number | null;
 }
 
+export type MultiplesRecord = MultiplesRecordFields & GaiaFields & HipFields;
+
 /** Each float column's decimal places, as the Stage 6 writer prints them. */
 const PLACES = {
   x_pc: 6, y_pc: 6, z_pc: 6, absmag: 4, ci: 4,
@@ -151,11 +202,16 @@ export const MULTIPLES_TSV = defineArtifact({
     if (wdsRootOf(systemId) === null) row.fail(`system_id "${systemId}" names no WDS id`);
     const comp = row.raw('comp');
     if (comp.trim() === '') row.fail('comp is empty');
+    const withOrigin = <T>(value: T | null, column: 'gaia_origin' | 'hip_origin'): IdentifierWithOrigin<T> | null => {
+      const cell = row.raw(column);
+      if (value === null) return cell === '' ? null : row.fail(`${column} "${cell}" names the origin of no identifier`);
+      return { value, origin: parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`) };
+    };
     return {
       systemId,
       comp,
-      hip: row.int('hip'),
-      gaiaSourceId: row.sourceId('gaia_source_id'),
+      ...hipFields(withOrigin(row.int('hip'), 'hip_origin')),
+      ...gaiaFields(withOrigin(row.sourceId('gaia_source_id'), 'gaia_origin')),
       hd: row.int('hd'),
       x_pc: row.float('x_pc'),
       y_pc: row.float('y_pc'),
@@ -209,6 +265,8 @@ export const MULTIPLES_TSV = defineArtifact({
     source: r.source,
     regime: String(r.regime),
     resolve_via: r.resolveVia,
+    gaia_origin: r.gaiaOrigin === null ? '' : formatIdOrigin(r.gaiaOrigin),
+    hip_origin: r.hipOrigin === null ? '' : formatIdOrigin(r.hipOrigin),
     astrometry_via: r.astrometryVia,
     orbit_via: r.orbitVia,
     spect_via: r.spectVia,
