@@ -25,28 +25,26 @@ describe('ORBIT_VIA_PROPERTIES', () => {
 });
 
 describe('multiples.tsv codec', () => {
-  const header = MULTIPLES_HEADER;
-  const cells = multiplesLine;
 
   it('keeps a negative zero the writer printed', () => {
-    const text = `${header}\n${cells({ x_pc: '-0.000000' })}\n`;
+    const text = `${MULTIPLES_HEADER}\n${multiplesLine({ x_pc: '-0.000000' })}\n`;
     expect(MULTIPLES_TSV.serialize(MULTIPLES_TSV.parse(text))).toBe(text);
   });
 
   it('rejects a value outside a closed column', () => {
-    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ photometry_via: 'athyg' })}\n`))
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ photometry_via: 'athyg' })}\n`))
       .toThrow(/photometry_via: "athyg" is not one of/);
   });
 
   it('rejects a source_id that is not digits', () => {
-    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ gaia_source_id: '12a' })}\n`))
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ gaia_source_id: '12a' })}\n`))
       .toThrow(/multiples\.tsv:2: gaia_source_id: "12a" is not a source_id/);
   });
 
   it('rejects a row no synthetic key composes from', () => {
-    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ system_id: '03082+4057-AB', comp: ' ' })}\n`))
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ system_id: '03082+4057-AB', comp: ' ' })}\n`))
       .toThrow(/comp is empty/);
-    expect(() => MULTIPLES_TSV.parse(`${header}\n${cells({ system_id: 'NODASH', comp: 'A' })}\n`))
+    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ system_id: 'NODASH', comp: 'A' })}\n`))
       .toThrow(/system_id "NODASH" names no WDS id/);
   });
 
@@ -57,14 +55,14 @@ describe('multiples.tsv codec', () => {
       [{ e: '1.000000' }, /e 1 is not a bound orbit/],
       [{ e: '-0.100000' }, /e -0.1 is not a bound orbit/],
     ] as const) {
-      expect(() => MULTIPLES_TSV.parse(`${header}\n${cells(over)}\n`)).toThrow(message);
+      expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine(over)}\n`)).toThrow(message);
     }
-    expect(MULTIPLES_TSV.parse(`${header}\n${cells({ P_days: '2.867000', a_AU: '0.060000', e: '0.000000' })}\n`)[0])
+    expect(MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ P_days: '2.867000', a_AU: '0.060000', e: '0.000000' })}\n`)[0])
       .toMatchObject({ pDays: 2.867, aAU: 0.06, e: 0 });
   });
 
   it('round-trips each identifier\'s origin', () => {
-    const text = `${header}\n${cells({ gaia_source_id: '42', gaia_origin: 'letter:Aa', hip: '7', hip_origin: 'own' })}\n`;
+    const text = `${MULTIPLES_HEADER}\n${multiplesLine({ gaia_source_id: '42', gaia_origin: 'letter:Aa', hip: '7', hip_origin: 'own' })}\n`;
     const [row] = MULTIPLES_TSV.parse(text);
     expect([row.gaiaOrigin, row.hipOrigin]).toEqual([inheritedFrom('Aa', 'letter'), OWN]);
     expect(MULTIPLES_TSV.serialize([row])).toBe(text);
@@ -80,7 +78,7 @@ describe('multiples.tsv codec', () => {
       [{ hip: '7', hip_origin: 'parent:foo bar' }, /hip_origin "parent:foo bar" is not own/],
       [{ hip: '7', hip_origin: 'letter:42' }, /hip_origin "letter:42" is not own/],
     ] as const) {
-      expect(() => MULTIPLES_TSV.parse(`${header}\n${cells(over)}\n`)).toThrow(message);
+      expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine(over)}\n`)).toThrow(message);
     }
   });
 });

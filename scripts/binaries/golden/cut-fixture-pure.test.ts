@@ -9,13 +9,12 @@ import { MULTIPLES_HEADER, multiplesLine } from '../multiples-tsv-fixture';
 import { FIXTURE_SYSTEMS, cutMultiples, cutRowIndexMap } from './cut-fixture-pure';
 import { wdsRootOf } from '../component-tokens-pure';
 
-const line = multiplesLine;
 const RECORDS = MULTIPLES_TSV.parse([
   MULTIPLES_HEADER,
-  line({ system_id: '00001+0001-AB', comp: 'A', hip: '10', gaia_source_id: '100' }),
-  line({ system_id: '00001+0001-AB', comp: 'B', gaia_source_id: '101' }),
-  line({ system_id: '00001+0001-_C', comp: 'C', hip: '12', orbit_role: 'standalone' }),
-  line({ system_id: '00002-0002-AB', comp: 'A', hip: '20', gaia_source_id: '200' }),
+  multiplesLine({ system_id: '00001+0001-AB', comp: 'A', hip: '10', gaia_source_id: '100' }),
+  multiplesLine({ system_id: '00001+0001-AB', comp: 'B', gaia_source_id: '101' }),
+  multiplesLine({ system_id: '00001+0001-_C', comp: 'C', hip: '12', orbit_role: 'standalone' }),
+  multiplesLine({ system_id: '00002-0002-AB', comp: 'A', hip: '20', gaia_source_id: '200' }),
   '',
 ].join('\n'));
 

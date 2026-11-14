@@ -107,7 +107,6 @@ export const BI_WDS = '10000+0000';
 /** Bound to a source no test asks about, so the cascade passes skip it. */
 export const BYSTANDER_SOURCE = '0';
 
-
 /** `pair` with its split tokens; a side not given is a bound bystander. */
 export function decomposed(pair: WdsPair, sides: { primary?: Side; secondary?: Side } = {}): DecomposedPair {
   const tokens = splitComponents(pair.components)!;

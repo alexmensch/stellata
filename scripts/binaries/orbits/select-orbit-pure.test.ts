@@ -8,7 +8,7 @@ import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type PairAstrometry } 
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { mscOrbit } from '../load/load-fixture';
 import type { MscOrbitRow } from '../load/msc-pure';
-import { decomposed , type Side } from '../resolve/resolve-fixture';
+import { decomposed, type Side } from '../resolve/resolve-fixture';
 import { nssOrbitalRow } from './nss-fixture';
 import { keplerSemimajorAxisAu, nssSeparationConsistent, selectOrbit, type PairOrbit } from './select-orbit-pure';
 
