@@ -1204,7 +1204,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   function promoteAt(
     grid: DustGrid,
     rowOverrides: MultiplesRowOverrides,
-  ): Star & Pick<ReturnType<typeof promote>, 'codes'> {
+  ): { star: Star } & Pick<ReturnType<typeof promote>, 'codes'> {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
     const primaryRow = multiplesRow({
       comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',
@@ -1219,18 +1219,18 @@ describe('promoteCompanions build-time de-extinction', () => {
       [primaryRow, secondary], [primaryStar], inputs({ dustGrid: grid }),
     );
     expect(newStars).toHaveLength(1);
-    return { ...newStars[0], codes };
+    return { star: newStars[0], codes };
   }
 
   it('de-extincts observed absmag and de-reddens the row’s own ci', () => {
     const observed: MultiplesRowOverrides = {
       photometryVia: 'athyg_own', absmag: 3.0, ci: 0.5, spect: '', dmag: null,
     };
-    const withGrid = promoteAt(grid, observed);
-    const noGrid = promoteAt(TRANSPARENT_DUST, observed);
+    const { star: withGrid, codes } = promoteAt(grid, observed);
+    const { star: noGrid } = promoteAt(TRANSPARENT_DUST, observed);
     expect(noGrid.absmag - withGrid.absmag).toBeCloseTo(av, 6);
     expect(noGrid.ci - withGrid.ci).toBeCloseTo(av / R_V, 6);
-    expect(withGrid.codes['promotion.dust.edenhofer2024.absmag-and-ci']).toBe(1);
+    expect(codes['promotion.dust.edenhofer2024.absmag-and-ci']).toBe(1);
   });
 
   it('leaves intrinsic spectral-derived absmag and Ballesteros ci untouched', () => {
@@ -1241,11 +1241,11 @@ describe('promoteCompanions build-time de-extinction', () => {
       photometryVia: 'athyg_system_inherited', spectVia: 'simbad',
       spect: 'B8V', dmag: null,
     };
-    const withGrid = promoteAt(grid, intrinsic);
-    const noGrid = promoteAt(TRANSPARENT_DUST, intrinsic);
+    const { star: withGrid, codes } = promoteAt(grid, intrinsic);
+    const { star: noGrid } = promoteAt(TRANSPARENT_DUST, intrinsic);
     expect(withGrid.absmag).toBeCloseTo(noGrid.absmag, 6);
     expect(withGrid.ci).toBeCloseTo(noGrid.ci, 6);
-    expect(withGrid.codes['promotion.dust.edenhofer2024.not-applied']).toBe(1);
+    expect(codes['promotion.dust.edenhofer2024.not-applied']).toBe(1);
   });
 });
 
