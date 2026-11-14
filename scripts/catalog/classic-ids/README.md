@@ -30,14 +30,24 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
                                   both Gaia cross-walks and the gate's three
-                                  evidence tables, and emits the overlay and
-                                  its two gate queues through emitArtifacts,
-                                  so a drifted count snapshot lands none of
-                                  the three.
-  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay and its
-                                  two gate queues as the build's
+                                  evidence tables, and emits the overlay, its
+                                  lineage and the two gate queues viewed from
+                                  it through emitArtifacts, so a drifted count
+                                  snapshot, a lineage budget overrun or a
+                                  CI heap overrun (../../util/heap-budget/)
+                                  lands none of them.
+  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay, its two
+                                  gate queues and its lineage files
+                                  (CLASSIC_IDS_LINEAGE) as the build's
                                   emitArtifacts declaration
                                   (../../util/README.md). Side-effect free.
+  classic-id-lineage-pure.ts      This stage's lineage (#classic-id-lineage):
+    (+ test)                      reason codes, one row per designation, the
+                                  refused and route rows, and the two gate
+                                  queues as views of them. Pure.
+  classic-id-keys.ts              CLASSIC_ID_KEYS: each row's key, from the
+                                  declaration of the catalogue row it reads;
+                                  the build and the unit suite share it.
   binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
                                   overlay join reads, as one `OverlayWalks`.
                                   ../astrometry-request/ runs the same join
@@ -79,7 +89,8 @@ scripts/catalog/classic-ids/
                                   that only needs them does not reach the
                                   artifact.
   route-disagreements-tsv.ts      The two gate queues' codecs:
-  rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
+  rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS;
+                                  their rows come from the lineage views.
   route-disagreements-review-     ROUTE_DISAGREEMENTS_REVIEW: the curated
     source.ts                     disposition of each route-disagreement
                                   row, declared; read by parity-ledger.test.ts.
@@ -87,8 +98,10 @@ scripts/catalog/classic-ids/
                                   label flips each round-trip their committed
                                   file byte for byte.
   classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
-    (+ test)                      reads no evidence), the binding gate and its
-                                  counts. The gate itself — evidence,
+    (+ test)                      reads no evidence: each designation's
+                                  reach, with the overlay and the route
+                                  counts its projections), the binding gate
+                                  and its counts. The gate itself — evidence,
                                   thresholds, `weighBinding` — is
                                   ../membership/binding/'s; this module
                                   imports it. Pure.
@@ -200,12 +213,12 @@ HIP passes `null` to `weighBinding`, as the record side does, and the sibling
 arm reads `null` as nothing to key on; any number, `0` included, is looked up
 as a HIP and can reach the system-primary fallback.
 
-**Two counts say whether the evidence actually arrived**, because a missing `G`
+**Two checks say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
 
-| Count | Today | Meaning |
+| Check | Today | Meaning |
 |---|---|---|
-| `gateSkippedNoGMag` | **<!-- count:classic-id-overlay/gateSkippedNoGMag -->0<!-- /count -->** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
+| `classic-ids.unweighed-no-pulled-row` rows | **none**: a lineage invariant fails the build naming each designation row ([Invariants](../lineage/README.md#invariants)) | gateable sources the pull returned no row for — the request under-covering its candidates; the fault the union exists to prevent. |
 | `gateSkippedNullGMag` | <!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count --> | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
@@ -215,7 +228,7 @@ at all, whether or not the sibling arm then refused them, so the partition
 always sums to the rows weighed. None of them carries a HIP, so that arm has
 nothing to key on there today. The request reads the same join and the same
 walk (`magnitudeWeighableSourceIds`), so it and the gate agree by construction
-and `gateSkippedNoGMag` stays pinnable at zero.
+and the invariant holds with no exceptions.
 The membership derivation runs the same checks on the record side through the
 same `weighBinding` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
@@ -231,6 +244,50 @@ The TYC cross-walk is 2.5 M rows for a ~350 k-row join, so
 `GAIA_TYC_XMATCH` (`../parse/gaia-tyc-xmatch-source.ts`) streams it line-by-line
 and takes a keep-set of the Tycho ids IV/25 actually mentions. Reading it
 as one string peaks near a gigabyte alongside the join's own maps.
+
+## Classic-ID lineage
+
+`build:classic-ids` is the lineage stage `classic-ids`, first in pipeline
+order (`classic-id-lineage-pure.ts`; the contract is
+[Record lineage](../lineage/README.md)). No record exists yet when it runs,
+so its rows are keyed on the **designation**, each on the catalogue row that
+states it:
+
+| Designation | Key | One row per |
+|---|---|---|
+| HD | its IV/25 entry with the lowest Tycho-2 id in string order (`iv25:<tyc>`); the others are evidence | HD number |
+| HIP | Gaia's HIP cross-match (`gaia-dr3-hip:<hip>`), the table HIP enters this stage from | cross-match entry |
+| Bayer, Flamsteed | IV/27A (`iv27a:<hd>`) | designation |
+| HR | V/50 (`v50:<hr>`) | HR number |
+| GJ | CNS5 (`cns5:<cns5 id>`) | CNS5 row |
+
+Each designation row says where its route took it: `<kind>[.<route>].bound`
+with the sources the gate kept (`source_ids`, every one where an HD reaches
+several), `.gated` where the gate refused every source it reached, or
+`.no-source` (`hr.no-hd` where V/50 prints no HD) — so a designation no
+route reaches, Sirius's HD 48915 among the stars too bright for Gaia, has a
+row of its own. Params carry the designation in trace's form (`hd:128621`)
+and the cells its route read. A source the gate refused gets one `refused`
+row (`gate-mag` / `gate-sibling`: `source_id`, `via`, the designation that
+reached it with its `kind`, then the gate's facts, membership's
+refused-binding shape) for every designation reaching it, under that
+designation's key — which can state two designations (197 IV/25 Tycho-2 ids
+carry two HDs), so the row names its own. Each
+IV/27A row whose HIP resolves gets a `route.agree`, `route.disagree` or
+`route.hip-only` row. A source the astrometry pull holds no row for gets an
+`unweighed-no-pulled-row` row the same way, which `CLASSIC_ID_INVARIANTS`
+fails the build on ([The gate's evidence has to be pulled](#the-gates-evidence-has-to-be-pulled)).
+
+**The two gate queues are views of these rows, and nothing else writes
+them**: `rejectedBindingsView` groups the refused rows by source and names
+each by the designations its refused rows carry; `routeDisagreementsView` is the
+`route.disagree` rows. Both regenerate byte-identical and stay under CI's
+regenerate-and-diff; `hd_hip_route_disagreements_review.tsv` stays
+hand-curated.
+
+Measured 2026-11-14: 476,336 rows, 9.3 MB gzipped, 0.6 s with no
+baseline and 4.1 s when the baseline verdict re-hashes the merge-base's
+inputs (2.2 s of it); `CLASSIC_ID_LINEAGE_BUDGET` pins 9.8 MB and 10 s.
 
 ## One designation, two HD numbers
 
@@ -327,13 +384,19 @@ constellation out of the designation string and loses only its expanded alias
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareCountSnapshot` / `UPDATE_SNAPSHOTS` machinery
 `build-catalog.ts` uses (`snapshotCheck` in
-`../../util/snapshot-check.ts`). Three groups:
+`../../util/snapshot-check.ts`), staged
+([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)).
+Stage `classic-ids` is the stage's lines folded per live code
+([Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)):
+where each designation went, the HIP-route agree / disagree / HIP-only split,
+and the gate's refusals per designation key. `classic-ids-derived` holds
+what no row decides, in three groups:
 
-- **Input + route sizes** — upstream row counts, how many Tycho ids
-  resolve, the HIP-route agree / disagree / HIP-only split. Pre-gate.
+- **Input + route sizes** — upstream row counts and how many Tycho ids
+  resolve. Pre-gate.
 - **Overlay sizes** — rows, and per-identifier how many sources carry
   each designation, plus the multi-valued cardinalities. Post-gate.
-- **`gate*`** — rows dropped per gate, `gateableVia` per printed tier, and
+- **`gate*`** — sources dropped per gate, `gateableVia` per printed tier, and
   `gateSkippedNoPrintedV`, the population no tier reaches and so unvettable.
   That last one is the count to watch alongside `../membership/`'s
   `membership.overlay.bright.no-entry` — <!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> rows the printed-V cascade puts

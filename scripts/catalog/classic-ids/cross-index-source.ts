@@ -16,6 +16,7 @@ export const CROSS_INDEX = defineSource({
   file: 'data/classic-ids/cross_index.tsv',
   hint: 'Refresh the CDS inputs with `pnpm run refresh:classic-ids`.',
   members: [CORRECTIONS],
+  rowKey: { id: 'iv27a', text: (hd: number) => String(hd) },
   parse: (input) => {
     const [corrections] = input.members;
     return applyCrossIndexCorrections(
