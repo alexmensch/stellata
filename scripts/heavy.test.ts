@@ -119,6 +119,20 @@ describe('heavy.sh', () => {
     expect(log()).toEqual(['start a', 'done a']);
   }, 30_000);
 
+  it.each([
+    ['SIGTERM', 143],
+    ['SIGINT', 130],
+    ['SIGHUP', 129],
+  ] as const)('%s on a running holder stops every process it started and frees its slot', async (signal, code) => {
+    const marker = `30.${process.pid}${Math.floor(Math.random() * 1e6)}`;
+    const a = heavy('a', Number(marker));
+    await until(() => log().length > 0);
+    a.child.kill(signal);
+    expect((await a.done).code).toBe(code);
+    expect(tickets()).toEqual([]);
+    expect(spawnSync('pgrep', ['-f', `sleep ${marker}`]).status).toBe(1);
+  }, 20_000);
+
   it('a waiter stopped by TERM leaves the queue', async () => {
     const a = heavy('a', 1);
     await until(() => log().length > 0);
