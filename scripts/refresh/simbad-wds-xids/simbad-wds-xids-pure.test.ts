@@ -41,6 +41,12 @@ describe('xidsPull', () => {
     expect(checks.every((check) => check.kind === 'pass')).toBe(true);
   });
 
+  it('logs the matched share, and an empty request as n/a rather than 0.0%', async () => {
+    const simbad = fake({ 2002: { mainId: '* alf Cen A', ids: ['WDS J14396-6050A'] } });
+    expect((await run(simbad, [c('14396-6050', 'A'), c('20000+0000', 'A')])).log).toContain('WDS idents: 1/2 (50.0%) components matched');
+    expect((await run(simbad, [])).log).toContain('WDS idents: 0/0 (n/a) components matched');
+  });
+
   it('refuses a WDS ident SIMBAD answers under two objects', async () => {
     const simbad = fake({ 1: { mainId: 'a', ids: ['WDS J06451-1643A'] }, 2: { mainId: 'b', ids: ['WDS J06451-1643A'] } });
     await expect(run(simbad, [c('06451-1643', 'A')])).rejects.toThrow(/WDS J06451-1643A → 1 and 2/);
