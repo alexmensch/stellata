@@ -47,7 +47,7 @@ export interface ManifestRecord {
   binding: BindingClass;
   routes: string;
   term: MembershipTerm;
-  /** The record's lineage origin key (../lineage/README.md#identity--the-origin-source-row). */
+  /** The record's lineage origin key (../lineage/identity/README.md). */
   originKey: string;
   isSol: boolean;
 }

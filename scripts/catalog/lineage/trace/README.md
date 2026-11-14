@@ -41,7 +41,7 @@ name.
    found this way: by the designation in their params (`hd:128621`) or by a
    Gaia id they reached or refused. Identity rows come from every
    stage that writes them (`StageLineageSpec.identity`,
-   [Identity](../README.md#identity--the-origin-source-row)). No index is
+   [Identity](../identity/README.md)). No index is
    kept: trace streams the stage files twice, once to find the keys and once
    to collect their rows, and never holds a stage's rows whole — every
    stage's rows decoded at once overrun the 4 GB heap.

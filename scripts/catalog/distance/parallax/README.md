@@ -33,7 +33,7 @@ scripts/catalog/distance/parallax/
     (+ test)
                                 reason enum and its row. The parity gate
                                 matches a row on recordKey
-                                (../../lineage/identity-pure.ts).
+                                (../../lineage/identity/identity-pure.ts).
   parked-ledger-tsv.ts          Its codec (PARKED_LEDGER), apart so a module
                                 needing only the enum reaches no file. The
                                 rows are a view of placement lineage's park

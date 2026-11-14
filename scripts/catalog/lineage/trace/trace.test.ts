@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { LAUNCHER } from '../../../util/import-closure-pure';
 import { REPO_ROOT } from '../../../util/paths';
-import { identityRows } from '../identity-pure';
+import { identityRows } from '../identity/identity-pure';
 import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';

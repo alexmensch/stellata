@@ -1,6 +1,6 @@
 // What the upstream stages' lineage says about ledger keys and admitted records, joined on the origin key. See README.md#sid-events.
 
-import type { IdentityRow } from '../catalog/lineage/identity-pure';
+import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import {
   decodeLineageLine, lineageLineCode, lineageLineKey, paramsOf, type LineageLine,
 } from '../catalog/lineage/lineage-row-pure';

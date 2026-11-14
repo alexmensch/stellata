@@ -35,7 +35,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { identityRow, recordKey } from '../lineage/identity-pure';
+import { identityRow, recordKey } from '../lineage/identity/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
