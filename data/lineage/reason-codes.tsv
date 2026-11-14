@@ -349,6 +349,8 @@ promotion.adopted.own-hip	promotion	merge	outcome	live		7.1.6	The row's Gaia sou
 promotion.adopted.own-id	promotion	merge	outcome	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.
 promotion.adopted.sameas-bridge	promotion	merge	outcome	live		7.1.6	A same-as edge bridges the row's synthetic key to a Gaia source already in the catalogue, whose record is the component.
 promotion.brightness.anchor-collocated	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its anchor's magnitude, the last resort for a pair's primary promoted as the anchor's companion.
+promotion.brightness.anchor-re-split	promotion	none	outcome	live		7.1.21	The anchor its magnitude difference is read off was dimmed to remove its members' light, so the minted record's absolute magnitude is re-split from the anchor's new one.
+promotion.brightness.blend-split	promotion	none	outcome	live		7.1.21	The minted record shares its Gaia source with n records in all, whose light it is the blend of, so its absolute magnitude is dimmed by 2.5·log₁₀(n), an equal split.
 promotion.brightness.dmag-imputed	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its anchor's absolute magnitude plus the pair's magnitude difference.
 promotion.brightness.inherited-twin	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the primary's inherited magnitude, kept because the pair has a renderable orbit.
 promotion.brightness.own	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the row's own photometry.

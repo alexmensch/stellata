@@ -212,7 +212,13 @@ export interface MintedBrightness {
   ci: CompanionCiVia;
   /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
   av: number;
+  /** Each post-pass that changed the minted absmag, in the order it ran. */
+  adjustments: MintedAdjustment[];
 }
+
+export type MintedAdjustment =
+  | { pass: 'blend-split'; n: number }
+  | { pass: 'anchor-re-split'; anchorIdx: number };
 
 
 /** See README.md#promotion-lineage. */
@@ -1120,11 +1126,14 @@ interface AnchorDimCandidate {
    *  secondary, the WDS-root offset for an escape row. */
   sepArcsec: number | null;
   av: number;
+  /** Null for a member already in the catalogue. */
+  minted: MintedBrightness | null;
 }
 
 interface BlendSplitCandidate {
   star: Star;
   spectral: SpectralInfo;
+  brightness: MintedBrightness;
 }
 
 /** A member that is already its own record never reaches the minting path below,
@@ -1167,6 +1176,7 @@ function registerExistingMemberForAnchorDim(
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow),
     av: avSolToStar(state.dustGrid, member.x, member.y, member.z),
+    minted: null,
   });
 }
 
@@ -1453,7 +1463,7 @@ function promoteRow(
   }
   const ci = companionCi(row, spectral.info, av);
   const brightness: MintedBrightness = {
-    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av,
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustments: [],
   };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
@@ -1563,6 +1573,7 @@ function promoteRow(
       structural: idsInheritedFromAnchor,
       ...anchorDimGeometry(row, anchorPrimaryRow),
       av,
+      minted: brightness,
     });
   }
   // A gaia_photometry absmag is the backing source's magnitude. When that
@@ -1577,6 +1588,7 @@ function promoteRow(
     const cand: BlendSplitCandidate = {
       star: state.newStars[state.newStars.length - 1],
       spectral: spectral.info,
+      brightness,
     };
     if (bucket) bucket.push(cand);
     else state.gaiaPhotometryByBackingSource.set(row.gaiaSourceId, [cand]);
@@ -1947,8 +1959,9 @@ export function promoteCompanions(
   for (const bucket of state.gaiaPhotometryByBackingSource.values()) {
     if (bucket.length < 2) continue;
     const splitMag = 2.5 * Math.log10(bucket.length);
-    for (const { star, spectral } of bucket) {
+    for (const { star, spectral, brightness } of bucket) {
       star.absmag += splitMag;
+      brightness.adjustments.push({ pass: 'blend-split', n: bucket.length });
       star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
       post.companionBlendSplit++;
     }
@@ -2133,6 +2146,7 @@ export function promoteCompanions(
     anchor.absmag = absoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
+      cand.minted?.adjustments.push({ pass: 'anchor-re-split', anchorIdx: cand.anchorIdx });
       cand.member.physicalRadius = physicalRadius(
         cand.member.absmag, cand.memberSpectral,
       ).rSun;

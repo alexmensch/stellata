@@ -600,13 +600,17 @@ code's line count.
 
 A mint's facets are its brightness lineage, since the record walk's
 [brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
-never sees it: the absmag source (`brightness.*`), the B−V's (`colour.own`,
+never sees it: the absmag source (`brightness.*`), then each post-pass that
+changed that absmag after the mint, in the order it ran
+(`brightness.blend-split`, `params.n` the records sharing the source;
+`brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
+already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
 the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
 `companionCi`), and one dust row naming which of the two the A_V at the
 minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
 `.absmag-only`, `.ci-only`, `.not-applied`: a class→M_V absmag and a derived
 B−V are intrinsic), its `params.av` in brightness-colour's format
-(`dustParams`), the only facet with params. Their evidence is the outcome
+(`dustParams`). Their evidence is the outcome
 row's: the photometry is the row's own, and the anchor a Δmag reads is cited
 there. A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.

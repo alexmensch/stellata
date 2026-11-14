@@ -416,9 +416,10 @@ describe('anchor flux dimming', () => {
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
     const anchor = blendAnchor();
-    const { newStars, stats } = promote(dimRows(2.0), [anchor], inputs());
+    const { newStars, stats, codes } = promote(dimRows(2.0), [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.brightness.anchor-re-split']).toBe(1);
     // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
     expect(anchor.absmag).toBeCloseTo(1.15973, 4);
     expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
@@ -441,7 +442,8 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor();
     // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
     // the blend itself — subtracting it would zero the residual.
-    const { stats } = promote(dimRows(null, 1.0), [anchor], inputs());
+    const { stats, codes } = promote(dimRows(null, 1.0), [anchor], inputs());
+    expect(codes['promotion.brightness.anchor-re-split']).toBe(0);
     expect(stats.companionBlendDimSkipped).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(1.0);
@@ -1611,7 +1613,8 @@ describe('promoteCompanions', () => {
         pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars, stats } = promote(rows, [castorA], inputs());
+    const { newStars, stats, codes } = promote(rows, [castorA], inputs());
+    expect(codes['promotion.brightness.blend-split']).toBe(2);
     const c = newStars.find((s) => s.syntheticId === null);
     const cb = newStars.find((s) => s.syntheticId !== null);
     const split = COMBINED + 2.5 * Math.log10(2);

@@ -11,7 +11,8 @@ import type { Star } from '../parse/stars-parse';
 import { dustParams, EDENHOFER_AV } from '../photometry/brightness-colour-lineage-pure';
 import {
   companionAbsmagIsObserved,
-  type CompanionAbsmagSource, type CompanionCiVia, type MintedBrightness, type MultiplesTsvRow, type PromotedRow,
+  type CompanionAbsmagSource, type CompanionCiVia, type MintedAdjustment, type MintedBrightness, type MultiplesTsvRow,
+  type PromotedRow,
   type PromotionDerivedCounts, type RowOutcome,
 } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -37,6 +38,8 @@ const FACET_CODES = {
   'brightness.spectral': outcomeCode('The minted record\'s absolute magnitude is its per-component spectral type\'s absolute magnitude.'),
   'brightness.inherited-twin': outcomeCode('The minted record\'s absolute magnitude is the primary\'s inherited magnitude, kept because the pair has a renderable orbit.'),
   'brightness.anchor-collocated': outcomeCode('The minted record\'s absolute magnitude is its anchor\'s magnitude, the last resort for a pair\'s primary promoted as the anchor\'s companion.'),
+  'brightness.blend-split': outcomeCode('The minted record shares its Gaia source with n records in all, whose light it is the blend of, so its absolute magnitude is dimmed by 2.5·log₁₀(n), an equal split.'),
+  'brightness.anchor-re-split': outcomeCode('The anchor its magnitude difference is read off was dimmed to remove its members\' light, so the minted record\'s absolute magnitude is re-split from the anchor\'s new one.'),
   'colour.own': outcomeCode('The minted record\'s B−V is the row\'s own observed colour.'),
   'colour.spectral-derived': outcomeCode('The minted record\'s B−V is the intrinsic colour of its spectral class (Ballesteros 2012, /data/papers/index.md#ballesteros2012), the row carrying no colour of its own.'),
   'colour.none': outcomeCode('The minted record has no colour of its own and no derivable spectral class, so it bakes the solar B−V.'),
@@ -114,6 +117,8 @@ type ParamsOf<B extends Branch> =
 
 type FacetParamsOf<F extends Facet> =
   F extends `dust.${string}` ? { av: string }
+  : F extends 'brightness.blend-split' ? { n: string }
+  : F extends 'brightness.anchor-re-split' ? { record: string }
   : Record<string, never>;
 
 type FacetEntry = readonly [Facet, LineageParams];
@@ -129,6 +134,17 @@ export function promotionOriginKey(row: Pick<MultiplesTsvRow, 'systemId' | 'comp
 export interface PromotionDecision {
   readonly outcome: LineageRow;
   readonly facets: readonly LineageRow[];
+}
+
+function adjustmentFacet(a: MintedAdjustment, recordKey: (idx: number) => string): FacetEntry {
+  switch (a.pass) {
+    case 'blend-split': return facet('brightness.blend-split', { n: String(a.n) });
+    case 'anchor-re-split': return facet('brightness.anchor-re-split', { record: recordKey(a.anchorIdx) });
+    default: {
+      const unmapped: never = a;
+      throw new Error(`minted adjustment with no row mapping: ${JSON.stringify(unmapped)}`);
+    }
+  }
 }
 
 /** `recordKey` is the origin key of the record at a pre-sort catalogue index. */
@@ -168,6 +184,7 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
     case 'minted':
       return decided(row(MINT_BRANCHES[o.synthetic ? 'synthetic' : 'keyed'], { via }), [
         flag(true, brightnessFacet(o.brightness.source)),
+        ...o.brightness.adjustments.map((a) => adjustmentFacet(a, recordKey)),
         flag(o.brightness.spectMsFromOwnAbsmag, 'spectral.ms-from-own-absmag'),
         flag(true, COLOUR_CODES[o.brightness.ci]),
         facet(dustFacet(o.brightness), dustParams(o.brightness.av)),
