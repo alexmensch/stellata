@@ -174,7 +174,7 @@ describe('readTable', () => {
     expect(() => spaced.sourceId('id')).toThrow('fixture/t.tsv:2: id: " 123" is not a source_id. Re-run x.');
     const [list] = readTable(SPEC, 'id\tv\n12|34\t12||34\n');
     expect(list.sourceIdList('id', '|')).toEqual(['12', '34']);
-    expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: "12||34" has an empty element. Re-run x.');
   });
 
   it('names file, line and column on a bad identifier', () => {

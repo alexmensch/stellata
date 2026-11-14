@@ -88,14 +88,18 @@ export function idCell(raw: string | undefined): number | null {
   return t === null ? null : safeInteger(t);
 }
 
-export function idListCell(raw: string | undefined, separator: string): number[] {
+function listCell<T>(raw: string | undefined, separator: string, cell: (v: string) => T | null): T[] {
   const t = raw ?? '';
   if (t === '') return [];
   return t.split(separator).map((v) => {
-    const n = idCell(v);
+    const n = cell(v);
     if (n === null) throw new Error(`"${t}" has an empty element`);
     return n;
   });
+}
+
+export function idListCell(raw: string | undefined, separator: string): number[] {
+  return listCell(raw, separator, idCell);
 }
 
 export function sourceIdCell(raw: string | undefined): string | null {
@@ -191,7 +195,7 @@ export class TableRow<C extends string> {
   }
 
   sourceIdList(c: C, separator: string): string[] {
-    return this.cell(c, (raw) => (raw === '' ? [] : raw.split(separator).map((v) => present(sourceIdCell(v)))));
+    return this.cell(c, (raw) => listCell(raw, separator, sourceIdCell));
   }
 
   oneOf<T extends string>(c: C, allowed: readonly T[]): T {
