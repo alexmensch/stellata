@@ -365,7 +365,9 @@ function admitGroup(
     hip, hd: hds[0] ?? null, hr: hrs[0] ?? null, gl, flam,
     hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
   };
-  const row = primariesManifestRecord({ tyc, bayer: '', proper: '' }, record, group.binding, group.origin);
+  const row = primariesManifestRecord(
+    { tyc: hdItem?.tyc ?? null, bayer: null, proper: null }, record, group.binding, group.origin,
+  );
   return { blocked, verdict: { kind: 'admitted', reason, row, record } };
 }
 

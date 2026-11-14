@@ -89,29 +89,27 @@ export function manifestRecord(
   };
 }
 
-const textOrNull = (cell: string | null): string | null => (cell === '' ? null : cell);
-
 /** A primaries row from its merged labels: the spine's printed TYC, Bayer and
  *  proper cells (empty on an addition) beside the label merge's record. */
 export function primariesManifestRecord(
-  cells: { tyc: string; bayer: string; proper: string },
+  printed: { tyc: string | null; bayer: string | null; proper: string | null },
   r: LabelMergeRecord,
   binding: BindingClass,
   originKey: string,
 ): ManifestRecord {
-  const proper = textOrNull(cells.proper);
+  const { tyc, bayer, proper } = printed;
   return {
-    tyc: textOrNull(cells.tyc),
+    tyc,
     hip: r.hip,
     hd: r.hd,
     hdAlt: [...r.hdAlt],
     hr: r.hr,
     hrAlt: [...r.hrAlt],
-    gl: textOrNull(r.gl),
+    gl: r.gl,
     flam: r.flam,
-    bayer: textOrNull(cells.bayer),
+    bayer,
     proper,
-    gaiaSourceId: textOrNull(r.gaiaSourceId),
+    gaiaSourceId: r.gaiaSourceId,
     binding,
     routes: '',
     term: 'primaries',

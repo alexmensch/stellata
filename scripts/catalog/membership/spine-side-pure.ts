@@ -13,6 +13,7 @@ import {
   type LabelOverrides,
 } from '../classic-ids/label-merge/label-merge-pure';
 import type { SpineRow } from '../spine/inherited-spine-pure';
+import { textCell } from '../../util/tsv/table-pure';
 import type { PrimaryIndex, PrimaryTables } from '../spine/primaries-audit-pure';
 import type { SpineSettlement } from './binding/spine-settle-pure';
 import { attestedLabels, routedRow } from './label-attestation-pure';
@@ -60,7 +61,8 @@ export function spineSide(input: {
       const overlayEntry = record.gaiaSourceId !== null && overlay.has(record.gaiaSourceId);
       outcomes.push({ key, outcome: { kind: 'bright', overlayEntry } });
     }
-    const merged = primariesManifestRecord(kept[i], record, settled[i].ships.binding, key);
+    const printed = { tyc: textCell(kept[i].tyc), bayer: textCell(kept[i].bayer), proper: textCell(kept[i].proper) };
+    const merged = primariesManifestRecord(printed, record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
     const attested = routedRow(labels);
