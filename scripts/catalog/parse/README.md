@@ -257,9 +257,5 @@ Each record's `vx/vy/vz` is assembled after its direction resolves, by
 `velocityPcPerYr` in `../distance/`:
 [Space-motion velocity](../distance/README.md#space-motion-velocity).
 
-After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
-visual-doubles flagging (`visual-doubles.ts`), and the 100-byte v9
-record write per star including the seven `float32` Apsis fields, the
-`uint32` `sid`, the three `float32` velocity components, plus the
-`uint8` multiplicity status. See sections
-below.
+The passes after the walk are `../README.md`'s; the record write is
+`encodeCatalog` (`../record/`).
