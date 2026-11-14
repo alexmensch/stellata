@@ -7,9 +7,9 @@ const OWNER = 'src/astro-core/angles.ts';
 
 const M = String.raw`([\w.]+)`;
 const RULES: ReadonlyArray<LineRule> = [
-  { name: '((x % m) + m) % m', re: new RegExp(String.raw`%\s*${M}\s*\)?\s*\+\s*\1\s*\)\s*%\s*\1\b`) },
-  { name: '(x + m) % m', re: new RegExp(String.raw`\+\s*${M}\s*\)\s*%\s*\1\b`) },
-  { name: 'x < 0 ? x + m : x', re: new RegExp(String.raw`${M}\s*<\s*0\s*\?\s*\1\s*\+\s*[\w.]+\s*:\s*\1\b`) },
+  { name: '((x % m) + m) % m', re: new RegExp(String.raw`%\s*${M}\s*\)?\s*\+\s*\1\s*\)\s*%\s*\1(?![\w.])`) },
+  { name: '(x + m) % m', re: new RegExp(String.raw`\+\s*${M}\s*\)\s*%\s*\1(?![\w.])`) },
+  { name: 'x < 0 ? x + m : x', re: new RegExp(String.raw`${M}\s*<\s*0\s*\?\s*\1\s*\+\s*[\w.]+\s*:\s*\1(?![\w.])`) },
   { name: 'if (x < 0) x += m', re: new RegExp(String.raw`if\s*\(\s*${M}\s*<\s*0\s*\)\s*\{?\s*\1\s*\+=`) },
 ];
 
@@ -51,6 +51,9 @@ describe('floor-modulo shapes', () => {
       'const next = FRAME_CYCLE[(at + step) % FRAME_CYCLE.length];',
       'return pyMod(x, 360);',
       'const s = x < 0 ? -x : x;',
+      'const j = (a + n) % n.length;',
+      'const k = ((a % n) + n) % n2;',
+      'const t = w < 0 ? w + 360 : w.value;',
     ]) {
       expect(firstRule(line, RULES), line).toBeUndefined();
     }
