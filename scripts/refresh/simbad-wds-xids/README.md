@@ -76,8 +76,7 @@ changed override stales the record.
 
 Every guard here and in [Overrides](#overrides) fails the pull rather than
 skip: a skipped id, override or file loses a binding with nothing in the
-output to show it. Skipping, as the deleted Python pull did, is the defect
-these replace.
+output to show it.
 
 - **Band**: between `MIN_COMPONENT_REACH` (36%) of the components and all of
   them, since each binds at most one object; measured 2026-11-09, 23,669 of
