@@ -31,18 +31,17 @@ export interface SpineSide {
 export function spineSide(input: {
   kept: readonly SpineRow[];
   keyOf: (keptRow: number) => string;
-  settlement: Pick<SpineSettlement, 'bindings' | 'settled'>;
+  settled: SpineSettlement['rows'];
   overlay: ClassicIdOverlay;
   overrides: LabelOverrides;
   siblingRenderedSourceIds: ReadonlySet<string>;
   tables: PrimaryTables;
   idx: PrimaryIndex;
 }): SpineSide {
-  const { kept, keyOf, overlay, tables, idx } = input;
-  const { bindings, settled } = input.settlement;
+  const { kept, keyOf, settled, overlay, tables, idx } = input;
   // The merge keys on the DERIVED binding, so the labels a record takes are the
   // ones the overlay hangs on the source it is actually bound to.
-  const spineSides = kept.map((row, i) => spineLabelMergeRecord(row, settled[i].value));
+  const spineSides = kept.map((row, i) => spineLabelMergeRecord(row, settled[i].ships.value));
   const records = spineSides.map((s) => s.record);
   const merge = mergeClassicIdLabels({
     records,
@@ -55,13 +54,13 @@ export function spineSide(input: {
   const rows = records.map((record, i) => {
     const key = keyOf(i);
     if (record.gaiaSourceId === null) outcomes.push({ key, outcome: { kind: 'ships-none' } });
-    const b = bindings[i];
+    const b = settled[i].binding;
     const mag = b.outcome === 'sol' ? SOL_APPARENT_V_MAGNITUDE : b.gate.printedV?.vMag ?? null;
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       const overlayEntry = record.gaiaSourceId !== null && overlay.has(record.gaiaSourceId);
       outcomes.push({ key, outcome: { kind: 'bright', overlayEntry } });
     }
-    const merged = primariesManifestRecord(kept[i], record, settled[i].binding, key);
+    const merged = primariesManifestRecord(kept[i], record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
     const attested = attestedRow({ ...merged, ...labels.kept }, tables, idx, labels.attestation);

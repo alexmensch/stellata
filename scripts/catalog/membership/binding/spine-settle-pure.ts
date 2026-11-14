@@ -55,10 +55,15 @@ export interface SettledBinding {
   binding: PrimariesBindingClass;
 }
 
+/** One kept spine row's derivation and what it ships. */
+export interface SettledSpineRow {
+  binding: SpineBinding;
+  ships: SettledBinding;
+}
+
 export interface SpineSettlement {
   /** Per kept spine row, in order. */
-  bindings: SpineBinding[];
-  settled: SettledBinding[];
+  rows: SettledSpineRow[];
   outcomes: KeyedOutcome[];
   unshipped: UnshippedCandidate[];
 }
@@ -229,7 +234,7 @@ export function settleSpineBindings(input: {
   const outcomes: KeyedOutcome[] = [];
   const unshipped: UnshippedCandidate[] = [];
   const applied = new Set<string>();
-  const settled = bindings.map((b, i): SettledBinding => {
+  const rows = bindings.map((b, i): SettledSpineRow => {
     const row = kept[i];
     const key = keyOf(i);
     outcomes.push({ key, outcome: spineBindingOutcome(row, b, tables, evidence.wdsXids) });
@@ -244,16 +249,16 @@ export function settleSpineBindings(input: {
       s = r.settled;
     }
     outcomes.push({ key, outcome: { kind: 'admit-spine', binding: s.binding } });
-    return s;
+    return { binding: b, ships: s };
   });
   for (const key of dispositions.keys()) {
     if (!applied.has(key)) {
       throw new Error(`binding-review-dispositions.tsv: row ${key} disposes no spine row; remove it`);
     }
   }
-  const duplicated = heldMoreThanOnce(settled.map((s) => s.value));
+  const duplicated = heldMoreThanOnce(rows.map((r) => r.ships.value));
   if (duplicated.size > 0) {
     throw new Error(`two spine rows bind one Gaia source: ${[...duplicated].join(', ')}`);
   }
-  return { bindings, settled, outcomes, unshipped };
+  return { rows, outcomes, unshipped };
 }

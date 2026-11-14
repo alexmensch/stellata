@@ -83,7 +83,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     kept, keyOf, derive, dispositions: input.dispositions, evidence, tables,
   });
   const spine = spineSide({
-    kept, keyOf, settlement, overlay: input.overlay, overrides: input.overrides,
+    kept, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
     siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
   });
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);
