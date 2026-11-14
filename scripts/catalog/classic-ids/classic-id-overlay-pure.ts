@@ -235,6 +235,36 @@ type OverlayRouteCounts = Pick<OverlayJoinCounts,
   | 'crossIndexBayerUnkeyed' | 'crossIndexFlamsteedUnkeyed' | 'bsc5HrUnkeyed'
   | 'cns5GjUnkeyed' | 'cns5GjViaHip'>;
 
+/** The sources a designation's route reached before the gate, or none. */
+export type Reach<R extends string> =
+  | { readonly kind: 'reached'; readonly route: R; readonly sources: readonly string[] }
+  | { readonly kind: 'unreached' };
+
+/** One designation the join reads, and where its route took it: the overlay
+ *  and its counts are projections of these. */
+export type DesignationReach =
+  | { readonly kind: 'hd'; readonly hd: number; readonly tycs: readonly string[]; readonly reach: Reach<'tyc'> }
+  | { readonly kind: 'hip'; readonly hip: number; readonly source: string }
+  | {
+    readonly kind: 'bayer' | 'flamsteed';
+    readonly hd: number;
+    readonly hip: number | null;
+    readonly value: string;
+    readonly reach: Reach<'hd' | 'hip'>;
+  }
+  | { readonly kind: 'hr'; readonly hr: number; readonly hd: number | null; readonly reach: Reach<'hd'> }
+  | {
+    readonly kind: 'gj';
+    readonly cns5: number;
+    readonly gj: string;
+    readonly hip: number | null;
+    readonly reach: Reach<'edr3' | 'hip'>;
+  };
+
+/** An IV/27A row whose HIP resolves, its HD route weighed against its HIP
+ *  route; `hip-only` where the HD reaches no source. */
+export type RouteCheck = HdHipRouteDisagreement & { readonly outcome: 'agree' | 'disagree' | 'hip-only' };
+
 /** Every source a route proposes, with the designations each would carry —
  *  the gate's candidates, before any evidence weighs them. */
 export interface OverlayCandidates {
@@ -243,104 +273,40 @@ export interface OverlayCandidates {
    *  tier: the walk holds both ends here and the overlay carries no TYC cell. */
   tycsBySource: Map<string, string[]>;
   hdToSources: Map<number, string[]>;
-  disagreements: HdHipRouteDisagreement[];
+  reaches: DesignationReach[];
+  routeChecks: RouteCheck[];
   routeCounts: OverlayRouteCounts;
 }
 
-export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
-  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource } = walks;
+function reachOf<R extends string>(route: R, sources: readonly string[]): Reach<R> {
+  return sources.length === 0 ? { kind: 'unreached' } : { kind: 'reached', route, sources };
+}
+
+function overlayOf(reaches: readonly DesignationReach[]): ClassicIdOverlay {
   const overlay: ClassicIdOverlay = new Map();
-
-  // HD → TYC → source_id is the primary route: every HD-bearing AT-HYG row
-  // also carries a TYC, so no HD needs the HIP route as an authority.
-  const hdToSources = new Map<number, string[]>();
-  const tycsBySource = new Map<string, string[]>();
-  const distinctTyc = new Set<string>();
-  const resolvedTyc = new Set<string>();
-  let ambiguousRows = 0;
-  for (const row of tyc2Hd) {
-    distinctTyc.add(row.tyc);
-    if (row.nHd > 1 || row.nTyc > 1) ambiguousRows++;
-    const sourceId = tycToSource.get(row.tyc);
-    if (sourceId === undefined) continue;
-    resolvedTyc.add(row.tyc);
-    const tycs = tycsBySource.get(sourceId);
-    if (tycs === undefined) tycsBySource.set(sourceId, [row.tyc]);
-    else addValue(tycs, row.tyc);
-    addValue(entryFor(overlay, sourceId).hd, row.hd);
-    const sources = hdToSources.get(row.hd);
-    if (sources === undefined) hdToSources.set(row.hd, [sourceId]);
-    else addValue(sources, sourceId);
-  }
-
-  // HIP is a designation in its own right, so every cross-walk entry keys a
-  // label — the walk is not merely a routing table here.
-  for (const [hip, sourceId] of hipToSource) {
-    addValue(entryFor(overlay, sourceId).hip, hip);
-  }
-
-  const disagreements: HdHipRouteDisagreement[] = [];
-  let hipRouteAgree = 0;
-  let hipRouteHipOnly = 0;
-  let bayerUnkeyed = 0;
-  let flamsteedUnkeyed = 0;
-  for (const row of crossIndex) {
-    const hdRoute = hdToSources.get(row.hd) ?? [];
-    const hipRoute = row.hip === null ? undefined : hipToSource.get(row.hip);
-    if (row.hip !== null && hipRoute !== undefined) {
-      if (hdRoute.length === 0) hipRouteHipOnly++;
-      else if (hdRoute.includes(hipRoute)) hipRouteAgree++;
-      else {
-        disagreements.push({
-          hd: row.hd,
-          hip: row.hip,
-          hdRouteSourceIds: [...hdRoute],
-          hipRouteSourceId: hipRoute,
-        });
-      }
-    }
-    const targets = hdRoute.length > 0 ? hdRoute : hipRoute ? [hipRoute] : [];
-    if (row.bayer !== null && row.cst !== null) {
-      if (targets.length === 0) bayerUnkeyed++;
-      for (const sourceId of targets) {
-        addValue(entryFor(overlay, sourceId).bayer, `${row.bayer} ${row.cst}`);
-      }
-    }
-    if (row.flamsteed !== null && row.cst !== null) {
-      if (targets.length === 0) flamsteedUnkeyed++;
-      for (const sourceId of targets) {
-        addValue(entryFor(overlay, sourceId).flamsteed, `${row.flamsteed} ${row.cst}`);
+  const sourcesOf = (r: { readonly reach: Reach<string> }): readonly string[] => (
+    r.reach.kind === 'reached' ? r.reach.sources : []
+  );
+  for (const r of reaches) {
+    switch (r.kind) {
+      case 'hd': for (const s of sourcesOf(r)) addValue(entryFor(overlay, s).hd, r.hd); break;
+      case 'hip': addValue(entryFor(overlay, r.source).hip, r.hip); break;
+      case 'bayer': for (const s of sourcesOf(r)) addValue(entryFor(overlay, s).bayer, r.value); break;
+      case 'flamsteed': for (const s of sourcesOf(r)) addValue(entryFor(overlay, s).flamsteed, r.value); break;
+      case 'hr': for (const s of sourcesOf(r)) addValue(entryFor(overlay, s).hr, r.hr); break;
+      case 'gj':
+        for (const s of sourcesOf(r)) {
+          const entry = entryFor(overlay, s);
+          addValue(entry.gj, r.gj);
+          if (r.hip !== null) addValue(entry.hip, r.hip);
+        }
+        break;
+      default: {
+        const unhandled: never = r;
+        throw new Error(`classic-ID join: unhandled designation ${JSON.stringify(unhandled)}`);
       }
     }
   }
-
-  let hrUnkeyed = 0;
-  for (const row of bsc5) {
-    const targets = row.hd === null ? [] : hdToSources.get(row.hd) ?? [];
-    if (targets.length === 0) {
-      hrUnkeyed++;
-      continue;
-    }
-    for (const sourceId of targets) addValue(entryFor(overlay, sourceId).hr, row.hr);
-  }
-
-  let gjUnkeyed = 0;
-  let gjViaHip = 0;
-  for (const row of cns5) {
-    let sourceId = row.gaiaSourceId;
-    if (sourceId === null && row.hip !== null) {
-      sourceId = hipToSource.get(row.hip) ?? null;
-      if (sourceId !== null) gjViaHip++;
-    }
-    if (sourceId === null) {
-      gjUnkeyed++;
-      continue;
-    }
-    const entry = entryFor(overlay, sourceId);
-    addValue(entry.gj, `${row.gj}${row.gjComp ?? ''}`);
-    if (row.hip !== null) addValue(entry.hip, row.hip);
-  }
-
   for (const entry of overlay.values()) {
     entry.hd.sort((a, b) => a - b);
     entry.hr.sort((a, b) => a - b);
@@ -349,12 +315,93 @@ export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
     entry.bayer.sort();
     entry.flamsteed.sort();
   }
+  return overlay;
+}
 
+function unreached(reaches: readonly DesignationReach[], kind: DesignationReach['kind']): number {
+  return reaches.filter((r) => r.kind === kind && 'reach' in r && r.reach.kind === 'unreached').length;
+}
+
+export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
+  const { tyc2Hd, crossIndex, bsc5, cns5, tycToSource, hipToSource } = walks;
+  const reaches: DesignationReach[] = [];
+
+  // HD → TYC → source_id is the primary route: every HD-bearing AT-HYG row
+  // also carries a TYC, so no HD needs the HIP route as an authority.
+  const hdToSources = new Map<number, string[]>();
+  const tycsByHd = new Map<number, string[]>();
+  const tycsBySource = new Map<string, string[]>();
+  const distinctTyc = new Set<string>();
+  const resolvedTyc = new Set<string>();
+  let ambiguousRows = 0;
+  for (const row of tyc2Hd) {
+    distinctTyc.add(row.tyc);
+    if (row.nHd > 1 || row.nTyc > 1) ambiguousRows++;
+    const tycsOfHd = tycsByHd.get(row.hd);
+    if (tycsOfHd === undefined) tycsByHd.set(row.hd, [row.tyc]);
+    else addValue(tycsOfHd, row.tyc);
+    const sourceId = tycToSource.get(row.tyc);
+    if (sourceId === undefined) continue;
+    resolvedTyc.add(row.tyc);
+    const tycs = tycsBySource.get(sourceId);
+    if (tycs === undefined) tycsBySource.set(sourceId, [row.tyc]);
+    else addValue(tycs, row.tyc);
+    const sources = hdToSources.get(row.hd);
+    if (sources === undefined) hdToSources.set(row.hd, [sourceId]);
+    else addValue(sources, sourceId);
+  }
+  for (const [hd, tycs] of tycsByHd) {
+    reaches.push({ kind: 'hd', hd, tycs, reach: reachOf('tyc', hdToSources.get(hd) ?? []) });
+  }
+
+  // HIP is a designation in its own right, so every cross-walk entry keys a
+  // label — the walk is not merely a routing table here.
+  for (const [hip, source] of hipToSource) reaches.push({ kind: 'hip', hip, source });
+
+  const routeChecks: RouteCheck[] = [];
+  for (const row of crossIndex) {
+    const hdRoute = hdToSources.get(row.hd) ?? [];
+    const hipRoute = row.hip === null ? undefined : hipToSource.get(row.hip);
+    if (row.hip !== null && hipRoute !== undefined) {
+      routeChecks.push({
+        hd: row.hd,
+        hip: row.hip,
+        hdRouteSourceIds: [...hdRoute],
+        hipRouteSourceId: hipRoute,
+        outcome: hdRoute.length === 0 ? 'hip-only' : hdRoute.includes(hipRoute) ? 'agree' : 'disagree',
+      });
+    }
+    const reach: Reach<'hd' | 'hip'> = hdRoute.length > 0
+      ? reachOf('hd', hdRoute)
+      : reachOf('hip', hipRoute === undefined ? [] : [hipRoute]);
+    if (row.cst === null) continue;
+    if (row.bayer !== null) reaches.push({ kind: 'bayer', hd: row.hd, hip: row.hip, value: `${row.bayer} ${row.cst}`, reach });
+    if (row.flamsteed !== null) {
+      reaches.push({ kind: 'flamsteed', hd: row.hd, hip: row.hip, value: `${row.flamsteed} ${row.cst}`, reach });
+    }
+  }
+
+  for (const row of bsc5) {
+    reaches.push({
+      kind: 'hr', hr: row.hr, hd: row.hd, reach: reachOf('hd', row.hd === null ? [] : hdToSources.get(row.hd) ?? []),
+    });
+  }
+
+  for (const row of cns5) {
+    const viaHip = row.hip === null ? undefined : hipToSource.get(row.hip);
+    const reach: Reach<'edr3' | 'hip'> = row.gaiaSourceId !== null
+      ? reachOf('edr3', [row.gaiaSourceId])
+      : reachOf('hip', viaHip === undefined ? [] : [viaHip]);
+    reaches.push({ kind: 'gj', cns5: row.cns5, gj: `${row.gj}${row.gjComp ?? ''}`, hip: row.hip, reach });
+  }
+
+  const checked = (o: RouteCheck['outcome']): number => routeChecks.filter((c) => c.outcome === o).length;
   return {
-    overlay,
+    overlay: overlayOf(reaches),
     tycsBySource,
     hdToSources,
-    disagreements,
+    reaches,
+    routeChecks,
     routeCounts: {
       tyc2HdRows: tyc2Hd.length,
       tyc2HdDistinctTyc: distinctTyc.size,
@@ -365,14 +412,14 @@ export function joinOverlayCandidates(walks: OverlayWalks): OverlayCandidates {
       bsc5Rows: bsc5.length,
       cns5Rows: cns5.length,
       hipXmatchEntries: hipToSource.size,
-      hdHipRouteAgree: hipRouteAgree,
-      hdHipRouteDisagree: disagreements.length,
-      hdHipRouteHipOnly: hipRouteHipOnly,
-      crossIndexBayerUnkeyed: bayerUnkeyed,
-      crossIndexFlamsteedUnkeyed: flamsteedUnkeyed,
-      bsc5HrUnkeyed: hrUnkeyed,
-      cns5GjUnkeyed: gjUnkeyed,
-      cns5GjViaHip: gjViaHip,
+      hdHipRouteAgree: checked('agree'),
+      hdHipRouteDisagree: checked('disagree'),
+      hdHipRouteHipOnly: checked('hip-only'),
+      crossIndexBayerUnkeyed: unreached(reaches, 'bayer'),
+      crossIndexFlamsteedUnkeyed: unreached(reaches, 'flamsteed'),
+      bsc5HrUnkeyed: unreached(reaches, 'hr'),
+      cns5GjUnkeyed: unreached(reaches, 'gj'),
+      cns5GjViaHip: reaches.filter((r) => r.kind === 'gj' && r.reach.kind === 'reached' && r.reach.route === 'hip').length,
     },
   };
 }
@@ -390,8 +437,11 @@ export function magnitudeWeighableSourceIds(
 }
 
 export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
-  const { overlay, tycsBySource, hdToSources, disagreements, routeCounts } =
+  const { overlay, tycsBySource, hdToSources, routeChecks, routeCounts } =
     joinOverlayCandidates(input);
+  const disagreements = routeChecks
+    .filter((c) => c.outcome === 'disagree')
+    .map(({ hd, hip, hdRouteSourceIds, hipRouteSourceId }) => ({ hd, hip, hdRouteSourceIds, hipRouteSourceId }));
 
   // Gate before counting, so every overlay* count describes the artifact
   // rather than the pre-vetting routing; routeCounts stay pre-gate.

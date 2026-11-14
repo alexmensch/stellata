@@ -87,8 +87,10 @@ scripts/catalog/classic-ids/
                                   label flips each round-trip their committed
                                   file byte for byte.
   classic-id-overlay-pure.ts      The join (`joinOverlayCandidates`, which
-    (+ test)                      reads no evidence), the binding gate and its
-                                  counts. The gate itself — evidence,
+    (+ test)                      reads no evidence: each designation's
+                                  reach, with the overlay and the route
+                                  counts its projections), the binding gate
+                                  and its counts. The gate itself — evidence,
                                   thresholds, `weighBinding` — is
                                   ../membership/binding/'s; this module
                                   imports it. Pure.
