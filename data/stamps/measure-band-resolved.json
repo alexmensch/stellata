@@ -2,9 +2,10 @@
   "inputs": {
     "scripts/catalog/columns/catalog-buffer.ts": "ef714be2cd1ed896bffab5c342840bbecda23ba8",
     "scripts/catalog/columns/catalog-columns.ts": "6233acd5ccaea4dc8d598d1c55200431e188bb83",
-    "scripts/milkyway-calibration/measure-resolved-light.ts": "bc309445d7332f1d4ac9826a52009fab297a6a3f",
+    "scripts/milkyway-calibration/measure-resolved-light.ts": "b3b29590a1cc476139d1484c66681d025cca5078",
     "scripts/milkyway-calibration/resolved-hole-table-outputs.ts": "e2e25cc022519a880ce61194711bf7a40777c060",
-    "scripts/milkyway-calibration/resolved-light-pure.ts": "1e8fd25209b4852d8ddc0c1e0d26908ca526bef7",
+    "scripts/milkyway-calibration/resolved-light-pure.ts": "b62b4c7a5c01ae9dbb4c34588dee6012970bbb80",
+    "scripts/util/counts/tally-pure.ts": "265ed4a4383f703a0954a60697c7444b9c4a59d2",
     "scripts/util/emit-artifacts.ts": "fbcf67915d807b948badcae9b64a885d8705c026",
     "scripts/util/paths.ts": "57cc218a71295c2f51e5f3b5f4657c26e6b13927",
     "scripts/util/staged-write.ts": "33b66e0828f74af840ad7bd4c3b195d5c1b5e12c",
@@ -27,7 +28,7 @@
   "outputs": {
     "src/astro-core/milkyway/calibration/resolved-hole-table.ts": "f617e243cc366de46ad3f15cf5177c1fa13eb87a"
   },
-  "request": "a7ddcef5b11b10ed394ae61ccdb5c5a43f1f7021",
+  "request": "fce56804371e60428efa79e93613554581edc559",
   "requestFrom": [
     "public/catalog-manifest.json"
   ]
