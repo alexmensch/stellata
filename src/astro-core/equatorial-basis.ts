@@ -31,6 +31,10 @@ export interface ProperMotion {
   pmDecMasyr: number | null;
 }
 
+function hasProperMotion(pm: ProperMotion): pm is { pmRaMasyr: number; pmDecMasyr: number } {
+  return pm.pmRaMasyr !== null && pm.pmDecMasyr !== null;
+}
+
 const RAD_TO_DEG = 180 / Math.PI;
 
 export function equatorialTangentBasisRad(raRad: number, decRad: number): TangentBasis {
@@ -84,7 +88,7 @@ export function directionAtEpoch(
   pos: SkyPosition, pm: ProperMotion, fromEpoch: number, toEpoch: number,
 ): UnitVector {
   const { u, east, north } = equatorialTangentBasis(pos.raDeg, pos.decDeg);
-  if (pm.pmRaMasyr === null || pm.pmDecMasyr === null) return u;
+  if (!hasProperMotion(pm)) return u;
   const dEast = pm.pmRaMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
   const dNorth = pm.pmDecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
   const x = u.x + dEast * east.x + dNorth * north.x;
@@ -99,7 +103,7 @@ export function directionAtEpoch(
 export function skyPositionAtEpoch(
   pos: SkyPosition, pm: ProperMotion, fromEpoch: number, toEpoch: number,
 ): SkyPosition {
-  if (pm.pmRaMasyr === null || pm.pmDecMasyr === null) return pos;
+  if (!hasProperMotion(pm)) return pos;
   return raDecFromUnitVector(directionAtEpoch(pos, pm, fromEpoch, toEpoch));
 }
 
