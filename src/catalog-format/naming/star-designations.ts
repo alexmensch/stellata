@@ -15,6 +15,7 @@ import {
   gouldDesignation,
   superscript,
 } from './star-naming-pure';
+import { ascending } from '../../astro-core/order-pure';
 
 export { designationSetOfEntry, formatGcvsDesignation, superscript };
 
@@ -53,12 +54,12 @@ export function starDesignations(
   // accepted (/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend).
   // Sorted, so the line does not depend on overlay cell order.
   if (entry.hr !== undefined) {
-    for (const hr of [entry.hr, ...(entry.hra ?? [])].sort((a, b) => a - b)) {
+    for (const hr of [entry.hr, ...(entry.hra ?? [])].sort(ascending)) {
       out.push(`HR ${hr}`);
     }
   }
   if (entry.hd !== undefined) {
-    for (const hd of [entry.hd, ...(entry.hda ?? [])].sort((a, b) => a - b)) {
+    for (const hd of [entry.hd, ...(entry.hda ?? [])].sort(ascending)) {
       out.push(`HD ${hd}`);
     }
   }

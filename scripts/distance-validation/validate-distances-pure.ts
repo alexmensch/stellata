@@ -2,6 +2,7 @@
 
 import { NO_FIGURE, formatFraction } from '../util/counts/tally-pure';
 import { ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, type VaidmanRow } from './vaidman-tsv';
+import { ascending } from '../../src/astro-core/order-pure';
 
 export const MEDIAN_FRAC_DIFF_MAX = 0.15;
 export const LARGE_DIFF_THRESHOLD = 0.5;
@@ -40,7 +41,7 @@ export function percentile(sorted: readonly number[], p: number): number {
 
 /** Median, 84th percentile and max of |diffs|, NaN diffs dropped first; `empty` when none remain. */
 export function aggregateStats(diffs: readonly number[]): Stats {
-  const abs = diffs.filter((d) => !Number.isNaN(d)).map(Math.abs).sort((a, b) => a - b);
+  const abs = diffs.filter((d) => !Number.isNaN(d)).map(Math.abs).sort(ascending);
   if (abs.length === 0) return { kind: 'empty' };
   return { kind: 'measured', median: percentile(abs, 50), p84: percentile(abs, 84), max: abs[abs.length - 1], count: abs.length };
 }

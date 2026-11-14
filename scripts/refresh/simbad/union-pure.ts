@@ -7,6 +7,7 @@ import { corroborate, verdictLine, type Verdicts } from './resolve-membership-pu
 import { fetchBasic, resolveOids, type BasicCells, type ParseLedger, type SimbadPhases } from './simbad-fetch-pure';
 import { isFilled } from './simbad-rows-pure';
 import { GAIA_DR3, WIDENING_LADDER } from './simbad-specs-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The namespaces a union pass may ask; the order is not load-bearing, and Gaia is absent (README.md#why-the-union-asks-no-gaia-rung). */
 export const UNION_NAMESPACES = WIDENING_LADDER;
@@ -128,7 +129,7 @@ export async function unionUnanswered(
     );
     report.resolved.set(ns.name, resolved.size);
     report.verdicts.set(ns.name, verdicts);
-    const fresh = [...new Set(resolved.values())].filter((oid) => !rows.has(oid) && !found.has(oid)).sort((a, b) => a - b);
+    const fresh = [...new Set(resolved.values())].filter((oid) => !rows.has(oid) && !found.has(oid)).sort(ascending);
     const pulled = fresh.length > 0 ? await fetchBasic(ask, phases, fresh) : new Map<number, BasicCells>();
     const kept = [...pulled].filter(([, cells]) => isFilled(cells[value]));
     for (const [oid, cells] of kept) {

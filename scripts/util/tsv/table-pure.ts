@@ -1,6 +1,8 @@
 // The one TSV header walk and cell parser set: rows typed by their column
 // names, with an empty cell and a malformed one kept apart. See README.md.
 
+import { ascending } from '../../../src/astro-core/order-pure';
+
 export interface TableSpec<C extends string> {
   /** Repo-relative path; also the label every parse error names. */
   readonly file: string;
@@ -113,9 +115,7 @@ export function compareSourceIds(a: string | null, b: string | null): number {
   if (x === y) return 0;
   if (x === null) return -1;
   if (y === null) return 1;
-  const bx = BigInt(x);
-  const by = BigInt(y);
-  return bx < by ? -1 : bx > by ? 1 : 0;
+  return ascending(BigInt(x), BigInt(y));
 }
 
 function present<T>(v: T | null): T {

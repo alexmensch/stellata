@@ -1,6 +1,8 @@
 // Pure statistics for the frame-cost harness: dwell summaries and
 // baseline-vs-disabled differential rows. See README.md.
 
+import { ascending } from '../../../astro-core/order-pure';
+
 /** How a row's milliseconds were measured. Three different instruments —
  *  never compare numbers across two of them. */
 export const GPU_FRAME_METHODS = ['timer-query', 'timestamp', 'raf-delta'] as const;
@@ -202,7 +204,7 @@ const IQR_TO_SIGMA = 1 / 1.349;
 const MEDIAN_SE_FACTOR = 1.2533;
 
 function sortedCopy(xs: readonly number[]): number[] {
-  return [...xs].sort((a, b) => a - b);
+  return [...xs].sort(ascending);
 }
 
 export function median(xs: readonly number[]): number {

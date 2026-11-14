@@ -18,6 +18,7 @@ import {
 import { LABEL_FLIPS } from './label-merge/label-flips-tsv';
 import { ROUTE_DISAGREEMENTS_REVIEW } from './route-disagreements-review-source';
 import { CATALOG_PARTITION } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const IDENTITY_VERDICTS = new Set(['no-identity-event', 'merge', 'split']);
 
@@ -137,7 +138,7 @@ describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('withheld sibling HD numbers',
 
   it('withholds 34 HD numbers, six of which a manifest row of its own carries', () => {
     expect(withheld.size).toBe(34);
-    expect([...carriedBy.keys()].sort((a, b) => a - b)).toEqual(WITHHELD_ON_THEIR_OWN_ROW);
+    expect([...carriedBy.keys()].sort(ascending)).toEqual(WITHHELD_ON_THEIR_OWN_ROW);
   });
 
   it('parks every one of those six for want of a published parallax', () => {
