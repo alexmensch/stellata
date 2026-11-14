@@ -59,7 +59,7 @@ describe('gaia-xmatch / parseGaiaHipXmatchTsv', () => {
     expect(m.get(10)).toBe('777');
   });
 
-  it('throws on a gaia_source_id that is not digits, naming the line', () => {
+  it('throws on a gaia_source_id that is not digits or is zero-padded, naming the line', () => {
     const text = 'hip\tgaia_source_id\tangular_distance\n9\tnot-a-number\t0.1\n';
     expect(() => parseGaiaHipXmatchTsv(text, FROM)).toThrow(/:2: gaia_source_id: "not-a-number" is not a source_id/);
     const padded = 'hip\tgaia_source_id\tangular_distance\n9\t000\t0.1\n';
