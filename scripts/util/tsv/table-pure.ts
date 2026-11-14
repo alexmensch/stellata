@@ -76,11 +76,16 @@ function safeInteger(t: string): number {
 
 const ID = /^(0|[1-9]\d*)$/;
 
-export function idCell(raw: string | undefined): number | null {
+function identifierText(raw: string | undefined, noun: string): string | null {
   const t = raw ?? '';
   if (t === '') return null;
-  if (!ID.test(t)) throw new Error(`"${t}" is not an identifier`);
-  return safeInteger(t);
+  if (!ID.test(t)) throw new Error(`"${t}" is not ${noun}`);
+  return t;
+}
+
+export function idCell(raw: string | undefined): number | null {
+  const t = identifierText(raw, 'an identifier');
+  return t === null ? null : safeInteger(t);
 }
 
 export function idListCell(raw: string | undefined, separator: string): number[] {
@@ -94,10 +99,7 @@ export function idListCell(raw: string | undefined, separator: string): number[]
 }
 
 export function sourceIdCell(raw: string | undefined): string | null {
-  const t = textCell(raw);
-  if (t === null) return null;
-  if (!ID.test(t)) throw new Error(`"${t}" is not a source_id`);
-  return t;
+  return identifierText(raw, 'a source_id');
 }
 
 /** Absent (null or empty) first, then by value. */

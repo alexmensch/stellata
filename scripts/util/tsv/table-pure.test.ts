@@ -170,6 +170,8 @@ describe('readTable', () => {
     const [padded] = readTable(SPEC, 'id\tv\n0123\t0\n');
     expect(() => padded.sourceId('id')).toThrow('fixture/t.tsv:2: id: "0123" is not a source_id. Re-run x.');
     expect(padded.sourceId('v')).toBe('0');
+    const [spaced] = readTable(SPEC, 'id\tv\n 123\t1\n');
+    expect(() => spaced.sourceId('id')).toThrow('fixture/t.tsv:2: id: " 123" is not a source_id. Re-run x.');
     const [list] = readTable(SPEC, 'id\tv\n12|34\t12||34\n');
     expect(list.sourceIdList('id', '|')).toEqual(['12', '34']);
     expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
