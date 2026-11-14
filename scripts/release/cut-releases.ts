@@ -16,11 +16,14 @@ import {
 } from './release-plan-pure.ts';
 import { releaseAt, releaseCommitAt, releaseOn } from '../util/release-version.ts';
 
+type PlanSource = { readonly from: 'file'; readonly path: string } | { readonly from: 'env' };
+
 type Options =
   | { readonly step: 'plan'; readonly head: string; readonly out: string | null }
-  | { readonly step: 'tag' | 'publish'; readonly plan: string };
+  | { readonly step: 'tag' | 'publish'; readonly plan: PlanSource };
 
-const USAGE = 'Usage: cut-releases.ts plan [--head <sha>] [--out <plan.json>] | cut-releases.ts <tag|publish> --plan <plan.json>';
+const USAGE =
+  'Usage: cut-releases.ts plan [--head <sha>] [--out <plan.json>] | cut-releases.ts <tag|publish> [--plan <plan.json>] (else the PLAN env var)';
 
 function parseArgs(argv: string[]): Options {
   const [step, ...rest] = argv;
@@ -36,8 +39,17 @@ function parseArgs(argv: string[]): Options {
     return { step, head: flags.get('--head') ?? 'HEAD', out: flags.get('--out') ?? null };
   }
   const plan = flags.get('--plan');
-  if ((step === 'tag' || step === 'publish') && plan !== undefined && flags.size === 1) return { step, plan };
+  if ((step === 'tag' || step === 'publish') && flags.size === (plan === undefined ? 0 : 1)) {
+    return { step, plan: plan === undefined ? { from: 'env' } : { from: 'file', path: plan } };
+  }
   throw new Error(USAGE);
+}
+
+function readPlan(source: PlanSource): string {
+  if (source.from === 'file') return readFileSync(source.path, 'utf8');
+  const plan = process.env.PLAN;
+  if (plan === undefined || plan === '') throw new Error(`No plan: PLAN is unset and no --plan given.\n${USAGE}`);
+  return plan;
 }
 
 function run(command: string, args: string[]): string {
@@ -123,7 +135,7 @@ function main(): void {
     if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `releases=${releases.length}\nplan=${json}\n`);
     return;
   }
-  const releases = parsePlan(readFileSync(opts.plan, 'utf8'));
+  const releases = parsePlan(readPlan(opts.plan));
   if (opts.step === 'tag') releases.forEach(tag);
   else releases.forEach((release, i) => publish(release, i === releases.length - 1));
 }
