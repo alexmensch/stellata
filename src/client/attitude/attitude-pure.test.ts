@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
+import { pyMod } from '../../astro-core/angles';
 import {
   autoFrameFor,
   ballBasisInto,
@@ -195,7 +196,7 @@ describe('reference frames', () => {
 
   it('puts the ecliptic pole at RA 18h', () => {
     const p = frames.ecliptic.pole;
-    const ra = ((Math.atan2(p.y, p.x) * 12) / Math.PI + 24) % 24;
+    const ra = pyMod((Math.atan2(p.y, p.x) * 12) / Math.PI, 24);
     expect(ra).toBeCloseTo(18, 6);
   });
 

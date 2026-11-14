@@ -6,6 +6,7 @@ import {
 import {
   DEPTH_DIM_CLEARANCE_PC, rimDistancesForExtent,
 } from '../../fresnel-shell/shell-distance-pure';
+import { pyMod } from '../../../astro-core/angles';
 import { AU_PC } from '../../../astro-core/astronomy-constants';
 import { ShellRegistry } from '../../fresnel-shell/shell-registry';
 import { fakeShellMaterials } from '../../fresnel-shell/shell-materials-mock';
@@ -51,7 +52,7 @@ describe('HELIOPAUSE_APEX_SOL_PC', () => {
       HELIOPAUSE_APEX_SOL_PC.y,
       HELIOPAUSE_APEX_SOL_PC.z,
     );
-    const raDeg = (Math.atan2(HELIOPAUSE_APEX_SOL_PC.y, HELIOPAUSE_APEX_SOL_PC.x) * 180 / Math.PI + 360) % 360;
+    const raDeg = pyMod(Math.atan2(HELIOPAUSE_APEX_SOL_PC.y, HELIOPAUSE_APEX_SOL_PC.x) * 180 / Math.PI, 360);
     const decDeg = Math.asin(HELIOPAUSE_APEX_SOL_PC.z / r) * 180 / Math.PI;
     expect(raDeg).toBeCloseTo(255.04, 2);
     expect(decDeg).toBeCloseTo(-17.6, 2);

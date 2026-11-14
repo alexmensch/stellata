@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { pyMod } from '../../../astro-core/angles';
 import { unitVectorFromRaDec } from '../../../astro-core/equatorial-basis';
 import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../../../astro-core/galactic-coords';
 import type { CoordSphereFrame, CoordSphereSpec, DrawnCoordSphereFrame } from './coord-sphere';
@@ -93,7 +94,7 @@ function frameCoordsOf(spec: CoordSphereSpec, dir: THREE.Vector3) {
   const pole = spec.dirToIcrs(0, Math.PI / 2, new THREE.Vector3());
   const lonRad = Math.atan2(dir.dot(quadrant), dir.dot(lonAxis));
   return {
-    lonDeg: ((lonRad / DEG) % 360 + 360) % 360,
+    lonDeg: pyMod(lonRad / DEG, 360),
     latDeg: Math.asin(Math.min(1, Math.max(-1, dir.dot(pole)))) / DEG,
   };
 }
