@@ -22,7 +22,7 @@ mkdir -p "$queue"
 me=
 child=
 cleanup() {
-  [ -n "$child" ] && kill -TERM "$child" 2>/dev/null
+  [ -n "$child" ] && stop_group "$child"
   [ -n "$me" ] && rm -f "$me"
 }
 trap 'cleanup; exit 143' TERM
@@ -56,6 +56,8 @@ until awk -v l="$(load)" -v c="$cores" 'BEGIN { exit !(l < c) }'; do
 done
 
 echo "heavy: running $*" >&2
+# Job control gives the command its own process group, so stop_group reaches every descendant.
+set -m
 "$@" &
 child=$!
 status=0

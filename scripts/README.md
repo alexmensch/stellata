@@ -186,7 +186,7 @@ when a slot opens. A ticket whose process is gone is cleared on sight. The
 load check is the second gate, for work started outside it (a dev server,
 another session); after `HEAVY_LOAD_WAIT_S` (default 600 s) of load at or
 above the cores, the command runs anyway. The exit status is the command's;
-TERM, INT or HUP stops the command and frees the ticket. Who runs what
+TERM, INT or HUP stops the command's whole process group, then frees the ticket. Who runs what
 through it: [Heavy commands share the CPU](/.claude/skills/stellata-pickup-epic/SKILL.md#heavy-commands-share-the-cpu).
 `scripts/heavy.test.ts` pins the slots, the order, the dead-ticket clear and
 the load condition. The ticket format, the liveness check and the
