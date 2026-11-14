@@ -386,7 +386,7 @@ fallback carries the rest at no wire cost. The cascade behind the field:
 [The designation constellation](../../../scripts/catalog/naming/README.md#the-designation-constellation).
 
 Field shape pinned in `src/catalog-format/record/catalog-pure.ts` as the `SearchEntry`
-interface — the writer (`../../../scripts/catalog/build-catalog.ts`) and the reader
+interface — the writer (`../../../scripts/catalog/record/search-index-pure.ts`) and the reader
 (`src/client/typeahead/search.ts`) both import it; drift = compile error.
 
 Which forms dispatch to an exact-match map and which are Fuse-fuzzy, and

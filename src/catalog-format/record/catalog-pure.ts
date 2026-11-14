@@ -638,7 +638,7 @@ export function readNameTable(
 
 // ---- search-index.json wire contract ------------------------------------
 
-// One entry per searchable star written by build-catalog.ts and consumed
+// One entry per searchable star written by scripts/catalog/record/search-index-pure.ts and consumed
 // by src/client/typeahead/search.ts. Keys are short
 // (i/p/b/f/c/s/g/hip/hd/hr/gl/cl/cp) for wire size — the index is ~15 MB raw
 // with hundreds of thousands of entries. Sharing the interface across
@@ -721,7 +721,7 @@ export function designationConIndex(
   return positionalConIndex ?? NO_CONSTELLATION_INDEX;
 }
 
-// Sole writer of the SearchEntry wire shape (build-catalog.ts calls it);
+// Sole writer of the SearchEntry wire shape (buildSearchIndex calls it);
 // src/client/typeahead/search.ts is the reader. Returns null for a star
 // with no identifier a user could type. Each optional field is set only
 // when present, so JSON.stringify never emits an explicit null/undefined
@@ -820,8 +820,7 @@ export function buildSearchEntry(
 // ---- Catalog flag bits --------------------------------------------------
 
 // Per-star bitfield stored at RECORD_LAYOUT.flags. Single source of truth
-// for both writers (scripts/catalog/build-catalog, src/catalog-format/record/catalog-pure
-// inferBinaries) and readers (catalog-loader, chart-labels,
+// for every build pass that sets a bit and every reader (catalog-loader, chart-labels,
 // verify-catalog). Adding a bit means adding a name to the FLAGS
 // registry, not sprinkling another magic number — the regression tests
 // then automatically pin distinct-ness and single-bit-ness.
