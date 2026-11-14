@@ -1,5 +1,4 @@
-// Emit data/gaia/gaia_catalog_source_id_request.tsv, the full-catalog Gaia 5p
-// request. See README.md.
+// Emit data/gaia/gaia_catalog_source_id_request.tsv, the one Gaia 5p request. See README.md.
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from './astrometry-request-outputs';
 import { serialiseSourceIdRequest } from './export-astrometry-request-pure';
@@ -26,7 +25,6 @@ import { readArtifact } from '../../util/sources/source';
 import { emitArtifacts } from '../../util/emit-artifacts';
 
 const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
-
 
 export async function main(): Promise<void> {
   const ids = new Set<string>();
