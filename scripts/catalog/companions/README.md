@@ -437,7 +437,8 @@ Per-row gates and resolution:
   its radius re-derived. Equal split — a pair Gaia couldn't resolve is
   near-equal by construction, exact for the M-dwarf eclipsing pairs that
   dominate; total system light is preserved. `ci` stays the shared
-  colour. Counted `companionBlendSplit`; runs before the record sort.
+  colour. Each split record writes `promotion.brightness.blend-split`
+  ([Promotion lineage](#promotion-lineage)); runs before the record sort.
   See [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
   (Blend split).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited

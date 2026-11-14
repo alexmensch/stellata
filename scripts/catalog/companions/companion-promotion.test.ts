@@ -1615,7 +1615,7 @@ describe('promoteCompanions', () => {
         pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars, stats, codes } = promote(rows, [castorA], inputs());
+    const { newStars, codes } = promote(rows, [castorA], inputs());
     expect(codes['promotion.brightness.blend-split']).toBe(2);
     const c = newStars.find((s) => s.syntheticId === null);
     const cb = newStars.find((s) => s.syntheticId !== null);
@@ -1627,7 +1627,6 @@ describe('promoteCompanions', () => {
       10 ** (-0.4 * c!.absmag) + 10 ** (-0.4 * cb!.absmag),
     );
     expect(combined).toBeCloseTo(COMBINED, 4);
-    expect(stats.companionBlendSplit).toBe(2);
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {

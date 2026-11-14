@@ -146,7 +146,7 @@ describe('promotion count block', () => {
 
   it('summarises the families as the build log has them', () => {
     const derived: PromotionDerivedCounts = {
-      companionRepositionedInnerToParent: 0, companionBlendSplit: 2, companionBlendDimmedAnchors: 3,
+      companionRepositionedInnerToParent: 0, companionBlendDimmedAnchors: 3,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
       companionExistingMemberRecurated: { dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 0 }, physicalOverlaps: 0,

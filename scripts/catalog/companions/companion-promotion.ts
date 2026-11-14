@@ -240,13 +240,6 @@ export type PostPassStats = {
    *  onto B so the catalog placement matches the binaries.bin pair anchor
    *  (runtime-binaries-pure.ts's overrideInnerPrimaryIndices). */
   companionRepositionedInnerToParent: number;
-  /** Promoted gaia_photometry records whose absmag was reduced by the
-   *  blend-split post-pass: when N≥2 collocated records share one Gaia
-   *  source (an unresolved sub-arcsec pair Gaia fit as a single source,
-   *  e.g. YY Gem Ca/Cb), that source's G is the pair's COMBINED light, so
-   *  each component is fainter than the derived combined M by
-   *  2.5·log10(N). Counts every record so adjusted. */
-  companionBlendSplit: number;
   /** Anchor records dimmed by the flux-conservation post-pass — the
    *  per-anchor joint subset solve judged ≥1 member's light embedded in
    *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
@@ -402,7 +395,6 @@ export function refusalStated(
 function emptyPostPassStats(): PostPassStats {
   return {
     companionRepositionedInnerToParent: 0,
-    companionBlendSplit: 0,
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionBlendDimUnfit: 0,
@@ -1079,8 +1071,7 @@ interface PromotionState {
   /** Records whose absmag came from a component's own Gaia photometry
    *  (`gaia_photometry`), keyed by the BACKING source_id (`row.gaiaSourceId`
    *  before any inherited-id strip). A source backing ≥2 of these is an
-   *  unresolved blend whose combined light the post-pass splits — see
-   *  `companionBlendSplit`. */
+   *  unresolved blend whose combined light the post-pass splits. */
   gaiaPhotometryByBackingSource: Map<string, BlendSplitCandidate[]>;
   /** Anchor-dimming candidates for the flux-conservation post-pass —
    *  see `companionBlendDimmedAnchors`. */
@@ -1955,7 +1946,6 @@ export function promoteCompanions(
       star.absmag += splitMag;
       brightness.adjustments.push({ pass: 'blend-split', n: bucket.length });
       star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
-      post.companionBlendSplit++;
     }
   }
 

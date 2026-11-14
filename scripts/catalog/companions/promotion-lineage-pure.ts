@@ -232,7 +232,7 @@ export function promotionSummary(counts: PromotionCounts, derived: PromotionDeri
     + `collocated-primary=${c('dropped.collocated-primary')}, anchor-is-component=${c('dropped.anchor-is-component')}); `
     + `absmag spectral-derived=${c('brightness.spectral')}, spect ms-from-own-absmag=${c('spectral.ms-from-own-absmag')}, `
     + `wds-mag-derived=${c('brightness.wds-mag')}, inherited-twin-orbital=${c('brightness.inherited-twin')}, `
-    + `blend-split=${derived.companionBlendSplit}, `
+    + `blend-split=${c('brightness.blend-split')}, `
     + `dimmed-anchors=${derived.companionBlendDimmedAnchors} (skipped ${derived.companionBlendDimSkipped}, `
     + `unfit ${derived.companionBlendDimUnfit}, outside ${derived.companionBlendDimOutside}, `
     + `gaia-resolved ${derived.companionBlendDimGaiaResolved}, `
