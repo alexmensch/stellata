@@ -5,7 +5,7 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
 import { wdsPair } from '../../wds/wds-fixture';
-import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
+import { athygRow, gaia5pRow } from '../load/load-fixture';
 import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
@@ -143,7 +143,7 @@ function biSide(gaia: string | null, hip: number | null): Side {
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
 export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): GaiaAstrometryCatalogRow {
-  return gaiaAstrometryRow({
+  return gaia5pRow({
     sourceId, raDeg: 180 + eArcsec / ARCSEC_PER_DEG, decDeg: nArcsec / ARCSEC_PER_DEG, parallaxErrorMas: 0.1, gMag: 5, bpMag: 5, rpMag: 5,
   });
 }

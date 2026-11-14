@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { columnTable } from '../../util/tsv/table-pure';
 import { buildMscLookup } from './msc-pure';
 import { buildIndices, parseCcdmIndex, scrubAthygGaia, type IndexInputs } from './indices-pure';
-import { FIXTURE, athygRow, gaiaAstrometryRow } from './load-fixture';
+import { FIXTURE, athygRow, gaia5pRow } from './load-fixture';
 import type { AthygRow } from './athyg-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
@@ -57,7 +57,7 @@ describe('parseCcdmIndex', () => {
 
 describe('the magnitude gate on HIP-anchored Gaia bindings', () => {
   it('rejects a cross-walk binding fainter than the star can be (Castor A)', () => {
-    const { idx } = withGate([athygRow({ hip: 36850, vMag: 1.58 })], new Map([[36850, '892']]), [gaiaAstrometryRow({ sourceId: '892', gMag: 2.92 })]);
+    const { idx } = withGate([athygRow({ hip: 36850, vMag: 1.58 })], new Map([[36850, '892']]), [gaia5pRow({ sourceId: '892', gMag: 2.92 })]);
     expect(idx.hipToGaia.has(36850)).toBe(false);
     expect(idx.srcToHip.has('892')).toBe(false);
     expect(idx.xwalkMagRejected).toEqual([{ hip: 36850, sourceId: '892' }]);
@@ -67,7 +67,7 @@ describe('the magnitude gate on HIP-anchored Gaia bindings', () => {
     const { idx } = withGate(
       [athygRow({ hip: 93506, vMag: 2.60 }), athygRow({ hip: 1, vMag: 8.0 })],
       new Map([[93506, '77'], [1, '5']]),
-      [gaiaAstrometryRow({ sourceId: '77', gMag: 3.25 }), gaiaAstrometryRow({ sourceId: '5', gMag: 6.0 })],
+      [gaia5pRow({ sourceId: '77', gMag: 3.25 }), gaia5pRow({ sourceId: '5', gMag: 6.0 })],
     );
     expect(idx.hipToGaia).toEqual(new Map([[93506, '77'], [1, '5']]));
     expect(idx.xwalkMagRejected).toEqual([]);
@@ -77,14 +77,14 @@ describe('the magnitude gate on HIP-anchored Gaia bindings', () => {
     const { idx } = withGate(
       [athygRow({ hip: 1 }), athygRow({ hip: 2, vMag: 5 }), athygRow({ hip: 3, vMag: 5 })],
       new Map([[1, '10'], [2, '20'], [3, '30']]),
-      [gaiaAstrometryRow({ sourceId: '30', gMag: null })],
+      [gaia5pRow({ sourceId: '30', gMag: null })],
     );
     expect(idx.hipToGaia.size).toBe(3);
   });
 
   it('empties an AT-HYG gaia cell it refuses and keeps the bare HIP (α Cen B)', () => {
     const { idx, scrubbed } = withGate(
-      [athygRow({ hip: 71681, gaia: '587', vMag: 1.35 })], new Map(), [gaiaAstrometryRow({ sourceId: '587', gMag: 20.95 })],
+      [athygRow({ hip: 71681, gaia: '587', vMag: 1.35 })], new Map(), [gaia5pRow({ sourceId: '587', gMag: 20.95 })],
     );
     expect(scrubbed.rows[0].gaia).toBeNull();
     expect(idx.srcToAthyg.has('587')).toBe(false);

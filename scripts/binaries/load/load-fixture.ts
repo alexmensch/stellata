@@ -3,7 +3,7 @@
 import type { AthygRow } from './athyg-pure';
 import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
-import { gaiaAstrometryRow as catalogGaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
+import { gaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 export const FIXTURE = { file: 'fixture/binaries.tsv', hint: 'h' } as const;
@@ -33,10 +33,10 @@ export function athygRow(over: Partial<AthygRow> = {}): AthygRow {
 }
 
 /** A 5p row; `sourceId` keys its ref. */
-export function gaiaAstrometryRow(
+export function gaia5pRow(
   { sourceId = '1', ...over }: Partial<GaiaAstrometryCatalogRow> & { readonly sourceId?: string } = {},
 ): GaiaAstrometryCatalogRow {
-  return catalogGaiaAstrometryRow({
+  return gaiaAstrometryRow({
     ref: sourceRowRef(GAIA_ASTROMETRY, sourceId), parallaxMas: 10, parallaxErrorMas: 0.05,
     pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1.0, ipdFracMultiPeak: 0,
     ...over,

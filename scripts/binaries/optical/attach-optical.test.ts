@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import type { MeasuredAstrometry } from '../astrometry/routes-pure';
-import { gaiaAstrometryRow } from '../load/load-fixture';
+import { gaia5pRow } from '../load/load-fixture';
 import { NO_ORBIT } from '../orbits/select-orbit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, indices } from '../resolve/resolve-fixture';
@@ -23,9 +23,9 @@ function run(pairs: readonly DecomposedPair[], masses: readonly number[]) {
   };
   const ix = indices({
     srcToAstrometry: new Map([
-      ['1', gaiaAstrometryRow({ sourceId: '1', parallaxMas: 21.29, parallaxErrorMas: 0.05, pmraMasyr: 0.0, pmdecMasyr: 0.0 })],
-      ['2', gaiaAstrometryRow({ sourceId: '2', parallaxMas: 21.19, parallaxErrorMas: 0.05, pmraMasyr: 22.4, pmdecMasyr: 0.0 })],
-      ['3', gaiaAstrometryRow({ sourceId: '3', parallaxMas: 21.25, parallaxErrorMas: 0.05, pmraMasyr: 1.0, pmdecMasyr: 0.0 })],
+      ['1', gaia5pRow({ sourceId: '1', parallaxMas: 21.29, parallaxErrorMas: 0.05, pmraMasyr: 0.0, pmdecMasyr: 0.0 })],
+      ['2', gaia5pRow({ sourceId: '2', parallaxMas: 21.19, parallaxErrorMas: 0.05, pmraMasyr: 22.4, pmdecMasyr: 0.0 })],
+      ['3', gaia5pRow({ sourceId: '3', parallaxMas: 21.25, parallaxErrorMas: 0.05, pmraMasyr: 1.0, pmdecMasyr: 0.0 })],
     ]),
   });
   return attachStage5(stage3, { orbits: new Map(pairs.map((p) => [p, NO_ORBIT])) }, new Map(pairs.map((p, i) => [p, masses[i]])), ix);

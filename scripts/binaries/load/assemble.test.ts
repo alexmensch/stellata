@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { discovererKey } from '../component-tokens-pure';
 import { blankPair, orb6Entry, wdsPair } from '../../wds/wds-fixture';
-import { athygRow, gaiaAstrometryRow, mscOrbit, mscSystem } from './load-fixture';
+import { athygRow, gaia5pRow, mscOrbit, mscSystem } from './load-fixture';
 import { assembleReferenceCatalogs, stage1Counts, type Stage1Inputs } from './reference-catalogs';
 import { stage1Report } from './stage1-report-pure';
 
@@ -29,8 +29,8 @@ function inputs(over: Partial<Stage1Inputs> = {}): Stage1Inputs {
     tycToGaia: new Map(),
     nss: new Map(),
     astrometry: new Map([
-      ['11', gaiaAstrometryRow({ sourceId: '11', gMag: 9 })],
-      ['99', gaiaAstrometryRow({ sourceId: '99' })],
+      ['11', gaia5pRow({ sourceId: '11', gMag: 9 })],
+      ['99', gaia5pRow({ sourceId: '99' })],
     ]),
     astrometryExclusions: new Map([['99', 'blend']]),
     simbadWdsXids: new Map(),

@@ -6,7 +6,7 @@ import type { WdsPair } from '../../wds/wds-pure';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type MeasuredAstrometry } from '../astrometry/routes-pure';
 import type { Parallax } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
-import { gaiaAstrometryRow } from '../load/load-fixture';
+import { gaia5pRow } from '../load/load-fixture';
 import { UNKNOWN_COMPONENT_MASS_MSUN } from '../masses/pair-masses';
 import type { OrbitVia } from '../multiples-record-pure';
 import { NO_ORBIT, type PairOrbit } from '../orbits/select-orbit-pure';
@@ -21,7 +21,7 @@ import { orbitalPmBudgetKmS } from './pm-budget-pure';
 
 const DEFAULT_TOTAL_MASS = 2 * UNKNOWN_COMPONENT_MASS_MSUN;
 const plx = (parallaxMas: number, parallaxErrorMas: number | null): Parallax => ({ parallaxMas, parallaxErrorMas });
-const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryCatalogRow>): GaiaAstrometryCatalogRow => gaiaAstrometryRow({ sourceId, ...over });
+const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryCatalogRow>): GaiaAstrometryCatalogRow => gaia5pRow({ sourceId, ...over });
 const measured = (over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry => ({
   astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05, pmraMasyr: 4100, pmdecMasyr: -3200, refEpoch: 2016,
   ...over,

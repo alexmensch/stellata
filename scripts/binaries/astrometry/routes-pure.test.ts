@@ -6,7 +6,7 @@ import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constan
 import { wdsPair } from '../../wds/wds-fixture';
 import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
-import { gaiaAstrometryRow } from '../load/load-fixture';
+import { gaia5pRow } from '../load/load-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { OWN } from '../multiples-record-pure';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved, type Side } from '../resolve/resolve-fixture';
@@ -49,7 +49,7 @@ describe('routeAstrometry', () => {
 
   it('routes a position-only Gaia row to HIP2 when HIP2 covers it (Castor AB)', () => {
     const a = measured(routeAstrometry(resolved({ gaiaSourceId: '1000', hip: 36850 }), null, indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '1000', parallaxMas: null, parallaxErrorMas: null })]),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '1000', parallaxMas: null, parallaxErrorMas: null })]),
       hip2: hip2Map([[36850, { plxMas: 64.12 }]]),
     })));
     expect(a.astrometryVia).toBe('hip2_long_baseline');
@@ -58,21 +58,21 @@ describe('routeAstrometry', () => {
 
   it('keeps a position-only Gaia row as gaia_5p, parallax absent, when HIP2 misses', () => {
     const a = measured(routeAstrometry(resolved({ gaiaSourceId: '1000', hip: 99 }), null, indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '1000', parallaxMas: null, parallaxErrorMas: null })]),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '1000', parallaxMas: null, parallaxErrorMas: null })]),
     })));
     expect(a.astrometryVia).toBe('gaia_5p');
     expect(a.parallaxMas).toBeNull();
   });
 
   it('defaults to gaia_5p, the row\'s own values at its own epoch', () => {
-    const row = gaiaAstrometryRow({ sourceId: '42', raDeg: 12, pmraMasyr: 7 });
+    const row = gaia5pRow({ sourceId: '42', raDeg: 12, pmraMasyr: 7 });
     const a = measured(routeAstrometry(resolved({ gaiaSourceId: '42' }), null, indices({ srcToAstrometry: astrometryMap([row]) })));
     expect(a).toMatchObject({ astrometryVia: 'gaia_5p', raDeg: 12, pmraMasyr: 7, refEpoch: 2016 });
   });
 
   it('tags an NSS source with an unreliable 5p fit gaia_nss_systemic, on either indicator', () => {
     const route = (over: Partial<GaiaAstrometryCatalogRow>): ComponentAstrometry => routeAstrometry(resolved({ gaiaSourceId: '7' }), null, indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '7', ...over })]), srcToNss: nssFor('7'),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '7', ...over })]), srcToNss: nssFor('7'),
     }));
     expect(route({ ruwe: 2.5 }).astrometryVia).toBe('gaia_nss_systemic');
     expect(route({ ipdFracMultiPeak: 5 }).astrometryVia).toBe('gaia_nss_systemic');
@@ -81,7 +81,7 @@ describe('routeAstrometry', () => {
 
   const pmCase = (rho: number, gaia: Partial<GaiaAstrometryCatalogRow>, hip2: Partial<Hip2AstrometryRow>, hipToGaia = true): ComponentAstrometry =>
     routeAstrometry(resolved({ gaiaSourceId: '1000' }), rho, indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '1000', ...gaia })]),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '1000', ...gaia })]),
       hipToGaia: new Map(hipToGaia ? [[999, '1000']] : []),
       hip2: hip2Map([[999, hip2]]),
     }));
@@ -101,7 +101,7 @@ describe('routeAstrometry', () => {
 
   it('prefers NSS-systemic over HIP2 when both would fire', () => {
     const a = routeAstrometry(resolved({ gaiaSourceId: '1000' }), 1, indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '1000', ruwe: 2, pmraMasyr: 10, pmdecMasyr: 10 })]),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '1000', ruwe: 2, pmraMasyr: 10, pmdecMasyr: 10 })]),
       srcToNss: nssFor('1000'),
       hipToGaia: new Map([[999, '1000']]),
       hip2: hip2Map([[999, { pmRaMasyr: 200, pmDeMasyr: 200 }]]),
@@ -131,13 +131,13 @@ describe('routePairs', () => {
     r.pairs.flatMap((p) => [r.astrometry.get(p)!.primary, r.astrometry.get(p)!.secondary]);
 
   it('keys each side\'s route by its pair', () => {
-    const r = routePairs([ab('AB', 10, { gaiaSourceId: '42' })], indices({ srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '42' })]) }), []);
+    const r = routePairs([ab('AB', 10, { gaiaSourceId: '42' })], indices({ srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '42' })]) }), []);
     expect(astrometryOf(r).map((a) => a.astrometryVia)).toEqual(['gaia_5p', 'unresolved']);
   });
 
   it('routes every row of a source by its tightest ρ', () => {
     const idx = indices({
-      srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '42', pmraMasyr: 10, pmdecMasyr: 10 })]),
+      srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '42', pmraMasyr: 10, pmdecMasyr: 10 })]),
       hipToGaia: new Map([[99, '42']]),
       hip2: hip2Map([[99, { pmRaMasyr: 200, pmDeMasyr: 10 }]]),
     });
@@ -182,7 +182,7 @@ describe('routePairs — the AT-HYG position fallback', () => {
     const gaiaPair = pairOf(100, 20, 5, 0, { primary: { gaiaSourceId: '42' } });
     const hipPair = pairOf(100, 20, 10, 0, { primary: { gaiaSourceId: null, hip: 32349 } });
     const idx = indices({
-      athyg: [row], srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '42' })]), hip2: hip2Map([[32349, {}]]),
+      athyg: [row], srcToAstrometry: astrometryMap([gaia5pRow({ sourceId: '42' })]), hip2: hip2Map([[32349, {}]]),
     });
     const r = routePairs([gaiaPair, hipPair], idx, [row]);
     expect(r.pairs.map((p) => r.astrometry.get(p)!.primary.astrometryVia)).toEqual(['gaia_5p', 'hip2_long_baseline']);

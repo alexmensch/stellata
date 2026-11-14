@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
-import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
+import { athygRow, gaia5pRow } from '../load/load-fixture';
 import { mscPairKey } from '../load/msc-pure';
 import { ORBIT_VIA_ON_FILE, type MultiplesRecord } from '../multiples-record-pure';
 import { indices, xid } from '../resolve/resolve-fixture';
@@ -118,7 +118,7 @@ describe('attachStage6 — photometry_via', () => {
   it('derives a secondary\'s photometry from its own Gaia 5p row when AT-HYG has none', () => {
     const { rows } = runStage6([sides('1', '2')], indices({
       athyg: [athygRow({ gaia: '1' })],
-      srcToAstrometry: new Map([['2', gaiaAstrometryRow({ sourceId: '2', parallaxMas: 10.0, gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
+      srcToAstrometry: new Map([['2', gaia5pRow({ sourceId: '2', parallaxMas: 10.0, gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
     }));
     expect(rows[1].photometryVia).toBe('gaia_photometry');
     expect([rows[1].absmag, rows[1].ci].every((v) => v !== null)).toBe(true);
@@ -132,7 +132,7 @@ describe('attachStage6 — photometry_via', () => {
   it('prefers AT-HYG\'s photometry over Gaia\'s', () => {
     const { rows } = runStage6([sides('1', '2')], indices({
       athyg: [athygRow({ gaia: '1' }), athygRow({ gaia: '2' })],
-      srcToAstrometry: new Map([['2', gaiaAstrometryRow({ sourceId: '2', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
+      srcToAstrometry: new Map([['2', gaia5pRow({ sourceId: '2', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
     }));
     expect(rows[1].photometryVia).toBe('athyg_own');
   });
@@ -140,7 +140,7 @@ describe('attachStage6 — photometry_via', () => {
   it('derives nothing for a side not on its own Gaia 5p fit', () => {
     const { rows } = runStage6([{ ...sides('1', '2'), astrometry: [measured(), measured({ astrometryVia: 'hip2_long_baseline' })] }], indices({
       athyg: [athygRow({ gaia: '1' })],
-      srcToAstrometry: new Map([['2', gaiaAstrometryRow({ sourceId: '2', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
+      srcToAstrometry: new Map([['2', gaia5pRow({ sourceId: '2', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
     }));
     expect([rows[1].photometryVia, rows[1].absmag]).toEqual(['none', null]);
   });
@@ -150,7 +150,7 @@ describe('attachStage6 — photometry_via', () => {
       primary: { gaiaSourceId: '1', hip: 100, resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: '1', resolveVia: 'orb6_hip' },
     }], indices({
       athyg: [athygRow({ hip: 100 })],
-      srcToAstrometry: new Map([['1', gaiaAstrometryRow({ sourceId: '1', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
+      srcToAstrometry: new Map([['1', gaia5pRow({ sourceId: '1', gMag: 8.0, bpMag: 8.6, rpMag: 7.4 })]]),
     }));
     expect([rows[1].photometryVia, rows[1].absmag]).toEqual(['none', null]);
   });
