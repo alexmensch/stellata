@@ -93,13 +93,12 @@ a pair's primary is `pair-anchor` when it anchors its pair and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
 ([Promotion lineage](#promotion-lineage)).
-Each outcome is a lineage row, and each flag it carries — its brightness
-source, a main-sequence spectral estimate, a constellation split, a designation
-constellation taken from the anchor, an owned fit — a facet row of its own, so
-every per-row count is a fold of its lineage codes
-([Promotion lineage](#promotion-lineage)). The
-post-passes below act on records, not rows: their counters are
-`PromotionStats`, promotion's derived count block with `physicalOverlaps`.
+Each outcome is a lineage row, and each flag it carries a facet row of its
+own (the list is [Promotion lineage](#promotion-lineage)'s), so every per-row
+count is a fold of its lineage codes. The post-passes below act on records,
+not rows; blend split and the anchor re-split write a facet on each minted
+record they change, and `PromotionStats`, promotion's derived count block
+with `physicalOverlaps`, counts what no row records.
 
 Per-row gates and resolution:
 
@@ -605,8 +604,10 @@ code's line count.
 
 A mint's facets are its brightness lineage, since the record walk's
 [brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
-never sees it: the absmag source (`brightness.*`), a row for each post-pass
-that changed that absmag after the mint (`brightness.blend-split`, `params.n` the records sharing the source;
+never sees it: the absmag source (`brightness.*`), a row for the post-pass,
+if any, that changed that absmag after the mint — at most one, since blend
+split takes only own-photometry mints and the re-split only Δmag ones
+(`brightness.blend-split`, `params.n` the records sharing the source;
 `brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
 already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
 the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
