@@ -57,7 +57,7 @@ describe('pairOwner', () => {
 describe('mergeDivergences', () => {
   it('confirms a spine entry the HIP\'s Gaia source sits on', () => {
     const d = mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
-    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, sourceId: 'S1' }]);
+    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, sourceId: 'S1' }]);
   });
 
   it('moves the record onto the entry the HIP\'s Gaia source sits on', () => {

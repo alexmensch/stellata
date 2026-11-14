@@ -21,7 +21,7 @@ export type HeldState = (typeof HELD_STATES)[number];
 
 export type MergeDivergence =
   | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
-  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly sourceId: string }
+  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
   | { readonly kind: 'pair-moves'; readonly hip: number; readonly owner: string; readonly sourceId: string }
   | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState };
@@ -99,7 +99,7 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: MergeLinks): {
   if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, reason: verdict.reason }, hip };
   return {
     divergence: verdict.owner === row.tyc
-      ? { kind: 'pair-confirmed', hip, sourceId: verdict.sourceId }
+      ? { kind: 'pair-confirmed', hip, owner: verdict.owner, sourceId: verdict.sourceId }
       : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId },
     hip,
   };

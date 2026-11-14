@@ -569,7 +569,7 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
     case 'unlinked':
       return row(key, 'merge.unlinked', { cells: d.cells.join('+'), derived: d.witnessed, evidence: d.published });
     case 'pair-confirmed':
-      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: String(d.hip), evidence: d.sourceId });
+      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
     case 'pair-moves':
       return row(key, 'merge.pair.moves', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
     case 'pair-review':

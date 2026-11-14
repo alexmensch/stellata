@@ -954,7 +954,7 @@ describe('codecs', () => {
     const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
     const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
     const ledger = membershipLedgers([
-      merge({ kind: 'pair-confirmed', hip: 70, sourceId: '5' }),
+      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', sourceId: '5' }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
