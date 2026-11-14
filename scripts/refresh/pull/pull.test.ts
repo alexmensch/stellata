@@ -143,8 +143,8 @@ describe('runPull', () => {
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['old stars\n', 'old pairs\n']);
   });
 
-  it('caps a whole or sliced table at the 30 M cells the widest measured table fits in the CI heap budget', () => {
-    expect(MAX_TABLE_CELLS).toBe(30_000_000);
+  it('caps a whole or sliced table at the 60 M cells both measured tables fit in the CI heap budget', () => {
+    expect(MAX_TABLE_CELLS).toBe(60_000_000);
   });
 
   it('refuses, before asking anything, a whole-table query too large to hold', async () => {
