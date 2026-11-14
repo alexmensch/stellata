@@ -246,7 +246,7 @@ export type PostPassStats = {
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
    *  onto B so the catalog placement matches the binaries.bin pair anchor
-   *  (runtime-binaries-pure.ts's overrideInnerPrimaryIndices). */
+   *  (record-index/pair-resolution-pure.ts's parent re-home). */
   companionRepositionedInnerToParent: number;
   /** Anchor records dimmed by the flux-conservation post-pass — the
    *  per-anchor joint subset solve judged ≥1 member's light embedded in
@@ -1857,7 +1857,7 @@ export function promoteCompanions(
   // (Castor A) and resolvePosition anchored the secondary there. Now every
   // component is resolved; re-run the placement against the parent's slot
   // so the catalog matches the binaries.bin pair anchor
-  // (runtime-binaries-pure.ts's overrideInnerPrimaryIndices) — both the
+  // (record-index/pair-resolution-pure.ts's parent re-home) — both the
   // ρ=0 collocation case and a measured sep+PA re-projection. Position
   // only — dedup/naming already resolved, and A_V de-extinction across the
   // sub-arcsec sibling offset is below the dust grid's resolution. Parent
@@ -1907,7 +1907,7 @@ export function promoteCompanions(
   // inheritance above is the load-bearing guarantee: no promoted companion
   // freezes at v=0 while its primary drifts. FULL coherence for
   // binaries.bin's authoritative runtime pairing (which re-homes a handful
-  // of inner pairs via overrideInnerPrimaryIndices, and owns Tier-3
+  // of inner pairs via record-index's parent re-home, and owns Tier-3
   // static pairs the catalog build doesn't group) is deferred — and
   // harmless for v1 since Tier-1/2 offsets are elements-owned.
   for (const g of systemicGroups.values()) {

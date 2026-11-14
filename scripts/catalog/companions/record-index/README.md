@@ -27,7 +27,26 @@ scripts/catalog/companions/record-index/
                              non-index entry.
   catalog-row-index-map-source.ts
                              CATALOG_ROW_INDEX_MAP, the sidecar declared.
+  pair-resolution-pure.ts (+ test)
+                             resolvePairs: each multiples.tsv pair's two
+                             ends as records — `own`, each end through its
+                             own row, and `rendered`, after the parent
+                             re-home — the one resolution every reader of a
+                             pair takes; distinctEnds.
 ```
+
+## The parent re-home
+
+An inner pair's primary is forced onto its PARENT component's record: the
+parent pair is `assignParentRelations`' pick
+(`/scripts/binaries/pairs-pure.ts`), and the slot is whichever end of that
+pair carries the parent token, walked outer-first so a deeper nest takes its
+parent's re-homed slot. This is the shared-slot invariant the runtime walk
+rides ([Hierarchical walk](/src/client/binaries/README.md#hierarchical-walk)).
+Castor Ba carries A's blended source, so its own resolve lands on A's record;
+AB already resolved B. A parent slot that resolves to nothing leaves the
+primary on its own resolve. `rendered` carries the result; `own` keeps each
+end's own resolve for the readers that ask which records a row backs.
 
 ## The sidecar and how a component resolves
 
@@ -64,7 +83,7 @@ letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own
 designations stay the manifest's.
 
-The writer's **`overrideInnerPrimaryIndices`** — an inner pair's primary
+The writer's [parent re-home](#the-parent-re-home) — an inner pair's primary
 forced onto its PARENT component's slot — is replicated, by
 `reHomeToParent`. It was left out while it only changed *which* index
 anchors a pair, which root-grouping and the brightest-participant pick

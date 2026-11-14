@@ -164,13 +164,19 @@ scripts/binaries/
                                   public/binaries.bin through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
-  runtime-binaries-pure.ts        The writer itself: pairs joined from the
-    (+ test)                      rows (a system with a role missing or
+  pairs-pure.ts (+ test)          The pair model: pairs joined from the
+                                  rows (a system with a role missing or
                                   doubled, or no WDS id, throws), parents by
-                                  component-letter prefix,
-                                  outer-before-inner walk, and planRecords —
-                                  both ends resolved, unaddressable pairs
-                                  dropped and counted, flags set — whose
+                                  component-letter prefix, the
+                                  outer-before-inner walk. Read by the
+                                  writer and by the catalogue's pair
+                                  resolution (../catalog/companions/record-index/).
+  pair-fixture.ts                 Test-only: one MultiplesPair from its
+                                  system_id and the cells a test names.
+  runtime-binaries-pure.ts        The writer itself: planRecords — over
+    (+ test)                      each pair's resolved ends, unaddressable
+                                  pairs dropped and counted, duplicate
+                                  relations deduped, flags set — whose
                                   records the format's encodeBinaries
                                   writes.
   runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
@@ -261,10 +267,11 @@ invariant the runtime walk + focal-frame ride depend on (see
 shares its identifier with the system primary (Castor A & B blend to one
 Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
 pair's own id-first resolve lands on the wrong sibling. Two coupled
-corrections in `runtime-binaries-pure.ts`: `assignParentRelations`
+corrections: `assignParentRelations` (`pairs-pure.ts`)
 picks the *bound* parent (has-orbit, then tightest sep) over a
-coincidental element-less wide pair, and `overrideInnerPrimaryIndices`
-re-homes each inner pair's primary onto that parent's member slot.
+coincidental element-less wide pair, and the pair resolution re-homes
+each inner pair's primary onto that parent's member slot
+([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home)).
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
 agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 

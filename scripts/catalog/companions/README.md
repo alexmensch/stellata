@@ -261,7 +261,7 @@ Per-row gates and resolution:
   component→index map for a parent that kept its own Gaia row), covering
   both the ρ=0 collocation and a measured sep+PA re-projection. This makes
   the baked placement match the runtime pair anchor
-  (`/scripts/binaries/runtime-binaries-pure.ts`'s `overrideInnerPrimaryIndices`);
+  ([The parent re-home](record-index/README.md#the-parent-re-home));
   counted by `companionRepositionedInnerToParent`. Rendering is unaffected either
   way (elements-alone R(t)), but a consistent bake keeps the
   baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
