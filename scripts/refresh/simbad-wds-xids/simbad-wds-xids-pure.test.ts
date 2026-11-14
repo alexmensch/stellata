@@ -52,6 +52,17 @@ describe('xidsPull', () => {
     await expect(pull.run(stray, () => {})).rejects.toThrow(/WDS J99999\+9999Z, which names no component/);
   });
 
+  it('drops and logs a WDS ident answered only under SIMBAD\'s case-folded match, leaving the asked component to the cascade', async () => {
+    const simbad = fake({
+      10: { mainId: 'primary', ids: ['WDS J01234+5678A', 'HD   1234'] },
+      20: { mainId: 'pair AB', ids: ['WDS J01234+5678AB'] },
+      30: { mainId: 'secondary b', ids: ['HD   1234Ab'] },
+    });
+    const { rows, log } = await run(simbad, [c('01234+5678', 'A'), c('01234+5678', 'Ab')]);
+    expect(rows.map((r) => r.slice(0, 3))).toEqual([['01234+5678', 'A', '10'], ['01234+5678', 'Ab', '30']]);
+    expect(log).toContain('  WDS ident answered only case-folded, bound to none: WDS J01234+5678AB → 20');
+  });
+
   it('recovers Sirius B through its letter on Sirius A\'s HD, asking aliases only of a system with an unresolved component', async () => {
     const simbad = fake({
       8399845: { mainId: '* alf CMa', ids: ['WDS J06451-1643A', 'HD  48915', 'HIP 32349'] },

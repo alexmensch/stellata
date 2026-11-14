@@ -85,4 +85,10 @@ describe('assembleReferenceCatalogs', () => {
     expect(stage1Report(sparse).at(-1)).toMatch(/^WARNING: AT-HYG gaia coverage 50\.0% outside/);
     expect(stage1Report(c).some((line) => line.startsWith('WARNING'))).toBe(false);
   });
+
+  it('reports an empty AT-HYG as coverage n/a, outside the band', () => {
+    const report = stage1Report(assembleReferenceCatalogs(inputs({ athyg: [] })));
+    expect(report).toContain('0 / 0 AT-HYG rows carry gaia (n/a)');
+    expect(report.at(-1)).toBe('WARNING: AT-HYG gaia coverage n/a outside [90.0%, 100.0%] — input drift suspected');
+  });
 });

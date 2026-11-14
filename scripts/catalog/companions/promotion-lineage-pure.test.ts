@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { makeStar } from '../parse/star-fixture';
-import type { PromotedRow, PromotionDerivedCounts, RowOutcome } from './companion-promotion';
+import type { MintedBrightness, PromotedRow, PromotionDerivedCounts, RowOutcome } from './companion-promotion';
 import { multiplesRow } from './multiples-fixture';
 import {
   decisionRows, PROMOTION_CODES, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary,
@@ -14,7 +14,7 @@ const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): Prom
   { row, via: 'secondary', outcome, anchor: 'spine:7', systemAnchor: 'spine:7', synthKey: 'synth-22266-1645-B', ...anchors }
 );
 const recordKey = (idx: number): string => `spine:${idx}`;
-const own = { source: 'own', spectMsFromOwnAbsmag: false } as const;
+const own: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0.12345, adjustment: null };
 const rowsOf = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => decisionRows(promotionDecision(promoted(outcome, anchors), recordKey));
 const outcomeRow = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}) => rowsOf(outcome, anchors)[0];
 
@@ -24,7 +24,7 @@ const OUTCOMES: RowOutcome[] = [
   { kind: 'dropped', reason: 'parked-record', parked: 'spine:2', viaGaia5p: false, ownedFit: false },
   { kind: 'adopted', idx: 3, via: 'earlier-mint' },
   { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: true, recurated: null },
-  { kind: 'minted', idx: 5, synthetic: true, brightness: { source: 'wds_mag', spectMsFromOwnAbsmag: true }, constellationSplit: true },
+  { kind: 'minted', idx: 5, synthetic: true, brightness: { source: 'wds_mag', spectMsFromOwnAbsmag: true, ci: 'spectral_derived', av: 0.5, adjustment: null }, constellationSplit: true },
   { kind: 'minted', idx: 6, synthetic: false, brightness: own, constellationSplit: false },
   { kind: 'primary-unresolved' },
   { kind: 'unpaired' },
@@ -47,9 +47,13 @@ describe('promotionDecision', () => {
       ['promotion.adopted.own-hip', 'promotion.desig-con.from-anchor'],
       [
         'promotion.minted.synthetic', 'promotion.brightness.wds-mag', 'promotion.spectral.ms-from-own-absmag',
+        'promotion.colour.spectral-derived', 'promotion.dust.edenhofer2024.absmag-only',
         'promotion.constellation.split-from-anchor',
       ],
-      ['promotion.minted.keyed', 'promotion.brightness.own'],
+      [
+        'promotion.minted.keyed', 'promotion.brightness.own', 'promotion.colour.own',
+        'promotion.dust.edenhofer2024.absmag-and-ci',
+      ],
       ['promotion.parked.primary-unresolved'],
       ['promotion.parked.unpaired'],
       ['promotion.not-applicable.pair-anchor'],
@@ -57,9 +61,40 @@ describe('promotionDecision', () => {
     expect(() => stageLineageText(PROMOTION_CODES, sortLineageLines(LINES))).not.toThrow();
   });
 
-  it('writes a facet row with no params and no evidence', () => {
-    const facets = rowsOf(OUTCOMES[5]).slice(1);
-    expect(facets.map((r) => [paramsOf(r), r.evidence])).toEqual(facets.map(() => [{}, []]));
+  it('writes a facet row with no evidence, and params only on the dust row', () => {
+    const facets = rowsOf(OUTCOMES[6]).slice(1);
+    expect(facets.map((r) => [r.code, paramsOf(r), r.evidence])).toEqual([
+      ['promotion.brightness.own', {}, []],
+      ['promotion.colour.own', {}, []],
+      ['promotion.dust.edenhofer2024.absmag-and-ci', { av: '0.1235' }, []],
+    ]);
+  });
+
+  it('writes the post-pass that changed the minted absmag beside its source', () => {
+    const adjusted = (brightness: MintedBrightness) => rowsOf({
+      kind: 'minted', idx: 6, synthetic: false, constellationSplit: false, brightness,
+    }).slice(1, 3).map((r) => [r.code, paramsOf(r)]);
+    expect(adjusted({ ...own, adjustment: { pass: 'blend-split', n: 3 } })).toEqual([
+      ['promotion.brightness.own', {}],
+      ['promotion.brightness.blend-split', { n: '3' }],
+    ]);
+    expect(adjusted({ ...own, source: 'dmag_imputed', adjustment: { pass: 'anchor-re-split', anchorIdx: 2 } })).toEqual([
+      ['promotion.brightness.dmag-imputed', {}],
+      ['promotion.brightness.anchor-re-split', { record: 'spine:2' }],
+    ]);
+  });
+
+  it('names which values the A_V corrected: absmag unless class-derived, B−V only when observed', () => {
+    const dust = (source: 'own' | 'spectral', ci: 'own' | 'spectral_derived' | 'none'): string | undefined => rowsOf({
+      kind: 'minted', idx: 6, synthetic: false, constellationSplit: false,
+      brightness: { source, spectMsFromOwnAbsmag: false, ci, av: 0, adjustment: null },
+    }).find((r) => r.code.startsWith('promotion.dust.'))?.code;
+    expect([
+      dust('own', 'own'), dust('own', 'none'), dust('spectral', 'own'), dust('spectral', 'spectral_derived'),
+    ]).toEqual([
+      'promotion.dust.edenhofer2024.absmag-and-ci', 'promotion.dust.edenhofer2024.absmag-only',
+      'promotion.dust.edenhofer2024.ci-only', 'promotion.dust.edenhofer2024.not-applied',
+    ]);
   });
 
   it('names an adopted record by its origin key and the re-curation it took', () => {
@@ -110,7 +145,7 @@ describe('promotion count block', () => {
 
   it('summarises the families as the build log has them', () => {
     const derived: PromotionDerivedCounts = {
-      companionRepositionedInnerToParent: 0, companionBlendSplit: 2, companionBlendDimmedAnchors: 3,
+      companionRepositionedInnerToParent: 0, companionBlendDimmedAnchors: 3,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
       companionExistingMemberRecurated: { dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 0 }, physicalOverlaps: 0,

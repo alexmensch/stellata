@@ -4,7 +4,7 @@ import { DIRECTION_VIA_VALUES } from '../../catalog/distance/direction-cascade';
 import { VELOCITY_VIA_VALUES } from '../../catalog/distance/velocity';
 import { DIST_VIA_VALUES } from '../../../src/catalog-format/record/catalog-pure';
 import { V_VIA_VALUES } from '../../catalog/photometry/v-magnitude-pure';
-import { emptyTallyPartition, fold, formatPartition, percentOf, prefixed, renamed, share, sumOf } from './tally-pure';
+import { emptyTallyPartition, fold, formatPartition, formatShare, percentOf, prefixed, renamed, share, sumOf } from './tally-pure';
 
 describe('util/tally / fold', () => {
   const OUTCOMES = ['kept', 'parked', 'dropped'] as const;
@@ -69,9 +69,14 @@ describe('util/tally / sumOf', () => {
 });
 
 describe('util/tally / share', () => {
-  it('divides, and throws on an empty whole rather than calling it 0', () => {
-    expect(share(1, 4, 'r')).toBe(0.25);
-    expect(() => share(0, 0, 'nss_orbit_rate')).toThrow(/nss_orbit_rate: nothing to rate/);
+  it('divides, and has no denominator on an empty whole rather than calling it 0', () => {
+    expect(share(1, 4)).toEqual({ kind: 'rated', value: 0.25 });
+    expect(share(0, 0)).toEqual({ kind: 'no-denominator' });
+  });
+
+  it('formats a rated share to one decimal and an absent one as n/a', () => {
+    expect(formatShare(share(1, 8))).toBe('12.5%');
+    expect(formatShare(share(0, 0))).toBe('n/a');
   });
 });
 
