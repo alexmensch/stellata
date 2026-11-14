@@ -96,7 +96,8 @@ into per-component rows. Canonical column order is
 system_id, comp, hip, gaia_source_id, hd,
 x_pc, y_pc, z_pc, absmag, ci, spect, name,
 source, regime,
-resolve_via, astrometry_via, orbit_via, spect_via,
+resolve_via, gaia_origin, hip_origin,
+astrometry_via, orbit_via, spect_via,
 photometry_via, a_via,
 orbit_role,
 P_days, T_jd, e, a_AU, i_rad, omega_rad, Omega_rad, q, dist_pc,
@@ -107,11 +108,21 @@ anchor_sep_arcsec, anchor_pa_deg, anchor_comp, mag_pri, mag_sec
 `x_pc/y_pc/z_pc` are emitted at the **J2016.0** scene epoch:
 `positionPc` PM-propagates each component's direction from its native
 epoch (`MeasuredAstrometry.refEpoch` — Gaia J2016.0, HIP2 J1991.25,
-AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH`, mirroring the single-star
-cascade in `scripts/catalog/distance/direction-cascade.ts`. This keeps a promoted
+AT-HYG J1991.25) to `CATALOG_SCENE_EPOCH` through `directionAtEpoch`
+(`src/astro-core/equatorial-basis.ts`), the formula the single-star
+cascade in `scripts/catalog/distance/direction-cascade.ts` advances
+through, so a pair and its catalogue record cannot disagree on where a
+star sits. This keeps a promoted
 secondary's baked xyz on the same epoch as its primary so the static
 relative sep/PA is the pair's true J2016.0 geometry, not corrupted by
 (epoch gap × systemic PM). See [Reference epoch](/data/README.md#reference-epoch-and-proper-motion).
+
+`gaia_origin` / `hip_origin` say where the row's Gaia source and HIP came
+from, blank exactly when the identifier is: `own`, or `<kind>:<token>` for one
+copied from another component of the system — `blend:Aa`, `letter:Aa`,
+`parent:A`, `partner:Ca`. Stage 2 records them as it binds
+([Identifier origins](../resolve/README.md#identifier-origins)); a standalone
+row's SIMBAD identifiers are `own`.
 
 `hd` carries the component's own HD number, with the pair primary
 falling back to the coord-validated ORB6 entry's HD (stashed on the

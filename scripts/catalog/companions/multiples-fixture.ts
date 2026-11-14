@@ -3,17 +3,27 @@
 
 import type { MultiplesTsvRow } from './companion-promotion';
 import { parseStage6Offset } from './anchor-offset-pure';
+import { OWN, gaiaFields, hipFields, type IdOrigin } from '../../binaries/multiples-tsv';
+
+type IdentifierKeys = 'gaiaSourceId' | 'gaiaOrigin' | 'hip' | 'hipOrigin';
+
+/** A row's fields, its identifiers given bare; each binds under its `*Origin`, else as the row's own. */
+export type MultiplesRowOverrides = Partial<Omit<MultiplesTsvRow, IdentifierKeys>> & {
+  gaiaSourceId?: string | null;
+  gaiaOrigin?: IdOrigin | null;
+  hip?: number | null;
+  hipOrigin?: IdOrigin | null;
+};
 
 /** `anchorOffset` defaults to what the parse boundary gives the row's own
  *  `comp` / `anchorComp` with blank offset cells. */
-export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
+export function multiplesRow(overrides: MultiplesRowOverrides = {}): MultiplesTsvRow {
+  const { gaiaSourceId, gaiaOrigin, hip, hipOrigin, ...rest } = overrides;
   const comp = overrides.comp ?? 'B';
   const anchorComp = overrides.anchorComp ?? null;
   return {
     systemId: 'WDS-1-AB',
     comp,
-    hip: null,
-    gaiaSourceId: null,
     hd: null,
     x_pc: 100, y_pc: 0, z_pc: 0,
     absmag: 5.0, ci: 0.6, spect: '',
@@ -44,6 +54,8 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     anchorOffset: parseStage6Offset(comp, anchorComp, null, null),
     magPri: null,
     magSec: null,
-    ...overrides,
+    ...rest,
+    ...gaiaFields(gaiaSourceId == null ? null : { value: gaiaSourceId, origin: gaiaOrigin ?? OWN }),
+    ...hipFields(hip == null ? null : { value: hip, origin: hipOrigin ?? OWN }),
   };
 }

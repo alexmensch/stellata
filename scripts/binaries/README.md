@@ -98,6 +98,9 @@ scripts/binaries/
                                   byte. Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  multiples-tsv-fixture.ts        Test-only: one multiples.tsv row as text
+                                  from the cells a test names
+                                  (multiplesLine, MULTIPLES_HEADER).
   component-tokens-pure.ts        WDS component-letter tokens:
     (+ test)                      wdsRootOf (a system_id's WDS id, the one
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
@@ -125,20 +128,17 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  propagatePosition (linear in RA/Dec
-                                  degrees, cos δ floored at 1e-3),
                                   tangentOffset, polarToTangent (a WDS
                                   ρ, θ as an east / north offset),
                                   distancePc (1000 /
-                                  parallax), chordSq / positionsWithin
+                                  parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
                                   offset), and the AT-HYG / WDS
-                                  reference epochs. Not the catalogue's
-                                  tangent-basis propagation
-                                  (../catalog/distance/direction-cascade.ts);
-                                  one formula for both is
-                                  stellata-hhaw.45.17.8.
+                                  reference epochs. Proper motion
+                                  propagates through astro-core's
+                                  directionAtEpoch / skyPositionAtEpoch,
+                                  the formula the catalogue uses.
   python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
                                   where JavaScript's default differs: pyMod,
                                   `%` with the divisor's sign; pySum, a

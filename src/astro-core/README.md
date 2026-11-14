@@ -63,8 +63,21 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. Shared by the catalog build's PM propagation
-  (`scripts/catalog/distance/direction-cascade.ts`) and space-motion velocity
+  sides speak. `directionAtEpoch` is the one proper-motion propagation:
+  linear along the tangent basis and renormalised, exact in cos δ and
+  stable through the poles, taking a `ProperMotion` whose μ_α* is already
+  cos δ-applied; either component missing returns the position unmoved.
+  <a id="proper-motion-accuracy"></a>Its accuracy budget: no radial
+  velocity, so perspective acceleration (≤0.15″ worst case) is omitted, and
+  under 0.002″ error at Barnard's-scale proper motion over the 24.75-yr
+  HIP2 J1991.25→J2016 interval — the longest any caller propagates.
+  `skyPositionAtEpoch` is the same read back as (ra, dec), for the binaries
+  binding audit's tangent-plane offsets. `angularSeparationArcsec` is
+  the separation between two unit vectors through `angleBetweenRad`, so it
+  resolves micro-arcseconds where an `acos` of the dot product reads 0.
+  Shared by the catalog build's
+  PM propagation (`scripts/catalog/distance/direction-cascade.ts`), every
+  binaries-pipeline propagation (`scripts/binaries/`), space-motion velocity
   (`scripts/catalog/distance/velocity.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection

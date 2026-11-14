@@ -1,4 +1,4 @@
-// build-seed.sh against a stub checkout whose build:data is a sleep that flags any overlap.
+// build-seed.sh against a stub checkout whose build:data is a sleep that flags any overlap, through heavy.sh on a private queue.
 import { spawn, spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -25,6 +25,8 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'build-seed-'));
   mkdirSync(join(dir, 'scripts'));
   copyFileSync(join(__dirname, 'build-seed.sh'), join(dir, 'scripts', 'build-seed.sh'));
+  copyFileSync(join(__dirname, 'heavy.sh'), join(dir, 'scripts', 'heavy.sh'));
+  copyFileSync(join(__dirname, 'run-queue.sh'), join(dir, 'scripts', 'run-queue.sh'));
   writeFileSync(join(dir, 'stub.sh'), STUB);
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     scripts: { 'worktree:include': 'echo written >> include; exit "${INCLUDE_EXIT:-0}"', 'build:data': 'sh stub.sh' },
@@ -35,7 +37,7 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 function seed(seconds: number, exit = 0, includeExit = 0): Promise<Run> {
   const child = spawn('bash', [join(dir, 'scripts', 'build-seed.sh')], {
-    env: { ...process.env, STUB_SECONDS: String(seconds), STUB_EXIT: String(exit), INCLUDE_EXIT: String(includeExit) },
+    env: { ...process.env, STUB_SECONDS: String(seconds), STUB_EXIT: String(exit), INCLUDE_EXIT: String(includeExit), HEAVY_DIR: join(dir, 'heavy'), HEAVY_POLL_S: '0.1', HEAVY_LOAD_CMD: 'echo 0' },
   });
   let stdout = '';
   child.stdout.on('data', (chunk: Buffer) => (stdout += chunk.toString()));
@@ -43,7 +45,7 @@ function seed(seconds: number, exit = 0, includeExit = 0): Promise<Run> {
 }
 
 const log = (): string[] => readFileSync(join(dir, 'log'), 'utf8').trim().split('\n');
-const entries = (): string[] => readdirSync(join(dir, 'build', 'build-seed'));
+const entries = (): string[] => readdirSync(join(dir, 'build', 'build-seed')).filter((name) => name !== '.lock');
 
 async function untilStarted(): Promise<void> {
   for (;;) {
