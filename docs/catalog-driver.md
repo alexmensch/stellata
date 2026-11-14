@@ -430,11 +430,28 @@ curation surface for the merge decisions:
 
 Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 
+**Connected is not unique, so the 136 is not the whole surface.** Tycho-2's
+own `hip` column gives 539 spine HIPs to two entries of a resolved pair, so a
+row carrying either entry connects, and only the spine says which entry is the
+HIP's record. The primaries disagree with it there: IV/25 gives the HD to the
+other entry on 451 (measured over the uncorrected spine), while over the
+corrected rows Gaia's two cross-matches put the HIP's source on the spine's
+entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->274<!-- /count -->, on the other for <!-- count:membership-manifest/membership.merge.pair.moves -->176<!-- /count --> and on no single entry for
+the rest. The rule
+(the owner's, 2026-11-14): **Gaia decides, else review** — the entry the HIP's
+own Gaia source sits on takes the HIP and its HD; with no such entry the row
+is queued and the spine's choice ships meanwhile
+([The pair rule](/scripts/catalog/membership/merge-derivation/README.md#connected-is-not-unique--the-pair-rule)).
+The cells a primary fills where the spine row leaves them empty are on the same
+surface. `build:membership` measures all of it in a shadow that moves no row
+and writes `data/membership/merge-divergence.tsv`, counts pinned under
+`membership.merge.*` ([The divergence ledger](/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger)).
+
 **Per column.**
 
 | Column | Readers today | Owned replacement | Child |
 |---|---|---|---|
-| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip <!-- count:membership-manifest/labelSpineOnly.hip -->18,551<!-- /count --> · hd <!-- count:membership-manifest/labelSpineOnly.hd -->12,744<!-- /count --> · hr <!-- count:membership-manifest/labelSpineOnly.hr -->1,698<!-- /count --> · gl <!-- count:membership-manifest/labelSpineOnly.gl -->1,225<!-- /count --> rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/additions/README.md#grouping-and-admission)), the 136 carried on evidenced rows of the generalised correction table | `stellata-hooj.17.2` |
+| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip <!-- count:membership-manifest/labelSpineOnly.hip -->18,551<!-- /count --> · hd <!-- count:membership-manifest/labelSpineOnly.hd -->12,744<!-- /count --> · hr <!-- count:membership-manifest/labelSpineOnly.hr -->1,698<!-- /count --> · gl <!-- count:membership-manifest/labelSpineOnly.gl -->1,225<!-- /count --> rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/additions/README.md#grouping-and-admission)), the pair rule above, and every row of `merge-divergence.tsv` carried as an evidenced row of the generalised correction table, a review-queue row or a ledgered manifest change | `stellata-hooj.17.2` (the shadow and its ledger) → `stellata-hooj.17.11` (the switch) |
 | `flam` | merge backstop (<!-- count:membership-manifest/labelSpineOnly.flam -->693<!-- /count --> rows); 2,604 attested, 120 not, <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP already attest the rest. The <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are a **source** question: a frozen SIMBAD identifier pull (`* NN Con`) attests them, or the drop ledger freezes as a committed record — the spine gone, nothing regenerates it | `stellata-hooj.17.4` |
 | `bayer` | copied to the manifest; naming reads it as two counters only (`namingBayerAdded` <!-- count:build-catalog/namingBayerAdded -->519<!-- /count -->, `namingBayerDropped` <!-- count:build-catalog/namingBayerDropped -->2<!-- /count -->) | WGSN ∪ IV/27A by HR/HD/HIP resolves <!-- count:manifest-naming/membershipBayerRowsCovered -->1,520<!-- /count --> of <!-- count:manifest-naming/membershipBayerRows -->1,522<!-- /count --> and the 2 drop by design ([Measured coverage](/scripts/catalog/naming/README.md#measured-coverage)): the manifest column goes, the counters re-pin on the authority | `stellata-hooj.17.3` |
 | `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (<!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count --> records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> disposed names (26 display, 20 alias); the membership gate test's [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual gate | Sol → the generator emits its one row. <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
@@ -446,11 +463,11 @@ Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 
 | Consumer | What it needs | Replacement | Child |
 |---|---|---|---|
-| `build:membership`, spine side | one row per star with the designations the primaries publish for it; Sol | the link graph; the evidenced merge table; a hand-emitted Sol | 17.2 |
+| `build:membership`, spine side | one row per star with the designations the primaries publish for it; Sol | the link graph; the evidenced merge table; a hand-emitted Sol | 17.2 → 17.11 |
 | `build:membership`, binding | a reference to diff the derivation against | none — see `gaia_source_id` above | 17.6 |
 | manifest gate (i) + the disposition join | a baseline every manifest row accounts for | the previous release's manifest, pinned by sha in a head file so the gate cannot compare against a stale or self-generated copy; departures = the parked, additions and retirement ledgers | 17.5 |
 | `parity-ledger.test.ts` | the shipped record set | the manifest — closer to what ships than the spine was | 17.5 |
-| `build:astrometry-request` | the derivation's candidate set | manifest TYCs; candidates over every manifest row once one derivation runs for all rows | 17.2 |
+| `build:astrometry-request` | the derivation's candidate set | manifest TYCs; candidates over every manifest row once one derivation runs for all rows | 17.11 |
 | `audit:spine-primaries`, `audit:spine-associations` | the retirement's measurement | retire with the file: attestation already ships as the manifest's `routes`, and admission is the generator's own | 17.7 |
 | `inherited-spine-guard.test.ts`, `stale_gaia_source_ids.tsv` | the frozen artifact's integrity; the DR2 queue | retire. The queue's live facts already read out of the `simbad_dr2_object` dispositions, whose evidence names each DR2 id outright rather than pointing at the file (`17.6`); the guard and the file go with the artifact | 17.6 ✓ / 17.7 |
 | manifest `bayer` / `proper` → `readStars` → naming | see the two column rows | see the two column rows | 17.3 |
@@ -467,23 +484,28 @@ is held by the gates that remain:
 3. `17.3` ∥ `17.4` — the name and label cells, independent of each other
    and of the merge decisions. `17.4` must settle before `17.7`, since the
    drop ledger regenerates from spine cells.
-4. `17.2` — the merge decisions, held against the spine by gate (i) **as it
+4. `17.2` — the merge decisions measured: the shadow derivation and its
+   divergence ledger, moving no row.
+5. `17.11` — the switch onto it, held against the spine by gate (i) **as it
    stands**: the spine's last job is to prove its own re-derivation moved
-   nothing but the 136.
-5. `17.5` — the baseline swap, after `17.2` so the previous manifest the gate
+   nothing the ledger does not enumerate.
+6. `17.5` — the baseline swap, after `17.11` so the previous manifest the gate
    adopts is the re-derived one.
-6. `17.9` — move `build:binaries` off the AT-HYG CSV (below); independent of
+7. `17.9` — move `build:binaries` off the AT-HYG CSV (below); independent of
    the spine children, so it runs alongside them.
-7. `17.7` — drop the file, retire the instruments and the byte guard, sweep
+8. `17.7` — drop the file, retire the instruments and the byte guard, sweep
    the prose, restate the licence once.
 
 **Expected movement, stated in advance.** Records: **zero** drops at every
 step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s residual is zero, so every row keeps an attested key; the primaries rows
 (376,909) and their binding classes hold across the epic except as this
-paragraph enumerates. `17.6` moved none of them, as predicted. Labels: `17.2`
-moves at most the 136 cells above, each
-re-attested by the positional witness, corrected with evidence, or on a
-ledger row; `17.3` changes no displayed name among the <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> + Sol and the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count -->
+paragraph enumerates. `17.6` moved none of them, as predicted. Merge
+decisions: `17.2` moves nothing; `17.11` moves exactly the rows of
+`merge-divergence.tsv` it settles — the 136 unlinked cells each re-attested by
+the positional witness, corrected with evidence, or on a ledger row, and the
+records the pair rule moves onto the other entry of their Tycho-2 pair, each
+keeping its SID (they key on HIP or HD) while its TYC, position, V, proper
+motion and binding move; `17.3` changes no displayed name among the <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> + Sol and the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count -->
 each land on a naming-parity row; `17.4` adds <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed labels if the
 SIMBAD pull is adopted, else none. Identity: at most the Gl 863.1A split and
 a review outcome on ξ UMa's shared HIP; none from `17.6`, `17.5`, `17.7`.
