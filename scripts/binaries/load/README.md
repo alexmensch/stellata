@@ -137,11 +137,12 @@ grade cell is not a digit reads as grade 5 (outcome `fallback`).
 
 Each pass returns one outcome per row it weighed — duplicate collapse, ORB6
 grades, curated ORB6 letters, astrometry exclusions, the rescue, MSC synthesis
-— the duplicate collapse's and the rescue's as decisions carrying the row (a
-donor also names the orphans it donated to), which the `pairs` lineage stage
-writes ([Pairs lineage](../README.md#pairs-lineage)) — and every count, in `stage1Counts` and in the build log, folds from those
+— and every count, in `stage1Counts` and in the build log, folds from those
 through the one tally helper ([The tally](../../util/counts/README.md#the-tally));
-no pass returns a bare number.
+no pass returns a bare number. The duplicate collapse and the rescue return
+each outcome as a decision carrying its row (a donor also names the orphans it
+donated to), which the `pairs` lineage stage writes
+([Pairs lineage](../README.md#pairs-lineage)).
 `stage1Counts` names the count-snapshot keys this stage's code produces. The
 snapshot's `wds_pairs_total` is not one of them: Stage 3 appends its NSS
 inner pairs to the same list, so its `stage3Counts` returns the total
