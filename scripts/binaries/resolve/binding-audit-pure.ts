@@ -8,7 +8,7 @@ import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
-import { working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
+import { OWN, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
 
@@ -459,8 +459,12 @@ function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPa
 /** gaia always clears; a HIP clears only when it cross-walks to the contested
  *  source or the winner carries it too, else the loser would resolve straight back. */
 function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: IdentifierIndices): void {
-  if (c.hip !== null && (indices.hipToGaia.get(c.hip) === c.gaiaSourceId || winner.has(c.hip))) c.hip = null;
+  if (c.hip !== null && (indices.hipToGaia.get(c.hip) === c.gaiaSourceId || winner.has(c.hip))) {
+    c.hip = null;
+    c.hipOrigin = null;
+  }
   c.gaiaSourceId = null;
+  c.gaiaOrigin = null;
   c.resolveVia = 'unresolved';
 }
 
@@ -475,7 +479,11 @@ export function enforceBindingVerdicts(
     if (action === null) continue;
     enforced.add(v.wdsId);
     if (action.kind === 'rebind') {
-      for (const i of ctx.instances.get(action.letter) ?? []) instance(out, i).gaiaSourceId = action.sourceId;
+      for (const i of ctx.instances.get(action.letter) ?? []) {
+        const c = instance(out, i);
+        c.gaiaSourceId = action.sourceId;
+        c.gaiaOrigin = OWN;
+      }
       continue;
     }
     const winner = winnerHips(v, ctx, out, indices);

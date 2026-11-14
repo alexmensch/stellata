@@ -5,7 +5,7 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
-import { componentsOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { componentsOf, inheritedFrom, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
@@ -97,9 +97,12 @@ export function synthesizeNssInnerPairs(
     const pair = subResolutionPair(
       c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
     );
+    const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({
       wdsId: c.wdsId, discoverer: SYNTH_NSS_DISCOVERER, component, isPrimary,
-      gaiaSourceId: carrier.sourceId, resolveVia: c.resolveVia, hip: c.hip, athygRow: c.athygRow, hd: null,
+      gaiaSourceId: carrier.sourceId, gaiaOrigin: fromCarrier, resolveVia: c.resolveVia,
+      hip: c.hip, hipOrigin: c.hip === null ? null : fromCarrier,
+      athygRow: c.athygRow, athygOrigin: c.athygRow === null ? null : fromCarrier, hd: null,
     });
     const inner: DecomposedPair = { pair, tokens: splitComponents(pair.components)!, primary: child(a, true), secondary: child(b, false) };
     out.push(inner);

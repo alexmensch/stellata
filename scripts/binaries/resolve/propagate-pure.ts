@@ -5,31 +5,39 @@ import {
 } from '../component-tokens-pure';
 import type { WdsPair } from '../../wds/wds-pure';
 import {
-  findOwningPair, pairsByDiscoverer, priorityOf, working,
-  type DecomposedPair, type Draft, type ResolvedComponent,
+  findOwningPair, inheritedFrom, pairsByDiscoverer, priorityOf, working,
+  type DecomposedPair, type Draft, type IdOrigin, type InheritanceKind, type ResolvedComponent,
 } from './components-pure';
 import type { ResolveVia } from '../multiples-tsv';
 
 interface SourceBinding {
   readonly gaia: string;
   readonly via: ResolveVia;
+  readonly origin: IdOrigin;
+}
+
+interface HipBinding {
+  readonly hip: number;
+  readonly origin: IdOrigin;
 }
 
 /** Each donor's strongest-tier source and first HIP, grouped under `donorKey`
- *  (null: no donor), filled into every heir's gaps under its own key. */
+ *  (null: no donor), filled into every heir's gaps under its own key. An heir
+ *  records `origin(donor, held)` for an identifier the donor holds under `held`. */
 function inheritWithin(
   out: readonly Draft[], donorKey: (c: Draft) => ComponentKey | null, isHeir: (c: Draft) => boolean,
+  origin: (donor: Draft, held: IdOrigin) => IdOrigin,
 ): void {
   const sources = new Map<ComponentKey, SourceBinding>();
-  const hips = new Map<ComponentKey, number>();
+  const hips = new Map<ComponentKey, HipBinding>();
   for (const c of out) {
     const key = donorKey(c);
     if (key === null) continue;
     const cur = sources.get(key);
     if (c.gaiaSourceId !== null && (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via))) {
-      sources.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia });
+      sources.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia, origin: origin(c, c.gaiaOrigin!) });
     }
-    if (c.hip !== null && !hips.has(key)) hips.set(key, c.hip);
+    if (c.hip !== null && !hips.has(key)) hips.set(key, { hip: c.hip, origin: origin(c, c.hipOrigin!) });
   }
   for (const c of out) {
     if (!isHeir(c)) continue;
@@ -37,15 +45,20 @@ function inheritWithin(
     const binding = sources.get(key);
     if (c.gaiaSourceId === null && binding !== undefined) {
       c.gaiaSourceId = binding.gaia;
+      c.gaiaOrigin = binding.origin;
       c.resolveVia = binding.via;
     }
-    if (c.hip === null) c.hip = hips.get(key) ?? null;
+    const hip = hips.get(key);
+    if (c.hip === null && hip !== undefined) {
+      c.hip = hip.hip;
+      c.hipOrigin = hip.origin;
+    }
   }
 }
 
 export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
   const w = working(pairs);
-  inheritWithin(w.components, (c) => componentKey(c.wdsId, c.component), () => true);
+  inheritWithin(w.components, (c) => componentKey(c.wdsId, c.component), () => true, (_, held) => held);
   inheritWithin(
     w.components,
     (c) => {
@@ -53,6 +66,7 @@ export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonl
       return top === null ? null : componentKey(c.wdsId, top);
     },
     (c) => c.component === c.component.toUpperCase() && c.component.length === 1,
+    (donor) => inheritedFrom(donor.component, 'letter'),
   );
   return w.pairs;
 }
@@ -66,9 +80,13 @@ export function propagateBlendIdentity(
     if (pair.rhoLast === null || pair.rhoLast > 0) continue;
     if (s.gaiaSourceId !== null || s.hip !== null || s.athygRow !== null) continue;
     if (p.gaiaSourceId === null && p.hip === null && p.athygRow === null) continue;
+    const blend = inheritedFrom(p.component, 'blend');
     s.gaiaSourceId = p.gaiaSourceId;
+    s.gaiaOrigin = p.gaiaSourceId === null ? null : blend;
     s.hip = p.hip;
+    s.hipOrigin = p.hip === null ? null : blend;
     s.athygRow = p.athygRow;
+    s.athygOrigin = p.athygRow === null ? null : blend;
     if (p.gaiaSourceId !== null) s.resolveVia = p.resolveVia;
     seeded.push(s);
   }
@@ -81,19 +99,23 @@ function strength(c: ResolvedComponent): number {
 }
 
 /** Fills only what `dst` lacks; true when anything moved. */
-function copyBinding(dst: Draft, src: ResolvedComponent): boolean {
+function copyBinding(dst: Draft, src: ResolvedComponent, how: InheritanceKind): boolean {
+  const origin = inheritedFrom(src.component, how);
   let changed = false;
   if (dst.gaiaSourceId === null && src.gaiaSourceId !== null) {
     dst.gaiaSourceId = src.gaiaSourceId;
+    dst.gaiaOrigin = origin;
     dst.resolveVia = src.resolveVia;
     changed = true;
   }
   if (dst.hip === null && src.hip !== null) {
     dst.hip = src.hip;
+    dst.hipOrigin = origin;
     changed = true;
   }
   if (dst.athygRow === null && src.athygRow !== null) {
     dst.athygRow = src.athygRow;
+    dst.athygOrigin = origin;
     changed = true;
   }
   return changed;
@@ -124,7 +146,7 @@ export function seedSynthesizedComponentBindings(
     if (c.gaiaSourceId === null) {
       const parent = parentComponentToken(c.component);
       const donor = parent === null ? undefined : donors.get(componentKey(c.wdsId, parent));
-      if (donor !== undefined && copyBinding(c, donor)) seeded.push(c);
+      if (donor !== undefined && copyBinding(c, donor, 'parent')) seeded.push(c);
     }
     primaryByPair.set(pair, c);
   }
@@ -133,7 +155,7 @@ export function seedSynthesizedComponentBindings(
     const pair = findOwningPair(c, index);
     if (pair === null || c.gaiaSourceId !== null) continue;
     const primary = primaryByPair.get(pair);
-    if (primary !== undefined && copyBinding(c, primary)) seeded.push(c);
+    if (primary !== undefined && copyBinding(c, primary, 'partner')) seeded.push(c);
   }
   return { pairs: w.pairs, seeded };
 }
@@ -146,14 +168,14 @@ export function inheritDownwardParentBindings(
   pairs: readonly DecomposedPair[], onlyWdsIds: ReadonlySet<string>,
 ): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
   const w = working(pairs);
-  const bound = new Map<ComponentKey, { gaia: string; via: ResolveVia; hip: number | null }>();
+  const bound = new Map<ComponentKey, { gaia: string; via: ResolveVia; hip: number | null; token: string }>();
   const canon: { token: string; c: Draft }[] = [];
   for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (!onlyWdsIds.has(pair.wdsId)) continue;
     for (const [token, c] of [[p.component, p], [canonicalCompLetter(p.component, s.component), s]] as const) {
       canon.push({ token, c });
       const key = componentKey(pair.wdsId, token);
-      if (c.gaiaSourceId !== null && !bound.has(key)) bound.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia, hip: c.hip });
+      if (c.gaiaSourceId !== null && !bound.has(key)) bound.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia, hip: c.hip, token });
     }
   }
   const seeded: Draft[] = [];
@@ -162,9 +184,14 @@ export function inheritDownwardParentBindings(
     const parent = parentComponentToken(token);
     const binding = parent === null ? undefined : bound.get(componentKey(c.wdsId, parent));
     if (binding === undefined) continue;
+    const origin = inheritedFrom(binding.token, 'parent');
     c.gaiaSourceId = binding.gaia;
+    c.gaiaOrigin = origin;
     c.resolveVia = binding.via;
-    if (c.hip === null && binding.hip !== null) c.hip = binding.hip;
+    if (c.hip === null && binding.hip !== null) {
+      c.hip = binding.hip;
+      c.hipOrigin = origin;
+    }
     seeded.push(c);
   }
   return { pairs: w.pairs, seeded };

@@ -9,7 +9,7 @@ import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
 import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { componentsOf, OWN, type DecomposedPair, type IdOrigin, type ResolvedComponent } from './components-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
@@ -51,11 +51,16 @@ export function indices(over: {
   });
 }
 
+/** An identifier `over` sets without an origin is the component's own. */
 export function resolved(over: Partial<ResolvedComponent> = {}): ResolvedComponent {
+  const ownIf = (v: unknown): IdOrigin | null => (v === null || v === undefined ? null : OWN);
   return {
     wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true,
     gaiaSourceId: null, resolveVia: 'unresolved', hip: null, athygRow: null, hd: null,
     ...over,
+    gaiaOrigin: over.gaiaOrigin ?? ownIf(over.gaiaSourceId),
+    hipOrigin: over.hipOrigin ?? ownIf(over.hip),
+    athygOrigin: over.athygOrigin ?? ownIf(over.athygRow),
   };
 }
 

@@ -16,7 +16,7 @@ import {
   SIBLING_REJECTION_TIERS, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
   type SiblingRejection, type SiblingRejectionTier,
 } from './cascade-pure';
-import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { decompose, freezePairs, markOwn, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
 
 export interface CascadeInputs {
@@ -38,7 +38,7 @@ export function resolveCascade(
   const ccdm = resolveViaCcdm(simbad, inputs.indices);
   const position = resolveViaPosition(ccdm.pairs, inputs.athyg);
   return {
-    pairs: propagateIdentities(position.pairs),
+    pairs: propagateIdentities(markOwn(position.pairs)),
     siblingRejections: [...ccdm.rejected, ...position.rejected],
   };
 }

@@ -8,7 +8,8 @@ import {
   ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
 import {
-  componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
+  OWN, componentsOf, findOwningPair, inheritedFrom, pairRows, pairsByDiscoverer,
+  type DecomposedPair, type IdOrigin, type ResolvedComponent,
 } from './components-pure';
 import { measuredOffset, splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
@@ -80,8 +81,8 @@ export interface AthygMatch {
   /** Into `componentsOf(pairs)`. */
   readonly componentIdx: number;
   readonly athygIdx: number;
-  /** A secondary riding its primary's row because its own predicted match missed. */
-  readonly blendInherit: boolean;
+  /** Inherited: a secondary riding its primary's row because its own predicted match missed. */
+  readonly origin: IdOrigin;
 }
 
 /** A matched row whose HIP a disjoint, non-partner letter of the system already binds. */
@@ -129,7 +130,7 @@ export function pairAthygMatches(
     const [, partner] = pairComponentTokens(pair.components)!;
     if (claimedBySibling(i, match, c.component, partner)) return;
     primaryIdxByPair.set(pair, match);
-    matches.push({ componentIdx: i, athygIdx: match, blendInherit: false });
+    matches.push({ componentIdx: i, athygIdx: match, origin: OWN });
   });
 
   components.forEach((c, i) => {
@@ -143,15 +144,13 @@ export function pairAthygMatches(
       const predicted = predictSecondaryPosition(pair.precise, offset);
       match = matchAthygEitherEpoch(predicted, grid, athyg, ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC, primaryIdx);
     }
-    if (match !== null) {
-      const [primaryToken] = splitComponents(pair.components)!;
-      if (!claimedBySibling(i, match, canonicalCompLetter(primaryToken, c.component), primaryToken)) {
-        matches.push({ componentIdx: i, athygIdx: match, blendInherit: false });
-        return;
-      }
+    const [primaryToken] = splitComponents(pair.components)!;
+    if (match !== null && !claimedBySibling(i, match, canonicalCompLetter(primaryToken, c.component), primaryToken)) {
+      matches.push({ componentIdx: i, athygIdx: match, origin: OWN });
+      return;
     }
     if (opts.allowBlendInherit && primaryIdx !== null) {
-      matches.push({ componentIdx: i, athygIdx: primaryIdx, blendInherit: true });
+      matches.push({ componentIdx: i, athygIdx: primaryIdx, origin: inheritedFrom(primaryToken, 'blend') });
     }
   });
 

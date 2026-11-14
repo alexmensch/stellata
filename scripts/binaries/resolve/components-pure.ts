@@ -13,6 +13,18 @@ export function priorityOf(via: ResolveVia): number {
   return RESOLVE_VIA_PRIORITY.get(via) as number;
 }
 
+export type InheritanceKind = 'blend' | 'letter' | 'parent' | 'partner';
+
+export type IdOrigin =
+  | { readonly kind: 'own' }
+  | { readonly kind: 'inherited'; readonly from: string; readonly how: InheritanceKind };
+
+export const OWN: IdOrigin = Object.freeze({ kind: 'own' });
+
+export function inheritedFrom(from: string, how: InheritanceKind): IdOrigin {
+  return { kind: 'inherited', from, how };
+}
+
 /** One side of one decomposing pair row, as Stage 2 bound it. */
 export interface ResolvedComponent {
   readonly wdsId: string;
@@ -21,10 +33,13 @@ export interface ResolvedComponent {
   readonly component: string;
   readonly isPrimary: boolean;
   readonly gaiaSourceId: string | null;
+  readonly gaiaOrigin: IdOrigin | null;
   readonly resolveVia: ResolveVia;
   readonly hip: number | null;
+  readonly hipOrigin: IdOrigin | null;
   /** The position-matched AT-HYG row, for a row whose identifiers no index reaches. */
   readonly athygRow: AthygRow | null;
+  readonly athygOrigin: IdOrigin | null;
   /** The coord-validated ORB6 entry's HD, primaries only. */
   readonly hd: number | null;
 }
@@ -34,8 +49,20 @@ export type Draft = { -readonly [K in keyof ResolvedComponent]: ResolvedComponen
 export function unresolvedComponent(pair: WdsPair, component: string, isPrimary: boolean): ResolvedComponent {
   return {
     wdsId: pair.wdsId, discoverer: pair.discoverer, component, isPrimary,
-    gaiaSourceId: null, resolveVia: 'unresolved', hip: null, athygRow: null, hd: null,
+    gaiaSourceId: null, gaiaOrigin: null, resolveVia: 'unresolved', hip: null, hipOrigin: null,
+    athygRow: null, athygOrigin: null, hd: null,
   };
+}
+
+/** Every identifier a tier set without an origin is the component's own. */
+export function markOwn(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
+  const w = working(pairs);
+  for (const c of w.components) {
+    if (c.gaiaSourceId !== null && c.gaiaOrigin === null) c.gaiaOrigin = OWN;
+    if (c.hip !== null && c.hipOrigin === null) c.hipOrigin = OWN;
+    if (c.athygRow !== null && c.athygOrigin === null) c.athygOrigin = OWN;
+  }
+  return w.pairs;
 }
 
 export type PairsByDiscoverer = ReadonlyMap<DiscovererKey, readonly WdsPair[]>;
