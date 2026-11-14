@@ -40,16 +40,21 @@ export function sumOf<P extends string, K extends string>(counts: Record<`${P}${
   return members.reduce((n, m) => n + counts[`${prefix}${m}`], 0);
 }
 
-/** `part / whole` for a snapshot rate; throws on an empty whole, which is a
- *  broken build, not a rate of 0. */
-export function share(part: number, whole: number, rate: string): number {
-  if (whole <= 0) throw new Error(`${rate}: nothing to rate (denominator ${whole})`);
-  return part / whole;
+export type Share = { kind: 'rated'; value: number } | { kind: 'no-denominator' };
+
+/** `part / whole`, or `no-denominator` for an empty whole — never a rate of 0. */
+export function share(part: number, whole: number): Share {
+  return whole === 0 ? { kind: 'no-denominator' } : { kind: 'rated', value: part / whole };
+}
+
+/** A share as a percentage to one decimal, `n/a` when it has no denominator. */
+export function formatShare(s: Share): string {
+  return s.kind === 'no-denominator' ? 'n/a' : `${(100 * s.value).toFixed(1)}%`;
 }
 
 /** `part` as a percentage of `whole` to one decimal, `n/a` for an empty whole. */
 export function percentOf(part: number, whole: number): string {
-  return whole === 0 ? 'n/a' : `${((100 * part) / whole).toFixed(1)}%`;
+  return formatShare(share(part, whole));
 }
 
 /** One-line `bucket=n` rundown of a row partition, zeros included — the
