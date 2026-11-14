@@ -34,6 +34,11 @@ describe('thieleInnesToCampbell', () => {
     expect(c.periastronRad).toBeCloseTo(300 * DEG_TO_RAD, 9);
   });
 
+  it('wraps ω a rounding unit below zero to exactly 2π, as Python\'s % does (Gaia DR3 64668261720271360)', () => {
+    const c = thieleInnesToCampbell(0.2275720416105897, 0.3257060892200916, 0.11165712627187728, -0.07801524450128418)!;
+    expect(c.periastronRad).toBe(2 * Math.PI);
+  });
+
   it('returns null for a degenerate quartet', () => {
     expect(thieleInnesToCampbell(0, 0, 0, 0)).toBeNull();
   });
