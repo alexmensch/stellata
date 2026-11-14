@@ -20,12 +20,8 @@ const log = (msg: string): void => console.log(`[build-runtime-binaries] ${msg}`
 export function main(): void {
   const rows = readArtifact(MULTIPLES_TSV);
   const map = CATALOG_ROW_INDEX_MAP.read();
-  log(
-    `row-index map: ${Object.keys(map.byGaia).length.toLocaleString()} Gaia, `
-      + `${Object.keys(map.byHip).length.toLocaleString()} HIP, `
-      + `${Object.keys(map.bySynth).length.toLocaleString()} synthetic entries`,
-  );
-  const { bytes, counts: c, nested } = encodeRuntimeBinaries(rows, map);
+  log(`row-index map: ${map.pairs.size.toLocaleString()} resolved pairs`);
+  const { bytes, counts: c, nested } = encodeRuntimeBinaries(rows, map.pairs);
   log(`${c.pairs_total.toLocaleString()} physical pairs; ${nested.toLocaleString()} nest inside an outer pair`);
   log(`orbit coverage: ${c.pairs_with_orbit.toLocaleString()} with elements (${c.pairs_with_inclination.toLocaleString()} with inclination)`);
   log(

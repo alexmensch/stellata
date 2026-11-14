@@ -79,7 +79,7 @@ import {
   resolvedMemberIndices,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
-import { resolvePairs } from './companions/record-index/pair-resolution-pure';
+import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
 import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -423,8 +423,6 @@ export async function main() {
 
   const eclipsing = wingEclipsingBinaries(stars);
 
-  // Built here (not at the sidecar write below) so the wings pass resolves
-  // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
   const resolvedPairs = resolvePairs(pairsFromRows(multiplesRows), rowIndexMap);
 
@@ -513,6 +511,7 @@ export async function main() {
     figureLines,
     componentDesignations,
     rowIndexMap,
+    resolvedPairs,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
       parkedLedger,
@@ -561,6 +560,7 @@ interface CatalogEmissionInputs {
   readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
+  readonly resolvedPairs: readonly ResolvedPair[];
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -583,7 +583,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, sidEvents, ledgers, lineage,
   stageCounts, heap,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -627,11 +627,14 @@ function catalogEmission({
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap);
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(
+    handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap,
+    new Map(resolvedPairs.map((r) => [r.pair.systemId, r.rendered])),
+  );
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
-      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
+      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries, ${resolvedPairs.length} resolved pairs)`,
   );
 
   const figures = figuresCounts(figureLines);

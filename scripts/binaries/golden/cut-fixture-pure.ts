@@ -1,8 +1,6 @@
 // Cut multiples.tsv and the catalogue row-index map down to the golden's WDS systems. See README.md.
 
-import type {
-  CatalogRowIndexMap, CatalogRowIndexSidecar,
-} from '../../catalog/companions/record-index/catalog-row-index-map-pure';
+import type { CatalogRowIndexSidecar } from '../../catalog/companions/record-index/catalog-row-index-map-pure';
 import type { MultiplesRecord } from '../multiples-record-pure';
 import { wdsRootOf } from '../component-tokens-pure';
 
@@ -30,14 +28,16 @@ function pick(table: Readonly<Record<string, number>>, keys: Iterable<string>): 
 
 /** `multiplesSha1` is the cut multiples.tsv's, so the fixture pair holds the handshake. */
 export function cutRowIndexMap(
-  map: CatalogRowIndexMap, records: readonly MultiplesRecord[], systems: readonly string[],
+  sidecar: CatalogRowIndexSidecar, records: readonly MultiplesRecord[], systems: readonly string[],
   multiplesSha1: string,
 ): CatalogRowIndexSidecar {
+  const keep = new Set(systems);
   const synthPrefixes = systems.map((wds) => `synth-${wds}-`);
   return {
     multiplesSha1,
-    byGaia: pick(map.byGaia, records.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
-    byHip: pick(map.byHip, records.flatMap((r) => (r.hip === null ? [] : [String(r.hip)]))),
-    bySynth: pick(map.bySynth, Object.keys(map.bySynth).filter((k) => synthPrefixes.some((p) => k.startsWith(p)))),
+    byGaia: pick(sidecar.byGaia, records.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
+    byHip: pick(sidecar.byHip, records.flatMap((r) => (r.hip === null ? [] : [String(r.hip)]))),
+    bySynth: pick(sidecar.bySynth, Object.keys(sidecar.bySynth).filter((k) => synthPrefixes.some((p) => k.startsWith(p)))),
+    pairs: new Map([...sidecar.pairs].filter(([systemId]) => keep.has(wdsRootOf(systemId) ?? ''))),
   };
 }

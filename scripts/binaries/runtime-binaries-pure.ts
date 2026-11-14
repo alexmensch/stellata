@@ -4,8 +4,7 @@ import {
   FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
   hasRenderableOrbit, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
-import type { CatalogRowIndexMap } from '../catalog/companions/record-index/catalog-row-index-map-pure';
-import { resolvePairs, type PairEnds } from '../catalog/companions/record-index/pair-resolution-pure';
+import type { PairEnds } from '../catalog/companions/record-index/pair-resolution-pure';
 import { compoundContains, relatedHier } from './component-tokens-pure';
 import {
   assignParentRelations, pairsFromRows, topologicalWalkOrder, type MultiplesPair, type PairRow,
@@ -123,13 +122,18 @@ export interface RuntimeBinaries {
   readonly nested: number;
 }
 
+/** See README.md#runtime-side-artifact. */
 export function encodeRuntimeBinaries(
   rows: readonly PairRow[],
-  map: CatalogRowIndexMap,
+  pairEnds: ReadonlyMap<string, PairEnds>,
 ): RuntimeBinaries {
   const pairs = pairsFromRows(rows);
   const parents = assignParentRelations(pairs);
-  const ends = resolvePairs(pairs, map).map((r) => r.rendered);
+  const ends = pairs.map((p) => {
+    const e = pairEnds.get(p.systemId);
+    if (e === undefined) throw new Error(`catalog row-index map: no resolved ends for pair ${p.systemId}`);
+    return e;
+  });
   const { records, counts } = planRecords(pairs, parents, topologicalWalkOrder(parents), ends);
   return { bytes: encodeBinaries(records), counts, nested: parents.filter((p) => p !== NO_PARENT).length };
 }

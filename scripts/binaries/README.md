@@ -160,7 +160,7 @@ scripts/binaries/
                                   (promotion's origin keys), so it never
                                   reaches the codec.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
-                                  the catalogue row-index map →
+                                  the catalogue sidecar's resolved pairs →
                                   public/binaries.bin through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
@@ -232,22 +232,17 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
 3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.ts`). Reads
-   multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
-   sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
+   multiples.tsv + the `pairs` section of `catalog-row-index-map.json` —
+   each pair's two ends as catalogue records, already resolved by the
+   catalogue build ([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home),
+   [The sidecar and how a component resolves](../catalog/companions/record-index/README.md#the-sidecar-and-how-a-component-resolves))
+   — and emits `public/binaries.bin`: one
    fixed-size record per physical pair carrying Kepler elements + sep/PA
    + a hierarchical parent-relation index, in the layout
-   `/src/catalog-format/binaries/` owns. It refuses to emit when the map's
-   `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue built
-   from another copy). Each end resolves through
-   `catalog-row-index-map-pure.ts` (`../catalog/companions/record-index/`),
-   the functions the catalogue's wings pass calls too:
-   gaia → hip → synth; the synth key composes from the pair's expanded
-   `comp` tokens (`Aa1,2` resolves through the same `synth-…-Aa2` key the
-   catalog minted). Both pair ends then prefer a distinct synth slot over
-   their id-first resolve: promotion mints a synth record only after
-   judging a row's ids inherited and stripping them, so when one exists
-   it is always the truer target than the blended member row the
-   inherited id lands on. `pnpm run build:binaries-runtime`; loaded by
+   `/src/catalog-format/binaries/` owns. It resolves nothing itself, so a
+   pair the section does not carry throws, and it refuses to emit when the
+   map's `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue
+   built from another copy). `pnpm run build:binaries-runtime`; loaded by
    `src/client/binaries/binaries-loader.ts`.
 
 The Tier A validation harness

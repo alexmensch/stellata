@@ -10,7 +10,11 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import { MULTIPLES_TSV } from '../../scripts/binaries/multiples-tsv';
 import { encodeRuntimeBinaries, type RuntimeBinaries } from '../../scripts/binaries/runtime-binaries-pure';
-import { parseCatalogRowIndexMap } from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
+import {
+  parseCatalogRowIndexMap, type CatalogRowIndexSidecar,
+} from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
+import { resolvePairs } from '../../scripts/catalog/companions/record-index/pair-resolution-pure';
+import { pairsFromRows } from '../../scripts/binaries/pairs-pure';
 import { REPO_ROOT } from '../../scripts/util/paths';
 import { hashBytes } from '../../scripts/util/stamp-hash';
 
@@ -54,12 +58,18 @@ function describeFirstDifference(actual: Uint8Array, golden: Uint8Array): string
 }
 
 describe('binaries.bin golden', () => {
+  let rows: ReturnType<typeof MULTIPLES_TSV.parse>;
+  let sidecar: CatalogRowIndexSidecar;
   let encoded: RuntimeBinaries;
   beforeAll(() => {
-    encoded = encodeRuntimeBinaries(
-      MULTIPLES_TSV.parse(readFileSync(FIXTURE_MULTIPLES, 'utf8')),
-      parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8')),
-    );
+    rows = MULTIPLES_TSV.parse(readFileSync(FIXTURE_MULTIPLES, 'utf8'));
+    sidecar = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
+    encoded = encodeRuntimeBinaries(rows, sidecar.pairs);
+  });
+
+  it('the fixture pairs are what the pair resolution makes of the fixture map', () => {
+    const resolved = resolvePairs(pairsFromRows(rows), sidecar);
+    expect(new Map(resolved.map((r) => [r.pair.systemId, r.rendered]))).toEqual(sidecar.pairs);
   });
 
   it('the fixture exercises every count', () => {
@@ -81,7 +91,6 @@ describe('binaries.bin golden', () => {
   });
 
   it('the fixture map was built from the fixture multiples.tsv', () => {
-    const sidecar = parseCatalogRowIndexMap(readFileSync(FIXTURE_ROW_INDEX_MAP, 'utf8'));
     expect(sidecar.multiplesSha1).toBe(hashBytes(readFileSync(FIXTURE_MULTIPLES)));
   });
 
