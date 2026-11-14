@@ -24,7 +24,8 @@ Read each with `bd show <id>`.
 
 ## Bring main in — gates, release level
 
-The gates are `pnpm run typecheck && pnpm test`.
+The gates are `pnpm run typecheck && bash scripts/heavy.sh pnpm test`
+([Heavy commands](/scripts/README.md#heavy-commands--heavysh)).
 
 Syncing is required by the ruleset
 ([Merge gating](/RELEASING.md#merge-gating)). No version is ever in conflict: the PR carries a release level label

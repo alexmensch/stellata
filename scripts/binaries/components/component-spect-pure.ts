@@ -8,12 +8,12 @@ import type { ResolvedComponent } from '../resolve/components-pure';
 
 /** The position-matched row, then the Gaia source's, then the HIP's. */
 export function athygRowFor(c: ResolvedComponent, indices: IdentifierIndices): AthygRow | null {
-  if (c.athygRow !== null) return c.athygRow;
-  if (c.gaiaSourceId !== null) {
-    const row = indices.srcToAthyg.get(c.gaiaSourceId);
+  if (c.athyg !== null) return c.athyg.value;
+  if (c.gaia !== null) {
+    const row = indices.srcToAthyg.get(c.gaia.value);
     if (row !== undefined) return row;
   }
-  return c.hip === null ? null : indices.hipToAthyg.get(c.hip) ?? null;
+  return c.hip === null ? null : indices.hipToAthyg.get(c.hip.value) ?? null;
 }
 
 export interface ResolvedSpect {

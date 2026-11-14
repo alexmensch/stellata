@@ -5,8 +5,9 @@ import { fold } from '../../util/counts/tally-pure';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { nssOrbitalRow, nssRow } from '../orbits/nss-fixture';
-import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
-import { decomposed, indices } from '../resolve/resolve-fixture';
+import type { DecomposedPair } from '../resolve/components-pure';
+import { decomposed, ids, indices, type Side } from '../resolve/resolve-fixture';
+import { inheritedFrom } from '../multiples-tsv';
 import { NSS_SYNTHESIS_OUTCOMES, SYNTH_NSS_DISCOVERER, synthesizeNssInnerPairs } from './nss-inner-pairs-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
 
@@ -14,10 +15,10 @@ const AST: ComponentAstrometry = {
   astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 50, parallaxErrorMas: 0.05, pmraMasyr: 1, pmdecMasyr: -1, refEpoch: 2016,
 };
 
-const side = (gaiaSourceId: string | null, over: Partial<ResolvedComponent> = {}): Partial<ResolvedComponent> =>
+const side = (gaiaSourceId: string | null, over: Side = {}): Side =>
   ({ gaiaSourceId, resolveVia: gaiaSourceId === null ? 'unresolved' : 'simbad_xid', ...over });
 
-const pairOf = (components: string, primary: Partial<ResolvedComponent>, secondary: Partial<ResolvedComponent>): DecomposedPair =>
+const pairOf = (components: string, primary: Side, secondary: Side): DecomposedPair =>
   decomposed(wdsPair({ wdsId: 'W1', components }), { primary, secondary });
 
 function run(pairs: readonly DecomposedPair[], nss: NssOrbitRow | readonly NssOrbitRow[], ast: ComponentAstrometry = AST) {
@@ -38,7 +39,8 @@ describe('synthesizeNssInnerPairs', () => {
     expect(inner.pair).toMatchObject({ wdsId: 'W1', components: 'Aa,Ab', discoverer: SYNTH_NSS_DISCOVERER, rhoLast: 0, precise: { raDeg: 100, decDeg: 0 } });
     expect(inner.tokens).toEqual(['Aa', 'Ab']);
     for (const c of [inner.primary, inner.secondary]) {
-      expect(c).toMatchObject({ gaiaSourceId: '42', resolveVia: 'simbad_xid', hip: 7, discoverer: SYNTH_NSS_DISCOVERER });
+      expect(ids(c)).toMatchObject({ gaiaSourceId: '42', resolveVia: 'simbad_xid', hip: 7, discoverer: SYNTH_NSS_DISCOVERER });
+      expect([c.gaia?.origin, c.hip?.origin]).toEqual([inheritedFrom('A', 'parent'), inheritedFrom('A', 'parent')]);
     }
     expect([inner.primary.isPrimary, inner.secondary.isPrimary]).toEqual([true, false]);
     expect(r.astrometry.get(inner)).toEqual({ primary: AST, secondary: AST });
@@ -65,7 +67,7 @@ describe('synthesizeNssInnerPairs', () => {
       [pairOf('AC', side('100'), side('98')), pairOf('AB', side('42'), side('99'))],
       [nssOrbitalRow({ sourceId: '100', periodDays: 200 }), inRegime],
     );
-    expect(r.pairs.map((p) => [p.pair.components, p.primary.gaiaSourceId])).toEqual([['Aa,Ab', '42']]);
+    expect(r.pairs.map((p) => [p.pair.components, p.primary.gaia?.value])).toEqual([['Aa,Ab', '42']]);
     expect(r.tally.skipped_children_exist).toBe(1);
   });
 

@@ -158,7 +158,7 @@ describe('readTable', () => {
     expect(rows[0].rawLine).toBe(' A \t1');
   });
 
-  it('reads a source_id as bare digits, kept a string', () => {
+  it('reads a source_id as bare digits with no leading zero, kept a string', () => {
     const [row] = readTable(SPEC, 'id\tv\n4295806720123456789\t\n');
     expect(row.sourceId('id')).toBe('4295806720123456789');
     expect(row.requiredSourceId('id')).toBe('4295806720123456789');
@@ -167,9 +167,14 @@ describe('readTable', () => {
     const [bad] = readTable(SPEC, 'id\tv\n-12\t1e3\n');
     expect(() => bad.sourceId('id')).toThrow('fixture/t.tsv:2: id: "-12" is not a source_id. Re-run x.');
     expect(() => bad.requiredSourceId('v')).toThrow(/v: "1e3" is not a source_id/);
+    const [padded] = readTable(SPEC, 'id\tv\n0123\t0\n');
+    expect(() => padded.sourceId('id')).toThrow('fixture/t.tsv:2: id: "0123" is not a source_id. Re-run x.');
+    expect(padded.sourceId('v')).toBe('0');
+    const [spaced] = readTable(SPEC, 'id\tv\n 123\t1\n');
+    expect(() => spaced.sourceId('id')).toThrow('fixture/t.tsv:2: id: " 123" is not a source_id. Re-run x.');
     const [list] = readTable(SPEC, 'id\tv\n12|34\t12||34\n');
     expect(list.sourceIdList('id', '|')).toEqual(['12', '34']);
-    expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => list.sourceIdList('v', '|')).toThrow('fixture/t.tsv:2: v: "12||34" has an empty element. Re-run x.');
   });
 
   it('names file, line and column on a bad identifier', () => {

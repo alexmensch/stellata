@@ -36,8 +36,9 @@ import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
-import { multiplesRow } from './multiples-fixture';
-import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
+import { multiplesRow, type MultiplesRowOverrides } from './multiples-fixture';
+import { OWN } from '../../binaries/multiples-tsv';
+import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
@@ -87,14 +88,7 @@ const ORBIT_ELEMENTS = {
 } as const;
 
 describe('parseMultiplesTsv', () => {
-  const tsv = (cells: Partial<Record<(typeof MULTIPLES_COLUMNS)[number], string>>): string => {
-    const base = {
-      source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'unresolved',
-      orbit_via: 'none', spect_via: 'none', photometry_via: 'none', a_via: 'none',
-      orbit_role: 'secondary', ...cells,
-    } as Record<string, string>;
-    return `${MULTIPLES_COLUMNS.join('\t')}\n${MULTIPLES_COLUMNS.map((c) => base[c] ?? '').join('\t')}\n`;
-  };
+  const tsv = (cells: Parameters<typeof multiplesLine>[0]): string => `${MULTIPLES_HEADER}\n${multiplesLine(cells)}\n`;
 
   it('parses a row and its Stage 6 anchor offset', () => {
     const [r] = parseMultiplesTsv(tsv({
@@ -618,7 +612,7 @@ describe('anchor flux dimming', () => {
   // Subset-solve fixtures: the anchor's AT-HYG magnitude is set to the
   // WDS pair blend (or the primary alone), distPc=10 so distance modulus
   // and de-extinction both vanish and observed = absolute magnitudes.
-  const solveRows = (over1: Partial<MultiplesTsvRow>, over2?: Partial<MultiplesTsvRow>) => {
+  const solveRows = (over1: MultiplesRowOverrides, over2?: MultiplesRowOverrides) => {
     const rows = [
       multiplesRow({
         systemId: 'WDS-9-AB', comp: 'A', hip: 7777,
@@ -733,8 +727,8 @@ describe('anchor flux dimming', () => {
   // names what the re-split's residual represents, and it is also the Δ
   // reference every dmag_imputed member is measured from.
   const depthRows = (
-    over1: Partial<MultiplesTsvRow>,
-    over2: Partial<MultiplesTsvRow>,
+    over1: MultiplesRowOverrides,
+    over2: MultiplesRowOverrides,
     secondCursorComp: string,
   ) => {
     const blend = blendMag(5.02, 7.42);
@@ -1199,7 +1193,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   // uses its own xyz — the sightline the integral runs down.
   function promoteAt(
     grid: DustGrid,
-    rowOverrides: Partial<MultiplesTsvRow>,
+    rowOverrides: MultiplesRowOverrides,
   ): Star {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
     const primaryRow = multiplesRow({
@@ -1219,7 +1213,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   }
 
   it('de-extincts observed absmag and de-reddens the row’s own ci', () => {
-    const observed: Partial<MultiplesTsvRow> = {
+    const observed: MultiplesRowOverrides = {
       photometryVia: 'athyg_own', absmag: 3.0, ci: 0.5, spect: '', dmag: null,
     };
     const withGrid = promoteAt(grid, observed);
@@ -1232,7 +1226,7 @@ describe('promoteCompanions build-time de-extinction', () => {
     // Inherited photometry + per-component type → class→M_V absmag and
     // Ballesteros 2012 (/data/papers/index.md#ballesteros2012) ci: both
     // already extinction-free, so no subtraction.
-    const intrinsic: Partial<MultiplesTsvRow> = {
+    const intrinsic: MultiplesRowOverrides = {
       photometryVia: 'athyg_system_inherited', spectVia: 'simbad',
       spect: 'B8V', dmag: null,
     };
@@ -2849,7 +2843,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   // withholds the component's own MEASUREMENT, which a row states whether or
   // not Stage 3 baked it an xyz. Both shapes have to reach the count, and the
   // second is the one a placement test would miss.
-  const withPlacement: Partial<MultiplesTsvRow>[] = [
+  const withPlacement: Partial<Pick<MultiplesTsvRow, 'x_pc' | 'y_pc' | 'z_pc'>>[] = [
     {}, { x_pc: null, y_pc: null, z_pc: null },
   ];
   for (const placement of withPlacement) {
@@ -2857,8 +2851,8 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
     it(`counts a refused row that DID carry a per-component fit as promotion.fit.owned, with ${label}`, () => {
       const ownFit = blendedRows.map((r) => (r.comp === 'B'
         ? {
-          ...r, hip: 7980, astrometryVia: 'gaia_5p' as const,
-          gaiaSourceId: '405578335904111745', ...placement,
+          ...r, hip: 7980, hipOrigin: OWN, astrometryVia: 'gaia_5p' as const,
+          gaiaSourceId: '405578335904111745', gaiaOrigin: OWN, ...placement,
         }
         : r));
       const { codes } = promote(

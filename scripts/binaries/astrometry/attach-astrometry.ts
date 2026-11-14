@@ -1,6 +1,6 @@
 // Stage 3: each component's astrometry, then the NSS inner pairs, keyed by DecomposedPair. See README.md.
 
-import { fold, prefixed, share } from '../../util/counts/tally-pure';
+import { fold, prefixed, share, type Share } from '../../util/counts/tally-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, RESOLVE_VIA_ANCHORS_SOURCE_ID, type ResolveVia } from '../multiples-tsv';
 import { componentsOf, type DecomposedPair } from '../resolve/components-pure';
@@ -73,12 +73,12 @@ export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Resul
   };
 }
 
-/** The rates-snapshot keys over `stage3Counts`. */
-export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', number> {
+/** Stage 3's build-log rates over `stage3Counts`. */
+export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', Share> {
   const total = counts.components_total;
   const anchored = RESOLVE_VIA.filter((tier) => RESOLVE_VIA_ANCHORS_SOURCE_ID[tier]).reduce((n, tier) => n + counts[`resolution_${tier}`], 0);
   return {
-    gaia_resolve_rate: share(anchored, total, 'gaia_resolve_rate'),
-    hip2_fallback_rate: share(counts.astrometry_hip2_long_baseline, total, 'hip2_fallback_rate'),
+    gaia_resolve_rate: share(anchored, total),
+    hip2_fallback_rate: share(counts.astrometry_hip2_long_baseline, total),
   };
 }

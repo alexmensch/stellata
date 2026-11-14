@@ -98,6 +98,9 @@ scripts/binaries/
                                   byte. Its rowKey cites a row by
                                   (system_id, comp) for lineage
                                   (../util/sources/README.md#sourcerowref).
+  multiples-tsv-fixture.ts        Test-only: one multiples.tsv row as text
+                                  from the cells a test names
+                                  (multiplesLine, MULTIPLES_HEADER).
   component-tokens-pure.ts        WDS component-letter tokens:
     (+ test)                      wdsRootOf (a system_id's WDS id, the one
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
