@@ -75,16 +75,9 @@ export function wingRenderablePrimaries(
 
   let renderableCompanionWinged = 0;
   for (const indices of drawnPerSystem.values()) {
-    let anchor = -1;
-    let alreadyWinged = false;
-    for (const idx of indices) {
-      if ((stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0) {
-        alreadyWinged = true;
-        break;
-      }
-      if (anchor < 0 || stars[idx].absmag < stars[anchor].absmag) anchor = idx;
-    }
-    if (alreadyWinged || anchor < 0) continue;
+    const drawn = [...indices];
+    if (drawn.some((idx) => (stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0)) continue;
+    const anchor = drawn.reduce((best, idx) => (stars[idx].absmag < stars[best].absmag ? idx : best));
     stars[anchor].flags |= FLAG_BINARY_PRIMARY;
     renderableCompanionWinged++;
   }
