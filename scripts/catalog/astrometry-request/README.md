@@ -98,7 +98,7 @@ turns into rows is an output of the build this request feeds.
 `additionItemCells` reads them off the primaries and the corrected spine
 instead, the same enumeration `buildMembership` derives. Requesting them all, whatever a row ends up bound to, is what lets
 the generator fail on any candidate it weighs with no pulled row, as the
-overlay's `gateSkippedNoGMag` pins at zero. A disposition can keep an id no
+overlay's `classic-ids.unweighed-no-pulled-row` invariant does. A disposition can keep an id no
 candidate walk reaches, so the kept ids are requested on their own.
 
 **The binaries' one covers the pair members the parallax cascade reads.**
@@ -167,8 +167,9 @@ row with no Hipparcos V at all.
 archive returns no row for lands the gate right back in pass-by-default, which
 is why both gates fail on a candidate that reaches them with no row in the
 pull, so a request that quietly stops covering them fails the build instead of
-silently accepting bindings: the overlay through `gateSkippedNoGMag`, pinned at
-**0**, and the derivation through membership lineage's
+silently accepting bindings: the overlay through classic-ID lineage's
+`unweighed-no-pulled-row` invariant, which names each designation and source,
+and the derivation through membership lineage's
 `binding.unweighed-no-pulled-row` invariant, which names each record and
 source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 388,980 rows against the request's
 388,982: 2 requested ids have no row, and both are reviewed bindings rather
