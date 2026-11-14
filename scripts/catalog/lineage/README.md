@@ -56,7 +56,10 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call; countedStageLineage, the same plus
-                                 its count block.
+                                 its count block; namedStageRun, the run of
+                                 a stage whose lines file is named for it,
+                                 which build:catalog and build:binaries
+                                 build their stages with.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).

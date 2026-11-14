@@ -60,13 +60,13 @@ import { identityText } from './lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
 import {
-  foldStageLines, lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
+  foldStageLines, lineageLineCode, stageLineageLine, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
-  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageEmission, type StageLineageRun,
+  countedStageLineage, namedStageRun, stageLineage, upstreamLineage, type LineageBudget, type NamedStage, type StageLineageEmission,
+  type StageLineageRun,
 } from './lineage/stage-lineage';
-import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import {
   BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines, brightnessColourSummary,
 } from './photometry/brightness-colour-lineage-pure';
@@ -170,35 +170,12 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-/** A build:catalog stage's lineage: its lines file, named for the stage, and any sibling file its spec declares. */
-type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
-  readonly spec: StageLineageSpec<F, S>;
-  readonly codes: C;
-  readonly lines: () => readonly LineageLine[];
-  readonly budget: LineageBudget;
-  readonly invariants: readonly LineageInvariant[];
-  readonly inputs: FileHashes;
-} & ([Exclude<F, S>] extends [never]
-  ? { readonly siblings?: never }
-  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = NamedStage<F, S, C>;
 
 function catalogStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
   stage: CatalogStage<F, S, C>,
 ): StageLineageRun<F, S> {
-  const { spec, codes, siblings } = stage;
-  return {
-    layout: LINEAGE_LAYOUT,
-    spec,
-    inputs: stage.inputs,
-    diffed: spec.stage,
-    lines: stage.lines,
-    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
-    joins: () => [],
-    budget: stage.budget,
-    invariants: stage.invariants,
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  };
+  return namedStageRun({ ...stage, upstream: UPSTREAM_LINEAGE });
 }
 
 function catalogStageLineage<F extends string, S extends F, C extends StageCodes<string, S>>(stage: CatalogStage<F, S, C>) {

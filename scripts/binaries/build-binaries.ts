@@ -7,10 +7,9 @@ import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
 import { stepInputHashes } from '../util/step-input-hashes';
-import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
-import { stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
+import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { countedStageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
+import { countedStageLineage, namedStageRun, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
 import { PAIRS_CODES, PAIRS_LINEAGE_BUDGET, pairsLineageLines } from './pairs-lineage-pure';
 import { binariesCounts } from './counts/binaries-counts';
@@ -62,22 +61,10 @@ const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-binaries-expe
 
 const log = (line: string): void => console.log(`[build-binaries] ${line}`);
 
-/** A one-file stage of this step, diffed on its own file. */
 function binariesStageLineage<S extends string, B extends string, L extends B>(
   spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>, lines: () => readonly LineageLine[], budget: LineageBudget,
 ) {
-  return countedStageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec,
-    inputs: stepInputHashes(),
-    diffed: spec.stage,
-    lines,
-    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted) }) as Record<S, Uint8Array>,
-    joins: () => [],
-    budget,
-    invariants: [],
-    argv: process.argv.slice(2),
-  }, codes);
+  return countedStageLineage(namedStageRun({ spec, codes, lines, budget, invariants: [], inputs: stepInputHashes() }), codes);
 }
 
 export async function main(): Promise<void> {
