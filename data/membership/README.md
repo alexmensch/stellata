@@ -81,9 +81,17 @@ label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parit
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
                          flamsteed_unattested (119) · hd_unattested (1).
+merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
+                         row's merge decision departs from what the
+                         primaries' own links derive — unlinked ·
+                         pair_moves · pair_review · derived_only · differs —
+                         with the
+                         derived value and its witness. Moves no manifest
+                         row; it is the surface the switch off the spine
+                         settles (/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger).
 ```
 
-The three ledgers above that `build:membership` writes, and
+The four ledgers above that `build:membership` writes, and
 `../classic-ids/label_flips.tsv`, are views of the stage's lineage
 ([Membership lineage](/scripts/catalog/membership/README.md#membership-lineage)):
 no code writes their rows except by generating them from it.

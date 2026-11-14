@@ -1,6 +1,6 @@
 // The membership ledgers' row shapes and the closed sets the generator and its lineage share. See README.md#files-in-this-area.
 
-import { RECORD_KEY_COLUMNS, type RecordIdentifiers } from '../lineage/identity-pure';
+import { RECORD_KEY_COLUMNS, type RecordIdentifiers } from '../lineage/identity/identity-pure';
 
 /** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [
@@ -67,6 +67,17 @@ export interface LabelDropRow extends RecordIdentifiers {
  *  that Flamsteed number, or that HD number, for the star. */
 export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
+
+export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;
+export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'pair_review', 'derived_only', 'differs'] as const;
+export type MergeDivergenceKind = (typeof MERGE_DIVERGENCE_KINDS)[number];
+/** see merge-derivation/README.md#the-divergence-ledger */
+export interface MergeDivergenceRow extends RecordIdentifiers {
+  divergence: MergeDivergenceKind;
+  cells: string;
+  derived: string;
+  evidence: string;
+}
 
 /** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
  *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the

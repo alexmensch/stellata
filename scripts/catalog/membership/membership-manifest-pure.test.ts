@@ -28,6 +28,9 @@ import {
 import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
+import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
+import { mergeDivergences, mergeLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
@@ -35,7 +38,7 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { identityRow, recordKey } from '../lineage/identity-pure';
+import { identityRow, recordKey } from '../lineage/identity/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
@@ -944,6 +947,51 @@ describe('codecs', () => {
     expect(membershipLedgers([dropRow('hd', '70000')], identity).labelDrops).toEqual([{
       tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested',
     }]);
+  });
+
+  it('builds the merge links from the primaries, writing every GJ in the record\'s form', () => {
+    const gliese = [
+      'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+      'Wo 9390\tA\t9.0\t\t\t\t\t\t300',
+      'NN 3002\t\t9.0\t\t\t\t\t\t301',
+    ].join('\n') + '\n';
+    const t: PrimaryTables = {
+      ...tables,
+      iv25: [...tables.iv25, { tyc: '4-1-1', hd: 300, nHd: 1, nTyc: 1 }, { tyc: '4-2-1', hd: 301, nHd: 1, nTyc: 1 }],
+      cns5: [...tables.cns5, { cns5: 9, gj: '9390', gjComp: 'A', gaiaSourceId: null, hip: 90, astrometry: null }],
+      gliese: parseGlieseTsv(gliese, GLIESE),
+      tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
+    };
+    const m = mergeLinksFrom(t, spineKeys(spine));
+    const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
+      .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
+    expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
+    expect(derivedOnly(spineRow({ tyc: '4-2-1' }))).toEqual(['hd:301:free', 'gl:GJ 3002:free']);
+    expect(derivedOnly(spineRow({ tyc: '2-1-1', hd: '60' }))).toEqual(['hip:30:free', 'hr:2:free']);
+    expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
+  });
+
+  it('ledgers every merge divergence but a confirmed pair, and round-trips the ledger', () => {
+    const key = 'spine:9';
+    const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
+    const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
+    const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
+    const ledger = membershipLedgers([
+      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', sourceId: '5' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5' }),
+      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
+      merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
+      merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
+    ], identity).mergeDivergence;
+    expect(ledger).toHaveLength(4);
+    expect(ledger).toEqual(expect.arrayContaining([
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-2', evidence: '5' },
+      { ...ids, divergence: 'pair_review', cells: 'hip', derived: '1-1-1|1-1-2', evidence: 'no_hip_source' },
+      { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
+      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
+    ]));
+    const text = MERGE_DIVERGENCE.serialize(ledger);
+    expect(MERGE_DIVERGENCE.serialize(MERGE_DIVERGENCE.parse(text))).toBe(text);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {

@@ -11,6 +11,7 @@ import {
   type HipAddition,
   type PrimaryIndex,
   type PrimaryTables,
+  type SpineKeys,
 } from '../../spine/primaries-audit-pure';
 
 export type AdditionCohorts = { hd: HdAddition | null; hip: HipAddition | null; cns5: Cns5Row | null };
@@ -43,9 +44,9 @@ export function additionCells(items: readonly AdditionCohorts[]): BindingCells {
 }
 
 export function additionCohortItems(
-  tables: PrimaryTables, kept: readonly SpineRow[], idx: PrimaryIndex,
+  tables: PrimaryTables, spine: SpineKeys, idx: PrimaryIndex,
 ): AdditionCohortItem[] {
-  const additions = findAdditions(tables, spineKeys(kept), idx);
+  const additions = findAdditions(tables, spine, idx);
   return [
     ...additions.hd.map((hd) => ({ key: `tyc:${hd.tyc}`, hd, hip: null, cns5: null })),
     ...additions.hip.map((hip) => ({ key: `hip:${hip.hip}`, hd: null, hip, cns5: null })),
@@ -59,5 +60,5 @@ export function additionCohortItems(
 export function additionItemCells(
   tables: PrimaryTables, kept: readonly SpineRow[],
 ): BindingCells[] {
-  return additionCohortItems(tables, kept, indexPrimaries(tables)).map((i) => additionCells([i]));
+  return additionCohortItems(tables, spineKeys(kept), indexPrimaries(tables)).map((i) => additionCells([i]));
 }

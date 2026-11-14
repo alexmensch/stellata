@@ -1,6 +1,6 @@
 // Stage 7: every stage's counts, filed under the stage of the snapshot that pins them. See README.md.
 
-import { nestByStage, type StagedCounts } from '../../util/counts/count-stages-pure';
+import { nestByStage, type StageBlock, type StagedCounts } from '../../util/counts/count-stages-pure';
 import { stage3Counts } from '../astrometry/attach-astrometry';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
@@ -8,6 +8,8 @@ import { stage6Counts } from '../multiples/attach-multiples';
 import { stage5Counts } from '../optical/attach-optical';
 import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
+import type { BindingCounts } from '../resolve/binding-lineage-pure';
+import { BINDING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
@@ -15,6 +17,9 @@ type StageCountKey = keyof (
 );
 const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'optical', 'multiples'] as const;
 type BinariesStage = (typeof BINARIES_STAGES)[number];
+const SNAPSHOT_STAGES = [...BINARIES_STAGES, BINDING_LINEAGE.stage] as const;
+type SnapshotStage = (typeof SNAPSHOT_STAGES)[number];
+type SnapshotBlock = StageBlock<SnapshotStage>;
 
 type Filed<T> = { [S in keyof T]: keyof T[S] }[keyof T];
 type FiledTwice<T> = { [S in keyof T]: keyof T[S] & Filed<Omit<T, S>> }[keyof T];
@@ -26,20 +31,19 @@ type Unfiled<T> =
 function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, number>>>>>(
   stages: T,
   _everyKeyOnce: [Unfiled<T>] extends [never] ? true : Unfiled<T>,
-): StagedCounts<number> {
-  const blocks = BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted' as const, counts: stages[stage] } }));
-  return nestByStage<BinariesStage, number>(BINARIES_STAGES, blocks);
+): SnapshotBlock[] {
+  return BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted', counts: stages[stage] } }));
 }
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {
   return Object.fromEntries(Object.entries<number>(counts).filter(([key]) => key.startsWith(prefix))) as Record<Extract<K, `${P}${string}`>, number>;
 }
 
-export function binariesCounts(r: StageResults): StagedCounts<number> {
+export function binariesCounts(r: StageResults, binding: BindingCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
   const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = stage2Counts(r.resolved);
   const s3 = stage3Counts(r.reference, r.resolved, r.astrometry);
-  return filed({
+  const stages = filed({
     ingest: {
       wds_pairs_total: s3.wds_pairs_total,
       wds_duplicate_pair_rows_dropped: s1.wds_duplicate_pair_rows_dropped,
@@ -67,4 +71,7 @@ export function binariesCounts(r: StageResults): StagedCounts<number> {
     optical: stage5Counts(r.optical),
     multiples: stage6Counts(r.multiples),
   }, true);
+  return nestByStage<SnapshotStage, number>(SNAPSHOT_STAGES, [
+    ...stages, { stage: BINDING_LINEAGE.stage, block: { kind: 'counted', counts: binding } },
+  ]);
 }
