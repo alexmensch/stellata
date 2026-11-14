@@ -8,26 +8,11 @@ import type { BlankRescueOutcome } from './load/blank-rescue-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage6Result } from './multiples/attach-multiples';
 import type { Stage5Result } from './optical/attach-optical';
-import type { OpticalVia } from './optical/optical-tiers-pure';
+import { OPTICAL_VIA, OPTICAL_VIA_PROPERTIES } from './optical/optical-tiers-pure';
 import { valueOf, type DecomposedPair, type ResolvedComponent } from './resolve/components-pure';
 import { PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PAIRS_LINEAGE_BUDGET = { gzipBytes: 2_600_000, writeMs: 2_000 };
-
-const OPTICAL_TIERS: Record<OpticalVia, string> = {
-  wds_notes_kept: 'Stage 5 kept the pair on a WDS note flag marking it physical (T, V, Z).',
-  wds_notes_rejected: 'Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y).',
-  orbit_kept: 'Stage 5 kept the pair because Stage 4 found it an orbit.',
-  sep_limit_rejected: 'Stage 5 rejected the pair: its components sit over the bound-pair limit apart in 3D.',
-  gaia_kept: 'Stage 5 kept the pair: both sides have Gaia astrometry, consistent with a bound pair.',
-  gaia_rejected: 'Stage 5 rejected the pair on both sides\' Gaia parallaxes or its escape-velocity gate.',
-  asymm_kept: 'Stage 5 kept the pair: one side\'s Gaia parallax agrees with the other\'s HIP2 anchor.',
-  asymm_rejected: 'Stage 5 rejected the pair: one side\'s Gaia parallax disagrees with the other\'s HIP2 anchor.',
-  cpm_baseline_kept: 'Stage 5 kept the pair: its WDS separation held still while the primary moved.',
-  cpm_baseline_rejected: 'Stage 5 rejected the pair: its WDS separation drifted as a background star\'s would.',
-  mag_heuristic_kept: 'Stage 5 kept the pair on the magnitude-gap backstop, or for want of magnitudes.',
-  mag_heuristic_rejected: 'Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5).',
-};
 
 type UnpairedBlank = Exclude<BlankRescueOutcome, 'rescued'>;
 
@@ -44,16 +29,18 @@ function kebab<T extends string>(tag: T): Kebab<T> {
   return tag.replaceAll('_', '-') as Kebab<T>;
 }
 
-function codesOf<T extends string, P extends string>(prefix: P, described: Record<T, string>): Record<`${P}${Kebab<T>}`, CodeDeclaration> {
+function codesOf<T extends string, P extends string>(
+  prefix: P, tags: readonly T[], description: (tag: T) => string,
+): Record<`${P}${Kebab<T>}`, CodeDeclaration> {
   return Object.fromEntries(
-    Object.entries<string>(described).map(([tag, description]) => [`${prefix}${kebab(tag)}`, outcomeCode(description)]),
+    tags.map((tag) => [`${prefix}${kebab(tag)}`, outcomeCode(description(tag))]),
   ) as Record<`${P}${Kebab<T>}`, CodeDeclaration>;
 }
 
 export const PAIRS_CODES = stageCodes(PAIRS_LINEAGE.stage, {
   'duplicate-row': outcomeCode('A WDS summary row repeating another\'s wds_id, discoverer and components; the more-observed row is kept.'),
-  ...codesOf('blank-', UNPAIRED_BLANKS),
-  ...codesOf('optical.', OPTICAL_TIERS),
+  ...codesOf('blank-', Object.keys(UNPAIRED_BLANKS) as UnpairedBlank[], (b) => UNPAIRED_BLANKS[b]),
+  ...codesOf('optical.', OPTICAL_VIA, (via) => OPTICAL_VIA_PROPERTIES[via].description),
   'no-position': outcomeCode('A pair Stage 5 kept with no position on either side and no system anchor, so it never reaches multiples.tsv.'),
 });
 

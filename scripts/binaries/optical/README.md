@@ -10,8 +10,10 @@ tier decides, its thresholds and why: [What each tier decides](#what-each-tier-d
 ```
 scripts/binaries/optical/
   optical-tiers-pure.ts (+ test)  OPTICAL_VIA_PROPERTIES (each tag, in
-                                  cascade order, and whether it keeps the
-                                  pair); the tier thresholds; each tier's
+                                  cascade order, whether it keeps the
+                                  pair, and its pairs lineage code's
+                                  description, built from the thresholds
+                                  it names); the tier thresholds; each tier's
                                   test; classifyPairOptical, the cascade
                                   for one pair.
   pm-budget-pure.ts               orbitalPmBudgetKmS: the orbital motion a
