@@ -12,7 +12,7 @@ Names are repo-relative. `declareOutputs` reads a relative path as
 repo-relative, so an outputs module passes them as they are.
 
 - `data-files.ts` — `DATA_FILES`, the committed `data/` files the
-  step-table outputs modules declare: the membership manifest and its three
+  step-table outputs modules declare: the membership manifest and its four
   ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
   WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, the label-merge
