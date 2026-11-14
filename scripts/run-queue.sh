@@ -1,10 +1,18 @@
 # Sourced by heavy.sh and build-seed.sh: ticket files named <start ns>.<pid>, their liveness, and stopping a process group.
 
+# The stamp is taken and the ticket written under one lock, so tickets appear in the order their names sort;
+# flock is released by the kernel when python exits, however it exits.
 queue_register() {
-  local path
-  path="$1/$(python3 -c 'import time; print(time.time_ns())').$$"
-  printf '%s\n' "$2" > "$path"
-  echo "$path"
+  python3 -c '
+import fcntl, os, sys, time
+queue, pid, content = sys.argv[1:]
+with open(os.path.join(queue, ".lock"), "w") as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    path = os.path.join(queue, f"{time.time_ns()}.{pid}")
+    with open(path, "w") as ticket:
+        ticket.write(content + "\n")
+print(path)
+' "$1" "$$" "$2"
 }
 
 queue_live() {

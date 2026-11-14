@@ -180,7 +180,8 @@ built, so the next build there sees them rewritten and rebuilds.
 `HEAVY_SLOTS` (default 2) slots shared by every checkout and worktree on the
 machine, and the 1-minute load average is below the core count. Slots go in
 arrival order: each run writes a ticket `<start ns>.<pid>` (holding its
-command) into `$TMPDIR/stellata-heavy/` and waits while as many live tickets
+command) into `$TMPDIR/stellata-heavy/` — stamped and written under one file
+lock (`.lock`), so tickets appear in the order their names sort — and waits while as many live tickets
 as there are slots sort ahead of it, so waiters never all start together
 when a slot opens. A ticket whose process is gone is cleared on sight. The
 load check is the second gate, for work started outside it (a dev server,

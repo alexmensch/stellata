@@ -56,7 +56,7 @@ const log = (): string[] => {
     return [];
   }
 };
-const tickets = (): string[] => readdirSync(queue);
+const tickets = (): string[] => readdirSync(queue).filter((name) => name !== '.lock');
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function until(pred: () => boolean): Promise<void> {
@@ -90,6 +90,15 @@ describe('heavy.sh', () => {
     expect(Math.max(...concurrency)).toBe(2);
     expect(tickets()).toEqual([]);
   }, 30_000);
+
+  it('never admits more than HEAVY_SLOTS when many arrive together', async () => {
+    const runs = Array.from({ length: 8 }, (_, i) => heavy(`r${i}`, 0.3, { slots: 2 }));
+    await Promise.all(runs.map((r) => r.done));
+    let live = 0;
+    const concurrency = log().map((l) => (live += l.startsWith('start') ? 1 : -1));
+    expect(Math.max(...concurrency)).toBe(2);
+    expect(tickets()).toEqual([]);
+  }, 60_000);
 
   it("clears a dead holder's ticket", async () => {
     const dead = spawnSync('true').pid;

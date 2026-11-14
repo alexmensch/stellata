@@ -45,7 +45,7 @@ function seed(seconds: number, exit = 0, includeExit = 0): Promise<Run> {
 }
 
 const log = (): string[] => readFileSync(join(dir, 'log'), 'utf8').trim().split('\n');
-const entries = (): string[] => readdirSync(join(dir, 'build', 'build-seed'));
+const entries = (): string[] => readdirSync(join(dir, 'build', 'build-seed')).filter((name) => name !== '.lock');
 
 async function untilStarted(): Promise<void> {
   for (;;) {
