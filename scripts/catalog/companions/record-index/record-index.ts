@@ -1,5 +1,4 @@
-// Post-sort addressing of catalog records from multiples.tsv rows, and the
-// two passes that need only that. See README.md.
+// The row-index sidecar and the post-sort readers of resolvePairs. See README.md.
 
 import {
   FLAG_BINARY_PRIMARY,
@@ -11,10 +10,6 @@ import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/bina
 import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { distinctEnds, type ResolvedPair } from './pair-resolution-pure';
 
-// Build the lookup sidecar after the final record sort. The runtime
-// binaries loader resolves multiples.tsv rows to catalog.bin records
-// through this map; the build script writes it next to catalog.bin /
-// search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
   /** README.md#the-sidecar-and-how-a-component-resolves. */
@@ -42,7 +37,7 @@ export function buildCatalogRowIndexMap(
   return { byGaia, byHip, bySynth };
 }
 
-// ---- Wings for renderable-companion primaries --------------------------
+// ---- Readers of resolvePairs ------------------------------------------
 
 /** Every rendered pair whose row carries a renderable orbit, as (primary,
  *  secondary) record indices: the pairs binaries.bin draws apart from the
