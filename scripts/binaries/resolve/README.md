@@ -112,8 +112,8 @@ AT-HYG binding retires with its AT-HYG read (stellata-hooj.17). The counts
 fold into the snapshot's `component-binding` stage ([Composition, not counting](../counts/README.md#composition-not-counting)).
 
 `BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s: 94,042 rows for 47,021
-components came to 898 KB gzipped in 386 ms with no baseline to diff
-(2026-11-14).
+components came to 898 KB gzipped in 386–752 ms across two runs, neither
+diffing against a baseline (2026-11-14).
 
 ## Choices the outputs rest on
 
