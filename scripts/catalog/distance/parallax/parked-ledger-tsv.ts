@@ -5,13 +5,14 @@ import {
   PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells, parkedRecordKey,
   type ParkedLedgerEntry, type ParkedReason,
 } from './parked-ledger-pure';
+import { RECORD_KEY_COLUMNS } from '../../lineage/identity-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
  *  with every other and leave the file's order a function of the walk. */
 export const PARKED_LEDGER = defineArtifact({
   file: DATA_FILES.parkedLedger,
-  columns: ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const,
+  columns: [...RECORD_KEY_COLUMNS, 'reason'] as const,
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',
   decode: (row): ParkedLedgerEntry => ({

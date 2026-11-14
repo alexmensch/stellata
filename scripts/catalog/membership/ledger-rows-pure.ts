@@ -1,5 +1,7 @@
 // The membership ledgers' row shapes and the closed sets the generator and its lineage share. See README.md#files-in-this-area.
 
+import { RECORD_KEY_COLUMNS } from '../lineage/identity-pure';
+
 /** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [
   'admitted:hd_link_gap',
@@ -26,7 +28,7 @@ export interface OwnCandidate {
   readonly of: string;
 }
 
-export const LEDGER_COLUMNS =['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
+export const LEDGER_COLUMNS = [...RECORD_KEY_COLUMNS, 'reason'] as const;
 export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
 
 export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
@@ -47,9 +49,7 @@ export const BINDING_REVIEW_COLUMNS = [
 ] as const;
 export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
 
-export const LABEL_DROP_COLUMNS = [
-  'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason',
-] as const;
+export const LABEL_DROP_COLUMNS = [...RECORD_KEY_COLUMNS, 'cell', 'value', 'reason'] as const;
 export type LabelDropRow = Record<(typeof LABEL_DROP_COLUMNS)[number], string>;
 /** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
  *  that Flamsteed number, or that HD number, for the star. */

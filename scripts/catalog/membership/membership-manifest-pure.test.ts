@@ -22,7 +22,9 @@ import {
 import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
-import { ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import {
+  ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX, LABEL_DROP_COLUMNS, LEDGER_COLUMNS,
+} from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
@@ -913,9 +915,9 @@ describe('codecs', () => {
   // rather than parsing into blanks the ledger's key columns cannot tell from
   // a genuinely empty cell.
   it('refuses a row that does not carry every column', () => {
-    const ledger = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'].join('\t')}\n`;
+    const ledger = `${LEDGER_COLUMNS.join('\t')}\n`;
     expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
-    const drops = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason'].join('\t')}\n`;
+    const drops = `${LABEL_DROP_COLUMNS.join('\t')}\n`;
     expect(() => LABEL_DROPS.parse(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
   });
 

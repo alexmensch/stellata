@@ -4,6 +4,7 @@
 
 import { nullableCell } from '../../../util/tsv/artifact-pure';
 import { intCell, sourceIdCell, textCell } from '../../../util/tsv/table-pure';
+import { RECORD_KEY_COLUMNS, type IdentityCells } from '../../lineage/identity-pure';
 
 /** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
@@ -77,8 +78,6 @@ export interface ParkedRecord extends ParkedLedgerEntry {
 /** The five identifier cells, joined — the manifest carries all of them under
  *  the same names, so the parity gate matches ledger row to manifest row on the
  *  whole tuple rather than guessing which id is the one that identifies. */
-export function parkedRecordKey(cells: {
-  tyc: string; hip: string; hd: string; gl: string; gaia_source_id: string;
-}): string {
-  return [cells.tyc, cells.hip, cells.hd, cells.gl, cells.gaia_source_id].join('\t');
+export function parkedRecordKey(cells: IdentityCells): string {
+  return RECORD_KEY_COLUMNS.map((c) => cells[c]).join('\t');
 }

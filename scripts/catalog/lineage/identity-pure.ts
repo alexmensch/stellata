@@ -3,7 +3,10 @@
 import { readTable, type TableSpec } from '../../util/tsv/table-pure';
 import { sortUtf8 } from './lineage-row-pure';
 
-export const IDENTITY_COLUMNS = ['key', 'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'designations'] as const;
+/** The five identifier cells a record's ledger rows and its identity row carry. */
+export const RECORD_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const;
+
+export const IDENTITY_COLUMNS = ['key', ...RECORD_KEY_COLUMNS, 'designations'] as const;
 
 export interface IdentityRow {
   readonly key: string;
@@ -15,7 +18,7 @@ export interface IdentityRow {
   readonly designations: readonly string[];
 }
 
-export type IdentityCells = Pick<IdentityRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>;
+export type IdentityCells = Pick<IdentityRow, (typeof RECORD_KEY_COLUMNS)[number]>;
 
 export function identityRow(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {
   return {
