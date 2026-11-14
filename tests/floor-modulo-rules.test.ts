@@ -14,13 +14,8 @@ const RULES: ReadonlyArray<LineRule> = [
 ];
 
 const HAND_ROLLED_ALLOWED: ReadonlyMap<string, number> = new Map([
-  ['src/client/attitude/attitude-ball.ts', 1],
   ['src/client/debug/perf-hud.ts', 1],
   ['src/client/format/velocity-format.ts', 1],
-  ['src/client/galactic/coord-spheres/coord-sphere-frames.ts', 2],
-  ['src/client/solar-system/ephemerides/lunar-theory-pure.ts', 1],
-  ['src/client/solar-system/planets/rotation/earth-orientation-pure.ts', 1],
-  ['src/client/solar-system/planets/rotation/rotation-elements-pure.ts', 1],
   ['src/client/typeahead/typeahead.ts', 1],
 ]);
 
