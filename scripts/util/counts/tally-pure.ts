@@ -47,19 +47,25 @@ export function share(part: number, whole: number): Share {
   return whole === 0 ? { kind: 'no-denominator' } : { kind: 'rated', value: part / whole };
 }
 
-/** A fraction as a percentage to one decimal: `formatFraction(0.125)` is `12.5%`. */
-export function formatFraction(v: number): string {
-  return `${(100 * v).toFixed(1)}%`;
+/** A fraction as a percentage, one decimal unless `digits` says otherwise: `formatFraction(0.125)` is `12.5%`. */
+export function formatFraction(v: number, digits = 1): string {
+  return `${(100 * v).toFixed(digits)}%`;
 }
 
-/** A share as a percentage to one decimal, `n/a` when it has no denominator. */
-export function formatShare(s: Share): string {
-  return s.kind === 'no-denominator' ? 'n/a' : formatFraction(s.value);
+/** A share as a percentage through `formatFraction`, `n/a` when it has no denominator. */
+export function formatShare(s: Share, digits = 1): string {
+  return s.kind === 'no-denominator' ? 'n/a' : formatFraction(s.value, digits);
 }
 
-/** `part` as a percentage of `whole` to one decimal, `n/a` for an empty whole. */
-export function percentOf(part: number, whole: number): string {
-  return formatShare(share(part, whole));
+/** `part` as a percentage of `whole` through `formatShare`, `n/a` for an empty whole. */
+export function percentOf(part: number, whole: number, digits = 1): string {
+  return formatShare(share(part, whole), digits);
+}
+
+/** Whether a share reaches `floor`. A share with no denominator never does: an
+ *  empty population is the drift a coverage floor exists to catch. */
+export function meetsFloor(s: Share, floor: number): boolean {
+  return s.kind === 'rated' && s.value >= floor;
 }
 
 /** One-line `bucket=n` rundown of a row partition, zeros included — the

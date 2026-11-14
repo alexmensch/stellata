@@ -14,9 +14,12 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 sumOf, a prefixed subset's total;
                                 share, a rate or `no-denominator` on an
                                 empty whole, never 0; formatFraction, the
-                                one-decimal percentage; formatShare, a
-                                share through it, `n/a` when absent;
-                                percentOf, the two composed for a log line;
+                                percentage (one decimal unless a figure
+                                asks for more); formatShare, a share
+                                through it, `n/a` when absent; percentOf,
+                                the two composed for a log line;
+                                meetsFloor, every coverage floor's verdict,
+                                failing a share with no denominator;
                                 formatPartition, a partition's one-line
                                 `bucket=n` rundown.
 count-stages-pure.ts (+ test)   The staged snapshot: CountBlock and
