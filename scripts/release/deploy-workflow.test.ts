@@ -80,7 +80,8 @@ describe('deploy.yml publish job', () => {
   it('checks out only the dependency-free release scripts, without persisting credentials', () => {
     const checkout = only(stepsOf(publishJob()).filter((step) => field(step, 'uses')?.startsWith('actions/checkout@')));
     expect(field(checkout, 'persist-credentials')).toBe('false');
-    const paths = checkout.match(/sparse-checkout: \|\n((?: {12}.+\n)+)/)?.[1].trim().split(/\s+/);
-    expect(paths).toEqual(['scripts/release', 'scripts/util']);
+    const anchor = field(checkout, 'sparse-checkout')?.match(/^\*([\w-]+)$/)?.[1];
+    const block = WORKFLOW.match(new RegExp(`sparse-checkout: &${anchor} \\|\\n((?: {12}.+\\n)+)`))?.[1];
+    expect(block?.trim().split(/\s+/)).toEqual(['scripts/release', 'scripts/util']);
   });
 });
