@@ -106,7 +106,10 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // record — its own Gaia source is SIMBAD's δ Ser A, which is HD 138918 —
     // and the primaries admit 138917 as δ Ser B's own row on its own source.
     // That is the paragraph above happening again, deliberately.
-    expect(reOwned.length).toBe(26);
+    //
+    // 26 → 25 with the pair rule: HIP 3885 now sits on HD 4757's own Tycho-2
+    // entry, so the merge no longer removes hd:4757 from it.
+    expect(reOwned.length).toBe(25);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });
