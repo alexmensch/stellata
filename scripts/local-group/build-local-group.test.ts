@@ -18,6 +18,7 @@ import {
 } from './build-local-group-pure';
 import { type LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
 import { lgObjectStub } from './lg-object-mock';
+import { ascending } from '../../src/astro-core/order-pure';
 
 describe('parseOverrides', () => {
   const HEADER =
@@ -303,7 +304,7 @@ describe('emission over the committed catalog', () => {
         worstName = row.name;
       }
     }
-    devs.sort((x, y) => x - y);
+    devs.sort(ascending);
     expect(devs.length).toBe(121);
     expect(roundHalfEven(devs[Math.floor(devs.length / 2)], 4)).toBe(0.0078);
     expect(roundHalfEven(worstDev, 4)).toBe(0.2504);

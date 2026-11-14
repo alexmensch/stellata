@@ -15,6 +15,7 @@ import {
   precessionRotationFromJ2000,
   unprecessDirection,
 } from '../precession';
+import { ascending, compareCodeUnits } from '../order-pure';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -125,7 +126,7 @@ export interface ConstellationRegionGrid {
 }
 
 function sortedDistinct(values: readonly number[]): number[] {
-  return [...new Set(values)].sort((a, b) => a - b);
+  return [...new Set(values)].sort(ascending);
 }
 
 /** Dec band edges of a grid: the distinct edge declinations with ±90 closing
@@ -400,7 +401,7 @@ export function buildRegionLabelAnchors(
 
   const toB1875 = precessionRotationFromJ2000(B1875_JD);
   const anchors: RegionLabelAnchor[] = [];
-  for (const [code, sum] of [...sums].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [code, sum] of [...sums].sort(([a], [b]) => compareCodeUnits(a, b))) {
     const length = Math.hypot(sum.x, sum.y, sum.z);
     const b1875 = { x: sum.x / length, y: sum.y / length, z: sum.z / length };
     const at = constellationEdgeCodeAt(grid, raDecFromUnitVector(b1875));

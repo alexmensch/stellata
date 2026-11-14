@@ -30,6 +30,7 @@ import {
   galacticDirection,
   type Vec3,
 } from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const PATCH_SAMPLES = 32;
 const STRIP_STEP_DEG = 0.25;
@@ -163,7 +164,7 @@ function stats(values: number[], labels: string[]): Stats {
       worst = labels[i];
     }
   }
-  const sorted = [...abs].sort((a, b) => a - b);
+  const sorted = [...abs].sort(ascending);
   return {
     max,
     p99: sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * 0.99))],

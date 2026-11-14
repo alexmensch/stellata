@@ -8,6 +8,7 @@ import {
   bareGjKey, cns5RowFor, indexCns5, type PrimaryTables,
 } from './primaries-audit-pure';
 import type { SimbadXids } from '../spectral/spectral-resolve';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export type KeyCell = 'tyc' | 'hip' | 'hd' | 'hr' | 'gl';
 export const KEY_CELLS: readonly KeyCell[] = ['tyc', 'hip', 'hd', 'hr', 'gl'];
@@ -84,7 +85,7 @@ function components(uf: UnionFind, cells: readonly KeyCell[]): KeyCell[][] {
     group.push(cell);
     byRoot.set(root, group);
   });
-  return [...byRoot.values()].sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]));
+  return [...byRoot.values()].sort((a, b) => b.length - a.length || compareCodeUnits(a[0], b[0]));
 }
 
 function bareGl(cell: string | null): string | null {

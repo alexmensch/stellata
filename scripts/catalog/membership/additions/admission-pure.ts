@@ -51,6 +51,7 @@ import {
   type AdditionCohortItem,
   type AdditionCohorts,
 } from './addition-items-pure';
+import { ascending, compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
   const list = by.get(key);
@@ -279,13 +280,12 @@ function additionGroupOrder(
 }
 
 function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
-  if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
+  const byTyc = compareCodeUnits(a.tyc, b.tyc);
+  if (byTyc !== 0) return byTyc;
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
   if (hipA !== hipB) return hipA - hipB;
-  const glA = a.rawGl ?? '';
-  const glB = b.rawGl ?? '';
-  return glA < glB ? -1 : glA > glB ? 1 : 0;
+  return compareCodeUnits(a.rawGl ?? '', b.rawGl ?? '');
 }
 
 interface Admission {
@@ -308,7 +308,7 @@ function admitGroup(
   const { hd: hdItem, hip: hipItem, rawGl, tyc, source } = group;
   const blocked: string[] = [];
 
-  const hds = [...(hdItem?.hds ?? [])].sort((a, b) => a - b).filter((hd) => {
+  const hds = [...(hdItem?.hds ?? [])].sort(ascending).filter((hd) => {
     if (!claims.hd.has(hd)) return true;
     blocked.push(`hd:${hd}`);
     return false;
@@ -325,7 +325,7 @@ function admitGroup(
       else if (!hrs.includes(hr)) hrs.push(hr);
     }
   }
-  hrs.sort((a, b) => a - b);
+  hrs.sort(ascending);
   let gl = rawGl;
   const glKey = normaliseGjKey(gl);
   if (glKey !== null) {

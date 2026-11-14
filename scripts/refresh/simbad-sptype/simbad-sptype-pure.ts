@@ -12,6 +12,7 @@ import { fetchBasic, fetchIdents, parseLedger, phaseRecord, simbadPhases, type B
 import { countFilled, fillLine, floorCheck, identBlock, identNames, isFilled, simbadColumns, simbadRows } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, GJ, HIP, MAIN_ID, OID, OTYPE, SP_BIBCODE, SP_QUAL, SP_TYPE, TYC } from '../simbad/simbad-specs-pure';
 import { recoveredRows, unionReportLines, unionUnanswered } from '../simbad/union-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export const BASIC = [OID, MAIN_ID, SP_TYPE, SP_QUAL, SP_BIBCODE, OTYPE] as const;
 export const IDENTS = [HIP, GAIA_DR3, TYC, GJ];
@@ -74,7 +75,7 @@ export function sptypePull(
       const ledger = parseLedger();
       const resolved = await resolveMembershipKeys(ask, SPTYPE_PHASES, keys, ledger);
       for (const line of requestReport(resolved)) log(line);
-      const basic = await fetchBasic(ask, SPTYPE_PHASES, [...resolved.oids].sort((a, b) => a - b));
+      const basic = await fetchBasic(ask, SPTYPE_PHASES, [...resolved.oids].sort(ascending));
       const union = await unionUnanswered(ask, SPTYPE_PHASES, ledger, { records, bindings: resolved.bindings, rows: basic, value: SP_TYPE.column });
       for (const line of unionReportLines(union.report)) log(line);
       const merged = new Map([...basic, ...union.found]);
@@ -83,7 +84,7 @@ export function sptypePull(
         if (shown++ === RECOVERED_SAMPLE) break;
         log(`      recovered via ${namespace.padEnd(9)} hip=${String(record.hip ?? '-').padStart(7)} hd=${String(record.hd ?? '-').padStart(7)} → ${merged.get(oid)?.[SP_TYPE.column]}`);
       }
-      const oids = [...merged.keys()].sort((a, b) => a - b);
+      const oids = [...merged.keys()].sort(ascending);
       const idents = await fetchIdents(ask, SPTYPE_PHASES, IDENTS, oids, ledger);
       const typed = countFilled(merged.values(), (cells) => isFilled(cells[SP_TYPE.column]));
       log(fillLine('sp_type', typed, merged.size));
