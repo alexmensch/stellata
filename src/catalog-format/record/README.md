@@ -366,7 +366,7 @@ V0645 Cen, R CrB, T Tau, novae) are searchable but never pulsate.
 
 Multiple-star components additionally carry `cl` (canonical WDS component
 letter) + `cp` (the record its system's designation comes from), emitted
-by `buildComponentDesignations` (`../companions/record-index/`) after the
+by `buildComponentDesignations` (`/scripts/catalog/companions/record-index/`) after the
 row-index map is built — reading each `multiples.tsv` pair's ends from
 the one pair resolution whose drawn ends the `binaries.bin` writer reads.
 The pair drives both the composed display label ("Sirius B") and the
