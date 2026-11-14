@@ -189,7 +189,9 @@ above the cores, the command runs anyway. The exit status is the command's;
 TERM, INT or HUP stops the command and frees the ticket. Who runs what
 through it: [Heavy commands share the CPU](/.claude/skills/stellata-pickup-epic/SKILL.md#heavy-commands-share-the-cpu).
 `scripts/heavy.test.ts` pins the slots, the order, the dead-ticket clear and
-the load condition.
+the load condition. The ticket format, the liveness check and the
+process-group stop are `run-queue.sh`'s, sourced by `heavy.sh` and
+`build-seed.sh` alike.
 
 ## Seeding builds — `build:seed`
 

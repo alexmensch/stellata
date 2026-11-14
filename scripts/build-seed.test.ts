@@ -26,6 +26,7 @@ beforeEach(() => {
   mkdirSync(join(dir, 'scripts'));
   copyFileSync(join(__dirname, 'build-seed.sh'), join(dir, 'scripts', 'build-seed.sh'));
   copyFileSync(join(__dirname, 'heavy.sh'), join(dir, 'scripts', 'heavy.sh'));
+  copyFileSync(join(__dirname, 'run-queue.sh'), join(dir, 'scripts', 'run-queue.sh'));
   writeFileSync(join(dir, 'stub.sh'), STUB);
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     scripts: { 'worktree:include': 'echo written >> include; exit "${INCLUDE_EXIT:-0}"', 'build:data': 'sh stub.sh' },

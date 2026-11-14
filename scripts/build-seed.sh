@@ -5,34 +5,29 @@ set -euo pipefail
 set -m
 
 cd "$(dirname "$0")/.."
+. scripts/run-queue.sh
 runs=build/build-seed
 mkdir -p "$runs"
-ticket=$(python3 -c 'import time; print(time.time_ns())')
-me="$runs/$ticket.$$"
+me=
 build=
 
 stop_build() {
-  if [ -n "$build" ]; then
-    kill -TERM -- "-$build" 2>/dev/null || true
-    for _ in $(seq 1 30); do
-      kill -0 -- "-$build" 2>/dev/null || break
-      sleep 1
-    done
-    kill -KILL -- "-$build" 2>/dev/null || true
-  fi
-  rm -f "$me"
+  [ -n "$build" ] && stop_group "$build"
+  [ -n "$me" ] && rm -f "$me"
 }
 trap 'stop_build; echo "build:seed: superseded by a newer build:seed"; exit 0' TERM
 trap 'stop_build; exit 130' INT
 trap 'stop_build; exit 129' HUP
 
 # Register before scanning: of two concurrent runs, at least one then sees the other.
-: > "$me"
+me=$(queue_register "$runs" '')
+ticket=${me##*/}
+ticket=${ticket%.*}
 for entry in "$runs"/*; do
   [ "$entry" = "$me" ] && continue
   name=${entry##*/}
   pid=${name##*.}
-  if ! grep -q build-seed.sh <<< "$(ps -o command= -p "$pid" 2>/dev/null)"; then
+  if ! queue_live "$entry" build-seed.sh; then
     rm -f "$entry"
   elif [ "${name%.*}" -gt "$ticket" ]; then
     rm -f "$me"

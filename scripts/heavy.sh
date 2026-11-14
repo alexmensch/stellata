@@ -3,6 +3,7 @@
 set -uo pipefail
 
 [ $# -gt 0 ] || { echo 'usage: heavy.sh <command…>' >&2; exit 2; }
+. "$(dirname "$0")/run-queue.sh"
 
 queue=${HEAVY_DIR:-${TMPDIR:-/tmp}/stellata-heavy}
 slots=${HEAVY_SLOTS:-2}
@@ -18,25 +19,23 @@ load() {
 }
 
 mkdir -p "$queue"
-me="$queue/$(python3 -c 'import time; print(time.time_ns())').$$"
+me=
 child=
 cleanup() {
   [ -n "$child" ] && kill -TERM "$child" 2>/dev/null
-  rm -f "$me"
+  [ -n "$me" ] && rm -f "$me"
 }
 trap 'cleanup; exit 143' TERM
 trap 'cleanup; exit 130' INT
 trap 'cleanup; exit 129' HUP
-echo "$*" > "$me"
+me=$(queue_register "$queue" "$*")
 
 ahead() {
-  local n=0 entry name pid
+  local n=0 entry
   for entry in "$queue"/*; do
-    name=${entry##*/}
     [ "$entry" = "$me" ] && break
-    pid=${name##*.}
-    if ! grep -q heavy.sh <<< "$(ps -o command= -p "$pid" 2>/dev/null)"; then
-      echo "heavy: clearing the dead holder $pid ($(cat "$entry" 2>/dev/null))" >&2
+    if ! queue_live "$entry" heavy.sh; then
+      echo "heavy: clearing the dead holder ${entry##*.} ($(cat "$entry" 2>/dev/null))" >&2
       rm -f "$entry"
     else
       n=$((n + 1))
