@@ -82,10 +82,9 @@ scripts/binaries/
                                   Stage 5 reads. Own README.
   multiples-record-pure.ts        MultiplesRecord, the closed value sets
                                   and the properties a set's members
-                                  carry (which resolve tiers anchor on a
-                                  Gaia source_id; each orbit route's
-                                  elements, regime and Stage 6
-                                  estimates), and IdOrigin. The stages
+                                  carry (each orbit route's elements,
+                                  regime and Stage 6 estimates), and
+                                  IdOrigin. The stages
                                   import these from here, so a step that
                                   runs a stage without reading the file
                                   never reaches the codec
