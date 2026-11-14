@@ -27,6 +27,10 @@ export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
 export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
 
+export function isSolProper(proper: string | null): boolean {
+  return proper === SOL_PROPER_NAME;
+}
+
 export interface ManifestRecord {
   tyc: string | null;
   hip: number | null;
@@ -85,7 +89,7 @@ export function manifestRecord(
     routes: cell('routes'),
     term: oneOf('term', MEMBERSHIP_TERMS),
     originKey: cell('origin_key') || fail('origin_key is empty'),
-    isSol: proper === SOL_PROPER_NAME,
+    isSol: isSolProper(proper),
   };
 }
 
@@ -114,7 +118,7 @@ export function primariesManifestRecord(
     routes: '',
     term: 'primaries',
     originKey,
-    isSol: proper === SOL_PROPER_NAME,
+    isSol: isSolProper(proper),
   };
 }
 

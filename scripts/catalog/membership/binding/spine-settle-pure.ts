@@ -1,6 +1,5 @@
 // Each spine row's binding settled: the derivation, the collision rule, the review queue and the dispositions that settle it. See README.md#what-the-derivation-cannot-settle-alone.
 
-import { SOL_PROPER_NAME } from '../../../../src/catalog-format/record/catalog-pure';
 import { intCell } from '../../../util/tsv/table-pure';
 import type { SimbadXids } from '../../spectral/spectral-resolve';
 import type { PrimaryTables } from '../../spine/primaries-audit-pure';
@@ -34,7 +33,7 @@ import {
   type MembershipOutcome,
   type PrimariesBindingClass,
 } from '../membership-lineage-pure';
-import { joinManifestValues } from '../membership-manifest-tsv';
+import { isSolProper, joinManifestValues } from '../membership-manifest-tsv';
 
 type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'sol';
 
@@ -76,7 +75,7 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
 
 /** Withholds any source two rows derive — see README.md. */
 function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): SpineBinding[] {
-  const derivations = spine.map((row) => (row.proper === SOL_PROPER_NAME ? null : derive(row)));
+  const derivations = spine.map((row) => (isSolProper(row.proper) ? null : derive(row)));
   const collisions = heldMoreThanOnce(derivations.map((d) => d?.derived.sourceId ?? null));
   return derivations.map((d): SpineBinding => {
     if (d === null) return { outcome: 'sol' };
