@@ -89,10 +89,6 @@ export function inheritedFrom(from: string, how: InheritanceKind): IdOrigin {
   return Object.freeze({ kind: 'inherited', from, how });
 }
 
-export function isInherited(origin: IdOrigin | null, how?: InheritanceKind): boolean {
-  return origin !== null && origin.kind === 'inherited' && (how === undefined || origin.how === how);
-}
-
 /** `own`, or `<how>:<from>` (`blend:A`, `letter:Aa`). */
 export function formatIdOrigin(origin: IdOrigin): string {
   return origin.kind === 'own' ? 'own' : `${origin.how}:${origin.from}`;
