@@ -3,6 +3,7 @@
 import { parkedRecord } from '../distance/placement-lineage-pure';
 import { placementDerivedFold, type PlacementDerivedCounts } from '../distance/placement-counts-pure';
 import type { ParkedRecord } from '../distance/parallax/parked-ledger-pure';
+import { GALACTIC_ESCAPE_VELOCITY_KM_S, VELOCITY_SANITY_CEILING_KM_S } from '../distance/velocity';
 import type { RowOutcome, Star } from './stars-parse';
 
 export const VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP = 25;
@@ -55,4 +56,24 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
       velocityClampedSample, velocityAboveEscapeSample, rvRadialRejectedSample,
     }),
   };
+}
+
+/** The build log's velocity samples: radial rejections and clamps when any, the above-escape sample always. */
+export function walkVelocitySummary(
+  { rvRadialRejectedSample, velocityClampedSample, velocityAboveEscapeSample }: WalkStats,
+): string {
+  const block = (heading: string, samples: readonly string[]) => [heading, ...samples.map((s) => `    ${s}`)];
+  return [
+    ...(rvRadialRejectedSample.length > 0
+      ? block(`  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`, rvRadialRejectedSample)
+      : []),
+    ...(velocityClampedSample.length > 0
+      ? block(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`, velocityClampedSample)
+      : []),
+    ...block(
+      `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — `
+        + `sample (first ${velocityAboveEscapeSample.length}):`,
+      velocityAboveEscapeSample,
+    ),
+  ].join('\n');
 }

@@ -15,7 +15,10 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are placement's,
+which act on records, file a derived block), and so are classic-ids' (beside
+a derived block of the overlay's sizes,
+[Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
+and placement's,
 beside a derived block of the shipped tiers
 ([Placement counts](../distance/README.md#placement-counts)).
 
@@ -88,7 +91,9 @@ scripts/catalog/lineage/
 ## Identity — the origin source row
 
 Every row is keyed on the record's **origin**: a `SourceRowRef` naming the
-source row that founded the record.
+source row that founded the record. `classic-ids` runs before any record
+exists, so its rows are keyed on the catalogue row stating each designation
+([Classic-ID lineage](../classic-ids/README.md#classic-id-lineage)).
 
 | Record founded by | Origin key |
 |---|---|
@@ -211,6 +216,8 @@ predicate over the row's `params` (`NO_EXCEPTIONS` for a zero-pin). A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
+Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
+([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
@@ -283,7 +290,8 @@ contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
-measured budget sits beside its contract: [allocation's](/scripts/sid/README.md#sid-events),
+measured budget sits beside its contract: [classic-ids'](../classic-ids/README.md#classic-id-lineage),
+[allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
@@ -375,13 +383,19 @@ still regenerated and diffed by CI, so a PR diff keeps showing the change:
 | `data/membership/parked-ledger.tsv` | placement park rows |
 
 `binding-review.tsv` and `rejected_bindings.tsv` are then two filters over
-one row type. Each view moves when its writing stage gains lineage; the
-first four are views now ([Membership lineage](../membership/README.md#membership-lineage)),
-and so is `parked-ledger.tsv` ([Placement lineage](../distance/README.md#placement-lineage)).
+one row type. Every one is a view now: the first four of membership's
+([Membership lineage](../membership/README.md#membership-lineage)), the two
+classic-ID queues of `classic-ids`' ([Classic-ID lineage](../classic-ids/README.md#classic-id-lineage)),
+and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.md#placement-lineage)).
+
+## The classic-ids stage
+
+`build:classic-ids` is the first stage, run before membership; its contract
+lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage
 
-`build:membership` is the first stage with lineage; its contract lives
+`build:membership` is the stage after classic-ids; its contract lives
 beside its module, in [Membership lineage](../membership/README.md#membership-lineage).
 
 Curated human input stays hand-written and is read by the build or its

@@ -3,13 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
+import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import type { ParkedPlacement, PlacedPlacement } from '../distance/placement-lineage-pure';
 import type { ShippedBrightness } from '../photometry/brightness-colour-lineage-pure';
 import { SPECTRAL_UNKNOWN } from '../../../src/catalog-format/spectral/spectral-classify';
 import { physicalRadius } from '../../../src/catalog-format/spectral/physical-radius';
 import { makeStar } from './star-fixture';
 import type { RowOutcome, ShippedFacts } from './stars-parse';
-import { VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP, walkStatsFold, type WalkStats } from './walk-stats-pure';
+import { GALACTIC_ESCAPE_VELOCITY_KM_S, VELOCITY_SANITY_CEILING_KM_S } from '../distance/velocity';
+import {
+  VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP, walkStatsFold, walkVelocitySummary, type WalkStats,
+} from './walk-stats-pure';
 
 const GL_REF = sourceRowRef(GLIESE, '901');
 const TYC_REF = sourceRowRef(TYCHO2, '1-1-1');
@@ -87,5 +91,34 @@ describe('walkStatsFold', () => {
     expect(stats.velocityAboveEscapeSample[0]).toBe('Fixture: 600 km/s @ 100 pc');
     expect(stats.velocityClampedSample).toEqual(['Fixture: 2000 km/s @ 100 pc']);
     expect(stats.placementDerived).toMatchObject({ velocityTycho2Pm: VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP + 2, velocityZero: 1 });
+  });
+});
+
+describe('walkVelocitySummary', () => {
+  it('prints only the above-escape block when nothing was rejected or clamped', () => {
+    expect(walkVelocitySummary(fold([shipped()]))).toBe(
+      `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — sample (first 0):`,
+    );
+  });
+
+  it('prints each sample under its heading, rejections then clamps then above-escape', () => {
+    const simbad = sourceRowRef(SIMBAD_VALUES, 9);
+    const rejected: PlacedPlacement['rv'] = {
+      kind: 'rejected',
+      rv: { via: 'simbad', value: { kmS: 1800, bibcode: 'x', ref: simbad }, evidence: [simbad], refusals: [] },
+    };
+    const stats = fold([
+      shipped({ rv: rejected }, { distPc: 12.34 }),
+      shipped({ speed: 'clamped' }, { speedKmS: 2000 }),
+      shipped({ speed: 'above_escape' }, { speedKmS: 600 }),
+    ]);
+    expect(walkVelocitySummary(stats).split('\n')).toEqual([
+      `  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`,
+      '    Fixture: 1800.0 km/s @ 12.3 pc',
+      `  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`,
+      '    Fixture: 2000 km/s @ 100 pc',
+      `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — sample (first 1):`,
+      '    Fixture: 600 km/s @ 100 pc',
+    ]);
   });
 });

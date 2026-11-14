@@ -367,7 +367,7 @@ arithmetic and label-flips replay:
 
 ## Membership lineage
 
-`build:membership` is the first stage with lineage
+`build:membership` is the lineage stage after `classic-ids`
 (`membership-lineage-pure.ts`). `buildMembership` returns a
 keyed outcome per decision — admission, fold, component, the spine
 derivation's verdict with every candidate it refused, a disposition, an
