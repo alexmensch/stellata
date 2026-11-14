@@ -1,14 +1,12 @@
 // Every floor modulo goes through pyMod in src/astro-core/angles.ts; see README.md#floor-modulos.
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
-import { isProductionTs, walkFiles } from './walk-files';
+import { type LineRule, firstRule, lineHits, scanTree } from './line-scan';
+import { isProductionTs } from './walk-files';
 
-const ROOT = resolve(__dirname, '..');
 const OWNER = 'src/astro-core/angles.ts';
 
 const M = String.raw`([\w.]+)`;
-const RULES: ReadonlyArray<{ name: string; re: RegExp }> = [
+const RULES: ReadonlyArray<LineRule> = [
   { name: '((x % m) + m) % m', re: new RegExp(String.raw`%\s*${M}\s*\)?\s*\+\s*\1\s*\)\s*%\s*\1\b`) },
   { name: '(x + m) % m', re: new RegExp(String.raw`\+\s*${M}\s*\)\s*%\s*\1\b`) },
   { name: 'x < 0 ? x + m : x', re: new RegExp(String.raw`${M}\s*<\s*0\s*\?\s*\1\s*\+\s*[\w.]+\s*:\s*\1\b`) },
@@ -24,20 +22,7 @@ const HAND_ROLLED_ALLOWED: ReadonlyMap<string, number> = new Map([
   ['src/client/typeahead/typeahead.ts', 1],
 ]);
 
-const firstRule = (line: string): string | undefined => RULES.find(({ re }) => re.test(line))?.name;
-
-function scanned(): string[] {
-  return ['src', 'scripts'].flatMap((dir) => [
-    ...walkFiles(join(ROOT, dir), { skipDir: (n) => n === 'node_modules', include: isProductionTs }),
-  ]).map((p) => relative(ROOT, p)).filter((p) => p !== OWNER);
-}
-
-function hits(path: string): string[] {
-  return readFileSync(join(ROOT, path), 'utf8').split('\n').flatMap((line, i) => {
-    const rule = firstRule(line);
-    return rule === undefined ? [] : [`${path}:${i + 1} [${rule}] ${line.trim()}`];
-  });
-}
+const hits = (path: string): string[] => lineHits(path, RULES);
 
 describe('floor-modulo shapes', () => {
   it('catches each hand-rolled shape', () => {
@@ -51,7 +36,7 @@ describe('floor-modulo shapes', () => {
       ['return w < 0 ? w + 360 : w;', 'x < 0 ? x + m : x'],
       ['const a = lon < 0 ? lon + TWO_PI : lon;', 'x < 0 ? x + m : x'],
     ] as const) {
-      expect(firstRule(line), line).toBe(rule);
+      expect(firstRule(line, RULES), line).toBe(rule);
     }
   });
 
@@ -63,13 +48,13 @@ describe('floor-modulo shapes', () => {
       'return pyMod(x, 360);',
       'const s = x < 0 ? -x : x;',
     ]) {
-      expect(firstRule(line), line).toBeUndefined();
+      expect(firstRule(line, RULES), line).toBeUndefined();
     }
   });
 });
 
 describe('floor modulos', () => {
-  const files = scanned();
+  const files = scanTree(['src', 'scripts'], isProductionTs, new Set([OWNER]));
 
   it('no hand-rolled floor modulo outside pyMod and the allowlist', () => {
     const found = files.filter((p) => !HAND_ROLLED_ALLOWED.has(p)).flatMap(hits);

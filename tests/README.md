@@ -353,6 +353,12 @@ import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          `*-fixture.ts`), shared by node-import-boundary,
                          pipeline-viewer-boundary, record-codec-imports
                          and vite-config-import-extensions.
+line-scan.ts             Not a test — `scanTree` (repo-relative paths under
+                         named folders, minus exclusions) and `lineHits` /
+                         `firstRule` (each line's first matching rule, as
+                         `path:line [rule] text`), for the pattern scanners
+                         with an owner file and an exemption list:
+                         sort-comparator-rules and floor-modulo-rules.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
