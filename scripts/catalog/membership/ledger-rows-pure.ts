@@ -1,5 +1,7 @@
 // The membership ledgers' row shapes and the closed sets the generator and its lineage share. See README.md#files-in-this-area.
 
+import { RECORD_KEY_COLUMNS, type RecordIdentifiers } from '../lineage/identity-pure';
+
 /** The record-parity reason enum (/docs/catalog-driver.md#61-record-parity) for records the primaries admit that the spine lacked. */
 export const ADDITION_REASONS = [
   'admitted:hd_link_gap',
@@ -14,6 +16,7 @@ export type AdditionReason = (typeof ADDITION_REASONS)[number];
  *  the record it resolves to rather than admitted; the suffix is that record's
  *  designation. */
 export const COMPONENT_REASON_PREFIX = 'component:';
+export type ComponentReason = `${typeof COMPONENT_REASON_PREFIX}${string}`;
 
 export const OWN_CANDIDATE_REASONS = [
   'refused_mag', 'refused_sibling', 'withheld', 'runner_up', 'component',
@@ -26,8 +29,10 @@ export interface OwnCandidate {
   readonly of: string;
 }
 
-export const LEDGER_COLUMNS =['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const;
-export type AdditionLedgerRow = Record<(typeof LEDGER_COLUMNS)[number], string>;
+export const LEDGER_COLUMNS = [...RECORD_KEY_COLUMNS, 'reason'] as const;
+export interface AdditionLedgerRow extends RecordIdentifiers {
+  reason: AdditionReason | ComponentReason;
+}
 
 export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
 export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
@@ -45,12 +50,19 @@ export const BINDING_REVIEW_COLUMNS = [
   'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
   'derived_simbad',
 ] as const;
-export type BindingReviewRow = Record<(typeof BINDING_REVIEW_COLUMNS)[number], string>;
+export type BindingReviewRow = Record<Exclude<(typeof BINDING_REVIEW_COLUMNS)[number], 'verdict'>, string> & {
+  verdict: BindingReviewVerdict;
+};
 
-export const LABEL_DROP_COLUMNS = [
-  'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason',
-] as const;
-export type LabelDropRow = Record<(typeof LABEL_DROP_COLUMNS)[number], string>;
+export const LABEL_DROP_COLUMNS = [...RECORD_KEY_COLUMNS, 'cell', 'value', 'reason'] as const;
+export const LABEL_DROP_CELLS = ['hd', 'flam'] as const;
+export type LabelDropCell = (typeof LABEL_DROP_CELLS)[number];
+/** `value` is the dropped HD or Flamsteed number. */
+export interface LabelDropRow extends RecordIdentifiers {
+  cell: LabelDropCell;
+  value: number;
+  reason: LabelDropReason;
+}
 /** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
  *  that Flamsteed number, or that HD number, for the star. */
 export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;

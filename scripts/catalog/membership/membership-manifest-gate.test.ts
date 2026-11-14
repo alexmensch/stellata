@@ -29,7 +29,7 @@ import { loadCatalog } from '../catalog-lookup';
 import {
   FLAG_BINARY_COMPANION_ONLY, type SearchEntry, CATALOG_MANIFEST_FILENAME,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
+import { recordKey } from '../lineage/identity-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   spineDesignations,
@@ -41,12 +41,8 @@ import { readSourceIdRequest, unrequestedBindings } from '../astrometry-request/
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
-import {
-  MEMBERSHIP_EXPECTED_FILE,
-  manifestKey,
-  matchSpineToManifest,
-  type SpineMatch,
-} from './membership-manifest-pure';
+import { MEMBERSHIP_EXPECTED_FILE } from './membership-manifest-pure';
+import { matchSpineToManifest, type SpineMatch } from './spine-match-pure';
 import {
   MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
@@ -185,9 +181,9 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     // (magnitude-term/README.md#the-column-is-the-ledger).
     const unreachedKeys = match.unreached
       .filter((i) => manifest[i].term === 'primaries')
-      .map((i) => manifestKey(manifest[i]))
+      .map((i) => recordKey(manifest[i]))
       .sort();
-    expect(admitted.map(parkedRecordKey).sort()).toEqual(unreachedKeys);
+    expect(admitted.map(recordKey).sort()).toEqual(unreachedKeys);
     for (const l of admitted) {
       expect((ADDITION_REASONS as readonly string[]).includes(l.reason), l.reason).toBe(true);
     }
@@ -195,13 +191,13 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     for (const l of admitted) byReason.set(l.reason, (byReason.get(l.reason) ?? 0) + 1);
     expect(Object.fromEntries(byReason)).toEqual(expected.additionsByReason);
 
-    const manifestKeys = new Set(manifest.map(manifestKey));
+    const manifestKeys = new Set(manifest.map(recordKey));
     const manifestTycs = new Set(manifest.map((r) => r.tyc).filter((t) => t !== null));
     const designations = new Set(manifest.flatMap(manifestDesignations));
     expect(components).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('component')]);
     for (const c of components) {
-      expect(manifestKeys.has(parkedRecordKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
-      if (c.tyc !== '') expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
+      expect(manifestKeys.has(recordKey(c)), `component row is a manifest row: ${c.tyc}`).toBe(false);
+      if (c.tyc !== null) expect(manifestTycs.has(c.tyc), `component TYC admitted: ${c.tyc}`).toBe(false);
       const anchor = c.reason.slice(COMPONENT_REASON_PREFIX.length);
       expect(designations.has(anchor), `anchor ${anchor} is a manifest designation`).toBe(true);
     }
@@ -219,7 +215,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   it.skipIf(!lfsContentReadable(REQUEST_PATH))('requests every primaries row\'s source', () => {
     const declared = { file: REQUEST_PATH, hint: 'Run `pnpm run build:astrometry-request`.' };
     const requested = new Set(readSourceIdRequest(readFileSync(REQUEST_PATH, 'utf-8'), declared).map(String));
-    const unrequested = unrequestedBindings(manifest, requested).map(manifestKey);
+    const unrequested = unrequestedBindings(manifest, requested).map(recordKey);
     expect(unrequested.slice(0, 20)).toEqual([]);
     expect(unrequested).toHaveLength(0);
   });
@@ -307,9 +303,9 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // keyed on the manifest row it left, under a closed reason.
   it('ledgers every dropped spine label onto its manifest row', () => {
     const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS.file), 'utf-8'));
-    const manifestKeys = new Set(manifest.map(manifestKey));
+    const manifestKeys = new Set(manifest.map(recordKey));
     for (const d of drops) {
-      expect(manifestKeys.has(parkedRecordKey(d)), `label drop keys a manifest row: ${parkedRecordKey(d)}`).toBe(true);
+      expect(manifestKeys.has(recordKey(d)), `label drop keys a manifest row: ${recordKey(d)}`).toBe(true);
       expect(['hd', 'flam']).toContain(d.cell);
     }
     const byReason = new Map<string, number>();
@@ -325,15 +321,15 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // lost, so the drop cannot have moved a canonical key.
   it('drops no label that was keying its record', () => {
     const drops = LABEL_DROPS.parse(readFileSync(resolve(REPO_ROOT, LABEL_DROPS.file), 'utf-8'));
-    const byKey = new Map(manifest.map((r) => [manifestKey(r), r]));
+    const byKey = new Map(manifest.map((r) => [recordKey(r), r]));
     const moved: string[] = [];
     for (const d of drops) {
       if (d.cell === 'flam') {
-        expect(manifestDesignations(byKey.get(parkedRecordKey(d))!)
+        expect(manifestDesignations(byKey.get(recordKey(d))!)
           .some((x) => x.startsWith('flam:'))).toBe(false);
         continue;
       }
-      const key = canonicalKeyOf(manifestDesignations(byKey.get(parkedRecordKey(d))!));
+      const key = canonicalKeyOf(manifestDesignations(byKey.get(recordKey(d))!));
       if (compareDesignations(key, `hd:${d.value}`) >= 0) moved.push(`${key} vs hd:${d.value}`);
     }
     expect(moved).toEqual([]);
@@ -380,7 +376,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
         return designations;
       };
       const fromManifest = tally(
-        manifest.filter((row) => !parked.has(manifestKey(row))).map(withBridgedSynth),
+        manifest.filter((row) => !parked.has(recordKey(row))).map(withBridgedSynth),
       );
       const diff = differences(fromBuild, fromManifest);
       expect(diff.slice(0, 20)).toEqual([]);

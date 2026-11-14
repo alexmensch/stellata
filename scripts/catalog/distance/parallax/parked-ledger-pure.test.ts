@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 
 import { describeCommittedRoundTrip } from '../../../util/tsv/committed-round-trip';
 
-import { PARKED_REASONS, parkedRecordKey, type ParkedRecord } from './parked-ledger-pure';
+import { PARKED_REASONS, type ParkedRecord } from './parked-ledger-pure';
+import { recordKey } from '../../lineage/identity-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from './parked-ledger-tsv';
 
 const SIGMA_ORI: ParkedRecord = {
@@ -32,18 +33,18 @@ describe('parked-ledger', () => {
     );
     expect(rows).toHaveLength(4);
     expect(rows.map((r) => r.reason).sort()).toEqual([...PARKED_REASONS].sort());
-    expect(rows.map((r) => r.recordKey)).toContain(parkedRecordKey({
-      tyc: '4771-1188-1', hip: '26549', hd: '37468', gl: '',
-      gaia_source_id: '3216486443742786048',
+    expect(rows.map((r) => r.recordKey)).toContain(recordKey({
+      tyc: '4771-1188-1', hip: 26549, hd: 37468, gl: null,
+      gaiaSourceId: '3216486443742786048',
     }));
   });
 
   it('carries a park the V cascade caused, not only the two parallax reasons', () => {
     const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([UNLIT]));
     expect(row.reason).toBe('no_v_magnitude');
-    expect(row.recordKey).toBe(parkedRecordKey({
-      tyc: '1234-567-1', hip: '', hd: '999999', gl: '',
-      gaia_source_id: '4576147844112599424',
+    expect(row.recordKey).toBe(recordKey({
+      tyc: '1234-567-1', hip: null, hd: 999999, gl: null,
+      gaiaSourceId: '4576147844112599424',
     }));
   });
 
@@ -51,16 +52,16 @@ describe('parked-ledger', () => {
     + 'by a bound sibling, with nothing to point it at', () => {
     const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([PLACELESS]));
     expect(row.reason).toBe('no_position');
-    expect(row.recordKey).toBe(parkedRecordKey({
-      tyc: '', hip: '10270', hd: '', gl: '', gaia_source_id: '',
+    expect(row.recordKey).toBe(recordKey({
+      tyc: null, hip: 10270, hd: null, gl: null, gaiaSourceId: null,
     }));
   });
 
   it('keys a row carrying no identifier at all — the ledger still has to name '
     + 'it, and an empty tuple is that name', () => {
     const [row] = parseParkedRecordsTsv(PARKED_LEDGER.serialize([NO_IDS]));
-    expect(row.recordKey).toBe(parkedRecordKey({
-      tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '',
+    expect(row.recordKey).toBe(recordKey({
+      tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: null,
     }));
   });
 

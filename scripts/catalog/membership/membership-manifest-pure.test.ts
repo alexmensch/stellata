@@ -13,12 +13,8 @@ import type { Tycho2Row } from '../tycho2-parse';
 import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
-import {
-  buildMembership,
-  manifestKey,
-  matchSpineToManifest,
-  type MembershipResult,
-} from './membership-manifest-pure';
+import { buildMembership, type MembershipResult } from './membership-manifest-pure';
+import { matchSpineToManifest } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
@@ -26,9 +22,11 @@ import {
 import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
-import { ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX } from './ledger-rows-pure';
+import {
+  ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX, LABEL_DROP_COLUMNS, LEDGER_COLUMNS,
+} from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
-import { bindingReviewKey } from './ledger-rows-pure';
+import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
@@ -37,14 +35,14 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
+import { identityRow, recordKey } from '../lineage/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, withLead, membershipSummary, membershipTotals,
+  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLedgers, membershipLineageRow, withLead, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
@@ -465,7 +463,7 @@ describe('buildMembership — the spine side', () => {
     });
     expect(promoted.rows.find((r) => r.tyc === '5-5-1')).toMatchObject({ hd: 70003 });
     expect(promoted.labelDrops).toContainEqual(expect.objectContaining({
-      cell: 'hd', value: '70002', reason: 'hd_unattested',
+      cell: 'hd', value: 70002, reason: 'hd_unattested',
     }));
   });
 
@@ -473,8 +471,8 @@ describe('buildMembership — the spine side', () => {
     const row = result.rows.find((r) => r.hip === 70)!;
     expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
     expect(result.labelDrops).toEqual([
-      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'hd', value: '70000', reason: 'hd_unattested' },
-      { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '', cell: 'flam', value: '5', reason: 'flamsteed_unattested' },
+      { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested' },
+      { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
     expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
   });
@@ -621,13 +619,13 @@ describe('buildMembership — the additions', () => {
   });
 
   it('ledgers each admitted row under the record-parity reason its designation earns', () => {
-    const reasons = new Map(result.ledger.map((l) => [parkedRecordKey(l), l.reason]));
-    expect(reasons.get(manifestKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
-    expect(reasons.get(manifestKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
+    const reasons = new Map(result.ledger.map((l) => [recordKey(l), l.reason]));
+    expect(reasons.get(recordKey(byTyc.get('2-1-1')!))).toBe('admitted:hd_link_gap');
+    expect(reasons.get(recordKey(byTyc.get('2-2-1')!))).toBe('admitted:hd_omitted');
     const hip40 = result.rows.find((r) => r.hip === 40)!;
-    expect(reasons.get(manifestKey(hip40))).toBe('admitted:hip_omitted');
+    expect(reasons.get(recordKey(hip40))).toBe('admitted:hip_omitted');
     const gj = result.rows.find((r) => r.gl === 'GJ 10001')!;
-    expect(reasons.get(manifestKey(gj))).toBe('admitted:cns5_census');
+    expect(reasons.get(recordKey(gj))).toBe('admitted:cns5_census');
     expect(gj.gaiaSourceId).toBe('555');
     expect(totals(result).additionsByReason).toEqual({
       'admitted:hd_link_gap': 8, 'admitted:hd_omitted': 1,
@@ -644,7 +642,7 @@ describe('buildMembership — the additions', () => {
   it('resolves a TYC carrying only a spine record\'s HD onto that record, not into a row', () => {
     expect(byTyc.has('2-3-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-3-1', hip: '', hd: '100001', gl: '', gaia_source_id: '', reason: 'component:hd:100001',
+      tyc: '2-3-1', hip: null, hd: 100001, gl: null, gaiaSourceId: null, reason: 'component:hd:100001',
     });
     expect(codes(result).component).toBe(4);
   });
@@ -655,7 +653,7 @@ describe('buildMembership — the additions', () => {
   it('admits one record per designation when two groups arrive with the same HD', () => {
     expect(byTyc.has('2-6-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-6-1', hip: '', hd: '60', gl: '', gaia_source_id: '', reason: 'component:hd:60',
+      tyc: '2-6-1', hip: null, hd: 60, gl: null, gaiaSourceId: null, reason: 'component:hd:60',
     });
     expect(byTyc.get('2-1-1')?.hd).toBe(60);
     expect(result.derived.sharedDesignations).toBe(0);
@@ -667,7 +665,7 @@ describe('buildMembership — the additions', () => {
     expect(byTyc.get('2-8-1')).toMatchObject({ hd: 70, gaiaSourceId: '1010' });
     expect(byTyc.has('2-7-1')).toBe(false);
     expect(result.ledger).toContainEqual({
-      tyc: '2-7-1', hip: '', hd: '70', gl: '', gaia_source_id: '', reason: 'component:hd:70',
+      tyc: '2-7-1', hip: null, hd: 70, gl: null, gaiaSourceId: null, reason: 'component:hd:70',
     });
   });
 
@@ -703,7 +701,7 @@ describe('buildMembership — the additions', () => {
   it('resolves a second census row under one GJ onto the first', () => {
     expect(result.rows.filter((r) => r.gl === 'GJ 10002')).toHaveLength(1);
     expect(result.ledger).toContainEqual({
-      tyc: '', hip: '', hd: '', gl: 'GJ 10002', gaia_source_id: '',
+      tyc: null, hip: null, hd: null, gl: 'GJ 10002', gaiaSourceId: null,
       reason: 'component:gl:GJ_10002',
     });
   });
@@ -902,7 +900,7 @@ describe('codecs', () => {
       .toEqual(result.bindingReview);
     const ledger = ADDITIONS_LEDGER.parse(ADDITIONS_LEDGER.serialize(result.ledger));
     expect(ledger).toHaveLength(result.ledger.length);
-    expect(new Set(ledger.map(parkedRecordKey))).toEqual(new Set(result.ledger.map(parkedRecordKey)));
+    expect(new Set(ledger.map(recordKey))).toEqual(new Set(result.ledger.map(recordKey)));
     const drops = LABEL_DROPS.parse(LABEL_DROPS.serialize(result.labelDrops));
     expect(new Set(drops.map((d) => JSON.stringify(d))))
       .toEqual(new Set(result.labelDrops.map((d) => JSON.stringify(d))));
@@ -916,10 +914,36 @@ describe('codecs', () => {
   // rather than parsing into blanks the ledger's key columns cannot tell from
   // a genuinely empty cell.
   it('refuses a row that does not carry every column', () => {
-    const ledger = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'].join('\t')}\n`;
+    const ledger = `${LEDGER_COLUMNS.join('\t')}\n`;
     expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
-    const drops = `${['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'cell', 'value', 'reason'].join('\t')}\n`;
+    const drops = `${LABEL_DROP_COLUMNS.join('\t')}\n`;
     expect(() => LABEL_DROPS.parse(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
+  });
+
+  it('refuses a malformed key cell or drop value, naming the file and line', () => {
+    const ledger = `${LEDGER_COLUMNS.join('\t')}\n`;
+    expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\tx\t\t\t\tadmitted:hd_omitted\n`))
+      .toThrow(new RegExp(`${ADDITIONS_LEDGER.file}:2: .*not an integer`));
+    expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\t\t01\tadmitted:hd_omitted\n`))
+      .toThrow(new RegExp(`${ADDITIONS_LEDGER.file}:2:`));
+    const drops = `${LABEL_DROP_COLUMNS.join('\t')}\n`;
+    expect(() => LABEL_DROPS.parse(`${drops}\t70\t\t\t\thd\t\thd_unattested\n`))
+      .toThrow(new RegExp(`${LABEL_DROPS.file}:2: value`));
+    expect(() => LABEL_DROPS.parse(`${drops}\t70\t\t\t\tbayer\t5\thd_unattested\n`))
+      .toThrow(new RegExp(`${LABEL_DROPS.file}:2: cell`));
+  });
+
+  it('refuses a label-drop lineage row whose cell or value the ledger cannot carry', () => {
+    const key = 'spine:9';
+    const identity = new Map([[key, identityRow(key, { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
+    const dropRow = (cell: string, value: string) => membershipLineageRow({
+      key, outcome: { kind: 'label-drop', reason: 'hd_unattested', cell: cell as LabelDropCell, value },
+    });
+    expect(() => membershipLedgers([dropRow('hd', '')], identity)).toThrow(/spine:9's label drop: the value is empty/);
+    expect(() => membershipLedgers([dropRow('bayer', '5')], identity)).toThrow(/spine:9's label drop: "bayer" is not one of hd \| flam/);
+    expect(membershipLedgers([dropRow('hd', '70000')], identity).labelDrops).toEqual([{
+      tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested',
+    }]);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {

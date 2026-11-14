@@ -14,6 +14,12 @@ scripts/catalog/membership/magnitude-term/
     (+ test)                    the Riello transform, the row fold the
                                 whole-text and line-fed streaming readers
                                 share, and the union's dedupe. Pure.
+  magnitude-rows-pure.ts        magnitudeTermRows: the term's manifest rows
+                                and their admission outcomes, each citing the
+                                primaries row that left its source unshipped.
+                                Apart from magnitude-term-pure.ts because it
+                                builds manifest records, and the pull's
+                                declaration imports that module. Pure.
   magnitude-pull-source.ts      MAGNITUDE_PULL, the pull's declaration
                                 (../../../util/sources/), keyed for lineage
                                 on its Gaia DR3 source_id.
@@ -72,7 +78,8 @@ Measured over the committed pull at `V ≤ 11`, and pinned by the gate suite:
 
 ## The union dedupes on the derived binding
 
-`buildMembership` runs the dedupe itself rather than taking a newcomer list,
+`magnitudeTermRows` (`magnitude-rows-pure.ts`) dedupes against the primaries
+rows `buildMembership` has just built rather than taking a newcomer list,
 because the sources the primaries bind are the bindings it has just derived
 ([The four sources, in precedence order](../binding/README.md#the-four-sources-in-precedence-order)) — a caller
 deduping against the *previous* manifest would re-admit every source that

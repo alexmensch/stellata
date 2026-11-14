@@ -34,7 +34,9 @@ scripts/util/tsv/
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec;
                               tsvLine / tsvText, its line and file layout,
                               which the refresh pulls' formatter writes
-                              through too.
+                              through too; `byText`, a record order by a
+                              text key (`../order-pure.ts`'s
+                              `compareCodeUnits`).
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte
                               for byte; a failure names the first line
@@ -129,13 +131,14 @@ and its parse each have one owner.
   row, delimiter check included — what an append-only writer adds to an
   `as-given` file, byte-identical to the rewrite it replaces.
 - `parse`, `rows` (a generator) and `lineReader` decode through the one
-  `decode`. Most codecs decode a typed record — numbers parsed, a closed
+  `decode`. Codecs decode a typed record — numbers parsed, a closed
   column through `oneOf`, so an unknown value fails at the read rather than
-  downstream. Four decode a **cell record** instead, every column the string
-  as written (`row.cells()`): the spine (`INHERITED_SPINE`, frozen and read
-  verbatim) and the three membership ledgers (`BINDING_REVIEW`,
-  `ADDITIONS_LEDGER`, `LABEL_DROPS`). Those still check their closed column
-  at the read — verdict, reason — but hand it on as a string.
+  downstream. The spine (`INHERITED_SPINE`, frozen and read verbatim) is the
+  one **cell record**, every column the string as written (`row.cells()`);
+  `BINDING_REVIEW` keeps the spine's key cells and `derived_source_id` as
+  written beside its typed verdict, since the curated dispositions join on
+  that text: the key through `bindingReviewKey`, the id by equality with
+  their own `derived_source_id` cell. Its read still refuses a malformed id.
 - A reader opens the file through `readArtifact` / `streamArtifact`
   (`../sources/`), which fail on a missing file or an LFS pointer before
   decoding. A declared `rowKey` (then required in the artifact's type) lets lineage cite its rows

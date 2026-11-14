@@ -11,9 +11,11 @@ import type { DirectionResolution, DirectionVia, Tycho2SolutionKind } from './di
 import { isGaiaCatalogueBibcode } from './gaia-distrust';
 import type { ParallaxResolution, ParallaxTier } from './parallax/parallax-cascade';
 import {
-  PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells,
-  type ParkedIdentifiers, type ParkedLedgerCells, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
+  PARKED_REASONS, type ParkedLedgerEntry, type ParkedReason, type ParkedRecord,
 } from './parallax/parked-ledger-pure';
+import {
+  recordIdentifiersOf, recordKeyCells, type IdentityCells, type RecordIdentifiers,
+} from '../lineage/identity-pure';
 import { VELOCITY_VIA_BY_PM_RESCUE, pmRescueOutcome, type PmRescueOutcome, type PmRescueResolution } from './pm-rescue/pm-rescue';
 import type { SpeedBand, VelocityVia } from './velocity';
 import { rvErrorBand, type RadialVelocityResolution, type RvErrorBand } from './radial-velocity/radial-velocity';
@@ -198,7 +200,7 @@ type Tier = { tier: string };
 type ParamsOf<B extends Branch> =
   B extends `${string}.refused.${string}` ? Tier
   : B extends 'rv.rejected-above-ceiling' ? Tier
-  : B extends `park.${string}` ? ParkedLedgerCells
+  : B extends `park.${string}` ? IdentityCells
   : Record<string, never>;
 
 /** The distance layers above the parallax a placed record was given. */
@@ -220,19 +222,19 @@ export type Placement =
   | {
     readonly kind: 'parked-parallax';
     readonly key: string;
-    readonly ids: ParkedIdentifiers;
+    readonly ids: RecordIdentifiers;
     readonly parallax: ParallaxResolution;
   }
   | {
     readonly kind: 'parked-no-v';
     readonly key: string;
-    readonly ids: ParkedIdentifiers;
+    readonly ids: RecordIdentifiers;
     readonly parallax: ParallaxResolution;
   }
   | {
     readonly kind: 'parked-no-position';
     readonly key: string;
-    readonly ids: ParkedIdentifiers;
+    readonly ids: RecordIdentifiers;
     readonly parallax: ParallaxResolution;
     readonly direction: DirectionResolution;
   }
@@ -321,7 +323,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
     else if (res.via !== 'none') row(DIRECTION_BRANCHES[res.via], none, res.evidence);
   };
   const park = (q: ParkedPlacement): void =>
-    row(PARK_BRANCHES[parkReason(q)], parkedLedgerCells(q.ids), []);
+    row(PARK_BRANCHES[parkReason(q)], recordKeyCells(q.ids), []);
 
   switch (p.kind) {
     case 'parked-parallax':
@@ -381,7 +383,7 @@ export function parkedLedgerView(lines: Iterable<LineageLine>): ParkedLedgerEntr
   for (const line of lines) {
     const reason = REASON_BY_PARK_CODE.get(lineageLineCode(line));
     if (reason === undefined) continue;
-    entries.push({ ...parkedIdentifiersOf(paramsOf(decodeLineageLine(line)) as ParkedLedgerCells), reason });
+    entries.push({ ...recordIdentifiersOf(paramsOf(decodeLineageLine(line)) as IdentityCells), reason });
   }
   return entries;
 }

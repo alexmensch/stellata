@@ -289,32 +289,60 @@ export type IdentifierCells = Pick<
   SpineRow, 'tyc' | 'hip' | 'hd' | 'hr' | 'gl' | 'flam' | 'bayer' | 'proper'
 >;
 
+/** The same identifiers typed — a membership manifest record satisfies it. */
+export interface Identifiers {
+  tyc: string | null;
+  hip: number | null;
+  hd: number | null;
+  hr: number | null;
+  gl: string | null;
+  flam: number | null;
+  bayer: string | null;
+  proper: string | null;
+}
+
+const nonEmpty = (cell: string): string | null => (cell === '' ? null : cell);
+
 export function attestSpineRow(
   row: IdentifierCells,
   tables: PrimaryTables,
   idx: PrimaryIndex,
 ): RowAttestation {
-  const hd = intCell(row.hd);
-  const hr = intCell(row.hr);
-  const hip = intCell(row.hip);
-  const flam = intCell(row.flam);
+  return attestIdentifiers({
+    tyc: nonEmpty(row.tyc),
+    hip: intCell(row.hip),
+    hd: intCell(row.hd),
+    hr: intCell(row.hr),
+    gl: nonEmpty(row.gl),
+    flam: intCell(row.flam),
+    bayer: nonEmpty(row.bayer),
+    proper: nonEmpty(row.proper),
+  }, tables, idx);
+}
+
+export function attestIdentifiers(
+  ids: Identifiers,
+  tables: PrimaryTables,
+  idx: PrimaryIndex,
+): RowAttestation {
+  const { hd, hr, hip, flam, gl, bayer, proper, tyc } = ids;
   const attestation: Attestation = {
     hd: hd === null ? null : attestHd(hd, idx, tables),
     hr: hr === null ? null : idx.hrSet.has(hr) ? 'v50' : null,
     hip: hip === null ? null : tables.hipI239.has(hip) ? 'i239' : null,
-    gl: row.gl === '' ? null : attestGl(row.gl, idx, tables.gliese),
-    bayer: row.bayer === '' ? null : attestBayer(hd, hip, idx, tables.wgsn),
+    gl: gl === null ? null : attestGl(gl, idx, tables.gliese),
+    bayer: bayer === null ? null : attestBayer(hd, hip, idx, tables.wgsn),
     flam: flam === null ? null : attestFlam(flam, hd, hip, idx, tables.wgsn),
-    proper: row.proper === ''
+    proper: proper === null
       ? null
-      : row.proper === SOL_PROPER_NAME ? 'sol' : tables.wgsn.names.has(row.proper) ? 'wgsn' : null,
-    tyc: row.tyc !== '' && tables.tycho2.has(row.tyc) ? 'tycho2' : null,
+      : proper === SOL_PROPER_NAME ? 'sol' : tables.wgsn.names.has(proper) ? 'wgsn' : null,
+    tyc: tyc !== null && tables.tycho2.has(tyc) ? 'tycho2' : null,
   };
   const carried: ClassicalCell[] = [];
   const unattested: ClassicalCell[] = [];
   const present: Record<ClassicalCell, boolean> = {
-    hd: hd !== null, hr: hr !== null, hip: hip !== null, gl: row.gl !== '',
-    bayer: row.bayer !== '', flam: flam !== null, proper: row.proper !== '',
+    hd: hd !== null, hr: hr !== null, hip: hip !== null, gl: gl !== null,
+    bayer: bayer !== null, flam: flam !== null, proper: proper !== null,
   };
   for (const cell of CLASSICAL_CELLS) {
     if (!present[cell]) continue;
