@@ -23,6 +23,8 @@ export interface GaiaAstrometryCatalogRow {
   gMag: number | null;
   bpMag: number | null;
   rpMag: number | null;
+  /** Epoch of ra/dec, Julian years: 2016.0 throughout DR3. */
+  refEpoch: number;
   /** DR3 `radial_velocity` (km/s), the RVS median. Null on the ~2/3 of
    *  sources RVS did not reach — magnitude-limited to G_RVS ≲ 14. */
   radialVelocityKmS: number | null;
@@ -36,7 +38,7 @@ export interface GaiaAstrometryCatalogRow {
 
 const ASTROMETRY_COLUMNS = [
   'source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmdec',
-  'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag',
+  'ref_epoch', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag',
   'phot_rp_mean_mag', 'radial_velocity', 'radial_velocity_error',
 ] as const;
 
@@ -55,7 +57,8 @@ function foldAstrometryRow(
   if (keep && !keep.has(sourceId)) return;
   const raDeg = row.float('ra');
   const decDeg = row.float('dec');
-  if (raDeg === null || decDeg === null) return;
+  const refEpoch = row.float('ref_epoch');
+  if (raDeg === null || decDeg === null || refEpoch === null) return;
   onRow(sourceId, {
     raDeg,
     decDeg,
@@ -68,6 +71,7 @@ function foldAstrometryRow(
     gMag: row.float('phot_g_mean_mag'),
     bpMag: row.float('phot_bp_mean_mag'),
     rpMag: row.float('phot_rp_mean_mag'),
+    refEpoch,
     radialVelocityKmS: row.float('radial_velocity'),
     radialVelocityErrorKmS: row.float('radial_velocity_error'),
     ref: sourceRowRef(from, sourceId),

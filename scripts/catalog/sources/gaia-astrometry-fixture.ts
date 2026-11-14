@@ -23,6 +23,7 @@ export function gaiaAstrometryRow(
     gMag: null,
     bpMag: null,
     rpMag: null,
+    refEpoch: 2016,
     radialVelocityKmS: null,
     radialVelocityErrorKmS: null,
     ref: sourceRowRef(GAIA_ASTROMETRY, '0'),

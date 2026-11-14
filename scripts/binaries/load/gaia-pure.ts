@@ -1,27 +1,7 @@
-// The binaries' Gaia DR3 tables: the 5p astrometry pull and the NSS two-body orbits.
+// The binaries' Gaia DR3 tables: the astrometry exclusions and the NSS two-body orbits.
 
-import type { Declared } from '../../util/sources/source';
-import { readTable, type ColumnTable } from '../../util/tsv/table-pure';
-
-/** One row of the binaries' astrometry pull: the 5p solution, the two fit
- *  flags behind the NSS-systemic route, and the photometry. */
-export interface GaiaAstrometryRow {
-  readonly sourceId: string;
-  readonly raDeg: number;
-  readonly decDeg: number;
-  readonly parallaxMas: number | null;
-  readonly parallaxErrorMas: number | null;
-  readonly pmraMasyr: number | null;
-  readonly pmraErrorMasyr: number | null;
-  readonly pmdecMasyr: number | null;
-  readonly pmdecErrorMasyr: number | null;
-  readonly refEpoch: number;
-  readonly ruwe: number | null;
-  readonly ipdFracMultiPeak: number | null;
-  readonly gMag: number | null;
-  readonly bpMag: number | null;
-  readonly rpMag: number | null;
-}
+import type { ColumnTable } from '../../util/tsv/table-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** The NSS two-body columns the orbit stages read. */
 export interface NssOrbitRow {
@@ -39,45 +19,14 @@ export interface NssOrbitRow {
   readonly massRatio: number | null;
 }
 
-const ASTROMETRY_COLUMNS = [
-  'source_id', 'ra', 'dec', 'parallax', 'parallax_error', 'pmra', 'pmra_error', 'pmdec', 'pmdec_error',
-  'ref_epoch', 'ruwe', 'ipd_frac_multi_peak', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
-] as const;
-
-export function parseGaiaAstrometry(text: string, from: Declared): Map<string, GaiaAstrometryRow> {
-  const out = new Map<string, GaiaAstrometryRow>();
-  for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) {
-    const sourceId = row.sourceId('source_id');
-    const raDeg = row.float('ra');
-    const decDeg = row.float('dec');
-    const refEpoch = row.float('ref_epoch');
-    if (sourceId === null || raDeg === null || decDeg === null || refEpoch === null) continue;
-    out.set(sourceId, {
-      sourceId, raDeg, decDeg, refEpoch,
-      parallaxMas: row.float('parallax'),
-      parallaxErrorMas: row.float('parallax_error'),
-      pmraMasyr: row.float('pmra'),
-      pmraErrorMasyr: row.float('pmra_error'),
-      pmdecMasyr: row.float('pmdec'),
-      pmdecErrorMasyr: row.float('pmdec_error'),
-      ruwe: row.float('ruwe'),
-      ipdFracMultiPeak: row.float('ipd_frac_multi_peak'),
-      gMag: row.float('phot_g_mean_mag'),
-      bpMag: row.float('phot_bp_mean_mag'),
-      rpMag: row.float('phot_rp_mean_mag'),
-    });
-  }
-  return out;
-}
-
 export const ASTROMETRY_EXCLUSION_OUTCOMES = ['kept', 'excluded'] as const;
 export type AstrometryExclusionOutcome = (typeof ASTROMETRY_EXCLUSION_OUTCOMES)[number];
 
 /** The pull less the curated exclusions; `outcomes` is one per pulled source. */
 export function applyAstrometryExclusions(
-  astrometry: ReadonlyMap<string, GaiaAstrometryRow>, exclusions: ReadonlyMap<string, string>,
-): { kept: Map<string, GaiaAstrometryRow>; outcomes: readonly AstrometryExclusionOutcome[] } {
-  const kept = new Map<string, GaiaAstrometryRow>();
+  astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>, exclusions: ReadonlyMap<string, string>,
+): { kept: Map<string, GaiaAstrometryCatalogRow>; outcomes: readonly AstrometryExclusionOutcome[] } {
+  const kept = new Map<string, GaiaAstrometryCatalogRow>();
   const outcomes: AstrometryExclusionOutcome[] = [];
   for (const [sourceId, row] of astrometry) {
     const excluded = exclusions.has(sourceId);

@@ -5,12 +5,13 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constants';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 const hip2Map = (rows: readonly (readonly [number, Partial<Hip2AstrometryRow>])[]): Map<number, Hip2AstrometryRow> =>
   new Map(rows.map(([hip, over]) => [hip, hip2AstrometryRow(over)]));
@@ -70,7 +71,7 @@ describe('routeAstrometry', () => {
   });
 
   it('tags an NSS source with an unreliable 5p fit gaia_nss_systemic, on either indicator', () => {
-    const route = (over: Partial<GaiaAstrometryRow>): ComponentAstrometry => routeAstrometry(resolved({ gaiaSourceId: '7' }), null, indices({
+    const route = (over: Partial<GaiaAstrometryCatalogRow>): ComponentAstrometry => routeAstrometry(resolved({ gaiaSourceId: '7' }), null, indices({
       srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '7', ...over })]), srcToNss: nssFor('7'),
     }));
     expect(route({ ruwe: 2.5 }).astrometryVia).toBe('gaia_nss_systemic');
@@ -78,7 +79,7 @@ describe('routeAstrometry', () => {
     expect(route({}).astrometryVia).toBe('gaia_5p');
   });
 
-  const pmCase = (rho: number, gaia: Partial<GaiaAstrometryRow>, hip2: Partial<Hip2AstrometryRow>, hipToGaia = true): ComponentAstrometry =>
+  const pmCase = (rho: number, gaia: Partial<GaiaAstrometryCatalogRow>, hip2: Partial<Hip2AstrometryRow>, hipToGaia = true): ComponentAstrometry =>
     routeAstrometry(resolved({ gaiaSourceId: '1000' }), rho, indices({
       srcToAstrometry: astrometryMap([gaiaAstrometryRow({ sourceId: '1000', ...gaia })]),
       hipToGaia: new Map(hipToGaia ? [[999, '1000']] : []),

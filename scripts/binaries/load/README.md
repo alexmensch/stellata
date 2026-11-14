@@ -27,12 +27,14 @@ scripts/binaries/load/
   curated-source.ts            ORB6_COMPONENT_OVERRIDES,
                                COMPONENT_SPTYPE_OVERRIDES,
                                ASTROMETRY_EXCLUSIONS.
-  gaia-pure.ts                 The 5p astrometry pull and the NSS orbit
-                               columns; NSS_SOLUTION_TYPES, one table naming
+  gaia-pure.ts                 The curated astrometry exclusions and the NSS
+                               orbit columns; NSS_SOLUTION_TYPES, one table naming
                                what each solution type's columns constrain,
                                which Stage 4 converts by, and its pick tier
                                (#gaia-nss-one-solution-per-source).
-  binaries-astrometry-source.ts  BINARIES_ASTROMETRY (gaia_dr3_astrometry.tsv).
+  binaries-astrometry-source.ts  BINARIES_ASTROMETRY (gaia_dr3_astrometry.tsv),
+                               read through the catalogue's one Gaia
+                               astrometry fold (../../catalog/sources/).
   simbad-pure.ts               SIMBAD's WDS cross-IDs, the sp_type pull, and
                                their join on simbad_oid.
   simbad-wds-sptype-source.ts  SIMBAD_WDS_SPTYPE.

@@ -6,10 +6,11 @@ import { AU_PER_PC, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-con
 import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-pure';
 import { polarToTangent } from '../sky-geometry-pure';
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-tsv';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** Each tag, in the cascade's order, and whether it keeps the pair. */
 export const OPTICAL_VIA_PROPERTIES = {
@@ -78,7 +79,7 @@ export function cpmBaselineVerdict(pair: WdsPair, pmraMasyr: number | null, pmde
   return null;
 }
 
-function gaiaFor(c: ResolvedComponent, indices: IdentifierIndices): GaiaAstrometryRow | null {
+function gaiaFor(c: ResolvedComponent, indices: IdentifierIndices): GaiaAstrometryCatalogRow | null {
   return c.gaiaSourceId === null ? null : indices.srcToAstrometry.get(c.gaiaSourceId) ?? null;
 }
 
@@ -148,7 +149,7 @@ function positivelyCollocated(p: Parallax, s: Parallax): boolean {
 }
 
 export function bothGaiaVerdict(
-  p: GaiaAstrometryRow, s: GaiaAstrometryRow, rhoArcsec: number | null, totalMassMsun: number, orbitalPmBudgetKmS: number,
+  p: GaiaAstrometryCatalogRow, s: GaiaAstrometryCatalogRow, rhoArcsec: number | null, totalMassMsun: number, orbitalPmBudgetKmS: number,
 ): TierVerdict {
   if (p.parallaxMas === null || s.parallaxMas === null || p.parallaxErrorMas === null || s.parallaxErrorMas === null) return null;
   const pPar = { parallaxMas: p.parallaxMas, parallaxErrorMas: p.parallaxErrorMas };
@@ -168,7 +169,7 @@ export function bothGaiaVerdict(
   return transverseVelocityKmS(dpm, dPc) > ESCAPE_VELOCITY_SAFETY_FACTOR * vEscape + budget ? 'rejected' : 'kept';
 }
 
-export function asymmGaiaVerdict(gaia: GaiaAstrometryRow, anchor: Parallax, rhoArcsec: number | null): TierVerdict {
+export function asymmGaiaVerdict(gaia: GaiaAstrometryCatalogRow, anchor: Parallax, rhoArcsec: number | null): TierVerdict {
   if (gaia.parallaxMas === null || gaia.parallaxErrorMas === null) return null;
   const sigmaCombined = Math.hypot(gaia.parallaxErrorMas, anchor.parallaxErrorMas ?? 0.0);
   if (Math.abs(gaia.parallaxMas - anchor.parallaxMas) < ASYMM_PLX_GATE_SIGMA * sigmaCombined) return 'kept';

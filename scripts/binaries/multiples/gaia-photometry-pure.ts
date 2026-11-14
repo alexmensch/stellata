@@ -3,7 +3,8 @@
 import { BV_MAX, BV_MIN, ballesterosBvFromTeff } from '../../../src/astro-core/colour/blackbody-lut-pure';
 import { polynomial } from '../../catalog/photometry/gaia-photometry-pure';
 import { RIELLO_BP_RP_MAX, RIELLO_BP_RP_MIN, rielloGMinusV } from '../../catalog/photometry/v-magnitude-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+
 
 /** Montalto 2021 (/data/papers/index.md#montalto2021) eq. 4: Teff as a
  *  quintic in BP − RP, ascending powers, valid over the range below. Fed the
@@ -21,7 +22,7 @@ export interface GaiaPhotometryEstimate {
 
 /** Null without a G magnitude or a positive parallax. Without BP and RP the
  *  absmag is M_G itself. */
-export function gaiaPhotometryAbsmagCi(gaia: GaiaAstrometryRow): GaiaPhotometryEstimate | null {
+export function gaiaPhotometryAbsmagCi(gaia: GaiaAstrometryCatalogRow): GaiaPhotometryEstimate | null {
   if (gaia.gMag === null || gaia.parallaxMas === null || gaia.parallaxMas <= 0) return null;
   const absG = gaia.gMag + 5.0 * Math.log10(gaia.parallaxMas) - 10.0;
   if (gaia.bpMag === null || gaia.rpMag === null) return { absmag: absG, ci: null };

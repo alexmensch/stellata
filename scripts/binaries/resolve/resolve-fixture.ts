@@ -1,7 +1,7 @@
 // Test-only builders for Stage 2's inputs and records.
 
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryRow, NssOrbitRow } from '../load/gaia-pure';
+import type { NssOrbitRow } from '../load/gaia-pure';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
 import { wdsPair } from '../../wds/wds-fixture';
@@ -13,6 +13,7 @@ import { componentsOf, type DecomposedPair, type ResolvedComponent } from './com
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmIndex {
   const hipToCcdm = new Map<number, string>();
@@ -27,7 +28,7 @@ export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmI
 export function indices(over: {
   athyg?: readonly AthygRow[];
   hipToGaia?: ReadonlyMap<number, string>;
-  srcToAstrometry?: ReadonlyMap<string, GaiaAstrometryRow>;
+  srcToAstrometry?: ReadonlyMap<string, GaiaAstrometryCatalogRow>;
   ccdm?: readonly { hip: number; ccdm: string }[];
   hip2?: ReadonlyMap<number, Hip2AstrometryRow>;
   srcToNss?: ReadonlyMap<string, NssOrbitRow>;
@@ -118,10 +119,9 @@ function biSide(gaia: string | null, hip: number | null): Side {
 }
 
 /** A Gaia row (E, N) arcsec from RA 180°, Dec 0°. */
-export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): GaiaAstrometryRow {
+export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): GaiaAstrometryCatalogRow {
   return gaiaAstrometryRow({
-    sourceId, raDeg: 180 + eArcsec / ARCSEC_PER_DEG, decDeg: nArcsec / ARCSEC_PER_DEG, parallaxErrorMas: 0.1,
-    pmraErrorMasyr: 0.1, pmdecErrorMasyr: 0.1, gMag: 5, bpMag: 5, rpMag: 5,
+    sourceId, raDeg: 180 + eArcsec / ARCSEC_PER_DEG, decDeg: nArcsec / ARCSEC_PER_DEG, parallaxErrorMas: 0.1, gMag: 5, bpMag: 5, rpMag: 5,
   });
 }
 
@@ -136,6 +136,6 @@ export function biSystem(rows: readonly BiRow[], wdsId = BI_WDS): DecomposedPair
     decomposed(biPair(wdsId, comps, rho, theta), { primary: biSide(p[0], p[1]), secondary: biSide(s[0], s[1]) }));
 }
 
-export function astrometryMap(rows: readonly GaiaAstrometryRow[]): Map<string, GaiaAstrometryRow> {
-  return new Map(rows.map((r) => [r.sourceId, r]));
+export function astrometryMap(rows: readonly GaiaAstrometryCatalogRow[]): Map<string, GaiaAstrometryCatalogRow> {
+  return new Map(rows.map((r) => [r.ref.row, r]));
 }
