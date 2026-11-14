@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# `pnpm run worktree:include` then `pnpm run build:data`, first stopping every older build:seed in this checkout.
+# `pnpm run worktree:include` then `pnpm run build:data` through heavy.sh's gate, first stopping every older build:seed in this checkout.
 set -euo pipefail
 # Job control puts the build in its own process group, so one signal stops all of it.
 set -m
@@ -45,7 +45,7 @@ for entry in "$runs"/*; do
   fi
 done
 
-{ pnpm run worktree:include && pnpm run build:data; } &
+{ pnpm run worktree:include && bash scripts/heavy.sh pnpm run build:data; } &
 build=$!
 status=0
 wait "$build" || status=$?

@@ -193,7 +193,8 @@ the load condition.
 
 ## Seeding builds — `build:seed`
 
-`pnpm run build:seed` (`build-seed.sh`) writes `.worktreeinclude`, then runs `build:data` — every build step
+`pnpm run build:seed` (`build-seed.sh`) writes `.worktreeinclude`, then runs `build:data` through
+[`heavy.sh`](#heavy-commands--heavysh) — every build step
 on the table, exactly the steps whose outputs seed a new worktree
 ([Building in a worktree](#building-in-a-worktree)) — with one build per
 checkout. `build:membership` is among them, which keeps the main checkout holding the
@@ -203,7 +204,8 @@ before looking at the others, then stops every older live run and waits for it
 to exit, or exits at once if a newer one is registered; so the newest run
 builds and no two ever build at the same time, however many start together. A
 stopped run takes its build's whole process group down (TERM, then KILL after
-30 s) before exiting, and an entry whose process is gone is deleted on sight.
+30 s) before exiting — a run still queued in `heavy.sh` frees its ticket — and an
+entry whose process is gone is deleted on sight.
 `scripts/build-seed.test.ts` pins all of this. The superseded run exits 0 with
 `superseded by a newer build:seed`; any other exit is the build's own status.
 Nothing is forced — the step that was interrupted has no stamp and reruns,
