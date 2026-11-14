@@ -175,35 +175,45 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-/** A build:catalog stage whose lineage is one file named for the stage. */
-function catalogStageRun<S extends string>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<string, NoInfer<S>>, lines: () => readonly LineageLine[],
-  budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
-): StageLineageRun<S, S> {
+/** A build:catalog stage's lineage: its lines file, named for the stage, and any sibling file its spec declares. */
+type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
+  readonly spec: StageLineageSpec<F, S>;
+  readonly codes: C;
+  readonly lines: () => readonly LineageLine[];
+  readonly budget: LineageBudget;
+  readonly invariants: readonly LineageInvariant[];
+  readonly inputs: FileHashes;
+} & ([Exclude<F, S>] extends [never]
+  ? { readonly siblings?: never }
+  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+
+function catalogStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
+  stage: CatalogStage<F, S, C>,
+): StageLineageRun<F, S> {
+  const { spec, codes, siblings } = stage;
   return {
     layout: LINEAGE_LAYOUT,
     spec,
-    inputs: stepInputs,
+    inputs: stage.inputs,
     diffed: spec.stage,
-    lines,
-    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted) }) as Record<S, Uint8Array>,
+    lines: stage.lines,
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
     joins: () => [],
-    budget,
-    invariants,
+    budget: stage.budget,
+    invariants: stage.invariants,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   };
 }
 
-function catalogStageLineage<S extends string>(...run: Parameters<typeof catalogStageRun<S>>) {
-  return stageLineage(catalogStageRun(...run));
+function catalogStageLineage<F extends string, S extends F, C extends StageCodes<string, S>>(stage: CatalogStage<F, S, C>) {
+  return stageLineage(catalogStageRun(stage));
 }
 
-function catalogCountedStageLineage<S extends string, B extends string, L extends B>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>,
-  ...rest: Parameters<typeof catalogStageRun<S>> extends [unknown, unknown, ...infer R] ? R : never
+function catalogCountedStageLineage<F extends string, S extends F, B extends string, L extends B>(
+  stage: CatalogStage<F, S, StageCodes<B, S, L>>,
 ) {
-  return countedStageLineage(catalogStageRun(spec, codes, ...rest), codes);
+  return countedStageLineage(catalogStageRun(stage), stage.codes);
 }
 
 // A function of its own so the walk's lines are unreachable once it returns:
@@ -228,18 +238,20 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       });
       const parkedLedger = parkedLedgerTsv(placementLines);
       const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-      const placementEmission = catalogCountedStageLineage(
-        PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
-      );
+      const placementEmission = catalogCountedStageLineage({
+        spec: PLACEMENT_LINEAGE, codes: PLACEMENT_CODES, lines: () => placementLines,
+        budget: PLACEMENT_LINEAGE_BUDGET, invariants: PLACEMENT_INVARIANTS, inputs: stepInputs,
+      });
       // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
       placementLines = [];
-      const brightnessEmission = catalogCountedStageLineage(
-        BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
-        stepInputs,
-      );
-      const sizeEmission = catalogStageLineage(
-        SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
-      );
+      const brightnessEmission = catalogCountedStageLineage({
+        spec: BRIGHTNESS_COLOUR_LINEAGE, codes: BRIGHTNESS_COLOUR_CODES, lines: () => brightnessSpill.lines(),
+        budget: BRIGHTNESS_COLOUR_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+      });
+      const sizeEmission = catalogStageLineage({
+        spec: SIZE_LINEAGE, codes: SIZE_CODES, lines: () => sizeSpill.lines(),
+        budget: SIZE_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+      });
       return { stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals };
     } finally {
       sizeSpill.dispose();
@@ -254,18 +266,18 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // A function of its own so its line per record is unreachable once it returns:
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogCountedStageLineage(
-    COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
-    stepInputs,
-  );
+  return catalogCountedStageLineage({
+    spec: COHERENCE_LINEAGE, codes: COHERENCE_CODES, lines: () => coherenceLineageLines(verdicts, stars),
+    budget: COHERENCE_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+  });
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
 function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogCountedStageLineage(
-    NAMING_LINEAGE, NAMING_CODES, () => namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
-    NAMING_INVARIANTS, stepInputs,
-  );
+  return catalogCountedStageLineage({
+    spec: NAMING_LINEAGE, codes: NAMING_CODES, lines: () => namingLineageLines(records, stars, CONSTELLATIONS),
+    budget: NAMING_LINEAGE_BUDGET, invariants: NAMING_INVARIANTS, inputs: stepInputs,
+  });
 }
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
@@ -637,38 +649,17 @@ export async function main() {
 
   console.log(apsisCoverageSummary(records));
 
-  const lineage = stageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: PROMOTION_LINEAGE,
-    inputs: inputHashesAtStart,
-    diffed: 'promotion',
-    lines: () => promotionLines,
-    render: (sorted) => ({
-      promotion: stageLineageText(PROMOTION_CODES, sorted),
-      'promotion.identity': identityText(promotionIdentity),
-    }),
-    joins: () => [],
-    budget: PROMOTION_LINEAGE_BUDGET,
-    invariants: [],
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
+  const lineage = catalogStageLineage({
+    spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
+    siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
+    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
   });
-  const allocationLineage = countedStageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: ALLOCATION_LINEAGE,
-    inputs: inputHashesAtStart,
-    diffed: 'allocation',
+  const allocationLineage = catalogCountedStageLineage({
+    spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
     lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
-    render: (sorted) => ({
-      allocation: stageLineageText(ALLOCATION_CODES, sorted),
-      [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),
-    }),
-    joins: () => [],
-    budget: ALLOCATION_LINEAGE_BUDGET,
-    invariants: [],
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  }, ALLOCATION_CODES);
+    siblings: () => ({ [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)) }),
+    budget: ALLOCATION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+  });
   console.log(allocationSummary(allocationLineage.counts, allocation.events.length));
   const files = {
     manifest: manifestJson,
