@@ -5,7 +5,7 @@ import {
   type AliasDisposition, type AliasField, type LabelDisposition, type LabelField, type LabelFlip,
 } from '../classic-ids/label-merge/label-merge-pure';
 import { recordIdentifiersOf, type IdentityRow } from '../lineage/identity-pure';
-import { idCell } from '../../util/tsv/table-pure';
+import { idCell, oneOfCell } from '../../util/tsv/table-pure';
 import type { DiffJoin } from '../lineage/lineage-diff-pure';
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
@@ -554,10 +554,14 @@ export function membershipLedgers(
     return id;
   };
   const tuple = (id: IdentityRow) => recordIdentifiersOf(id);
-  const dropCell = (cell: string): LabelDropCell => {
-    const typed = LABEL_DROP_CELLS.find((c) => c === cell);
-    if (typed === undefined) throw new Error(`membership lineage: label-drop cell "${cell}" is not one of ${LABEL_DROP_CELLS.join(' | ')}`);
-    return typed;
+  const dropped = (key: string, cell: string, value: string): Pick<LabelDropRow, 'cell' | 'value'> => {
+    try {
+      const number = idCell(value);
+      if (number === null) throw new Error('the value is empty');
+      return { cell: oneOfCell(cell, LABEL_DROP_CELLS), value: number };
+    } catch (e) {
+      throw new Error(`membership lineage: ${key}'s label drop: ${(e as Error).message}`);
+    }
   };
 
   const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [] };
@@ -577,9 +581,7 @@ export function membershipLedgers(
       out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${designation}` });
     } else if (drop !== undefined) {
       const { cell, value } = paramsAs(r, drop[1]);
-      const number = idCell(value);
-      if (number === null) throw new Error(`membership lineage: ${r.key} drops an empty ${cell} label`);
-      out.labelDrops.push({ ...tuple(of(r.key)), cell: dropCell(cell), value: number, reason: drop[0] });
+      out.labelDrops.push({ ...tuple(of(r.key)), ...dropped(r.key, cell, value), reason: drop[0] });
     } else if (flip !== undefined) {
       out.flips.push({
         sourceId: of(r.key).gaia_source_id, field: flip.field, ...paramsAs(r, flip.branch), disposition: flip.disposition,
