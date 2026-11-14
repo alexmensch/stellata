@@ -93,12 +93,10 @@ export function idListCell(raw: string | undefined, separator: string): number[]
   });
 }
 
-const SOURCE_ID = /^\d+$/;
-
 export function sourceIdCell(raw: string | undefined): string | null {
   const t = textCell(raw);
   if (t === null) return null;
-  if (!SOURCE_ID.test(t)) throw new Error(`"${t}" is not a source_id`);
+  if (!ID.test(t)) throw new Error(`"${t}" is not a source_id`);
   return t;
 }
 

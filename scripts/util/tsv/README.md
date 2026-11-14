@@ -85,8 +85,8 @@ the target that rebuilds or re-pulls the file.
   sign, padding or leading zero, within the safe-integer range — so a
   catalogue number or sid that parses is one its codec re-encodes byte for
   byte.
-  `sourceId` takes bare digits only and answers a string, since a DR3
-  source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
+  `sourceId` holds the same rule — bare digits, no leading zero — and answers
+  a string, since a DR3 source_id exceeds `Number.MAX_SAFE_INTEGER`; `requiredSourceId` also throws
   on an empty cell, and `sourceIdList(column, separator)` reads a list of
   them. Every source_id column a TypeScript reader takes goes through these.
   `compareSourceIds` is the one order over them: absent
