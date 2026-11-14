@@ -13,15 +13,15 @@ const counts = (over: Partial<Stage3Counts>): Stage3Counts => ({
 });
 
 describe('stage3Rates', () => {
-  it('rates the source-anchored tiers and the HIP2 route over every component', () => {
-    expect(stage3Rates(counts({ components_total: 8, resolution_orb6_hip: 3, resolution_ccdm_hip: 2, astrometry_hip2_long_baseline: 2 })))
-      .toEqual({ gaia_resolve_rate: { kind: 'rated', value: 0.375 }, hip2_fallback_rate: { kind: 'rated', value: 0.25 } });
+  it('rates the Gaia-bound components and the HIP2 route over every component', () => {
+    expect(stage3Rates(counts({ components_total: 8, resolution_orb6_hip: 3, resolution_ccdm_hip: 2, resolution_unresolved: 3, astrometry_hip2_long_baseline: 2 })))
+      .toEqual({ gaia_resolve_rate: { kind: 'rated', value: 0.625 }, hip2_fallback_rate: { kind: 'rated', value: 0.25 } });
   });
 
-  it('counts the position_pm and position_nopm tiers as Gaia-resolved, and ccdm_hip and unresolved as not', () => {
+  it('counts every tier but unresolved as Gaia-resolved, ccdm_hip and the position_* tiers included', () => {
     const tiers = {
-      resolution_orb6_hip: 1, resolution_athyg_gaia_native: 1, resolution_simbad_xid: 1,
-      resolution_position_pm: 2, resolution_position_nopm: 3, resolution_ccdm_hip: 4, resolution_unresolved: 4,
+      resolution_orb6_hip: 1, resolution_athyg_gaia_native: 1, resolution_simbad_xid: 1, resolution_ccdm_hip: 1,
+      resolution_position_pm: 2, resolution_position_nopm: 2, resolution_unresolved: 8,
     };
     expect(stage3Rates(counts({ components_total: 16, ...tiers })).gaia_resolve_rate).toEqual({ kind: 'rated', value: 0.5 });
   });

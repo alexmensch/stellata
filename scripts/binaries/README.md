@@ -84,8 +84,7 @@ scripts/binaries/
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the codec for
                                   multiples.tsv — column roster, closed
                                   value sets and the properties a set's
-                                  members carry (which resolve tiers
-                                  anchor on a Gaia source_id; each
+                                  members carry (each
                                   orbit route's elements, regime and
                                   Stage 6 estimates), per-column
                                   decimal places,
