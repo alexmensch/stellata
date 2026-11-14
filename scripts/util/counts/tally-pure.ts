@@ -62,10 +62,13 @@ export function percentOf(part: number, whole: number, digits = 1): string {
   return formatShare(share(part, whole), digits);
 }
 
-/** Whether a share reaches `floor`. A share with no denominator never does: an
+export type FloorVerdict = 'meets' | 'under' | 'no-denominator';
+
+/** A share against `floor`. A share with no denominator never meets it: an
  *  empty population is the drift a coverage floor exists to catch. */
-export function meetsFloor(s: Share, floor: number): boolean {
-  return s.kind === 'rated' && s.value >= floor;
+export function floorVerdict(s: Share, floor: number): FloorVerdict {
+  if (s.kind === 'no-denominator') return 'no-denominator';
+  return s.value >= floor ? 'meets' : 'under';
 }
 
 /** One-line `bucket=n` rundown of a row partition, zeros included — the

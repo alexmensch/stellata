@@ -1,6 +1,6 @@
 // A SIMBAD pull's written rows: basic columns, then per-oid blocks, each bibcoded group shipped only beside its bibcode; and its fill gates. See README.md.
 
-import { formatFraction, formatShare, meetsFloor, percentOf, type Share } from '../../util/counts/tally-pure';
+import { floorVerdict, formatFraction, formatShare, percentOf, type Share } from '../../util/counts/tally-pure';
 import type { Check } from '../../util/emit-artifacts';
 import type { Column, Row } from '../pull/columns-pure';
 import type { BasicCells } from './simbad-fetch-pure';
@@ -68,7 +68,10 @@ export const fillLine = (label: string, filled: number, total: number): string =
 /** A fill below its floor means the response shape or the request drifted, not a sparse cohort; an empty population fails it too. */
 export function floorCheck(label: string, fill: Share, floor: number, diagnosis: string): Check {
   const line = `${label} ${formatShare(fill)}, floor ${formatFraction(floor, 0)}`;
-  if (meetsFloor(fill, floor)) return { kind: 'pass', report: line };
-  const why = fill.kind === 'no-denominator' ? 'no rows to rate' : diagnosis;
-  return { kind: 'fail', message: `${line}: ${why}; investigate before pinning` };
+  const fail = (why: string): Check => ({ kind: 'fail', message: `${line}: ${why}; investigate before pinning` });
+  switch (floorVerdict(fill, floor)) {
+    case 'meets': return { kind: 'pass', report: line };
+    case 'under': return fail(diagnosis);
+    case 'no-denominator': return fail('no rows to rate');
+  }
 }

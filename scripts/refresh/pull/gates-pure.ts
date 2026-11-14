@@ -1,6 +1,6 @@
 // A pulled table's gates, each an emitArtifacts check: row band, spot rows, coverage and its floor. See README.md#gates.
 
-import { meetsFloor, percentOf, share } from '../../util/counts/tally-pure';
+import { floorVerdict, percentOf, share } from '../../util/counts/tally-pure';
 import type { Check } from '../../util/emit-artifacts';
 import type { Cell } from './columns-pure';
 
@@ -87,8 +87,10 @@ export function coverageCheck(label: string, cells: readonly Cell[], idColumn: s
     `  union ${reached(union)}`,
   ].join('\n');
   const floor = coverage.floor;
-  if (floor === undefined || meetsFloor(share(union, requested), floor)) return pass(report);
-  return requested === 0
-    ? fail(`${label}: no ids requested, so nothing to rate against the floor ${floor}`, report)
-    : fail(`${label}: coverage ${reached(union)} is under the floor ${floor}`, report);
+  if (floor === undefined) return pass(report);
+  switch (floorVerdict(share(union, requested), floor)) {
+    case 'meets': return pass(report);
+    case 'under': return fail(`${label}: coverage ${reached(union)} is under the floor ${floor}`, report);
+    case 'no-denominator': return fail(`${label}: no ids requested, so nothing to rate against the floor ${floor}`, report);
+  }
 }

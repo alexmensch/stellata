@@ -18,8 +18,9 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 asks for more); formatShare, a share
                                 through it, `n/a` when absent; percentOf,
                                 the two composed for a log line;
-                                meetsFloor, every coverage floor's verdict,
-                                failing a share with no denominator;
+                                floorVerdict, every coverage floor's
+                                verdict (meets | under | no-denominator),
+                                never meeting with an empty population;
                                 formatPartition, a partition's one-line
                                 `bucket=n` rundown.
 count-stages-pure.ts (+ test)   The staged snapshot: CountBlock and

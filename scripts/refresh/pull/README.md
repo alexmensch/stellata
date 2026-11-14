@@ -263,4 +263,4 @@ emission before a byte is written, every output of the pull included.
   the scope's `idColumn` (an id may answer several rows, as DR2 neighbours
   do), always reported, failing under `floor` when one is set. An empty
   request reports `n/a` and fails any floor
-  ([`meetsFloor`](../../util/counts/README.md)).
+  ([`floorVerdict`](../../util/counts/README.md)).

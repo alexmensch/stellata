@@ -2,7 +2,7 @@
 
 import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
-import { formatFraction, formatShare, meetsFloor, share } from '../util/counts/tally-pure';
+import { floorVerdict, formatFraction, formatShare, share } from '../util/counts/tally-pure';
 import type { Declared } from '../util/sources/source';
 import { floatCell, intCell } from '../util/tsv/table-pure';
 
@@ -169,12 +169,14 @@ export function parsePreciseCoord(field: string): SkyPosition | null {
 function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, present: (r: T) => boolean, floor: number): void {
   const ok = rows.filter(present).length;
   const rate = share(ok, rows.length);
-  if (!meetsFloor(rate, floor)) {
-    const why = rate.kind === 'no-denominator' ? 'no rows parsed' : 'likely a column-offset drift; re-verify the fixed-width layout';
-    throw new Error(
-      `${from.file}: '${field}' non-null rate ${formatShare(rate)} (${ok}/${rows.length}) below `
-        + `${formatFraction(floor, 0)} floor — ${why}. ${from.hint}`,
-    );
+  const fail = (why: string): Error => new Error(
+    `${from.file}: '${field}' non-null rate ${formatShare(rate)} (${ok}/${rows.length}) below `
+      + `${formatFraction(floor, 0)} floor — ${why}. ${from.hint}`,
+  );
+  switch (floorVerdict(rate, floor)) {
+    case 'meets': return;
+    case 'under': throw fail('likely a column-offset drift; re-verify the fixed-width layout');
+    case 'no-denominator': throw fail('no rows parsed');
   }
 }
 
