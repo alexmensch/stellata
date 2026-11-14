@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
-import { mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
+import { hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -41,6 +41,13 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     held: spineKeys(spine),
   };
 }
+
+describe('hdToHr', () => {
+  it('refuses an HD V/50 gives to two HRs', () => {
+    expect(hdToHr(new Map([[7, 100], [8, 200]]))).toEqual(new Map([[100, 7], [200, 8]]));
+    expect(() => hdToHr(new Map([[7, 100], [8, 100]]))).toThrow(/HD 100 to both HR 7 and HR 8/);
+  });
+});
 
 describe('pairOwner', () => {
   it('names the entry whose Gaia neighbour is the HIP\'s', () => {

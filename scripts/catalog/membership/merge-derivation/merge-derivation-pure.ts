@@ -56,11 +56,21 @@ export function mergeLinksFrom(tables: PrimaryTables, held: SpineKeys): MergeLin
   return {
     links,
     hipEntries,
-    hdHr: new Map([...links.hrHd].map(([hr, hd]) => [hd, hr])),
+    hdHr: hdToHr(links.hrHd),
     cns5ByHip,
     v70aByHd,
     held,
   };
+}
+
+export function hdToHr(hrHd: ReadonlyMap<number, number>): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const [hr, hd] of hrHd) {
+    const other = out.get(hd);
+    if (other !== undefined) throw new Error(`V/50 gives HD ${hd} to both HR ${other} and HR ${hr}`);
+    out.set(hd, hr);
+  }
+  return out;
 }
 
 /** Of the Tycho-2 entries naming one HIP, the one whose Gaia best neighbour is the HIP's own. */
