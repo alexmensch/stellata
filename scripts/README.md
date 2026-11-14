@@ -174,6 +174,23 @@ link leaves.
 A clobbered main checkout repairs itself: its stamps record the outputs it
 built, so the next build there sees them rewritten and rebuilds.
 
+## Heavy commands — `heavy.sh`
+
+`bash scripts/heavy.sh <command…>` runs the command once it holds one of
+`HEAVY_SLOTS` (default 2) slots shared by every checkout and worktree on the
+machine, and the 1-minute load average is below the core count. Slots go in
+arrival order: each run writes a ticket `<start ns>.<pid>` (holding its
+command) into `$TMPDIR/stellata-heavy/` and waits while as many live tickets
+as there are slots sort ahead of it, so waiters never all start together
+when a slot opens. A ticket whose process is gone is cleared on sight. The
+load check is the second gate, for work started outside it (a dev server,
+another session); after `HEAVY_LOAD_WAIT_S` (default 600 s) of load at or
+above the cores, the command runs anyway. The exit status is the command's;
+TERM, INT or HUP stops the command and frees the ticket. Who runs what
+through it: `.claude/skills/stellata-pickup-epic/SKILL.md` § Heavy commands.
+`scripts/heavy.test.ts` pins the slots, the order, the dead-ticket clear and
+the load condition.
+
 ## Seeding builds — `build:seed`
 
 `pnpm run build:seed` (`build-seed.sh`) writes `.worktreeinclude`, then runs `build:data` — every build step

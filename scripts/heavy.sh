@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Runs <command…> once it holds one of HEAVY_SLOTS machine-wide slots, taken in arrival order, and load is below the core count.
+set -uo pipefail
+
+[ $# -gt 0 ] || { echo 'usage: heavy.sh <command…>' >&2; exit 2; }
+
+queue=${HEAVY_DIR:-${TMPDIR:-/tmp}/stellata-heavy}
+slots=${HEAVY_SLOTS:-2}
+cores=${HEAVY_CORES:-$(getconf _NPROCESSORS_ONLN)}
+poll_s=${HEAVY_POLL_S:-5}
+load_wait_s=${HEAVY_LOAD_WAIT_S:-600}
+
+load() {
+  if [ -n "${HEAVY_LOAD_CMD:-}" ]; then sh -c "$HEAVY_LOAD_CMD"
+  elif [ -r /proc/loadavg ]; then cut -d' ' -f1 /proc/loadavg
+  else sysctl -n vm.loadavg | awk '{print $2}'
+  fi
+}
+
+mkdir -p "$queue"
+me="$queue/$(python3 -c 'import time; print(time.time_ns())').$$"
+child=
+cleanup() {
+  [ -n "$child" ] && kill -TERM "$child" 2>/dev/null
+  rm -f "$me"
+}
+trap 'cleanup; exit 143' TERM
+trap 'cleanup; exit 130' INT
+trap 'cleanup; exit 129' HUP
+echo "$*" > "$me"
+
+ahead() {
+  local n=0 entry name pid
+  for entry in "$queue"/*; do
+    name=${entry##*/}
+    [ "$entry" = "$me" ] && break
+    pid=${name##*.}
+    if ! grep -q heavy.sh <<< "$(ps -o command= -p "$pid" 2>/dev/null)"; then
+      echo "heavy: clearing the dead holder $pid ($(cat "$entry" 2>/dev/null))" >&2
+      rm -f "$entry"
+    else
+      n=$((n + 1))
+    fi
+  done
+  echo "$n"
+}
+
+while [ "$(ahead)" -ge "$slots" ]; do sleep "$poll_s"; done
+
+load_wait_start=$SECONDS
+until awk -v l="$(load)" -v c="$cores" 'BEGIN { exit !(l < c) }'; do
+  if [ $((SECONDS - load_wait_start)) -ge "$load_wait_s" ]; then
+    echo "heavy: load $(load) still at or above $cores after ${load_wait_s}s; running anyway" >&2
+    break
+  fi
+  sleep "$poll_s"
+done
+
+echo "heavy: running $*" >&2
+"$@" &
+child=$!
+status=0
+wait "$child" || status=$?
+child=
+rm -f "$me"
+exit "$status"
