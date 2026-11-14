@@ -8,7 +8,7 @@ import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
 import { wdsRootOf } from './component-tokens-pure';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  ASTROMETRY_VIA, A_VIA, type IdentifierWithOrigin, MULTIPLES_SOURCES, type MultiplesRecord, ORBIT_ROLES, ORBIT_VIA, PHOTOMETRY_VIA, RESOLVE_VIA, SPECT_VIA, formatIdOrigin, gaiaFields, hipFields, parseIdOrigin,
+  ASTROMETRY_VIA, A_VIA, type IdentifierWithOrigin, MULTIPLES_SOURCES, type MultiplesRecord, ORBIT_ROLES, ORBIT_VIA, PHOTOMETRY_VIA, RESOLVE_VIA, type ResolveVia, SPECT_VIA, formatIdOrigin, gaiaFields, hipFields, parseIdOrigin,
 } from './multiples-record-pure';
 
 export const MULTIPLES_COLUMNS = [
@@ -63,11 +63,15 @@ export const MULTIPLES_TSV = defineArtifact({
       if (value === null) return cell === '' ? null : row.fail(`${column} "${cell}" names the origin of no identifier`);
       return { value, origin: parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`) };
     };
+    const withVia = (gaia: IdentifierWithOrigin<string> | null, via: ResolveVia) => {
+      if (gaia === null) return via === 'unresolved' ? null : row.fail(`resolve_via ${via} with no gaia_source_id`);
+      return via === 'unresolved' ? row.fail(`gaia_source_id ${gaia.value} with resolve_via unresolved`) : { ...gaia, via };
+    };
     return {
       systemId,
       comp,
       ...hipFields(withOrigin(row.int('hip'), 'hip_origin')),
-      ...gaiaFields(withOrigin(row.sourceId('gaia_source_id'), 'gaia_origin')),
+      ...gaiaFields(withVia(withOrigin(row.sourceId('gaia_source_id'), 'gaia_origin'), row.oneOf('resolve_via', RESOLVE_VIA))),
       hd: row.int('hd'),
       x_pc: row.float('x_pc'),
       y_pc: row.float('y_pc'),
@@ -78,7 +82,6 @@ export const MULTIPLES_TSV = defineArtifact({
       name: row.raw('name'),
       source: row.oneOf('source', MULTIPLES_SOURCES),
       regime,
-      resolveVia: row.oneOf('resolve_via', RESOLVE_VIA),
       astrometryVia: row.oneOf('astrometry_via', ASTROMETRY_VIA),
       orbitVia: row.oneOf('orbit_via', ORBIT_VIA),
       spectVia: row.oneOf('spect_via', SPECT_VIA),

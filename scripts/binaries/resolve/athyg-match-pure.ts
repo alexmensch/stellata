@@ -4,7 +4,7 @@ import { directionAtEpoch, unitVectorFromRaDec, type SkyPosition, type UnitVecto
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
-import { pyMod } from '../python-float-pure';
+import { pyMod } from '../../../src/astro-core/angles';
 import {
   ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition,
 } from '../sky-geometry-pure';

@@ -6,7 +6,7 @@ import {
   auditBindingIntegrity, bfsOffset, bindingAuditSourceIds, bindingIntegrityCounts, enforceBindingVerdicts,
   type BindingCandidate, type BindingVerdict, type Edge,
 } from './binding-audit-pure';
-import { componentsOf } from './components-pure';
+import { componentsOf, resolveViaOf } from './components-pure';
 import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, ids, type BiRow } from './resolve-fixture';
 import { OWN } from '../multiples-record-pure';
 
@@ -54,13 +54,13 @@ describe('auditBindingIntegrity', () => {
     expect(v[0].action).toEqual({ kind: 'unbind', targets: [{ token: 'C', sourceId: SX }] });
   });
 
-  it('rebinds a letter carrying two sources to the one at its measured position', () => {
+  it('rebinds a letter carrying two sources to the one at its measured position, under that binding\'s tier', () => {
     const SB = '200';
-    const { verdicts } = audit(
+    const { verdicts, audited, idx } = audit(
       [
-        ['AB', 0.9, 0.0, [SA, null], [SB, null]],
+        ['AB', 0.9, 0.0, [SA, null], [SB, null, 'ccdm_hip']],
         ['AC', 5.0, 0.0, [SA, null], ['300', null]],
-        ['BC', 4.1, 0.0, [SA, null], ['300', null]],
+        ['BC', 4.1, 0.0, [SA, null, 'orb6_hip'], ['300', null]],
       ],
       [biAstro(SA, 0, 0), biAstro(SB, 0, 0.9), biAstro('300', 0, 5)],
     );
@@ -68,7 +68,24 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('geometric');
     expect(v[0].winner?.sourceId).toBe(SB);
-    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'B', sourceId: SB });
+    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'B', sourceId: SB, via: 'ccdm_hip' });
+    const bs = componentsOf(enforceBindingVerdicts(audited, idx)).filter((c) => c.component === 'B');
+    expect(bs.map((c) => [c.gaia?.value, resolveViaOf(c)])).toEqual([[SB, 'ccdm_hip'], [SB, 'ccdm_hip']]);
+  });
+
+  it('rebinds under the strongest tier among the letter\'s instances holding the source', () => {
+    const SB = '200';
+    const { verdicts } = audit(
+      [
+        ['AB', 0.9, 0.0, [SA, null], [SB, null, 'ccdm_hip']],
+        ['AD', 0.9, 0.0, [SA, null], ['400', null]],
+        ['BC', 4.1, 0.0, [SB, null, 'orb6_hip'], ['300', null]],
+        ['BE', 4.1, 0.0, ['600', null], ['500', null]],
+      ],
+      [biAstro(SA, 0, 0), biAstro(SB, 0, 0.9), biAstro('300', 0, 5), biAstro('400', 0.9, 0), biAstro('500', 0, 5), biAstro('600', 9, 9)],
+    );
+    expect(verdicts).toHaveLength(1);
+    expect(ofShape(verdicts, 'letter_sources')[0].action).toEqual({ kind: 'rebind', letter: 'B', sourceId: SB, via: 'orb6_hip' });
   });
 
   it('finds no conflict in a source bound along one ancestry', () => {
@@ -152,10 +169,10 @@ describe('auditBindingIntegrity', () => {
     expect(v).toHaveLength(1);
     expect(v[0].verdict).toBe('identity_refuted');
     expect(v[0].winner?.label).toBe('B');
-    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA });
+    expect(v[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA, via: 'simbad_xid' });
     expect(ofShape(verdicts, 'letter_sources')).toEqual([]);
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
-    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN });
+    expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia).toEqual({ value: SA, origin: OWN, via: 'simbad_xid' });
     expect(after.find((c) => c.component === 'B' && !c.isPrimary)?.gaia?.value).toBe(SX);
   });
 
@@ -173,6 +190,15 @@ describe('auditBindingIntegrity', () => {
     const after = componentsOf(enforceBindingVerdicts(audited, idx));
     expect(after.find((c) => c.component === 'A' && c.isPrimary)?.gaia?.value).toBe(SA);
     expect(after.find((c) => c.component === 'Ba' && c.isPrimary)?.gaia?.value).toBe(SX);
+  });
+
+  it('rebinds under simbad_xid when no instance of the letter holds SIMBAD\'s source', () => {
+    const x = xids(xid(BI_WDS, 'A', SA), xid(BI_WDS, 'B', SX));
+    const blendRowsOrb6: BiRow[] = [['AB', 5.0, 0.0, [SX, null, 'orb6_hip'], [SX, null]], ['AC', 10.0, 0.0, [SX, null, 'orb6_hip'], [SC, null]]];
+    const { verdicts, audited, idx } = audit(blendRowsOrb6, [biAstro(SX, 0, -6.5), biAstro(SC, 0, 0)], { xids: x });
+    expect(ofShape(verdicts, 'source_letters')[0].action).toEqual({ kind: 'rebind', letter: 'A', sourceId: SA, via: 'simbad_xid' });
+    const as = componentsOf(enforceBindingVerdicts(audited, idx)).filter((c) => c.component === 'A');
+    expect(as.map((c) => [c.gaia?.value, c.gaia?.via])).toEqual([[SA, 'simbad_xid'], [SA, 'simbad_xid']]);
   });
 
   it('keeps the blend skip when one side has no identity of its own', () => {
@@ -237,10 +263,10 @@ describe('auditBindingIntegrity', () => {
 
   it('leaves its input as it was', () => {
     const pairs = biSystem([['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]]);
-    const before = componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia]);
+    const before = componentsOf(pairs).map((c) => [c.gaia, c.hip]);
     const idx = indices({ srcToAstrometry: astrometryMap([biAstro(SA, 0, 0), biAstro(SX, 0, 3)]) });
     expect(auditBindingIntegrity(pairs, idx, new Map()).verdicts).toHaveLength(1);
-    expect(componentsOf(pairs).map((c) => [c.gaia, c.hip, c.resolveVia])).toEqual(before);
+    expect(componentsOf(pairs).map((c) => [c.gaia, c.hip])).toEqual(before);
   });
 });
 

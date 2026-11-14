@@ -6,14 +6,9 @@ import {
 import type { WdsPair } from '../../wds/wds-pure';
 import {
   findOwningPair, inheritAs, pairsByDiscoverer, priorityOf, working,
-  type Bound, type DecomposedPair, type Draft, type ResolvedComponent,
+  type Bound, type DecomposedPair, type Draft, type GaiaBinding, type ResolvedComponent,
 } from './components-pure';
-import { inheritedFrom, type IdOrigin, type InheritanceKind, type ResolveVia } from '../multiples-record-pure';
-
-interface SourceBinding {
-  readonly gaia: Bound<string>;
-  readonly via: ResolveVia;
-}
+import { inheritedFrom, type IdOrigin, type InheritanceKind } from '../multiples-record-pure';
 
 /** Each donor's strongest-tier source and first HIP, grouped under `donorKey`
  *  (null: no donor), filled into every heir's gaps under its own key; `origin`
@@ -22,14 +17,14 @@ function inheritWithin(
   out: readonly Draft[], donorKey: (c: Draft) => ComponentKey | null, isHeir: (c: Draft) => boolean,
   origin: (donor: Draft, held: IdOrigin) => IdOrigin,
 ): void {
-  const sources = new Map<ComponentKey, SourceBinding>();
+  const sources = new Map<ComponentKey, GaiaBinding>();
   const hips = new Map<ComponentKey, Bound<number>>();
   for (const c of out) {
     const key = donorKey(c);
     if (key === null) continue;
     const cur = sources.get(key);
-    if (c.gaia !== null && (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via))) {
-      sources.set(key, { gaia: inheritAs(c.gaia, origin(c, c.gaia.origin)), via: c.resolveVia });
+    if (c.gaia !== null && (cur === undefined || priorityOf(c.gaia.via) < priorityOf(cur.via))) {
+      sources.set(key, inheritAs(c.gaia, origin(c, c.gaia.origin)));
     }
     if (c.hip !== null && !hips.has(key)) hips.set(key, inheritAs(c.hip, origin(c, c.hip.origin)));
   }
@@ -37,10 +32,7 @@ function inheritWithin(
     if (!isHeir(c)) continue;
     const key = componentKey(c.wdsId, c.component);
     const binding = sources.get(key);
-    if (c.gaia === null && binding !== undefined) {
-      c.gaia = binding.gaia;
-      c.resolveVia = binding.via;
-    }
+    if (c.gaia === null && binding !== undefined) c.gaia = binding;
     if (c.hip === null) c.hip = hips.get(key) ?? null;
   }
 }
@@ -84,7 +76,6 @@ function copyBinding(dst: Draft, src: ResolvedComponent, how: InheritanceKind): 
   let changed = false;
   if (dst.gaia === null && src.gaia !== null) {
     dst.gaia = inheritAs(src.gaia, origin);
-    dst.resolveVia = src.resolveVia;
     changed = true;
   }
   if (dst.hip === null && src.hip !== null) {
@@ -145,14 +136,14 @@ export function inheritDownwardParentBindings(
   pairs: readonly DecomposedPair[], onlyWdsIds: ReadonlySet<string>,
 ): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
   const w = working(pairs);
-  const bound = new Map<ComponentKey, { gaia: Bound<string>; via: ResolveVia; hip: Bound<number> | null }>();
+  const bound = new Map<ComponentKey, { gaia: GaiaBinding; hip: Bound<number> | null }>();
   const canon: { token: string; c: Draft }[] = [];
   for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (!onlyWdsIds.has(pair.wdsId)) continue;
     for (const [token, c] of [[p.component, p], [canonicalCompLetter(p.component, s.component), s]] as const) {
       canon.push({ token, c });
       const key = componentKey(pair.wdsId, token);
-      if (c.gaia !== null && !bound.has(key)) bound.set(key, { gaia: c.gaia, via: c.resolveVia, hip: c.hip });
+      if (c.gaia !== null && !bound.has(key)) bound.set(key, { gaia: c.gaia, hip: c.hip });
     }
   }
   const seeded: Draft[] = [];
@@ -164,7 +155,6 @@ export function inheritDownwardParentBindings(
     if (binding === undefined) continue;
     const origin = inheritedFrom(parent, 'parent');
     c.gaia = inheritAs(binding.gaia, origin);
-    c.resolveVia = binding.via;
     if (c.hip === null && binding.hip !== null) c.hip = inheritAs(binding.hip, origin);
     seeded.push(c);
   }
