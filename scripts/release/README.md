@@ -194,9 +194,9 @@ preview URL.
 ## Invariants
 
 - **Idempotent by release, not by tag.** A rerun skips any tag that
-  already has a *release*; a tag that exists without one still gets its
-  release created. Checking the tag instead would strand a run that
-  died between `git push` and `gh release create`.
+  already has a *release*; a tag that exists without one — pushed by hand
+  through the [Manual release](/RELEASING.md#manual-release-fallback)
+  fallback, or for a commit with no PR — still gets its release created.
 - **`--latest` goes to the newest planned release only.** Back-filling
   older versions must not move the repo's "Latest" pointer backwards.
 - **A missing notes section is not an error.** Falls back to
