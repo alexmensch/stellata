@@ -45,7 +45,8 @@ Each has its own README.
   as Python computes it, so a tiny negative `x` rounds up to `m` rather
   than wrapping to 0 — the edge `multiples.tsv`'s bytes rest on. Write no
   `((x % m) + m) % m`: it rounds before the remainder and wraps that edge
-  the other way. Also `angleBetweenRad`, the unsigned angle between two
+  the other way ([Floor modulos](/tests/README.md#floor-modulos) fails the
+  suite on it). Also `angleBetweenRad`, the unsigned angle between two
   unnormalised vectors as `atan2(|a×b|, a·b)` — **the small-angle-safe
   form, and the reason it is not `phaseAngleFromLegs`**: the cosine is
   flat near zero, so at 1e-6 rad the normalised dot rounds to 1 and

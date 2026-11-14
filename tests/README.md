@@ -85,6 +85,9 @@ doc-pointer-resolution.test.ts
                          or anchor that exists — the codebase's wiki
                          links, checked. Grammar, scope and resolution:
                          README.md#doc-pointer-resolution.
+floor-modulo-rules.test.ts
+                         No floor modulo hand-rolled outside pyMod
+                         (#floor-modulos).
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
@@ -631,3 +634,19 @@ orders by the machine's locale. A sort meant for people to read in their
 locale is exempt by name (`LOCALE_ORDER_ALLOWED`, each with its reason), and
 an exemption that no longer sorts by locale fails. A projection subtraction
 inside a chain (`a.n - b.n || …`) is not matched.
+
+## Floor modulos
+
+`floor-modulo-rules.test.ts` scans every non-test, non-declaration
+TypeScript file under `src/` and `scripts/` and fails on a floor modulo
+spelled by hand: `((x % m) + m) % m`, `(x + m) % m`, or
+`x < 0 ? x + m : x`, where every `m` is the same token. Each goes through
+`pyMod` in `/src/astro-core/angles.ts`, the one file exempt
+([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
+`(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
+since it is the add-once spelling of the same wrap.
+
+`HAND_ROLLED_ALLOWED` pins each pre-existing file to its exact hit count,
+so a new site in a listed file fails as surely as one elsewhere, and a
+site fixed without shrinking its entry fails too. The list is meant to
+empty, never to grow. Tests are not scanned.
