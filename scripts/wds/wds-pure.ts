@@ -3,10 +3,20 @@
 import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 import { floorVerdict, formatFraction, formatShare, share } from '../util/counts/tally-pure';
+import { sourceRowRef, type AnySourceRowRef, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
 import type { Declared } from '../util/sources/source';
 import { floatCell, intCell } from '../util/tsv/table-pure';
 
+/** A pair as WDS and ORB6 both name it. */
+export type WdsPairRowKey = Pick<WdsPair, 'wdsId' | 'discoverer' | 'components'>;
+
+export function wdsPairRowKey(id: string): RowKey<WdsPairRowKey> {
+  return { id, text: ({ wdsId, discoverer, components }) => `${wdsId}/${discoverer}/${components}` };
+}
+
 export interface WdsPair {
+  /** The row that founded the pair: its WDS summary row, or the row a synthesized pair stands for. */
+  readonly origin: AnySourceRowRef;
   /** `HHMMm±DDMM`. */
   readonly wdsId: string;
   readonly discoverer: string;
@@ -180,17 +190,19 @@ function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, pr
   }
 }
 
-export function parseWdsSumm(text: string, from: Declared): WdsPair[] {
+export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowKey>): WdsPair[] {
   const keep = (line: string): boolean => line.length >= 22 && !WDS_HEADER.test(line) && PY_INT.test(line.slice(0, 5));
   const pairs: WdsPair[] = [];
   for (const l of fixedWidthLines(text, from, WDS_LINE_WIDTH, keep)) {
     const wdsId = l.slice(0, 10).trim();
     const discoverer = l.slice(10, 17).trim();
     if (!wdsId || !discoverer) continue;
+    const components = l.slice(17, 22).trim();
     pairs.push({
+      origin: sourceRowRef(from, { wdsId, discoverer, components }),
       wdsId,
       discoverer,
-      components: l.slice(17, 22).trim(),
+      components,
       dateLast: l.int('date_last', 28, 32),
       thetaLast: l.sepPa('theta_last', 42, 45),
       rhoLast: l.sepPa('rho_last', 52, 57),
@@ -260,8 +272,12 @@ export function splitComponents(components: string): readonly [string, string] |
   return s.length === 2 ? [s[0], s[1]] : null;
 }
 
-/** `outcomes` is one per input row. */
-export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; outcomes: readonly WdsDedupOutcome[] } {
+export interface WdsDedupDecision {
+  readonly row: WdsPair;
+  readonly outcome: WdsDedupOutcome;
+}
+
+export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; decisions: readonly WdsDedupDecision[] } {
   const best = new Map<string, number>();
   pairs.forEach((p, i) => {
     const key = `${p.wdsId}\u0000${p.discoverer}\u0000${p.components}`;
@@ -271,6 +287,6 @@ export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly W
   const keep = new Set(best.values());
   return {
     pairs: pairs.filter((_, i) => keep.has(i)),
-    outcomes: pairs.map((_, i) => (keep.has(i) ? 'kept' : 'dropped')),
+    decisions: pairs.map((row, i) => ({ row, outcome: keep.has(i) ? 'kept' : 'dropped' })),
   };
 }

@@ -53,8 +53,8 @@ describe('assembleReferenceCatalogs', () => {
       '10000+0000 MSC Aa,Ab',
     ]);
     expect(c.orb6.map((e) => e.components)).toEqual(['AB', 'Aa,Ab']);
-    expect(c.blankRescue).toEqual(['rescued', 'donor']);
-    expect(c.wdsDedup).toEqual(['dropped', 'kept', 'kept', 'kept']);
+    expect(c.blankRescue.map((d) => d.outcome)).toEqual(['rescued', 'donor']);
+    expect(c.wdsDedup.map((d) => d.outcome)).toEqual(['dropped', 'kept', 'kept', 'kept']);
     expect(c.orb6Overrides).toEqual(['unchanged', 'applied']);
   });
 

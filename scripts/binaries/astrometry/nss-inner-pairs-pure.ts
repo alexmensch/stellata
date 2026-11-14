@@ -7,6 +7,8 @@ import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
 import { componentsOf, inheritAs, type DecomposedPair, type GaiaBinding, type ResolvedComponent } from '../resolve/components-pure';
 import { inheritedFrom } from '../multiples-record-pure';
+import { GAIA_NSS } from '../../catalog/sources/gaia-nss-source';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
@@ -97,7 +99,7 @@ export function synthesizeNssInnerPairs(
 
     const [a, b] = verdict.children;
     const pair = subResolutionPair(
-      c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
+      sourceRowRef(GAIA_NSS, carrier.gaia.value), c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
     );
     const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({

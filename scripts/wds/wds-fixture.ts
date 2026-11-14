@@ -1,15 +1,19 @@
 // Test-only builders for the WDS summary and ORB6 row types.
 
+import { sourceRowRef } from '../util/sources/row-ref-pure';
 import type { Orb6Entry, WdsPair } from './wds-pure';
+import { WDS_SUMM } from './wds-source';
 
+/** Founded on its own WDS summary row unless `over.origin` names another. */
 export function wdsPair(over: Partial<WdsPair> = {}): WdsPair {
-  return {
+  const fields = {
     wdsId: 'WDS-1', discoverer: 'TST   1', components: 'AB',
     dateLast: 2020, rhoLast: 5.0, thetaLast: 90.0, magPri: 4.0, magSec: 6.0,
     spectral: '', notes: '    ', precise: { raDeg: 100.0, decDeg: 0.0 },
     nObs: null, dateFirst: null, thetaFirst: null, rhoFirst: null,
     ...over,
   };
+  return { ...fields, origin: over.origin ?? sourceRowRef(WDS_SUMM, fields) };
 }
 
 export function blankPair(wdsId: string, discoverer = 'TST   1'): WdsPair {

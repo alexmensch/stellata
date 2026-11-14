@@ -37,8 +37,8 @@ scripts/binaries/multiples/
 `Stage6Result.rows` is the file's row order: two rows per kept, placed pair in
 Stage 3's pair order, then the standalone rows in the SIMBAD cross-ID file's
 order. A kept pair with no position on either side and no system anchor is not
-a row; its `<wds_id><components>` is in `droppedNoPosition`, the only record of
-it. `mscMagFills` names the pairs whose magnitudes came from the MSC.
+a row; the pair itself is in `droppedNoPosition`. `mscMagFills` names the
+pairs whose magnitudes came from the MSC.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,

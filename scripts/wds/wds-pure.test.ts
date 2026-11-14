@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { sourceRowRefText } from '../util/sources/row-ref-pure';
 import { wdsPair } from './wds-fixture';
+import { WDS_SUMM } from './wds-source';
 
 const FIXTURE = { file: 'fixture/wds.txt', hint: 'h' } as const;
+const SUMM_FIXTURE = { ...WDS_SUMM, ...FIXTURE };
 import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm, splitComponents } from './wds-pure';
 
 describe('measuredOffset', () => {
@@ -33,39 +36,40 @@ const ORB6_STF1110 = '073435.86+315317.8 07346+3153 STF1110AB       6175  60178 
 
 describe('parseWdsSumm', () => {
   it('skips the header block and reads ids, dates and the precise coordinate', () => {
-    const [pr, ...rest] = parseWdsSumm(`${WDS_HEADER_BLOCK}${WDS_LINE}\n`, FIXTURE);
+    const [pr, ...rest] = parseWdsSumm(`${WDS_HEADER_BLOCK}${WDS_LINE}\n`, SUMM_FIXTURE);
     expect(rest).toEqual([]);
     expect(pr.wdsId).toBe('00000+7530');
     expect(pr.discoverer).toBe('A  1248');
     expect(pr.dateLast).toBe(1982);
     expect(pr.precise?.decDeg).toBeCloseTo(75.4833, 2);
+    expect(sourceRowRefText(pr.origin)).toBe(`wds:00000+7530/A  1248/${pr.components}`);
   });
 
   it('reads both ρ / θ sentinels as no measurement', () => {
     const noMeasurement = withCells(withCells(WDS_LINE, 42, '-1 '), 52, '-1.0 ');
     const overflow = withCells(WDS_LINE, 52, '999.9');
-    const [a] = parseWdsSumm(`${WDS_HEADER_BLOCK}${noMeasurement}\n`, FIXTURE);
-    const [b] = parseWdsSumm(`${WDS_HEADER_BLOCK}${overflow}\n`, FIXTURE);
+    const [a] = parseWdsSumm(`${WDS_HEADER_BLOCK}${noMeasurement}\n`, SUMM_FIXTURE);
+    const [b] = parseWdsSumm(`${WDS_HEADER_BLOCK}${overflow}\n`, SUMM_FIXTURE);
     expect([a.rhoLast, a.thetaLast, b.rhoLast]).toEqual([null, null, null]);
-    const [c] = parseWdsSumm(`${withCells(WDS_LINE, 52, '999.8')}\n`, FIXTURE);
+    const [c] = parseWdsSumm(`${withCells(WDS_LINE, 52, '999.8')}\n`, SUMM_FIXTURE);
     expect(c.rhoLast).toBe(999.8);
   });
 
   it('reads a lone `.` as no value and throws on any other non-number, naming the field', () => {
-    expect(parseWdsSumm(`${withCells(WDS_LINE, 58, '    .')}\n`, FIXTURE)[0].magPri).toBeNull();
-    expect(() => parseWdsSumm(`${withCells(WDS_LINE, 58, 'abcde')}\n`, FIXTURE))
+    expect(parseWdsSumm(`${withCells(WDS_LINE, 58, '    .')}\n`, SUMM_FIXTURE)[0].magPri).toBeNull();
+    expect(() => parseWdsSumm(`${withCells(WDS_LINE, 58, 'abcde')}\n`, SUMM_FIXTURE))
       .toThrow(/fixture\/wds\.txt:1: mag_pri: "abcde" is not a decimal number/);
   });
 
   it('passes with precise coordinates present and throws past the coverage floor', () => {
     const present = Array.from({ length: 20 }, () => WDS_LINE).join('\n');
-    expect(parseWdsSumm(`banner\n${present}\n`, FIXTURE)).toHaveLength(20);
+    expect(parseWdsSumm(`banner\n${present}\n`, SUMM_FIXTURE)).toHaveLength(20);
     const drifted = [...Array.from({ length: 18 }, () => WDS_BASE.padEnd(130)), WDS_LINE, WDS_LINE].join('\n');
-    expect(() => parseWdsSumm(`banner\n${drifted}\n`, FIXTURE)).toThrow(/'precise' non-null rate 10\.0% .*column-offset drift/);
+    expect(() => parseWdsSumm(`banner\n${drifted}\n`, SUMM_FIXTURE)).toThrow(/'precise' non-null rate 10\.0% .*column-offset drift/);
   });
 
   it('throws on a summary with no rows, its rate n/a', () => {
-    expect(() => parseWdsSumm('banner\n', FIXTURE)).toThrow(/'precise' non-null rate n\/a \(0\/0\) below 95% floor — no rows parsed/);
+    expect(() => parseWdsSumm('banner\n', SUMM_FIXTURE)).toThrow(/'precise' non-null rate n\/a \(0\/0\) below 95% floor — no rows parsed/);
   });
 });
 
@@ -86,17 +90,18 @@ describe('dedupWdsPairRows', () => {
   it('keeps the most-observed duplicate', () => {
     const low = cd(3, 1.5);
     const high = cd(7, 3.5);
-    expect(dedupWdsPairRows([low, high])).toEqual({ pairs: [high], outcomes: ['dropped', 'kept'] });
+    expect(dedupWdsPairRows([low, high])).toEqual({ pairs: [high], decisions: [{ row: low, outcome: 'dropped' }, { row: high, outcome: 'kept' }] });
   });
 
   it('keeps the first of a tie', () => {
     const first = cd(3, 3.5);
-    expect(dedupWdsPairRows([first, cd(3, 1.5)])).toEqual({ pairs: [first], outcomes: ['kept', 'dropped'] });
+    const second = cd(3, 1.5);
+    expect(dedupWdsPairRows([first, second])).toEqual({ pairs: [first], decisions: [{ row: first, outcome: 'kept' }, { row: second, outcome: 'dropped' }] });
   });
 
   it('passes distinct keys through in order', () => {
     const rows = [cd(3, 1.0), wdsPair({ wdsId: '17247-3412', discoverer: 'WSI  62', components: 'AB', nObs: 2 })];
-    expect(dedupWdsPairRows(rows)).toEqual({ pairs: rows, outcomes: ['kept', 'kept'] });
+    expect(dedupWdsPairRows(rows)).toEqual({ pairs: rows, decisions: rows.map((row) => ({ row, outcome: 'kept' })) });
   });
 });
 
