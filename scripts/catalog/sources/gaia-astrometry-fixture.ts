@@ -1,7 +1,7 @@
-// Test-only builder for GaiaAstrometryCatalogRow. See README.md.
+// Test-only builder for GaiaAstrometryRow. See README.md.
 
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
-import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from './gaia-astrometry-source';
+import { GAIA_ASTROMETRY, type GaiaAstrometryRow } from './gaia-astrometry-source';
 
 /** A row with every optional column absent, so a suite states only the columns
  *  its assertion turns on. Parallax is one of them, which makes the default a
@@ -9,8 +9,8 @@ import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from './gaia-astrometr
  *  the roster is the point: a column added to the interface lands here once
  *  instead of in every suite that happens to build a row. */
 export function gaiaAstrometryRow(
-  overrides: Partial<GaiaAstrometryCatalogRow> = {},
-): GaiaAstrometryCatalogRow {
+  overrides: Partial<GaiaAstrometryRow> = {},
+): GaiaAstrometryRow {
   return {
     raDeg: 0,
     decDeg: 0,

@@ -129,7 +129,7 @@ after it, so a subset join never materialises the table.
 
 ## The direction tier's two Gaia files
 
-`directions.gaiaAstrometry` is fed by `gaia_dr3_astrometry_catalog.tsv` and,
+`directions.gaiaAstrometry` is fed by `gaia_dr3_astrometry.tsv` and,
 when `MAGNITUDE_FLOOR_V` is set, by the magnitude pull's own rows for the
 sources that term admitted — same schema, same parser, so tier 1 sees one kind
 of row and cannot tell which file it came from. Only the manifest rows marked

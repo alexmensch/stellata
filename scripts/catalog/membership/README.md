@@ -238,7 +238,7 @@ of ids resting on it visible.
 **An asserted id still needs a second witness**, because the count cannot
 supply one: a mistyped digit leaves every `disposition.*` code reading what it
 read before, so nothing but the value itself says it is wrong. The generator therefore requires every asserted
-id to be a source `data/gaia/gaia_dr3_astrometry_catalog.tsv` carries, and
+id to be a source `data/gaia/gaia_dr3_astrometry.tsv` carries, and
 fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
 whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
 a gap in what SIMBAD publishes for two objects, not a rule

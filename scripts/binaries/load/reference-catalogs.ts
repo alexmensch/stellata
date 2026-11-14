@@ -37,7 +37,7 @@ import {
   type WdsPair,
 } from '../../wds/wds-pure';
 import { ORB6, WDS_SUMM } from '../../wds/wds-source';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** Expected parse cardinalities, about 10% either side of the frozen
  *  catalogues; a new upstream release re-pins them deliberately. CCDM is the
@@ -61,7 +61,7 @@ export interface Stage1Inputs {
   readonly hipToGaia: ReadonlyMap<number, string>;
   readonly tycToGaia: ReadonlyMap<string, string>;
   readonly nss: ReadonlyMap<string, NssOrbitRow>;
-  readonly astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>;
+  readonly astrometry: ReadonlyMap<string, GaiaAstrometryRow>;
   readonly astrometryExclusions: ReadonlyMap<string, string>;
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly simbadSptypeByOid: ReadonlyMap<number, string>;

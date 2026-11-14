@@ -2,7 +2,7 @@
 // fitted none for. Index over multiples.tsv × the DR3 astrometry table; the
 // cascade tier that reads it is in parallax-cascade.ts. See README.md.
 
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import type { MultiplesTsvRow } from '../../companions/companion-promotion';
 import { wdsRootOf } from '../../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
@@ -89,7 +89,7 @@ function precisionRank(s: SiblingParallax): number {
  *  participate. */
 export function buildPairMemberParallaxIndex(
   multiplesRows: readonly MultiplesTsvRow[],
-  gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>,
+  gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>,
 ): PairMemberParallaxIndex {
   const index = emptyPairMemberParallaxIndex();
   const seenSource = new Map<string, Set<string>>();

@@ -2,7 +2,7 @@
 // cascade's three printed tiers, SIMBAD's WDS component cross-IDs.
 // See ../../classic-ids/README.md#the-gates-evidence-has-to-be-pulled.
 
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
 import { HIP_PHOTOMETRY } from '../../photometry/hip-photometry-source';
 import type { PrintedHipValue } from '../../photometry/hip-photometry-parse-pure';
@@ -20,7 +20,7 @@ export function loadHipVMag(): Map<number, PrintedHipValue> {
  *  binding, on sources the record build refuses. */
 export function loadBindingEvidence(printedV: PrintedVLookups): {
   evidence: BindingEvidence;
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  gaiaAstrometry: Map<string, GaiaAstrometryRow>;
 } {
   const gaiaAstrometry = GAIA_ASTROMETRY.read();
   const wdsXids = parseSimbadWdsXidsTsv(SIMBAD_WDS_XIDS.read());

@@ -10,7 +10,7 @@ import { foldStageLines } from '../lineage/lineage-row-pure';
 import type { Star } from '../parse/stars-parse';
 import { makeStar } from '../parse/star-fixture';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
-import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { HIP2 } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
@@ -43,8 +43,8 @@ function pairRow(
 }
 
 function gaiaRow(
-  overrides: Partial<GaiaAstrometryCatalogRow>,
-): GaiaAstrometryCatalogRow {
+  overrides: Partial<GaiaAstrometryRow>,
+): GaiaAstrometryRow {
   return gaiaAstrometryRow({
     parallaxMas: 10, parallaxErrorMas: 0.1,
     pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1.0, ipdFracMultiPeak: 0, gMag: 8,

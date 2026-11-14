@@ -11,7 +11,7 @@ import { readTable, tableLineReader, type TableRow } from '../../util/tsv/table-
  *  ra/dec are at J2016.0. `parallaxMas === null` marks a 2p
  *  (position-only) solution — Gaia detected the source but could not
  *  fit parallax + PM. */
-export interface GaiaAstrometryCatalogRow {
+export interface GaiaAstrometryRow {
   raDeg: number;
   decDeg: number;
   parallaxMas: number | null;
@@ -48,7 +48,7 @@ type AstrometryRow = TableRow<(typeof ASTROMETRY_COLUMNS)[number]>;
  *  numeric parse would corrupt the key. */
 function foldAstrometryRow(
   row: AstrometryRow,
-  onRow: (sourceId: string, row: GaiaAstrometryCatalogRow) => void,
+  onRow: (sourceId: string, row: GaiaAstrometryRow) => void,
   from: RowKeyed<string>,
   keep?: ReadonlySet<string>,
 ): void {
@@ -83,7 +83,7 @@ function foldAstrometryRow(
  *  table. `keep` filters to a subset. */
 export function gaiaAstrometryLineReader(
   from: Declared & RowKeyed<string>,
-  onRow: (sourceId: string, row: GaiaAstrometryCatalogRow) => void,
+  onRow: (sourceId: string, row: GaiaAstrometryRow) => void,
   keep?: ReadonlySet<string>,
 ): (raw: string) => void {
   return tableLineReader({ ...from, columns: ASTROMETRY_COLUMNS }, (row) => foldAstrometryRow(row, onRow, from, keep));
@@ -94,9 +94,9 @@ export function gaiaAstrometryAccumulator(
   keep?: ReadonlySet<string>,
 ): {
   line: (raw: string) => void;
-  result: () => Map<string, GaiaAstrometryCatalogRow>;
+  result: () => Map<string, GaiaAstrometryRow>;
 } {
-  const out = new Map<string, GaiaAstrometryCatalogRow>();
+  const out = new Map<string, GaiaAstrometryRow>();
   return {
     line: gaiaAstrometryLineReader(from, (sourceId, row) => out.set(sourceId, row), keep),
     result: () => out,
@@ -106,9 +106,9 @@ export function gaiaAstrometryAccumulator(
 export function parseGaiaAstrometryTsv(
   text: string,
   from: Declared & RowKeyed<string>,
-): Map<string, GaiaAstrometryCatalogRow> {
-  const out = new Map<string, GaiaAstrometryCatalogRow>();
-  const keepRow = (sourceId: string, row: GaiaAstrometryCatalogRow): void => { out.set(sourceId, row); };
+): Map<string, GaiaAstrometryRow> {
+  const out = new Map<string, GaiaAstrometryRow>();
+  const keepRow = (sourceId: string, row: GaiaAstrometryRow): void => { out.set(sourceId, row); };
   for (const row of readTable({ ...from, columns: ASTROMETRY_COLUMNS }, text)) foldAstrometryRow(row, keepRow, from);
   return out;
 }
@@ -117,6 +117,6 @@ export const GAIA_ASTROMETRY = defineSource({
   file: DATA_FILES.gaiaAstrometry,
   hint: 'Re-run `pnpm run refresh:gaia-astrometry`.',
   rowKey: { id: 'gaia-dr3-astrometry', text: (sourceId: string) => sourceId },
-  parse: (input): Map<string, GaiaAstrometryCatalogRow> =>
+  parse: (input): Map<string, GaiaAstrometryRow> =>
     parseGaiaAstrometryTsv(input.text(), GAIA_ASTROMETRY),
 });

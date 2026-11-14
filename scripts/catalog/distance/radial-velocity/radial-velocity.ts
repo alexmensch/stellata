@@ -2,7 +2,7 @@
 // → zero radial term, with the Gaia-bibcode skip rule. See README.md.
 
 import { VELOCITY_SANITY_CEILING_KM_S } from '../velocity';
-import { type GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import { type GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import {
   gaiaHas5pSolution,
   gaiaRefusals,
@@ -73,7 +73,7 @@ export type RadialVelocityResolution = CascadeResult<
 >;
 
 export interface RadialVelocitySources {
-  gaia: GaiaAstrometryCatalogRow | null;
+  gaia: GaiaAstrometryRow | null;
   simbad: SimbadRadialVelocity | null;
 }
 

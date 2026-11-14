@@ -12,7 +12,7 @@ import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geomet
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
 export type BindingShape = (typeof BINDING_SHAPES)[number];
@@ -159,16 +159,16 @@ export function bfsOffset(adj: SystemContext['adj'], start: string, goal: string
   })).get(goal) ?? null;
 }
 
-function sourceOffset(src: GaiaAstrometryCatalogRow, ref: GaiaAstrometryCatalogRow, epoch: number | null): TangentOffset {
+function sourceOffset(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, epoch: number | null): TangentOffset {
   if (epoch === null) return tangentOffset({ raDeg: src.raDeg, decDeg: src.decDeg }, { raDeg: ref.raDeg, decDeg: ref.decDeg });
-  const at = (r: GaiaAstrometryCatalogRow) => skyPositionAtEpoch(
+  const at = (r: GaiaAstrometryRow) => skyPositionAtEpoch(
     { raDeg: r.raDeg, decDeg: r.decDeg }, { pmRaMasyr: r.pmraMasyr, pmDecMasyr: r.pmdecMasyr }, r.refEpoch, epoch,
   );
   return tangentOffset(at(src), at(ref));
 }
 
 /** The better of J2016.0 and, when the chain carries one, the WDS edge epoch. */
-function arbitrationError(src: GaiaAstrometryCatalogRow, ref: GaiaAstrometryCatalogRow, predicted: Edge): number {
+function arbitrationError(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, predicted: Edge): number {
   const miss = (o: TangentOffset) => Math.hypot(o.eastArcsec - predicted.eastArcsec, o.northArcsec - predicted.northArcsec);
   const err = miss(sourceOffset(src, ref, null));
   return predicted.epoch === null ? err : Math.min(err, miss(sourceOffset(src, ref, predicted.epoch)));
@@ -209,7 +209,7 @@ export type VerdictAction =
 interface Reference {
   readonly token: string;
   readonly sourceId: string;
-  readonly astro: GaiaAstrometryCatalogRow;
+  readonly astro: GaiaAstrometryRow;
 }
 
 /** A letter whose one source has astrometry, every predicted offset's anchor:

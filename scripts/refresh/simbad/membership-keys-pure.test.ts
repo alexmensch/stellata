@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import {
   GAIA_NATIVE_BINDING, GATE_REPRODUCED_BINDING, gaiaCompleteSourceIds, glSuffix, keyedRows, membershipKeys, requestLines, valueCohort,
 } from './membership-keys-pure';
@@ -104,9 +104,9 @@ describe('valueCohort', () => {
 });
 
 describe('gaiaCompleteSourceIds', () => {
-  const row = (values: Partial<GaiaAstrometryCatalogRow>) => ({
+  const row = (values: Partial<GaiaAstrometryRow>) => ({
     parallaxMas: 1, pmraMasyr: 2, pmdecMasyr: 2.5, radialVelocityKmS: 3, ...values,
-  }) as GaiaAstrometryCatalogRow;
+  }) as GaiaAstrometryRow;
 
   it('needs a parallax, both proper-motion components and a radial velocity', () => {
     expect(gaiaCompleteSourceIds(new Map([

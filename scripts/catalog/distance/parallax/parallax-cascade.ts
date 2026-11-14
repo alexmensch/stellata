@@ -4,7 +4,7 @@
 
 import { gaiaRefusals, refusedPublicationCited, type RefusedPublication } from '../gaia-distrust';
 import type { Hip2AstrometryRow } from '../../sources/hip2-source';
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import { parallaxSignalToNoise } from '../../cited-parallax';
 import type { CitedParallax, MeasuredParallax } from '../../cited-parallax';
 import type { CascadeResult, CascadeRefusal } from '../../cascade-result';
@@ -38,7 +38,7 @@ export interface OriginPlacement {
 }
 
 export interface ParallaxSources {
-  gaia: GaiaAstrometryCatalogRow | null;
+  gaia: GaiaAstrometryRow | null;
   hip2: Hip2AstrometryRow | null;
   cns5: CitedParallax | null;
   gliese: GlieseRow | null;

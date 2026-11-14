@@ -188,7 +188,7 @@ side and the record side must not drift on what counts as a bad binding — and
 until the lower two tiers landed here they drifted on evidence *reach*, with
 the label gate weighing 99,799 rows against the derivation's whole spine.
 
-The `G` comes from `data/gaia/gaia_dr3_astrometry_catalog.tsv`, and **`gMagOf`
+The `G` comes from `data/gaia/gaia_dr3_astrometry.tsv`, and **`gMagOf`
 returning null is not a rejection — it is a pass.** So a candidate the
 astrometry pull does not cover is not merely unvetted, it is silently
 accepted.

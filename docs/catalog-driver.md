@@ -930,7 +930,7 @@ Rules:
   Tycho-2-tier records.
 - **Binding-gate note.** GSPC and the SIMBAD values pull consume the
   spine's already-gated `gaia_source_id`/HIP keys (same shape as Apsis
-  and the astrometry catalog), so the [§ 4](#4-how-hd-reaches-gaia) gate does not re-run. Tycho-2
+  and the astrometry pull), so the [§ 4](#4-how-hd-reaches-gaia) gate does not re-run. Tycho-2
   and CNS5 value columns join on the record's own TYC/GJ designation —
   value joins, not identity joins, and never positional. The SIMBAD
   pulls' **widening ladder** is the one place a value join carries binding

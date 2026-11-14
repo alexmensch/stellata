@@ -11,7 +11,7 @@ direction and velocity in `../distance/`, the anchor grade in
 
 ```
 scripts/catalog/sources/
-  gaia-astrometry-source.ts       GAIA_ASTROMETRY and GaiaAstrometryCatalogRow,
+  gaia-astrometry-source.ts       GAIA_ASTROMETRY and GaiaAstrometryRow,
     (+ test)                      the one Gaia DR3 astrometry row fold: the
                                   catalogue table reads it whole
                                   (parseGaiaAstrometryTsv), and the
@@ -34,7 +34,7 @@ scripts/catalog/sources/
                                   and parseNssIndex: the source_ids carrying
                                   an NSS two-body orbit, the only signal the
                                   catalogue reads.
-  gaia-astrometry-fixture.ts      Test-only GaiaAstrometryCatalogRow builder.
+  gaia-astrometry-fixture.ts      Test-only GaiaAstrometryRow builder.
                                   A module, not an export from a test file:
                                   suites in distance/, multiplicity/, parse/
                                   and companions/ build these rows, and a

@@ -19,7 +19,7 @@ import {
   TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type Tycho2Row,
 } from '../tycho2-parse';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
-import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import { type GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { GAIA_NSS } from '../sources/gaia-nss-source';
 import { HIP2, type Hip2AstrometryRow } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
@@ -54,7 +54,7 @@ const solve = (
 const dirOf = (s: DirectionSolution): UnitVector =>
   directionOnPm(s, s.srcPmraMasyr, s.srcPmdecMasyr);
 
-function gaiaRow(overrides: Partial<GaiaAstrometryCatalogRow> = {}): GaiaAstrometryCatalogRow {
+function gaiaRow(overrides: Partial<GaiaAstrometryRow> = {}): GaiaAstrometryRow {
   return gaiaAstrometryRow({
     raDeg: 100, decDeg: 20,
     parallaxMas: 50,
@@ -220,7 +220,7 @@ describe('direction-cascade / resolveDirection routing', () => {
   });
 
   it('names the Gaia solution each HIP2 route passed over, and only those', () => {
-    const refusalsOf = (gaia: GaiaAstrometryCatalogRow | null, hip2 = hip2Row()) =>
+    const refusalsOf = (gaia: GaiaAstrometryRow | null, hip2 = hip2Row()) =>
       resolveDirection(inputs({ sourceId: SID, hip: 42 }), sources({
         gaiaAstrometry: new Map(gaia === null ? [] : [[SID, gaia]]),
         hip2: new Map([[42, hip2]]),
@@ -392,7 +392,7 @@ describe('resolveDirection velocity solution', () => {
   });
 
   it('a 2p Gaia row (null PM) routes velocity to zero', () => {
-    const twoP: GaiaAstrometryCatalogRow = {
+    const twoP: GaiaAstrometryRow = {
       ...gaiaRow, pmraMasyr: null, pmdecMasyr: null,
     };
     const sources: DirectionSources = {

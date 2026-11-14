@@ -5,7 +5,7 @@ import { buildMscLookup } from './msc-pure';
 import { buildIndices, parseCcdmIndex, scrubAthygGaia, type IndexInputs } from './indices-pure';
 import { FIXTURE, athygRow, gaia5pRow } from './load-fixture';
 import type { AthygRow } from './athyg-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 function indices(over: Partial<IndexInputs> = {}) {
   return buildIndices({
@@ -17,7 +17,7 @@ function indices(over: Partial<IndexInputs> = {}) {
   });
 }
 
-function withGate(athyg: AthygRow[], hipToGaia: Map<number, string>, astrometry: GaiaAstrometryCatalogRow[]) {
+function withGate(athyg: AthygRow[], hipToGaia: Map<number, string>, astrometry: GaiaAstrometryRow[]) {
   const srcToAstrometry = new Map(astrometry.map((r) => [r.ref.row, r]));
   const scrubbed = scrubAthygGaia(athyg, srcToAstrometry);
   return { scrubbed, idx: indices({ athyg: scrubbed.rows, hipToGaia, srcToAstrometry, athygGaiaMagRejected: scrubbed.rejected }) };

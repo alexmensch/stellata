@@ -1,7 +1,7 @@
 # The astrometry request
 
 The source_id list the one Gaia 5p pull is made against. `pnpm run
-build:astrometry-request` emits `data/gaia/gaia_catalog_source_id_request.tsv`
+build:astrometry-request` emits `data/gaia/gaia_astrometry_source_id_request.tsv`
 — **388,982** ids, the union of four contributions the table's
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
@@ -77,7 +77,7 @@ and requesting them would re-pull 598,464 rows that file already holds.
 
 ## The request is a union, and why that is not a compromise
 
-`data/gaia/gaia_dr3_astrometry_catalog.tsv` has **four** contributors wanting
+`data/gaia/gaia_dr3_astrometry.tsv` has **four** contributors wanting
 different sets, so the request is the union of all four:
 
 | Contribution | Ids | Consumer |
@@ -188,9 +188,9 @@ What no request can fix is `gateSkippedNullGMag` (<!-- count:classic-id-overlay/
 
 ## What the pulled set feeds
 
-The request drives `refresh:gaia-astrometry-catalog`
+The request drives `refresh:gaia-astrometry`
 (`scripts/refresh/gaia-request/`) →
-the astrometry catalog, which is tier 1 of the direction cascade and the rv
+the astrometry pull, which is tier 1 of the direction cascade and the rv
 cascade, the source of the BP/RP the V and ci cascades transform, both
 gates' evidence above, and the binaries' per-component astrometry.
 `refresh:gaia-gspc`, `refresh:gaia-apsis` and `refresh:bailer-jones` read the

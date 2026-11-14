@@ -4,7 +4,7 @@
 
 import { gaiaRefusals, refusedPublicationCited } from '../gaia-distrust';
 import type { VelocityVia } from '../velocity';
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import type { Tycho2Row } from '../../tycho2-parse';
 import type { CitedProperMotion } from '../../cited-proper-motion';
 import type { CascadeResult, CascadeRefusal, UniformValues } from '../../cascade-result';
@@ -36,7 +36,7 @@ export interface PmRescueSources {
   tycho2: Tycho2Row | null;
   cns5: CitedProperMotion | null;
   simbad: CitedProperMotion | null;
-  gaia: GaiaAstrometryCatalogRow | null;
+  gaia: GaiaAstrometryRow | null;
 }
 
 /** A courier's PM the Gaia-bibcode skip rule rejected. */

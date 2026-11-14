@@ -47,7 +47,7 @@ import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-bas
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
-import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
   parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,
@@ -1084,7 +1084,7 @@ interface PromotionState {
   /** `<anchorIdx> <memberIdx>` pairs already registered off an existing catalog
    *  record, so a member reached from two cursors subtracts its flux once. */
   existingDimMembers: Set<string>;
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  gaiaAstrometry: Map<string, GaiaAstrometryRow>;
   synthGaiaBridges: Map<string, string>;
   /** Members already re-curated this run and where their brightness came
    *  from, so a member reached from two cursors is repositioned once and
@@ -1187,7 +1187,7 @@ const DIST_VIA_OWN_GAIA_FIT: ReadonlySet<string> = new Set([
 
 /** See README.md#re-curation-of-an-already-in-catalog-member. */
 function ownFitFailsAnchorGrade(
-  star: Star, gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>,
+  star: Star, gaiaAstrometry: Map<string, GaiaAstrometryRow>,
 ): boolean {
   if (star.gaiaSourceId === null) return false;
   if (star.distVia === null || !DIST_VIA_OWN_GAIA_FIT.has(star.distVia)) {
@@ -1597,7 +1597,7 @@ export interface PromotionInputs {
   conAssignment: ConstellationAssignment;
   dustGrid: DustGrid;
   parked: ParkedRefusals;
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  gaiaAstrometry: Map<string, GaiaAstrometryRow>;
   synthGaiaBridges: Map<string, string>;
 }
 

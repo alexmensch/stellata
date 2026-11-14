@@ -1,7 +1,7 @@
 // The binaries' Gaia DR3 tables: the astrometry exclusions and the NSS two-body orbits.
 
 import type { ColumnTable } from '../../util/tsv/table-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** The NSS two-body columns the orbit stages read. */
 export interface NssOrbitRow {
@@ -24,9 +24,9 @@ export type AstrometryExclusionOutcome = (typeof ASTROMETRY_EXCLUSION_OUTCOMES)[
 
 /** The pull less the curated exclusions; `outcomes` is one per pulled source. */
 export function applyAstrometryExclusions(
-  astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>, exclusions: ReadonlyMap<string, string>,
-): { kept: Map<string, GaiaAstrometryCatalogRow>; outcomes: readonly AstrometryExclusionOutcome[] } {
-  const kept = new Map<string, GaiaAstrometryCatalogRow>();
+  astrometry: ReadonlyMap<string, GaiaAstrometryRow>, exclusions: ReadonlyMap<string, string>,
+): { kept: Map<string, GaiaAstrometryRow>; outcomes: readonly AstrometryExclusionOutcome[] } {
+  const kept = new Map<string, GaiaAstrometryRow>();
   const outcomes: AstrometryExclusionOutcome[] = [];
   for (const [sourceId, row] of astrometry) {
     const excluded = exclusions.has(sourceId);

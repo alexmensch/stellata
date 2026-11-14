@@ -1,7 +1,7 @@
 // Test-only builders for the Stage 1 row types.
 
 import type { AthygRow } from './athyg-pure';
-import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import { GAIA_ASTROMETRY, type GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
 import { gaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
@@ -34,8 +34,8 @@ export function athygRow(over: Partial<AthygRow> = {}): AthygRow {
 
 /** A 5p row; `sourceId` keys its ref. */
 export function gaia5pRow(
-  { sourceId = '1', ...over }: Partial<GaiaAstrometryCatalogRow> & { readonly sourceId?: string } = {},
-): GaiaAstrometryCatalogRow {
+  { sourceId = '1', ...over }: Partial<GaiaAstrometryRow> & { readonly sourceId?: string } = {},
+): GaiaAstrometryRow {
   return gaiaAstrometryRow({
     ref: sourceRowRef(GAIA_ASTROMETRY, sourceId), parallaxMas: 10, parallaxErrorMas: 0.05,
     pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1.0, ipdFracMultiPeak: 0,

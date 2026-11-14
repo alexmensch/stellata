@@ -4,7 +4,7 @@ import { HIP2_REF_EPOCH, hip2PmDisagrees } from '../../catalog/distance/directio
 import { gaia5pUnreliable } from '../../catalog/distance/gaia-distrust';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
@@ -41,7 +41,7 @@ export interface PairAstrometry {
 /** A source in any pair this close routes through HIP2 when the two catalogues' PMs disagree. */
 export const HIP2_COMPANION_SEPARATION_ARCSEC = 5.0;
 
-export function fromGaia(row: GaiaAstrometryCatalogRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
+export function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
   return Object.freeze({
     astrometryVia, raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.parallaxMas, parallaxErrorMas: row.parallaxErrorMas,
     pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch,

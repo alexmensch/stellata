@@ -13,7 +13,7 @@ import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-p
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import { type DirectionSources } from '../distance/direction-cascade';
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
-import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import { type GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
@@ -186,7 +186,7 @@ describe('readStars Gaia source_id', () => {
   // record's designation set — so every SID keyed on it moves.
   it('takes the manifest column even where the G−V gate would scrub it', () => {
     const sourceId = '5853498713190525696';
-    const gaiaAstrometry = new Map<string, GaiaAstrometryCatalogRow>([
+    const gaiaAstrometry = new Map<string, GaiaAstrometryRow>([
       [sourceId, gaiaAstrometryRow({
         parallaxMas: 10, parallaxErrorMas: 0.1,
         pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1, ipdFracMultiPeak: 0,
@@ -495,7 +495,7 @@ describe('readStars PM rescue', () => {
     };
   }
 
-  const gaiaRow = (overrides: Partial<GaiaAstrometryCatalogRow> = {}) =>
+  const gaiaRow = (overrides: Partial<GaiaAstrometryRow> = {}) =>
     new Map([[SOURCE_ID, gaiaAstrometryRow(overrides)]]);
 
   const speed = (s: { vx: number; vy: number; vz: number }): number =>
