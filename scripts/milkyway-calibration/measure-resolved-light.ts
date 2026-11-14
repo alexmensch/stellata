@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 import { catalogColumnsProjection, readCatalogColumns } from '../catalog/columns/catalog-columns';
-import { share } from '../util/counts/tally-pure';
+import { NO_FIGURE, share } from '../util/counts/tally-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { publicFile } from '../util/paths';
 import {
@@ -50,7 +50,7 @@ const mag = (flux: number) => -2.5 * Math.log10(flux);
 const fmt = (n: number, digits = 4) => n.toFixed(digits);
 const ofModel = (light: number, model: number): string => {
   const s = share(light, model);
-  return s.kind === 'rated' ? fmt(s.value, 3) : 'n/a';
+  return s.kind === 'rated' ? fmt(s.value, 3) : NO_FIGURE;
 };
 
 type Caps = Record<'galacticCentre' | 'northGalacticPole', CapSurfaceBrightness>;

@@ -16,7 +16,9 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 empty whole, never 0; formatFraction, the
                                 percentage (one decimal unless a figure
                                 asks for more); formatShare, a share
-                                through it, `n/a` when absent; percentOf,
+                                through it, `NO_FIGURE` (`n/a`) when
+                                absent, the one spelling every absent
+                                figure under scripts/ prints; percentOf,
                                 the two composed for a log line;
                                 floorVerdict, every coverage floor's
                                 verdict (meets | under | no-denominator),

@@ -1,6 +1,6 @@
 // The Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) distances against Vaidman 2025 (/data/papers/index.md#vaidman2025): statistics, acceptance bars and the report. See README.md.
 
-import { formatFraction } from '../util/counts/tally-pure';
+import { NO_FIGURE, formatFraction } from '../util/counts/tally-pure';
 import { ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, type VaidmanRow } from './vaidman-tsv';
 
 export const MEDIAN_FRAC_DIFF_MAX = 0.15;
@@ -47,7 +47,7 @@ export function aggregateStats(diffs: readonly number[]): Stats {
 
 /** One statistic as a two-decimal percentage, `n/a` when there were no differences to take it over. */
 export function statFraction(stats: Stats, field: 'median' | 'p84' | 'max'): string {
-  return stats.kind === 'empty' ? 'n/a' : formatFraction(stats[field], 2);
+  return stats.kind === 'empty' ? NO_FIGURE : formatFraction(stats[field], 2);
 }
 
 export function topNDisagreements(items: readonly Disagreement[], n = TOP_N_REPORTED): Disagreement[] {

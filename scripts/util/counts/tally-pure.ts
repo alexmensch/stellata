@@ -52,9 +52,11 @@ export function formatFraction(v: number, digits = 1): string {
   return `${(100 * v).toFixed(digits)}%`;
 }
 
-/** A share as a percentage through `formatFraction`, `n/a` when it has no denominator. */
+export const NO_FIGURE = 'n/a';
+
+/** A share as a percentage through `formatFraction`, `NO_FIGURE` when it has no denominator. */
 export function formatShare(s: Share, digits = 1): string {
-  return s.kind === 'no-denominator' ? 'n/a' : formatFraction(s.value, digits);
+  return s.kind === 'no-denominator' ? NO_FIGURE : formatFraction(s.value, digits);
 }
 
 /** `part` as a percentage of `whole` through `formatShare`, `n/a` for an empty whole. */
