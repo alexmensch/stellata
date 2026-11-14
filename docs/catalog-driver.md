@@ -511,8 +511,12 @@ records the pair rule moves onto the other entry of their Tycho-2 pair, each
 keeping its SID (they key on HIP or HD) while its TYC, position, V, proper
 motion and binding move; `17.3` changes no displayed name among the <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> + Sol and the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count -->
 each land on a naming-parity row; `17.4` adds <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed labels if the
-SIMBAD pull is adopted, else none. Identity: at most the Gl 863.1A split and
-a review outcome on ξ UMa's shared HIP; none from `17.6`, `17.5`, `17.7`.
+SIMBAD pull is adopted, else none. Identity: at most the Gl 863.1A split, a
+review outcome on ξ UMa's shared HIP, and the one `pair_moves` row whose owner
+is itself a spine record — HIP 7751, which the spine puts on HD 10360 /
+GJ 66A (TYC 8478-1394-2) and Gaia on TYC 8478-1394-1, the HD 10361 record
+(`membership.merge.derived-only.hip.held`), so the HIP moves between two
+records rather than re-keying one; none from `17.6`, `17.5`, `17.7`.
 Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
 build. Pins that retired with `17.6`: `derivedVsFrozen`, `derivedContestedMatch`
 and the frozen-relative verdict names. Pins still to retire with the file:

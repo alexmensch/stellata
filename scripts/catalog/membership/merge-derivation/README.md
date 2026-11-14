@@ -70,5 +70,10 @@ row IV/25's TYC→HD link does not count, since which entry the HD belongs to
 is the pair rule's verdict. Rows the pair rule confirms carry
 `merge.pair.confirmed` in lineage and no ledger row.
 
+**A `pair_moves` owner can itself be another spine record**: an entry the
+spine carries with no HIP. Moving the HIP there takes it from one record to
+another, an identity event rather than a re-key, and the receiving record
+shows the same HIP as `derived_only` `hip` `held`.
+
 The counts are the `membership.merge.*` codes in
 `../membership-manifest-expected.json`; read them there.
