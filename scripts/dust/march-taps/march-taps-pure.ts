@@ -8,6 +8,7 @@ import {
   type DustDecodeParams,
   type Vec3,
 } from '../../../src/astro-core/extinction/dust-raymarch-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The fixed tap count the march spent before the path-length rule, frozen as
  *  the yardstick both this sweep and `../prefilter/cost.ts` quote against.
@@ -30,7 +31,7 @@ export function percentile(sorted: readonly number[], q: number): number {
 }
 
 export function summarise(errors: readonly number[]): ErrorSummary {
-  const sorted = [...errors].sort((a, b) => a - b);
+  const sorted = [...errors].sort(ascending);
   return {
     p50: percentile(sorted, 0.5),
     p90: percentile(sorted, 0.9),

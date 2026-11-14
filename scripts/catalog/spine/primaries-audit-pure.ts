@@ -16,6 +16,7 @@ import { percentOf } from '../../util/counts/tally-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { SimbadXids } from '../spectral/spectral-resolve';
 import type { SpineRow } from './inherited-spine-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The HD number above which AT-HYG's Tycho-2 → HD link took effect. Below it
  *  the spine carries an HD only where HYG supplied one — measured, not designed:
@@ -580,7 +581,7 @@ export function findAdditions(
   const hip: HipAddition[] = [];
   const tycho2Hips = new Set<number>();
   for (const row of tables.tycho2.values()) if (row.hip !== null) tycho2Hips.add(row.hip);
-  for (const h of [...tables.hipI239].sort((a, b) => a - b)) {
+  for (const h of [...tables.hipI239].sort(ascending)) {
     if (spine.hip.has(h)) continue;
     hip.push({
       hip: h,

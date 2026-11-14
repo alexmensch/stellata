@@ -15,6 +15,7 @@ import {
   precessionRotationFromJ2000,
   unprecessDirection,
 } from '../precession';
+import { ascending } from '../order-pure';
 
 /** A boundary arc of constant B1875 RA, spanning `decLoDeg` → `decHiDeg`. */
 export interface MeridianEdge {
@@ -125,7 +126,7 @@ export interface ConstellationRegionGrid {
 }
 
 function sortedDistinct(values: readonly number[]): number[] {
-  return [...new Set(values)].sort((a, b) => a - b);
+  return [...new Set(values)].sort(ascending);
 }
 
 /** Dec band edges of a grid: the distinct edge declinations with ±90 closing

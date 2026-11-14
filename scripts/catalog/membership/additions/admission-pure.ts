@@ -51,7 +51,7 @@ import {
   type AdditionCohortItem,
   type AdditionCohorts,
 } from './addition-items-pure';
-import { compareCodeUnits } from '../../../../src/astro-core/order-pure';
+import { ascending, compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
   const list = by.get(key);
@@ -307,7 +307,7 @@ function admitGroup(
   const { hd: hdItem, hip: hipItem, rawGl, tyc, source } = group;
   const blocked: string[] = [];
 
-  const hds = [...(hdItem?.hds ?? [])].sort((a, b) => a - b).filter((hd) => {
+  const hds = [...(hdItem?.hds ?? [])].sort(ascending).filter((hd) => {
     if (!claims.hd.has(hd)) return true;
     blocked.push(`hd:${hd}`);
     return false;
@@ -324,7 +324,7 @@ function admitGroup(
       else if (!hrs.includes(hr)) hrs.push(hr);
     }
   }
-  hrs.sort((a, b) => a - b);
+  hrs.sort(ascending);
   let gl = rawGl;
   const glKey = normaliseGjKey(gl);
   if (glKey !== null) {
