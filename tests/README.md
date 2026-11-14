@@ -544,7 +544,7 @@ direction:
 
 | tree | root | may import |
 | --- | --- | --- |
-| shared physics | `src/astro-core/` | itself |
+| shared physics and primitives | `src/astro-core/` | itself |
 | format | `src/catalog-format/` | itself, astro-core |
 | viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
 | pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
@@ -561,7 +561,7 @@ tooling roots drive or check the built viewer — the perf runner its frame-cost
 instrument, the release check its share-URL grammar — so they read it by
 design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
-a file name, a rule over record fields) or astro-core (physics), never into
+a file name, a rule over record fields) or astro-core (physics and shared primitives, such as the sort order), never into
 the side that happens to compute it first.
 
 ## Record codec imports
