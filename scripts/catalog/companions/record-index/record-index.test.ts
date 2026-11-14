@@ -134,9 +134,9 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(a)).toBe(false);
   });
 
-  it('puts the glyph on the brightest record of a system that draws a pair, drawn in it or not', () => {
+  it('puts the glyph only on an end of a drawn pair, never on a brighter undrawn member', () => {
     // A,BC: the compound BC resolves to no record, so binaries.bin draws only
-    // B against C; A is still the system's brightest member.
+    // B against C.
     const a = makeStar({ hip: 100, absmag: 1.0 });
     const b = makeStar({ hip: 200, absmag: 4.0 });
     const c = makeStar({ hip: 300, absmag: 6.0 });
@@ -147,7 +147,7 @@ describe('wingRenderablePrimaries', () => {
       multiplesRow({ systemId: 'W1-BC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
     ];
     expect(wing(rows, [a, b, c])).toBe(1);
-    expect([a, b, c].map(isWinged)).toEqual([true, false, false]);
+    expect([a, b, c].map(isWinged)).toEqual([false, true, false]);
   });
 
   it('wings no system that draws no pair', () => {

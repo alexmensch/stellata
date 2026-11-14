@@ -64,19 +64,17 @@ export function wingRenderablePrimaries(
   resolved: readonly ResolvedPair[],
   stars: Star[],
 ): Pick<MultiplicityCounts, 'renderableCompanionWinged'> {
-  const systems = new Map<string, { members: Set<number>; drawsAPair: boolean }>();
-  for (const { pair, own, rendered } of resolved) {
-    let system = systems.get(pair.wdsId);
-    if (!system) { system = { members: new Set(), drawsAPair: false }; systems.set(pair.wdsId, system); }
-    for (const idx of [own.primary, own.secondary, rendered.primary, rendered.secondary]) {
-      if (idx !== null) system.members.add(idx);
-    }
-    if (distinctEnds(rendered)) system.drawsAPair = true;
+  const drawnPerSystem = new Map<string, Set<number>>();
+  for (const { pair, rendered } of resolved) {
+    if (!distinctEnds(rendered)) continue;
+    let drawn = drawnPerSystem.get(pair.wdsId);
+    if (!drawn) { drawn = new Set(); drawnPerSystem.set(pair.wdsId, drawn); }
+    drawn.add(rendered.primary);
+    drawn.add(rendered.secondary);
   }
 
   let renderableCompanionWinged = 0;
-  for (const { members: indices, drawsAPair } of systems.values()) {
-    if (!drawsAPair) continue;
+  for (const indices of drawnPerSystem.values()) {
     let anchor = -1;
     let alreadyWinged = false;
     for (const idx of indices) {

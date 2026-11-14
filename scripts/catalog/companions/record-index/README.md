@@ -120,18 +120,19 @@ A physical pair wider than the `0.005 pc` geometric cell, not CCDM
 the geometric cell) shows a companion or a live orbit with no wings on
 the anchor. `wingRenderablePrimaries` closes that gap:
 
-- **Renders-a-companion gate.** A WDS system qualifies when at least one
-  of its pairs' `rendered` ends are DISTINCT records — a companion
-  `binaries.bin` draws.
-- **One glyph per WDS system, on its brightest member.** The bit lands on
-  the intrinsically brightest record any of the system's pairs resolves to,
-  `own` or `rendered` ends alike (the mutual-primary / CCDM brightest-member
-  contract) — whether or not that record is an end of a drawn pair. `A,BC`
-  with BC an unresolved compound draws only B against C, and the glyph
-  still lands on A. A hierarchical system (Castor Ca,Cb inside the outer
-  pairs) gets one glyph on the system anchor, never one per inner pair. A
-  system any earlier pass already flagged on any member is skipped, so it
-  keeps its single glyph.
+- **Renders-a-companion gate.** Only the ends of pairs `binaries.bin`
+  draws take part: a pair whose `rendered` ends are DISTINCT records.
+- **One glyph per WDS system, on a drawn pair.** A system's drawn-pair ends
+  are grouped by WDS root and the bit lands on the intrinsically brightest
+  of them (the mutual-primary / CCDM brightest-member contract) — never on a
+  member with no drawn companion, however bright. A WDS root's members can
+  sit hundreds of parsecs apart in the catalogue (05159+3425: A at 89 pc, Ba
+  at 364 pc), so its brightest member is not necessarily anywhere near a
+  drawn pair. `A,BC` with BC an unresolved compound draws only B against C,
+  so the glyph lands on B. A hierarchical system (Castor Ca,Cb inside the
+  outer pairs) gets one glyph on the system anchor, never one per inner
+  pair. A system any earlier pass already flagged on a drawn-pair end is
+  skipped, so it keeps its single glyph.
 - **Additive only.** The pass never clears wings, so the
   reverse-direction cases stay correct: eclipsing binaries (an eclipsed
   star is a binary by convention even with a spectroscopically-
