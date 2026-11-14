@@ -23,6 +23,7 @@ import {
   absmagFromSpectral,
   physicalRadius,
   spectralClassCi,
+  spectralClassColorIsDerivable,
   spectralFromAbsmag,
 } from '../../../src/catalog-format/spectral/physical-radius';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
@@ -525,27 +526,38 @@ export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> 
   return groups;
 }
 
-// Companion B-V (ci). When Stage 6 tags the row's photometry as
-// inherited from the system primary (Sirius B's row carrying Sirius A's
-// 0.009 white instead of its own DA1.9 blue), derive an intrinsic colour
-// from the spectral class via the shared spectralClassCi.
 /** True when the row's `ci` is its OWN observed B−V (dust-reddened), so
- *  build-time de-extinction must de-redden it. False when imputeCompanionCi
- *  derives an intrinsic B−V from spectral type or the solar fallback —
+ *  build-time de-extinction must de-redden it. False when the row's ci is
+ *  inherited from the system primary (Sirius B's row carrying Sirius A's
+ *  0.009 white) or absent, and companionCi derives an intrinsic B−V from spectral type or the solar fallback —
  *  those are already extinction-free and must not be de-reddened. */
 export function companionCiIsObserved(secondary: MultiplesTsvRow): boolean {
   return secondary.ci !== null
     && secondary.photometryVia !== PHOTOMETRY_VIA_SYSTEM_INHERITED;
 }
 
-export function imputeCompanionCi(
+/** `own` = the row's observed B−V; `spectral_derived` = its class's
+ *  intrinsic colour; `none` = no derivable class, so the solar B−V. */
+export type CompanionCiVia = 'own' | 'spectral_derived' | 'none';
+
+export interface CompanionCi {
+  value: number;
+  via: CompanionCiVia;
+}
+
+/** The B−V a companion ships, de-reddened by `av` only where it is observed. */
+export function companionCi(
   secondary: MultiplesTsvRow,
   spectralInfo: SpectralInfo,
-): number {
+  av: number,
+): CompanionCi {
   if (companionCiIsObserved(secondary)) {
-    return secondary.ci as number;
+    return { value: (secondary.ci as number) - av / R_V, via: 'own' };
   }
-  return spectralClassCi(spectralInfo);
+  return {
+    value: spectralClassCi(spectralInfo),
+    via: spectralClassColorIsDerivable(spectralInfo) ? 'spectral_derived' : 'none',
+  };
 }
 
 
@@ -1244,8 +1256,7 @@ function recurateExistingMember(
     const absmag = brightness === 'wds_mag' && wdsMag !== null
       ? absoluteMagnitude(wdsMag, dNew) : imputed.absmag;
     member.absmag = deExtinctCompanionAbsmag({ absmag, source: brightness }, avNew);
-    member.ci = imputeCompanionCi(row, spectral);
-    if (companionCiIsObserved(row)) member.ci -= avNew / R_V;
+    member.ci = companionCi(row, spectral, avNew).value;
   } else if (dOld > 0 && dNew > 0) {
     member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
   }
@@ -1433,11 +1444,7 @@ function promoteRow(
     spectral = { info: spectralFromAbsmag(absmag), display: null };
   }
   const brightness: MintedBrightness = { source: imputed.source, spectMsFromOwnAbsmag };
-  let ci = imputeCompanionCi(row, spectral.info);
-  // The row's own observed ci embeds A_V too; a derived ci (Ballesteros 2012
-  // (/data/papers/index.md#ballesteros2012) / solar fallback) is already
-  // intrinsic.
-  if (companionCiIsObserved(row)) ci -= av / R_V;
+  const ci = companionCi(row, spectral.info, av);
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
   // Velocity and the DESIGNATION constellation are the two inherited fields
@@ -1477,7 +1484,7 @@ function promoteRow(
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
-    absmag, ci,
+    absmag, ci: ci.value,
     spectral: spectral.info,
     physicalRadius: physicalRadius(absmag, spectral.info).rSun,
     conIndex,

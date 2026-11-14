@@ -9,7 +9,7 @@ import {
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
   imputeCompanionAbsmag,
-  imputeCompanionCi,
+  companionCi,
   isDisjointSingleLetter,
   parseMultiplesTsv,
   projectFromSepPa,
@@ -1110,7 +1110,7 @@ describe('anchor flux dimming', () => {
   });
 });
 
-describe('imputeCompanionCi', () => {
+describe('companionCi', () => {
   const wdInfo = classifyFromSimbad('DA1.9')!;
   const mDwarfInfo = classifyFromSimbad('M3V')!;
 
@@ -1119,7 +1119,8 @@ describe('imputeCompanionCi', () => {
       comp: 'B', ci: 0.009,
       photometryVia: 'athyg_system_inherited',
     });
-    const bv = imputeCompanionCi(sec, wdInfo);
+    const { value: bv, via } = companionCi(sec, wdInfo, 0);
+    expect(via).toBe('spectral_derived');
     // T_eff(DA1.9) = 50400/2 = 25200 K → the inverse of Ballesteros 2012
     // (/data/papers/index.md#ballesteros2012) eq. 14 ≈ -0.44.
     // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
@@ -1132,14 +1133,21 @@ describe('imputeCompanionCi', () => {
     const sec = multiplesRow({
       comp: 'B', ci: 1.42, photometryVia: 'athyg_own',
     });
-    expect(imputeCompanionCi(sec, mDwarfInfo)).toBe(1.42);
+    expect(companionCi(sec, mDwarfInfo, 0)).toEqual({ value: 1.42, via: 'own' });
+  });
+
+  it('de-reddens only an observed colour', () => {
+    const own = multiplesRow({ comp: 'B', ci: 1.42, photometryVia: 'athyg_own' });
+    const inherited = multiplesRow({ comp: 'B', ci: 0.009, photometryVia: 'athyg_system_inherited' });
+    expect(companionCi(own, mDwarfInfo, 0.31).value).toBeCloseTo(1.42 - 0.31 / R_V, 12);
+    expect(companionCi(inherited, mDwarfInfo, 0.31)).toEqual(companionCi(inherited, mDwarfInfo, 0));
   });
 
   it('derives from spectral info when row.ci is null', () => {
     const sec = multiplesRow({
       comp: 'B', ci: null, photometryVia: 'none',
     });
-    const bv = imputeCompanionCi(sec, mDwarfInfo);
+    const bv = companionCi(sec, mDwarfInfo, 0).value;
     expect(bv).toBeGreaterThan(0.5);
     expect(bv).toBeLessThan(2.0);
   });
@@ -1149,7 +1157,7 @@ describe('imputeCompanionCi', () => {
       comp: 'B', ci: 0.009,
       photometryVia: 'athyg_system_inherited',
     });
-    expect(imputeCompanionCi(sec, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+    expect(companionCi(sec, SPECTRAL_UNKNOWN, 0)).toEqual({ value: SOLAR_BV_FALLBACK, via: 'none' });
   });
 });
 
