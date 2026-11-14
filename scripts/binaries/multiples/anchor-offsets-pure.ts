@@ -7,7 +7,8 @@ import {
 } from '../component-tokens-pure';
 import type { MscLookup } from '../load/msc-pure';
 import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from '../optical/optical-tiers-pure';
-import { pyMod, pySum } from '../python-float-pure';
+import { pyMod } from '../../../src/astro-core/angles';
+import { pySum } from '../python-float-pure';
 import { addEdge, addNewestEdge, pairVector, walk, type Edge } from '../resolve/binding-audit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import type { TangentOffset } from '../sky-geometry-pure';

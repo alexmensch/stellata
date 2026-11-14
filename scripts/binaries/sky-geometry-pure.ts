@@ -3,7 +3,7 @@
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition, UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
-import { pyMod } from './python-float-pure';
+import { pyMod } from '../../src/astro-core/angles';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row

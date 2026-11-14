@@ -41,7 +41,11 @@ Each has its own README.
   wraps onto (−π, π] and (−180, 180]. Both reduce by one `floor`, not by
   a while-loop: Earth's spin accumulates ~6.6e8 degrees at the model
   clock's bounds and a loop would iterate millions of times to bring that
-  back. Also `angleBetweenRad`, the unsigned angle between two
+  back. `pyMod(x, m)`, the one floor modulo: `%` with the divisor's sign,
+  as Python computes it, so a tiny negative `x` rounds up to `m` rather
+  than wrapping to 0 — the edge `multiples.tsv`'s bytes rest on. Write no
+  `((x % m) + m) % m`: it rounds before the remainder and wraps that edge
+  the other way. Also `angleBetweenRad`, the unsigned angle between two
   unnormalised vectors as `atan2(|a×b|, a·b)` — **the small-angle-safe
   form, and the reason it is not `phaseAngleFromLegs`**: the cosine is
   flat near zero, so at 1e-6 rad the normalised dot rounds to 1 and

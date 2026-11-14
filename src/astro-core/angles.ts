@@ -1,5 +1,5 @@
-// Signed angle wrapping, and the small-angle-safe angle between two
-// vectors. See README.md.
+// Angle wrapping — signed, and the floor modulo — and the small-angle-safe
+// angle between two vectors. See README.md.
 
 /** Wrap to (-π, π]. */
 export function wrapAngle(a: number): number {
@@ -15,6 +15,15 @@ export function wrapDegrees(d: number): number {
   let r = d - Math.floor(d / 360) * 360;
   if (r > 180) r -= 360;
   return r;
+}
+
+/** `x mod m` with the sign of `m`, as Python's `%` computes it — including
+ *  its rounding up to `m` for a tiny negative `x`, which `((x % m) + m) % m`
+ *  would wrap to 0. */
+export function pyMod(x: number, m: number): number {
+  const r = x % m;
+  if (r === 0) return 0;
+  return (r < 0) !== (m < 0) ? r + m : r;
 }
 
 /** Unsigned angle between two vectors, radians, neither needing to be

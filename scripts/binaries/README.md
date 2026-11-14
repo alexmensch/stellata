@@ -142,10 +142,11 @@ scripts/binaries/
                                   propagates through astro-core's
                                   directionAtEpoch / skyPositionAtEpoch,
                                   the formula the catalogue uses.
-  python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
-                                  where JavaScript's default differs: pyMod,
-                                  `%` with the divisor's sign; pySum, a
-                                  compensated sum.
+  python-float-pure.ts (+ test)   pySum, the compensated sum
+                                  multiples.tsv rests on where JavaScript's
+                                  left fold differs. Its sibling pyMod, `%`
+                                  with the divisor's sign, is astro-core's
+                                  (src/astro-core/angles.ts).
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window
