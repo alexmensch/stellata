@@ -254,11 +254,15 @@ function spineClaims(records: readonly LabelMergeRecord[]): Claims {
   return claims;
 }
 
-/** What the derivation reached for one spine row. */
-interface SpineBinding {
-  derived: DerivedBinding | null;
-  gate: RowGateEvidence | null;
-  outcome: BindingOutcome;
+/** What the derivation reached for one spine row. Sol derives nothing. */
+type SpineBinding =
+  | { outcome: 'sol' }
+  | DerivedSpineBinding;
+
+interface DerivedSpineBinding {
+  outcome: Exclude<BindingOutcome, 'sol'>;
+  derived: DerivedBinding;
+  gate: RowGateEvidence;
 }
 
 /** Candidates the gates passed that did not win — a disagreement between
@@ -302,22 +306,18 @@ function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingE
 
 /** Withholds any source two rows derive — see binding/README.md. */
 function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): SpineBinding[] {
-  const bindings: SpineBinding[] = spine.map((row) => {
-    if (row.proper === SOL_PROPER_NAME) {
-      return { derived: null, gate: null, outcome: 'sol' };
-    }
-    const { derived, gate } = derive(row);
-    return { derived, gate, outcome: bindingOutcome(derived, false) };
-  });
-  const holders = new Map<string, number[]>();
-  bindings.forEach((b, i) => {
-    if (b.derived?.sourceId != null) pushKeyed(holders, b.derived.sourceId, i);
-  });
-  for (const rows of holders.values()) {
-    if (rows.length < 2) continue;
-    for (const i of rows) bindings[i].outcome = bindingOutcome(bindings[i].derived!, true);
+  const derivations = spine.map((row) => (row.proper === SOL_PROPER_NAME ? null : derive(row)));
+  const holders = new Map<string, number>();
+  for (const d of derivations) {
+    const id = d?.derived.sourceId ?? null;
+    if (id !== null) holders.set(id, (holders.get(id) ?? 0) + 1);
   }
-  return bindings;
+  return derivations.map((d): SpineBinding => {
+    if (d === null) return { outcome: 'sol' };
+    const id = d.derived.sourceId;
+    const withheld = id !== null && (holders.get(id) ?? 0) > 1;
+    return { ...d, outcome: bindingOutcome(d.derived, withheld) };
+  });
 }
 
 function xidsCell(xids: SimbadXids | undefined): string {
@@ -336,14 +336,13 @@ function magCell(value: number | null): string {
 /** Sol derives nothing, so its cells past the spine's own are empty. */
 function bindingReviewCells(row: SpineRow, b: SpineBinding, tables: PrimaryTables): BindingReviewCells {
   const spine = { tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl };
-  if (b.derived === null || b.gate === null) {
+  if (b.outcome === 'sol') {
     return {
       ...spine, derived_source_id: '', derived_via: '', candidates: '', rejected: '',
       v_mag: '', v_via: '', derived_g: '', derived_simbad: '',
     };
   }
-  const derived = b.derived;
-  const gate = b.gate;
+  const { derived, gate } = b;
   const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
   const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
   const candidates = derived.ranked.flatMap((c) => c.via.map((v) => `${v}:${c.sourceId}`));
@@ -367,22 +366,23 @@ function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined
 function spineBindingOutcome(
   row: SpineRow, b: SpineBinding, tables: PrimaryTables, xids: SimbadWdsXidIndex | null,
 ): MembershipOutcome {
-  const sourceId = b.derived?.sourceId ?? null;
+  const derived = b.outcome === 'sol' ? null : b.derived;
+  const sourceId = derived?.sourceId ?? null;
   const letters = {
     sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
     hipLetters: wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1)),
   };
   if (isQueuedOutcome(b.outcome)) {
     return {
-      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? [], CONTESTED_LEADS),
+      kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, derived?.via ?? [], CONTESTED_LEADS),
       review: bindingReviewCells(row, b, tables), ...letters,
     };
   }
   return {
     kind: 'spine-binding',
-    ...withLead(b.outcome === 'bound' && b.derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, b.derived?.via ?? [], BINDING_SOURCES),
+    ...withLead(b.outcome === 'bound' && derived?.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, derived?.via ?? [], BINDING_SOURCES),
     sourceId: sourceId ?? '',
-    via: b.derived?.via.join('+') ?? '',
+    via: derived?.via.join('+') ?? '',
     ...letters,
   };
 }
@@ -428,9 +428,9 @@ function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
 
 /** See binding/README.md. */
 function settleBinding(
-  b: SpineBinding, disposition: BindingDispositionRow | undefined, evidence: BindingEvidence,
+  b: DerivedSpineBinding, disposition: BindingDispositionRow | undefined, evidence: BindingEvidence,
 ): { value: string | null; binding: PrimariesBindingClass; asserted: boolean } {
-  const derived = b.derived!;
+  const { derived } = b;
   if (disposition === undefined) {
     const shippable = b.outcome === 'bound' || b.outcome === 'contested';
     return shippable && derived.sourceId !== null
@@ -855,7 +855,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     outcomes.push({ key: origin, outcome: spineBindingOutcome(spineRow, b, tables, evidence.wdsXids) });
     let value: string | null = null;
     let binding: PrimariesBindingClass = 'none';
-    if (b.derived !== null) {
+    if (b.outcome !== 'sol') {
       const d = b.derived;
       outcomes.push(...refusedCandidates(origin, 'spine', d), ...unweighedCandidates(origin, [{ d, cites: [] }]));
       outcomes.push(...d.weighedNullGMag.map((c): KeyedOutcome => ({
@@ -923,10 +923,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (record.gaiaSourceId === null) {
       outcomes.push({ key: spineKey(i), outcome: { kind: 'ships-none' } });
     }
-    // Sol derives no binding, so it carries no gate evidence of its own.
-    const mag = kept[i].proper === SOL_PROPER_NAME
-      ? SOL_APPARENT_V_MAGNITUDE
-      : spineBindings[i].gate?.printedV?.vMag ?? null;
+    const b = spineBindings[i];
+    const mag = b.outcome === 'sol' ? SOL_APPARENT_V_MAGNITUDE : b.gate.printedV?.vMag ?? null;
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       outcomes.push({ key: spineKey(i), outcome: { kind: 'bright', overlayEntry: !noEntry } });
     }
@@ -997,7 +995,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     }
   };
   spineBindings.forEach((b, i) => {
-    if (b.derived !== null) noteUnshipped(spineKey(i), b.derived, settled[i].value, settled[i].withheldAs);
+    if (b.outcome !== 'sol') noteUnshipped(spineKey(i), b.derived, settled[i].value, settled[i].withheldAs);
   });
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
