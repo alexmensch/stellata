@@ -1158,6 +1158,13 @@ describe('membership lineage', () => {
     expect(fieldLines).toEqual([...LABEL_FIELDS]);
   });
 
+  it('logs a label field no row keys as n/a coverage', () => {
+    const zeroed = Object.fromEntries(Object.keys(result.derived).map((k) => [k, 0])) as MembershipDerivedCounts;
+    const fieldLines = membershipSummary(foldStageLines(MEMBERSHIP_CODES, []), zeroed).split('\n').filter((l) => /^  \S/.test(l));
+    expect(fieldLines).toHaveLength(LABEL_FIELDS.length);
+    for (const line of fieldLines) expect(line).toContain('0 /       0 (n/a)');
+  });
+
   it('carries a new reason code to the snapshot, failing it until the snapshot is refreshed', () => {
     const { drift, refreshed } = seededCodeCheck(MEMBERSHIP_CODES, sorted(result.lineage));
     expect(drift.drifted).toBe(true);

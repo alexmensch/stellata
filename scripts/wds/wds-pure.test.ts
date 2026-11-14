@@ -63,6 +63,10 @@ describe('parseWdsSumm', () => {
     const drifted = [...Array.from({ length: 18 }, () => WDS_BASE.padEnd(130)), WDS_LINE, WDS_LINE].join('\n');
     expect(() => parseWdsSumm(`banner\n${drifted}\n`, FIXTURE)).toThrow(/'precise' non-null rate 10\.0% .*column-offset drift/);
   });
+
+  it('throws on a summary with no rows, its rate n/a', () => {
+    expect(() => parseWdsSumm('banner\n', FIXTURE)).toThrow(/'precise' non-null rate n\/a \(0\/0\) below 95% floor — no rows parsed/);
+  });
 });
 
 describe('parsePreciseCoord', () => {
@@ -128,6 +132,10 @@ describe('parseOrb6', () => {
     expect(parseOrb6(`banner\n${Array(20).fill(ORB6_HDS).join('\n')}\n`, FIXTURE).entries).toHaveLength(20);
     const drifted = [...Array(19).fill(blanked), ORB6_HDS].join('\n');
     expect(() => parseOrb6(`banner\n${drifted}\n`, FIXTURE)).toThrow(/'P' non-null rate 5\.0% .*column-offset drift/);
+  });
+
+  it('throws on a catalogue with no rows, its rate n/a', () => {
+    expect(() => parseOrb6('banner\n', FIXTURE)).toThrow(/'P' non-null rate n\/a \(0\/0\) below 90% floor — no rows parsed/);
   });
 
   it('reads a non-digit grade as 5 and counts it', () => {

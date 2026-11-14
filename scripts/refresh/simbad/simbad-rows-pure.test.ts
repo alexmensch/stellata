@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { share } from '../../util/counts/tally-pure';
 import {
-  countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, percent, share, simbadColumns, simbadRows,
+  countFilled, fillLine, floorCheck, fluxBlock, identBlock, isFilled, simbadColumns, simbadRows,
 } from './simbad-rows-pure';
 import {
   BASIC_BIBCODED_GROUPS, GAIA_DR3, HIP, OID, OTYPE, PLX_BIBCODE, PLX_ERR, PLX_QUAL, PLX_VALUE,
@@ -68,16 +69,20 @@ describe('fill gates', () => {
     expect(fillLine('sp_type', 1, 4)).toBe('  sp_type               1/4 = 25.0%');
   });
 
-  it('reads an empty population as 0%, never NaN', () => {
-    expect(share(0, 0)).toBe(0);
-    expect(percent(share(0, 0))).toBe('0.0%');
-    expect(percent(0.8, 0)).toBe('80%');
+  it('prints an empty population as n/a, never 0% or NaN', () => {
+    expect(fillLine('sp_type', 0, 0)).toBe('  sp_type               0/0 = n/a');
   });
 
   it('fails below the floor and passes at it', () => {
-    expect(floorCheck('sp_type coverage', 0.49, 0.5, 'the shape drifted')).toEqual({
+    expect(floorCheck('sp_type coverage', share(49, 100), 0.5, 'the shape drifted')).toEqual({
       kind: 'fail', message: 'sp_type coverage 49.0%, floor 50%: the shape drifted; investigate before pinning',
     });
-    expect(floorCheck('sp_type coverage', 0.5, 0.5, 'the shape drifted')).toEqual({ kind: 'pass', report: 'sp_type coverage 50.0%, floor 50%' });
+    expect(floorCheck('sp_type coverage', share(1, 2), 0.5, 'the shape drifted')).toEqual({ kind: 'pass', report: 'sp_type coverage 50.0%, floor 50%' });
+  });
+
+  it('fails an empty population, saying there was nothing to rate', () => {
+    expect(floorCheck('sp_type coverage', share(0, 0), 0.5, 'the shape drifted')).toEqual({
+      kind: 'fail', message: 'sp_type coverage n/a, floor 50%: no rows to rate; investigate before pinning',
+    });
   });
 });

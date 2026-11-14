@@ -8,6 +8,7 @@ import {
   passesAcceptanceBars,
   topNDisagreements,
   type Disagreement,
+  type Stats,
   type ValidationReport,
 } from './validate-distances-pure';
 import { ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, type Adopted, type VaidmanRow } from './vaidman-tsv';
@@ -27,23 +28,23 @@ describe('fractionalDiff', () => {
 
 describe('aggregateStats', () => {
   it('interpolates percentiles linearly over |diffs|', () => {
-    const stats = aggregateStats([0.01, -0.04, 0.05, -0.1, 0.2]);
+    const stats = measured(aggregateStats([0.01, -0.04, 0.05, -0.1, 0.2]));
     expect(stats.count).toBe(5);
     expect(stats.median).toBeCloseTo(0.05, 12);
     expect(stats.max).toBeCloseTo(0.2, 12);
     expect(stats.p84).toBeCloseTo(0.136, 12);
   });
 
-  it('answers NaN for no values and the value itself for one', () => {
-    expect(aggregateStats([])).toEqual({ median: NaN, p84: NaN, max: NaN, count: 0 });
-    expect(aggregateStats([0.07])).toEqual({ median: 0.07, p84: 0.07, max: 0.07, count: 1 });
+  it('answers empty for no values and the value itself for one', () => {
+    expect(aggregateStats([])).toEqual({ kind: 'empty' });
+    expect(aggregateStats([0.07])).toEqual({ kind: 'measured', median: 0.07, p84: 0.07, max: 0.07, count: 1 });
   });
 
   it('drops NaN inputs before sorting', () => {
-    const stats = aggregateStats([0.1, NaN, -0.2, NaN, 0.3]);
+    const stats = measured(aggregateStats([0.1, NaN, -0.2, NaN, 0.3]));
     expect(stats.count).toBe(3);
     expect(stats.median).toBeCloseTo(0.2, 12);
-    expect(aggregateStats([NaN, NaN]).count).toBe(0);
+    expect(aggregateStats([NaN, NaN])).toEqual({ kind: 'empty' });
   });
 });
 
@@ -59,14 +60,14 @@ describe('topNDisagreements', () => {
 });
 
 describe('formatReport', () => {
-  const report = (unresolved: string[], large: number, median = 0.05): ValidationReport => ({
+  const report = (unresolved: string[], large: number, stats: Stats = { kind: 'measured', median: 0.05, p84: 0.1, max: 0.6, count: 8 }): ValidationReport => ({
     edsd: {
       total: 10, compared: 8, unresolved,
-      stats: { median, p84: 0.1, max: 0.6, count: 8 },
+      stats,
       large: Array(large).fill(disagreement('BIG', 0.6)),
       top: [disagreement('BIG', 0.6), disagreement('MED', 0.2)],
     },
-    bj: { total: 2, compared: 2, unresolved: [], stats: { median: 0, p84: 0, max: 0, count: 2 }, top: [disagreement('SC', 0)] },
+    bj: { total: 2, compared: 2, unresolved: [], stats: { kind: 'measured', median: 0, p84: 0, max: 0, count: 2 }, top: [disagreement('SC', 0)] },
   });
 
   it('emits the stable headline markers', () => {
@@ -84,9 +85,10 @@ describe('formatReport', () => {
     );
   });
 
-  it('skips an empty unresolved line and renders NaN as n/a', () => {
+  it('skips an empty unresolved line, prints statistics to two decimals and an empty subset as n/a', () => {
     expect(formatReport(report([], 0))).not.toContain('EDSD_new unresolved');
-    expect(formatReport(report([], 0, NaN))).toContain('median |frac diff|=n/a');
+    expect(formatReport(report([], 0))).toContain('(median |frac diff|=5.00%, p84=10.00%, max=60.00%)');
+    expect(formatReport(report([], 0, { kind: 'empty' }))).toContain('(median |frac diff|=n/a, p84=n/a, max=n/a)');
   });
 });
 
@@ -111,11 +113,11 @@ describe('buildReport', () => {
     expect(report.edsd.total).toBe(5);
     expect(report.edsd.compared).toBe(4);
     expect(report.edsd.unresolved).toEqual(['E']);
-    expect(report.edsd.stats.median).toBeCloseTo(0.1, 12);
+    expect(measured(report.edsd.stats).median).toBeCloseTo(0.1, 12);
     expect(report.edsd.large.map((d) => d.name)).toEqual(['D']);
     expect(report.bj.total).toBe(2);
     expect(report.bj.compared).toBe(2);
-    expect(report.bj.stats.median).toBe(0);
+    expect(measured(report.bj.stats).median).toBe(0);
     expect(passesAcceptanceBars(report)).toBe(true);
   });
 
@@ -126,7 +128,18 @@ describe('buildReport', () => {
     expect(passesAcceptanceBars(far)).toBe(false);
     const off = buildReport(six.slice(0, 5), new Map(six.map((r) => [r.gaiaSourceId, 120])));
     expect(off.edsd.large).toHaveLength(0);
-    expect(off.edsd.stats.median).toBeCloseTo(0.2, 12);
+    expect(measured(off.edsd.stats).median).toBeCloseTo(0.2, 12);
     expect(passesAcceptanceBars(off)).toBe(false);
   });
+
+  it('fails a subset with no comparable star', () => {
+    const unresolved = buildReport([ref('A', '1', 0, 100, ADOPTED_EDSD_NEW)], new Map());
+    expect(unresolved.edsd.stats).toEqual({ kind: 'empty' });
+    expect(passesAcceptanceBars(unresolved)).toBe(false);
+  });
 });
+
+function measured(stats: Stats): Extract<Stats, { kind: 'measured' }> {
+  if (stats.kind !== 'measured') throw new Error('expected measured statistics');
+  return stats;
+}

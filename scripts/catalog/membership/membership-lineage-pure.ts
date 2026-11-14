@@ -25,7 +25,7 @@ import {
   type LabelDropCell, type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
-import { sumOf } from '../../util/counts/tally-pure';
+import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
   DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES, PAIR_REVIEW_REASONS,
   type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence, type PairReviewReason,
@@ -815,9 +815,8 @@ export function membershipSummary(counts: MembershipCounts, derived: MembershipD
     const of = (d: LabelDisposition): number => (dispositionFields(d).includes(field) ? n(labelBranch(d, field)) : 0);
     const covered = derived[`labelAgree.${field}`];
     const keyed = covered + of('overlay-wins') + derived[`labelSpineOnly.${field}`];
-    const coverage = keyed === 0 ? '—' : `${((100 * covered) / keyed).toFixed(1)}%`;
     lines.push(
-      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)} (${coverage}) — `
+      `  ${field.padEnd(6)} ${String(covered).padStart(7)} / ${String(keyed).padStart(7)} (${percentOf(covered, keyed)}) — `
         + list(LABEL_DISPOSITIONS, of),
     );
   }
