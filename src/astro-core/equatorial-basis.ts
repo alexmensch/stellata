@@ -2,7 +2,7 @@
 // proper-motion propagation, space-motion velocity, and sky-offset
 // projection all resolve their components along.
 
-import { angleBetweenRad } from './angles';
+import { angleBetweenRad, pyMod } from './angles';
 import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
 
 export interface UnitVector {
@@ -109,11 +109,9 @@ export function skyPositionAtEpoch(
 
 /** The inverse of `unitVectorFromRaDec`, with ra wrapped to [0, 360). */
 export function raDecFromUnitVector(v: UnitVector): SkyPosition {
-  const signed = Math.atan2(v.y, v.x) * RAD_TO_DEG;
-  const wrapped = signed < 0 ? signed + 360 : signed;
+  const ra = pyMod(Math.atan2(v.y, v.x) * RAD_TO_DEG, 360);
   return {
-    // A tiny negative signed angle rounds to exactly 360, and `+ 0` folds −0.
-    raDeg: wrapped === 360 ? 0 : wrapped + 0,
+    raDeg: ra === 360 ? 0 : ra,
     decDeg: Math.asin(Math.max(-1, Math.min(1, v.z))) * RAD_TO_DEG,
   };
 }
