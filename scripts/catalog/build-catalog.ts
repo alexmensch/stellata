@@ -5,25 +5,13 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  HEADER_SIZE,
-  RECORD_SIZE,
   BINARY_VERSION,
-  NO_COMPANION,
-  NO_GAIA_SOURCE_ID,
-  NO_APSIS,
-  NO_CONSTELLATION_INDEX,
-  APSIS_FIELDS,
-  type ApsisField,
-  writeStarRecord,
-  writeCatalogHeader,
-  encodeNameTable,
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
   type CatalogManifest,
   SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
-import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
 import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
@@ -31,7 +19,8 @@ import {
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, assertSolFirst } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
-import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './record/records-stage-pure';
+import { apsisCoverageSummary, recordsCounts } from './record/records-stage-pure';
+import { encodeCatalog } from './record/encode-catalog-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -489,96 +478,19 @@ export async function main() {
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
 
-  // Build name table — the NAME tiers only. Every designation is composed
-  // at runtime off search-index.json so the main binary stays compact.
-  const nameTable = encodeNameTable(stars.map((s) => s.proper));
-  const nameOffsets = nameTable.offsets;
-  const nameTableLength = nameTable.bytes.length;
-  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: nameTable.entries };
-  console.log(namingSummary(namingEmission.counts, namingDerived));
-
-  // Allocate output buffer.
-  const recordsLength = stars.length * RECORD_SIZE;
-  const totalLength = HEADER_SIZE + nameTableLength + recordsLength;
-  const out = new ArrayBuffer(totalLength);
-  const view = new DataView(out);
-  const bytes = new Uint8Array(out);
-
-  // Header, then the name table, then the records — the order the first
-  // transport chunk needs to decode standalone (`/src/catalog-format/record/README.md#on-disk-transport-chunking`).
-  writeCatalogHeader(view, {
-    count: stars.length,
-    nameTableOffset: HEADER_SIZE,
-    nameTableLength,
+  const { buffer: out, recordsOffset, nameTableEntries } = encodeCatalog({
+    stars, apsisMap, sids: recordSids, multiplicityStatus,
   });
-
-  bytes.set(nameTable.bytes, HEADER_SIZE);
-  let off = HEADER_SIZE + nameTableLength;
-
-  // Records.
-  const unclassifiedCon: number[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    const { ampUnits, periodUnits } = variabilityUnits(s);
-    // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
-    // manifest column as BigInt to preserve every bit before writing.
-    const gaiaSourceId = s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-
-    // Apsis lookup keyed by gaia_source_id string (BigInt key would
-    // require a parallel string map). NO_APSIS (NaN) fills every cell
-    // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsisRow = s.gaiaSourceId !== null ? apsisMap.get(s.gaiaSourceId) : undefined;
-    const apsis = {} as Record<ApsisField, number>;
-    for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
-
-    writeStarRecord(view, off, {
-      x: s.x, y: s.y, z: s.z,
-      vx: s.vx, vy: s.vy, vz: s.vz,
-      absmag: s.absmag,
-      ci: s.ci,
-      physRadius: s.physicalRadius,
-      companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
-      nameOffset: s.proper ? nameOffsets[i] : 0,
-      ...encodeSpectralBytes(s.spectral),
-      conIndex: s.conIndex,
-      flags: s.flags,
-      ampUnits,
-      periodUnits,
-      varType: s.varType ?? 0,
-      hip: s.hip ?? 0,
-      gaiaSourceId,
-      apsis,
-      sid: recordSids[i],
-      multiplicityStatus: multiplicityStatus[i],
-    });
-
-    if (s.conIndex === NO_CONSTELLATION_INDEX) unclassifiedCon.push(i);
-    off += RECORD_SIZE;
-  }
-
-  // The IAU boundaries partition the whole sphere, so byte 34's sentinel is
-  // unreachable for anything with a direction. Sol sits at the origin and is
-  // the one record that has none — any other holder means an assignment path
-  // was skipped, which surfaces downstream as a blank constellation row
-  // rather than an error.
-  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== SOL_RECORD_INDEX) {
-    throw new Error(
-      `Expected Sol (record ${SOL_RECORD_INDEX}) to be the only record without a `
-      + `constellation; got ${unclassifiedCon.length}: `
-      + `${unclassifiedCon.slice(0, 10).join(', ')}`,
-    );
-  }
-
-  if (off !== totalLength) {
-    throw new Error(`Size mismatch: wrote ${off}, expected ${totalLength}`);
-  }
+  const totalLength = out.byteLength;
+  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries };
+  console.log(namingSummary(namingEmission.counts, namingDerived));
 
   const chunkBytes = planCatalogChunks(totalLength);
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
   // the name table's length as well as the chunk target.
   const recordsInFirstChunk = recordsInChunkPrefix(
-    chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
+    chunkBytes, 1, recordsOffset, stars.length,
   );
   assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
   const records = recordsCounts(stars, apsisMap, inputs.gspcMap, recordsInFirstChunk);
@@ -586,7 +498,7 @@ export async function main() {
   const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
     const n = recordsInChunkPrefix(
-      chunkBytes, i + 1, HEADER_SIZE + nameTableLength, stars.length,
+      chunkBytes, i + 1, recordsOffset, stars.length,
     );
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });

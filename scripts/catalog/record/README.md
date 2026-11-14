@@ -28,6 +28,13 @@ scripts/catalog/record/
                                   sorted records — and variabilityUnits,
                                   the quantised period and amplitude each
                                   record writes. Pure.
+  encode-catalog-pure.ts (+ test) encodeCatalog — the sorted records, their
+                                  SIDs and multiplicity statuses to the
+                                  assembled catalog.bin buffer: header, name
+                                  table (the NAME tiers only), then each
+                                  record with its Apsis cells. Throws unless
+                                  Sol is the one record without a
+                                  constellation. Pure.
 ```
 
 ## Curated records

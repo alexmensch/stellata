@@ -91,7 +91,7 @@ export function encodePeriodUnits(periodDays: number): number {
 // ---- Binary catalog format ----------------------------------------------
 
 // Single source of truth for the catalog.bin file layout, shared by the
-// writer (scripts/catalog/build-catalog), the runtime reader
+// writer (scripts/catalog/record/encode-catalog-pure), the runtime reader
 // (src/client/loaders/catalog-loader), and the verify tool
 // (scripts/catalog/validate/verify-catalog).
 //
@@ -123,8 +123,8 @@ export const RECORD_RESERVED_TAIL_BYTES = 3;
 export const NO_COMPANION = 0xffffffff;
 // Reserved none/invalid SID sentinel (/docs/sid.md#2-identity-model--three-layers); allocation starts
 // at 1, so 0 in RECORD_LAYOUT.sid means the record resolved to no ledger
-// row — a state build-catalog.ts writes only in its unallocated-bootstrap
-// path before hard-failing (/scripts/catalog/README.md#sid-allocation).
+// row — never shipped: a failed allocation throws before anything is
+// encoded (/scripts/catalog/README.md#sid-allocation).
 export const NO_SID = 0;
 // Sentinel uint8 stored at RECORD_LAYOUT.conIndex when the star has no
 // constellation assignment. Valid IAU constellation indexes are
@@ -382,7 +382,7 @@ export interface WireStarRecord {
 }
 
 /** Encode one record at byte `off` — the writer side of the layout
- *  contract, shared by build-catalog.ts and the loader round-trip tests
+ *  contract, shared by the build's encodeCatalog and the loader round-trip tests
  *  so a writer-only encoding bug can't ship untested. */
 export function writeStarRecord(view: DataView, off: number, r: WireStarRecord): void {
   view.setFloat32(off + RECORD_LAYOUT.x, r.x, true);
