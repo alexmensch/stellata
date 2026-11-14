@@ -29,6 +29,17 @@ import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 
+/** The text form of each record's origin SourceRowRef (../lineage/README.md#identity--the-origin-source-row),
+ *  built by the caller, which holds the declarations. */
+export interface OriginKeys {
+  /** By the row's index in the committed spine. */
+  spine(index: number): string;
+  iv25(tyc: string): string;
+  i239(hip: number): string;
+  cns5(id: number): string;
+  gaia(sourceId: string): string;
+}
+
 const RETIRED_7_1_20 = retired('7.1.20');
 
 const ADDITION_BRANCHES = {

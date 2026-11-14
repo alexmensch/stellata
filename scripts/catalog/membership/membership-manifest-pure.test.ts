@@ -13,12 +13,8 @@ import type { Tycho2Row } from '../tycho2-parse';
 import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
-import {
-  buildMembership,
-  manifestKey,
-  matchSpineToManifest,
-  type MembershipResult,
-} from './membership-manifest-pure';
+import { buildMembership, type MembershipResult } from './membership-manifest-pure';
+import { matchSpineToManifest } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
@@ -32,6 +28,7 @@ import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
+  manifestKey,
   manifestDesignations,
   manifestRecord,
   type ManifestColumn,

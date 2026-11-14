@@ -41,7 +41,8 @@ scripts/catalog/lineage/
   baseline/                      StageHeader, planBaseline and judgeBaseline:
                                  which baseline a build diffs against. Own
                                  README.
-  identity-pure.ts               The identity row and its file; refuses two
+  identity-pure.ts               The identity row, identityRow its one
+                                 constructor, and its file; refuses two
                                  records on one key.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the

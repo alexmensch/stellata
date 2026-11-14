@@ -15,6 +15,15 @@ export interface IdentityRow {
   readonly designations: readonly string[];
 }
 
+export type IdentityCells = Pick<IdentityRow, 'tyc' | 'hip' | 'hd' | 'gl' | 'gaia_source_id'>;
+
+export function identityRow(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {
+  return {
+    key, tyc: cells.tyc, hip: cells.hip, hd: cells.hd, gl: cells.gl,
+    gaia_source_id: cells.gaia_source_id, designations,
+  };
+}
+
 const DESIGNATION_SEPARATOR = '|';
 
 export function identityText(rows: readonly IdentityRow[]): string {

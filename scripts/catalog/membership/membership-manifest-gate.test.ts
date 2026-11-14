@@ -41,12 +41,8 @@ import { readSourceIdRequest, unrequestedBindings } from '../astrometry-request/
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
-import {
-  MEMBERSHIP_EXPECTED_FILE,
-  manifestKey,
-  matchSpineToManifest,
-  type SpineMatch,
-} from './membership-manifest-pure';
+import { MEMBERSHIP_EXPECTED_FILE } from './membership-manifest-pure';
+import { matchSpineToManifest, type SpineMatch } from './spine-match-pure';
 import {
   MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
@@ -58,6 +54,7 @@ import { bindingReviewKey } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
+  manifestKey,
   manifestDesignations,
   type ManifestRecord,
 } from './membership-manifest-tsv';

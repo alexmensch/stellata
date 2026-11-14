@@ -6,9 +6,15 @@ import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { BINDING_CLASSES, type BindingClass } from './ledger-rows-pure';
+import type { LabelMergeRecord } from '../classic-ids/label-merge/label-merge-pure';
+import { parkedRecordKey } from '../distance/parallax/parked-ledger-pure';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
+
+export function joinManifestValues(values: readonly (string | number)[]): string {
+  return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
+}
 
 export const MANIFEST_COLUMNS = [
   'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
@@ -84,6 +90,52 @@ export function manifestRecord(
   };
 }
 
+const textOrNull = (cell: string | null): string | null => (cell === '' ? null : cell);
+
+/** A primaries row from its merged labels: the spine's printed TYC, Bayer and
+ *  proper cells (empty on an addition) beside the label merge's record. */
+export function primariesManifestRecord(
+  cells: { tyc: string; bayer: string; proper: string },
+  r: LabelMergeRecord,
+  binding: BindingClass,
+  originKey: string,
+): ManifestRecord {
+  const proper = textOrNull(cells.proper);
+  return {
+    tyc: textOrNull(cells.tyc),
+    hip: r.hip,
+    hd: r.hd,
+    hdAlt: [...r.hdAlt],
+    hr: r.hr,
+    hrAlt: [...r.hrAlt],
+    gl: textOrNull(r.gl),
+    flam: r.flam,
+    bayer: textOrNull(cells.bayer),
+    proper,
+    gaiaSourceId: textOrNull(r.gaiaSourceId),
+    binding,
+    routes: '',
+    term: 'primaries',
+    originKey,
+    isSol: proper === SOL_PROPER_NAME,
+  };
+}
+
+/** A magnitude-term row: every classical cell empty, the source_id its whole
+ *  identity. */
+export function magnitudeManifestRecord(sourceId: string, originKey: string): ManifestRecord {
+  return {
+    tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null,
+    bayer: null, proper: null,
+    gaiaSourceId: sourceId,
+    binding: 'gaia_native',
+    routes: '',
+    term: 'magnitude',
+    originKey,
+    isSol: false,
+  };
+}
+
 /** The `starDesignations` set a manifest row stands in for — the membership
  *  term's half of SID resolution. */
 export function manifestDesignations(r: ManifestRecord): string[] {
@@ -121,9 +173,9 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     tyc: nullableCell(r.tyc),
     hip: nullableCell(r.hip),
     hd: nullableCell(r.hd),
-    hd_alt: r.hdAlt.join(MANIFEST_VALUE_SEPARATOR),
+    hd_alt: joinManifestValues(r.hdAlt),
     hr: nullableCell(r.hr),
-    hr_alt: r.hrAlt.join(MANIFEST_VALUE_SEPARATOR),
+    hr_alt: joinManifestValues(r.hrAlt),
     gl: nullableCell(r.gl),
     flam: nullableCell(r.flam),
     bayer: nullableCell(r.bayer),
@@ -135,3 +187,9 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     origin_key: r.originKey,
   }),
 });
+
+/** The identifier tuple a ledger row and a manifest row share — the same five
+ *  cells the parked ledger keys on. */
+export function manifestKey(record: ManifestRecord): string {
+  return parkedRecordKey(MEMBERSHIP_MANIFEST.encode(record));
+}
