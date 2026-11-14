@@ -1,6 +1,9 @@
 /** Stage 6 anchor offsets re-based onto promotion's WDS-root anchor:
  *  README.md#promoted-companion-field-inheritance. */
 
+import { pyMod } from '../../../src/astro-core/angles';
+import { RAD_TO_DEG } from '../../../src/astro-core/astronomy-constants';
+
 export interface AnchorOffsetRow {
   comp: string;
   anchorComp: string | null;
@@ -25,7 +28,7 @@ export function tangentOffset(sepArcsec: number, paDeg: number): TangentOffset {
 export function sepPaOf({ east, north }: TangentOffset): SepPa {
   return {
     sepArcsec: Math.hypot(east, north),
-    paDeg: ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360,
+    paDeg: pyMod(Math.atan2(east, north) * RAD_TO_DEG, 360),
   };
 }
 

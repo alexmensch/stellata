@@ -42,7 +42,8 @@ import { multiplesRow, type MultiplesRowOverrides } from './multiples-fixture';
 import { OWN } from '../../binaries/multiples-record-pure';
 import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
-import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
+import { AU_PER_PC, RAD_TO_DEG } from '../../../src/astro-core/astronomy-constants';
+import { pyMod } from '../../../src/astro-core/angles';
 
 /** promoteCompanions plus its rows' lineage folded per code, as the build folds them. */
 function promote(...args: Parameters<typeof promoteCompanions>) {
@@ -2616,7 +2617,7 @@ describe('promoteCompanions', () => {
     const north = 42.1 * Math.cos(269 * rad) - 55.5 * Math.cos(259 * rad);
     const expected = projectFromSepPa(
       d.x, d.y, d.z, Math.hypot(east, north),
-      ((Math.atan2(east, north) / rad) + 360) % 360,
+      pyMod(Math.atan2(east, north) * RAD_TO_DEG, 360),
     );
     expect(h.x).toBeCloseTo(expected?.x ?? NaN, 12);
     expect(h.y).toBeCloseTo(expected?.y ?? NaN, 12);
