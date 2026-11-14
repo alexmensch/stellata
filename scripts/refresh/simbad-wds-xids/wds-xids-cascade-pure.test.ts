@@ -91,24 +91,26 @@ describe('cascadeRecoveries', () => {
     expect(out.hits).toEqual({ HD: 1, CCDM: 0, HIP: 0 });
   });
 
-  it('refuses an HD reply naming a bare number', () => {
+  it('refuses an HD reply naming a bare number, and an id nobody asked', () => {
     const ledger = parseLedger();
-    expect(cascadeRecoveries([{ id: 'HD 12345', oid: 111 }], candidates, new Set(), ledger).recoveries.size).toBe(0);
+    expect(() => cascadeRecoveries([{ id: 'HD 12345', oid: 111 }], candidates, new Set(), ledger)).toThrow(/HD 12345, which names no alias the cascade asked/);
     expect(ledger.check('t').kind).toBe('pass');
+    expect(() => cascadeRecoveries([{ id: 'Unexpected', oid: 999 }], candidates, new Set(), parseLedger())).toThrow(/Unexpected, which names no alias/);
   });
 
-  it('refuses a reply whose letter differs only in case, and fails the ledger on an HD reply it cannot read', () => {
-    expect(cascadeRecoveries([{ id: 'HD  12345b', oid: 111 }], candidates, new Set(), parseLedger()).recoveries.size).toBe(0);
+  it('drops a reply whose letter differs only in case, naming it, and fails the ledger on an HD reply it cannot read', () => {
+    const out = cascadeRecoveries([{ id: 'CCDM J00000+0000b', oid: 222 }, { id: 'HD  12345b', oid: 111 }], candidates, new Set(), parseLedger());
+    expect(out.recoveries.size).toBe(0);
+    expect(out.folded).toEqual(['CCDM J00000+0000b → 222', 'HD  12345b → 111']);
     const ledger = parseLedger();
     expect(cascadeRecoveries([{ id: 'HD 12345 B?', oid: 111 }], candidates, new Set(), ledger).recoveries.size).toBe(0);
     expect(ledger.check('t').kind).toBe('fail');
   });
 
-  it('drops an alias naming an object an ident already resolved, and an id nobody asked', () => {
-    expect(cascadeRecoveries([{ id: 'HD 12345B', oid: 555 }], candidates, new Set([555]), parseLedger()).recoveries.size).toBe(0);
-    const stray = cascadeRecoveries([{ id: 'Unexpected', oid: 999 }], candidates, new Set(), parseLedger());
-    expect(stray.recoveries.size).toBe(0);
-    expect(stray.hits).toEqual({ HD: 0, CCDM: 0, HIP: 0 });
+  it('drops an alias naming an object an ident already resolved', () => {
+    const out = cascadeRecoveries([{ id: 'HD 12345B', oid: 555 }], candidates, new Set([555]), parseLedger());
+    expect(out.recoveries.size).toBe(0);
+    expect(out.hits).toEqual({ HD: 0, CCDM: 0, HIP: 0 });
   });
 
   it('binds neither of two objects one component\'s aliases name, whichever order they answer in', () => {
