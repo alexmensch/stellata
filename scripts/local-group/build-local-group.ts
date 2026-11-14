@@ -17,6 +17,7 @@ import {
   mergeRowAndOverride,
 } from './build-local-group-pure';
 import type { LgObjectRow } from '../../src/catalog-format/local-group/local-group-schema';
+import { compareCodeUnits } from '../../src/astro-core/order-pure';
 
 export async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
@@ -96,7 +97,7 @@ export async function main(): Promise<void> {
 
   // Stable order — by name, case-insensitive — so repeat builds emit
   // byte-identical artifacts.
-  objects.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
+  objects.sort((a, b) => compareCodeUnits(a.name.toLowerCase(), b.name.toLowerCase()));
 
   const spec = SIBLING_ARTIFACTS['local-group'];
   const allocation = allocateSibling(spec, LOCAL_GROUP_JSON, objects);

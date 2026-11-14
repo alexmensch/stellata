@@ -29,9 +29,10 @@ Each has its own README.
 - `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
   comparator (numbers and bigints by value, strings by code unit; a string
   against a number does not compile), and `compareCodeUnits`, its string
-  case: the same order on every machine, unlike `localeCompare`. Every
-  ascending sort on either side routes through one of them; an inline
-  `(a, b) => a - b` also answers NaN where `ascending` answers 0.
+  case: the same order on every machine, unlike `localeCompare`. Any
+  order that reaches a written or committed output sorts through them;
+  `localeCompare` is for a list people read, such as the constellation
+  typeahead.
 - `equinoctial-pure.ts` (+ test) — the non-singular equinoctial element
   representation and the classical round trip; the Horizons element fetch
   and the viewer's planet ephemeris both express their elements in it
