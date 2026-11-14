@@ -4,7 +4,7 @@ import {
   FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
   hasRenderableOrbit, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
-import type { PairEnds } from '../catalog/companions/record-index/pair-resolution-pure';
+import { distinctEnds, type PairEnds } from '../catalog/companions/record-index/pair-resolution-pure';
 import { compoundContains, relatedHier } from './component-tokens-pure';
 import {
   assignParentRelations, pairsFromRows, topologicalWalkOrder, type MultiplesPair, type PairRow,
@@ -58,14 +58,10 @@ export function planRecords(
   walkOrder: readonly number[],
   ends: readonly PairEnds[],
 ): { records: BinaryRecord[]; counts: RuntimeBinariesCounts } {
-  const resolvedPrimary = ends.map((e) => e.primary);
-  const resolvedSecondary = ends.map((e) => e.secondary);
-
-  const relationKey = (i: number): string => `${resolvedPrimary[i]},${resolvedSecondary[i]}`;
+  const relationKey = (i: number): string => `${ends[i].primary},${ends[i].secondary}`;
   const relationWinner = new Map<string, number>();
   for (const i of walkOrder) {
-    if (resolvedPrimary[i] === null || resolvedSecondary[i] === null) continue;
-    if (resolvedPrimary[i] === resolvedSecondary[i]) continue;
+    if (!distinctEnds(ends[i])) continue;
     const incumbent = relationWinner.get(relationKey(i));
     if (incumbent === undefined
       || (hasRenderableOrbit(pairs[i].elements) && !hasRenderableOrbit(pairs[incumbent].elements))) {
@@ -77,8 +73,7 @@ export function planRecords(
   const records: BinaryRecord[] = [];
   const inputToOutput = new Map<number, number>();
   for (const i of walkOrder) {
-    const primaryIdx = resolvedPrimary[i];
-    const secondaryIdx = resolvedSecondary[i];
+    const { primary: primaryIdx, secondary: secondaryIdx } = ends[i];
     if (primaryIdx === null) { counts.pairs_dropped_primary_unresolved++; continue; }
     if (secondaryIdx === null) { counts.pairs_dropped_secondary_unresolved++; continue; }
     if (primaryIdx === secondaryIdx) { counts.pairs_dropped_degenerate_idx++; continue; }
