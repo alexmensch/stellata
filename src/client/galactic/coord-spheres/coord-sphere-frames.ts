@@ -11,6 +11,7 @@ import type {
   DrawnCoordSphereFrame,
 } from './coord-sphere';
 import { galacticDirToIcrs } from '../../../astro-core/galactic-coords';
+import { fmtLonDeg } from '../../format/angle-format';
 
 /**
  * Radians in. The identity frame: catalog.bin's Cartesian basis already has x toward
@@ -49,11 +50,6 @@ export function eclipticDirToIcrs(
     u.y * COS_OBLIQUITY - u.z * SIN_OBLIQUITY,
     u.y * SIN_OBLIQUITY + u.z * COS_OBLIQUITY,
   );
-}
-
-/** Whole degrees, wrapped to [0, 360). */
-export function fmtLonDeg(deg: number): string {
-  return `${pyMod(Math.round(deg), 360)}°`;
 }
 
 /** Whole degrees, signed. */
