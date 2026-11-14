@@ -76,6 +76,9 @@ describe('multiples.tsv codec', () => {
       [{ gaia_source_id: '42', gaia_origin: '' }, /gaia_origin "" is not own or <kind>:<token>/],
       [{ hip: '7', hip_origin: 'cousin:A' }, /hip_origin "cousin:A" is not own/],
       [{ hip: '7', hip_origin: 'blend:' }, /hip_origin "blend:" is not own/],
+      [{ hip: '7', hip_origin: 'blend:a:b' }, /hip_origin "blend:a:b" is not own/],
+      [{ hip: '7', hip_origin: 'parent:foo bar' }, /hip_origin "parent:foo bar" is not own/],
+      [{ hip: '7', hip_origin: 'letter:42' }, /hip_origin "letter:42" is not own/],
     ] as const) {
       expect(() => MULTIPLES_TSV.parse(`${header}\n${cells(over)}\n`)).toThrow(message);
     }

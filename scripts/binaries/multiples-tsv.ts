@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../util/paths';
 import { defineArtifact, nullableCell } from '../util/tsv/artifact-pure';
 import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
-import { wdsRootOf } from './component-tokens-pure';
+import { isComponentToken, wdsRootOf } from './component-tokens-pure';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 
 export const MULTIPLES_COLUMNS = [
@@ -99,7 +99,7 @@ export function parseIdOrigin(cell: string): IdOrigin | null {
   const colon = cell.indexOf(':');
   const how = cell.slice(0, colon);
   const from = cell.slice(colon + 1);
-  if (colon < 0 || from === '' || !(INHERITANCE_KINDS as readonly string[]).includes(how)) return null;
+  if (colon < 0 || !isComponentToken(from) || !(INHERITANCE_KINDS as readonly string[]).includes(how)) return null;
   return inheritedFrom(from, how as InheritanceKind);
 }
 
