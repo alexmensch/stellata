@@ -26,6 +26,18 @@ export function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: B
   };
 }
 
+/** The sources more than one row or group reaches. */
+export function heldMoreThanOnce(sourceIds: Iterable<string | null>): Set<string> {
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  for (const id of sourceIds) {
+    if (id === null) continue;
+    if (seen.has(id)) repeated.add(id);
+    else seen.add(id);
+  }
+  return repeated;
+}
+
 /** Candidates the gates passed that did not win — a disagreement between
  *  sources the precedence order settled rather than the evidence. Sound only
  *  because `deriveBinding` weighs every ranked candidate: a candidate it left

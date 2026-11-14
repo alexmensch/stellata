@@ -14,6 +14,7 @@ import type {
   BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution,
 } from './binding-gate-pure';
 import {
+  heldMoreThanOnce,
   passingRunnersUp,
   refusedCandidates,
   unshippedCandidates,
@@ -71,16 +72,11 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
 /** Withholds any source two rows derive — see README.md. */
 function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): SpineBinding[] {
   const derivations = spine.map((row) => (row.proper === SOL_PROPER_NAME ? null : derive(row)));
-  const holders = new Map<string, number>();
-  for (const d of derivations) {
-    const id = d?.derived.sourceId ?? null;
-    if (id !== null) holders.set(id, (holders.get(id) ?? 0) + 1);
-  }
+  const collisions = heldMoreThanOnce(derivations.map((d) => d?.derived.sourceId ?? null));
   return derivations.map((d): SpineBinding => {
     if (d === null) return { outcome: 'sol' };
     const id = d.derived.sourceId;
-    const withheld = id !== null && (holders.get(id) ?? 0) > 1;
-    return { ...d, outcome: bindingOutcome(d.derived, withheld) };
+    return { ...d, outcome: bindingOutcome(d.derived, id !== null && collisions.has(id)) };
   });
 }
 
@@ -255,13 +251,9 @@ export function settleSpineBindings(input: {
       throw new Error(`binding-review-dispositions.tsv: row ${key} disposes no spine row; remove it`);
     }
   }
-  const held = new Map<string, number>();
-  for (const s of settled) {
-    if (s.value !== null) held.set(s.value, (held.get(s.value) ?? 0) + 1);
-  }
-  const duplicated = [...held].filter(([, n]) => n > 1).map(([id]) => id);
-  if (duplicated.length > 0) {
-    throw new Error(`two spine rows bind one Gaia source: ${duplicated.join(', ')}`);
+  const duplicated = heldMoreThanOnce(settled.map((s) => s.value));
+  if (duplicated.size > 0) {
+    throw new Error(`two spine rows bind one Gaia source: ${[...duplicated].join(', ')}`);
   }
   return { bindings, settled, outcomes, unshipped };
 }

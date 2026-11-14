@@ -20,6 +20,7 @@ import {
   type DerivedBinding,
 } from '../binding/binding-derivation-pure';
 import {
+  heldMoreThanOnce,
   passingRunnersUp,
   refusedCandidates,
   unshippedCandidates,
@@ -404,13 +405,7 @@ export function admitAdditions(input: {
   const derivedGroups = groupAdditions(items, tables, index).map((g) => ({
     items: g, derived: g.length === 1 ? g[0].derived : derive(additionCells(g)).derived,
   }));
-  const sourceGroups = new Map<string, number>();
-  for (const { derived } of derivedGroups) {
-    if (derived.sourceId !== null) {
-      sourceGroups.set(derived.sourceId, (sourceGroups.get(derived.sourceId) ?? 0) + 1);
-    }
-  }
-  const sharedSources = new Set([...sourceGroups].filter(([, n]) => n > 1).map(([s]) => s));
+  const sharedSources = heldMoreThanOnce(derivedGroups.map(({ derived }) => derived.sourceId));
 
   const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [] };
   const groups = derivedGroups.map(({ items: groupItems, derived }) => {
