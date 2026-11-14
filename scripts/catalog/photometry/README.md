@@ -155,8 +155,8 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
 ```
 
 Per-tier routing over the shipped records: `gaia_relation` **<!-- count:build-catalog/brightness-colour.ci.gaia-relation -->881,895<!-- /count -->** ·
-`printed_hip_bv` **<!-- count:build-catalog/brightness-colour.ci.printed-hip-bv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/brightness-colour.ci.gspc -->12,013<!-- /count -->** ·
-`spectral_derived` **<!-- count:build-catalog/brightness-colour.ci.spectral-derived -->3,785<!-- /count -->** · `none` **<!-- count:build-catalog/brightness-colour.ci.none -->57,681<!-- /count -->**, which
+`printed_hip_bv` **<!-- count:build-catalog/brightness-colour.ci.printed-hip-bv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/brightness-colour.ci.gspc -->12,092<!-- /count -->** ·
+`spectral_derived` **<!-- count:build-catalog/brightness-colour.ci.spectral-derived -->3,776<!-- /count -->** · `none` **<!-- count:build-catalog/brightness-colour.ci.none -->57,611<!-- /count -->**, which
 bakes the solar colour. The relation carries the bulk; the two measured tiers under
 it take the rows past its colour and saturation bounds, and the rest reach
 neither and take a derived colour or none.

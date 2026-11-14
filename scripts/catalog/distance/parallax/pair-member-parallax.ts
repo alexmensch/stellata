@@ -2,7 +2,7 @@
 // fitted none for. Index over multiples.tsv × the DR3 astrometry table; the
 // cascade tier that reads it is in parallax-cascade.ts. See README.md.
 
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import type { MultiplesTsvRow } from '../../companions/companion-promotion';
 import { wdsRootOf } from '../../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
@@ -77,25 +77,6 @@ function precisionRank(s: SiblingParallax): number {
   return parallaxSignalToNoise(s.mas, s.errMas) ?? -Infinity;
 }
 
-/** Every source the sibling tier may read a parallax from — the pair-row half
- *  of the astrometry request (`../../astrometry-request/README.md`).
- *
- *  Deliberately every kept-physical pair member rather than only the roots
- *  holding a parked row: which rows park is an output of the build the request
- *  feeds, so keying the request on it would make the two define each other and
- *  leave the set unstable under any cascade change. */
-export function pairMemberSourceIds(
-  multiplesRows: readonly MultiplesTsvRow[],
-): Set<string> {
-  const ids = new Set<string>();
-  for (const row of multiplesRows) {
-    if (row.orbitRole === 'standalone') continue;
-    if (wdsRootOf(row.systemId) === null) continue;
-    if (row.gaiaSourceId !== null) ids.add(row.gaiaSourceId);
-  }
-  return ids;
-}
-
 /** A member's parallax is read on its OWN `gaia_source_id`, which is what keeps
  *  the index honest: Stage 2/3 bind one blended source to every component of a
  *  sub-arcsec pair, so a root's rows routinely repeat the primary's id. Reading
@@ -108,7 +89,7 @@ export function pairMemberSourceIds(
  *  participate. */
 export function buildPairMemberParallaxIndex(
   multiplesRows: readonly MultiplesTsvRow[],
-  gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>,
+  gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>,
 ): PairMemberParallaxIndex {
   const index = emptyPairMemberParallaxIndex();
   const seenSource = new Map<string, Set<string>>();

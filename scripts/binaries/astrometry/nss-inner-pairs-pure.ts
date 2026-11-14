@@ -6,7 +6,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
 import { componentsOf, inheritAs, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
-import { inheritedFrom } from '../multiples-tsv';
+import { inheritedFrom } from '../multiples-record-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';

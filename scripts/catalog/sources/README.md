@@ -11,16 +11,17 @@ direction and velocity in `../distance/`, the anchor grade in
 
 ```
 scripts/catalog/sources/
-  gaia-astrometry-source.ts       GAIA_ASTROMETRY and GaiaAstrometryCatalogRow,
+  gaia-astrometry-source.ts       GAIA_ASTROMETRY and GaiaAstrometryRow,
     (+ test)                      the one Gaia DR3 astrometry row fold: the
                                   catalogue table reads it whole
-                                  (parseGaiaAstrometryCatalogTsv), and the
+                                  (parseGaiaAstrometryTsv), and the
                                   magnitude term streams its pull through it
                                   with a keep-set (gaiaAstrometryAccumulator,
                                   `../parse/README.md#streaming-a-committed-table`),
                                   and the SIMBAD values pull streams it row by
                                   row without holding it
-                                  (gaiaAstrometryLineReader).
+                                  (gaiaAstrometryLineReader). The binaries
+                                  read their rows through the same fold.
   hip2-source.ts (+ test)         HIP2 and Hip2AstrometryRow. The parse also
                                   lists every HIP the table publishes,
                                   positioned or not, for
@@ -33,7 +34,7 @@ scripts/catalog/sources/
                                   and parseNssIndex: the source_ids carrying
                                   an NSS two-body orbit, the only signal the
                                   catalogue reads.
-  gaia-astrometry-fixture.ts      Test-only GaiaAstrometryCatalogRow builder.
+  gaia-astrometry-fixture.ts      Test-only GaiaAstrometryRow builder.
                                   A module, not an export from a test file:
                                   suites in distance/, multiplicity/, parse/
                                   and companions/ build these rows, and a

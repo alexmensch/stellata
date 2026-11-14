@@ -1,6 +1,6 @@
 // The manifest's rows as SIMBAD request keys, and the per-field value cohort that narrows them. See README.md.
 
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
 import { GAIA_DR3, WIDENING_LADDER, type LadderName } from './simbad-specs-pure';
 
@@ -78,10 +78,10 @@ export const GATE_REPRODUCED_BINDING = 'crosswalk_gated';
 export const GAIA_NATIVE_BINDING = 'gaia_native';
 
 /** Gaia states a parallax, both proper-motion components and a radial velocity for the row. */
-export const statesEveryCascadeValue = (row: GaiaAstrometryCatalogRow): boolean =>
+export const statesEveryCascadeValue = (row: GaiaAstrometryRow): boolean =>
   [row.parallaxMas, row.pmraMasyr, row.pmdecMasyr, row.radialVelocityKmS].every((v) => v !== null);
 
-export function gaiaCompleteSourceIds(catalog: ReadonlyMap<string, GaiaAstrometryCatalogRow>): Set<string> {
+export function gaiaCompleteSourceIds(catalog: ReadonlyMap<string, GaiaAstrometryRow>): Set<string> {
   const complete = new Set<string>();
   for (const [sourceId, row] of catalog) if (statesEveryCascadeValue(row)) complete.add(sourceId);
   return complete;

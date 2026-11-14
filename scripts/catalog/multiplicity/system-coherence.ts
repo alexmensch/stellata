@@ -4,7 +4,7 @@
 
 import type { Star } from '../parse/stars-parse';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
-import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
 import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';
@@ -37,7 +37,7 @@ export const ANCHOR_TIERS = ['gaia-clean', 'hip2', 'bailer-jones', 'inherited'] 
 export type AnchorTier = (typeof ANCHOR_TIERS)[number];
 
 export interface CoherenceSources {
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  gaiaAstrometry: Map<string, GaiaAstrometryRow>;
   hip2: Map<number, Hip2AstrometryRow>;
   /** Only membership is consulted for the tier pick. */
   bailerJones: BailerJonesIndex;

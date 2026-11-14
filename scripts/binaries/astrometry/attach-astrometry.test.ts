@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { emptyTallyPartition, prefixed } from '../../util/counts/tally-pure';
-import { RESOLVE_VIA } from '../multiples-tsv';
+import { RESOLVE_VIA } from '../multiples-record-pure';
 import { stage3Rates, type Stage3Counts } from './attach-astrometry';
 import { ROUTED_VIA } from './routes-pure';
 

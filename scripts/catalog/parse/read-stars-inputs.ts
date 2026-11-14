@@ -44,7 +44,7 @@ export type InputsCounts = {
   simbadSptypeEntries: number;
   /** Rows in `data/simbad/simbad_values.tsv` — the per-field value cohort (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers). */
   simbadValuesEntries: number;
-  /** Total entries in the full-catalog Gaia DR3 5p astrometry TSV
+  /** Total entries in the Gaia DR3 5p astrometry TSV
    *  (parsed map size) — direction-cascade tier 1 coverage. */
   gaiaAstrometryEntries: number;
   /** Total entries in the HIP2 van Leeuwen 2007

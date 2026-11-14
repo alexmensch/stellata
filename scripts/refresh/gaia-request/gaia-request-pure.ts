@@ -69,17 +69,13 @@ export function astrometryTable(ids: readonly bigint[], spotRows: readonly [Spot
   };
 }
 
-/** First request row, the row at the batch boundary, and the first HIP-anchored row. */
-export const BINARIES_ASTROMETRY_SPOTS: readonly [SpotRow, ...SpotRow[]] = [
+/** Rows spread over the request's id range, and Barnard's Star, whose radial velocity catches an all-null rv column. */
+export const ASTROMETRY_SPOTS: readonly [SpotRow, ...SpotRow[]] = [
+  astrometrySpot('7632157690368', [5.6023, 45.466, -6.8343], 8.068802),
   astrometrySpot('594595272471808', [11.0297, 49.4157, -45.9419], 11.953011),
   astrometrySpot('3723554268436602240', [3.0991, -189.5386, -70.415], 5.87496),
-  astrometrySpot('4923860051276772608', [16.1641, -202.7111, -71.6125], 10.588468),
-];
-
-/** First request row, a mid-file row, and Barnard's Star, whose radial velocity catches an all-null rv column. */
-export const CATALOG_ASTROMETRY_SPOTS: readonly [SpotRow, ...SpotRow[]] = [
-  astrometrySpot('7632157690368', [5.6023, 45.466, -6.8343], 8.068802),
   astrometrySpot('4040814466068502656', [3.4911, 2.6759, -5.679], 8.888946),
+  astrometrySpot('4923860051276772608', [16.1641, -202.7111, -71.6125], 10.588468),
   astrometrySpot('4472832130942575872', [546.9759, -801.551, 10362.3942], 8.193974, {
     radial_velocity: near(-110.4682, 0.001), radial_velocity_error: near(0.1313, 0.001),
   }),

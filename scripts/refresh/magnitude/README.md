@@ -26,8 +26,8 @@ Output paths are `DATA_FILES`' (`/src/catalog-format/pipeline-outputs/`).
   columns, formats, the magnitude leg's band, spot rows and extra gates.
 - `magnitude-outputs.ts` — the three `declareOutputs`.
 - `refresh-gaia-{magnitude,apsis}.ts`, `refresh-bailer-jones.ts` — one entry
-  per step; the two deep-population entries read the catalogue request through
-  `CATALOG_ASTROMETRY_REQUEST` (`../gaia-request/`).
+  per step; the two deep-population entries read the astrometry request through
+  `ASTROMETRY_REQUEST` (`../gaia-request/`).
 - `magnitude.test.ts`, `deep-population.test.ts` — replies recorded from ESA
   on 2026-11-09 formatting to lines of each committed table byte for byte
   (`../pull/recorded-reply.ts`), each committed table's order, the magnitude
@@ -90,7 +90,7 @@ columns, its magnitude leg's band, its spot rows and any further gates.
   g.source_id = t.source_id`, projecting `t.<column>`; both sides are keyed on
   the indexed `source_id`, so the join costs about what the slice does. Its
   `maxRows` is the leg's band ceiling.
-- The **request leg** is `gaia_catalog_source_id_request.tsv`, whose classic
+- The **request leg** is `gaia_astrometry_source_id_request.tsv`, whose classic
   tiers reach fainter than the floor, restricted to the ids the magnitude leg
   did not return, in `source_id IN` batches of 5,000. That restriction keeps
   each source to one row.

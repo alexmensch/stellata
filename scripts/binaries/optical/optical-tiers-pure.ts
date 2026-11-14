@@ -6,9 +6,9 @@ import { AU_PER_PC, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-con
 import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-pure';
 import { polarToTangent } from '../sky-geometry-pure';
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-tsv';
+import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-record-pure';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
 
 /** Each tag, in the cascade's order, and whether it keeps the pair. */

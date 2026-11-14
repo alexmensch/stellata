@@ -7,7 +7,7 @@ import { positiveParallaxMas } from '../astrometry/system-anchors-pure';
 import type { PairAstrometry } from '../astrometry/routes-pure';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import type { MscOrbitRow } from '../load/msc-pure';
-import { ORBIT_VIA_ON_FILE, type OrbitViaOnFile } from '../multiples-tsv';
+import { ORBIT_VIA_ON_FILE, type OrbitViaOnFile } from '../multiples-record-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import {
   ORB6_SPECTROSCOPIC_GRADES, ORB6_VISUAL_GRADES, mscToCanonicalElements, orb6ToCanonicalElements, pickBestMsc, pickBestOrb6,

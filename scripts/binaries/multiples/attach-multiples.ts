@@ -5,7 +5,7 @@ import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { firstPerSystem } from '../astrometry/system-anchors-pure';
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
-import { A_VIA, ASTROMETRY_VIA, ORBIT_ROLES, SPECT_VIA, type MultiplesRecord } from '../multiples-tsv';
+import { A_VIA, ASTROMETRY_VIA, ORBIT_ROLES, SPECT_VIA, type MultiplesRecord } from '../multiples-record-pure';
 import { OPTICAL_VIA_PROPERTIES } from '../optical/optical-tiers-pure';
 import type { Stage5Result } from '../optical/attach-optical';
 import type { Stage4Result } from '../orbits/attach-orbits';

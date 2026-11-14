@@ -1,10 +1,10 @@
 // The Stage 2 spot-check: curated (wds_id, component) → expected tier and source, against the strongest resolution. See README.md#the-spot-check.
 
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
-import { RESOLVE_VIA } from '../multiples-tsv';
+import { RESOLVE_VIA } from '../multiples-record-pure';
 import type { TableRow } from '../../util/tsv/table-pure';
 import { priorityOf, valueOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
-import type { ResolveVia } from '../multiples-tsv';
+import type { ResolveVia } from '../multiples-record-pure';
 
 export const SPOT_CHECK_COLUMNS = [
   'category', 'name', 'wds_id', 'component', 'expected_resolve_via', 'expected_gaia_source_id', 'note',

@@ -9,7 +9,7 @@ import {
 } from './cascade-pure';
 import { componentsOf } from './components-pure';
 import { alone, athygAt, decomposed, indices, lone, pairAt, ids, resolved, xid } from './resolve-fixture';
-import { OWN } from '../multiples-tsv';
+import { OWN } from '../multiples-record-pure';
 
 const orb6 = (wdsId: string, components: string, hip: number | null): Orb6Entry =>
   orb6Entry({ wdsId, components, hip, grade: 5 });

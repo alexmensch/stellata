@@ -7,7 +7,7 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import { nssOrbitalRow, nssRow } from '../orbits/nss-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, ids, indices, type Side } from '../resolve/resolve-fixture';
-import { inheritedFrom } from '../multiples-tsv';
+import { inheritedFrom } from '../multiples-record-pure';
 import { NSS_SYNTHESIS_OUTCOMES, SYNTH_NSS_DISCOVERER, synthesizeNssInnerPairs } from './nss-inner-pairs-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
 

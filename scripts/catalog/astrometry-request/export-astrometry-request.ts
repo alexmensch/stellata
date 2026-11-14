@@ -1,5 +1,4 @@
-// Emit data/gaia/gaia_catalog_source_id_request.tsv, the full-catalog Gaia 5p
-// request. See README.md.
+// Emit data/gaia/gaia_astrometry_source_id_request.tsv, the one Gaia 5p request. See README.md.
 
 import { ASTROMETRY_REQUEST_OUTPUTS } from './astrometry-request-outputs';
 import { serialiseSourceIdRequest } from './export-astrometry-request-pure';
@@ -8,8 +7,8 @@ import {
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
 import { loadHipVMag } from '../membership/binding/binding-evidence';
-import { readMultiplesTsv } from '../companions/companion-promotion';
-import { pairMemberSourceIds } from '../distance/parallax/pair-member-parallax';
+import { loadReferenceCatalogs } from '../../binaries/load/reference-catalogs';
+import { astrometryRequestIds, resolveStage2 } from '../../binaries/resolve/resolve-pairs';
 import {
   derivationCandidateSourceIds,
   indexSimbadSources,
@@ -24,22 +23,18 @@ import { indexCns5 } from '../spine/primaries-audit-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import { readArtifact } from '../../util/sources/source';
 import { emitArtifacts } from '../../util/emit-artifacts';
+import { watchHeap } from '../../util/heap-budget/heap-budget';
 
 const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
-
-export async function main(): Promise<void> {
-  const ids = new Set<string>();
-  const hipVMag = loadHipVMag();
-
-  // One table load for both contributions: the gate's Tycho-2 / Gliese arms
-  // read the same tables the derivation's do, and the TYC cross-walk has to
-  // cover IV/25's Tycho ids as well as the spine's for the gate's arm.
+/** Both binding gates' candidates, off one load of the primary tables: the
+ *  gate's Tycho-2 / Gliese arms read the tables the derivation's do, and the TYC
+ *  cross-walk covers IV/25's Tycho ids as well as the spine's for the gate. */
+async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set<string> }> {
   const spine = readArtifact(INHERITED_SPINE);
   const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
   const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
-
-  const candidates = magnitudeWeighableSourceIds(
+  const gate = magnitudeWeighableSourceIds(
     joinOverlayCandidates({
       tyc2Hd: tables.iv25,
       crossIndex: tables.iv27a,
@@ -48,44 +43,58 @@ export async function main(): Promise<void> {
       tycToSource: tables.tycToSource,
       hipToSource: tables.hipToSource,
     }),
-    printedVLookups(hipVMag, tables.tycho2, tables.gliese),
+    printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
-  for (const id of candidates) ids.add(id);
-
   const derivation = derivationCandidateSourceIds(
     [...kept, ...additionItemCells(tables, kept)], tables, indexCns5(tables.cns5).cns5ByOwnKey,
     indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless),
   );
-  for (const id of derivation) ids.add(id);
-  const afterDerivation = ids.size;
+  return { gate, derivation };
+}
 
-  const siblings = pairMemberSourceIds(readMultiplesTsv());
-  for (const id of siblings) ids.add(id);
-  const afterSiblings = ids.size;
+async function binariesCandidates(): Promise<Set<string>> {
+  const reference = await loadReferenceCatalogs();
+  return astrometryRequestIds(resolveStage2(reference), reference.indices);
+}
 
-  const reviewed = new Set(
+function reviewedKeptIds(): Set<string> {
+  return new Set(
     [...BINDING_REVIEW_DISPOSITIONS.read().values()]
       .map((d) => d.keep_source_id)
       .filter((id) => id !== ''),
   );
+}
+
+export async function main(): Promise<void> {
+  const heap = watchHeap('build:astrometry-request');
+  const { gate, derivation } = await bindingCandidates();
+  const binaries = await binariesCandidates();
+  const reviewed = reviewedKeptIds();
+
+  const ids = new Set(gate);
+  for (const id of derivation) ids.add(id);
+  const afterDerivation = ids.size;
+  for (const id of binaries) ids.add(id);
+  const afterBinaries = ids.size;
   for (const id of reviewed) ids.add(id);
 
   emitArtifacts({
     outputs: ASTROMETRY_REQUEST_OUTPUTS,
     files: { request: serialiseSourceIdRequest(ids) },
+    checks: [heap.check()],
   });
-  console.log(`classic-ID gate candidates: ${candidates.size}`);
+  console.log(`classic-ID gate candidates: ${gate.size}`);
   console.log(
     `binding-derivation candidates: ${derivation.size} ` +
-      `(+${afterDerivation - candidates.size} beyond the gate's)`,
+      `(+${afterDerivation - gate.size} beyond the gate's)`,
   );
   console.log(
-    `bound-pair siblings: ${siblings.size} ` +
-      `(+${afterSiblings - afterDerivation} beyond the two above)`,
+    `binaries candidates: ${binaries.size} ` +
+      `(+${afterBinaries - afterDerivation} beyond the two above)`,
   );
   console.log(
     `reviewed bindings kept: ${reviewed.size} ` +
-      `(+${ids.size - afterSiblings} beyond the three above)`,
+      `(+${ids.size - afterBinaries} beyond the three above)`,
   );
   console.log(`wrote ${OUT} (${ids.size} source_ids)`);
 }

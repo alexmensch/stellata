@@ -5,8 +5,9 @@ import { gMinusVRejects } from '../../catalog/membership/binding/binding-gate-pu
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { ComponentKey } from '../component-tokens-pure';
 import type { AthygRow } from './athyg-pure';
-import type { GaiaAstrometryRow, NssOrbitRow } from './gaia-pure';
+import type { NssOrbitRow } from './gaia-pure';
 import type { MscLookup } from './msc-pure';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export interface RejectedBinding {
   readonly hip: number | null;

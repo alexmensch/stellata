@@ -3,7 +3,7 @@
 import { componentKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
-import type { SpectVia } from '../multiples-tsv';
+import type { SpectVia } from '../multiples-record-pure';
 import type { ResolvedComponent } from '../resolve/components-pure';
 
 /** The position-matched row, then the Gaia source's, then the HIP's. */

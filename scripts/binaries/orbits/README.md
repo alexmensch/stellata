@@ -36,7 +36,7 @@ scripts/binaries/orbits/
 its `OrbitElements` — a route with elements never coexists with a null
 orbit. The routes, their order and what each carries (`hasElements`, the
 legacy `regime`, whether Stage 6 estimates its missing q / ω / a) are one
-table in the codec, `ORBIT_VIA_PROPERTIES` (`../multiples-tsv.ts`);
+table, `ORBIT_VIA_PROPERTIES` (`../multiples-record-pure.ts`);
 `selectOrbit` walks `ORBIT_VIA_ON_FILE` in that order with one route function
 per member, the first to return elements winning. A route whose best row
 converts to nothing (an unreadable period) falls through to the next.

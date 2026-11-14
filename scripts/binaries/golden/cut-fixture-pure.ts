@@ -3,7 +3,7 @@
 import type {
   CatalogRowIndexMap, CatalogRowIndexSidecar,
 } from '../../catalog/companions/record-index/catalog-row-index-map-pure';
-import type { MultiplesRecord } from '../multiples-tsv';
+import type { MultiplesRecord } from '../multiples-record-pure';
 import { wdsRootOf } from '../component-tokens-pure';
 
 export const FIXTURE_SYSTEMS: readonly string[] = [

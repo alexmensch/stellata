@@ -10,7 +10,7 @@ import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
-import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import {
   lookupCns5Astrometry,
@@ -34,7 +34,7 @@ export const HIP2_PM_DELTA_THRESHOLD_MASYR = 50.0;
  *  them, and the bundle is named for the cascade that ROUTES on it rather than
  *  for sole ownership. */
 export interface DirectionSources {
-  gaiaAstrometry: Map<string, GaiaAstrometryCatalogRow>;
+  gaiaAstrometry: Map<string, GaiaAstrometryRow>;
   hip2: Map<number, Hip2AstrometryRow>;
   /** Every source with an NSS two-body orbit, to its row. */
   nss: ReadonlyMap<string, SourceRowRef<string>>;
@@ -128,7 +128,7 @@ export function directionOnPm(
  *  catalogue's and the binaries' Stage 3 one gate. Missing PM on either side →
  *  no comparison possible → false. */
 export function hip2PmDisagrees(
-  gaia: Pick<GaiaAstrometryCatalogRow, 'pmraMasyr' | 'pmdecMasyr'>,
+  gaia: Pick<GaiaAstrometryRow, 'pmraMasyr' | 'pmdecMasyr'>,
   hip2: Pick<Hip2AstrometryRow, 'pmRaMasyr' | 'pmDeMasyr'>,
 ): boolean {
   if (
@@ -175,7 +175,7 @@ export function resolveDirection(
     via: V, value: Extract<DirectionResolution, { via: V }>['value'], evidence: readonly AnySourceRowRef[],
   ): DirectionResolution => ({ via, value, evidence, refusals }) as DirectionResolution;
 
-  const gaiaSolution = (g: GaiaAstrometryCatalogRow): DirectionSolution => ({
+  const gaiaSolution = (g: GaiaAstrometryRow): DirectionSolution => ({
     srcRaDeg: g.raDeg, srcDecDeg: g.decDeg,
     srcEpoch: GAIA_DR3_REF_EPOCH,
     srcPmraMasyr: g.pmraMasyr, srcPmdecMasyr: g.pmdecMasyr,

@@ -3,7 +3,7 @@
 
 import type { MultiplesTsvRow } from './companion-promotion';
 import { parseStage6Offset } from './anchor-offset-pure';
-import { OWN, gaiaFields, hipFields, type IdOrigin } from '../../binaries/multiples-tsv';
+import { OWN, gaiaFields, hipFields, type IdOrigin } from '../../binaries/multiples-record-pure';
 
 type IdentifierKeys = 'gaiaSourceId' | 'gaiaOrigin' | 'hip' | 'hipOrigin';
 

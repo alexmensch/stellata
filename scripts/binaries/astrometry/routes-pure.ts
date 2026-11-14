@@ -4,9 +4,9 @@ import { HIP2_REF_EPOCH, hip2PmDisagrees } from '../../catalog/distance/directio
 import { gaia5pUnreliable } from '../../catalog/distance/gaia-distrust';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-tsv';
+import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
@@ -77,7 +77,7 @@ export function routeAstrometry(c: ResolvedComponent, minRhoArcsec: number | nul
     if (hip2 !== null) return fromHip2(hip2);
     if (gaia === null) return UNRESOLVED_ASTROMETRY;
   }
-  if (indices.srcToNss.has(gaia.sourceId) && gaia5pUnreliable(gaia)) return fromGaia(gaia, 'gaia_nss_systemic');
+  if (indices.srcToNss.has(gaia.ref.row) && gaia5pUnreliable(gaia)) return fromGaia(gaia, 'gaia_nss_systemic');
   if (minRhoArcsec !== null && minRhoArcsec <= HIP2_COMPANION_SEPARATION_ARCSEC) {
     const hip2 = componentHip2(c, indices);
     if (hip2 !== null && hip2PmDisagrees(gaia, hip2)) return fromHip2(hip2);

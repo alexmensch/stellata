@@ -1,8 +1,10 @@
 // Test-only builders for the Stage 1 row types.
 
 import type { AthygRow } from './athyg-pure';
-import type { GaiaAstrometryRow } from './gaia-pure';
+import { GAIA_ASTROMETRY, type GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
+import { gaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 export const FIXTURE = { file: 'fixture/binaries.tsv', hint: 'h' } as const;
 
@@ -30,11 +32,13 @@ export function athygRow(over: Partial<AthygRow> = {}): AthygRow {
   };
 }
 
-export function gaiaAstrometryRow(over: Partial<GaiaAstrometryRow> = {}): GaiaAstrometryRow {
-  return {
-    sourceId: '1', raDeg: 0, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05,
-    pmraMasyr: 0, pmraErrorMasyr: 0.05, pmdecMasyr: 0, pmdecErrorMasyr: 0.05, refEpoch: 2016,
-    ruwe: 1.0, ipdFracMultiPeak: 0, gMag: null, bpMag: null, rpMag: null,
+/** A 5p row; `sourceId` keys its ref. */
+export function gaia5pRow(
+  { sourceId = '1', ...over }: Partial<GaiaAstrometryRow> & { readonly sourceId?: string } = {},
+): GaiaAstrometryRow {
+  return gaiaAstrometryRow({
+    ref: sourceRowRef(GAIA_ASTROMETRY, sourceId), parallaxMas: 10, parallaxErrorMas: 0.05,
+    pmraMasyr: 0, pmdecMasyr: 0, ruwe: 1.0, ipdFracMultiPeak: 0,
     ...over,
-  };
+  });
 }

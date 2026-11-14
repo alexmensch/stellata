@@ -101,7 +101,7 @@ surface for the derived binding), the primaries the audit reads
 `../tycho2/`, `../iau-wgsn/`, the two `../gaia/` cross-walks,
 `../simbad/simbad_sptype.tsv`), the `gl:` bridges of
 `../sid/sameas-overrides.tsv`, the binding gates' evidence
-(`../gaia/gaia_dr3_astrometry_catalog.tsv` for G,
+(`../gaia/gaia_dr3_astrometry.tsv` for G,
 `../hipparcos/hip_main_vmag.tsv` for printed V,
 `../simbad/simbad_wds_xids.tsv` for component attribution), the post-gate
 overlay `../classic-ids/classic_id_overlay.tsv`,

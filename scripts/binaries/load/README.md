@@ -27,12 +27,11 @@ scripts/binaries/load/
   curated-source.ts            ORB6_COMPONENT_OVERRIDES,
                                COMPONENT_SPTYPE_OVERRIDES,
                                ASTROMETRY_EXCLUSIONS.
-  gaia-pure.ts                 The 5p astrometry pull and the NSS orbit
-                               columns; NSS_SOLUTION_TYPES, one table naming
+  gaia-pure.ts                 The curated astrometry exclusions and the NSS
+                               orbit columns; NSS_SOLUTION_TYPES, one table naming
                                what each solution type's columns constrain,
                                which Stage 4 converts by, and its pick tier
                                (#gaia-nss-one-solution-per-source).
-  binaries-astrometry-source.ts  BINARIES_ASTROMETRY (gaia_dr3_astrometry.tsv).
   simbad-pure.ts               SIMBAD's WDS cross-IDs, the sp_type pull, and
                                their join on simbad_oid.
   simbad-wds-sptype-source.ts  SIMBAD_WDS_SPTYPE.
@@ -56,12 +55,12 @@ The real-data case is the parent folder's `build-binaries.test.ts`.
 
 ## Where each input comes from
 
-Seventeen inputs. Eight are declared here. The WDS summary and ORB6 are
+Seventeen inputs. Seven are declared here. The WDS summary and ORB6 are
 declared in [`../../wds/`](../../wds/README.md), which the SIMBAD WDS cross-ID
-pull reads too, with the duplicate-row collapse and `measuredOffset`. Seven are files the catalogue build
+pull reads too, with the duplicate-row collapse and `measuredOffset`. Eight are files the catalogue build
 reads too, read through **its** declaration, never a second one: AT-HYG
-(`../../catalog/spine/`), HIP↔CCDM (`../../catalog/multiplicity/`), HIP2 and
-the NSS table (`../../catalog/sources/`), the two Gaia best-neighbour walks
+(`../../catalog/spine/`), HIP↔CCDM (`../../catalog/multiplicity/`), HIP2,
+the Gaia astrometry pull and the NSS table (`../../catalog/sources/`), the two Gaia best-neighbour walks
 (`../../catalog/parse/`), and SIMBAD's WDS cross-IDs
 (`../../catalog/membership/binding/`). Where the two builds want different
 columns of one file, the declaration returns a column table and each reader

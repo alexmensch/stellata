@@ -40,10 +40,6 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_OUTPUTS',
   ),
   tsManual(
-    { kind: 'pull' }, 'refresh:gaia-astrometry-catalog', 'scripts/refresh/gaia-request/refresh-gaia-astrometry-catalog.ts',
-    'scripts/refresh/gaia-request/gaia-request-outputs.ts', 'GAIA_ASTROMETRY_CATALOG_OUTPUTS',
-  ),
-  tsManual(
     { kind: 'pull' }, 'refresh:gaia-magnitude', 'scripts/refresh/magnitude/refresh-gaia-magnitude.ts',
     'scripts/refresh/magnitude/magnitude-outputs.ts', 'GAIA_MAGNITUDE_OUTPUTS',
   ),

@@ -7,7 +7,7 @@ import { systemParallaxAnchors } from '../astrometry/system-anchors-pure';
 import { canonicalCompLetter, pairRowKey, type PairRowKey } from '../component-tokens-pure';
 import { mscPairKey } from '../load/msc-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
-import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-tsv';
+import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-record-pure';
 import { groupOrb6ByPair } from '../resolve/cascade-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { selectOrbit, type PairOrbit } from './select-orbit-pure';

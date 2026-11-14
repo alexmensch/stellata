@@ -2,7 +2,7 @@
 // relation over it shares. See README.md#the-published-relations.
 
 /** The three Gaia DR3 broadband magnitudes a published relation reads.
- *  Structurally satisfied by `GaiaAstrometryCatalogRow`. */
+ *  Structurally satisfied by `GaiaAstrometryRow`. */
 export interface GaiaPhotometry {
   gMag: number | null;
   bpMag: number | null;

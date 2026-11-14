@@ -3,7 +3,7 @@
 import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { OWN, RESOLVE_VIA, type IdOrigin, type ResolveVia } from '../multiples-tsv';
+import { OWN, RESOLVE_VIA, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
 /** Lower is stronger evidence. */

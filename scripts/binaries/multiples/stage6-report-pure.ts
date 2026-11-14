@@ -1,7 +1,7 @@
 // Stage 6's build-log lines, read off the Stage6Result it returned.
 
 import { count, countsListed, droppedPairSample } from '../build-log-pure';
-import { SPECT_VIA } from '../multiples-tsv';
+import { SPECT_VIA } from '../multiples-record-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { stage6Counts, type Stage6Result } from './attach-multiples';
 

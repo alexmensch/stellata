@@ -7,7 +7,7 @@ import {
   rvErrorBand,
 } from './radial-velocity';
 import { VELOCITY_SANITY_CEILING_KM_S } from '../velocity';
-import { type GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import { type GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 import type { SimbadRadialVelocity } from '../../simbad/simbad-values-parse';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
 import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
@@ -29,7 +29,7 @@ describe('resolveRadialVelocity cascade', () => {
   const GAIA_DR3 = '2022yCat.1355....0G';
   const simbadRv = (kmS: number, bibcode = LITERATURE) => ({ kmS, bibcode, ref: SIMBAD_REF });
   const resolve = (
-    gaia: GaiaAstrometryCatalogRow | null, simbad: SimbadRadialVelocity | null,
+    gaia: GaiaAstrometryRow | null, simbad: SimbadRadialVelocity | null,
   ) => resolveRadialVelocity({ gaia, simbad });
   const NO_5P = { tier: 'gaia_dr3', reason: 'no_5p_solution', ref: GAIA_REF } as const;
   const SKIPPED = { tier: 'simbad', reason: 'gaia_release', ref: SIMBAD_REF } as const;

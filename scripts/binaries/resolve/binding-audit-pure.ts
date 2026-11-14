@@ -1,7 +1,6 @@
 // The binding-integrity audit: verdicts on one source across disjoint letters and one letter across sources, then their enforcement. See README.md#the-binding-integrity-audit.
 
 import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type ComponentKey } from '../component-tokens-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import { skyPositionAtEpoch } from '../../../src/astro-core/equatorial-basis';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
@@ -13,6 +12,7 @@ import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geomet
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
+import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
 export type BindingShape = (typeof BINDING_SHAPES)[number];

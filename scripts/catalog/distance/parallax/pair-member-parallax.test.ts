@@ -3,13 +3,12 @@ import { describe, it, expect } from 'vitest';
 import {
   buildPairMemberParallaxIndex,
   lookupPairMemberParallax,
-  pairMemberSourceIds,
   unpulledSiblingsMessage,
 } from './pair-member-parallax';
 import { PARALLAX_SN_FLOOR } from './parallax-cascade';
 import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import { multiplesRow } from '../../companions/multiples-fixture';
-import type { GaiaAstrometryCatalogRow } from '../../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
 
 // σ Ori's real shape: the WDS root holds the blended Aa/Ab/A/B rows on one
 // source that publishes no parallax, and HIP 26551 D on its own clean fit.
@@ -20,14 +19,14 @@ const SIBLING_PLX = 2.4744;
 const SIBLING_ERR = 0.0622;
 
 const clean = (
-  overrides: Partial<GaiaAstrometryCatalogRow> = {},
-): GaiaAstrometryCatalogRow => gaiaAstrometryRow({
+  overrides: Partial<GaiaAstrometryRow> = {},
+): GaiaAstrometryRow => gaiaAstrometryRow({
   parallaxMas: SIBLING_PLX, parallaxErrorMas: SIBLING_ERR,
   ruwe: 1.0689, ipdFracMultiPeak: 0, gMag: 6.5,
   ...overrides,
 });
 
-const sigmaOri = (gaia: Map<string, GaiaAstrometryCatalogRow>) =>
+const sigmaOri = (gaia: Map<string, GaiaAstrometryRow>) =>
   buildPairMemberParallaxIndex([
     multiplesRow({
       systemId: `${ROOT}-Aa,Ab`, comp: 'Aa', hip: 26549,
@@ -73,7 +72,7 @@ describe('pair-member-parallax / the sibling a member borrows from', () => {
 });
 
 describe('pair-member-parallax / the coherence anchor gate', () => {
-  const rejected: [string, Partial<GaiaAstrometryCatalogRow>][] = [
+  const rejected: [string, Partial<GaiaAstrometryRow>][] = [
     ['a RUWE the fit does not stand behind', { ruwe: 1.5 }],
     ['a blended image (ipd_frac_multi_peak is a percent here)', { ipdFracMultiPeak: 37 }],
     ['a saturated source', { gMag: 2.5 }],
@@ -91,7 +90,7 @@ describe('pair-member-parallax / the coherence anchor gate', () => {
   // exactly one bucket and the three sum with `entryCount` and `unpulled` to
   // the dedup's input — two sources here, the blend and the sibling. A path
   // summing nowhere would leave the README's table quietly short.
-  const attributed: [string, Partial<GaiaAstrometryCatalogRow> | null, number, {
+  const attributed: [string, Partial<GaiaAstrometryRow> | null, number, {
     noParallax: number; notAnchorGrade: number; belowSnFloor: number;
   }, number][] = [
     ['a clean sibling', {}, 1, { noParallax: 1, notAnchorGrade: 0, belowSnFloor: 0 }, 0],
@@ -109,7 +108,7 @@ describe('pair-member-parallax / the coherence anchor gate', () => {
     it(`attributes ${label} to one bucket, and the five still partition`, () => {
       // σ Ori's blend publishes no parallax of its own, so wherever the pull
       // holds a row for it at all it lands in `noParallax`.
-      const gaia = overrides === null ? new Map<string, GaiaAstrometryCatalogRow>()
+      const gaia = overrides === null ? new Map<string, GaiaAstrometryRow>()
         : new Map([
           [BLEND_SOURCE, clean({ parallaxMas: null })],
           [SIBLING_SOURCE, clean(overrides)],
@@ -170,33 +169,5 @@ describe('pair-member-parallax / what the index admits', () => {
     ], new Map([[SIBLING_SOURCE, clean()]]));
     expect(index.entryCount).toBe(0);
     expect(lookupPairMemberParallax(index, BLEND_SOURCE, null)).toBeNull();
-  });
-});
-
-describe('pair-member-parallax / the astrometry request contribution', () => {
-  const rows = [
-    multiplesRow({ systemId: `${ROOT}-AB`, comp: 'A', gaiaSourceId: BLEND_SOURCE, orbitRole: 'primary' }),
-    multiplesRow({ systemId: `${ROOT}-AB`, comp: 'B', gaiaSourceId: BLEND_SOURCE }),
-    multiplesRow({ systemId: `${ROOT}-AB,D`, comp: 'D', gaiaSourceId: SIBLING_SOURCE }),
-    multiplesRow({ systemId: `${ROOT}-_Z`, comp: 'Z', gaiaSourceId: '999', orbitRole: 'standalone' }),
-    multiplesRow({ systemId: `${ROOT}-AE`, comp: 'E', gaiaSourceId: null }),
-  ];
-
-  it('names every kept-physical pair member the tier could read, once', () => {
-    expect([...pairMemberSourceIds(rows)].sort())
-      .toEqual([BLEND_SOURCE, SIBLING_SOURCE].sort());
-  });
-
-  it('leaves standalone rows out, matching what the index will read', () => {
-    expect(pairMemberSourceIds(rows).has('999')).toBe(false);
-  });
-
-  it('asks for a source whether or not the table already answers — the request '
-    + 'cannot be keyed on which rows park, since that is the build it feeds', () => {
-    // No astrometry at all: the request still has to name these sources, or
-    // the pull can never turn them into candidates.
-    const index = buildPairMemberParallaxIndex(rows, new Map());
-    expect(index.entryCount).toBe(0);
-    expect(pairMemberSourceIds(rows).size).toBe(2);
   });
 });

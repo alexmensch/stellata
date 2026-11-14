@@ -2,13 +2,13 @@
 // 5p fit its own indicators mark orbit-corrupted, and the bibcode naming Gaia's
 // own reduction returning through a second-order index.
 
-import type { GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
+import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 
 /** Whether the row carries the full five-parameter solution. A 2p row is
  *  position-only — Gaia fitted neither parallax nor PM, which on a close pair is
  *  the blend the fit could not separate. The direction cascade's tier-1 branch,
  *  the rv cascade's Gaia tier and the PM rescue's skip rule all turn on this. */
-export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
+export function gaiaHas5pSolution(row: GaiaAstrometryRow): boolean {
   return row.parallaxMas !== null;
 }
 
@@ -16,7 +16,7 @@ export function gaiaHas5pSolution(row: GaiaAstrometryCatalogRow): boolean {
  *  parameters — the condition both skip rules gate on. A record with no Gaia
  *  row at all is NOT 2p: there is no blend to distrust, so a Gaia bibcode on
  *  it is an ordinary citation rather than the withheld fit returning. */
-export function gaiaRowIs2p(row: GaiaAstrometryCatalogRow | null): boolean {
+export function gaiaRowIs2p(row: GaiaAstrometryRow | null): boolean {
   return row !== null && !gaiaHas5pSolution(row);
 }
 
@@ -27,7 +27,7 @@ export const GAIA_IPD_FRAC_MULTI_PEAK_THRESHOLD = 2.0;
 /** RUWE / ipd_frac_multi_peak orbit-corruption indicators on the 5p fit —
  *  the catalogue's and the binaries' Stage 3 one gate, so a shared star routes
  *  identically in both. */
-export function gaia5pUnreliable(row: Pick<GaiaAstrometryCatalogRow, 'ruwe' | 'ipdFracMultiPeak'>): boolean {
+export function gaia5pUnreliable(row: Pick<GaiaAstrometryRow, 'ruwe' | 'ipdFracMultiPeak'>): boolean {
   if (row.ruwe !== null && row.ruwe > GAIA_RUWE_UNRELIABLE_THRESHOLD) return true;
   if (
     row.ipdFracMultiPeak !== null
@@ -85,7 +85,7 @@ const NOTHING_REFUSED: ReadonlySet<never> = new Set();
 
 /** What the record's own Gaia fit refuses: its release, when the fit is 2p. */
 export function gaiaRefusals(
-  gaia: GaiaAstrometryCatalogRow | null,
+  gaia: GaiaAstrometryRow | null,
 ): ReadonlySet<'gaia_release'> {
   return gaiaRowIs2p(gaia) ? GAIA_RELEASE_REFUSED : NOTHING_REFUSED;
 }
