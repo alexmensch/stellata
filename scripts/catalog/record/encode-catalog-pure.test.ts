@@ -4,6 +4,7 @@ import {
   HEADER_SIZE,
   NO_COMPANION,
   NO_CONSTELLATION_INDEX,
+  NO_SID,
   RECORD_SIZE,
   readCatalogHeader,
   readNameTable,
@@ -62,6 +63,17 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'period')).toBe(100);
     expect(readRecordField(view, star, 'sid')).toBe(102);
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
+  });
+
+  it('throws on a SID or multiplicity status list that does not pair with the records, and on NO_SID', () => {
+    const stars = [SOL, STAR];
+    const apsisMap = new Map<string, ApsisRow>();
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1], multiplicityStatus: Uint8Array.of(0, 0) }))
+      .toThrow(/2 records but 1 SIDs and 2 multiplicity statuses/);
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, 2], multiplicityStatus: Uint8Array.of(0) }))
+      .toThrow(/2 records but 2 SIDs and 1 multiplicity statuses/);
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, NO_SID], multiplicityStatus: Uint8Array.of(0, 0) }))
+      .toThrow(/record 1 carries NO_SID/);
   });
 
   it('throws unless Sol, at record 0, is the only record without a constellation', () => {

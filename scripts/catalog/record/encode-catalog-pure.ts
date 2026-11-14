@@ -7,6 +7,7 @@ import {
   NO_COMPANION,
   NO_CONSTELLATION_INDEX,
   NO_GAIA_SOURCE_ID,
+  NO_SID,
   RECORD_SIZE,
   SOL_RECORD_INDEX,
   encodeNameTable,
@@ -36,6 +37,13 @@ export interface EncodedCatalog {
 }
 
 export function encodeCatalog({ stars, apsisMap, sids, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
+  if (sids.length !== stars.length || multiplicityStatus.length !== stars.length) {
+    throw new Error(
+      `encodeCatalog: ${stars.length} records but ${sids.length} SIDs and ${multiplicityStatus.length} multiplicity statuses`,
+    );
+  }
+  const unallocated = sids.indexOf(NO_SID);
+  if (unallocated !== -1) throw new Error(`encodeCatalog: record ${unallocated} carries NO_SID`);
   const nameTable = encodeNameTable(stars.map((s) => s.proper));
   const recordsOffset = HEADER_SIZE + nameTable.bytes.length;
   const totalLength = recordsOffset + stars.length * RECORD_SIZE;

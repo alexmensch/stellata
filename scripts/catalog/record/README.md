@@ -32,9 +32,11 @@ scripts/catalog/record/
                                   SIDs and multiplicity statuses to the
                                   assembled catalog.bin buffer: header, name
                                   table (the NAME tiers only), then each
-                                  record with its Apsis cells. Throws unless
-                                  Sol is the one record without a
-                                  constellation. Pure.
+                                  record with its Apsis cells. Throws on a
+                                  SID or status list that does not pair
+                                  one-for-one with the records, on NO_SID,
+                                  and unless Sol is the one record without
+                                  a constellation. Pure.
 ```
 
 ## Curated records
