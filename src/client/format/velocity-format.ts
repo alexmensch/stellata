@@ -4,6 +4,7 @@
 import * as THREE from 'three';
 import { ICRS_TO_GAL_M3 } from '../../astro-core/galactic-coords';
 import { AU_PER_PC, KM_S_PER_AU_YR } from '../../astro-core/astronomy-constants';
+import { pyMod } from '../../astro-core/angles';
 
 /** km/s per pc/yr — the catalog `velocities` unit onto the display unit. */
 export const KMS_PER_PC_YR = AU_PER_PC * KM_S_PER_AU_YR;
@@ -11,7 +12,7 @@ export const KMS_PER_PC_YR = AU_PER_PC * KM_S_PER_AU_YR;
 export interface SpaceVelocity {
   /** Speed, km/s. */
   kms: number;
-  /** Galactic longitude of the velocity vector's heading, degrees [0, 360). */
+  /** Galactic longitude of the velocity vector's heading, degrees [0, 360]. */
   lDeg: number;
   /** Galactic latitude of the heading, degrees [-90, +90]. */
   bDeg: number;
@@ -34,8 +35,7 @@ export function spaceVelocity(
   const mag = Math.hypot(vxPcYr, vyPcYr, vzPcYr);
   if (!Number.isFinite(mag) || mag === 0) return null;
   const v = SCRATCH.set(vxPcYr, vyPcYr, vzPcYr).applyMatrix3(ICRS_TO_GAL_M3);
-  let lDeg = (Math.atan2(v.y, v.x) * 180) / Math.PI;
-  if (lDeg < 0) lDeg += 360;
+  const lDeg = pyMod((Math.atan2(v.y, v.x) * 180) / Math.PI, 360);
   const bDeg = (Math.asin(Math.min(1, Math.max(-1, v.z / mag))) * 180) / Math.PI;
   return { kms: mag * KMS_PER_PC_YR, lDeg, bDeg };
 }
