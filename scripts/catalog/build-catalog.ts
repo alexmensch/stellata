@@ -375,7 +375,7 @@ export async function main() {
   const sortKey = new Float64Array(stars.length);
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
+    const v = apparentVFromSol(s, avSolToStar(dustGrid, s.x, s.y, s.z));
     // On the key, before the sort — /src/catalog-format/record/README.md#record-order.
     if (!Number.isFinite(v)) {
       throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
