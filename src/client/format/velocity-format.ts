@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { ICRS_TO_GAL_M3 } from '../../astro-core/galactic-coords';
 import { AU_PER_PC, KM_S_PER_AU_YR } from '../../astro-core/astronomy-constants';
 import { raDecFromUnitVector } from '../../astro-core/equatorial-basis';
+import { fmtLonDeg } from './angle-format';
 
 /** km/s per pc/yr — the catalog `velocities` unit onto the display unit. */
 export const KMS_PER_PC_YR = AU_PER_PC * KM_S_PER_AU_YR;
@@ -45,5 +46,5 @@ export function spaceVelocity(
 export function formatSpaceVelocity(v: SpaceVelocity): string {
   const b = Math.round(v.bDeg);
   const bStr = b >= 0 ? `+${b}` : `${b}`;
-  return `${Math.round(v.kms)} km/s\nℓ ${Math.round(v.lDeg)}° · b ${bStr}°`;
+  return `${Math.round(v.kms)} km/s\nℓ ${fmtLonDeg(v.lDeg)} · b ${bStr}°`;
 }
