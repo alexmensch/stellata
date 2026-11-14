@@ -50,7 +50,7 @@ describe('classicIdLineage', () => {
     ].sort());
   });
 
-  it('keys an HD on its first IV/25 row, cites the rest, and lists only the sources the gate kept', () => {
+  it('keys an HD on its lowest Tycho-2 id in string order, cites the rest, and lists only the sources the gate kept', () => {
     const kept = '111111111111111111';
     const rows = lineageOf(toliman({
       tyc2Hd: [

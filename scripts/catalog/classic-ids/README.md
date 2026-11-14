@@ -254,7 +254,7 @@ states it:
 
 | Designation | Key | One row per |
 |---|---|---|
-| HD | its first IV/25 entry (`iv25:<tyc>`); the others are evidence | HD number |
+| HD | its IV/25 entry with the lowest Tycho-2 id in string order (`iv25:<tyc>`); the others are evidence | HD number |
 | HIP | Gaia's HIP cross-match (`gaia-dr3-hip:<hip>`), the table HIP enters this stage from | cross-match entry |
 | Bayer, Flamsteed | IV/27A (`iv27a:<hd>`) | designation |
 | HR | V/50 (`v50:<hr>`) | HR number |
