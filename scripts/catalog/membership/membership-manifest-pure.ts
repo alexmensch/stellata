@@ -1,4 +1,4 @@
-// buildMembership: the membership phases wired in order — corrections, spine bindings, spine side, the merge-derivation shadow, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
+// buildMembership: the membership phases wired in order — corrections, the pair rule, spine bindings, spine side, the merge derivation, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
 import type { ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
 import type { LabelMergeCounts, LabelOverrides } from '../classic-ids/label-merge/label-merge-pure';
@@ -14,7 +14,7 @@ import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
-import { mergeDivergences, mergeLinksFrom } from './merge-derivation/merge-derivation-pure';
+import { applyPairRule, mergeDivergences, pairLinksFrom } from './merge-derivation/merge-derivation-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
@@ -77,9 +77,12 @@ export interface MembershipResult extends MembershipLedgers {
 export function buildMembership(input: MembershipInput): MembershipResult {
   const { tables, evidence, keys, corrections } = input;
   const idx = indexPrimaries(tables);
-  const { corrected, kept, keptSpineIndex, folds } = applySpineCorrections(input.spine, corrections);
-  const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
+  const correctedSpine = applySpineCorrections(input.spine, corrections);
+  const { corrected, keptSpineIndex, folds } = correctedSpine;
+  const pairLinks = pairLinksFrom(tables);
   const derive = rowDeriver(tables, idx, evidence);
+  const { rows: kept, decided } = applyPairRule(correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId);
+  const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
 
   const settlement = settleSpineBindings({
     kept, keyOf, derive, dispositions: input.dispositions, evidence, tables,
@@ -89,8 +92,8 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
   });
   const keptKeys = spineKeys(kept);
-  const mergeLinks = mergeLinksFrom(tables, keptKeys);
-  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks).map(
+  const mergeLinks = { ...pairLinks, held: keptKeys };
+  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i)).map(
     (divergence) => ({ key: keyOf(i), outcome: { kind: 'merge', divergence } }),
   ));
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);

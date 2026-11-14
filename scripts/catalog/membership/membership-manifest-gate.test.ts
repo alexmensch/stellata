@@ -42,7 +42,8 @@ import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-sourc
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 import { MEMBERSHIP_EXPECTED_FILE } from './membership-manifest-pure';
-import { matchSpineToManifest, type SpineMatch } from './spine-match-pure';
+import { matchSpineToManifest, withRecordMoves, type SpineMatch } from './spine-match-pure';
+import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import {
   MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
@@ -124,6 +125,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   let corrected: SpineRow[];
   let folds: SpineFold[];
   let manifest: ManifestRecord[];
+  let recordMoves: { tyc: string | null; derived: string }[];
   let match: SpineMatch;
 
   beforeAll(() => {
@@ -133,8 +135,9 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       SPINE_CORRECTIONS.read(),
     ));
     manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
+    recordMoves = readArtifact(MERGE_DIVERGENCE).filter((d) => d.divergence === 'pair_moves');
     match = matchSpineToManifest(
-      spine.map(spineDesignations),
+      withRecordMoves(corrected, recordMoves).map(spineDesignations),
       manifest,
       SAMEAS_OVERRIDES.read(),
     );
@@ -160,6 +163,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const targets = match.manifestIndex.filter((i): i is number => i !== null);
     expect(targets.length - new Set(targets).size).toBe(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
     expect(folds).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
+    expect(recordMoves).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('merge.pair.moves-record')]);
     for (const { foldedRow, survivorRow } of folds) {
       expect(match.manifestIndex[foldedRow], bindingReviewKey(spine[foldedRow]))
         .toBe(match.manifestIndex[survivorRow]);

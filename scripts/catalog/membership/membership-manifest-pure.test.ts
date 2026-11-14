@@ -14,7 +14,7 @@ import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { buildMembership, type MembershipResult } from './membership-manifest-pure';
-import { matchSpineToManifest } from './spine-match-pure';
+import { matchSpineToManifest, withRecordMoves } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
@@ -29,7 +29,7 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
-import { mergeDivergences, mergeLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { mergeDivergences, pairLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
 import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
@@ -962,7 +962,7 @@ describe('codecs', () => {
       gliese: parseGlieseTsv(gliese, GLIESE),
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
-    const m = mergeLinksFrom(t, spineKeys(spine));
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine) };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
     expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
@@ -971,21 +971,22 @@ describe('codecs', () => {
     expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
   });
 
-  it('ledgers every merge divergence but a confirmed pair, and round-trips the ledger', () => {
+  it('ledgers every merge divergence but a confirmed pair and a move onto an entry, and round-trips the ledger', () => {
     const key = 'spine:9';
     const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
     const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
     const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
     const ledger = membershipLedgers([
       merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', sourceId: '5' }),
-      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5', onto: 'entry' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', sourceId: '5', onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
     ], identity).mergeDivergence;
     expect(ledger).toHaveLength(4);
     expect(ledger).toEqual(expect.arrayContaining([
-      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-2', evidence: '5' },
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
       { ...ids, divergence: 'pair_review', cells: 'hip', derived: '1-1-1|1-1-2', evidence: 'no_hip_source' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
       { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
@@ -1057,6 +1058,26 @@ describe('matchSpineToManifest', () => {
 
   it('reports the manifest rows no spine row reaches', () => {
     expect(match.unreached).toEqual([4, 5, 6]);
+  });
+});
+
+describe('withRecordMoves', () => {
+  const spine = [
+    spineRow({ tyc: '8-1-2', hip: '77', hd: '60' }),
+    spineRow({ tyc: '8-1-1', hd: '61' }),
+  ];
+  const manifest = [manifestRow({ tyc: '8-1-2', hd: '60' }), manifestRow({ tyc: '8-1-1', hip: '77', hd: '61' })];
+
+  it('matches both spine rows on their own records once the HIP has moved', () => {
+    const moved = withRecordMoves(spine, [{ tyc: '8-1-2', derived: '8-1-1' }]);
+    expect(moved).toEqual([spineRow({ tyc: '8-1-2', hd: '60' }), spineRow({ tyc: '8-1-1', hip: '77', hd: '61' })]);
+    expect(matchSpineToManifest(moved.map(spineDesignations), manifest, []).manifestIndex).toEqual([0, 1]);
+    expect(matchSpineToManifest(spine.map(spineDesignations), manifest, []).manifestIndex).toEqual([1, 1]);
+  });
+
+  it('refuses a move naming no spine row, or one onto a row that carries a HIP', () => {
+    expect(() => withRecordMoves(spine, [{ tyc: '8-1-9', derived: '8-1-1' }])).toThrow(/8-1-9 -> 8-1-1/);
+    expect(() => withRecordMoves(spine, [{ tyc: '8-1-1', derived: '8-1-2' }])).toThrow(/8-1-1 -> 8-1-2/);
   });
 });
 

@@ -1,6 +1,8 @@
 // The parity gate's spine ↔ manifest matcher. See README.md#the-parity-gate.
 
 import { compareDesignations, sameAsClasses, type SameasEdge } from '../../sid/sid-pure';
+import type { SpineRow } from '../spine/inherited-spine-pure';
+import type { MergeDivergenceRow } from './ledger-rows-pure';
 import { manifestDesignations, type ManifestRecord } from './membership-manifest-tsv';
 
 export interface SpineMatch {
@@ -48,4 +50,23 @@ export function matchSpineToManifest(
   });
   const unreached = manifestRows.map((_, i) => i).filter((i) => !reached.has(i));
   return { manifestIndex, unmatched, multiple, unreached };
+}
+
+/** see merge-derivation/README.md#applying-the-pair-rule */
+export function withRecordMoves(
+  rows: readonly SpineRow[], moves: readonly Pick<MergeDivergenceRow, 'tyc' | 'derived'>[],
+): SpineRow[] {
+  const byTyc = new Map<string, number>();
+  rows.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const out = [...rows];
+  for (const move of moves) {
+    const from = move.tyc === null ? undefined : byTyc.get(move.tyc);
+    const to = byTyc.get(move.derived);
+    if (from === undefined || to === undefined || out[from].hip === '' || out[to].hip !== '') {
+      throw new Error(`pair move ${move.tyc} -> ${move.derived} names no HIP-carrying spine row and HIP-less receiver`);
+    }
+    out[to] = { ...out[to], hip: out[from].hip };
+    out[from] = { ...out[from], hip: '' };
+  }
+  return out;
 }

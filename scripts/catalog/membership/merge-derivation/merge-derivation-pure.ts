@@ -11,7 +11,7 @@ import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-p
 import { cns5Gl } from '../additions/addition-items-pure';
 
 /** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
-export const PAIR_REVIEW_REASONS = ['no_hip_source', 'no_entry_matches', 'several_match'] as const;
+export const PAIR_REVIEW_REASONS = ['no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused'] as const;
 export type PairReviewReason = (typeof PAIR_REVIEW_REASONS)[number];
 
 /** The cells a spine row can leave empty that a primary's link fills. */
@@ -37,12 +37,24 @@ export type DiffersLink = (typeof DIFFERS_LINKS)[number];
 export type MergeDivergence =
   | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
   | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
-  | { readonly kind: 'pair-moves'; readonly hip: number; readonly owner: string; readonly sourceId: string }
+  | {
+    readonly kind: 'pair-moves';
+    readonly hip: number;
+    readonly owner: string;
+    readonly sourceId: string;
+    /** `record` when the owner entry is another spine record's, which takes the HIP. */
+    readonly onto: PairMoveTarget;
+  }
   | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
   | { readonly kind: 'differs'; readonly link: DiffersLink; readonly spine: string; readonly derived: readonly string[] };
 
-export interface MergeLinks {
+export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
+export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
+/** What `applyPairRule` decided on a row the Gaia test alone would move. */
+export type PairDecision = Extract<MergeDivergence, { kind: 'pair-moves' | 'pair-review' }>;
+
+export interface PairLinks {
   links: LinkTables;
   /** Tycho-2's own `hip` column, inverted: every entry naming the HIP. */
   hipEntries: ReadonlyMap<number, readonly string[]>;
@@ -51,6 +63,9 @@ export interface MergeLinks {
   cns5ByHip: ReadonlyMap<number, readonly string[]>;
   /** V/70A's rows by their `HD`, in the record's GJ form. */
   v70aByHd: ReadonlyMap<number, readonly string[]>;
+}
+
+export interface MergeLinks extends PairLinks {
   held: SpineKeys;
 }
 
@@ -60,7 +75,7 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   else list.push(value);
 }
 
-export function mergeLinksFrom(tables: PrimaryTables, held: SpineKeys): MergeLinks {
+export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   const links = linkTablesFrom(tables);
   const hipEntries = new Map<number, string[]>();
   for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
@@ -75,7 +90,6 @@ export function mergeLinksFrom(tables: PrimaryTables, held: SpineKeys): MergeLin
     hdHr: hdToHr(links.hrHd),
     cns5ByHip,
     v70aByHd,
-    held,
   };
 }
 
@@ -110,7 +124,7 @@ function v70aGl(row: GlieseRow): string {
 
 /** The pair rule's verdict on a spine row whose HIP Tycho-2 gives to two or
  *  more entries, and the HIP the row's other cells derive from. */
-function pairVerdict(row: SpineRow, spineHip: number | null, m: MergeLinks): {
+function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   divergence: MergeDivergence | null;
   hip: number | null;
 } {
@@ -126,9 +140,44 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: MergeLinks): {
   return {
     divergence: verdict.owner === row.tyc
       ? { kind: 'pair-confirmed', hip, owner: verdict.owner, sourceId: verdict.sourceId }
-      : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId },
+      : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId, onto: 'entry' },
     hip,
   };
+}
+
+/** `binds` is the source the binding derivation ships for a row. see README.md#applying-the-pair-rule */
+export function applyPairRule(
+  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null,
+): { rows: SpineRow[]; decided: ReadonlyMap<number, PairDecision> } {
+  const rows = [...kept];
+  const byTyc = new Map<string, number>();
+  kept.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const decided = new Map<number, PairDecision>();
+  const owners = new Set<string>();
+  kept.forEach((row, i) => {
+    const move = pairVerdict(row, intOf(row.hip), m).divergence;
+    if (move?.kind !== 'pair-moves') return;
+    const j = byTyc.get(move.owner);
+    if (j !== undefined && kept[j].hip !== '') {
+      throw new Error(`pair rule: HIP ${move.hip} moves onto ${move.owner}, whose spine record carries HIP ${kept[j].hip}`);
+    }
+    const receiver = j === undefined ? { ...row, tyc: move.owner } : { ...kept[j], hip: String(move.hip) };
+    if (binds(receiver) !== move.sourceId) {
+      decided.set(i, { kind: 'pair-review', hip: move.hip, entries: m.hipEntries.get(move.hip)!, reason: 'gate_refused' });
+      return;
+    }
+    if (owners.has(move.owner)) throw new Error(`pair rule: two HIPs move onto Tycho-2 entry ${move.owner}`);
+    owners.add(move.owner);
+    if (j === undefined) {
+      rows[i] = receiver;
+      decided.set(i, move);
+      return;
+    }
+    rows[i] = { ...rows[i], hip: '' };
+    rows[j] = receiver;
+    decided.set(i, { ...move, onto: 'record' });
+  });
+  return { rows, decided };
 }
 
 /** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */
@@ -191,7 +240,8 @@ function differsCells(row: SpineRow, inPair: boolean, m: MergeLinks): MergeDiver
   return out;
 }
 
-export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[] {
+/** `decided` is `applyPairRule`'s verdict on this row, which `row` already carries. */
+export function mergeDivergences(row: SpineRow, m: MergeLinks, decided?: PairDecision): MergeDivergence[] {
   const partition = partitionRow(row, m.links);
   const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
     ? [{
@@ -202,10 +252,14 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
     }]
     : [];
   const pair = pairVerdict(row, intOf(row.hip), m);
+  if (decided === undefined && pair.divergence?.kind === 'pair-moves') {
+    throw new Error(`pair rule not applied: HIP ${pair.divergence.hip} still on Tycho-2 entry ${row.tyc}`);
+  }
+  const verdict = decided ?? pair.divergence;
   return [
     ...unlinked,
-    ...(pair.divergence === null ? [] : [pair.divergence]),
+    ...(verdict === null ? [] : [verdict]),
     ...derivedOnlyCells(row, pair.hip, m),
-    ...differsCells(row, pair.divergence !== null, m),
+    ...differsCells(row, verdict !== null, m),
   ];
 }

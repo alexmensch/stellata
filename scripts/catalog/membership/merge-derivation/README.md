@@ -1,10 +1,11 @@
 # Merge derivation — the spine's merge decisions held against the primaries
 
-The shadow of `build:membership`'s spine side: for every spine row left after
-the corrections ([Correcting a merge decision](../spine-corrections/README.md#correcting-a-merge-decision)),
+`build:membership`'s spine side held against the primaries: for every spine
+row left after the corrections ([Correcting a merge decision](../spine-corrections/README.md#correcting-a-merge-decision)),
 what the primaries' own links derive for its identifier cells, and where that
-departs from the merge decision the spine records. **It changes no manifest
-row.** Its output is the divergence ledger that `stellata-hooj.17.11` switches
+departs from the merge decision the spine records. **The pair rule is applied**
+([Applying the pair rule](#applying-the-pair-rule)); every other divergence
+changes no manifest row yet. Its output is the divergence ledger that `stellata-hooj.17.11` switches
 the build onto: every row of it becomes an evidenced correction, a review
 queue row, or a manifest change with a lineage row, and the spine stops being
 read for merge decisions. The plan it serves is
@@ -14,13 +15,16 @@ read for merge decisions. The plan it serves is
 
 ```
 scripts/catalog/membership/merge-derivation/
-  merge-derivation-pure.ts   mergeLinksFrom (the links the derivation joins on,
+  merge-derivation-pure.ts   pairLinksFrom (the links the derivation joins on,
     (+ test)                 built over ../../spine/association-audit-pure.ts's
-                             tables), pairOwner and mergeDivergences, one row's
-                             divergences. Pure.
+                             tables), pairOwner, applyPairRule (the kept rows
+                             with every move applied) and mergeDivergences,
+                             one row's divergences. Pure.
 ```
 
-`../membership-manifest-pure.ts` runs it over the kept spine rows and adds each
+`../membership-manifest-pure.ts` applies the pair rule to the kept spine rows
+before the binding derivation reads them, then runs the derivation over them
+and adds each
 divergence to the stage's lineage as a `merge.*` code; the ledger is a view of
 those rows ([Membership lineage](../README.md#membership-lineage)), its codec
 `../merge-divergence-tsv.ts`.
@@ -44,6 +48,42 @@ IV/25's HD link does not vote: on a pair Tycho-2 resolved, an HD names a
 photographic blend, while the two cross-matches are positional fits to each
 star.
 
+## Applying the pair rule
+
+`applyPairRule` runs on the kept spine rows before anything else reads them, so
+the binding derivation, the label merge and the additions all see the moved
+rows. `build:astrometry-request` applies it the same way, so the request
+weighs the entries the records now sit on. A move changes one of two things:
+
+- **The row's TYC**, when the owner entry is no spine record's: the record
+  keeps its HIP, HD and SID and moves onto the other entry, so its position,
+  V, proper motion and binding all follow the entry. `merge.pair.moves`, no
+  ledger row: the record's SID and its gate (i) match ride on its HIP and HD,
+  which do not move.
+- **Which record carries the HIP**, when the owner entry is another spine
+  record's: the HIP leaves the row and lands on that record, an identity
+  event ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)): the receiving
+  record now carries the HIP's SID key, so allocation merges its SID into the
+  HIP's, and the row that lost it mints. `merge.pair.moves-record`, ledgered
+  as `pair_moves`, which gate (i) reads to match both spine rows on the
+  designations their records now carry (`../spine-match-pure.ts`,
+  `withRecordMoves`). The receiver must carry no HIP of its own, and no two
+  HIPs may move onto one entry; either fails the build.
+
+**A move stands only where the moved record binds the HIP's source.** The
+binding derivation ([Both gates weigh every candidate](../binding/README.md#both-gates-weigh-every-candidate))
+runs on the record as the move would leave it; where it ships anything but the
+source Gaia's two cross-matches named — the magnitude gate finding G more than
+a magnitude below the record's printed V, or SIMBAD giving the source to
+another component — Gaia contradicts itself, so the HIP is queued
+(`gate_refused`) rather than moved. On those pairs Gaia's HIP cross-match
+most likely names the fainter star. `build:astrometry-request` derives the
+same bindings over the pull it requests, so the two make the same move.
+
+A row the rule queues keeps the spine's entry while it waits.
+`mergeDivergences` refuses a row the rule would still move, so a move cannot
+be reported without being applied.
+
 ## The divergence ledger
 
 `data/membership/merge-divergence.tsv`, keyed on the record's five identifier
@@ -52,7 +92,7 @@ cells like the other ledgers, one row per divergence:
 | `divergence` | `cells` | `derived` | `evidence` |
 |---|---|---|---|
 | `unlinked` | the cells outside the row's largest connected group | the witnessed partition | the published partition |
-| `pair_moves` | `hip` | the entry the pair rule names | the HIP's Gaia source |
+| `pair_moves` | `hip` | the entry the pair rule moved the HIP onto, another spine record's | the HIP's Gaia source |
 | `pair_review` | `hip` | every entry naming the HIP | why no owner is named |
 | `derived_only` | the cell | the value a primary's link puts there | `held` if another spine row carries it, else `free` |
 | `differs` | the filled cell | the values a primary's link puts there, none of them the spine's | the cell the link reads, and the spine's value |
@@ -69,11 +109,6 @@ pair of HDs the spine swapped between two records shows on both. On a pair
 row IV/25's TYC→HD link does not count, since which entry the HD belongs to
 is the pair rule's verdict. Rows the pair rule confirms carry
 `merge.pair.confirmed` in lineage and no ledger row.
-
-**A `pair_moves` owner can itself be another spine record**: an entry the
-spine carries with no HIP. Moving the HIP there takes it from one record to
-another, an identity event rather than a re-key, and the receiving record
-shows the same HIP as `derived_only` `hip` `held`.
 
 The counts are the `membership.merge.*` codes in
 `../membership-manifest-expected.json`; read them there.

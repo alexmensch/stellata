@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
-import { hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
+import { applyPairRule, hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -61,15 +61,67 @@ describe('pairOwner', () => {
   });
 });
 
+/** A binding derivation that ships each entry's own Gaia source, as `links` names it. */
+const bindsOwn = (l: LinkTables) => (r: SpineRow): string | null => (r.tyc === '' ? null : l.sourceOf.tyc(r.tyc));
+
+describe('applyPairRule', () => {
+  it('moves a record onto the entry the HIP\'s Gaia source sits on, keeping its other cells', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100', hr: '7' })];
+    const l = links({ [B]: 'S1' });
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l));
+    expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100', hr: '7' })]);
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' }]]));
+    expect(kept[0].tyc).toBe(A);
+  });
+
+  it('moves the HIP alone onto another spine record sitting on the owner entry', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' }), row({ tyc: B, hd: '200' })];
+    const l = links({ [B]: 'S1' });
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l));
+    expect(rows).toEqual([row({ tyc: A, hd: '100' }), row({ tyc: B, hip: '10', hd: '200' })]);
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'record' }]]));
+  });
+
+  it('refuses a move onto a spine record that already carries a HIP', () => {
+    const kept = [row({ tyc: A, hip: '10' }), row({ tyc: B, hip: '11' })];
+    const l = links({ [B]: 'S1' });
+    expect(() => applyPairRule(kept, mergeLinks(l), bindsOwn(l)))
+      .toThrow(/HIP 10 moves onto 1-1-2, whose spine record carries HIP 11/);
+  });
+
+  it('leaves confirmed and queued pairs where the spine put them', () => {
+    const kept = [row({ tyc: A, hip: '10' })];
+    const confirmed = links({ [A]: 'S1' });
+    expect(applyPairRule(kept, mergeLinks(confirmed), bindsOwn(confirmed)).rows).toEqual(kept);
+    const queued = links({}, null);
+    expect(applyPairRule(kept, mergeLinks(queued), bindsOwn(queued)).decided.size).toBe(0);
+  });
+
+  it('queues a move whose moved record the binding gates refuse the HIP\'s source, leaving the row as it was', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+    const { rows, decided } = applyPairRule(kept, mergeLinks(links({ [B]: 'S1' })), () => null);
+    expect(rows).toEqual(kept);
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' }]]));
+    expect(mergeDivergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
+      .toContainEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
+  });
+});
+
 describe('mergeDivergences', () => {
   it('confirms a spine entry the HIP\'s Gaia source sits on', () => {
     const d = mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
     expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, sourceId: 'S1' }]);
   });
 
-  it('moves the record onto the entry the HIP\'s Gaia source sits on', () => {
-    const d = mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })));
-    expect(d).toEqual([{ kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1' }]);
+  it('refuses a row the pair rule would still move', () => {
+    expect(() => mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' }))))
+      .toThrow(/pair rule not applied: HIP 10 still on Tycho-2 entry 1-1-1/);
+  });
+
+  it('reports the move applied to the row in place of its confirmation', () => {
+    const move = { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' } as const;
+    const d = mergeDivergences(row({ tyc: B, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })), move);
+    expect(d).toEqual([move]);
   });
 
   it('queues the pair for review when Gaia names no owner', () => {

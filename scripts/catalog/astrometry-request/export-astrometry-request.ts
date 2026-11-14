@@ -6,7 +6,8 @@ import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
-import { loadHipVMag } from '../membership/binding/binding-evidence';
+import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
+import { rowDeriver } from '../membership/binding/binding-outcomes-pure';
 import { loadReferenceCatalogs } from '../../binaries/load/reference-catalogs';
 import { astrometryRequestIds, resolveStage2 } from '../../binaries/resolve/resolve-pairs';
 import {
@@ -15,11 +16,12 @@ import {
 } from '../membership/binding/binding-derivation-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding-review-dispositions-source';
 import { additionItemCells } from '../membership/additions/addition-items-pure';
+import { applyPairRule, pairLinksFrom } from '../membership/merge-derivation/merge-derivation-pure';
 import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from '../membership/spine-corrections/spine-corrections-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
-import { indexCns5 } from '../spine/primaries-audit-pure';
+import { indexCns5, indexPrimaries } from '../spine/primaries-audit-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import { readArtifact } from '../../util/sources/source';
 import { emitArtifacts } from '../../util/emit-artifacts';
@@ -32,8 +34,11 @@ const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
  *  cross-walk covers IV/25's Tycho ids as well as the spine's for the gate. */
 async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set<string> }> {
   const spine = readArtifact(INHERITED_SPINE);
-  const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
-  const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
+  const corrected = applySpineCorrections(spine, SPINE_CORRECTIONS.read()).kept;
+  const tables = await loadPrimaryTables(corrected.map((r) => r.tyc).filter((t) => t !== ''));
+  const printedV = printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese);
+  const derive = rowDeriver(tables, indexPrimaries(tables), loadBindingEvidence(printedV).evidence);
+  const kept = applyPairRule(corrected, pairLinksFrom(tables), (row) => derive(row).derived.sourceId).rows;
   const gate = magnitudeWeighableSourceIds(
     joinOverlayCandidates({
       tyc2Hd: tables.iv25,
@@ -43,7 +48,7 @@ async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set
       tycToSource: tables.tycToSource,
       hipToSource: tables.hipToSource,
     }),
-    printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
+    printedV,
   );
   const derivation = derivationCandidateSourceIds(
     [...kept, ...additionItemCells(tables, kept)], tables, indexCns5(tables.cns5).cns5ByOwnKey,

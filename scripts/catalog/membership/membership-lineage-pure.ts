@@ -255,6 +255,7 @@ const PAIR_REVIEW_DESCRIPTIONS = {
   no_hip_source: 'the Gaia HIP cross-match names no source for the HIP',
   no_entry_matches: 'no entry\'s Gaia TYC cross-match names the HIP\'s source',
   several_match: 'more than one entry\'s Gaia TYC cross-match names the HIP\'s source',
+  gate_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and the binding gates refuse that source for the moved record',
 } as const satisfies Record<PairReviewReason, string>;
 
 const HELD_DESCRIPTIONS = {
@@ -266,47 +267,52 @@ const PAIR_REVIEW_BRANCHES = {
   no_hip_source: 'merge.pair.review.no-hip-source',
   no_entry_matches: 'merge.pair.review.no-entry-matches',
   several_match: 'merge.pair.review.several-match',
+  gate_refused: 'merge.pair.review.gate-refused',
 } as const satisfies Record<PairReviewReason, string>;
 type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
 type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
 const derivedOnlyBranch = (c: DerivedOnlyCell, h: HeldState): DerivedOnlyBranch => `merge.derived-only.${c}.${h}`;
 type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`;
 const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
-type MergeBranch = 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
-
-/** Which ledger kind each divergence writes; a confirmed pair writes none. */
-const MERGE_LEDGER_KINDS = {
-  unlinked: 'unlinked',
-  'pair-confirmed': null,
-  'pair-moves': 'pair_moves',
-  'pair-review': 'pair_review',
-  'derived-only': 'derived_only',
-  differs: 'differs',
-} as const satisfies Record<MergeDivergence['kind'], MergeDivergenceKind | null>;
+type MergeBranch =
+  | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
+  | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
 
-/** Every merge code with the divergence it records: the one table the declarations and the ledger view read. */
-const MERGE_BRANCHES: readonly { branch: MergeBranch; of: MergeDivergence['kind']; description: string }[] = [
+/** Every merge code with the divergence it records and the merge-divergence.tsv kind it writes, if any: the one table the declarations and the ledger view read. */
+const MERGE_BRANCHES: readonly {
+  branch: MergeBranch;
+  of: MergeDivergence['kind'];
+  ledger: MergeDivergenceKind | null;
+  description: string;
+}[] = [
   {
-    branch: 'merge.unlinked', of: 'unlinked',
+    branch: 'merge.unlinked', of: 'unlinked', ledger: 'unlinked',
     description: 'Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.',
   },
-  { branch: 'merge.pair.confirmed', of: 'pair-confirmed', description: `${PAIR} the HIP's Gaia source is the spine entry's own.` },
   {
-    branch: 'merge.pair.moves', of: 'pair-moves',
+    branch: 'merge.pair.confirmed', of: 'pair-confirmed', ledger: null,
+    description: `${PAIR} the HIP's Gaia source is the spine entry's own.`,
+  },
+  {
+    branch: 'merge.pair.moves', of: 'pair-moves', ledger: null,
     description: `${PAIR} the HIP's Gaia source is another entry's, so the pair rule moves the record onto that entry.`,
   },
+  {
+    branch: 'merge.pair.moves-record', of: 'pair-moves', ledger: 'pair_moves',
+    description: `${PAIR} the HIP's Gaia source is the entry another spine record sits on, so the pair rule moves the HIP onto that record.`,
+  },
   ...PAIR_REVIEW_REASONS.map((r) => ({
-    branch: PAIR_REVIEW_BRANCHES[r], of: 'pair-review' as const,
+    branch: PAIR_REVIEW_BRANCHES[r], of: 'pair-review' as const, ledger: 'pair_review' as const,
     description: `${PAIR} the pair rule names no owner: ${PAIR_REVIEW_DESCRIPTIONS[r]}.`,
   })),
   ...DERIVED_ONLY_CELLS.flatMap((c) => HELD_STATES.map((h) => ({
-    branch: derivedOnlyBranch(c, h), of: 'derived-only' as const,
+    branch: derivedOnlyBranch(c, h), of: 'derived-only' as const, ledger: 'derived_only' as const,
     description: `A primary's own link puts a ${c} value on the spine row where the spine leaves the cell empty; ${HELD_DESCRIPTIONS[h]}.`,
   }))),
   ...DIFFERS_LINKS.map((l) => ({
-    branch: differsBranch(l), of: 'differs' as const,
+    branch: differsBranch(l), of: 'differs' as const, ledger: 'differs' as const,
     description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`,
   })),
 ];
@@ -594,7 +600,9 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
     case 'pair-confirmed':
       return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
     case 'pair-moves':
-      return row(key, 'merge.pair.moves', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
+      return row(key, d.onto === 'entry' ? 'merge.pair.moves' : 'merge.pair.moves-record', {
+        cells: 'hip', derived: d.owner, evidence: d.sourceId,
+      });
     case 'pair-review':
       return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
     case 'derived-only':
@@ -661,10 +669,9 @@ export function membershipLedgers(
     }
   };
 
-  const merged = new Map<string, [MergeDivergenceKind, MergeBranch]>(MERGE_BRANCHES.flatMap(({ branch, of: kind }) => {
-    const ledgered = MERGE_LEDGER_KINDS[kind];
-    return ledgered === null ? [] : [[MEMBERSHIP_CODES.code(branch), [ledgered, branch]] as const];
-  }));
+  const merged = new Map<string, [MergeDivergenceKind, MergeBranch]>(MERGE_BRANCHES.flatMap(({ branch, ledger }) => (
+    ledger === null ? [] : [[MEMBERSHIP_CODES.code(branch), [ledger, branch]] as const]
+  )));
   const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [], mergeDivergence: [] };
   const review = new Map<string, BindingReviewRow>();
   const reviewRow = (verdict: BindingReviewVerdict, cells: BindingReviewCells): BindingReviewRow => (
