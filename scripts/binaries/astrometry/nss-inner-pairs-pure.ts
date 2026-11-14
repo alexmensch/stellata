@@ -10,6 +10,7 @@ import { inheritedFrom } from '../multiples-record-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** Never a real WDS discoverer code, which carries a catalogue number. */
 export const SYNTH_NSS_DISCOVERER = 'GNSS';
@@ -45,7 +46,7 @@ function nssCarriers(pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<D
     }
   }
   return [...carriers.values()].sort((x, y) =>
-    x.component.wdsId === y.component.wdsId ? compareSourceIds(x.sourceId, y.sourceId) : x.component.wdsId < y.component.wdsId ? -1 : 1);
+    compareCodeUnits(x.component.wdsId, y.component.wdsId) || compareSourceIds(x.sourceId, y.sourceId));
 }
 
 export interface NssInnerPairs {

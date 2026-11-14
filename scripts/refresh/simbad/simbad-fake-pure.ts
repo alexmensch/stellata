@@ -4,6 +4,7 @@ import type { Row } from '../pull/columns-pure';
 import { phaseTemplate, type Ask, type Phase } from '../pull/pull';
 import type { HttpReply, TapClientDeps } from '../pull/tap-pure';
 import { simbadMatchKey } from './simbad-specs-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** The tables a fake answers from: each object's ids, its basic cells by SIMBAD column, its flux rows. */
 export interface FakeSimbad {
@@ -35,7 +36,7 @@ export function answer(fake: FakeSimbad, phase: Phase, ids: readonly string[] | 
     const prefixes = likePrefixes(phase.where);
     return fake.idents
       .filter((i) => oids.has(i.oid) && prefixes.some((p) => i.id.startsWith(p)))
-      .sort((a, b) => a.oid - b.oid || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      .sort((a, b) => a.oid - b.oid || compareCodeUnits(a.id, b.id))
       .map((i) => [String(i.oid), i.id]);
   }
   if (phase.from === 'flux') {

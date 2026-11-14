@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { ascending } from '../../util/order-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 import { cellReader, checkedRows, formatTsv, sortRows, type Column, type Row } from './columns-pure';
 import { spotRowCheck } from './gates-pure';
 import type { WrittenTable } from './pull';

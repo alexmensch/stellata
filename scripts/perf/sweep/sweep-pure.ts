@@ -5,6 +5,7 @@
 import type { FramePacing } from '../../../src/client/scene/frame-loop/frame-loop';
 import { throughputFrameMs, type DwellMetric } from '../dwell/dwell-pure';
 import type { DwellRecord } from '../schema';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export const DEFAULT_SWEEP_SCALES = [0.5, 1, 1.5, 2] as const;
 
@@ -55,7 +56,7 @@ export interface SweepFit {
  * dependence on area that is really a dependence on elapsed time.
  */
 export function sweepOrder(scales: readonly number[]): number[] {
-  const others = [...new Set(scales)].filter((s) => s !== 1).sort((a, b) => a - b);
+  const others = [...new Set(scales)].filter((s) => s !== 1).sort(ascending);
   return [1, ...others, 1];
 }
 

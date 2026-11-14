@@ -1,7 +1,7 @@
 // A self-written TSV's codec: exact header, one decoder for its readers, and
 // one serializer as its only writer. See README.md#artifact-codecs.
 
-import { compareCodeUnits } from '../order-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 import type { Declaration, RowKey, RowKeyOf } from '../sources/row-ref-pure';
 import {
   readTable, tableLineReader, type TableLineReader, type TableRow, type TableSpec,

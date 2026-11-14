@@ -35,7 +35,7 @@ scripts/util/tsv/
                               tsvLine / tsvText, its line and file layout,
                               which the refresh pulls' formatter writes
                               through too; `byText`, a record order by a
-                              text key (`../order-pure.ts`'s
+                              text key (`/src/astro-core/order-pure.ts`'s
                               `compareCodeUnits`).
   committed-round-trip.ts     Test support: describeCommittedRoundTrip, an
                               artifact's codec over its committed file, byte

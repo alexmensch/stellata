@@ -7,6 +7,7 @@ import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { BINDING_CLASSES, type BindingClass } from './ledger-rows-pure';
 import type { LabelMergeRecord } from '../classic-ids/label-merge/label-merge-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
@@ -159,7 +160,7 @@ export function sortManifestRecords(records: readonly ManifestRecord[]): Manifes
   return records
     .map((record) => ({ record, key: canonicalKeyOf(manifestDesignations(record)) }))
     .sort((a, b) => compareDesignations(a.key, b.key)
-      || ((a.record.tyc ?? '') < (b.record.tyc ?? '') ? -1 : (a.record.tyc ?? '') > (b.record.tyc ?? '') ? 1 : 0)
+      || compareCodeUnits(a.record.tyc ?? '', b.record.tyc ?? '')
       || compareSourceIds(a.record.gaiaSourceId, b.record.gaiaSourceId))
     .map((d) => d.record);
 }

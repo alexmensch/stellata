@@ -10,6 +10,7 @@ import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
 import type { SourceRowRef } from '../../../util/sources/row-ref-pure';
 import { listedRows } from '../../lineage/lineage-invariant-pure';
+import { compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax extends MeasuredParallax {
@@ -148,7 +149,7 @@ export function buildPairMemberParallaxIndex(
   }
   for (const candidates of index.candidatesByRoot.values()) {
     candidates.sort((a, b) => precisionRank(b) - precisionRank(a)
-      || a.sourceId.localeCompare(b.sourceId));
+      || compareCodeUnits(a.sourceId, b.sourceId));
   }
   return index;
 }

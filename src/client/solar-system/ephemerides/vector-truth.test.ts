@@ -26,6 +26,7 @@ import {
   planetEclipticAU,
   type Vec3,
 } from './ephemeris';
+import { ascending } from '../../../astro-core/order-pure';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/planet-vector-truth.tsv');
@@ -126,7 +127,7 @@ describe('vector truth corpus', () => {
 
   it('covers 9 bodies at 2 epochs outside the element tables and 5 inside', () => {
     expect(new Set(rows.map((r) => r.body)).size).toBe(9);
-    const epochs = [...new Set(rows.map((r) => r.jdTdb))].sort((a, b) => a - b);
+    const epochs = [...new Set(rows.map((r) => r.jdTdb))].sort(ascending);
     expect(epochs.filter((jd) => jd < TABLE_JD_START || jd > TABLE_JD_END)).toEqual(DEEP_EPOCHS);
     expect(epochs).toHaveLength(7);
     expect(rows).toHaveLength(63);

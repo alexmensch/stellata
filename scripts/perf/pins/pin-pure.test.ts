@@ -24,6 +24,7 @@ import {
 } from './pin-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type PerfFile, type ScenarioRecord } from '../schema';
 import { BACKENDS, SCENARIO_NAMES, TIER1_SCENARIOS, type Backend, type ScenarioName } from '../scenarios';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const M4: AdapterProbe = {
   webgl: {
@@ -1087,7 +1088,7 @@ describe('a split-frame frame row bands on its plain class', () => {
   });
 
   const percentileAt = (xs: readonly number[], p: number): number =>
-    [...xs].sort((a, b) => a - b)[Math.min(xs.length - 1, Math.ceil(p * xs.length) - 1)]!;
+    [...xs].sort(ascending)[Math.min(xs.length - 1, Math.ceil(p * xs.length) - 1)]!;
   const iqrOf = (xs: readonly number[]): number => percentileAt(xs, 0.75) - percentileAt(xs, 0.25);
 
   const RESOLVED_HIGH = earthSamples(12.0, 640, 210);
