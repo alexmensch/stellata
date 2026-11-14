@@ -22,6 +22,7 @@ import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { CLASSIC_ID_OVERLAY, overlayRows } from './classic-id-overlay-tsv';
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
+import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { countSnapshotCheck } from '../../util/snapshot-check';
@@ -66,6 +67,7 @@ function logOverlay(
 }
 
 export async function main(): Promise<void> {
+  const heap = watchHeap('build:classic-ids');
   const { evidence } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), TYCHO2.read(), GLIESE.read()),
   );
@@ -96,7 +98,7 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, countSnapshotCheck<StagedCounts>({
+    checks: [...lineage.checks, heap.check(), countSnapshotCheck<StagedCounts>({
       snapshotPath: EXPECTED_COUNTS,
       actual: nestByStage<(typeof CLASSIC_ID_COUNT_STAGES)[number], CountValue>(CLASSIC_ID_COUNT_STAGES, [
         { stage: CLASSIC_IDS_LINEAGE.stage, block: { kind: 'counted', counts: lineage.counts } },

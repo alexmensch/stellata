@@ -33,8 +33,9 @@ scripts/catalog/classic-ids/
                                   evidence tables, and emits the overlay, its
                                   lineage and the two gate queues viewed from
                                   it through emitArtifacts, so a drifted count
-                                  snapshot or a lineage budget overrun lands
-                                  none of them.
+                                  snapshot, a lineage budget overrun or a
+                                  CI heap overrun (../../util/heap-budget/)
+                                  lands none of them.
   classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay, its two
                                   gate queues and its lineage files
                                   (CLASSIC_IDS_LINEAGE) as the build's
