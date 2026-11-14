@@ -40,12 +40,11 @@ function reHomeInnerPrimaries(
     const parentI = parents[i];
     if (parentI === NO_PARENT) continue;
     const parentTok = parentComponentToken(pairs[i].primaryComp);
-    if (parentTok === null) continue;
     const pp = pairs[parentI];
     let slot: number | null;
-    if (pp.primaryComp === parentTok) slot = primary[parentI];
-    else if (pp.secondaryComp === parentTok) slot = own[parentI].secondary;
-    else continue;
+    if (parentTok !== null && pp.primaryComp === parentTok) slot = primary[parentI];
+    else if (parentTok !== null && pp.secondaryComp === parentTok) slot = own[parentI].secondary;
+    else throw new Error(`pair ${pairs[i].systemId}: parent pair ${pp.systemId} names no end ${parentTok ?? '(none)'}`);
     if (slot !== null) primary[i] = slot;
   }
   return own.map((e, i) => ({ primary: primary[i], secondary: e.secondary }));
