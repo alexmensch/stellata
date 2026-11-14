@@ -21,7 +21,12 @@ export interface StageLineageSpec<F extends string, S extends string = string> {
   readonly identity?: F;
 }
 
-export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity', 'membership'> = {
+export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'> = {
+  stage: 'classic-ids',
+  files: ['classic-ids'],
+};
+
+export const MEMBERSHIP_LINEAGE:StageLineageSpec<'membership' | 'identity', 'membership'> = {
   stage: 'membership',
   files: ['membership', 'identity'],
   identity: 'identity',

@@ -30,14 +30,23 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 scripts/catalog/classic-ids/
   build-classic-id-overlay.ts     I/O orchestrator: reads the frozen tables,
                                   both Gaia cross-walks and the gate's three
-                                  evidence tables, and emits the overlay and
-                                  its two gate queues through emitArtifacts,
-                                  so a drifted count snapshot lands none of
-                                  the three.
-  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay and its
-                                  two gate queues as the build's
+                                  evidence tables, and emits the overlay, its
+                                  lineage and the two gate queues viewed from
+                                  it through emitArtifacts, so a drifted count
+                                  snapshot or a lineage budget overrun lands
+                                  none of them.
+  classic-id-overlay-outputs.ts   CLASSIC_ID_OUTPUTS — the overlay, its two
+                                  gate queues and its lineage files
+                                  (CLASSIC_IDS_LINEAGE) as the build's
                                   emitArtifacts declaration
                                   (../../util/README.md). Side-effect free.
+  classic-id-lineage-pure.ts      This stage's lineage (#classic-id-lineage):
+    (+ test)                      reason codes, one row per designation, the
+                                  refused and route rows, and the two gate
+                                  queues as views of them. Pure.
+  classic-id-keys.ts              CLASSIC_ID_KEYS: each row's key, from the
+                                  declaration of the catalogue row it reads;
+                                  the build and the unit suite share it.
   binding-candidates.ts           `loadClassicIdCrossWalks`, every table the
                                   overlay join reads, as one `OverlayWalks`.
                                   ../astrometry-request/ runs the same join
@@ -79,7 +88,8 @@ scripts/catalog/classic-ids/
                                   that only needs them does not reach the
                                   artifact.
   route-disagreements-tsv.ts      The two gate queues' codecs:
-  rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS.
+  rejected-bindings-tsv.ts        ROUTE_DISAGREEMENTS, REJECTED_BINDINGS;
+                                  their rows come from the lineage views.
   route-disagreements-review-     ROUTE_DISAGREEMENTS_REVIEW: the curated
     source.ts                     disposition of each route-disagreement
                                   row, declared; read by parity-ledger.test.ts.
@@ -233,6 +243,44 @@ The TYC cross-walk is 2.5 M rows for a ~350 k-row join, so
 `GAIA_TYC_XMATCH` (`../parse/gaia-tyc-xmatch-source.ts`) streams it line-by-line
 and takes a keep-set of the Tycho ids IV/25 actually mentions. Reading it
 as one string peaks near a gigabyte alongside the join's own maps.
+
+## Classic-ID lineage
+
+`build:classic-ids` is the lineage stage `classic-ids`, first in pipeline
+order (`classic-id-lineage-pure.ts`; the contract is
+[Record lineage](../lineage/README.md)). No record exists yet when it runs,
+so its rows are keyed on the **designation**, each on the catalogue row that
+states it:
+
+| Designation | Key | One row per |
+|---|---|---|
+| HD | its first IV/25 entry (`iv25:<tyc>`); the others are evidence | HD number |
+| HIP | Gaia's HIP cross-match (`gaia-dr3-hip:<hip>`), the table HIP enters this stage from | cross-match entry |
+| Bayer, Flamsteed | IV/27A (`iv27a:<hd>`) | designation |
+| HR | V/50 (`v50:<hr>`) | HR number |
+| GJ | CNS5 (`cns5:<cns5 id>`) | CNS5 row |
+
+Each designation row says where its route took it: `<kind>[.<route>].bound`
+with the sources the gate kept (`source_ids`, every one where an HD reaches
+several), `.gated` where the gate refused every source it reached, or
+`.no-source` (`hr.no-hd` where V/50 prints no HD) — so a designation no
+route reaches, Sirius's HD 48915 among the stars too bright for Gaia, has a
+row of its own. Params carry the designation in trace's form (`hd:128621`)
+and the cells its route read. A source the gate refused gets one `refused`
+row (`gate-mag` / `gate-sibling`: `source_id`, `via`, then the gate's facts,
+membership's refused-binding shape) under every key reaching it, and each
+IV/27A row whose HIP resolves gets a `route.agree`, `route.disagree` or
+`route.hip-only` row.
+
+**The two gate queues are views of these rows, and nothing else writes
+them**: `rejectedBindingsView` groups the refused rows by source and names
+each by every designation reaching it; `routeDisagreementsView` is the
+`route.disagree` rows. Both regenerate byte-identical and stay under CI's
+regenerate-and-diff; `hd_hip_route_disagreements_review.tsv` stays
+hand-curated.
+
+Measured 2026-11-14: 476,336 rows, 9.3 MB gzipped, 0.6 s with no diff;
+`CLASSIC_ID_LINEAGE_BUDGET` pins 9.8 MB and 5 s.
 
 ## One designation, two HD numbers
 

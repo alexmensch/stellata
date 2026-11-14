@@ -52,29 +52,15 @@ export interface OverlayInput extends OverlayWalks {
   evidence: BindingEvidence;
 }
 
-/** An overlay row dropped because the source_id it keys is not the star its
- *  designations name. Emitted to `data/classic-ids/rejected_bindings.tsv` so
- *  the parity ledger can review what the gate removed. */
-export interface RejectedBinding {
+export interface GateRefusal {
   sourceId: string;
-  /** Null where the row carries no HIP at all. */
+  /** The HIP the sibling arm keyed on; null where the row carries none. */
   hip: number | null;
   /** Null on a sibling refusal of a row no printed tier reaches. Its tier says
    *  whether a rejection rests on Hipparcos or on one of the tiers below it. */
   printedV: PrintedV | null;
   gMag: number | null;
   reason: GateReason;
-  designations: string;
-}
-
-function designationSummary(entry: OverlayEntry): string {
-  const parts: string[] = [];
-  if (entry.hd.length) parts.push(`HD ${entry.hd.join('/')}`);
-  if (entry.hr.length) parts.push(`HR ${entry.hr.join('/')}`);
-  if (entry.gj.length) parts.push(`GJ ${entry.gj.join('/')}`);
-  for (const b of entry.bayer) parts.push(b);
-  for (const f of entry.flamsteed) parts.push(f);
-  return parts.join(' · ');
 }
 
 function gateKeys(
@@ -98,7 +84,7 @@ export function applyBindingGate(
   evidence: BindingEvidence,
   tycsBySource: ReadonlyMap<string, readonly string[]>,
 ): {
-  rejected: RejectedBinding[];
+  refused: GateRefusal[];
   skippedNoPrintedV: number;
   skippedNoGMag: number;
   skippedNullGMag: number;
@@ -107,7 +93,7 @@ export function applyBindingGate(
    *  astrometry request has to carry a G for. */
   magnitudeWeighed: Set<string>;
 } {
-  const rejected: RejectedBinding[] = [];
+  const refused: GateRefusal[] = [];
   const magnitudeWeighed = new Set<string>();
   let skippedNoPrintedV = 0;
   let skippedNoGMag = 0;
@@ -126,22 +112,11 @@ export function applyBindingGate(
     else if (verdict.magnitude === 'no_pulled_row') skippedNoGMag++;
     const reason = rejectionOf(verdict);
     if (reason === null) continue;
-    rejected.push({
-      sourceId,
-      hip,
-      printedV: printed,
-      gMag: evidence.gMagOf(sourceId),
-      reason,
-      designations: designationSummary(entry),
-    });
+    refused.push({ sourceId, hip, printedV: printed, gMag: evidence.gMagOf(sourceId), reason });
   }
-  for (const r of rejected) overlay.delete(r.sourceId);
-  return { rejected, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia, magnitudeWeighed };
+  for (const r of refused) overlay.delete(r.sourceId);
+  return { refused, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia, magnitudeWeighed };
 }
-
-/** An IV/27A row whose HD→TYC→source_id route and HIP→source_id route
- *  disagree. The HD route is the authority (/docs/catalog-driver.md#4-how-hd-reaches-gaia); these go to the parity
- *  ledger's review queue rather than being resolved mechanically. */
 
 export interface OverlayJoinCounts {
   tyc2HdRows: number;
@@ -209,8 +184,9 @@ export interface OverlayJoinCounts {
 export interface OverlayJoin {
   overlay: ClassicIdOverlay;
   counts: OverlayJoinCounts;
-  disagreements: HdHipRouteDisagreement[];
-  rejectedBindings: RejectedBinding[];
+  reaches: DesignationReach[];
+  routeChecks: RouteCheck[];
+  refused: GateRefusal[];
 }
 
 function entryFor(overlay: ClassicIdOverlay, sourceId: string): OverlayEntry {
@@ -437,11 +413,8 @@ export function magnitudeWeighableSourceIds(
 }
 
 export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
-  const { overlay, tycsBySource, hdToSources, routeChecks, routeCounts } =
+  const { overlay, tycsBySource, hdToSources, reaches, routeChecks, routeCounts } =
     joinOverlayCandidates(input);
-  const disagreements = routeChecks
-    .filter((c) => c.outcome === 'disagree')
-    .map(({ hd, hip, hdRouteSourceIds, hipRouteSourceId }) => ({ hd, hip, hdRouteSourceIds, hipRouteSourceId }));
 
   // Gate before counting, so every overlay* count describes the artifact
   // rather than the pre-vetting routing; routeCounts stay pre-gate.
@@ -466,8 +439,9 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
 
   return {
     overlay,
-    disagreements,
-    rejectedBindings: gate.rejected,
+    reaches,
+    routeChecks,
+    refused: gate.refused,
     counts: {
       ...routeCounts,
 
@@ -486,8 +460,8 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
       sourcesWithMultipleFlamsteed: withMultiple((e) => e.flamsteed),
       hdOnMultipleSources: [...hdToSources.values()].filter((s) => s.length > 1).length,
 
-      gateRejectedMag: gate.rejected.filter((r) => r.reason === 'mag').length,
-      gateRejectedSibling: gate.rejected.filter((r) => r.reason === 'sibling').length,
+      gateRejectedMag: gate.refused.filter((r) => r.reason === 'mag').length,
+      gateRejectedSibling: gate.refused.filter((r) => r.reason === 'sibling').length,
       gateSkippedNoPrintedV: gate.skippedNoPrintedV,
       gateableVia: gate.gateableVia,
       gateSkippedNoGMag: gate.skippedNoGMag,

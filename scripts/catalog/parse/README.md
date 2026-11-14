@@ -38,7 +38,9 @@ scripts/catalog/parse/
                                   the snapshot's inputs count block.
   gaia-hip-xmatch-source.ts       GAIA_HIP_XMATCH / GAIA_TYC_XMATCH, the two
   gaia-tyc-xmatch-source.ts       cross-walks declared one per module, so a
-                                  step reaches only the one it reads.
+                                  step reaches only the one it reads. The HIP
+                                  walk keys classic-ID lineage's HIP rows
+                                  (`gaia-dr3-hip:<hip>`).
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator). The HIP
                                   walk now serves the GCVS byGaia bridge in

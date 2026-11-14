@@ -25,7 +25,9 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
                                    source_id (357,265 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
-                                   (README.md#classic_id_overlaytsv--the-derived-overlay).
+                                   (README.md#classic_id_overlaytsv--the-derived-overlay),
+                                   a view of build:classic-ids' lineage
+                                   (/scripts/catalog/classic-ids/README.md#classic-id-lineage).
 hd_hip_route_disagreements_review.tsv
                                    Hand-curated dispositions for the queue,
                                    joined row-for-row by
@@ -34,7 +36,8 @@ hd_hip_route_disagreements_review.tsv
                                    grows the queue fails until reviewed.
 rejected_bindings.tsv              Pipeline-derived review queue —
                                    the bindings the gate dropped
-                                   (README.md#the-binding-gate).
+                                   (README.md#the-binding-gate), a view
+                                   of the same lineage.
 label_flips.tsv                    Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
@@ -197,7 +200,9 @@ that fired — so their sum, **460**, is the queue's size
 A firing gate drops the **whole row**, not just its `hip` cell: if the source
 is not the star then every designation keyed on it is misattributed, and the
 labels ride the inherited spine exactly as they do for a record the build
-scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
+scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`, one row
+per refused source, grouped from the lineage's refused rows
+([Classic-ID lineage](/scripts/catalog/classic-ids/README.md#classic-id-lineage))
 (`gaia_source_id`, `hip`, `v_mag`, `v_via`, `g_mag`, `reason`, `designations`;
 a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
 HIP was the row's only label, a blank `g_mag` means the sibling gate fired
