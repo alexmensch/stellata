@@ -56,8 +56,9 @@ described in [Stage 6](../../scripts/binaries/multiples/README.md#what-each-colu
 
 Per-component provenance columns (`resolve_via`, `astrometry_via`,
 `orbit_via`, `spect_via`, `photometry_via`, `a_via`) name which
-strategy / catalogue tier supplied each piece of data. Canonical
-values live in
+strategy / catalogue tier supplied each piece of data; `gaia_origin` and
+`hip_origin` say whether the component earned its Gaia source and HIP or
+copied them from another component. Canonical values live in
 [`scripts/binaries/`](../../scripts/binaries/README.md).
 
 ## Spot-check ground truth

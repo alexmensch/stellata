@@ -3,8 +3,9 @@
 
 import type { MultiplesTsvRow } from './companion-promotion';
 import { parseStage6Offset } from './anchor-offset-pure';
+import { OWN } from '../../binaries/multiples-tsv';
 
-/** `anchorOffset` defaults to what the parse boundary gives the row's own
+/** An identifier given without an origin is the row's own. `anchorOffset` defaults to what the parse boundary gives the row's own
  *  `comp` / `anchorComp` with blank offset cells. */
 export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): MultiplesTsvRow {
   const comp = overrides.comp ?? 'B';
@@ -45,5 +46,7 @@ export function multiplesRow(overrides: Partial<MultiplesTsvRow> = {}): Multiple
     magPri: null,
     magSec: null,
     ...overrides,
+    gaiaOrigin: overrides.gaiaOrigin ?? (overrides.gaiaSourceId == null ? null : OWN),
+    hipOrigin: overrides.hipOrigin ?? (overrides.hip == null ? null : OWN),
   };
 }

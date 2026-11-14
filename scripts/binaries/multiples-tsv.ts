@@ -12,7 +12,7 @@ export const MULTIPLES_COLUMNS = [
   'system_id', 'comp', 'hip', 'gaia_source_id', 'hd',
   'x_pc', 'y_pc', 'z_pc', 'absmag', 'ci', 'spect', 'name',
   'source', 'regime',
-  'resolve_via', 'astrometry_via', 'orbit_via', 'spect_via',
+  'resolve_via', 'gaia_origin', 'hip_origin', 'astrometry_via', 'orbit_via', 'spect_via',
   'photometry_via', 'a_via',
   'orbit_role',
   'P_days', 'T_jd', 'e', 'a_AU', 'i_rad', 'omega_rad', 'Omega_rad', 'q', 'dist_pc',
@@ -128,6 +128,10 @@ export interface MultiplesRecord {
   source: (typeof MULTIPLES_SOURCES)[number];
   regime: number;
   resolveVia: ResolveVia;
+  /** Set exactly when `gaiaSourceId` is. */
+  gaiaOrigin: IdOrigin | null;
+  /** Set exactly when `hip` is. */
+  hipOrigin: IdOrigin | null;
   astrometryVia: AstrometryVia;
   orbitVia: OrbitVia;
   spectVia: SpectVia;
@@ -188,11 +192,18 @@ export const MULTIPLES_TSV = defineArtifact({
     if (wdsRootOf(systemId) === null) row.fail(`system_id "${systemId}" names no WDS id`);
     const comp = row.raw('comp');
     if (comp.trim() === '') row.fail('comp is empty');
+    const origin = (column: 'gaia_origin' | 'hip_origin', bound: boolean): IdOrigin | null => {
+      const cell = row.raw(column);
+      if (!bound) return cell === '' ? null : row.fail(`${column} "${cell}" names the origin of no identifier`);
+      return parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`);
+    };
+    const hip = row.int('hip');
+    const gaiaSourceId = row.sourceId('gaia_source_id');
     return {
       systemId,
       comp,
-      hip: row.int('hip'),
-      gaiaSourceId: row.sourceId('gaia_source_id'),
+      hip,
+      gaiaSourceId,
       hd: row.int('hd'),
       x_pc: row.float('x_pc'),
       y_pc: row.float('y_pc'),
@@ -204,6 +215,8 @@ export const MULTIPLES_TSV = defineArtifact({
       source: row.oneOf('source', MULTIPLES_SOURCES),
       regime,
       resolveVia: row.oneOf('resolve_via', RESOLVE_VIA),
+      gaiaOrigin: origin('gaia_origin', gaiaSourceId !== null),
+      hipOrigin: origin('hip_origin', hip !== null),
       astrometryVia: row.oneOf('astrometry_via', ASTROMETRY_VIA),
       orbitVia: row.oneOf('orbit_via', ORBIT_VIA),
       spectVia: row.oneOf('spect_via', SPECT_VIA),
@@ -246,6 +259,8 @@ export const MULTIPLES_TSV = defineArtifact({
     source: r.source,
     regime: String(r.regime),
     resolve_via: r.resolveVia,
+    gaia_origin: r.gaiaOrigin === null ? '' : formatIdOrigin(r.gaiaOrigin),
+    hip_origin: r.hipOrigin === null ? '' : formatIdOrigin(r.hipOrigin),
     astrometry_via: r.astrometryVia,
     orbit_via: r.orbitVia,
     spect_via: r.spectVia,

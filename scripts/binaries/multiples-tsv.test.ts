@@ -3,8 +3,12 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../util/paths';
+import { MULTIPLES_HEADER, multiplesLine } from './multiples-tsv-fixture';
 import { describeCommittedRoundTrip } from '../util/tsv/committed-round-trip';
-import { MULTIPLES_COLUMNS, MULTIPLES_TSV, ORBIT_VIA, ORBIT_VIA_ON_FILE, ORBIT_VIA_PROPERTIES } from './multiples-tsv';
+import {
+  INHERITANCE_KINDS, MULTIPLES_TSV, ORBIT_VIA, ORBIT_VIA_ON_FILE, ORBIT_VIA_PROPERTIES, OWN,
+  formatIdOrigin, inheritedFrom, parseIdOrigin,
+} from './multiples-tsv';
 
 describeCommittedRoundTrip(MULTIPLES_TSV);
 
@@ -21,11 +25,8 @@ describe('ORBIT_VIA_PROPERTIES', () => {
 });
 
 describe('multiples.tsv codec', () => {
-  const header = MULTIPLES_COLUMNS.join('\t');
-  const cells = (over: Record<string, string>) => MULTIPLES_COLUMNS.map((c) => over[c] ?? ({
-    system_id: '00001+0001-AB', comp: 'A', source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'gaia_5p', orbit_via: 'none',
-    spect_via: 'none', photometry_via: 'none', a_via: 'none', orbit_role: 'primary',
-  } as Record<string, string>)[c] ?? '').join('\t');
+  const header = MULTIPLES_HEADER;
+  const cells = multiplesLine;
 
   it('keeps a negative zero the writer printed', () => {
     const text = `${header}\n${cells({ x_pc: '-0.000000' })}\n`;
@@ -60,5 +61,31 @@ describe('multiples.tsv codec', () => {
     }
     expect(MULTIPLES_TSV.parse(`${header}\n${cells({ P_days: '2.867000', a_AU: '0.060000', e: '0.000000' })}\n`)[0])
       .toMatchObject({ pDays: 2.867, aAU: 0.06, e: 0 });
+  });
+
+  it('round-trips each identifier\'s origin', () => {
+    const text = `${header}\n${cells({ gaia_source_id: '42', gaia_origin: 'letter:Aa', hip: '7', hip_origin: 'own' })}\n`;
+    const [row] = MULTIPLES_TSV.parse(text);
+    expect([row.gaiaOrigin, row.hipOrigin]).toEqual([inheritedFrom('Aa', 'letter'), OWN]);
+    expect(MULTIPLES_TSV.serialize([row])).toBe(text);
+  });
+
+  it('rejects an origin without its identifier, an identifier without its origin, and an unknown kind', () => {
+    for (const [over, message] of [
+      [{ hip_origin: 'own' }, /hip_origin "own" names the origin of no identifier/],
+      [{ gaia_source_id: '42', gaia_origin: '' }, /gaia_origin "" is not own or <kind>:<token>/],
+      [{ hip: '7', hip_origin: 'cousin:A' }, /hip_origin "cousin:A" is not own/],
+      [{ hip: '7', hip_origin: 'blend:' }, /hip_origin "blend:" is not own/],
+    ] as const) {
+      expect(() => MULTIPLES_TSV.parse(`${header}\n${cells(over)}\n`)).toThrow(message);
+    }
+  });
+});
+
+describe('IdOrigin cells', () => {
+  it('formats and parses every kind', () => {
+    for (const origin of [OWN, ...INHERITANCE_KINDS.map((how) => inheritedFrom('Aa1', how))]) {
+      expect(parseIdOrigin(formatIdOrigin(origin))).toEqual(origin);
+    }
   });
 });

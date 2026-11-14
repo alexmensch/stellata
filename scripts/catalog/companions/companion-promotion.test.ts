@@ -37,7 +37,7 @@ import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { multiplesRow } from './multiples-fixture';
-import { MULTIPLES_COLUMNS } from '../../binaries/multiples-tsv';
+import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
@@ -87,14 +87,7 @@ const ORBIT_ELEMENTS = {
 } as const;
 
 describe('parseMultiplesTsv', () => {
-  const tsv = (cells: Partial<Record<(typeof MULTIPLES_COLUMNS)[number], string>>): string => {
-    const base = {
-      source: 'wds', regime: '0', resolve_via: 'unresolved', astrometry_via: 'unresolved',
-      orbit_via: 'none', spect_via: 'none', photometry_via: 'none', a_via: 'none',
-      orbit_role: 'secondary', ...cells,
-    } as Record<string, string>;
-    return `${MULTIPLES_COLUMNS.join('\t')}\n${MULTIPLES_COLUMNS.map((c) => base[c] ?? '').join('\t')}\n`;
-  };
+  const tsv = (cells: Parameters<typeof multiplesLine>[0]): string => `${MULTIPLES_HEADER}\n${multiplesLine(cells)}\n`;
 
   it('parses a row and its Stage 6 anchor offset', () => {
     const [r] = parseMultiplesTsv(tsv({

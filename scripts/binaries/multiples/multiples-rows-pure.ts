@@ -10,7 +10,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
-import { ORBIT_VIA_PROPERTIES, type AstrometryVia, type MultiplesRecord, type PhotometryVia } from '../multiples-tsv';
+import { ORBIT_VIA_PROPERTIES, OWN, type AstrometryVia, type MultiplesRecord, type PhotometryVia } from '../multiples-tsv';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
 import { valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import { propagatePosition } from '../sky-geometry-pure';
@@ -87,7 +87,7 @@ function pairSide(c: ResolvedComponent, astrometry: ComponentAstrometry, indices
 type ComponentFields = Pick<
   MultiplesRecord,
   'comp' | 'hip' | 'gaiaSourceId' | 'hd' | 'x_pc' | 'y_pc' | 'z_pc' | 'distPc' | 'absmag' | 'ci' | 'spect' | 'name'
-  | 'source' | 'resolveVia' | 'astrometryVia' | 'spectVia' | 'photometryVia'
+  | 'source' | 'resolveVia' | 'gaiaOrigin' | 'hipOrigin' | 'astrometryVia' | 'spectVia' | 'photometryVia'
 >;
 
 /** `primaryAthyg` is null on the primary's own row. */
@@ -114,7 +114,8 @@ function componentFields(
   return {
     comp: c.component, hip: valueOf(c.hip), gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
     absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
-    resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
+    resolveVia: c.resolveVia, gaiaOrigin: c.gaia?.origin ?? null, hipOrigin: c.hip?.origin ?? null,
+    astrometryVia, spectVia, photometryVia,
   };
 }
 
@@ -222,7 +223,8 @@ export function standaloneRow(
   return {
     systemId: `${xid.wdsId}-_${xid.component}`, comp: xid.component, hip: xid.hip, gaiaSourceId: xid.gaiaSourceId, hd: null,
     ...positionFields(position), absmag: null, ci: null, spect, name: xid.simbadMainId, source: 'simbad', regime: 0,
-    resolveVia: 'simbad_xid', astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
+    resolveVia: 'simbad_xid', gaiaOrigin: xid.gaiaSourceId === null ? null : OWN, hipOrigin: xid.hip === null ? null : OWN,
+    astrometryVia, orbitVia: 'none', spectVia, photometryVia: 'none', orbitRole: 'standalone',
     ...NO_ORBIT_FIELDS,
     sepArcsec: null, paDeg: null, sepPaEpochJd: null, dmag: null, magPri: null, magSec: null,
     ...anchorFields(xid.wdsId, xid.component, anchors),
