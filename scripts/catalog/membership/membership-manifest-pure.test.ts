@@ -29,7 +29,8 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
-import type { MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { mergeDivergences, mergeLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
@@ -946,6 +947,28 @@ describe('codecs', () => {
     expect(membershipLedgers([dropRow('hd', '70000')], identity).labelDrops).toEqual([{
       tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested',
     }]);
+  });
+
+  it('builds the merge links from the primaries, writing every GJ in the record\'s form', () => {
+    const gliese = [
+      'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+      'Wo 9390\tA\t9.0\t\t\t\t\t\t300',
+      'NN 3002\t\t9.0\t\t\t\t\t\t301',
+    ].join('\n') + '\n';
+    const t: PrimaryTables = {
+      ...tables,
+      iv25: [...tables.iv25, { tyc: '4-1-1', hd: 300, nHd: 1, nTyc: 1 }, { tyc: '4-2-1', hd: 301, nHd: 1, nTyc: 1 }],
+      cns5: [...tables.cns5, { cns5: 9, gj: '9390', gjComp: 'A', gaiaSourceId: null, hip: 90, astrometry: null }],
+      gliese: parseGlieseTsv(gliese, GLIESE),
+      tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
+    };
+    const m = mergeLinksFrom(t, spineKeys(spine));
+    const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
+      .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
+    expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
+    expect(derivedOnly(spineRow({ tyc: '4-2-1' }))).toEqual(['hd:301:free', 'gl:GJ 3002:free']);
+    expect(derivedOnly(spineRow({ tyc: '2-1-1', hd: '60' }))).toEqual(['hip:30:free', 'hr:2:free']);
+    expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
   });
 
   it('ledgers every merge divergence but a confirmed pair, and round-trips the ledger', () => {
