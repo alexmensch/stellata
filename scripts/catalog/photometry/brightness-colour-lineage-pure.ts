@@ -24,7 +24,7 @@ export const AV_PARAM_DECIMALS = 4;
 /** A dust row's params, for this stage and every other that de-extincts a record. */
 export const dustParams = (av: number): { av: string } => ({ av: av.toFixed(AV_PARAM_DECIMALS) });
 
-export const EDENHOFER_AV = 'The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid';
+export const EDENHOFER_AV_PHRASE = 'The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid';
 
 const RETIRED_7_1_16 = retired('7.1.16');
 
@@ -120,8 +120,8 @@ export const BRIGHTNESS_COLOUR_CODES = stageCodes(BRIGHTNESS_COLOUR_LINEAGE.stag
   'spectral.none': outcomeCode('No tier classifies the record, so it renders as spectral type unknown.'),
   'spectral.refused.gaia-id-contradicts': refusalCode('A SIMBAD row states a Gaia DR3 id other than the record\'s own, so it describes another star.'),
   'spectral.refused.unclassifiable': refusalCode('A typed row\'s spectral string does not parse as a Morgan-Keenan class.'),
-  'dust.edenhofer2024.absmag-and-ci': outcomeCode(`${EDENHOFER_AV} is subtracted from absmag, and A_V/R_V from the observed B−V.`),
-  'dust.edenhofer2024.absmag-only': outcomeCode(`${EDENHOFER_AV} is subtracted from absmag; the B−V is intrinsic, so it is left as it is.`),
+  'dust.edenhofer2024.absmag-and-ci': outcomeCode(`${EDENHOFER_AV_PHRASE} is subtracted from absmag, and A_V/R_V from the observed B−V.`),
+  'dust.edenhofer2024.absmag-only': outcomeCode(`${EDENHOFER_AV_PHRASE} is subtracted from absmag; the B−V is intrinsic, so it is left as it is.`),
 });
 
 type Branch = Parameters<typeof BRIGHTNESS_COLOUR_CODES.code>[0];

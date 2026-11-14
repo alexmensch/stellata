@@ -8,7 +8,7 @@ import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '..
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
-import { dustParams, EDENHOFER_AV } from '../photometry/brightness-colour-lineage-pure';
+import { dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type {
   CompanionAbsmagSource, CompanionCiVia, MintedAdjustment, MintedBrightness, MultiplesTsvRow, PromotedRow,
@@ -42,10 +42,10 @@ const FACET_CODES = {
   'colour.own': outcomeCode('The minted record\'s B−V is the row\'s own observed colour.'),
   'colour.spectral-derived': outcomeCode('The minted record\'s B−V is the intrinsic colour of its spectral class (Ballesteros 2012, /data/papers/index.md#ballesteros2012), the row carrying no colour of its own.'),
   'colour.none': outcomeCode('The minted record has no colour of its own and no derivable spectral class, so it bakes the solar B−V.'),
-  'dust.edenhofer2024.absmag-and-ci': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from absmag, and A_V/R_V from the observed B−V.`),
-  'dust.edenhofer2024.absmag-only': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from absmag; the B−V is intrinsic, so it is left as it is.`),
-  'dust.edenhofer2024.ci-only': outcomeCode(`${EDENHOFER_AV} at the minted position, as A_V/R_V, is subtracted from the observed B−V; the absmag is its spectral class\'s, intrinsic, so it is left as it is.`),
-  'dust.edenhofer2024.not-applied': outcomeCode(`${EDENHOFER_AV} at the minted position is subtracted from neither value: the absmag is its spectral class\'s and the B−V intrinsic.`),
+  'dust.edenhofer2024.absmag-and-ci': outcomeCode(`${EDENHOFER_AV_PHRASE} at the minted position is subtracted from absmag, and A_V/R_V from the observed B−V.`),
+  'dust.edenhofer2024.absmag-only': outcomeCode(`${EDENHOFER_AV_PHRASE} at the minted position is subtracted from absmag; the B−V is intrinsic, so it is left as it is.`),
+  'dust.edenhofer2024.ci-only': outcomeCode(`${EDENHOFER_AV_PHRASE} at the minted position, as A_V/R_V, is subtracted from the observed B−V; the absmag is its spectral class\'s, intrinsic, so it is left as it is.`),
+  'dust.edenhofer2024.not-applied': outcomeCode(`${EDENHOFER_AV_PHRASE} at the minted position is subtracted from neither value: the absmag is its spectral class\'s and the B−V intrinsic.`),
   'spectral.ms-from-own-absmag': outcomeCode('The minted record\'s spectral class is a main-sequence estimate from its own absolute magnitude, the row\'s type being its primary\'s or blank.'),
   'constellation.split-from-anchor': outcomeCode('The minted record\'s position falls in another IAU constellation than its anchor\'s.'),
   'desig-con.from-anchor': outcomeCode('The adopted record carried no designation constellation and takes its anchor\'s.'),
