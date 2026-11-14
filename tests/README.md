@@ -651,9 +651,5 @@ the same. Each goes through
 `pyMod` in `/src/astro-core/angles.ts`, the one file exempt
 ([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
 `(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
-since it is the add-once spelling of the same wrap.
-
-`HAND_ROLLED_ALLOWED` pins each pre-existing file to its exact hit count,
-so a new site in a listed file fails as surely as one elsewhere, and a
-site fixed without shrinking its entry fails too. The list is meant to
-empty, never to grow. Tests are not scanned.
+since it is the add-once spelling of the same wrap. There is no allowlist.
+Tests are not scanned.
