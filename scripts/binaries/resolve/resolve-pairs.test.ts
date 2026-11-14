@@ -4,7 +4,7 @@ import { componentKey } from '../component-tokens-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import type { BindingVerdict } from './binding-audit-pure';
-import { componentsOf, type DecomposedPair } from './components-pure';
+import { componentsOf, resolveViaOf, type DecomposedPair } from './components-pure';
 import { astrometryRequestIds, resolveCascade, type Stage2Result } from './resolve-pairs';
 import { decomposed, indices, ids, xid, type Side } from './resolve-fixture';
 
@@ -32,7 +32,7 @@ describe('resolveCascade', () => {
       pairs: [wdsPair({ wdsId: '00491+5749', components: 'AB' })], orb6: [], indices: indices(), athyg: [],
       simbadWdsXids: new Map([[componentKey('00491+5749', 'B'), xid('00491+5749', 'B', '425040000962497792')]]),
     });
-    expect(pairs[0].primary.resolveVia).toBe('unresolved');
+    expect(resolveViaOf(pairs[0].primary)).toBe('unresolved');
     expect(ids(pairs[0].secondary)).toMatchObject({ resolveVia: 'simbad_xid', gaiaSourceId: '425040000962497792' });
   });
 });

@@ -6,7 +6,7 @@ import {
   inheritDownwardParentBindings, propagateBlendIdentity, propagateWithinSystem, seedSynthesizedComponentBindings,
 } from './propagate-pure';
 import { BI_WDS, alone, biPair, decomposed, ids, lone, resolved } from './resolve-fixture';
-import type { ResolvedComponent } from './components-pure';
+import { resolveViaOf, type ResolvedComponent } from './components-pure';
 import { OWN, inheritedFrom } from '../multiples-record-pure';
 
 const smear = (...cs: ResolvedComponent[]) => lone(propagateWithinSystem(cs.map(alone)));
@@ -38,8 +38,8 @@ describe('propagateWithinSystem', () => {
       resolved({ wdsId: 'X', discoverer: 'DC' }),
     );
     expect(ids(unbound)).toMatchObject({ gaiaSourceId: '42', resolveVia: 'orb6_hip' });
-    expect(simbad.resolveVia).toBe('simbad_xid');
-    expect(orb6.resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(simbad)).toBe('simbad_xid');
+    expect(resolveViaOf(orb6)).toBe('orb6_hip');
   });
 
   it('gives a bare letter its sub-letter\'s binding (Castor A ← Aa)', () => {

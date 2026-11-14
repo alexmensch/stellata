@@ -42,7 +42,7 @@ export function runStage6(
   specs: readonly PairSpec[], ix: IdentifierIndices = indices(), xids: ReadonlyMap<ComponentKey, SimbadWdsXid> = new Map(),
 ): Stage6Result {
   const pairs: DecomposedPair[] = specs.map((s) =>
-    decomposed(wdsPair(s.pair), { primary: s.primary ?? { resolveVia: 'orb6_hip' }, secondary: s.secondary ?? { resolveVia: 'orb6_hip' } }));
+    decomposed(wdsPair(s.pair), { primary: s.primary ?? {}, secondary: s.secondary ?? {} }));
   const stage3: Stage3Result = {
     pairs,
     astrometry: new Map(pairs.map((p, i) => {

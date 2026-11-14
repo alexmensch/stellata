@@ -112,8 +112,8 @@ describe('routeAstrometry', () => {
 
 const ab = (components: string, rhoLast: number | null, primary: Side, secondary: Side = {}): DecomposedPair =>
   decomposed(wdsPair({ wdsId: 'X', discoverer: 'D', components, rhoLast, thetaLast: 0, precise: null }), {
-    primary: { gaiaSourceId: null, resolveVia: 'unresolved', ...primary },
-    secondary: { gaiaSourceId: null, resolveVia: 'unresolved', ...secondary },
+    primary: { gaiaSourceId: null, ...primary },
+    secondary: { gaiaSourceId: null, ...secondary },
   });
 
 describe('minRhoPerSource', () => {
@@ -151,8 +151,8 @@ describe('routePairs — the AT-HYG position fallback', () => {
   const at = (ra: number, dec: number, over: Partial<AthygRow> = {}): AthygRow => athygAt({ ra, dec, ...over });
   const pairOf = (ra: number, dec: number, rhoLast: number | null, thetaLast: number | null, sides: { primary: Side; secondary?: Side }): DecomposedPair =>
     decomposed(pairAt({ wdsId: '11182+3132', components: 'AB', ra, dec, rhoLast, thetaLast }), {
-      primary: { resolveVia: 'simbad_xid', ...sides.primary },
-      secondary: { gaiaSourceId: null, resolveVia: 'unresolved', ...sides.secondary },
+      primary: sides.primary,
+      secondary: { gaiaSourceId: null, ...sides.secondary },
     });
 
   it('places both sides of a ξ UMa-shape pair Gaia and HIP2 both miss, parallax from the row\'s distance', () => {
