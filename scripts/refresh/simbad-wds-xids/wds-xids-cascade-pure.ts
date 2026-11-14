@@ -108,19 +108,22 @@ export function cascadeRecoveries(
     const key = componentId(candidate.component);
     const entry = named.get(key) ?? { component: candidate.component, byOid: new Map() };
     named.set(key, entry);
-    entry.byOid.set(oid, [...(entry.byOid.get(oid) ?? []), { id, strategy: candidate.strategy }]);
+    const held = entry.byOid.get(oid);
+    if (held === undefined) entry.byOid.set(oid, [{ id, strategy: candidate.strategy }]);
+    else held.push({ id, strategy: candidate.strategy });
   }
   const recoveries = new Map<string, { component: WdsComponent; oid: number }>();
   const counts: Record<CascadeStrategy, number> = { HD: 0, CCDM: 0, HIP: 0 };
   const conflicts: string[] = [];
   for (const [key, { component, byOid }] of named) {
-    const oids = [...byOid.keys()].sort((a, b) => a - b);
-    if (oids.length > 1) {
-      conflicts.push(`${key}: ${oids.map((oid) => `${oid} (${(byOid.get(oid) ?? []).map((h) => h.id).join(', ')})`).join(', ')}`);
+    const entries = [...byOid].sort(([a], [b]) => a - b);
+    if (entries.length > 1) {
+      conflicts.push(`${key}: ${entries.map(([oid, aliases]) => `${oid} (${aliases.map((h) => h.id).join(', ')})`).join(', ')}`);
       continue;
     }
-    recoveries.set(key, { component, oid: oids[0] });
-    for (const { strategy } of byOid.get(oids[0]) ?? []) counts[strategy]++;
+    const [[oid, aliases]] = entries;
+    recoveries.set(key, { component, oid });
+    for (const { strategy } of aliases) counts[strategy]++;
   }
   return { recoveries, hits: counts, conflicts: conflicts.sort() };
 }
