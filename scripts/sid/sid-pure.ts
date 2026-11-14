@@ -9,6 +9,7 @@ import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure
 import {
   decodeLedgerRow, LEDGER_COLUMNS, SID_KINDS, type LedgerRow, type SidKind,
 } from './ledger-pure';
+import { ascending, compareCodeUnits } from '../../src/astro-core/order-pure';
 
 // ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
 
@@ -150,11 +151,9 @@ export function compareDesignations(a: string, b: string): number {
     return da.ns < db.ns ? -1 : 1;
   }
   if (DIGITS_RE.test(da.key) && DIGITS_RE.test(db.key)) {
-    const ka = BigInt(da.key);
-    const kb = BigInt(db.key);
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
+    return ascending(BigInt(da.key), BigInt(db.key));
   }
-  return da.key < db.key ? -1 : da.key > db.key ? 1 : 0;
+  return compareCodeUnits(da.key, db.key);
 }
 
 export function canonicalKeyOf(designations: Iterable<string>): string {

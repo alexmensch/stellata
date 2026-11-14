@@ -51,6 +51,7 @@ import {
   type AdditionCohortItem,
   type AdditionCohorts,
 } from './addition-items-pure';
+import { compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
   const list = by.get(key);
@@ -283,9 +284,7 @@ function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
   if (hipA !== hipB) return hipA - hipB;
-  const glA = a.rawGl ?? '';
-  const glB = b.rawGl ?? '';
-  return glA < glB ? -1 : glA > glB ? 1 : 0;
+  return compareCodeUnits(a.rawGl ?? '', b.rawGl ?? '');
 }
 
 interface Admission {

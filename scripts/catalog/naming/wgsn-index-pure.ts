@@ -8,6 +8,7 @@ import { bayerKeySets, type DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export interface WgsnNameRow {
   name: string;
@@ -127,7 +128,7 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
   const bare = rows.filter((r) => !NAME_WITH_COMPONENT.test(r.name));
   const pool = bare.length > 0 ? bare : rows;
   return [...pool].sort((a, b) =>
-    a.name.length - b.name.length || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+    a.name.length - b.name.length || compareCodeUnits(a.name, b.name)
     || (a.srcId < b.srcId ? -1 : 1))[0];
 }
 
@@ -153,7 +154,7 @@ export function pickGouldRow(
 ): DesignationRow {
   return [...rows].sort((a, b) =>
     (a.num ?? 0) - (b.num ?? 0)
-    || (a.dc < b.dc ? -1 : a.dc > b.dc ? 1 : 0)
+    || compareCodeUnits(a.dc, b.dc)
     || ((a.half ?? '') < (b.half ?? '') ? -1 : 1))[0];
 }
 

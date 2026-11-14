@@ -6,6 +6,7 @@ import {
 } from '../catalog/lineage/lineage-row-pure';
 import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import type { Causes, Decision } from './allocate-pure';
+import { compareCodeUnits } from '../../src/astro-core/order-pure';
 
 export interface IdentitySource {
   readonly stage: string;
@@ -48,7 +49,7 @@ export function lineageCauses(
   }
   const rank = (stage: string): number => stageOrder.indexOf(stage);
   return new Map(keys.map((k) => [k, {
-    decisions: decisions.get(k)!.sort((a, b) => rank(a.stage) - rank(b.stage) || (a.origin < b.origin ? -1 : a.origin > b.origin ? 1 : 0)),
+    decisions: decisions.get(k)!.sort((a, b) => rank(a.stage) - rank(b.stage) || compareCodeUnits(a.origin, b.origin)),
     seenBy: stageOrder.filter((s) => seenBy.get(k)!.has(s)),
   }]));
 }
