@@ -2,9 +2,7 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
-import { nullableCell } from '../../../util/tsv/artifact-pure';
-import { intCell, sourceIdCell, textCell } from '../../../util/tsv/table-pure';
-import { RECORD_KEY_COLUMNS, type IdentityCells } from '../../lineage/identity-pure';
+import { RECORD_KEY_COLUMNS, type IdentityCells, type RecordIdentifiers } from '../../lineage/identity-pure';
 
 /** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule
@@ -27,40 +25,8 @@ export type ParkedReason = (typeof PARKED_REASONS)[number];
 /** One ledger row: a manifest row the walk could not ship, by its five
  *  identifier cells. Records leave the catalogue entirely, so nothing else in
  *  the build records that they existed. */
-export interface ParkedLedgerEntry {
-  tyc: string | null;
-  hip: number | null;
-  hd: number | null;
-  gl: string | null;
-  gaiaSourceId: string | null;
+export interface ParkedLedgerEntry extends RecordIdentifiers {
   reason: ParkedReason;
-}
-
-/** The five identifier cells a park is keyed on, without its reason. */
-export type ParkedIdentifiers = Omit<ParkedLedgerEntry, 'reason'>;
-
-/** The five cells' text, as the ledger and a placement park row both write them. */
-export function parkedLedgerCells(ids: ParkedIdentifiers) {
-  return {
-    tyc: nullableCell(ids.tyc),
-    hip: nullableCell(ids.hip),
-    hd: nullableCell(ids.hd),
-    gl: nullableCell(ids.gl),
-    gaia_source_id: nullableCell(ids.gaiaSourceId),
-  };
-}
-
-export type ParkedLedgerCells = ReturnType<typeof parkedLedgerCells>;
-
-/** Throws on a malformed cell, as the ledger's own read does. */
-export function parkedIdentifiersOf(cells: ParkedLedgerCells): ParkedIdentifiers {
-  return {
-    tyc: textCell(cells.tyc),
-    hip: intCell(cells.hip),
-    hd: intCell(cells.hd),
-    gl: textCell(cells.gl),
-    gaiaSourceId: sourceIdCell(cells.gaia_source_id),
-  };
 }
 
 export interface ParkedRecord extends ParkedLedgerEntry {

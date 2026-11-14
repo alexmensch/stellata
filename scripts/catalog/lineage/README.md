@@ -46,7 +46,9 @@ scripts/catalog/lineage/
                                  records on one key. RECORD_KEY_COLUMNS,
                                  the five-cell tuple every ledger keyed on
                                  a record (parked, additions, label drops)
-                                 spells its columns from.
+                                 spells its columns from, and its typed
+                                 form RecordIdentifiers with the cell
+                                 codec those ledgers share.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
                                  code generator and trace/ read, and the

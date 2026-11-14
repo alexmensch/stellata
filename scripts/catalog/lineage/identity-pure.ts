@@ -1,6 +1,7 @@
 // Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md#identity--the-origin-source-row.
 
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { nullableCell } from '../../util/tsv/artifact-pure';
+import { intCell, readTable, sourceIdCell, textCell, type TableSpec } from '../../util/tsv/table-pure';
 import { sortUtf8 } from './lineage-row-pure';
 
 /** The five identifier cells a record's ledger rows and its identity row carry. */
@@ -19,6 +20,37 @@ export interface IdentityRow {
 }
 
 export type IdentityCells = Pick<IdentityRow, (typeof RECORD_KEY_COLUMNS)[number]>;
+
+/** A record's five identifier cells, typed. */
+export interface RecordIdentifiers {
+  tyc: string | null;
+  hip: number | null;
+  hd: number | null;
+  gl: string | null;
+  gaiaSourceId: string | null;
+}
+
+/** The five cells' text, as every ledger keyed on a record writes them. */
+export function recordKeyCells(ids: RecordIdentifiers): IdentityCells {
+  return {
+    tyc: nullableCell(ids.tyc),
+    hip: nullableCell(ids.hip),
+    hd: nullableCell(ids.hd),
+    gl: nullableCell(ids.gl),
+    gaia_source_id: nullableCell(ids.gaiaSourceId),
+  };
+}
+
+/** Throws on a malformed cell. */
+export function recordIdentifiersOf(cells: IdentityCells): RecordIdentifiers {
+  return {
+    tyc: textCell(cells.tyc),
+    hip: intCell(cells.hip),
+    hd: intCell(cells.hd),
+    gl: textCell(cells.gl),
+    gaiaSourceId: sourceIdCell(cells.gaia_source_id),
+  };
+}
 
 export function identityRow(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {
   return {
