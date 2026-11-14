@@ -9,7 +9,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-tsv';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
 import {
-  componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
+  componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
 import { ATHYG_REFERENCE_EPOCH } from '../sky-geometry-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
@@ -66,13 +66,13 @@ export function fromAthygPosition(row: AthygRow): MeasuredAstrometry | null {
 }
 
 function componentHip2(c: ResolvedComponent, indices: IdentifierIndices): Hip2AstrometryRow | null {
-  const hip = c.hip ?? (c.gaiaSourceId === null ? null : indices.srcToHip.get(c.gaiaSourceId) ?? null);
+  const hip = valueOf(c.hip) ?? (c.gaia === null ? null : indices.srcToHip.get(c.gaia.value) ?? null);
   return hip === null ? null : indices.hipToHip2.get(hip) ?? null;
 }
 
 /** README.md#what-each-route-decides */
 export function routeAstrometry(c: ResolvedComponent, minRhoArcsec: number | null, indices: IdentifierIndices): ComponentAstrometry {
-  const gaia = c.gaiaSourceId === null ? null : indices.srcToAstrometry.get(c.gaiaSourceId) ?? null;
+  const gaia = c.gaia === null ? null : indices.srcToAstrometry.get(c.gaia.value) ?? null;
   if (gaia === null || gaia.parallaxMas === null) {
     const hip2 = componentHip2(c, indices);
     if (hip2 !== null) return fromHip2(hip2);
@@ -91,11 +91,11 @@ export function minRhoPerSource(pairs: readonly DecomposedPair[]): ReadonlyMap<s
   const index = pairsByDiscoverer(pairRows(pairs));
   const out = new Map<string, number>();
   for (const c of componentsOf(pairs)) {
-    if (c.gaiaSourceId === null) continue;
+    if (c.gaia === null) continue;
     const rho = findOwningPair(c, index)?.rhoLast ?? null;
     if (rho === null) continue;
-    const prev = out.get(c.gaiaSourceId);
-    if (prev === undefined || rho < prev) out.set(c.gaiaSourceId, rho);
+    const prev = out.get(c.gaia.value);
+    if (prev === undefined || rho < prev) out.set(c.gaia.value, rho);
   }
   return out;
 }
@@ -119,22 +119,22 @@ export interface SiblingClaimedComponent {
 export function routePairs(pairs: readonly DecomposedPair[], indices: IdentifierIndices, athyg: readonly AthygRow[]): RoutedPairs {
   const minRho = minRhoPerSource(pairs);
   const components = componentsOf(pairs);
-  const routed = components.map((c) => routeAstrometry(c, c.gaiaSourceId === null ? null : minRho.get(c.gaiaSourceId) ?? null, indices));
-  const athygRows = components.map((c) => c.athygRow);
+  const routed = components.map((c) => routeAstrometry(c, c.gaia === null ? null : minRho.get(c.gaia.value) ?? null, indices));
+  const athygRows = components.map((c) => c.athyg);
   const fallback = pairAthygMatches(pairs, athyg, {
-    skip: (i) => routed[i].astrometryVia !== 'unresolved', allowBlendInherit: true,
+    skip: (i) => routed[i].astrometryVia !== 'unresolved',
   });
   for (const m of fallback.matches) {
     const synth = fromAthygPosition(athyg[m.athygIdx]);
     if (synth === null) continue;
     routed[m.componentIdx] = synth;
-    athygRows[m.componentIdx] ??= athyg[m.athygIdx];
+    athygRows[m.componentIdx] ??= { value: athyg[m.athygIdx], origin: m.origin };
   }
 
   const astrometry = new Map<DecomposedPair, PairAstrometry>();
   const out = pairs.map((p, k): DecomposedPair => {
     const withRow = (c: ResolvedComponent, i: number): ResolvedComponent =>
-      athygRows[i] === c.athygRow ? c : { ...c, athygRow: athygRows[i] };
+      athygRows[i] === c.athyg ? c : { ...c, athyg: athygRows[i] };
     const next = { ...p, primary: withRow(p.primary, 2 * k), secondary: withRow(p.secondary, 2 * k + 1) };
     astrometry.set(next, { primary: routed[2 * k], secondary: routed[2 * k + 1] });
     return next;

@@ -76,30 +76,34 @@ function safeInteger(t: string): number {
 
 const ID = /^(0|[1-9]\d*)$/;
 
-export function idCell(raw: string | undefined): number | null {
+function identifierText(raw: string | undefined, noun: string): string | null {
   const t = raw ?? '';
   if (t === '') return null;
-  if (!ID.test(t)) throw new Error(`"${t}" is not an identifier`);
-  return safeInteger(t);
+  if (!ID.test(t)) throw new Error(`"${t}" is not ${noun}`);
+  return t;
 }
 
-export function idListCell(raw: string | undefined, separator: string): number[] {
+export function idCell(raw: string | undefined): number | null {
+  const t = identifierText(raw, 'an identifier');
+  return t === null ? null : safeInteger(t);
+}
+
+function listCell<T>(raw: string | undefined, separator: string, cell: (v: string) => T | null): T[] {
   const t = raw ?? '';
   if (t === '') return [];
   return t.split(separator).map((v) => {
-    const n = idCell(v);
+    const n = cell(v);
     if (n === null) throw new Error(`"${t}" has an empty element`);
     return n;
   });
 }
 
-const SOURCE_ID = /^\d+$/;
+export function idListCell(raw: string | undefined, separator: string): number[] {
+  return listCell(raw, separator, idCell);
+}
 
 export function sourceIdCell(raw: string | undefined): string | null {
-  const t = textCell(raw);
-  if (t === null) return null;
-  if (!SOURCE_ID.test(t)) throw new Error(`"${t}" is not a source_id`);
-  return t;
+  return identifierText(raw, 'a source_id');
 }
 
 /** Absent (null or empty) first, then by value. */
@@ -191,7 +195,7 @@ export class TableRow<C extends string> {
   }
 
   sourceIdList(c: C, separator: string): string[] {
-    return this.cell(c, (raw) => (raw === '' ? [] : raw.split(separator).map((v) => present(sourceIdCell(v)))));
+    return this.cell(c, (raw) => listCell(raw, separator, sourceIdCell));
   }
 
   oneOf<T extends string>(c: C, allowed: readonly T[]): T {

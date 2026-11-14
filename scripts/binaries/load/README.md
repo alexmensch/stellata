@@ -96,6 +96,14 @@ wds_id, component or oid. A curated row missing a cell it exists to state
 throws ([Cell corrections](../../util/tsv/README.md#cell-corrections)).
 AT-HYG spells an absent identifier `0` as well as empty.
 
+Each of these stops the build: a Gaia source_id that is not bare digits as
+written, padded or zero-led, which would otherwise miss its join; an `=====`
+rule in HIP↔CCDM, read as a format change
+(`../../catalog/multiplicity/vizier-rule-pure.ts`); a HIP value on two HIP2
+rows, 0 included, since which was meant is not the reader's to guess. Skipped instead:
+HIP↔CCDM's dash rule line, and a HIP2 row with `hip <= 0` or no position;
+HIP2's row band counts the positioned stars that remain.
+
 ## Gaia NSS: one solution per source
 
 Gaia DR3 publishes several two-body solutions for some sources, and the

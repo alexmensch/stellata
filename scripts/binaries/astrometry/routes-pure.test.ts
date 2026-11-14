@@ -7,8 +7,9 @@ import { wdsPair } from '../../wds/wds-fixture';
 import type { AthygRow } from '../load/athyg-pure';
 
 import { gaiaAstrometryRow } from '../load/load-fixture';
-import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
-import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved } from '../resolve/resolve-fixture';
+import type { DecomposedPair } from '../resolve/components-pure';
+import { OWN } from '../multiples-tsv';
+import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved, type Side } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
@@ -110,7 +111,7 @@ describe('routeAstrometry', () => {
   });
 });
 
-const ab = (components: string, rhoLast: number | null, primary: Partial<ResolvedComponent>, secondary: Partial<ResolvedComponent> = {}): DecomposedPair =>
+const ab = (components: string, rhoLast: number | null, primary: Side, secondary: Side = {}): DecomposedPair =>
   decomposed(wdsPair({ wdsId: 'X', discoverer: 'D', components, rhoLast, thetaLast: 0, precise: null }), {
     primary: { gaiaSourceId: null, resolveVia: 'unresolved', ...primary },
     secondary: { gaiaSourceId: null, resolveVia: 'unresolved', ...secondary },
@@ -149,7 +150,7 @@ describe('routePairs', () => {
 describe('routePairs — the AT-HYG position fallback', () => {
   const XI_UMA = { ra: 169.5454, dec: 31.5292 };
   const at = (ra: number, dec: number, over: Partial<AthygRow> = {}): AthygRow => athygAt({ ra, dec, ...over });
-  const pairOf = (ra: number, dec: number, rhoLast: number | null, thetaLast: number | null, sides: { primary: Partial<ResolvedComponent>; secondary?: Partial<ResolvedComponent> }): DecomposedPair =>
+  const pairOf = (ra: number, dec: number, rhoLast: number | null, thetaLast: number | null, sides: { primary: Side; secondary?: Side }): DecomposedPair =>
     decomposed(pairAt({ wdsId: '11182+3132', components: 'AB', ra, dec, rhoLast, thetaLast }), {
       primary: { resolveVia: 'simbad_xid', ...sides.primary },
       secondary: { gaiaSourceId: null, resolveVia: 'unresolved', ...sides.secondary },
@@ -173,8 +174,8 @@ describe('routePairs — the AT-HYG position fallback', () => {
     const own = at(0, 0, { distPc: 3 });
     const p = pairOf(XI_UMA.ra, XI_UMA.dec, 2.6, 90, { primary: { gaiaSourceId: '1' }, secondary: { gaiaSourceId: '2', athygRow: own } });
     const r = routePairs([p], indices({ athyg: [row] }), [row]);
-    expect(r.pairs[0].primary.athygRow).toBe(row);
-    expect(r.pairs[0].secondary.athygRow).toBe(own);
+    expect(r.pairs[0].primary.athyg).toEqual({ value: row, origin: OWN });
+    expect(r.pairs[0].secondary.athyg?.value).toBe(own);
   });
 
   it('runs only where the Gaia / HIP2 cascade left a component unresolved', () => {

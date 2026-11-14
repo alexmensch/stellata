@@ -80,11 +80,11 @@ export function cpmBaselineVerdict(pair: WdsPair, pmraMasyr: number | null, pmde
 }
 
 function gaiaFor(c: ResolvedComponent, indices: IdentifierIndices): GaiaAstrometryCatalogRow | null {
-  return c.gaiaSourceId === null ? null : indices.srcToAstrometry.get(c.gaiaSourceId) ?? null;
+  return c.gaia === null ? null : indices.srcToAstrometry.get(c.gaia.value) ?? null;
 }
 
 function hip2Anchor(c: ResolvedComponent, indices: IdentifierIndices): Parallax | null {
-  const row: Hip2AstrometryRow | undefined = c.hip === null ? undefined : indices.hipToHip2.get(c.hip);
+  const row: Hip2AstrometryRow | undefined = c.hip === null ? undefined : indices.hipToHip2.get(c.hip.value);
   return row === undefined || row.plxMas === null ? null : { parallaxMas: row.plxMas, parallaxErrorMas: row.plxErrorMas };
 }
 

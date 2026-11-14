@@ -16,9 +16,10 @@ scripts/binaries/resolve/
                                resolveCascade (the tiers and propagations
                                alone), Stage2Result, astrometryRequestIds,
                                stage2Counts.
-  components-pure.ts           ResolvedComponent, DecomposedPair,
-                               decompose (the split), working (a pass's
-                               copy), findOwningPair, RESOLVE_VIA_PRIORITY.
+  components-pure.ts           ResolvedComponent, DecomposedPair, Bound
+                               (an identifier and its origin), decompose
+                               (the split), working (a pass's copy),
+                               findOwningPair, RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
@@ -73,6 +74,24 @@ A pass reaches a component through its pair. One that works per component
 iterates `working(pairs).components`, a view of the same drafts in pair
 order, primary then secondary, so pairing never rests on position.
 
+## Identifier origins
+
+Each of a component's Gaia source, HIP and AT-HYG row is a `Bound`: the value
+and its `IdOrigin` (`../multiples-tsv.ts`), `own` or inherited from a named
+token of the same system. Every tier binds `own`; a rebind by the audit is
+`own`. The passes that copy record the kind:
+
+| Kind | Copied by | From |
+| --- | --- | --- |
+| `blend` | `propagateBlendIdentity`; Stage 3's AT-HYG fallback at ρ = 0 | a ρ = 0 pair's primary |
+| `letter` | `propagateWithinSystem` (A ← Aa) | the sub-letter donor |
+| `parent` | `seedSynthesizedComponentBindings` (primary), `inheritDownwardParentBindings`, Stage 3's NSS inner pairs | the parent token |
+| `partner` | `seedSynthesizedComponentBindings` (secondary); Stage 3's AT-HYG fallback at a measured or unmeasured ρ | the pair's primary |
+
+The same-letter smear across a letter's rows copies the origin unchanged:
+one letter is one star, so its binding is its own on every row or inherited
+on every row. A copy names its immediate donor, never the donor's donor.
+
 ## Choices the outputs rest on
 
 `multiples.tsv` is pinned byte for byte, and these choices hold it where a
@@ -119,8 +138,9 @@ explains the expectation, it does not excuse a miss.
 J1991.25 to the WDS coordinate epoch first, then as stored: AT-HYG's HIP rows
 sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under propagation).
 With propagation the grid search widens a cell each way so a high-PM star
-stored in a neighbouring cell is still a candidate. Stage 2 calls
-`pairAthygMatches` without blend inheritance; Stage 3 calls it with.
+stored in a neighbouring cell is still a candidate. A secondary whose own
+match misses rides its primary's row, inherited from it (`blend` at ρ = 0,
+else `partner`); Stage 2 binds only `own` matches, Stage 3 takes both.
 
 ## The binding-integrity audit
 
@@ -186,21 +206,20 @@ rows with the SYSTEM coordinate — Rigel's BC row carries A's coord, so
 B's primary match landed on A's row at ~0″ and wore A's photometry).
 The gate lives in `pairAthygMatches`, so Stage 2's identifier
 binding and Stage 3's astrometry fallback both honour it; the
-blend-inherit branch (a secondary riding its pair partner's row) is
+inherited branch (a secondary riding its pair primary's row) is
 exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
 (both stages summed).
 
 The two stages compose:
 
-- **Stage 2** binds identifiers — sets `athygRow` always on match,
+- **Stage 2** binds identifiers — sets `athyg` always on match,
   and surfaces `gaia` / `hip` from the row when the row carries them
   (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
-  Opts OUT of secondary blend-inheritance because copying the
-  primary's AT-HYG row to the secondary slot would also propagate the
-  primary's Gaia source onto the secondary.
+  Binds only `own` matches: an inherited match would carry the primary's
+  AT-HYG row, and with it the primary's Gaia source, onto the secondary.
 - **Stage 3** synthesizes astrometry — `routePairs`
   routes any remaining `unresolved` component through the same
-  cascade, opting INTO blend-inheritance so Hipparcos-unresolved
+  cascade, taking inherited matches too, so Hipparcos-unresolved
   pairs (A, B sharing one AT-HYG row at sub-AU separation) both
   emit `astrometry_via=athyg_position`.
 
