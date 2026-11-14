@@ -67,6 +67,10 @@ describe('floor modulos', () => {
     }
   });
 
+  it('the owner holds pyMod and only its docstring naming the shape', () => {
+    expect(lineHits(OWNER, RULES)).toHaveLength(1);
+  });
+
   it('the scan reaches the tree', () => {
     expect(files.length).toBeGreaterThan(1000);
   });
