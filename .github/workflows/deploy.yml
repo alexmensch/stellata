@@ -66,10 +66,9 @@ jobs:
           PLAN: ${{ needs.plan-releases.outputs.plan }}
         run: |
           set -euo pipefail
-          printf '%s\n' "$PLAN" > "$RUNNER_TEMP/release-plan.json"
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          node scripts/release/cut-releases.ts tag --plan "$RUNNER_TEMP/release-plan.json"
+          node scripts/release/cut-releases.ts tag
 
       - run: pnpm run build
 
@@ -132,7 +131,4 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.release-token.outputs.token }}
           PLAN: ${{ needs.plan-releases.outputs.plan }}
-        run: |
-          set -euo pipefail
-          printf '%s\n' "$PLAN" > "$RUNNER_TEMP/release-plan.json"
-          node scripts/release/cut-releases.ts publish --plan "$RUNNER_TEMP/release-plan.json"
+        run: node scripts/release/cut-releases.ts publish

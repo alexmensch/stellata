@@ -21,9 +21,11 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   `.github/actions/release-level`.
 - `cut-releases.ts` — the CLI, three steps: `plan [--head] [--out
   <file>]` plans the releases up to `--head` and writes them as JSON (to
-  `--out`, and with their count to `GITHUB_OUTPUT`); `tag --plan <file>`
-  makes each planned release's annotated tag locally; `publish --plan
-  <file>` creates each release, and with it its tag on origin. `parsePlan()` refuses a
+  `--out`, and with their count to `GITHUB_OUTPUT`); `tag` makes each
+  planned release's annotated tag locally; `publish` creates each release,
+  and with it its tag on origin. Both read the plan from `--plan <file>`,
+  or without it from the `PLAN` environment variable, which is how
+  `deploy.yml` hands on `plan`'s job output. `parsePlan()` refuses a
   malformed plan before either acts. Reads each commit's PR labels and
   body with `gh`. `publish`'s token: [The publish token](#the-publish-token).
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
