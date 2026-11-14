@@ -82,38 +82,32 @@ function v70aNumberKey(name: string): string | null {
   return normaliseGjKey(`GJ ${name.replace(/^(Gl|GJ|NN|Wo)\s+/i, '')}`);
 }
 
-export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[] {
+/** The pair rule's verdict on a spine row whose HIP Tycho-2 gives to two or
+ *  more entries, and the HIP the row's other cells derive from. */
+function pairVerdict(row: SpineRow, spineHip: number | null, m: MergeLinks): {
+  divergence: MergeDivergence | null;
+  hip: number | null;
+} {
+  const tycho2Hip = row.tyc === '' ? null : m.links.tycHip.get(row.tyc) ?? null;
+  const hip = spineHip ?? tycho2Hip;
+  const entries = hip === null ? [] : m.hipEntries.get(hip) ?? [];
+  if (hip === null || entries.length < 2 || !entries.includes(row.tyc)) return { divergence: null, hip };
+  const verdict = pairOwner(hip, entries, m.links);
+  if (spineHip === null) {
+    return { divergence: null, hip: 'owner' in verdict && verdict.owner === row.tyc ? hip : null };
+  }
+  if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, reason: verdict.reason }, hip };
+  return {
+    divergence: verdict.owner === row.tyc
+      ? { kind: 'pair-confirmed', hip, sourceId: verdict.sourceId }
+      : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId },
+    hip,
+  };
+}
+
+/** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */
+function derivedOnlyCells(row: SpineRow, hip: number | null, m: MergeLinks): MergeDivergence[] {
   const out: MergeDivergence[] = [];
-  const partition = partitionRow(row, m.links);
-  if (partition !== null && partition.minority.witnessed.length > 0) {
-    out.push({
-      kind: 'unlinked',
-      cells: partition.minority.witnessed,
-      witnessed: partition.partition.witnessed,
-      published: partition.partition.published,
-    });
-  }
-
-  const spineHip = intOf(row.hip);
-  let hip = spineHip;
-  if (row.tyc !== '') {
-    const tycho2Hip = m.links.tycHip.get(row.tyc) ?? null;
-    const pairHip = spineHip ?? tycho2Hip;
-    const entries = pairHip === null ? [] : m.hipEntries.get(pairHip) ?? [];
-    if (pairHip !== null && entries.length > 1 && entries.includes(row.tyc)) {
-      const verdict = pairOwner(pairHip, entries, m.links);
-      if (spineHip !== null) {
-        if ('reason' in verdict) out.push({ kind: 'pair-review', hip: pairHip, entries, reason: verdict.reason });
-        else if (verdict.owner === row.tyc) out.push({ kind: 'pair-confirmed', hip: pairHip, sourceId: verdict.sourceId });
-        else out.push({ kind: 'pair-moves', hip: pairHip, owner: verdict.owner, sourceId: verdict.sourceId });
-      } else if (!('reason' in verdict) && verdict.owner === row.tyc) {
-        hip = pairHip;
-      }
-    } else if (spineHip === null && tycho2Hip !== null) {
-      hip = tycho2Hip;
-    }
-  }
-
   const hd = intOf(row.hd);
   const hds = new Set<number>(row.tyc === '' ? [] : m.links.tycHd.get(row.tyc) ?? []);
   if (hip !== null) for (const d of m.links.hipHd.get(hip) ?? []) hds.add(d);
@@ -123,7 +117,7 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
       out.push({ kind: 'derived-only', cell, value, held: isHeld(value) ? 'held' : 'free' });
     }
   };
-  if (spineHip === null && hip !== null) derivedOnly('hip', [String(hip)], (v) => m.held.hip.has(Number(v)));
+  if (row.hip === '' && hip !== null) derivedOnly('hip', [String(hip)], (v) => m.held.hip.has(Number(v)));
   if (hd === null) derivedOnly('hd', [...hds].map(String), (v) => m.held.hd.has(Number(v)));
   if (row.hr === '') {
     const hrs = [...hds].map((d) => m.hdHr.get(d)).filter((r): r is number => r !== undefined);
@@ -142,4 +136,22 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
     derivedOnly('gl', byKey.values(), (v) => m.held.glKeys.has(v70aNumberKey(v)!));
   }
   return out;
+}
+
+export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[] {
+  const partition = partitionRow(row, m.links);
+  const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
+    ? [{
+      kind: 'unlinked',
+      cells: partition.minority.witnessed,
+      witnessed: partition.partition.witnessed,
+      published: partition.partition.published,
+    }]
+    : [];
+  const pair = pairVerdict(row, intOf(row.hip), m);
+  return [
+    ...unlinked,
+    ...(pair.divergence === null ? [] : [pair.divergence]),
+    ...derivedOnlyCells(row, pair.hip, m),
+  ];
 }
