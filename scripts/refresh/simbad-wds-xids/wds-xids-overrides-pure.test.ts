@@ -17,7 +17,9 @@ describe('parseWdsXidsOverrides', () => {
 
   it('refuses a missing column, an oid that is not an integer, an empty reason and a second row for one component', () => {
     expect(() => parseWdsXidsOverrides('wds_id\tcomponent\toid\treason\n', FROM)).toThrow(/simbad_oid/);
-    expect(() => parseWdsXidsOverrides(`${HEADER}06451-1643\tB\tnotanint\tbad\n`, FROM)).toThrow(/overrides\.tsv:2/);
+    for (const oid of ['notanint', '+930049', '-930049', ' 930049']) {
+      expect(() => parseWdsXidsOverrides(`${HEADER}06451-1643\tB\t${oid}\tbad\n`, FROM)).toThrow(/overrides\.tsv:2/);
+    }
     expect(() => parseWdsXidsOverrides(`${HEADER}06451-1643\tB\t930049\t\n`, FROM)).toThrow(/reason is empty/);
     expect(() => parseWdsXidsOverrides(`${HEADER}${SIRIUS_B}06451-1643\tB\t999\tagain\n`, FROM)).toThrow(/a second override for 06451-1643 B \(oid 930049, then 999\)/);
   });

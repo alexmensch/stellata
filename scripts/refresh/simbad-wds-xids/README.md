@@ -75,6 +75,11 @@ changed override stales the record.
 
 ## The request and the gates
 
+Every guard here and in [Overrides](#overrides) fails the pull rather than
+skip: a skipped id, override or file loses a binding with nothing in the
+output to show it. Skipping, as the deleted Python pull did, is the defect
+these replace.
+
 - **Band**: between `MIN_COMPONENT_REACH` (36%) of the components and all of
   them, since each binds at most one object; measured 2026-11-09, 23,669 of
   61,867 (38.3%).
@@ -91,7 +96,9 @@ changed override stales the record.
 `data/simbad/wds_xids_overrides.tsv` (`wds_id`, `component`, `simbad_oid`,
 `reason`, `#` comments) pins an object for a component neither the lookup
 nor the cascade reaches; [Provenance](/data/simbad/README.md#provenance)
-names today's rows. Every cell is required and one component takes one row.
+names today's rows. Every cell is required, `simbad_oid` is plain digits,
+and one component takes one row. The file is required too: no overrides is
+the header alone.
 
 ## The committed table
 
