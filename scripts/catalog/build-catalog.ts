@@ -101,7 +101,6 @@ import {
   applyVariability,
   gcvsSummary,
 } from './parse/gcvs/gcvs-parse';
-import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationIndex,
@@ -116,6 +115,7 @@ import {
   NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary, type NamingCounts,
 } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
+import { walkVelocitySummary } from './parse/walk-stats-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
@@ -308,21 +308,7 @@ export async function main() {
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   console.log(placementSummary(placementEmission.counts, stats.placementDerived));
   console.log(brightnessColourSummary(brightnessEmission.counts));
-  if (stats.rvRadialRejectedSample.length > 0) {
-    console.log(
-      `  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`,
-    );
-    for (const s of stats.rvRadialRejectedSample) console.log(`    ${s}`);
-  }
-  if (stats.velocityClampedSample.length > 0) {
-    console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
-    for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
-  }
-  console.log(
-    `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — `
-      + `sample (first ${stats.velocityAboveEscapeSample.length}):`,
-  );
-  for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);
+  console.log(walkVelocitySummary(stats));
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the

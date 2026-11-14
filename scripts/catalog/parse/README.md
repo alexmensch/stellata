@@ -22,7 +22,9 @@ scripts/catalog/parse/
                                   imports.
   walk-stats-pure.ts (+ test)     walkStatsFold — the walk's counts, folded
                                   from each RowOutcome as it passes, so no
-                                  outcome outlives its row.
+                                  outcome outlives its row; and
+                                  walkVelocitySummary, the build log's
+                                  velocity samples it folded.
   read-stars-inputs.ts            loadReadStarsInputs — every reference
                                   table readStars consumes, each read through
                                   its declared source (../../util/sources/),
