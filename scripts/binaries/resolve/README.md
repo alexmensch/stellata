@@ -83,10 +83,10 @@ token of the same system. Every tier binds `own`; a rebind by the audit is
 
 | Kind | Copied by | From |
 | --- | --- | --- |
-| `blend` | `propagateBlendIdentity`; Stage 3's AT-HYG fallback | a ρ = 0 pair's primary |
+| `blend` | `propagateBlendIdentity`; Stage 3's AT-HYG fallback at ρ = 0 | a ρ = 0 pair's primary |
 | `letter` | `propagateWithinSystem` (A ← Aa) | the sub-letter donor |
 | `parent` | `seedSynthesizedComponentBindings` (primary), `inheritDownwardParentBindings`, Stage 3's NSS inner pairs | the parent token |
-| `partner` | `seedSynthesizedComponentBindings` (secondary) | the synthesized pair's primary, at any ρ |
+| `partner` | `seedSynthesizedComponentBindings` (secondary); Stage 3's AT-HYG fallback at a measured or unmeasured ρ | the pair's primary |
 
 The same-letter smear across a letter's rows copies the origin unchanged:
 one letter is one star, so its binding is its own on every row or inherited
@@ -138,8 +138,8 @@ J1991.25 to the WDS coordinate epoch first, then as stored: AT-HYG's HIP rows
 sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under propagation).
 With propagation the grid search widens a cell each way so a high-PM star
 stored in a neighbouring cell is still a candidate. A secondary whose own
-match misses rides its primary's row, the match's origin `blend`; Stage 2
-binds only `own` matches, Stage 3 takes both.
+match misses rides its primary's row, inherited from it (`blend` at ρ = 0,
+else `partner`); Stage 2 binds only `own` matches, Stage 3 takes both.
 
 ## The binding-integrity audit
 
@@ -205,7 +205,7 @@ rows with the SYSTEM coordinate — Rigel's BC row carries A's coord, so
 B's primary match landed on A's row at ~0″ and wore A's photometry).
 The gate lives in `pairAthygMatches`, so Stage 2's identifier
 binding and Stage 3's astrometry fallback both honour it; the
-blend-inherit branch (a secondary riding its pair partner's row) is
+inherited branch (a secondary riding its pair primary's row) is
 exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
 (both stages summed).
 
@@ -214,11 +214,11 @@ The two stages compose:
 - **Stage 2** binds identifiers — sets `athyg` always on match,
   and surfaces `gaia` / `hip` from the row when the row carries them
   (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
-  Binds only `own` matches: a `blend` match would carry the primary's
+  Binds only `own` matches: an inherited match would carry the primary's
   AT-HYG row, and with it the primary's Gaia source, onto the secondary.
 - **Stage 3** synthesizes astrometry — `routePairs`
   routes any remaining `unresolved` component through the same
-  cascade, taking `blend` matches too, so Hipparcos-unresolved
+  cascade, taking inherited matches too, so Hipparcos-unresolved
   pairs (A, B sharing one AT-HYG row at sub-AU separation) both
   emit `astrometry_via=athyg_position`.
 

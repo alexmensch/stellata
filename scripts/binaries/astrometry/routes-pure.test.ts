@@ -8,6 +8,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryRow } from '../load/gaia-pure';
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
+import { OWN } from '../multiples-tsv';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved , type Side } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
@@ -172,7 +173,7 @@ describe('routePairs — the AT-HYG position fallback', () => {
     const own = at(0, 0, { distPc: 3 });
     const p = pairOf(XI_UMA.ra, XI_UMA.dec, 2.6, 90, { primary: { gaiaSourceId: '1' }, secondary: { gaiaSourceId: '2', athygRow: own } });
     const r = routePairs([p], indices({ athyg: [row] }), [row]);
-    expect(r.pairs[0].primary.athyg?.value).toBe(row);
+    expect(r.pairs[0].primary.athyg).toEqual({ value: row, origin: OWN });
     expect(r.pairs[0].secondary.athyg?.value).toBe(own);
   });
 

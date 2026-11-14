@@ -73,7 +73,7 @@ export const ORBIT_VIA_ON_FILE: readonly OrbitViaOnFile[] = ORBIT_VIA.filter(
 /** How a component came by an identifier another component holds: `blend`, a
  *  ρ = 0 pair's secondary from its primary; `letter`, a bare letter from its
  *  sub-letter (A ← Aa); `parent`, a sub-letter from its parent (Aa ← A);
- *  `partner`, a synthesized pair's secondary from its primary at any ρ. */
+ *  `partner`, a pair's secondary from its primary at a measured or unmeasured ρ. */
 export const INHERITANCE_KINDS = ['blend', 'letter', 'parent', 'partner'] as const;
 export type InheritanceKind = (typeof INHERITANCE_KINDS)[number];
 

@@ -149,7 +149,7 @@ export function pairAthygMatches(
       return;
     }
     if (primaryIdx !== null) {
-      matches.push({ componentIdx: i, athygIdx: primaryIdx, origin: inheritedFrom(primaryToken, 'blend') });
+      matches.push({ componentIdx: i, athygIdx: primaryIdx, origin: inheritedFrom(primaryToken, pair.rhoLast === 0 ? 'blend' : 'partner') });
     }
   });
 

@@ -50,4 +50,12 @@ describe('pairAthygMatches', () => {
       { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'blend') },
     ]);
   });
+
+  it('gives a measured secondary whose prediction misses its primary\'s row as a partner, not a blend', () => {
+    const measured = [decomposed(pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 360, thetaLast: 0 }), { primary: {}, secondary: {} })];
+    expect(pairAthygMatches(measured, athyg, { skip: () => false }).matches).toEqual([
+      { componentIdx: 0, athygIdx: 0, origin: OWN },
+      { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'partner') },
+    ]);
+  });
 });
