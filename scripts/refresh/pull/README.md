@@ -99,7 +99,9 @@ refuses it, naming the count, once its rows pass that. So it holds at most
 `min(query count × limit, maxRows + limit)` rows, and `runPull` refuses,
 before any query, one whose held rows × column count could exceed
 `MAX_TABLE_CELLS` (48,000,000). A request-scoped table is not bounded this
-way.
+way. The cap is per phase, but `runPhasedPull` holds every table's rows and
+TSV until the one emission, so a pull's tables share one heap budget: a pull
+with two large phases sums their cells against it.
 Measured 2026-11-14 under Node 26 with a 4,096 MiB heap (the CI runner's):
 each committed table cut into its slices on disk, every slice's CSV reply
 read from disk only when `runPull` asked it, nothing else held, peak live
