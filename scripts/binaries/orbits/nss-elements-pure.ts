@@ -4,6 +4,7 @@ import { DAYS_PER_JULIAN_YEAR, DEG_TO_RAD } from '../../../src/astro-core/astron
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { GAIA_DR3_REF_EPOCH } from '../../catalog/distance/direction-cascade';
 import { NSS_SOLUTION_TYPES, type NssOrbitRow } from '../load/gaia-pure';
+import { pyMod } from '../python-float-pure';
 import { distancePc } from '../sky-geometry-pure';
 
 /** NSS `t_periastron` counts days from here. */
@@ -37,12 +38,6 @@ export interface Campbell {
   readonly periastronRad: number;
 }
 
-/** Floor modulo, as Python's `%`, so the result has the divisor's sign. */
-function floorMod(x: number, m: number): number {
-  const r = x % m;
-  return r !== 0 && r < 0 !== m < 0 ? r + m : r;
-}
-
 /** Heintz 1978 (/data/papers/index.md#heintz1978) / Halbwachs 2023
  *  (/data/papers/index.md#halbwachs2023) Appendix A; null for a degenerate quartet. */
 export function thieleInnesToCampbell(A: number, B: number, F: number, G: number): Campbell | null {
@@ -63,7 +58,7 @@ export function thieleInnesToCampbell(A: number, B: number, F: number, G: number
     nodeRad += Math.PI;
     periastronRad += Math.PI;
   }
-  return { aMas: Math.sqrt(aSq), iRad: Math.acos(cosI), nodeRad, periastronRad: floorMod(periastronRad, 2 * Math.PI) };
+  return { aMas: Math.sqrt(aSq), iRad: Math.acos(cosI), nodeRad, periastronRad: pyMod(periastronRad, 2 * Math.PI) };
 }
 
 function rowCampbell(row: NssOrbitRow): Campbell | null {
