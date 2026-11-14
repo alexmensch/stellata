@@ -13,7 +13,7 @@ import {
   type OverlayJoinCounts,
 } from './classic-id-overlay-pure';
 import {
-  CLASSIC_ID_CODES, CLASSIC_ID_LINEAGE_BUDGET, classicIdLineage, rejectedBindingsView, routeDisagreementsView,
+  CLASSIC_ID_CODES, CLASSIC_ID_INVARIANTS, CLASSIC_ID_LINEAGE_BUDGET, classicIdLineage, rejectedBindingsView, routeDisagreementsView,
 } from './classic-id-lineage-pure';
 import { CLASSIC_ID_KEYS } from './classic-id-keys';
 import { REJECTED_BINDINGS } from './rejected-bindings-tsv';
@@ -55,9 +55,7 @@ function logOverlay(overlay: ClassicIdOverlay, counts: OverlayJoinCounts): void 
       `${counts.gateSkippedNoPrintedV} rows carry no printed V under any tier ` +
       `and bind on the sibling arm alone (gateable via printed_hip ${counts.gateableVia.printed_hip}, ` +
       `tycho2 ${counts.gateableVia.tycho2}, gliese ${counts.gateableVia.gliese}); ` +
-      `${counts.gateSkippedNoGMag} gateable rows are absent ` +
-      `from the astrometry pull (must be 0 — the request under-covers the ` +
-      `candidates), ${counts.gateSkippedNullGMag} have a row but no published G`,
+      `${counts.gateSkippedNullGMag} have a row but no published G`,
   );
 }
 
@@ -80,7 +78,7 @@ export async function main(): Promise<void> {
     render: (sorted) => ({ 'classic-ids': stageLineageText(CLASSIC_ID_CODES, sorted) }),
     joins: () => [],
     budget: CLASSIC_ID_LINEAGE_BUDGET,
-    invariants: [],
+    invariants: CLASSIC_ID_INVARIANTS,
     argv: process.argv.slice(2),
   });
   emitArtifacts({

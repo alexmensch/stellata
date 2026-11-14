@@ -207,6 +207,8 @@ predicate over the row's `params` (`NO_EXCEPTIONS` for a zero-pin). A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
+Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
+([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row

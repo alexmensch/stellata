@@ -210,22 +210,23 @@ describe('applyBindingGate', () => {
   });
 
   it('counts a row with no printed V as unvettable rather than passing it', () => {
-    const { counts } = tolimanOverlay(bindingEvidence(
+    const { counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map([[TOLIMAN_BAD_SRC, 20.95]]),
       null,
       NO_PRINTED_V,
     ));
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(1);
-    expect(counts.gateSkippedNoGMag).toBe(0);
+    expect(unpulled.size).toBe(0);
   });
 
   // The fault the union request exists to prevent: no G means the magnitude
   // check has nothing to compare and PASSES, so the binding ships unvetted.
-  // gateSkippedNoGMag is the only signal that happened — pinned at 0 on the
-  // real build, where it says the pull still covers every candidate.
-  it('counts a candidate absent from the pull as silently accepted, not refused', () => {
-    const { overlay, counts } = tolimanOverlay(bindingEvidence(
+  // `unpulled` is the only signal that happened — an invariant over the
+  // stage's lineage on the real build, where it says the pull still covers
+  // every candidate.
+  it('names a candidate absent from the pull as silently accepted, not refused', () => {
+    const { overlay, counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map(),
       null,
       printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
@@ -233,21 +234,21 @@ describe('applyBindingGate', () => {
     expect(overlay.has(TOLIMAN_BAD_SRC)).toBe(true);
     expect(counts.gateRejectedMag).toBe(0);
     expect(counts.gateSkippedNoPrintedV).toBe(0);
-    expect(counts.gateSkippedNoGMag).toBe(1);
+    expect([...unpulled]).toEqual([TOLIMAN_BAD_SRC]);
     expect(counts.gateSkippedNullGMag).toBe(0);
   });
 
   // Same pass-by-default, different cause and different remedy: the pull has
   // the row, Gaia just publishes no G. Splitting them is what keeps the
-  // request-coverage count pinnable at zero.
+  // request-coverage invariant at zero.
   it('separates a pulled row with a null G from one the pull never returned', () => {
-    const { counts } = tolimanOverlay(bindingEvidence(
+    const { counts, unpulled } = tolimanOverlay(bindingEvidence(
       new Map(),
       null,
       printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) }),
       new Set([TOLIMAN_BAD_SRC]),
     ));
-    expect(counts.gateSkippedNoGMag).toBe(0);
+    expect(unpulled.size).toBe(0);
     expect(counts.gateSkippedNullGMag).toBe(1);
   });
 
@@ -297,15 +298,15 @@ describe('applyBindingGate', () => {
     expect(overlay.has(src)).toBe(false);
   });
 
-  // gateSkippedNoGMag is the zero-pinned alarm that the pull stopped covering
-  // a candidate; a sibling refusal of the same candidate must not hide it.
-  it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
+  // `unpulled` is the alarm that the pull stopped covering a candidate; a
+  // sibling refusal of the same candidate must not hide it.
+  it('names an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
     const src = '663434291018997248';
     const hip = 41098;
     const overlay = new Map([[src, {
       hd: [70492], hr: [], hip: [hip], gj: [], bayer: [], flamsteed: [],
     }]]);
-    const { refused, skippedNoGMag } = applyBindingGate(overlay, bindingEvidence(
+    const { refused, unpulled } = applyBindingGate(overlay, bindingEvidence(
       new Map(),
       {
         bySource: new Map([[src, [{ wdsId: '08236-2439', component: 'B' }]]]),
@@ -315,7 +316,7 @@ describe('applyBindingGate', () => {
       printedVOf({ hip: new Map([[hip, 5.7]]) }),
     ), new Map());
     expect(refused.map((r) => r.reason)).toEqual(['sibling']);
-    expect(skippedNoGMag).toBe(1);
+    expect([...unpulled]).toEqual([src]);
   });
 });
 

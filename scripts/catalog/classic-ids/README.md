@@ -212,12 +212,12 @@ HIP passes `null` to `weighBinding`, as the record side does, and the sibling
 arm reads `null` as nothing to key on; any number, `0` included, is looked up
 as a HIP and can reach the system-primary fallback.
 
-**Two counts say whether the evidence actually arrived**, because a missing `G`
+**Two checks say whether the evidence actually arrived**, because a missing `G`
 is a pass either way and only one of the causes is fixable:
 
-| Count | Today | Meaning |
+| Check | Today | Meaning |
 |---|---|---|
-| `gateSkippedNoGMag` | **<!-- count:classic-id-overlay/gateSkippedNoGMag -->0<!-- /count -->** | gateable rows the pull returned no row for — the request under-covering its candidates. Pinned at zero; this is the fault the union exists to prevent. |
+| `classic-ids.unweighed-no-pulled-row` rows | **none**: a lineage invariant fails the build naming each designation row ([Invariants](../lineage/README.md#invariants)) | gateable sources the pull returned no row for — the request under-covering its candidates; the fault the union exists to prevent. |
 | `gateSkippedNullGMag` | <!-- count:classic-id-overlay/gateSkippedNullGMag -->112<!-- /count --> | rows Gaia has, with `phot_g_mean_mag` null. Silently accepted too, and no request can supply it — the residual the gate's reach does not cover. |
 
 `gateableVia` partitions the rows the gate could weigh by which tier supplied
@@ -227,7 +227,7 @@ at all, whether or not the sibling arm then refused them, so the partition
 always sums to the rows weighed. None of them carries a HIP, so that arm has
 nothing to key on there today. The request reads the same join and the same
 walk (`magnitudeWeighableSourceIds`), so it and the gate agree by construction
-and `gateSkippedNoGMag` stays pinnable at zero.
+and the invariant holds with no exceptions.
 The membership derivation runs the same checks on the record side through the
 same `weighBinding` call, with its own candidate contribution to the
 request and its own zero-pin ([The candidates have to be in the astrometry pull](../membership/binding/README.md#the-candidates-have-to-be-in-the-astrometry-pull)).
@@ -270,7 +270,9 @@ and the cells its route read. A source the gate refused gets one `refused`
 row (`gate-mag` / `gate-sibling`: `source_id`, `via`, then the gate's facts,
 membership's refused-binding shape) under every key reaching it, and each
 IV/27A row whose HIP resolves gets a `route.agree`, `route.disagree` or
-`route.hip-only` row.
+`route.hip-only` row. A source the astrometry pull holds no row for gets an
+`unweighed-no-pulled-row` row the same way, which `CLASSIC_ID_INVARIANTS`
+fails the build on ([The gate's evidence has to be pulled](#the-gates-evidence-has-to-be-pulled)).
 
 **The two gate queues are views of these rows, and nothing else writes
 them**: `rejectedBindingsView` groups the refused rows by source and names
@@ -279,8 +281,9 @@ each by every designation reaching it; `routeDisagreementsView` is the
 regenerate-and-diff; `hd_hip_route_disagreements_review.tsv` stays
 hand-curated.
 
-Measured 2026-11-14: 476,336 rows, 9.3 MB gzipped, 0.6 s with no diff;
-`CLASSIC_ID_LINEAGE_BUDGET` pins 9.8 MB and 5 s.
+Measured 2026-11-14: 476,336 rows, 9.3 MB gzipped, 0.6 s with no
+baseline and 4.1 s when the baseline verdict re-hashes the merge-base's
+inputs (2.2 s of it); `CLASSIC_ID_LINEAGE_BUDGET` pins 9.8 MB and 10 s.
 
 ## One designation, two HD numbers
 

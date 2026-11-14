@@ -230,7 +230,8 @@ magnitude comparison away, and taking that comparison caught **192 more
 mis-bindings** (`gateRejectedMag` 218 → 410). One helper serves both sides so
 they cannot drift again ([The gate's evidence has to be pulled](/scripts/catalog/classic-ids/README.md#the-gates-evidence-has-to-be-pulled)),
 and widening the gate meant widening the astrometry
-request by 295 ids and re-pulling, to hold `gateSkippedNoGMag` at zero.
+request by 295 ids and re-pulling, so that no source the gate weighs is
+missing from the pull (`classic-ids.unweighed-no-pulled-row`, a lineage invariant).
 
 **Ask the Gliese arm through `lookupGliese`**
 (`scripts/catalog/gliese-parse.ts`), not by the printed name: V/70A numbers the

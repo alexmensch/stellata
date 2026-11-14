@@ -107,6 +107,7 @@ classic-ids.hr.no-source	classic-ids	none	outcome	live		7.1.21	The HR's V/50 HD 
 classic-ids.route.agree	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD route and HIP route reach the same Gaia source.
 classic-ids.route.disagree	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD route and HIP route reach different Gaia sources; the HD route keeps its designations and the row is queued for review.
 classic-ids.route.hip-only	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD reaches no Gaia source and its HIP reaches one, so the HIP route carries its designations.
+classic-ids.unweighed-no-pulled-row	classic-ids	none	outcome	live		7.1.21	A Gaia source the designation reached, passed unweighed because the astrometry pull holds no row for it.
 coherence.anchor	coherence	none	outcome	retired	7.1.16	7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
 coherence.anchor.anchor-won	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: the pair primary, outranked by no member.
 coherence.anchor.inconsistent	coherence	none	outcome	retired	7.1.16	7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.

@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import { stageLineageLine } from '../lineage/lineage-row-pure';
 import { bindingEvidence } from '../membership/binding/binding-gate-pure';
 import { NO_PRINTED_V, printedVOf } from '../photometry/photometry-fixture';
-import { CLASSIC_ID_CODES, classicIdLineage, rejectedBindingsView, routeDisagreementsView } from './classic-id-lineage-pure';
+import { CLASSIC_ID_CODES, CLASSIC_ID_INVARIANTS, classicIdLineage, rejectedBindingsView, routeDisagreementsView } from './classic-id-lineage-pure';
 import { CLASSIC_ID_KEYS } from './classic-id-keys';
 import { buildClassicIdOverlay, type OverlayInput } from './classic-id-overlay-pure';
 import { cns5Row } from './cns5-fixture';
@@ -90,6 +91,28 @@ describe('classicIdLineage', () => {
 
   it('writes only codes it declares, each in its declared role', () => {
     for (const row of lineageOf(toliman())) expect(() => stageLineageLine(CLASSIC_ID_CODES, row)).not.toThrow();
+  });
+});
+
+describe('CLASSIC_ID_INVARIANTS', () => {
+  const linesOf = (input: OverlayInput) => lineageOf(input).map((r) => stageLineageLine(CLASSIC_ID_CODES, r));
+  const checks = (input: OverlayInput) => invariantViolations(CLASSIC_ID_INVARIANTS, linesOf(input)).map(invariantCheck);
+
+  it('holds while the astrometry pull covers every source a designation reaches', () => {
+    expect(checks(toliman()).map((c) => c.kind)).toEqual(['pass']);
+  });
+
+  it('fails a source the pull never returned, naming every designation row that reached it', () => {
+    const [check] = checks(toliman({
+      evidence: bindingEvidence(new Map(), null, printedVOf({ hip: new Map([[TOLIMAN_HIP, 1.33]]) })),
+    }));
+    expect(check.kind).toBe('fail');
+    const message = check.kind === 'fail' ? check.message : '';
+    expect(message).toMatch(/^invariant broken by 4 classic-ids\.unweighed-no-pulled-row rows/);
+    expect(message).toContain(`iv25:9007-5849-1\tclassic-ids.unweighed-no-pulled-row\t{"source_id":"${BACKGROUND}","via":"tyc"}`);
+    expect(message).toContain('gaia-dr3-hip:71681\t');
+    expect(message).toContain('iv27a:128621\t');
+    expect(message).toContain('v50:5460\t');
   });
 });
 

@@ -1,5 +1,6 @@
 // build:classic-ids as a lineage stage: its reason codes, one row per designation it reads, and its two gate queues as views. See README.md#classic-id-lineage.
 
+import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from '../membership/binding/binding-gate-pure';
@@ -9,7 +10,7 @@ import type { RejectedBindingRow } from './rejected-bindings-tsv';
 import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const CLASSIC_ID_LINEAGE_BUDGET = { gzipBytes: 9_800_000, writeMs: 5_000 };
+export const CLASSIC_ID_LINEAGE_BUDGET = { gzipBytes: 9_800_000, writeMs: 10_000 };
 
 const KEPT = 'and the binding gate keeps at least one.';
 const REFUSED = 'and the binding gate refuses every one.';
@@ -44,13 +45,14 @@ export const CLASSIC_ID_CODES = stageCodes(CLASSIC_IDS_LINEAGE.stage, {
   'route.hip-only': outcomeCode('The IV/27A row\'s HD reaches no Gaia source and its HIP reaches one, so the HIP route carries its designations.'),
   'gate-mag': refusalCode('A Gaia source the designation reached, refused because its G is more than a magnitude fainter than the printed V.'),
   'gate-sibling': refusalCode('A Gaia source the designation reached, refused because SIMBAD gives it to a different component of the system the HIP names.'),
+  'unweighed-no-pulled-row': outcomeCode('A Gaia source the designation reached, passed unweighed because the astrometry pull holds no row for it.'),
 });
 
 type Branch = Parameters<typeof CLASSIC_ID_CODES.code>[0];
 type GateBranch = `gate-${GateReason}`;
 type RouteBranch = `route.${RouteCheck['outcome']}`;
 type DesignationKind = DesignationReach['kind'];
-type DesignationBranch = Exclude<Branch, GateBranch | RouteBranch>;
+type DesignationBranch = Exclude<Branch, GateBranch | RouteBranch | 'unweighed-no-pulled-row'>;
 
 /** Each designation row's own params: the designation in the form trace matches, and the cells its route read. */
 interface DesignationParams {
@@ -70,9 +72,19 @@ type RefusedParams = { source_id: string; via: string; hip?: string; v_mag?: str
 /** Each code's params, the one declaration its writer and its views share. */
 type ParamsOf<B extends Branch> =
   B extends GateBranch ? RefusedParams
+  : B extends 'unweighed-no-pulled-row' ? { source_id: string; via: string }
   : B extends RouteBranch ? { hd: string; hip: string; hd_route_source_ids?: string; hip_route_source_id: string }
   : B extends DesignationBranch ? DesignationParams[KindOf<B>] & (B extends `${string}.bound` ? { source_ids: string } : unknown)
   : never;
+
+export const CLASSIC_ID_INVARIANTS: readonly LineageInvariant[] = [
+  lineageInvariant(
+    CLASSIC_ID_CODES,
+    'unweighed-no-pulled-row',
+    'every source a designation reaches is weighed on a row the astrometry pull carries (README.md#the-gates-evidence-has-to-be-pulled)',
+    NO_EXCEPTIONS,
+  ),
+];
 
 /** Each source a designation row cites, keyed by its declaration: the build and the unit suite share one. */
 export interface ClassicIdKeys {
@@ -188,26 +200,32 @@ function refusedRow(key: string, via: string, r: GateRefusal): LineageRow {
   return row(key, `gate-${r.reason}`, params);
 }
 
-/** One outcome row per designation the join reads, one per IV/27A route check, and one refused row per source the gate refused on each key reaching it. */
+/** One outcome row per designation the join reads, one per IV/27A route check, and one refused or unweighed row per gated or unpulled source on each key reaching it. */
 export function classicIdLineage(
-  { reaches, routeChecks, refused }: {
+  { reaches, routeChecks, refused, unpulled }: {
     readonly reaches: readonly DesignationReach[];
     readonly routeChecks: readonly RouteCheck[];
     readonly refused: readonly GateRefusal[];
+    readonly unpulled: ReadonlySet<string>;
   },
   keys: ClassicIdKeys,
 ): LineageRow[] {
   const refusals = new Map(refused.map((r) => [r.sourceId, r]));
   const rows: LineageRow[] = [];
-  const refusedOnKey = new Set<string>();
+  const written = new Set<string>();
+  const once = (line: LineageRow): void => {
+    const text = `${line.key}\t${line.code}\t${line.params}`;
+    if (written.has(text)) return;
+    written.add(text);
+    rows.push(line);
+  };
   for (const reach of reaches) {
     const d = designationRow(reach, refusals, keys);
     rows.push(d.row);
     for (const s of d.sources) {
       const refusal = refusals.get(s);
-      if (refusal === undefined || refusedOnKey.has(`${d.key}\t${s}`)) continue;
-      refusedOnKey.add(`${d.key}\t${s}`);
-      rows.push(refusedRow(d.key, d.via, refusal));
+      if (refusal !== undefined) once(refusedRow(d.key, d.via, refusal));
+      if (unpulled.has(s)) once(row(d.key, 'unweighed-no-pulled-row', { source_id: s, via: d.via }));
     }
   }
   for (const c of routeChecks) {

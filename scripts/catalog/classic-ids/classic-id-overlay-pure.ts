@@ -75,8 +75,8 @@ function gateKeys(
  *  the star then every designation keyed on it is misattributed, and the
  *  labels ride the inherited spine instead.
  *
- *  An unweighable row binds rather than drops, so the two no-G counts are the
- *  gate's own coverage alarms, split by cause
+ *  An unweighable row binds rather than drops, so `unpulled` and the null-G
+ *  count are the gate's own coverage alarms, split by cause
  *  (`../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`;
  *  `../photometry/README.md#the-v-cascade`). */
 export function applyBindingGate(
@@ -86,7 +86,8 @@ export function applyBindingGate(
 ): {
   refused: GateRefusal[];
   skippedNoPrintedV: number;
-  skippedNoGMag: number;
+  /** Gateable sources the astrometry pull returned no row for: silently accepted, not refused. */
+  unpulled: Set<string>;
   skippedNullGMag: number;
   gateableVia: Record<PrintedVVia, number>;
   /** The sources the magnitude arm reached a printed V for — what the
@@ -96,7 +97,7 @@ export function applyBindingGate(
   const refused: GateRefusal[] = [];
   const magnitudeWeighed = new Set<string>();
   let skippedNoPrintedV = 0;
-  let skippedNoGMag = 0;
+  const unpulled = new Set<string>();
   let skippedNullGMag = 0;
   const gateableVia = emptyTallyPartition(PRINTED_V_TIERS);
   for (const [sourceId, entry] of overlay) {
@@ -109,13 +110,13 @@ export function applyBindingGate(
     if (verdict.magnitude !== 'no_printed_v') magnitudeWeighed.add(sourceId);
     if (verdict.magnitude === 'no_printed_v') skippedNoPrintedV++;
     else if (verdict.magnitude === 'null_g') skippedNullGMag++;
-    else if (verdict.magnitude === 'no_pulled_row') skippedNoGMag++;
+    else if (verdict.magnitude === 'no_pulled_row') unpulled.add(sourceId);
     const reason = rejectionOf(verdict);
     if (reason === null) continue;
     refused.push({ sourceId, hip, printedV: printed, gMag: evidence.gMagOf(sourceId), reason });
   }
   for (const r of refused) overlay.delete(r.sourceId);
-  return { refused, skippedNoPrintedV, skippedNoGMag, skippedNullGMag, gateableVia, magnitudeWeighed };
+  return { refused, skippedNoPrintedV, unpulled, skippedNullGMag, gateableVia, magnitudeWeighed };
 }
 
 export interface OverlayJoinCounts {
@@ -155,11 +156,6 @@ export interface OverlayJoinCounts {
   gateRejectedSibling: number;
   gateSkippedNoPrintedV: number;
   gateableVia: Record<PrintedVVia, number>;
-  /** Gateable rows the astrometry pull returned no row for — silently accepted,
-   *  not refused. Pinned at zero: the request is a union precisely so that this
-   *  stays empty, and a non-zero value is the pull under-covering the
-   *  candidate set. */
-  gateSkippedNoGMag: number;
   /** Gateable rows Gaia has a row but no `phot_g_mean_mag` for. Also silently
    *  accepted, but no request can fix it — the residual the gate's reach simply
    *  does not cover. */
@@ -187,6 +183,7 @@ export interface OverlayJoin {
   reaches: DesignationReach[];
   routeChecks: RouteCheck[];
   refused: GateRefusal[];
+  unpulled: ReadonlySet<string>;
 }
 
 function entryFor(overlay: ClassicIdOverlay, sourceId: string): OverlayEntry {
@@ -442,6 +439,7 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
     reaches,
     routeChecks,
     refused: gate.refused,
+    unpulled: gate.unpulled,
     counts: {
       ...routeCounts,
 
@@ -464,7 +462,6 @@ export function buildClassicIdOverlay(input: OverlayInput): OverlayJoin {
       gateRejectedSibling: gate.refused.filter((r) => r.reason === 'sibling').length,
       gateSkippedNoPrintedV: gate.skippedNoPrintedV,
       gateableVia: gate.gateableVia,
-      gateSkippedNoGMag: gate.skippedNoGMag,
       gateSkippedNullGMag: gate.skippedNullGMag,
     },
   };
