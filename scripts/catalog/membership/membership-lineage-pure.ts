@@ -26,6 +26,11 @@ import {
 } from './ledger-rows-pure';
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { sumOf } from '../../util/counts/tally-pure';
+import {
+  DERIVED_ONLY_CELLS, HELD_STATES, PAIR_REVIEW_REASONS,
+  type DerivedOnlyCell, type HeldState, type MergeDivergence, type PairReviewReason,
+} from './merge-derivation/merge-derivation-pure';
+import type { MergeDivergenceKind, MergeDivergenceRow } from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
@@ -246,6 +251,43 @@ const LEAD_DESCRIPTIONS = {
   simbad: 'The winner rests on SIMBAD\'s cross-IDs alone.',
 } as const satisfies Record<BindingSource, string>;
 
+const PAIR_REVIEW_DESCRIPTIONS = {
+  no_hip_source: 'the Gaia HIP cross-match names no source for the HIP',
+  no_entry_matches: 'no entry\'s Gaia TYC cross-match names the HIP\'s source',
+  several_match: 'more than one entry\'s Gaia TYC cross-match names the HIP\'s source',
+} as const satisfies Record<PairReviewReason, string>;
+
+const HELD_DESCRIPTIONS = {
+  free: 'no other spine row carries it',
+  held: 'another spine row already carries it',
+} as const satisfies Record<HeldState, string>;
+
+const PAIR_REVIEW_BRANCHES = {
+  no_hip_source: 'merge.pair.review.no-hip-source',
+  no_entry_matches: 'merge.pair.review.no-entry-matches',
+  several_match: 'merge.pair.review.several-match',
+} as const satisfies Record<PairReviewReason, string>;
+type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
+type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
+type MergeBranch = 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | PairReviewBranch | DerivedOnlyBranch;
+
+const PAIR_REVIEW_CODES = Object.fromEntries(PAIR_REVIEW_REASONS.map((r) => [
+  PAIR_REVIEW_BRANCHES[r],
+  outcomeCode(`Tycho-2 gives the spine row's HIP to two or more entries, and the pair rule names no owner: ${PAIR_REVIEW_DESCRIPTIONS[r]}.`),
+])) as Record<PairReviewBranch, CodeDeclaration<typeof LIVE>>;
+
+const DERIVED_ONLY_CODES = Object.fromEntries(DERIVED_ONLY_CELLS.flatMap((c) => HELD_STATES.map((h) => [
+  `merge.derived-only.${c}.${h}`,
+  outcomeCode(`A primary's own link puts a ${c} value on the spine row where the spine leaves the cell empty; ${HELD_DESCRIPTIONS[h]}.`),
+]))) as Record<DerivedOnlyBranch, CodeDeclaration<typeof LIVE>>;
+
+const MERGE_KIND_OF = {
+  'merge.unlinked': 'unlinked',
+  'merge.pair.moves': 'pair_moves',
+  ...Object.fromEntries(PAIR_REVIEW_REASONS.map((r) => [PAIR_REVIEW_BRANCHES[r], 'pair_review'])),
+  ...Object.fromEntries(DERIVED_ONLY_CELLS.flatMap((c) => HELD_STATES.map((h) => [`merge.derived-only.${c}.${h}`, 'derived_only']))),
+} as Record<Exclude<MergeBranch, 'merge.pair.confirmed'>, MergeDivergenceKind>;
+
 function ledCodes<P extends string, O extends string, S extends BindingSource>(
   prefix: P, descriptions: Readonly<Record<O, string>>, leads: readonly S[],
 ): Record<`${P}.${O}.${S}`, CodeDeclaration<typeof LIVE>> {
@@ -324,6 +366,11 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
+  'merge.unlinked': outcomeCode('Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.'),
+  'merge.pair.confirmed': outcomeCode('Tycho-2 gives the spine row\'s HIP to two or more entries, and the HIP\'s Gaia source is the spine entry\'s own.'),
+  'merge.pair.moves': outcomeCode('Tycho-2 gives the spine row\'s HIP to two or more entries, and the HIP\'s Gaia source is another entry\'s, so the pair rule moves the record onto that entry.'),
+  ...PAIR_REVIEW_CODES,
+  ...DERIVED_ONLY_CODES,
 });
 
 
@@ -389,6 +436,7 @@ export type MembershipOutcome =
   | { readonly kind: 'addition-contested' }
   | { readonly kind: 'route-disagree'; readonly tycSourceId: string; readonly hipSourceId: string }
   | { readonly kind: 'blocked-designation'; readonly designations: readonly string[] }
+  | { readonly kind: 'merge'; readonly divergence: MergeDivergence }
   | { readonly kind: 'label-flip'; readonly flip: Omit<LabelFlip, 'sourceId'> }
   | {
     readonly kind: 'label-drop';
@@ -431,6 +479,7 @@ type ParamsOf<B extends Branch> =
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
   : B extends `unattested.${UnattestedCell}` ? { value: string }
+  : B extends MergeBranch ? Pick<MergeDivergenceRow, 'cells' | 'derived' | 'evidence'>
   : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
   : Record<string, never>;
 
@@ -507,9 +556,29 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'label-drop':
       return row(key, LABEL_DROP_BRANCHES[o.reason], { cell: o.cell, value: o.value });
+    case 'merge': return mergeRow(key, o.divergence);
     default: {
       const unmapped: never = o;
       throw new Error(`membership outcome with no row mapping: ${JSON.stringify(unmapped)}`);
+    }
+  }
+}
+
+function mergeRow(key: string, d: MergeDivergence): LineageRow {
+  switch (d.kind) {
+    case 'unlinked':
+      return row(key, 'merge.unlinked', { cells: d.cells.join('+'), derived: d.witnessed, evidence: d.published });
+    case 'pair-confirmed':
+      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: String(d.hip), evidence: d.sourceId });
+    case 'pair-moves':
+      return row(key, 'merge.pair.moves', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
+    case 'pair-review':
+      return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
+    case 'derived-only':
+      return row(key, `merge.derived-only.${d.cell}.${d.held}`, { cells: d.cell, derived: d.value, evidence: d.held });
+    default: {
+      const unmapped: never = d;
+      throw new Error(`merge divergence with no row mapping: ${JSON.stringify(unmapped)}`);
     }
   }
 }
@@ -527,6 +596,7 @@ export interface MembershipLedgers {
   bindingReview: BindingReviewRow[];
   labelDrops: LabelDropRow[];
   flips: LabelFlip[];
+  mergeDivergence: MergeDivergenceRow[];
 }
 
 export function membershipLedgers(
@@ -564,7 +634,11 @@ export function membershipLedgers(
     }
   };
 
-  const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [] };
+  const merged = new Map<string, [MergeDivergenceKind, Exclude<MergeBranch, 'merge.pair.confirmed'>]>(
+    (Object.keys(MERGE_KIND_OF) as Exclude<MergeBranch, 'merge.pair.confirmed'>[])
+      .map((b) => [MEMBERSHIP_CODES.code(b), [MERGE_KIND_OF[b], b]]),
+  );
+  const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [], mergeDivergence: [] };
   const review = new Map<string, BindingReviewRow>();
   const reviewRow = (verdict: BindingReviewVerdict, cells: BindingReviewCells): BindingReviewRow => (
     Object.fromEntries(BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : cells[c]])) as BindingReviewRow
@@ -575,7 +649,10 @@ export function membershipLedgers(
     const flip = flipBranches.get(r.code);
     const queue = queued.get(r.code);
     const disposal = disposed.get(r.code);
-    if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition });
+    const merge = merged.get(r.code);
+    if (merge !== undefined) {
+      out.mergeDivergence.push({ ...tuple(of(r.key)), divergence: merge[0], ...paramsAs(r, merge[1]) });
+    } else if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition });
     else if (r.code === MEMBERSHIP_CODES.code('component')) {
       const { designation } = paramsAs(r, 'component');
       out.ledger.push({ ...tuple(of(r.key)), reason: `${COMPONENT_REASON_PREFIX}${designation}` });

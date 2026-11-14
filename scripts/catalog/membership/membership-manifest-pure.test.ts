@@ -28,6 +28,8 @@ import {
 import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
+import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
+import type { MergeDivergence } from './merge-derivation/merge-derivation-pure';
 import {
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
@@ -944,6 +946,29 @@ describe('codecs', () => {
     expect(membershipLedgers([dropRow('hd', '70000')], identity).labelDrops).toEqual([{
       tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested',
     }]);
+  });
+
+  it('ledgers every merge divergence but a confirmed pair, and round-trips the ledger', () => {
+    const key = 'spine:9';
+    const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
+    const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
+    const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
+    const ledger = membershipLedgers([
+      merge({ kind: 'pair-confirmed', hip: 70, sourceId: '5' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5' }),
+      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
+      merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
+      merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
+    ], identity).mergeDivergence;
+    expect(ledger).toHaveLength(4);
+    expect(ledger).toEqual(expect.arrayContaining([
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-2', evidence: '5' },
+      { ...ids, divergence: 'pair_review', cells: 'hip', derived: '1-1-1|1-1-2', evidence: 'no_hip_source' },
+      { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
+      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
+    ]));
+    const text = MERGE_DIVERGENCE.serialize(ledger);
+    expect(MERGE_DIVERGENCE.serialize(MERGE_DIVERGENCE.parse(text))).toBe(text);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {

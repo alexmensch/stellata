@@ -1,4 +1,4 @@
-// buildMembership: the membership phases wired in order — corrections, spine bindings, spine side, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
+// buildMembership: the membership phases wired in order — corrections, spine bindings, spine side, the merge-derivation shadow, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
 import type { ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
 import type { LabelMergeCounts, LabelOverrides } from '../classic-ids/label-merge/label-merge-pure';
@@ -14,10 +14,12 @@ import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
+import { mergeDivergences, mergeLinksFrom } from './merge-derivation/merge-derivation-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
   membershipLineageRow,
+  type KeyedOutcome,
   type MembershipDerivedCounts,
   type MembershipLedgers,
   type OriginKeys,
@@ -86,6 +88,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     kept, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
     siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
   });
+  const mergeLinks = mergeLinksFrom(tables, kept);
+  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks).map(
+    (divergence) => ({ key: keyOf(i), outcome: { kind: 'merge', divergence } }),
+  ));
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);
   const additions = admitAdditions({
     tables, idx, kept, spineRecords: spine.records, derive, keys,
@@ -104,7 +110,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ...rows.map((r) => identityRow(r.originKey, MEMBERSHIP_MANIFEST.encode(r), manifestDesignations(r))),
   ];
   const lineage = [
-    ...settlement.outcomes, ...spine.outcomes, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes,
+    ...settlement.outcomes, ...spine.outcomes, ...merge, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes,
   ].map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const sorted = sortManifestRecords(rows);

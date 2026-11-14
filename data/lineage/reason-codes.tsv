@@ -257,6 +257,20 @@ membership.label.suppressed-collision.gl	membership	none	outcome	live		7.1.20	Th
 membership.label.suppressed-collision.hd	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hd.
 membership.label.suppressed-collision.hip	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hip.
 membership.label.suppressed-collision.hr	membership	none	outcome	live		7.1.20	The overlay's designation already names another record, so it is not added. Identifier: hr.
+membership.merge.derived-only.gl.free	membership	none	outcome	live		7.1.23	A primary's own link puts a gl value on the spine row where the spine leaves the cell empty; no other spine row carries it.
+membership.merge.derived-only.gl.held	membership	none	outcome	live		7.1.23	A primary's own link puts a gl value on the spine row where the spine leaves the cell empty; another spine row already carries it.
+membership.merge.derived-only.hd.free	membership	none	outcome	live		7.1.23	A primary's own link puts a hd value on the spine row where the spine leaves the cell empty; no other spine row carries it.
+membership.merge.derived-only.hd.held	membership	none	outcome	live		7.1.23	A primary's own link puts a hd value on the spine row where the spine leaves the cell empty; another spine row already carries it.
+membership.merge.derived-only.hip.free	membership	none	outcome	live		7.1.23	A primary's own link puts a hip value on the spine row where the spine leaves the cell empty; no other spine row carries it.
+membership.merge.derived-only.hip.held	membership	none	outcome	live		7.1.23	A primary's own link puts a hip value on the spine row where the spine leaves the cell empty; another spine row already carries it.
+membership.merge.derived-only.hr.free	membership	none	outcome	live		7.1.23	A primary's own link puts a hr value on the spine row where the spine leaves the cell empty; no other spine row carries it.
+membership.merge.derived-only.hr.held	membership	none	outcome	live		7.1.23	A primary's own link puts a hr value on the spine row where the spine leaves the cell empty; another spine row already carries it.
+membership.merge.pair.confirmed	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the HIP's Gaia source is the spine entry's own.
+membership.merge.pair.moves	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the HIP's Gaia source is another entry's, so the pair rule moves the record onto that entry.
+membership.merge.pair.review.no-entry-matches	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the pair rule names no owner: no entry's Gaia TYC cross-match names the HIP's source.
+membership.merge.pair.review.no-hip-source	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the pair rule names no owner: the Gaia HIP cross-match names no source for the HIP.
+membership.merge.pair.review.several-match	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the pair rule names no owner: more than one entry's Gaia TYC cross-match names the HIP's source.
+membership.merge.unlinked	membership	none	outcome	live		7.1.23	Neither the primaries' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.
 membership.overlay.bright.entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has a row for the source it ships.
 membership.overlay.bright.no-entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has no row for the source it ships, or it ships none.
 membership.unattested.bayer	membership	none	outcome	live		7.1.20	The record ships a Bayer designation no primary attests for it.
