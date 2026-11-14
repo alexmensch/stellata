@@ -11,11 +11,13 @@ in one direction only.
 
 ```
 scripts/catalog/companions/record-index/
-  record-index.ts (+ test)   buildCatalogRowIndexMap (the sidecar),
-                             resolvePairComponents (the resolution both
-                             passes share), wingRenderablePrimaries,
+  record-index.ts (+ test)   buildCatalogRowIndexMap (the sidecar), and
+                             the readers of resolvePairs' pairs:
+                             wingRenderablePrimaries,
                              renderableOrbitRelations (the overlap gate's
                              exemption, ../README.md#overlap-gate),
+                             resolvedMemberIndices (the
+                             MULTIPLICITY_RESOLVED set),
                              buildComponentDesignations.
   catalog-row-index-map-pure.ts
                              CatalogRowIndexMap (the sidecar's shape),
@@ -44,8 +46,11 @@ pair carries the parent token, walked outer-first so a deeper nest takes its
 parent's re-homed slot. This is the shared-slot invariant the runtime walk
 rides ([Hierarchical walk](/src/client/binaries/README.md#hierarchical-walk)).
 Castor Ba carries A's blended source, so its own resolve lands on A's record;
-AB already resolved B. A parent slot that resolves to nothing leaves the
-primary on its own resolve. `rendered` carries the result; `own` keeps each
+AB already resolved B. Where a component carries no identifier of its own
+AND its parent does, the re-home is the only thing that resolves the pair at
+all: WDS 02536-6420's Ba resolves to nothing while B (HD 18341, an addition)
+and synth Bb both ship, and `binaries.bin` renders the pair through B. A
+parent slot that resolves to nothing leaves the primary on its own resolve. `rendered` carries the result; `own` keeps each
 end's own resolve for the readers that ask which records a row backs.
 
 ## The sidecar and how a component resolves
@@ -57,22 +62,21 @@ the build consumed, taken from the runner's handed input map. Record indices
 are only true for that copy of the file, so `build:binaries-runtime` refuses
 to emit unless the `multiples.tsv` it reads has the same sha1.
 `catalog-row-index-map-pure.ts` is how one
-`multiples.tsv` component resolves through it, and both the runtime writer
-(`/scripts/binaries/runtime-binaries-pure.ts`) and `resolvePairComponents`
-here call it: `resolveMultiplesIdx` walks gaia → hip → synth, then
+`multiples.tsv` component resolves through it, and `resolvePairs` is its one
+caller: `resolveMultiplesIdx` walks gaia → hip → synth, then
 `synthSlotIdx` re-homes each pair end onto its own distinct synth slot
-whenever promotion minted one (the wings pass adds a third retry, below). A
+whenever promotion minted one. A
 synth slot exists only for a row whose ids were inherited then stripped, so
 it is always the truer target (Castor Ca inside the outer pair,
 `04049-3527`'s pair-mate-inherited C). `CATALOG_ROW_INDEX_MAP`
 (`catalog-row-index-map-source.ts`) is the declaration its readers open the
 file through.
 
-The pair walk around those calls is still written twice — the writer's and
-`renderedCursors` here — because the wings set has to match what
-`binaries.bin` actually renders. `/tests/integration/multi-star-regression.test.ts`
-pins the correspondence against the real artifact, so drift on either side
-fails.
+`resolvePairs` is the one walk over the pairs, and every reader takes its
+answer: the wings pass, the overlap gate's exemption, the multiplicity member
+set, the component designations and the `binaries.bin` writer
+(`/scripts/binaries/runtime-binaries-pure.ts`). `/tests/integration/multi-star-regression.test.ts`
+still pins the baked catalogue against the real artifact.
 
 **`bySynth` also carries bridged keys.** A component whose row carries no
 identifier is addressable only under its synth key, and where promotion
@@ -83,19 +87,7 @@ letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own
 designations stay the manifest's.
 
-The writer's [parent re-home](#the-parent-re-home) — an inner pair's primary
-forced onto its PARENT component's slot — is replicated, by
-`reHomeToParent`. It was left out while it only changed *which* index
-anchors a pair, which root-grouping and the brightest-participant pick
-absorb. That stopped being true once the primaries began admitting
-components in their own right: where a component carries no identifier of
-its own AND its parent does, the re-home is the only thing that resolves
-the pair at all, so skipping it drops the system from the wings set
-entirely. WDS 02536-6420 is the case — Ba resolves to nothing while B
-(HD 18341, an addition) and synth Bb both ship, and `binaries.bin` renders
-the pair through B.
-
-The relation-winner dedup is still **not** replicated: it changes only which
+The writer's relation-winner dedup stays the writer's: it changes only which
 of several rows wins one relation, never whether two distinct records face
 each other.
 
@@ -109,15 +101,18 @@ A physical pair wider than the `0.005 pc` geometric cell, not CCDM
 the geometric cell) shows a companion or a live orbit with no wings on
 the anchor. `wingRenderablePrimaries` closes that gap:
 
-- **Renders-a-companion gate.** A pair whose two sides resolve to
-  DISTINCT records renders a companion, so the winged set tracks
-  `binaries.bin`'s primaries.
-- **One glyph per WDS system.** Records participating in a rendered pair
-  are grouped by WDS root; the bit lands on the brightest participant
-  only (the mutual-primary / CCDM brightest-member contract). A
-  hierarchical system (Castor Ca,Cb inside the outer pairs) gets one
-  glyph on the system anchor, never one per inner pair. A system any
-  earlier pass already flagged is skipped, so it keeps its single glyph.
+- **Renders-a-companion gate.** A WDS system qualifies when at least one
+  of its pairs' `rendered` ends are DISTINCT records — a companion
+  `binaries.bin` draws.
+- **One glyph per WDS system, on its brightest member.** The bit lands on
+  the intrinsically brightest record any of the system's pairs resolves to,
+  `own` or `rendered` ends alike (the mutual-primary / CCDM brightest-member
+  contract) — whether or not that record is an end of a drawn pair. `A,BC`
+  with BC an unresolved compound draws only B against C, and the glyph
+  still lands on A. A hierarchical system (Castor Ca,Cb inside the outer
+  pairs) gets one glyph on the system anchor, never one per inner pair. A
+  system any earlier pass already flagged on any member is skipped, so it
+  keeps its single glyph.
 - **Additive only.** The pass never clears wings, so the
   reverse-direction cases stay correct: eclipsing binaries (an eclipsed
   star is a binary by convention even with a spectroscopically-
@@ -132,10 +127,10 @@ carrying the bit before this pass runs means more systems hit the
 already-flagged skip, which lowers this count without lowering the
 number of winged systems.
 
-Also returned: every resolved `multiples.tsv` member index — the record
-set the `MULTIPLICITY_RESOLVED` status covers (`../../multiplicity/README.md`).
-A blended primary whose members all collapse onto it counts, since the
-row exists for it even with nothing rendered apart.
+`resolvedMemberIndices` is the record set the `MULTIPLICITY_RESOLVED`
+status covers (`../../multiplicity/README.md`): both `own` ends of every pair
+whose primary resolves. A blended primary whose members all collapse onto it
+counts, since the row exists for it even with nothing rendered apart.
 
 ## Component-letter search designations
 
@@ -173,15 +168,11 @@ name before they were written:
   surviving collision being a data finding rather than a renderer
   concession.
 
-A letter is root-relative, so a component is addressable even when its own
-pair cursor is not: Rigil's `Ba,Bb` cursor has an unresolvable Ba, and
-requiring the cursor to resolve left Bb with no letter and no base to
-compose against. Naming needs only the letter and the root. The wings pass
-needs both ends of a pair, and resolves them itself so the parent re-home can
-reach a component `resolvePairComponents` gives up on; it still calls that
-function for the `MULTIPLICITY_RESOLVED` member set. Both refuse a cursor with
-no primary row — there is no side to anchor the pair on, and taking the first
-row instead would attribute a glyph off a pairing the data never states.
+Designations read each pair's `own` ends. A letter is root-relative, so a
+component is addressable even when its own pair's primary is not: Rigil's
+`Ba,Bb` pair has an unresolvable Ba, and requiring the primary to resolve
+left Bb with no letter and no base to compose against. Naming needs only the
+letter and the root.
 
 Emitted as the search index's `cl` / `cp` fields —
 [Search index](../../../../src/catalog-format/record/README.md#search-index-publicsearch-indexjson), [Star search](/src/client/typeahead/README.md#star-search),

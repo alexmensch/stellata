@@ -512,12 +512,12 @@ relations — since the runtime then draws them apart from the elements, and a
 bit-identical bake there is the deliberate sub-resolution placement above. Two
 siblings of one primary are not exempt: each moves on its own orbit, and
 nothing keeps them apart. The relations come from the runtime's own pairing —
-`renderableOrbitRelations` in `record-index/`, the wings pass's resolution
-(the writer's gaia → hip → synth resolution, both synth retries, the parent re-home) filtered to
-renderable orbits — never from promotion's cursor walk, which records a pair
+`renderableOrbitRelations` in `record-index/`, the `rendered` ends of
+`resolvePairs` (the resolution the writer takes) filtered to renderable
+orbits — never from promotion's cursor walk, which records a pair
 before its parent is minted.
 
-Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->93<!-- /count -->), a ratchet-down metric; the
+Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->55<!-- /count -->), a ratchet-down metric; the
 build log names each pair.
 
 #### Promoted-companion field inheritance

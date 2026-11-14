@@ -76,8 +76,11 @@ import {
   buildComponentDesignations,
   type ComponentDesignation,
   renderableOrbitRelations,
+  resolvedMemberIndices,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
+import { resolvePairs } from './companions/record-index/pair-resolution-pure';
+import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
 } from './companions/record-index/catalog-row-index-map-pure';
@@ -423,13 +426,11 @@ export async function main() {
   // Built here (not at the sidecar write below) so the wings pass resolves
   // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
+  const resolvedPairs = resolvePairs(pairsFromRows(multiplesRows), rowIndexMap);
 
-  const { memberIndices, ...renderableWings } = wingRenderablePrimaries(multiplesRows, stars, rowIndexMap);
+  const renderableWings = wingRenderablePrimaries(resolvedPairs, stars);
 
-  const overlaps = physicalOverlaps(
-    stars,
-    orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
-  );
+  const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
   console.log(promotionSummary(
     promotionCounts, promotionDerived, promotedRows.filter((r) => r.via === 'secondary').length,
@@ -439,9 +440,9 @@ export async function main() {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
 
-  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(multiplesRows, rowIndexMap);
+  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(resolvedPairs);
   const statuses = multiplicityStatuses(
-    stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
+    stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
   const multiplicity: MultiplicityCounts = {

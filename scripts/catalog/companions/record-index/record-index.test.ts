@@ -13,12 +13,18 @@ import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
   renderableOrbitRelations,
+  resolvedMemberIndices,
   wingRenderablePrimaries,
 } from './record-index';
+import { pairsFromRows } from '../../../binaries/pairs-pure';
+import { resolvePairs } from './pair-resolution-pure';
 import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../../util/paths';
 import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
 import { resolve } from 'node:path';
+
+const resolved = (rows: MultiplesTsvRow[], stars: Star[]) =>
+  resolvePairs(pairsFromRows(rows), buildCatalogRowIndexMap(stars));
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -86,7 +92,7 @@ describe('buildCatalogRowIndexMap', () => {
 
 describe('wingRenderablePrimaries', () => {
   const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(rows, stars, buildCatalogRowIndexMap(stars)).renderableCompanionWinged;
+    wingRenderablePrimaries(resolved(rows, stars), stars).renderableCompanionWinged;
   const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {
@@ -128,13 +134,34 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(a)).toBe(false);
   });
 
+  it('puts the glyph on the brightest record of a system that draws a pair, drawn in it or not', () => {
+    // A,BC: the compound BC resolves to no record, so binaries.bin draws only
+    // B against C; A is still the system's brightest member.
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
+    const c = makeStar({ hip: 300, absmag: 6.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'BC', orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W1-BC', comp: 'B', hip: 200, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-BC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a, b, c])).toBe(1);
+    expect([a, b, c].map(isWinged)).toEqual([true, false, false]);
+  });
+
+  it('wings no system that draws no pair', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'A', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-A,BC', comp: 'BC', orbitRole: 'secondary' }),
+    ];
+    expect(wing(rows, [a])).toBe(0);
+    expect(isWinged(a)).toBe(false);
+  });
+
   it('re-homes a pair primary carrying no identifier onto its PARENT component', () => {
-    // WDS 02536-6420: Ba resolves to nothing while B and synth Bb both ship,
-    // and binaries.bin renders the pair through B. Without the parent re-home
-    // the Ba,Bb cursor resolves no primary side and the system leaves the
-    // winged set entirely. The BC cursor is what puts B in the per-root
-    // component index; its own secondary resolves to nothing, so it renders
-    // no pair of its own.
+    // WDS 02536-6420 (README.md#the-parent-re-home); BC is Ba,Bb's parent pair.
     const b = makeStar({ hip: 200, absmag: 4.0 });
     const bb = makeStar({ syntheticId: 'synth-W1-Bb', absmag: 9.0 });
     const rows = [
@@ -146,21 +173,6 @@ describe('wingRenderablePrimaries', () => {
     expect(wing(rows, [b, bb])).toBe(1);
     expect(isWinged(b)).toBe(true);
     expect(isWinged(bb)).toBe(false);
-  });
-
-  it('wings nothing for a cursor with no primary row', () => {
-    // Two secondaries and no primary: there is no side to anchor the pair on,
-    // and taking the first row as the primary would attribute a glyph off a
-    // pairing the data never states.
-    const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0 });
-    const rows = [
-      multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'secondary' }),
-      multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
-    ];
-    expect(wing(rows, [a, b])).toBe(0);
-    expect(isWinged(a)).toBe(false);
-    expect(isWinged(b)).toBe(false);
   });
 
   it('resolves a blended secondary through its synth slot (id-first collides on the primary)', () => {
@@ -248,7 +260,7 @@ describe('renderableOrbitRelations', () => {
         systemId: '02291+2252-Ba,Bb', comp: 'Bb', gaiaSourceId: 'gB', hip: 11572, ...ORBIT,
       }),
     ];
-    expect(renderableOrbitRelations(rows, buildCatalogRowIndexMap([a, b, bb])))
+    expect(renderableOrbitRelations(resolved(rows, [a, b, bb])))
       .toEqual([[1, 2]]);
   });
 
@@ -259,13 +271,37 @@ describe('renderableOrbitRelations', () => {
       multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
       multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200 }),
     ];
-    expect(renderableOrbitRelations(rows, buildCatalogRowIndexMap([a, b]))).toEqual([]);
+    expect(renderableOrbitRelations(resolved(rows, [a, b]))).toEqual([]);
+  });
+});
+
+describe('resolvedMemberIndices', () => {
+  it('collects both own ends of every pair whose primary resolves, and nothing else', () => {
+    const a = makeStar({ hip: 100 });
+    const ab = makeStar({ syntheticId: 'synth-W1-Ab' });
+    const c = makeStar({ hip: 300 });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, orbitRole: 'secondary' }),
+      multiplesRow({ systemId: 'W2-AB', comp: 'A', hip: 999, orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W2-AB', comp: 'B', hip: 300, orbitRole: 'secondary' }),
+    ];
+    expect([...resolvedMemberIndices(resolved(rows, [a, ab, c]))].sort()).toEqual([0, 1]);
+  });
+
+  it('counts a blended primary whose secondary collapses onto it', () => {
+    const aa = makeStar({ hip: 100, gaiaSourceId: 'g5' });
+    const rows = [
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Aa', hip: 100, gaiaSourceId: 'g5', orbitRole: 'primary' }),
+      multiplesRow({ systemId: 'W1-Aa,Ab', comp: 'Ab', hip: 100, gaiaSourceId: 'g5', orbitRole: 'secondary' }),
+    ];
+    expect([...resolvedMemberIndices(resolved(rows, [aa]))]).toEqual([0]);
   });
 });
 
 describe('buildComponentDesignations', () => {
   const designate = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    buildComponentDesignations(rows, buildCatalogRowIndexMap(stars)).designations;
+    buildComponentDesignations(resolved(rows, stars)).designations;
 
   it('maps every component (including the primary) to the primary as base', () => {
     // α Cen shape: A (the Bayer-bearing primary) + B resolve by HIP, C by
