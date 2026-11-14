@@ -9,6 +9,11 @@ describe('pyMod', () => {
     expect(pyMod(-720, 360)).toBe(0);
   });
 
+  it('returns +0 for a zero remainder, −0 included, as Python does', () => {
+    expect(pyMod(-0, 2 * Math.PI)).toBe(0);
+    expect(pyMod(-4 * Math.PI, 2 * Math.PI)).toBe(0);
+  });
+
   it('rounds a tiny negative up to the divisor, as Python does', () => {
     expect(pyMod(-1e-20, 360)).toBe(360);
   });
