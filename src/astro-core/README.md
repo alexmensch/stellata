@@ -1,8 +1,9 @@
 # astro-core
 
-Shared physics: constants, angles, coordinate frames, orbits and the
-photometric models both the build pipeline (`scripts/`) and the viewer
-(`src/client/`) compute with. Neither side owns it; both import it.
+Shared physics — constants, angles, coordinate frames, orbits and the
+photometric models — and the primitives under them that both the build
+pipeline (`scripts/`) and the viewer (`src/client/`) compute with, such as
+the sort order. Neither side owns it; both import it.
 
 **It imports nothing outside itself** but npm packages — no `scripts/`, no
 `src/client/`, no `src/catalog-format/`. That is what lets a constant or a
@@ -25,6 +26,12 @@ Each has its own README.
 
 ## Files
 
+- `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
+  comparator (numbers and bigints by value, strings by code unit; a string
+  against a number does not compile), and `compareCodeUnits`, its string
+  case: the same order on every machine, unlike `localeCompare`. Every
+  ascending sort on either side routes through one of them; an inline
+  `(a, b) => a - b` also answers NaN where `ascending` answers 0.
 - `equinoctial-pure.ts` (+ test) — the non-singular equinoctial element
   representation and the classical round trip; the Horizons element fetch
   and the viewer's planet ephemeris both express their elements in it

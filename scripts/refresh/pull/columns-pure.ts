@@ -1,7 +1,7 @@
 // A pulled table's columns: the ADQL projection, the reply's schema check, the write order, and the TSV it writes. See README.md#columns.
 
 import { formatExponent, formatFixed, formatRepr } from '../../util/round-pure';
-import { compareCodeUnits } from '../../util/order-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
