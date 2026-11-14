@@ -18,7 +18,7 @@ import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
-import { directionAtEpoch, unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
+import { angularSeparationArcsec, directionAtEpoch, unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
@@ -613,10 +613,6 @@ describe('readStars advances the position on a rescued PM', () => {
   const RESCUED_PMDEC = -24.707;
   const DIST_PC = 52.6;
 
-  const angSepArcsec = (a: UnitVector, b: UnitVector): number =>
-    Math.acos(Math.max(-1, Math.min(1, a.x * b.x + a.y * b.y + a.z * b.z)))
-    * ((180 * 3600) / Math.PI);
-
   const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
   const simbadPmOnly = (): SimbadValueIndex => ({
@@ -682,8 +678,8 @@ describe('readStars advances the position on a rescued PM', () => {
       { raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC }, { pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC },
       TYCHO2_ICRS_EPOCH, CATALOG_SCENE_EPOCH,
     );
-    expect(angSepArcsec(shipped, advanced)).toBeCloseTo(0, 6);
-    expect(angSepArcsec(shipped, unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC)))
+    expect(angularSeparationArcsec(shipped, advanced)).toBeCloseTo(0, 6);
+    expect(angularSeparationArcsec(shipped, unitVectorFromRaDec(OBSERVED_RA, OBSERVED_DEC)))
       .toBeCloseTo(2.3367, 3);
   });
 

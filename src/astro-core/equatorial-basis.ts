@@ -2,7 +2,8 @@
 // proper-motion propagation, space-motion velocity, and sky-offset
 // projection all resolve their components along.
 
-import { DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
+import { angleBetweenRad } from './angles';
+import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
 
 export interface UnitVector {
   x: number;
@@ -69,6 +70,10 @@ export function equatorialTangentBasisAt(
  *  pole). Multiplying by a distance in pc yields a record's xyz. */
 export function unitVectorFromRaDec(raDeg: number, decDeg: number): UnitVector {
   return equatorialTangentBasis(raDeg, decDeg).u;
+}
+
+export function angularSeparationArcsec(a: UnitVector, b: UnitVector): number {
+  return angleBetweenRad(a.x, a.y, a.z, b.x, b.y, b.z) / ARCSEC_TO_RAD;
 }
 
 /** Sky direction at `toEpoch` of a source measured at `fromEpoch`: linear

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  angularSeparationArcsec,
   directionAtEpoch,
   equatorialTangentBasis,
   equatorialTangentBasisAt,
@@ -120,19 +121,13 @@ describe('equatorialTangentBasisAt', () => {
   });
 });
 
-const ARCSEC_PER_RAD = (180 * 3600) / Math.PI;
-
-function angSepArcsec(a: UnitVector, b: UnitVector): number {
-  return Math.acos(Math.max(-1, Math.min(1, dot(a, b)))) * ARCSEC_PER_RAD;
-}
-
 describe('directionAtEpoch', () => {
   it('returns the measured direction unchanged when either PM is missing', () => {
     const u = directionAtEpoch({ raDeg: 100, decDeg: 20 }, { pmRaMasyr: null, pmDecMasyr: -10 }, 2016, 2000);
     const v = directionAtEpoch({ raDeg: 100, decDeg: 20 }, { pmRaMasyr: 10, pmDecMasyr: null }, 2016, 2000);
     const raw = unitVectorFromRaDec(100, 20);
-    expect(angSepArcsec(u, raw)).toBe(0);
-    expect(angSepArcsec(v, raw)).toBe(0);
+    expect(angularSeparationArcsec(u, raw)).toBe(0);
+    expect(angularSeparationArcsec(v, raw)).toBe(0);
   });
 
   it('positive pmra moves east (+RA), positive pmdec moves north (+Dec)', () => {
@@ -140,12 +135,12 @@ describe('directionAtEpoch', () => {
     const east = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 1000, pmDecMasyr: 0 }, 2000, 2010);
     expect(east.y).toBeGreaterThan(0);
     expect(east.z).toBeCloseTo(0, 12);
-    expect(angSepArcsec(east, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
+    expect(angularSeparationArcsec(east, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
 
     const north = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 0, pmDecMasyr: 1000 }, 2000, 2010);
     expect(north.z).toBeGreaterThan(0);
     expect(north.y).toBeCloseTo(0, 12);
-    expect(angSepArcsec(north, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
+    expect(angularSeparationArcsec(north, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
   });
 
   it('backwards propagation (toEpoch < fromEpoch) flips the displacement sign', () => {
@@ -159,11 +154,11 @@ describe('directionAtEpoch', () => {
     // If the implementation wrongly divided (or multiplied) by cos δ,
     // the on-sky displacement at dec 60° would be 2× (or ½×) the
     // equatorial one.
-    const atEquator = angSepArcsec(
+    const atEquator = angularSeparationArcsec(
       directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 500, pmDecMasyr: 0 }, 2000, 2010),
       unitVectorFromRaDec(0, 0),
     );
-    const atDec60 = angSepArcsec(
+    const atDec60 = angularSeparationArcsec(
       directionAtEpoch({ raDeg: 0, decDeg: 60 }, { pmRaMasyr: 500, pmDecMasyr: 0 }, 2000, 2010),
       unitVectorFromRaDec(0, 60),
     );
@@ -173,16 +168,22 @@ describe('directionAtEpoch', () => {
   it('round-trips through an epoch and back', () => {
     const there = directionAtEpoch({ raDeg: 269.45, decDeg: 4.74 }, { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 }, 2016, 2000);
     // Convert back to (ra, dec) and re-propagate with the same PM.
-    const raBack = (Math.atan2(there.y, there.x) * 180) / Math.PI;
-    const decBack = (Math.asin(there.z) * 180) / Math.PI;
-    const home = directionAtEpoch({ raDeg: raBack, decDeg: decBack }, { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 }, 2000, 2016);
-    expect(angSepArcsec(home, unitVectorFromRaDec(269.45, 4.74))).toBeLessThan(0.001);
+    const home = directionAtEpoch(raDecFromUnitVector(there), { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 }, 2000, 2016);
+    expect(angularSeparationArcsec(home, unitVectorFromRaDec(269.45, 4.74))).toBeCloseTo(0.000853, 6);
   });
 
   it('stays finite and unit-length near the celestial pole', () => {
     const u = directionAtEpoch({ raDeg: 10, decDeg: 89.95 }, { pmRaMasyr: 5000, pmDecMasyr: 2000 }, 2000, 2016);
     const norm = Math.hypot(u.x, u.y, u.z);
     expect(norm).toBeCloseTo(1, 12);
+  });
+});
+
+describe('angularSeparationArcsec', () => {
+  it('resolves a micro-arcsecond separation that acos would round to zero', () => {
+    const a = unitVectorFromRaDec(30, 10);
+    const b = directionAtEpoch({ raDeg: 30, decDeg: 10 }, { pmRaMasyr: 0, pmDecMasyr: 1e-3 }, 2000, 2001);
+    expect(angularSeparationArcsec(a, b)).toBeCloseTo(1e-6, 12);
   });
 });
 
