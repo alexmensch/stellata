@@ -44,6 +44,10 @@ scripts/catalog/companions/
                                   the identity rows of the records it mints
                                   and the rows it removes or merges
                                   (#promotion-lineage).
+  companion-dust-pure.ts (+ test) Which of a companion's absmag and B−V are
+                                  observed, so carry the A_V that
+                                  de-extinction subtracts: read by the mint
+                                  and by promotion's dust row.
   overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
                                   the sum of their radii, less those an orbit
                                   chain separates. See Overlap gate below.
@@ -89,13 +93,12 @@ a pair's primary is `pair-anchor` when it anchors its pair and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
 ([Promotion lineage](#promotion-lineage)).
-Each outcome is a lineage row, and each flag it carries — its brightness
-source, a main-sequence spectral estimate, a constellation split, a designation
-constellation taken from the anchor, an owned fit — a facet row of its own, so
-every per-row count is a fold of its lineage codes
-([Promotion lineage](#promotion-lineage)). The
-post-passes below act on records, not rows: their counters are
-`PromotionStats`, promotion's derived count block with `physicalOverlaps`.
+Each outcome is a lineage row, and each flag it carries a facet row of its
+own (the list is [Promotion lineage](#promotion-lineage)'s), so every per-row
+count is a fold of its lineage codes. The post-passes below act on records,
+not rows; blend split and the anchor re-split write a facet on each minted
+record they change, and `PromotionStats`, promotion's derived count block
+with `physicalOverlaps`, counts what no row records.
 
 Per-row gates and resolution:
 
@@ -437,7 +440,8 @@ Per-row gates and resolution:
   its radius re-derived. Equal split — a pair Gaia couldn't resolve is
   near-equal by construction, exact for the M-dwarf eclipsing pairs that
   dominate; total system light is preserved. `ci` stays the shared
-  colour. Counted `companionBlendSplit`; runs before the record sort.
+  colour. Each split record writes `promotion.brightness.blend-split`
+  ([Promotion lineage](#promotion-lineage)); runs before the record sort.
   See [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
   (Blend split).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited
@@ -593,9 +597,28 @@ duplicate labels that survive the ladder are data findings, enumerated in
 `RowOutcome` ([above](#companion-promotion-from-databinariesmultiplestsv)) through an exhaustive `switch`: the
 outcome row (a mint is `promotion.minted.keyed` or `.synthetic`, a refused
 parked record `.gaia-5p` or `.other-route` by route), then a facet row, effect
-`none` and no params or evidence, per flag the outcome carries
-(`promotion.brightness.*`, `spectral.*`, `constellation.*`, `desig-con.*`,
-`fit.owned`), so every per-row count is a code's line count. A
+`none` and no evidence, per flag the outcome carries
+(`promotion.brightness.*`, `spectral.*`, `colour.*`, `dust.*`,
+`constellation.*`, `desig-con.*`, `fit.owned`), so every per-row count is a
+code's line count.
+
+A mint's facets are its brightness lineage, since the record walk's
+[brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
+never sees it: the absmag source (`brightness.*`), a row for the post-pass,
+if any, that changed that absmag after the mint — at most one, since blend
+split takes only own-photometry mints and the re-split only Δmag ones
+(`brightness.blend-split`, `params.n` the records sharing the source;
+`brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
+already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
+the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
+`companionCi`), and one dust row naming which of the two the A_V at the
+minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
+`.absmag-only`, `.ci-only`, `.not-applied`: a class→M_V absmag and a derived
+B−V are intrinsic), its `params.av` in brightness-colour's format
+(`dustParams`). Their evidence is the outcome
+row's: the photometry is the row's own, and the anchor a Δmag reads is cited
+there. A key's rows are a set, ordered as every stage file is
+([SourceRowRef](../lineage/README.md#sourcerowref)). A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
 to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
@@ -617,9 +640,10 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-12: 75,366 rows — one outcome row per `multiples.tsv` row
-plus 28,345 facet rows — and 31,908 identity rows (the minted companions and
-the 17,232 rows promotion retires, parks or merges), 1.06 MB gzipped in
-0.46 s (header, diff, write and invariants; 0.31 s of it the baseline);
-`PROMOTION_LINEAGE_BUDGET` pins 1.16 MB and 10 s. A CI run with a diff took
+Measured 2026-11-14: 106,734 rows — one outcome row per `multiples.tsv` row
+plus 59,713 facet rows, two of them (colour, dust) per minted record — and
+31,908 identity rows (the minted companions and the 17,232 rows promotion
+retires, parks or merges), 1.30 MB gzipped in 0.68 s (header, diff, write
+and invariants; 62 ms of it the baseline, 534 ms rendering);
+`PROMOTION_LINEAGE_BUDGET` pins 1.40 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.

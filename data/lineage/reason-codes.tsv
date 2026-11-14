@@ -379,11 +379,16 @@ promotion.adopted.own-hip	promotion	merge	outcome	live		7.1.6	The row's Gaia sou
 promotion.adopted.own-id	promotion	merge	outcome	live		7.1.6	The row's own Gaia source or HIP names a record already in the catalogue, which is the component.
 promotion.adopted.sameas-bridge	promotion	merge	outcome	live		7.1.6	A same-as edge bridges the row's synthetic key to a Gaia source already in the catalogue, whose record is the component.
 promotion.brightness.anchor-collocated	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its anchor's magnitude, the last resort for a pair's primary promoted as the anchor's companion.
+promotion.brightness.anchor-re-split	promotion	none	outcome	live		7.1.21	The anchor its magnitude difference is read off was dimmed to remove its members' light, so the minted record's absolute magnitude is re-split from the anchor's new one.
+promotion.brightness.blend-split	promotion	none	outcome	live		7.1.21	The minted record shares its Gaia source with n records in all, whose light it is the blend of, so its absolute magnitude is dimmed by 2.5·log₁₀(n), an equal split.
 promotion.brightness.dmag-imputed	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its anchor's absolute magnitude plus the pair's magnitude difference.
 promotion.brightness.inherited-twin	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the primary's inherited magnitude, kept because the pair has a renderable orbit.
 promotion.brightness.own	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the row's own photometry.
 promotion.brightness.spectral	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is its per-component spectral type's absolute magnitude.
 promotion.brightness.wds-mag	promotion	none	outcome	live		7.1.20	The minted record's absolute magnitude is the row's own WDS magnitude at the system's distance.
+promotion.colour.none	promotion	none	outcome	live		7.1.21	The minted record has no colour of its own and no derivable spectral class, so it bakes the solar B−V.
+promotion.colour.own	promotion	none	outcome	live		7.1.21	The minted record's B−V is the row's own observed colour.
+promotion.colour.spectral-derived	promotion	none	outcome	live		7.1.21	The minted record's B−V is the intrinsic colour of its spectral class (Ballesteros 2012, /data/papers/index.md#ballesteros2012), the row carrying no colour of its own.
 promotion.constellation.split-from-anchor	promotion	none	outcome	live		7.1.20	The minted record's position falls in another IAU constellation than its anchor's.
 promotion.desig-con.from-anchor	promotion	none	outcome	live		7.1.20	The adopted record carried no designation constellation and takes its anchor's.
 promotion.dropped.anchor-is-component	promotion	merge	outcome	live		7.1.6	The row's ids resolve to its anchor's record, which the naming authority already letters as this component, so that record is the component.
@@ -396,6 +401,10 @@ promotion.dropped.no-position	promotion	retire	outcome	live		7.1.6	The row has n
 promotion.dropped.parked-record	promotion	park	outcome	retired	7.1.20	7.1.6	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record.
 promotion.dropped.parked-record.gaia-5p	promotion	park	outcome	live		7.1.20	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record; the row's astrometry route is gaia_5p.
 promotion.dropped.parked-record.other-route	promotion	park	outcome	live		7.1.20	The distance the row states is a parallax a tier above refused, so promoting it would ship the parked record; the row's astrometry route is not gaia_5p.
+promotion.dust.edenhofer2024.absmag-and-ci	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from absmag, and A_V/R_V from the observed B−V.
+promotion.dust.edenhofer2024.absmag-only	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from absmag; the B−V is intrinsic, so it is left as it is.
+promotion.dust.edenhofer2024.ci-only	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position, as A_V/R_V, is subtracted from the observed B−V; the absmag is its spectral class's, intrinsic, so it is left as it is.
+promotion.dust.edenhofer2024.not-applied	promotion	none	outcome	live		7.1.21	The Sol-to-star A_V through the Edenhofer 2024 (/data/papers/index.md#edenhofer2024) dust grid at the minted position is subtracted from neither value: the absmag is its spectral class's and the B−V intrinsic.
 promotion.fit.owned	promotion	none	outcome	live		7.1.20	The refused row carries a per-component fit on an identifier of its own.
 promotion.minted	promotion	none	outcome	retired	7.1.20	7.1.6	The row becomes a new catalogue record.
 promotion.minted.keyed	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, keyed on a Gaia source or HIP of its own.

@@ -23,6 +23,7 @@ import {
   absmagFromSpectral,
   physicalRadius,
   spectralClassCi,
+  spectralClassColorIsDerivable,
   spectralFromAbsmag,
 } from '../../../src/catalog-format/spectral/physical-radius';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
@@ -39,6 +40,7 @@ import {
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
 import { promotionOriginKey } from './promotion-lineage-pure';
+import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
@@ -207,6 +209,23 @@ export type RowOutcome =
 export interface MintedBrightness {
   source: CompanionAbsmagSource;
   spectMsFromOwnAbsmag: boolean;
+  ci: CompanionCiVia;
+  /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
+  av: number;
+  /** The post-pass that changed the minted absmag, if one did. */
+  adjustment: MintedAdjustment | null;
+}
+
+export type MintedAdjustment =
+  | { pass: 'blend-split'; n: number }
+  | { pass: 'anchor-re-split'; anchorIdx: number };
+
+/** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
+export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
+  if (b.adjustment !== null) {
+    throw new Error(`minted record adjusted by ${a.pass} after ${b.adjustment.pass}`);
+  }
+  b.adjustment = a;
 }
 
 
@@ -229,13 +248,6 @@ export type PostPassStats = {
    *  onto B so the catalog placement matches the binaries.bin pair anchor
    *  (runtime-binaries-pure.ts's overrideInnerPrimaryIndices). */
   companionRepositionedInnerToParent: number;
-  /** Promoted gaia_photometry records whose absmag was reduced by the
-   *  blend-split post-pass: when N≥2 collocated records share one Gaia
-   *  source (an unresolved sub-arcsec pair Gaia fit as a single source,
-   *  e.g. YY Gem Ca/Cb), that source's G is the pair's COMBINED light, so
-   *  each component is fainter than the derived combined M by
-   *  2.5·log10(N). Counts every record so adjusted. */
-  companionBlendSplit: number;
   /** Anchor records dimmed by the flux-conservation post-pass — the
    *  per-anchor joint subset solve judged ≥1 member's light embedded in
    *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
@@ -391,7 +403,6 @@ export function refusalStated(
 function emptyPostPassStats(): PostPassStats {
   return {
     companionRepositionedInnerToParent: 0,
-    companionBlendSplit: 0,
     companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionBlendDimUnfit: 0,
@@ -524,27 +535,35 @@ export function groupBySystem(rows: MultiplesTsvRow[]): Map<string, PairCursor> 
   return groups;
 }
 
-// Companion B-V (ci). When Stage 6 tags the row's photometry as
-// inherited from the system primary (Sirius B's row carrying Sirius A's
-// 0.009 white instead of its own DA1.9 blue), derive an intrinsic colour
-// from the spectral class via the shared spectralClassCi.
 /** True when the row's `ci` is its OWN observed B−V (dust-reddened), so
- *  build-time de-extinction must de-redden it. False when imputeCompanionCi
- *  derives an intrinsic B−V from spectral type or the solar fallback —
+ *  build-time de-extinction must de-redden it. False when the row's ci is
+ *  inherited from the system primary (Sirius B's row carrying Sirius A's
+ *  0.009 white) or absent, and companionCi derives an intrinsic B−V from spectral type or the solar fallback —
  *  those are already extinction-free and must not be de-reddened. */
 export function companionCiIsObserved(secondary: MultiplesTsvRow): boolean {
   return secondary.ci !== null
     && secondary.photometryVia !== PHOTOMETRY_VIA_SYSTEM_INHERITED;
 }
 
-export function imputeCompanionCi(
+/** `own` = the row's observed B−V; `spectral_derived` = its class's
+ *  intrinsic colour; `none` = no derivable class, so the solar B−V. */
+export type CompanionCiVia = 'own' | 'spectral_derived' | 'none';
+
+export interface CompanionCi {
+  value: number;
+  via: CompanionCiVia;
+}
+
+/** The B−V a companion ships, de-reddened by `av` only where it is observed. */
+export function companionCi(
   secondary: MultiplesTsvRow,
   spectralInfo: SpectralInfo,
-): number {
-  if (companionCiIsObserved(secondary)) {
-    return secondary.ci as number;
-  }
-  return spectralClassCi(spectralInfo);
+  av: number,
+): CompanionCi {
+  const via: CompanionCiVia = companionCiIsObserved(secondary) ? 'own'
+    : spectralClassColorIsDerivable(spectralInfo) ? 'spectral_derived' : 'none';
+  const value = via === 'own' ? secondary.ci as number : spectralClassCi(spectralInfo);
+  return { value: companionCiIsObservedVia(via) ? value - av / R_V : value, via };
 }
 
 
@@ -1057,8 +1076,7 @@ interface PromotionState {
   /** Records whose absmag came from a component's own Gaia photometry
    *  (`gaia_photometry`), keyed by the BACKING source_id (`row.gaiaSourceId`
    *  before any inherited-id strip). A source backing ≥2 of these is an
-   *  unresolved blend whose combined light the post-pass splits — see
-   *  `companionBlendSplit`. */
+   *  unresolved blend whose combined light the post-pass splits. */
   gaiaPhotometryByBackingSource: Map<string, BlendSplitCandidate[]>;
   /** Anchor-dimming candidates for the flux-conservation post-pass —
    *  see `companionBlendDimmedAnchors`. */
@@ -1104,11 +1122,14 @@ interface AnchorDimCandidate {
    *  secondary, the WDS-root offset for an escape row. */
   sepArcsec: number | null;
   av: number;
+  /** Null for a member already in the catalogue. */
+  minted: MintedBrightness | null;
 }
 
 interface BlendSplitCandidate {
   star: Star;
   spectral: SpectralInfo;
+  brightness: MintedBrightness;
 }
 
 /** A member that is already its own record never reaches the minting path below,
@@ -1151,14 +1172,12 @@ function registerExistingMemberForAnchorDim(
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow),
     av: avSolToStar(state.dustGrid, member.x, member.y, member.z),
+    minted: null,
   });
 }
 
-/** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
- *  raymarch re-adds it without double-counting; a spectral-derived one
- *  (class→M_V) is already intrinsic. */
 function deExtinctCompanionAbsmag(imputed: CompanionAbsmag, av: number): number {
-  return imputed.source === 'spectral' ? imputed.absmag : imputed.absmag - av;
+  return companionAbsmagIsObserved(imputed.source) ? imputed.absmag - av : imputed.absmag;
 }
 
 /** The two tiers that place a record ON its own Gaia 5p solution. */
@@ -1243,8 +1262,7 @@ function recurateExistingMember(
     const absmag = brightness === 'wds_mag' && wdsMag !== null
       ? absoluteMagnitude(wdsMag, dNew) : imputed.absmag;
     member.absmag = deExtinctCompanionAbsmag({ absmag, source: brightness }, avNew);
-    member.ci = imputeCompanionCi(row, spectral);
-    if (companionCiIsObserved(row)) member.ci -= avNew / R_V;
+    member.ci = companionCi(row, spectral, avNew).value;
   } else if (dOld > 0 && dNew > 0) {
     member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
   }
@@ -1431,12 +1449,10 @@ function promoteRow(
   if (spectMsFromOwnAbsmag) {
     spectral = { info: spectralFromAbsmag(absmag), display: null };
   }
-  const brightness: MintedBrightness = { source: imputed.source, spectMsFromOwnAbsmag };
-  let ci = imputeCompanionCi(row, spectral.info);
-  // The row's own observed ci embeds A_V too; a derived ci (Ballesteros 2012
-  // (/data/papers/index.md#ballesteros2012) / solar fallback) is already
-  // intrinsic.
-  if (companionCiIsObserved(row)) ci -= av / R_V;
+  const ci = companionCi(row, spectral.info, av);
+  const brightness: MintedBrightness = {
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustment: null,
+  };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
   // Velocity and the DESIGNATION constellation are the two inherited fields
@@ -1476,7 +1492,7 @@ function promoteRow(
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
-    absmag, ci,
+    absmag, ci: ci.value,
     spectral: spectral.info,
     physicalRadius: physicalRadius(absmag, spectral.info).rSun,
     conIndex,
@@ -1545,6 +1561,7 @@ function promoteRow(
       structural: idsInheritedFromAnchor,
       ...anchorDimGeometry(row, anchorPrimaryRow),
       av,
+      minted: brightness,
     });
   }
   // A gaia_photometry absmag is the backing source's magnitude. When that
@@ -1559,6 +1576,7 @@ function promoteRow(
     const cand: BlendSplitCandidate = {
       star: state.newStars[state.newStars.length - 1],
       spectral: spectral.info,
+      brightness,
     };
     if (bucket) bucket.push(cand);
     else state.gaiaPhotometryByBackingSource.set(row.gaiaSourceId, [cand]);
@@ -1929,10 +1947,10 @@ export function promoteCompanions(
   for (const bucket of state.gaiaPhotometryByBackingSource.values()) {
     if (bucket.length < 2) continue;
     const splitMag = 2.5 * Math.log10(bucket.length);
-    for (const { star, spectral } of bucket) {
+    for (const { star, spectral, brightness } of bucket) {
       star.absmag += splitMag;
+      adjustMinted(brightness, { pass: 'blend-split', n: bucket.length });
       star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
-      post.companionBlendSplit++;
     }
   }
 
@@ -2115,6 +2133,7 @@ export function promoteCompanions(
     anchor.absmag = absoluteMagnitude(residualMObs - av, distPc);
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
+      if (cand.minted !== null) adjustMinted(cand.minted, { pass: 'anchor-re-split', anchorIdx: cand.anchorIdx });
       cand.member.physicalRadius = physicalRadius(
         cand.member.absmag, cand.memberSpectral,
       ).rSun;

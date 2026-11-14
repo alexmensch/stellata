@@ -9,13 +9,15 @@ import {
   GAIA_BLEND_MAX_SEP_ARCSEC,
   PRINTED_BLEND_MAX_SEP_ARCSEC,
   imputeCompanionAbsmag,
-  imputeCompanionCi,
+  adjustMinted,
+  companionCi,
   isDisjointSingleLetter,
   parseMultiplesTsv,
   projectFromSepPa,
   parkedRefusals,
   promoteCompanions,
   recuratedMembers,
+  type MintedBrightness,
   type MultiplesTsvRow,
   type PromotionInputs,
   type PromotionStats,
@@ -416,9 +418,10 @@ describe('anchor flux dimming', () => {
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
     const anchor = blendAnchor();
-    const { newStars, stats } = promote(dimRows(2.0), [anchor], inputs());
+    const { newStars, stats, codes } = promote(dimRows(2.0), [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.brightness.anchor-re-split']).toBe(1);
     // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
     expect(anchor.absmag).toBeCloseTo(1.15973, 4);
     expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
@@ -441,7 +444,8 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor();
     // No dmag → the secondary takes wds_mag: M = 1.0 at 10 pc, equal to
     // the blend itself — subtracting it would zero the residual.
-    const { stats } = promote(dimRows(null, 1.0), [anchor], inputs());
+    const { stats, codes } = promote(dimRows(null, 1.0), [anchor], inputs());
+    expect(codes['promotion.brightness.anchor-re-split']).toBe(0);
     expect(stats.companionBlendDimSkipped).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(0);
     expect(anchor.absmag).toBe(1.0);
@@ -1110,7 +1114,16 @@ describe('anchor flux dimming', () => {
   });
 });
 
-describe('imputeCompanionCi', () => {
+describe('adjustMinted', () => {
+  it('records one post-pass and refuses a second', () => {
+    const b: MintedBrightness = { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0, adjustment: null };
+    adjustMinted(b, { pass: 'blend-split', n: 2 });
+    expect(b.adjustment).toEqual({ pass: 'blend-split', n: 2 });
+    expect(() => adjustMinted(b, { pass: 'anchor-re-split', anchorIdx: 1 })).toThrow(/anchor-re-split after blend-split/);
+  });
+});
+
+describe('companionCi', () => {
   const wdInfo = classifyFromSimbad('DA1.9')!;
   const mDwarfInfo = classifyFromSimbad('M3V')!;
 
@@ -1119,7 +1132,8 @@ describe('imputeCompanionCi', () => {
       comp: 'B', ci: 0.009,
       photometryVia: 'athyg_system_inherited',
     });
-    const bv = imputeCompanionCi(sec, wdInfo);
+    const { value: bv, via } = companionCi(sec, wdInfo, 0);
+    expect(via).toBe('spectral_derived');
     // T_eff(DA1.9) = 50400/2 = 25200 K → the inverse of Ballesteros 2012
     // (/data/papers/index.md#ballesteros2012) eq. 14 ≈ -0.44.
     // The shader's LUT clamps to BV_MIN=-0.4 at lookup time; we store
@@ -1132,14 +1146,21 @@ describe('imputeCompanionCi', () => {
     const sec = multiplesRow({
       comp: 'B', ci: 1.42, photometryVia: 'athyg_own',
     });
-    expect(imputeCompanionCi(sec, mDwarfInfo)).toBe(1.42);
+    expect(companionCi(sec, mDwarfInfo, 0)).toEqual({ value: 1.42, via: 'own' });
+  });
+
+  it('de-reddens only an observed colour', () => {
+    const own = multiplesRow({ comp: 'B', ci: 1.42, photometryVia: 'athyg_own' });
+    const inherited = multiplesRow({ comp: 'B', ci: 0.009, photometryVia: 'athyg_system_inherited' });
+    expect(companionCi(own, mDwarfInfo, 0.31).value).toBeCloseTo(1.42 - 0.31 / R_V, 12);
+    expect(companionCi(inherited, mDwarfInfo, 0.31)).toEqual(companionCi(inherited, mDwarfInfo, 0));
   });
 
   it('derives from spectral info when row.ci is null', () => {
     const sec = multiplesRow({
       comp: 'B', ci: null, photometryVia: 'none',
     });
-    const bv = imputeCompanionCi(sec, mDwarfInfo);
+    const bv = companionCi(sec, mDwarfInfo, 0).value;
     expect(bv).toBeGreaterThan(0.5);
     expect(bv).toBeLessThan(2.0);
   });
@@ -1149,7 +1170,7 @@ describe('imputeCompanionCi', () => {
       comp: 'B', ci: 0.009,
       photometryVia: 'athyg_system_inherited',
     });
-    expect(imputeCompanionCi(sec, SPECTRAL_UNKNOWN)).toBe(SOLAR_BV_FALLBACK);
+    expect(companionCi(sec, SPECTRAL_UNKNOWN, 0)).toEqual({ value: SOLAR_BV_FALLBACK, via: 'none' });
   });
 });
 
@@ -1194,7 +1215,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   function promoteAt(
     grid: DustGrid,
     rowOverrides: MultiplesRowOverrides,
-  ): Star {
+  ): { star: Star } & Pick<ReturnType<typeof promote>, 'codes'> {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
     const primaryRow = multiplesRow({
       comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',
@@ -1205,21 +1226,22 @@ describe('promoteCompanions build-time de-extinction', () => {
       x_pc: pos.x, y_pc: pos.y, z_pc: pos.z, distPc: 40,
       ...rowOverrides,
     });
-    const { newStars } = promote(
+    const { newStars, codes } = promote(
       [primaryRow, secondary], [primaryStar], inputs({ dustGrid: grid }),
     );
     expect(newStars).toHaveLength(1);
-    return newStars[0];
+    return { star: newStars[0], codes };
   }
 
   it('de-extincts observed absmag and de-reddens the row’s own ci', () => {
     const observed: MultiplesRowOverrides = {
       photometryVia: 'athyg_own', absmag: 3.0, ci: 0.5, spect: '', dmag: null,
     };
-    const withGrid = promoteAt(grid, observed);
-    const noGrid = promoteAt(TRANSPARENT_DUST, observed);
+    const { star: withGrid, codes } = promoteAt(grid, observed);
+    const { star: noGrid } = promoteAt(TRANSPARENT_DUST, observed);
     expect(noGrid.absmag - withGrid.absmag).toBeCloseTo(av, 6);
     expect(noGrid.ci - withGrid.ci).toBeCloseTo(av / R_V, 6);
+    expect(codes['promotion.dust.edenhofer2024.absmag-and-ci']).toBe(1);
   });
 
   it('leaves intrinsic spectral-derived absmag and Ballesteros ci untouched', () => {
@@ -1230,10 +1252,11 @@ describe('promoteCompanions build-time de-extinction', () => {
       photometryVia: 'athyg_system_inherited', spectVia: 'simbad',
       spect: 'B8V', dmag: null,
     };
-    const withGrid = promoteAt(grid, intrinsic);
-    const noGrid = promoteAt(TRANSPARENT_DUST, intrinsic);
+    const { star: withGrid, codes } = promoteAt(grid, intrinsic);
+    const { star: noGrid } = promoteAt(TRANSPARENT_DUST, intrinsic);
     expect(withGrid.absmag).toBeCloseTo(noGrid.absmag, 6);
     expect(withGrid.ci).toBeCloseTo(noGrid.ci, 6);
+    expect(codes['promotion.dust.edenhofer2024.not-applied']).toBe(1);
   });
 });
 
@@ -1603,7 +1626,8 @@ describe('promoteCompanions', () => {
         pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars, stats } = promote(rows, [castorA], inputs());
+    const { newStars, codes } = promote(rows, [castorA], inputs());
+    expect(codes['promotion.brightness.blend-split']).toBe(2);
     const c = newStars.find((s) => s.syntheticId === null);
     const cb = newStars.find((s) => s.syntheticId !== null);
     const split = COMBINED + 2.5 * Math.log10(2);
@@ -1614,7 +1638,6 @@ describe('promoteCompanions', () => {
       10 ** (-0.4 * c!.absmag) + 10 ** (-0.4 * cb!.absmag),
     );
     expect(combined).toBeCloseTo(COMBINED, 4);
-    expect(stats.companionBlendSplit).toBe(2);
   });
 
   it('skips secondaries already in the catalog (matched by gaia)', () => {

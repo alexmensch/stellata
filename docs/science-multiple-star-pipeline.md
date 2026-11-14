@@ -636,7 +636,7 @@ consume it in two complementary ways:
      source's **combined** light and both components (plus any outer-pair
      row for the same source) carry it — collocated, so the system would
      render ~2× too bright. Companion promotion's blend-split post-pass
-     (`companion-promotion.ts`, `companionBlendSplit`) divides the combined
+     (`companion-promotion.ts`, counted `promotion.brightness.blend-split`) divides the combined
      light evenly across the N collocated records the source backs: each is
      `2.5·log₁₀(N)` fainter than the blend (0.753 mag for a pair). Equal
      split is the honest default — a pair Gaia couldn't resolve is

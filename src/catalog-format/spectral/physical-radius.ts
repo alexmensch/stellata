@@ -96,7 +96,7 @@ export function tempKelvin(info: SpectralInfo): number {
  *  `SOLAR_BV_FALLBACK` rather than `tempKelvin`'s neutral 5000 K row (a
  *  yellow-white default that would misrepresent an unknown star as solar).
  *  Shared by the main-catalog read (`stars-parse.ts`) and companion
- *  promotion (`imputeCompanionCi`): the shipped shader routing is
+ *  promotion (`companionCi`): the shipped shader routing is
  *  two-tier (`iTeffApsis > 0 ? Ballesteros(iTeffApsis) : iCi`), so a
  *  no-Apsis star's class colour has to be baked into `ci` here. The
  *  result is intrinsic and must NOT be de-reddened. */
