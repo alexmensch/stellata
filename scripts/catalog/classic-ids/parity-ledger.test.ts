@@ -74,7 +74,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // flipped that record to 164669, and the primaries admit 164668 itself.
     const admittedHd = new Set(
       readArtifact(ADDITIONS_LEDGER)
-        .filter((l) => l.reason.startsWith('admitted:') && l.hd !== '')
+        .filter((l) => l.reason.startsWith('admitted:') && l.hd !== null)
         .map((l) => `hd:${l.hd}`),
     );
     const reOwned = removedCanonical.filter((d) => admittedHd.has(d));

@@ -34,6 +34,17 @@ scripts/catalog/membership/binding/
                                 imports nothing from the manifest —
                                 `../../spine/` and
                                 `../../astrometry-request/` read it too.
+  binding-outcomes-pure.ts      What every primaries row's derivation
+                                records, spine and addition alike:
+                                rowDeriver, the refused, runner-up and
+                                unweighed candidates' outcomes, and the
+                                unshipped candidates ownCandidates folds,
+                                first row first, for the magnitude term.
+                                Pure.
+  spine-settle-pure.ts          settleSpineBindings: each spine row's
+                                derivation, the collision rule, its queue
+                                cells and the dispositions settling it,
+                                with the value it ships. Pure.
 ```
 
 ## The four sources, in precedence order

@@ -5,7 +5,7 @@ I/239 HIP and CNS5 census row the inherited spine does not carry, grouped into
 stars and admitted as manifest rows or ledgered onto the record they resolve
 to. `addition-items-pure.ts` enumerates the items and the cells each derives
 from; grouping, the binding derivation and admission run in
-`../membership-manifest-pure.ts`, and the ledger's codec is
+`admission-pure.ts`, and the ledger's codec is
 `../additions-ledger-tsv.ts`. This README is the authority for all of it. The
 manifest it feeds: `../README.md`.
 
@@ -21,6 +21,14 @@ scripts/catalog/membership/additions/
                            (../../../util/sources/README.md#reached-means-read).
                            Unit-tested in ../membership-manifest-pure.test.ts,
                            over that suite's primaries fixture.
+  admission-pure.ts        admitAdditions: the claim set seeded from the
+                           spine side, the grouping, each group's
+                           derivation, the admission order and the
+                           collision guard; the admitted rows, the
+                           components' identity rows and every outcome.
+                           Builds manifest records, so it stays apart from
+                           addition-items-pure.ts. Tested through
+                           ../membership-manifest-pure.test.ts.
 ```
 
 ## Grouping and admission

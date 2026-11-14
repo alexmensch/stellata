@@ -6,9 +6,14 @@ import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure
 import { canonicalKeyOf, compareDesignations, starDesignations } from '../../sid/sid-pure';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { BINDING_CLASSES, type BindingClass } from './ledger-rows-pure';
+import type { LabelMergeRecord } from '../classic-ids/label-merge/label-merge-pure';
 
 /** Multi-value separator inside `hd_alt` / `hr_alt` / `routes`. */
 export const MANIFEST_VALUE_SEPARATOR = '|';
+
+export function joinManifestValues(values: readonly (string | number)[]): string {
+  return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
+}
 
 export const MANIFEST_COLUMNS = [
   'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
@@ -21,6 +26,10 @@ export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
 export const MEMBERSHIP_TERMS = ['primaries', 'magnitude'] as const;
 export type MembershipTerm = (typeof MEMBERSHIP_TERMS)[number];
 
+
+export function isSolProper(proper: string | null): boolean {
+  return proper === SOL_PROPER_NAME;
+}
 
 export interface ManifestRecord {
   tyc: string | null;
@@ -80,7 +89,51 @@ export function manifestRecord(
     routes: cell('routes'),
     term: oneOf('term', MEMBERSHIP_TERMS),
     originKey: cell('origin_key') || fail('origin_key is empty'),
-    isSol: proper === SOL_PROPER_NAME,
+    isSol: isSolProper(proper),
+  };
+}
+
+/** A primaries row from its merged labels: the spine's printed TYC, Bayer and
+ *  proper cells (empty on an addition) beside the label merge's record. */
+export function primariesManifestRecord(
+  printed: { tyc: string | null; bayer: string | null; proper: string | null },
+  r: LabelMergeRecord,
+  binding: BindingClass,
+  originKey: string,
+): ManifestRecord {
+  const { tyc, bayer, proper } = printed;
+  return {
+    tyc,
+    hip: r.hip,
+    hd: r.hd,
+    hdAlt: [...r.hdAlt],
+    hr: r.hr,
+    hrAlt: [...r.hrAlt],
+    gl: r.gl,
+    flam: r.flam,
+    bayer,
+    proper,
+    gaiaSourceId: r.gaiaSourceId,
+    binding,
+    routes: '',
+    term: 'primaries',
+    originKey,
+    isSol: isSolProper(proper),
+  };
+}
+
+/** A magnitude-term row: every classical cell empty, the source_id its whole
+ *  identity. */
+export function magnitudeManifestRecord(sourceId: string, originKey: string): ManifestRecord {
+  return {
+    tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null,
+    bayer: null, proper: null,
+    gaiaSourceId: sourceId,
+    binding: 'gaia_native',
+    routes: '',
+    term: 'magnitude',
+    originKey,
+    isSol: false,
   };
 }
 
@@ -121,9 +174,9 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     tyc: nullableCell(r.tyc),
     hip: nullableCell(r.hip),
     hd: nullableCell(r.hd),
-    hd_alt: r.hdAlt.join(MANIFEST_VALUE_SEPARATOR),
+    hd_alt: joinManifestValues(r.hdAlt),
     hr: nullableCell(r.hr),
-    hr_alt: r.hrAlt.join(MANIFEST_VALUE_SEPARATOR),
+    hr_alt: joinManifestValues(r.hrAlt),
     gl: nullableCell(r.gl),
     flam: nullableCell(r.flam),
     bayer: nullableCell(r.bayer),

@@ -2,29 +2,25 @@
 
 import { defineArtifact } from '../../../util/tsv/artifact-pure';
 import {
-  PARKED_REASONS, parkedIdentifiersOf, parkedLedgerCells, parkedRecordKey,
-  type ParkedLedgerEntry, type ParkedReason,
+  PARKED_REASONS, type ParkedLedgerEntry, type ParkedReason,
 } from './parked-ledger-pure';
+import {
+  RECORD_KEY_COLUMNS, recordKey, recordKeyCells, rowRecordIdentifiers,
+} from '../../lineage/identity-pure';
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 
 /** Sorted on the whole row, not on `tyc` alone: a park with no TYC would tie
  *  with every other and leave the file's order a function of the walk. */
 export const PARKED_LEDGER = defineArtifact({
   file: DATA_FILES.parkedLedger,
-  columns: ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'reason'] as const,
+  columns: [...RECORD_KEY_COLUMNS, 'reason'] as const,
   hint: 'Re-run `pnpm run build:catalog`.',
   order: 'by-line',
   decode: (row): ParkedLedgerEntry => ({
-    ...parkedIdentifiersOf({
-      tyc: row.raw('tyc'),
-      hip: row.raw('hip'),
-      hd: row.raw('hd'),
-      gl: row.raw('gl'),
-      gaia_source_id: row.raw('gaia_source_id'),
-    }),
+    ...rowRecordIdentifiers(row),
     reason: row.oneOf('reason', PARKED_REASONS),
   }),
-  encode: (e: ParkedLedgerEntry) => ({ ...parkedLedgerCells(e), reason: e.reason }),
+  encode: (e: ParkedLedgerEntry) => ({ ...recordKeyCells(e), reason: e.reason }),
 });
 
 export interface ParkedLedgerRow {
@@ -34,7 +30,7 @@ export interface ParkedLedgerRow {
 
 export function parseParkedRecordsTsv(text: string): ParkedLedgerRow[] {
   return PARKED_LEDGER.parse(text).map((e) => ({
-    recordKey: parkedRecordKey(PARKED_LEDGER.encode(e)),
+    recordKey: recordKey(e),
     reason: e.reason,
   }));
 }

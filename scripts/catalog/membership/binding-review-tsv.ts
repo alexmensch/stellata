@@ -20,9 +20,8 @@ export const BINDING_REVIEW = defineArtifact({
   order: (a: BindingReviewRow, b: BindingReviewRow) => compareSourceIds(a.derived_source_id, b.derived_source_id)
     || byVerdict(a, b) || byKey(a, b),
   decode: (row): BindingReviewRow => {
-    row.oneOf('verdict', BINDING_REVIEW_VERDICTS);
     row.sourceId('derived_source_id');
-    return row.cells();
+    return { ...row.cells(), verdict: row.oneOf('verdict', BINDING_REVIEW_VERDICTS) };
   },
   encode: (r) => r,
 });

@@ -6,7 +6,7 @@ import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
 import { INHERITED_SPINE, spineLine } from '../spine/inherited-spine-tsv';
 import { MAGNITUDE_PULL } from './magnitude-term/magnitude-pull-source';
-import type { OriginKeys } from './membership-manifest-pure';
+import type { OriginKeys } from './membership-lineage-pure';
 
 export const ORIGIN_KEYS: OriginKeys = {
   spine: (index) => sourceRowRefText(sourceRowRef(INHERITED_SPINE, spineLine(index))),

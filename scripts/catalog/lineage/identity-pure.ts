@@ -1,9 +1,15 @@
 // Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md#identity--the-origin-source-row.
 
-import { readTable, type TableSpec } from '../../util/tsv/table-pure';
+import { nullableCell } from '../../util/tsv/artifact-pure';
+import {
+  intCell, readTable, sourceIdCell, textCell, type TableRow, type TableSpec,
+} from '../../util/tsv/table-pure';
 import { sortUtf8 } from './lineage-row-pure';
 
-export const IDENTITY_COLUMNS = ['key', 'tyc', 'hip', 'hd', 'gl', 'gaia_source_id', 'designations'] as const;
+/** The five identifier cells a record's ledger rows and its identity row carry. */
+export const RECORD_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const;
+
+export const IDENTITY_COLUMNS = ['key', ...RECORD_KEY_COLUMNS, 'designations'] as const;
 
 export interface IdentityRow {
   readonly key: string;
@@ -13,6 +19,64 @@ export interface IdentityRow {
   readonly gl: string;
   readonly gaia_source_id: string;
   readonly designations: readonly string[];
+}
+
+export type IdentityCells = Pick<IdentityRow, (typeof RECORD_KEY_COLUMNS)[number]>;
+
+/** A record's five identifier cells, typed. */
+export interface RecordIdentifiers {
+  tyc: string | null;
+  hip: number | null;
+  hd: number | null;
+  gl: string | null;
+  gaiaSourceId: string | null;
+}
+
+/** The five cells' text, as every ledger keyed on a record writes them. */
+export function recordKeyCells(ids: RecordIdentifiers): IdentityCells {
+  return {
+    tyc: nullableCell(ids.tyc),
+    hip: nullableCell(ids.hip),
+    hd: nullableCell(ids.hd),
+    gl: nullableCell(ids.gl),
+    gaia_source_id: nullableCell(ids.gaiaSourceId),
+  };
+}
+
+/** The five cells joined: what a ledger row and a manifest row match on, the
+ *  whole tuple rather than whichever id happens to identify. */
+export function recordKey(ids: RecordIdentifiers): string {
+  const cells = recordKeyCells(ids);
+  return RECORD_KEY_COLUMNS.map((c) => cells[c]).join('\t');
+}
+
+/** Throws on a malformed cell. */
+export function recordIdentifiersOf(cells: IdentityCells): RecordIdentifiers {
+  return {
+    tyc: textCell(cells.tyc),
+    hip: intCell(cells.hip),
+    hd: intCell(cells.hd),
+    gl: textCell(cells.gl),
+    gaiaSourceId: sourceIdCell(cells.gaia_source_id),
+  };
+}
+
+/** A ledger row's five key cells, failing on a malformed one with the row's file and line. */
+export function rowRecordIdentifiers<C extends string>(
+  row: TableRow<C | (typeof RECORD_KEY_COLUMNS)[number]>,
+): RecordIdentifiers {
+  try {
+    return recordIdentifiersOf(row.cells());
+  } catch (e) {
+    return row.fail((e as Error).message);
+  }
+}
+
+export function identityRow(key: string, cells: IdentityCells, designations: readonly string[]): IdentityRow {
+  return {
+    key, tyc: cells.tyc, hip: cells.hip, hd: cells.hd, gl: cells.gl,
+    gaia_source_id: cells.gaia_source_id, designations,
+  };
 }
 
 const DESIGNATION_SEPARATOR = '|';

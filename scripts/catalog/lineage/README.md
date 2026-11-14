@@ -44,8 +44,16 @@ scripts/catalog/lineage/
   baseline/                      StageHeader, planBaseline and judgeBaseline:
                                  which baseline a build diffs against. Own
                                  README.
-  identity-pure.ts               The identity row and its file; refuses two
-                                 records on one key.
+  identity-pure.ts               The identity row, identityRow its one
+                                 constructor, and its file; refuses two
+                                 records on one key. RECORD_KEY_COLUMNS,
+                                 the five-cell tuple every ledger keyed on
+                                 a record (parked, additions, label drops)
+                                 spells its columns from, and its typed
+                                 form RecordIdentifiers with the cell
+                                 codec those ledgers share and recordKey,
+                                 the joined tuple a ledger row and a
+                                 manifest row match on.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
                                  code generator and trace/ read, and the
