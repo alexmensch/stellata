@@ -64,7 +64,9 @@ committed count snapshot, as Stage 3's are
 
 - **Ω is folded into 0 ≤ Ω < π**, ω turned by π with it: the algebra cannot tell
   the ascending node from the descending one, and the fold picks one
-  orientation. ω then wraps into 0 ≤ ω < 2π with the divisor's sign (`floorMod`).
+  orientation. ω then wraps into 0 ≤ ω ≤ 2π through `../python-float-pure.ts`'s
+  `pyMod`: a zero remainder is +0, and an ω a rounding unit below zero comes
+  out as exactly 2π (284 committed Thiele-Innes rows, none shipped today).
 - **`t_periastron` counts days from J2016.0**, `GAIA_DR3_REF_EPOCH_JD`,
   derived from `../../catalog/distance/`'s `GAIA_DR3_REF_EPOCH`.
 - **`aAu` is always null** for an NSS solution: Stage 6 estimates it from

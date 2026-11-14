@@ -4,6 +4,7 @@ import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/e
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
+import { pyMod } from '../python-float-pure';
 import {
   ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
 } from '../sky-geometry-pure';
@@ -53,7 +54,7 @@ export function findNearestAthyg(
   let best = Infinity;
   for (let dDec = -decPad; dDec <= decPad; dDec++) {
     for (let dRa = -raWindow; dRa <= raWindow; dRa++) {
-      const raCell = (((baseRa + dRa) % 360) + 360) % 360;
+      const raCell = pyMod(baseRa + dRa, 360);
       for (const i of grid.get(cellKey(raCell, baseDec + dDec)) ?? []) {
         if (i === excludeIdx) continue;
         const row = athyg[i];
