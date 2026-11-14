@@ -4,6 +4,8 @@ import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 
 import { clearStamp, inputHashes, writeStamp, type FileHashes } from '../util/build-stamp';
+import { nodeRuntime } from '../util/heap-budget/heap-budget';
+import { HEAP_BUDGET_MIB, heapCappedEnv, heapRuntimeVerdict } from '../util/heap-budget/heap-budget-pure';
 import { PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV } from '../util/snapshot-check';
 import { stampedInputMap } from '../util/step-input-hashes';
 import { rerunCommand } from '../util/step-command-pure';
@@ -105,8 +107,16 @@ class Run {
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const { inputs } = judged;
-    const code = await runTs(tree, step.name, tree.abs(step.entry), [], inputs, env);
-    if (code !== 0) return { kind: 'failed', reason: `exited ${code}` };
+    const capped = step.heap === 'ci-budget';
+    if (capped) {
+      const runtime = heapRuntimeVerdict(nodeRuntime());
+      if (runtime.kind === 'other') return { kind: 'failed', reason: runtime.reason };
+    }
+    const code = await runTs(tree, step.name, tree.abs(step.entry), [], inputs, capped ? heapCappedEnv(env, HEAP_BUDGET_MIB) : env);
+    if (code !== 0) {
+      const cap = capped ? ` with its heap capped at the CI budget, ${HEAP_BUDGET_MIB} MiB (/scripts/util/heap-budget/README.md)` : '';
+      return { kind: 'failed', reason: `exited ${code}${cap}` };
+    }
     return this.land(stampFile, resolved, rehashed(inputs, this.options.updateSnapshots ? 'all' : resolved.outputs.files, tree));
   }
 

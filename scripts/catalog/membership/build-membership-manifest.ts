@@ -6,7 +6,6 @@ import { resolve } from 'node:path';
 
 import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
@@ -54,7 +53,6 @@ import { stageFile, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipel
 
 
 export async function main(): Promise<void> {
-  const heap = watchHeap('build:membership');
   const spine = readArtifact(INHERITED_SPINE);
   const multiples = readMultiplesTsv();
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
@@ -117,7 +115,7 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, heap.check(), countSnapshotCheck<StagedCounts>({
+    checks: [...lineage.checks, countSnapshotCheck<StagedCounts>({
       snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
       actual: nestByStage(MEMBERSHIP_COUNT_STAGES, [
         { stage: 'magnitude-term', block: magnitudeBlock },

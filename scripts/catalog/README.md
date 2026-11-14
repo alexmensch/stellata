@@ -109,8 +109,8 @@ scripts/catalog/
                                   checks, the seven lineage budgets,
                                   placement's and naming's lineage
                                   invariants (lineage/README.md#invariants)
-                                  and the CI heap budget
-                                  (../util/heap-budget/README.md) pass.
+                                  pass. Runs under the CI heap cap
+                                  (../util/heap-budget/README.md).
                                   A failed allocation throws before
                                   anything is staged
                                   ([SID allocation](#sid-allocation)).

@@ -330,9 +330,8 @@ same thing — single-use helpers stay with their consumer.
   `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
   (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
   record `HORIZONS_SERVICE`.
-- `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
-  against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
-  README.
+- `heap-budget/` — the CI heap budget a heavy build step runs capped at,
+  and the Node major it must run under. Own README.
 - `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
   spelling of a step's command, for the runner's refusals, the snapshot
   refresh hint and every artifact or registry hint naming its writer.

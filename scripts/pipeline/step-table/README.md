@@ -9,7 +9,9 @@ folder and import from here.
 ## The step table — `steps.ts`
 
 One entry per step: `name`, `kind`, `language`, `entry` (the file the step
-runs) and its outputs. A manual step is named for its `package.json` script,
+runs) and its outputs. A heavy build step adds `heap: 'ci-budget'`: the
+runner starts it with its heap capped at the CI runner's budget
+([util/heap-budget/](../../util/heap-budget/README.md)). A manual step is named for its `package.json` script,
 which is what the stop message prints and what runs it by hand. A TypeScript manual
 step, pull or bake (each `tsManual` entry in `manual-step-outputs.ts`), names its `declareOutputs` constant as a TypeScript build
 does, and one that describes itself exports `describe`

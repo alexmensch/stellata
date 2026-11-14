@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { fileHashes, type FileHashes } from '../util/build-stamp';
 import { escapeRegExp } from '../util/escape-regexp';
+import { CI_HEAP_LIMIT_MIB, HEAP_BUDGET_MIB } from '../util/heap-budget/heap-budget-pure';
 import { entryMetafile } from '../util/import-closure';
 import { REPO_ROOT } from '../util/paths';
 import { stampedInputMap } from '../util/step-input-hashes';
@@ -214,6 +215,26 @@ export const OUT = declareOutputs({ out: ${JSON.stringify(at('f.out'))} }, [
     write('a.in', 'x');
     await run([tsStep('a', 'a.out', ['a.in']), tsStep('b', 'b.out', ['a.out'])], ['b']);
     expect(builds()).toEqual(['a', 'b']);
+  });
+
+  it('starts a ci-budget step with its old-space limit at the CI heap budget, and leaves another step uncapped', async () => {
+    const limitStep = (name: string): StepEntry => {
+      const step = tsStep(name, `${name}.out`);
+      write(`steps/${name}.ts`, `
+import { writeFileSync } from 'node:fs';
+import { getHeapStatistics } from 'node:v8';
+export function main(): void {
+  writeFileSync(${JSON.stringify(at(`${name}.out`))}, String(getHeapStatistics().heap_size_limit / 2 ** 20));
+}
+`);
+      return step;
+    };
+    const capped = { ...limitStep('capped'), heap: 'ci-budget' } as const;
+    await run([capped, limitStep('free')], ['capped', 'free']);
+    const cappedMib = Number(read('capped.out'));
+    expect(cappedMib).toBeGreaterThanOrEqual(HEAP_BUDGET_MIB);
+    expect(cappedMib).toBeLessThan(CI_HEAP_LIMIT_MIB);
+    expect(Number(read('free.out'))).toBeGreaterThan(cappedMib);
   });
 
   it('hands a TypeScript step the input hashes its stamp records, and removes the file once it exits', async () => {

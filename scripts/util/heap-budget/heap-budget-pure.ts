@@ -1,27 +1,16 @@
-// A build step's peak live heap against the CI runner's V8 heap limit, as an emitArtifacts check. See README.md.
+// A heavy build step's heap capped at its share of the CI runner's V8 heap limit, under the Node CI pins. See README.md.
 
-import type { Check } from '../emit-artifacts';
-
-export const CI_HEAP_LIMIT_BYTES = 4096 * 2 ** 20;
+export const CI_HEAP_LIMIT_MIB = 4096;
 
 export const CI_HEAP_HEADROOM = 0.85;
 
-export interface GcSample {
-  readonly gcType: string;
-  readonly afterGC: { readonly heapStatistics: { readonly usedHeapSize: number } };
+export const HEAP_BUDGET_MIB = Math.floor(CI_HEAP_LIMIT_MIB * CI_HEAP_HEADROOM);
+
+/** `env` with V8's old-space limit set to `budgetMib`; it reaches every Node process the step starts, tsx's own included. */
+export function heapCappedEnv(env: NodeJS.ProcessEnv, budgetMib: number): NodeJS.ProcessEnv {
+  const cap = `--max-old-space-size=${budgetMib}`;
+  return { ...env, NODE_OPTIONS: env.NODE_OPTIONS ? `${env.NODE_OPTIONS} ${cap}` : cap };
 }
-
-const FULL_GC = 'MarkSweepCompact';
-
-export function peakLiveHeap(samples: readonly GcSample[], usedNow: number): number {
-  let peak = usedNow;
-  for (const s of samples) {
-    if (s.gcType === FULL_GC) peak = Math.max(peak, s.afterGC.heapStatistics.usedHeapSize);
-  }
-  return peak;
-}
-
-const mib = (bytes: number): string => `${(bytes / 2 ** 20).toFixed(0)} MiB`;
 
 /** The Node major a step runs under, and the one `.nvmrc` pins for CI. */
 export interface NodeRuntime {
@@ -29,17 +18,20 @@ export interface NodeRuntime {
   readonly pinned: number;
 }
 
-export function heapBudgetCheck(step: string, peak: number, node: NodeRuntime): Check {
-  if (node.running !== node.pinned) {
-    return {
-      kind: 'fail',
-      message: `${step} ran under Node ${node.running}, but CI runs Node ${node.pinned} (.nvmrc), whose heap differs: `
-        + 'run it under the pinned Node to judge it. See /scripts/util/heap-budget/README.md.',
-    };
-  }
-  const budget = CI_HEAP_LIMIT_BYTES * CI_HEAP_HEADROOM;
-  const measured = `${step} peak live heap: ${mib(peak)}, budget ${mib(budget)} (${CI_HEAP_HEADROOM} of the CI runner's ${mib(CI_HEAP_LIMIT_BYTES)})`;
-  return peak > budget
-    ? { kind: 'fail', message: `${measured}: CI would run out of heap. See /scripts/util/heap-budget/README.md.` }
-    : { kind: 'pass', report: measured };
+export type RuntimeVerdict =
+  | { readonly kind: 'pinned' }
+  | { readonly kind: 'other'; readonly reason: string };
+
+export function heapRuntimeVerdict(node: NodeRuntime): RuntimeVerdict {
+  return node.running === node.pinned ? { kind: 'pinned' } : {
+    kind: 'other',
+    reason: `it runs under Node ${node.running}, but CI runs Node ${node.pinned} (.nvmrc), whose heap differs: `
+      + 'run it under the pinned Node. See /scripts/util/heap-budget/README.md.',
+  };
+}
+
+export function nodeMajor(version: string, source: string): number {
+  const major = Number(/^v?(\d+)/.exec(version.trim())?.[1]);
+  if (!Number.isInteger(major)) throw new Error(`${source}: "${version.trim()}" names no Node major`);
+  return major;
 }
