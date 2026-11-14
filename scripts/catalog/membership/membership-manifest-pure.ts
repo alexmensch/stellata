@@ -106,9 +106,7 @@ import {
   MANIFEST_VALUE_SEPARATOR,
   MEMBERSHIP_MANIFEST,
   manifestDesignations,
-  manifestRecord,
   sortManifestRecords,
-  type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
 import {
@@ -121,10 +119,6 @@ export const MEMBERSHIP_EXPECTED_FILE =
 
 /** The snapshot's stages in pipeline order; each has a `-derived` slot beside it. */
 export const MEMBERSHIP_COUNT_STAGES = ['magnitude-term', 'membership'] as const;
-
-/** A manifest row as the generator assembles it, cell by cell, before
- *  `manifestRecord` types it with its origin key. */
-type ManifestCells = Record<Exclude<ManifestColumn, 'origin_key'>, string>;
 
 /** See binding/README.md. */
 export const BINDING_OUTCOMES = [
@@ -189,10 +183,6 @@ function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
 
 function joinValues(values: readonly (string | number)[]): string {
   return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
-}
-
-function splitValues(cell: string): string[] {
-  return cell === '' ? [] : cell.split(MANIFEST_VALUE_SEPARATOR);
 }
 
 /** The identifier tuple a ledger row and a manifest row share — the same five
@@ -466,28 +456,31 @@ function settleBinding(
  *  needs: the HD drop runs first because IV/27A can publish a Flamsteed number
  *  against an HD no HD primary attests. */
 function dropUnattestedLabels(
-  row: ManifestCells, tables: PrimaryTables, idx: PrimaryIndex, key: string, into: KeyedOutcome[],
+  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex, key: string, into: KeyedOutcome[],
 ): RowAttestation {
   const dropped: Array<{ cell: 'hd' | 'flam'; value: string; reason: LabelDropReason }> = [];
-  const hds = [row.hd, ...splitValues(row.hd_alt)].filter((h) => h !== '');
-  const kept = hds.filter((h) => {
-    const hd = intCell(h);
-    if (hd !== null && attestHd(hd, idx, tables) !== null) return true;
-    dropped.push({ cell: 'hd', value: h, reason: 'hd_unattested' });
+  const hds = row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt];
+  const kept = hds.filter((hd) => {
+    if (attestHd(hd, idx, tables) !== null) return true;
+    dropped.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
     return false;
   });
-  row.hd = kept[0] ?? '';
-  row.hd_alt = joinValues(kept.slice(1));
-  let attestation = attestSpineRow(row, tables, idx);
-  if (row.flam !== '' && attestation.attestation.flam === null) {
-    dropped.push({ cell: 'flam', value: row.flam, reason: 'flamsteed_unattested' });
-    row.flam = '';
-    attestation = attestSpineRow(row, tables, idx);
+  row.hd = kept[0] ?? null;
+  row.hdAlt = kept.slice(1);
+  let attestation = attestRecord(row, tables, idx);
+  if (row.flam !== null && attestation.attestation.flam === null) {
+    dropped.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
+    row.flam = null;
+    attestation = attestRecord(row, tables, idx);
   }
   for (const d of dropped) {
     into.push({ key, outcome: { kind: 'label-drop', reason: d.reason, cell: d.cell, value: d.value } });
   }
   return attestation;
+}
+
+function attestRecord(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): RowAttestation {
+  return attestSpineRow(MEMBERSHIP_MANIFEST.encode(row), tables, idx);
 }
 
 function routesCell(a: RowAttestation): {
@@ -502,45 +495,47 @@ function routesCell(a: RowAttestation): {
   return { routes: joinValues(routes), unattested: a.unattested };
 }
 
-function toRecord(cells: ManifestCells, originKey: string): ManifestRecord {
-  return manifestRecord((c) => (c === 'origin_key' ? originKey : cells[c]), (m) => {
-    throw new Error(`manifest row ${parkedRecordKey(cells)}: ${m}`);
-  });
-}
+const textOrNull = (cell: string | null): string | null => (cell === '' ? null : cell);
 
 function manifestRowFromRecord(
   cells: { tyc: string; bayer: string; proper: string },
   r: LabelMergeRecord,
   binding: BindingClass,
-): ManifestCells {
+  originKey: string,
+): ManifestRecord {
+  const proper = textOrNull(cells.proper);
   return {
-    tyc: cells.tyc,
-    hip: nullableCell(r.hip),
-    hd: nullableCell(r.hd),
-    hd_alt: joinValues(r.hdAlt),
-    hr: nullableCell(r.hr),
-    hr_alt: joinValues(r.hrAlt),
-    gl: r.gl ?? '',
-    flam: nullableCell(r.flam),
-    bayer: cells.bayer,
-    proper: cells.proper,
-    gaia_source_id: r.gaiaSourceId ?? '',
+    tyc: textOrNull(cells.tyc),
+    hip: r.hip,
+    hd: r.hd,
+    hdAlt: [...r.hdAlt],
+    hr: r.hr,
+    hrAlt: [...r.hrAlt],
+    gl: textOrNull(r.gl),
+    flam: r.flam,
+    bayer: textOrNull(cells.bayer),
+    proper,
+    gaiaSourceId: textOrNull(r.gaiaSourceId),
     binding,
     routes: '',
     term: 'primaries',
+    originKey,
+    isSol: proper === SOL_PROPER_NAME,
   };
 }
 
 /** One magnitude-term row — every classical cell empty, the source_id its
  *  whole identity. */
-function magnitudeTermRow(sourceId: string): ManifestCells {
+function magnitudeTermRow(sourceId: string, originKey: string): ManifestRecord {
   return {
-    tyc: '', hip: '', hd: '', hd_alt: '', hr: '', hr_alt: '', gl: '', flam: '',
-    bayer: '', proper: '',
-    gaia_source_id: sourceId,
+    tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null,
+    bayer: null, proper: null,
+    gaiaSourceId: sourceId,
     binding: 'gaia_native',
     routes: '',
     term: 'magnitude',
+    originKey,
+    isSol: false,
   };
 }
 
@@ -728,7 +723,7 @@ function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
 interface Admission {
   verdict:
     /** `record` is the admitted row's, for the claim set. */
-    | { kind: 'admitted'; reason: AdditionReason; row: ManifestCells; record: LabelMergeRecord }
+    | { kind: 'admitted'; reason: AdditionReason; row: ManifestRecord; record: LabelMergeRecord }
     /** Keyed on the cells it arrived with, since it becomes no row. */
     | { kind: 'component'; designation: string; cells: IdentityCells };
   /** Designations the guard withheld. Every one on a component row; on an
@@ -802,7 +797,7 @@ function admitGroup(
     hip, hd: hds[0] ?? null, hr: hrs[0] ?? null, gl, flam,
     hdAlt: hds.slice(1), hrAlt: hrs.slice(1),
   };
-  const row = manifestRowFromRecord({ tyc, bayer: '', proper: '' }, record, group.binding);
+  const row = manifestRowFromRecord({ tyc, bayer: '', proper: '' }, record, group.binding, group.origin);
   return { blocked, verdict: { kind: 'admitted', reason, row, record } };
 }
 
@@ -832,17 +827,19 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const outcomes: KeyedOutcome[] = [];
   const identity: IdentityRow[] = [];
-  const rows: { cells: ManifestCells; key: string }[] = [];
-  const attest = (key: string, row: ManifestCells, a?: RowAttestation): void => {
-    const { routes, unattested } = routesCell(a ?? attestSpineRow(row, tables, idx));
+  const rows: ManifestRecord[] = [];
+  const attest = (row: ManifestRecord, a?: RowAttestation): void => {
+    const { routes, unattested } = routesCell(a ?? attestRecord(row, tables, idx));
     row.routes = routes;
+    const cells = MEMBERSHIP_MANIFEST.encode(row);
+    const key = row.originKey;
     for (const cell of unattested) {
       if (cell === 'hd' || cell === 'flam') {
-        throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${row[cell]}); dropUnattestedLabels empties it on spine rows and additions take it from the primaries`);
+        throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${cells[cell]}); dropUnattestedLabels empties it on spine rows and additions take it from the primaries`);
       }
-      outcomes.push({ key, outcome: { kind: 'unattested', cell, value: row[cell] } });
+      outcomes.push({ key, outcome: { kind: 'unattested', cell, value: cells[cell] } });
     }
-    rows.push({ cells: row, key });
+    rows.push(row);
   };
 
   const applied = new Set<string>();
@@ -917,7 +914,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     overrides,
     siblingRenderedSourceIds,
   });
-  const spineManifestRows: ManifestCells[] = [];
+  const spineManifestRows: ManifestRecord[] = [];
   records.forEach((record, i) => {
     const noEntry = record.gaiaSourceId === null || !overlay.has(record.gaiaSourceId);
     if (record.gaiaSourceId === null) {
@@ -928,9 +925,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     if (mag !== null && mag <= BRIGHT_TIER_MAG_CEILING) {
       outcomes.push({ key: spineKey(i), outcome: { kind: 'bright', overlayEntry: !noEntry } });
     }
-    const row = manifestRowFromRecord(kept[i], record, settled[i].binding);
+    const row = manifestRowFromRecord(kept[i], record, settled[i].binding, spineKey(i));
     spineManifestRows.push(row);
-    attest(spineKey(i), row, dropUnattestedLabels(row, tables, idx, spineKey(i), outcomes));
+    attest(row, dropUnattestedLabels(row, tables, idx, spineKey(i), outcomes));
   });
   const keyBySource = new Map<string, string>();
   records.forEach((r, i) => {
@@ -948,9 +945,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     const folded = corrected[foldedRow];
     outcomes.push({ key: keys.spine(foldedRow), outcome: { kind: 'fold', survivor: keys.spine(survivorRow) } });
     identity.push(identityOf(keys.spine(foldedRow), { ...folded, gaia_source_id: '' }, spineDesignations(folded)));
-    const survivorHolds = new Set(manifestDesignations(
-      toRecord(spineManifestRows[survivorKept], spineKey(survivorKept)),
-    ));
+    const survivorHolds = new Set(manifestDesignations(spineManifestRows[survivorKept]));
     const lost = spineDesignations(corrected[foldedRow]).filter((d) => !survivorHolds.has(d));
     if (lost.length > 0) {
       throw new Error(
@@ -1035,7 +1030,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
         kind: 'blocked-designation', designations: [...a.blocked].sort(compareDesignations),
       } });
     }
-    const designations = manifestDesignations(toRecord(a.verdict.row, g.origin));
+    const designations = manifestDesignations(a.verdict.row);
     if (designations.length === 1 && designations[0].startsWith('gaia_dr3:')) {
       throw new Error(
         `admitted addition ${g.origin} keys on its Gaia id alone (${designations[0]}); a primaries `
@@ -1043,26 +1038,25 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       );
     }
     claimRecord(claims, a.verdict.record);
-    attest(g.origin, a.verdict.row);
+    attest(a.verdict.row);
   }
 
   const boundSourceIds = new Set(
-    rows.map((r) => r.cells.gaia_source_id).filter((s) => s !== ''),
+    rows.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId])),
   );
   for (const sourceId of magnitudeTermNewcomers(
     input.magnitudeTerm?.keptSourceIds ?? new Set(),
     boundSourceIds,
   )) {
     const own = ownCandidates.get(sourceId) ?? null;
-    rows.push({ cells: magnitudeTermRow(sourceId), key: keys.gaia(sourceId) });
+    rows.push(magnitudeTermRow(sourceId, keys.gaia(sourceId)));
     outcomes.push({ key: keys.gaia(sourceId), outcome: { kind: 'admit-magnitude', ownCandidate: own } });
   }
 
-  const typed = rows.map(({ cells, key }) => toRecord(cells, key));
-  typed.forEach((r, i) => identity.push(identityOf(r.originKey, rows[i].cells, manifestDesignations(r))));
+  for (const r of rows) identity.push(identityOf(r.originKey, MEMBERSHIP_MANIFEST.encode(r), manifestDesignations(r)));
   const lineage = outcomes.map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
-  const sorted = sortManifestRecords(typed);
+  const sorted = sortManifestRecords(rows);
   const owners = new Map<string, number>();
   for (const row of sorted) {
     for (const d of new Set(manifestDesignations(row))) owners.set(d, (owners.get(d) ?? 0) + 1);

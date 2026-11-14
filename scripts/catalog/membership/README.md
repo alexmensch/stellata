@@ -26,12 +26,11 @@ scripts/catalog/membership/
                                   the columns, the term set, and
                                   ManifestRecord — typed ids, alias lists,
                                   binding and term checked against their
-                                  sets, isSol. manifestRecord is the one
-                                  constructor, shared by the file decoder and
-                                  the generator, which assembles rows as
-                                  spine-shaped cells and types them at the
-                                  end. Leaf: readers import it, not the
-                                  generator module.
+                                  sets, isSol. manifestRecord is the file
+                                  decoder's constructor; the generator builds
+                                  ManifestRecord directly and meets cells
+                                  only through encode. Leaf: readers import
+                                  it, not the generator module.
   additions-ledger-tsv.ts         The three ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts
