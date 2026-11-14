@@ -92,7 +92,7 @@ returned id back to its request goes through `parseIdent` (Python:
 `IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
 drops all whitespace as SIMBAD does but keeps case, so a component letter
 differing only in case is refused; keying on the raw returned id silently
-loses those rows. The fake matches whitespace the same way.
+loses those rows. The fake matches the same way (`simbadMatchKey`).
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
