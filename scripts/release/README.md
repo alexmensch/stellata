@@ -21,11 +21,13 @@ usable by hand (see [Manual release](/RELEASING.md#manual-release-fallback)).
   `.github/actions/release-level`.
 - `cut-releases.ts` — the CLI, three steps: `plan [--head] [--out
   <file>]` plans the releases up to `--head` and writes them as JSON (to
-  `--out`, and with their count to `GITHUB_OUTPUT`); `tag --plan <file>`
-  makes each planned release's annotated tag locally; `publish --plan
-  <file>` creates each release, and with it its tag on origin. `parsePlan()` refuses a
+  `--out`, and with their count to `GITHUB_OUTPUT`); `tag` makes each
+  planned release's annotated tag locally; `publish` creates each release,
+  and with it its tag on origin. Both read the plan from `--plan <file>`,
+  or without it from the `PLAN` environment variable, which is how
+  `deploy.yml` hands on `plan`'s job output. `parsePlan()` refuses a
   malformed plan before either acts. Reads each commit's PR labels and
-  body with `gh`.
+  body with `gh`. `publish`'s token: [The publish token](#the-publish-token).
 - `asset-size-pure.ts` (+ test) — the Cloudflare Workers per-asset
   ceiling (`WORKERS_MAX_ASSET_BYTES`, 25 MiB) and `judgeAssetSizes()`,
   which ranks a file list largest first and splits out oversize and
@@ -117,6 +119,37 @@ tag without its page: a tag the next plan starts from has always been
 published. The tags GitHub makes are lightweight, which `releaseAt` reads
 the same (`describe --tags`).
 
+### The publish token
+
+**`publish` runs on a GitHub App token, never `GITHUB_TOKEN`.** A tag
+`gh release create --target` makes at a commit whose `.github/workflows/`
+files differ from `main`'s tip counts as a workflow update, which needs the
+Workflows permission `GITHUB_TOKEN` can never hold: it answers HTTP 403,
+"Resource not accessible by integration". A stack whose upper member edits
+a workflow, or a workflow edit landing while an earlier deploy is queued,
+puts a releasing commit there. `deploy.yml` mints the token in the step
+before `publish`, scoped to Contents and Workflows write and Pull requests
+read (the notes read each PR's body); the App and its secrets are in
+[Required repository secrets](/RELEASING.md#what-the-deploy-workflow-does).
+The workflow's own `GITHUB_TOKEN` is held at `contents: read`, so the App
+token is the only writer. **The token and the App key live on a runner
+that runs no dependency code**: mint and `publish` are their own job,
+`publish-releases`, after `deploy`, which checks out only `scripts/release`
+and `scripts/util` (plus the root files cone-mode sparse checkout always
+brings, `.nvmrc` among them; credentials not persisted), sets up Node and
+installs nothing — `cut-releases.ts` runs on `node:` builtins alone
+(above). The plan reaches it as the `plan-releases` job's output. **Every
+action in that job is referenced by commit SHA, not a version tag**: the
+job holds the App's private key, which can rewrite workflows, and a tag
+can be repointed at other code. Dependabot (`.github/dependabot.yml`)
+proposes the pins' bumps, with every other action's, weekly, labelled
+`skip-version-bump`. `deploy-workflow.test.ts` pins all of it:
+`publish`'s `GH_TOKEN` is the mint step's output in the same job, the step
+asks for those three permissions, the job's actions are SHA-pinned, `GITHUB_TOKEN`
+stays read-only, and the job needs `deploy`, uses only checkout,
+setup-node and the mint action, names no package manager, and checks out
+just those two folders.
+
 ## The pre-traffic check
 
 **The uploaded version has to answer as this checkout says it should
@@ -161,9 +194,9 @@ preview URL.
 ## Invariants
 
 - **Idempotent by release, not by tag.** A rerun skips any tag that
-  already has a *release*; a tag that exists without one still gets its
-  release created. Checking the tag instead would strand a run that
-  died between `git push` and `gh release create`.
+  already has a *release*; a tag that exists without one — pushed by hand
+  through the [Manual release](/RELEASING.md#manual-release-fallback)
+  fallback, or for a commit with no PR — still gets its release created.
 - **`--latest` goes to the newest planned release only.** Back-filling
   older versions must not move the repo's "Latest" pointer backwards.
 - **A missing notes section is not an error.** Falls back to
