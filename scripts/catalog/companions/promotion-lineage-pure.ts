@@ -54,8 +54,15 @@ type Facet = keyof typeof FACET_CODES;
 
 const brightnessFacet = (source: CompanionAbsmagSource): `brightness.${(typeof BRIGHTNESS_CODES)[CompanionAbsmagSource]}` => `brightness.${BRIGHTNESS_CODES[source]}`;
 
+/** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
+ *  raymarch re-adds it without double-counting; a spectral-derived one
+ *  (class→M_V) is already intrinsic. */
+export function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
+  return source !== 'spectral';
+}
+
 function dustFacet(b: MintedBrightness): Extract<Facet, `dust.${string}`> {
-  const absmag = b.absmagDeExtincted;
+  const absmag = companionAbsmagIsObserved(b.source);
   const ci = b.ci === 'own';
   if (absmag) return ci ? 'dust.edenhofer2024.absmag-and-ci' : 'dust.edenhofer2024.absmag-only';
   return ci ? 'dust.edenhofer2024.ci-only' : 'dust.edenhofer2024.not-applied';

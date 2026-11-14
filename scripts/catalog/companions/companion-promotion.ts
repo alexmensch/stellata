@@ -40,7 +40,7 @@ import {
 } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { readArtifact } from '../../util/sources/source';
-import { promotionOriginKey } from './promotion-lineage-pure';
+import { companionAbsmagIsObserved, promotionOriginKey } from './promotion-lineage-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
@@ -212,8 +212,6 @@ export interface MintedBrightness {
   ci: CompanionCiVia;
   /** The Sol-to-star A_V at the minted position, whether or not either value took it. */
   av: number;
-  /** False for a class→M_V absmag, which is intrinsic already. */
-  absmagDeExtincted: boolean;
   /** Each post-pass that changed the minted absmag, in the order it ran. */
   adjustments: MintedAdjustment[];
 }
@@ -1182,13 +1180,6 @@ function registerExistingMemberForAnchorDim(
   });
 }
 
-/** Observed-photometry absmag embeds A_V and gets it subtracted so the runtime
- *  raymarch re-adds it without double-counting; a spectral-derived one
- *  (class→M_V) is already intrinsic. */
-function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
-  return source !== 'spectral';
-}
-
 function deExtinctCompanionAbsmag(imputed: CompanionAbsmag, av: number): number {
   return companionAbsmagIsObserved(imputed.source) ? imputed.absmag - av : imputed.absmag;
 }
@@ -1464,8 +1455,7 @@ function promoteRow(
   }
   const ci = companionCi(row, spectral.info, av);
   const brightness: MintedBrightness = {
-    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av,
-    absmagDeExtincted: companionAbsmagIsObserved(imputed.source), adjustments: [],
+    source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustments: [],
   };
   // Falls back to the WDS-root system primary when the local anchor never made
   // it into the catalog (δ Vel CD class — local primary C never promotes).
