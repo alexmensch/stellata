@@ -343,7 +343,7 @@ pairs.optical.gaia-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the
 pairs.optical.mag-heuristic-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair on the magnitude-gap backstop, or for want of magnitudes.
 pairs.optical.mag-heuristic-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5).
 pairs.optical.orbit-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair because Stage 4 found it an orbit.
-pairs.optical.sep-limit-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair: its components sit over the bound-pair limit apart in 3D.
+pairs.optical.sep-limit-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair: its components sit over 1 pc apart in 3D.
 pairs.optical.wds-notes-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair on a WDS note flag marking it physical (T, V, Z).
 pairs.optical.wds-notes-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y).
 placement.direction.cns5	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
