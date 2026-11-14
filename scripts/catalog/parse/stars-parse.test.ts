@@ -11,17 +11,14 @@ import type { ApsisRow } from '../../../src/catalog-format/record/catalog-pure';
 import { GAIA_APSIS } from '../record/gaia-apsis-source';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
-import {
-  directionAtEpoch,
-  type DirectionSources,
-} from '../distance/direction-cascade';
+import { type DirectionSources } from '../distance/direction-cascade';
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import { type GaiaAstrometryCatalogRow } from '../sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
-import { unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
+import { directionAtEpoch, unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
@@ -682,7 +679,7 @@ describe('readStars advances the position on a rescued PM', () => {
       x: star.x / DIST_PC, y: star.y / DIST_PC, z: star.z / DIST_PC,
     };
     const advanced = directionAtEpoch(
-      OBSERVED_RA, OBSERVED_DEC, RESCUED_PMRA, RESCUED_PMDEC,
+      { raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC }, { pmRaMasyr: RESCUED_PMRA, pmDecMasyr: RESCUED_PMDEC },
       TYCHO2_ICRS_EPOCH, CATALOG_SCENE_EPOCH,
     );
     expect(angSepArcsec(shipped, advanced)).toBeCloseTo(0, 6);

@@ -63,7 +63,11 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. Shared by the catalog build's PM propagation
+  sides speak. `directionAtEpoch` is the one proper-motion propagation:
+  linear along the tangent basis and renormalised, exact in cos δ and
+  stable through the poles, taking a `ProperMotion` whose μ_α* is already
+  cos δ-applied; either component missing returns the position unmoved.
+  Shared by the catalog build's PM propagation
   (`scripts/catalog/distance/direction-cascade.ts`) and space-motion velocity
   (`scripts/catalog/distance/velocity.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),

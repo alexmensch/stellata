@@ -118,8 +118,9 @@ The two Tycho-2 cells were the trap: `ra_mdeg` is stated at J2000 while
 `ep_ra`/`ep_de` date the OBSERVATIONS behind it, and `ra_icrs` is the observed
 position at J1991.25 — so reading either epoch off the column beside it is
 wrong, in opposite directions. [Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)
-carries the measurement; `directionAtEpoch` is the single form
-every tier reaches through `directionOnPm`.
+carries the measurement; `directionAtEpoch`
+(`src/astro-core/equatorial-basis.ts`) is the single form every tier
+reaches through `directionOnPm`.
 
 **`resolveDirection` selects a solution; it does not advance one.**
 `DirectionSolution` carries the tier's position, its own epoch and its own PM,

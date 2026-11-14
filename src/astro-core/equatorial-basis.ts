@@ -2,7 +2,7 @@
 // proper-motion propagation, space-motion velocity, and sky-offset
 // projection all resolve their components along.
 
-import { DEG_TO_RAD } from './astronomy-constants';
+import { DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
 
 export interface UnitVector {
   x: number;
@@ -22,6 +22,12 @@ export interface TangentBasis {
 export interface SkyPosition {
   raDeg: number;
   decDeg: number;
+}
+
+/** Proper motion in mas/yr, μ_α* already cos δ-applied. */
+export interface ProperMotion {
+  pmRaMasyr: number | null;
+  pmDecMasyr: number | null;
 }
 
 const RAD_TO_DEG = 180 / Math.PI;
@@ -63,6 +69,24 @@ export function equatorialTangentBasisAt(
  *  pole). Multiplying by a distance in pc yields a record's xyz. */
 export function unitVectorFromRaDec(raDeg: number, decDeg: number): UnitVector {
   return equatorialTangentBasis(raDeg, decDeg).u;
+}
+
+/** Sky direction at `toEpoch` of a source measured at `fromEpoch`: linear
+ *  along the tangent basis, renormalised, with no radial velocity term. Do
+ *  NOT divide μ_α* by cos δ before calling. Either PM component missing →
+ *  the measured direction, unmoved. */
+export function directionAtEpoch(
+  pos: SkyPosition, pm: ProperMotion, fromEpoch: number, toEpoch: number,
+): UnitVector {
+  const { u, east, north } = equatorialTangentBasis(pos.raDeg, pos.decDeg);
+  if (pm.pmRaMasyr === null || pm.pmDecMasyr === null) return u;
+  const dEast = pm.pmRaMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
+  const dNorth = pm.pmDecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
+  const x = u.x + dEast * east.x + dNorth * north.x;
+  const y = u.y + dEast * east.y + dNorth * north.y;
+  const z = u.z + dEast * east.z + dNorth * north.z;
+  const norm = Math.hypot(x, y, z);
+  return { x: x / norm, y: y / norm, z: z / norm };
 }
 
 /** The inverse of `unitVectorFromRaDec`, with ra wrapped to [0, 360). */
