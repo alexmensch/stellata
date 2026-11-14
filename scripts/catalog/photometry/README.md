@@ -396,9 +396,9 @@ exhaustive `switch`:
   source row is the whole grid, so it cites none.
 
 The stage founds no record, writes no identity rows, and every code's
-effect is `none`. It covers the walked records: a minted companion's V,
-colour and A_V come from its `multiples.tsv` row, and promotion writes their
-rows ([Promotion lineage](../companions/README.md#promotion-lineage)).
+effect is `none`. It covers the walked records: a minted companion's
+absmag, colour and A_V come from its `multiples.tsv` row, and promotion writes
+their rows ([Promotion lineage](../companions/README.md#promotion-lineage)).
 
 Its count block is its lines folded per live code (`countedStageLineage`,
 [Counts fold from lineage](../lineage/README.md#counts-fold-from-lineage)),

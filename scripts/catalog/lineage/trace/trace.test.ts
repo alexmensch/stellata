@@ -323,7 +323,7 @@ describe('pnpm run trace', () => {
     expect(run(MINTED).split('\n')[0]).toBe('multiples:S-AB/B');
   });
 
-  it('prints a minted companion\'s V, colour and A_V provenance', () => {
+  it('prints a minted companion\'s absmag-source, colour and A_V provenance', () => {
     const out = run(MINTED);
     expect(out).toMatch(/promotion\.brightness\.dmag-imputed/);
     expect(out).toMatch(/promotion\.colour\.spectral-derived/);
