@@ -89,6 +89,7 @@ export function synthesizeNssInnerPairs(
   const out: DecomposedPair[] = [];
   const outAstrometry = new Map<DecomposedPair, PairAstrometry>();
   const outcomes: NssSynthesisOutcome[] = [];
+  const foundingSystem = new Map<string, string>();
   for (const carrier of nssCarriers(pairs, astrometry, indices)) {
     const { component: c, astrometry: ast } = carrier;
     const measured = ast.astrometryVia === 'unresolved' ? null : ast;
@@ -98,8 +99,17 @@ export function synthesizeNssInnerPairs(
     if (verdict.outcome !== 'synthesized') continue;
 
     const [a, b] = verdict.children;
+    const sourceId = carrier.gaia.value;
+    const founded = foundingSystem.get(sourceId);
+    if (founded !== undefined) {
+      throw new Error(
+        `Gaia NSS source ${sourceId} founds inner pairs in ${founded} and ${c.wdsId}; `
+        + `both would sit under one pairs lineage key (gaia-dr3-nss:${sourceId}). Decide which system the orbit belongs to.`,
+      );
+    }
+    foundingSystem.set(sourceId, c.wdsId);
     const pair = subResolutionPair(
-      sourceRowRef(GAIA_NSS, carrier.gaia.value), c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
+      sourceRowRef(GAIA_NSS, sourceId), c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
     );
     const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({

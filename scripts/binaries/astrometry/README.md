@@ -72,7 +72,9 @@ NSS row (its `origin`), placed at the carrier's position (none when the
 carrier has no astrometry), and both its sides take the carrier's
 identifiers and its `ComponentAstrometry`. A pair synthesized for
 one carrier counts as existing for the next, so two carriers never mint the
-same children.
+same children. A source founding inner pairs in two systems stops the build:
+both would share its `gaia-dr3-nss:` lineage key
+([Pairs lineage](../README.md#pairs-lineage)).
 
 ## System anchors
 
