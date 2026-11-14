@@ -23,6 +23,7 @@ import {
 } from '../../src/astro-core/milkyway/calibration/resolved-fraction-pure';
 import { ARCSEC_TO_RAD } from '../../src/astro-core/astronomy-constants';
 import type { CatalogColumns } from '../catalog/columns/catalog-columns';
+import { share, type Share } from '../util/counts/tally-pure';
 
 /** The record columns the measurement reads: position (Sol at the origin, ICRS
  *  axes) and absmag, intrinsic — the build already subtracted the Sol→star A_V. */
@@ -223,21 +224,28 @@ export function buildHoleCells(
   return cells;
 }
 
-/** Both a cell and a shell row carry the two terms of the ratio. */
-export function resolvedShare(of: { catalogue: number; model: number }): number {
-  return of.model > 0 ? Math.min(of.catalogue / of.model, 1) : 0;
+/** Both a cell and a shell row carry the two terms of the ratio; capped at 1, and no share where the model has no light. */
+export function resolvedShare(of: { catalogue: number; model: number }): Share {
+  const s = share(of.catalogue, of.model);
+  return s.kind === 'rated' ? { kind: 'rated', value: Math.min(s.value, 1) } : s;
 }
 
 /** README.md#how-a-cell-is-measured. */
 export const MIN_STARS_PER_CELL = 500;
 
-/** The table the band marches, from cells binned on the table's own edges. */
+function tabled(s: Share, where: string): number {
+  if (s.kind === 'no-denominator') throw new Error(`resolved-hole table: ${where} has no model light to take a share of`);
+  return s.value;
+}
+
+/** The table the band marches, from cells binned on the table's own edges. Throws on a cell or shell with no model light. */
 export function resolvedHoleTableFromCells(cells: readonly HoleCell[]): ResolvedHoleTable {
   const values = new Array<number>(RESOLVED_HOLE_SHELLS * RESOLVED_HOLE_BANDS).fill(0);
   const shellShare = shellTotals(cells).map(resolvedShare);
   for (const c of cells) {
-    values[resolvedHoleIndex(c.shell, c.band)] =
-      c.stars >= MIN_STARS_PER_CELL ? resolvedShare(c) : shellShare[c.shell];
+    values[resolvedHoleIndex(c.shell, c.band)] = c.stars >= MIN_STARS_PER_CELL
+      ? tabled(resolvedShare(c), `shell ${c.shell} band ${c.band}`)
+      : tabled(shellShare[c.shell], `shell ${c.shell}`);
   }
   return { values };
 }
