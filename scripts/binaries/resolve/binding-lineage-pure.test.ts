@@ -22,14 +22,14 @@ const records = MULTIPLES_TSV.parse([
 describe('bindingLineageRows', () => {
   it('writes each component\'s Gaia and HIP binding under its multiples.tsv row, naming the donor token of a copy', () => {
     expect([...bindingLineageRows(records)].map((r) => [r.key, r.code, r.params])).toEqual([
-      ['multiples:00001+0001-AB/A', 'binding.gaia.own', `{"gaia":"${GAIA}"}`],
-      ['multiples:00001+0001-AB/A', 'binding.hip.own', '{"hip":"hip:71683"}'],
-      ['multiples:00001+0001-AB/B', 'binding.gaia.inherited.blend', `{"gaia":"${GAIA}","from":"A"}`],
-      ['multiples:00001+0001-AB/B', 'binding.hip.inherited.partner', '{"hip":"hip:71683","from":"A"}'],
-      ['multiples:00002+0002-AB/Aa', 'binding.gaia.unbound', ''],
-      ['multiples:00002+0002-AB/Aa', 'binding.hip.inherited.parent', '{"hip":"hip:12","from":"A"}'],
-      ['multiples:00003+0003-AB/A', 'binding.gaia.inherited.letter', `{"gaia":"${GAIA}","from":"Aa"}`],
-      ['multiples:00003+0003-AB/A', 'binding.hip.unbound', ''],
+      ['multiples:00001+0001-AB/A', 'component-binding.gaia.own', `{"gaia":"${GAIA}"}`],
+      ['multiples:00001+0001-AB/A', 'component-binding.hip.own', '{"hip":"hip:71683"}'],
+      ['multiples:00001+0001-AB/B', 'component-binding.gaia.inherited.blend', `{"gaia":"${GAIA}","from":"A"}`],
+      ['multiples:00001+0001-AB/B', 'component-binding.hip.inherited.partner', '{"hip":"hip:71683","from":"A"}'],
+      ['multiples:00002+0002-AB/Aa', 'component-binding.gaia.unbound', ''],
+      ['multiples:00002+0002-AB/Aa', 'component-binding.hip.inherited.parent', '{"hip":"hip:12","from":"A"}'],
+      ['multiples:00003+0003-AB/A', 'component-binding.gaia.inherited.letter', `{"gaia":"${GAIA}","from":"Aa"}`],
+      ['multiples:00003+0003-AB/A', 'component-binding.hip.unbound', ''],
     ]);
   });
 
@@ -48,14 +48,14 @@ describe('BINDING_CODES', () => {
   it('folds two rows per component, one per identifier', () => {
     const counts = foldStageLines(BINDING_CODES, bindingLineageLines(records));
     expect(Object.values(counts).reduce((a, b) => a + b, 0)).toBe(2 * records.length);
-    expect(counts['binding.gaia.own']).toBe(1);
-    expect(counts['binding.hip.unbound']).toBe(1);
+    expect(counts['component-binding.gaia.own']).toBe(1);
+    expect(counts['component-binding.hip.unbound']).toBe(1);
   });
 
   it('reaches the count snapshot with a newly declared code', () => {
     const { drift, refreshed } = seededCodeCheck(BINDING_CODES, bindingLineageLines(records));
     expect(drift.drifted).toBe(true);
-    expect(drift.report).toContain(`binding.${SEEDED_BRANCH}`);
+    expect(drift.report).toContain(`component-binding.${SEEDED_BRANCH}`);
     expect(refreshed.drifted).toBe(false);
   });
 });

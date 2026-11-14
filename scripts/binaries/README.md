@@ -61,7 +61,7 @@ scripts/binaries/
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
                                   multiples.tsv, the binding verdicts and
-                                  the binding lineage stage
+                                  the component-binding lineage stage
                                   (resolve/README.md#binding-lineage)
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
@@ -207,8 +207,9 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach — with the binding-integrity verdicts
    (`build/binding-integrity-verdicts.tsv`, a gitignored review surface)
-   and each component's Gaia and HIP binding provenance as the `binding`
-   lineage stage (`build/lineage/binding.tsv.gz`).
+   and each component's Gaia and HIP binding provenance as the
+   `component-binding` lineage stage
+   (`build/lineage/component-binding.tsv.gz`).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
    (`../catalog/astrometry-request/`). All three land through `emitArtifacts`

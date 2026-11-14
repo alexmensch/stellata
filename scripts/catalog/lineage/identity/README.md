@@ -67,7 +67,7 @@ trace finds it. The ledger views and trace take their key columns from
 this row, never re-deriving them — except where the deciding stage's input
 cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
 the derivation weighed, which its curated dispositions join on, so those
-ride the binding row's `params`. A parked or dropped record never gets an
+ride membership's `membership.binding.*` row's `params`. A parked or dropped record never gets an
 index or a SID: it has no `allocation.sids` row, and a SID it once held
 is carried by allocation's parked, retired or merged row under the deciding
 origin, with that decision's code as `cause`.

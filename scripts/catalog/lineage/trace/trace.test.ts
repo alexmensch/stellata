@@ -208,19 +208,19 @@ const PROMOTION_IDENTITY = [
  *  copied from C across their ρ = 0 pair. */
 const BINDING = [
   'stage\tkey\trole\tcode\tparams\tevidence',
-  'binding\tmultiples:S-AB/A\toutcome\tbinding.gaia.own\t{"gaia":"222"}\t',
-  'binding\tmultiples:S-AB/A\toutcome\tbinding.hip.unbound\t\t',
-  `binding\tmultiples:S-AB/B\toutcome\tbinding.gaia.own\t{"gaia":"${MINTED}"}\t`,
-  'binding\tmultiples:S-AB/B\toutcome\tbinding.hip.unbound\t\t',
-  'binding\tmultiples:S-CD/C\toutcome\tbinding.gaia.own\t{"gaia":"999"}\t',
-  'binding\tmultiples:S-CD/C\toutcome\tbinding.hip.unbound\t\t',
-  'binding\tmultiples:S-CD/D\toutcome\tbinding.gaia.inherited.blend\t{"gaia":"999","from":"C"}\t',
-  'binding\tmultiples:S-CD/D\toutcome\tbinding.hip.unbound\t\t',
+  'component-binding\tmultiples:S-AB/A\toutcome\tcomponent-binding.gaia.own\t{"gaia":"222"}\t',
+  'component-binding\tmultiples:S-AB/A\toutcome\tcomponent-binding.hip.unbound\t\t',
+  `component-binding\tmultiples:S-AB/B\toutcome\tcomponent-binding.gaia.own\t{"gaia":"${MINTED}"}\t`,
+  'component-binding\tmultiples:S-AB/B\toutcome\tcomponent-binding.hip.unbound\t\t',
+  'component-binding\tmultiples:S-CD/C\toutcome\tcomponent-binding.gaia.own\t{"gaia":"999"}\t',
+  'component-binding\tmultiples:S-CD/C\toutcome\tcomponent-binding.hip.unbound\t\t',
+  'component-binding\tmultiples:S-CD/D\toutcome\tcomponent-binding.gaia.inherited.blend\t{"gaia":"999","from":"C"}\t',
+  'component-binding\tmultiples:S-CD/D\toutcome\tcomponent-binding.hip.unbound\t\t',
 ].join('\n') + '\n';
 
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
-    { stage: 'binding', rows: () => lineageRows(BINDING, 'fixture/binding.tsv') },
+    { stage: 'component-binding', rows: () => lineageRows(BINDING, 'fixture/component-binding.tsv') },
     ...stages, { stage: 'promotion', rows: () => lineageRows(PROMOTION, 'fixture/promotion.tsv') },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
@@ -236,8 +236,8 @@ describe('traceRecords over a promoted system', () => {
 
   it('says whether each component\'s identifiers were its own or copied, and from which token', () => {
     const d = traceSystem('hd:5').find((r) => r.key === 'multiples:S-CD/D');
-    expect(d?.rows.filter((r) => r.stage === 'binding').map((r) => `${r.code} ${r.params}`)).toEqual([
-      'binding.gaia.inherited.blend {"gaia":"999","from":"C"}', 'binding.hip.unbound ',
+    expect(d?.rows.filter((r) => r.stage === 'component-binding').map((r) => `${r.code} ${r.params}`)).toEqual([
+      'component-binding.gaia.inherited.blend {"gaia":"999","from":"C"}', 'component-binding.hip.unbound ',
     ]);
   });
 
@@ -249,7 +249,7 @@ describe('traceRecords over a promoted system', () => {
     const [minted] = traceSystem(MINTED);
     expect(minted.key).toBe('multiples:S-AB/B');
     expect(minted.rows.map((r) => r.code)).toEqual([
-      'binding.gaia.own', 'binding.hip.unbound',
+      'component-binding.gaia.own', 'component-binding.hip.unbound',
       'promotion.brightness.dmag-imputed', 'promotion.colour.spectral-derived',
       'promotion.dust.edenhofer2024.absmag-only', 'promotion.minted.keyed',
     ]);
@@ -352,7 +352,7 @@ describe('pnpm run trace', () => {
   });
 
   it('prints a component\'s binding provenance before its promotion rows', () => {
-    expect(run(MINTED)).toMatch(/multiples:S-AB\/B\n.*\n {2}outcome  binding\.gaia\.own +\{"gaia":"6000000000000000001"\}[\s\S]*promotion\.minted\.keyed/);
+    expect(run(MINTED)).toMatch(/multiples:S-AB\/B\n.*\n {2}outcome  component-binding\.gaia\.own +\{"gaia":"6000000000000000001"\}[\s\S]*promotion\.minted\.keyed/);
   });
 
   it('prints a minted companion\'s absmag-source, colour and A_V provenance', () => {
