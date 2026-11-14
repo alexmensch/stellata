@@ -18,21 +18,24 @@ export interface LabelDrop {
   reason: LabelDropReason;
 }
 
-function attestRecord(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): RowAttestation {
-  return attestSpineRow(MEMBERSHIP_MANIFEST.encode(row), tables, idx);
+/** A row and the attestation taken of that row. */
+export interface AttestedRow {
+  row: ManifestRecord;
+  attestation: RowAttestation;
+}
+
+export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): AttestedRow {
+  return { row, attestation: attestSpineRow(MEMBERSHIP_MANIFEST.encode(row), tables, idx) };
 }
 
 /** The spine-label cells a row keeps once those no primary attests leave it —
  *  the Flamsteed number, and the HD number with its aliases — each drop a
- *  label-parity ledger row (/docs/catalog-driver.md#62-label-parity), and the
- *  kept row's attestation, which `attestedRow` needs. The HD drop runs first
- *  because IV/27A can publish a Flamsteed number against an HD no HD primary
- *  attests. */
-export function attestedLabels(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): {
-  kept: Pick<ManifestRecord, 'hd' | 'hdAlt' | 'flam'>;
-  drops: LabelDrop[];
-  attestation: RowAttestation;
-} {
+ *  label-parity ledger row (/docs/catalog-driver.md#62-label-parity). The HD
+ *  drop runs first because IV/27A can publish a Flamsteed number against an
+ *  HD no HD primary attests. */
+export function attestedLabels(
+  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex,
+): AttestedRow & { drops: LabelDrop[] } {
   const drops: LabelDrop[] = [];
   const hds = row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt];
   const attestedHds = hds.filter((hd) => {
@@ -40,19 +43,16 @@ export function attestedLabels(row: ManifestRecord, tables: PrimaryTables, idx: 
     drops.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
     return false;
   });
-  const hdKept = { hd: attestedHds[0] ?? null, hdAlt: attestedHds.slice(1), flam: row.flam };
-  const attestation = attestRecord({ ...row, ...hdKept }, tables, idx);
-  if (row.flam === null || attestation.attestation.flam !== null) return { kept: hdKept, drops, attestation };
+  const hdKept = attestRow({ ...row, hd: attestedHds[0] ?? null, hdAlt: attestedHds.slice(1) }, tables, idx);
+  if (row.flam === null || hdKept.attestation.attestation.flam !== null) return { ...hdKept, drops };
   drops.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
-  const kept = { ...hdKept, flam: null };
-  return { kept, drops, attestation: attestRecord({ ...row, ...kept }, tables, idx) };
+  return { ...attestRow({ ...hdKept.row, flam: null }, tables, idx), drops };
 }
 
-/** Throws on an unattested `hd` or `flam` cell: run `attestedLabels` first. */
-export function attestedRow(
-  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex, attestation?: RowAttestation,
-): { row: ManifestRecord; outcomes: KeyedOutcome[] } {
-  const a = attestation ?? attestRecord(row, tables, idx);
+/** The row with its routes column, and an `unattested` outcome per cell no
+ *  primary attests. Throws on an unattested `hd` or `flam` cell: run
+ *  `attestedLabels` first. */
+export function routedRow({ row, attestation: a }: AttestedRow): { row: ManifestRecord; outcomes: KeyedOutcome[] } {
   const routes: string[] = [];
   for (const cell of CLASSICAL_CELLS) {
     const by = a.attestation[cell];

@@ -72,10 +72,10 @@ scripts/catalog/membership/
                                   dropped, one manifest row per kept spine
                                   row, the label flips' outcomes. Pure.
   label-attestation-pure.ts       Which labels a row keeps
-                                  (attestedLabels) and its routes column
-                                  with the unattested outcomes
-                                  (attestedRow), for spine rows and
-                                  additions alike. Pure.
+                                  (attestedLabels, the kept row with its own
+                                  attestation) and its routes column with
+                                  the unattested outcomes (routedRow), for
+                                  spine rows and additions alike. Pure.
   spine-match-pure.ts             matchSpineToManifest, the parity gate's
                                   spine ↔ manifest matcher. Pure.
   binding-review-dispositions-    The dispositions' columns, closed bases and

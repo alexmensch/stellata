@@ -15,7 +15,7 @@ import {
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import type { PrimaryIndex, PrimaryTables } from '../spine/primaries-audit-pure';
 import type { SpineSettlement } from './binding/spine-settle-pure';
-import { attestedLabels, attestedRow } from './label-attestation-pure';
+import { attestedLabels, routedRow } from './label-attestation-pure';
 import type { KeyedOutcome } from './membership-lineage-pure';
 import { primariesManifestRecord, type ManifestRecord } from './membership-manifest-tsv';
 
@@ -63,7 +63,7 @@ export function spineSide(input: {
     const merged = primariesManifestRecord(kept[i], record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
-    const attested = attestedRow({ ...merged, ...labels.kept }, tables, idx, labels.attestation);
+    const attested = routedRow(labels);
     outcomes.push(...attested.outcomes);
     return attested.row;
   });
