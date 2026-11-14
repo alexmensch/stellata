@@ -78,6 +78,36 @@ brightness-colour.v.refused.uncalibrated	brightness-colour	none	refused	live		7.
 brightness-colour.v.tycho2	brightness-colour	none	outcome	retired	7.1.16	7.1.15	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers.
 brightness-colour.v.tycho2.inside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies inside the [-0.25, 2.00] range the reduction is counted against.
 brightness-colour.v.tycho2.outside-bt-vt-range	brightness-colour	none	outcome	live		7.1.16	Johnson V reduced from the record's own Tycho-2 BT and VT, where no tier above answers; BT−VT lies outside the [-0.25, 2.00] range the reduction is counted against, and the reduction runs anyway since no tier below serves the record.
+classic-ids.bayer.hd-route.bound	classic-ids	none	outcome	live		7.1.21	The Bayer designation reaches Gaia sources through its IV/27A HD, and the binding gate keeps at least one.
+classic-ids.bayer.hd-route.gated	classic-ids	none	outcome	live		7.1.21	The Bayer designation reaches Gaia sources through its IV/27A HD, and the binding gate refuses every one.
+classic-ids.bayer.hip-route.bound	classic-ids	none	outcome	live		7.1.21	The Bayer designation's IV/27A HD reaches no Gaia source and its HIP reaches one, and the binding gate keeps at least one.
+classic-ids.bayer.hip-route.gated	classic-ids	none	outcome	live		7.1.21	The Bayer designation's IV/27A HD reaches no Gaia source and its HIP reaches one, and the binding gate refuses every one.
+classic-ids.bayer.no-source	classic-ids	none	outcome	live		7.1.21	Neither the Bayer designation's IV/27A HD nor its HIP reaches a Gaia source.
+classic-ids.flamsteed.hd-route.bound	classic-ids	none	outcome	live		7.1.21	The Flamsteed designation reaches Gaia sources through its IV/27A HD, and the binding gate keeps at least one.
+classic-ids.flamsteed.hd-route.gated	classic-ids	none	outcome	live		7.1.21	The Flamsteed designation reaches Gaia sources through its IV/27A HD, and the binding gate refuses every one.
+classic-ids.flamsteed.hip-route.bound	classic-ids	none	outcome	live		7.1.21	The Flamsteed designation's IV/27A HD reaches no Gaia source and its HIP reaches one, and the binding gate keeps at least one.
+classic-ids.flamsteed.hip-route.gated	classic-ids	none	outcome	live		7.1.21	The Flamsteed designation's IV/27A HD reaches no Gaia source and its HIP reaches one, and the binding gate refuses every one.
+classic-ids.flamsteed.no-source	classic-ids	none	outcome	live		7.1.21	Neither the Flamsteed designation's IV/27A HD nor its HIP reaches a Gaia source.
+classic-ids.gate-mag	classic-ids	none	refused	live		7.1.21	A Gaia source the designation reached, refused because its G is more than a magnitude fainter than the printed V.
+classic-ids.gate-sibling	classic-ids	none	refused	live		7.1.21	A Gaia source the designation reached, refused because SIMBAD gives it to a different component of the system the HIP names.
+classic-ids.gj.edr3.bound	classic-ids	none	outcome	live		7.1.21	CNS5 states the GJ designation's Gaia source, and the binding gate keeps it.
+classic-ids.gj.edr3.gated	classic-ids	none	outcome	live		7.1.21	CNS5 states the GJ designation's Gaia source, and the binding gate refuses it.
+classic-ids.gj.hip-route.bound	classic-ids	none	outcome	live		7.1.21	CNS5 states no Gaia source for the GJ designation and its HIP reaches one, and the binding gate keeps it.
+classic-ids.gj.hip-route.gated	classic-ids	none	outcome	live		7.1.21	CNS5 states no Gaia source for the GJ designation and its HIP reaches one, and the binding gate refuses it.
+classic-ids.gj.no-source	classic-ids	none	outcome	live		7.1.21	CNS5 states no Gaia source for the GJ designation, and no HIP of its reaches one.
+classic-ids.hd.bound	classic-ids	none	outcome	live		7.1.21	The HD's IV/25 Tycho-2 entries reach Gaia sources through the Gaia TYC cross-match, and the binding gate keeps at least one.
+classic-ids.hd.gated	classic-ids	none	outcome	live		7.1.21	The HD's IV/25 Tycho-2 entries reach Gaia sources through the Gaia TYC cross-match, and the binding gate refuses every one.
+classic-ids.hd.no-source	classic-ids	none	outcome	live		7.1.21	None of the HD's IV/25 Tycho-2 entries is in the Gaia TYC cross-match.
+classic-ids.hip.bound	classic-ids	none	outcome	live		7.1.21	The Gaia HIP cross-match pairs the HIP with a source the binding gate keeps.
+classic-ids.hip.gated	classic-ids	none	outcome	live		7.1.21	The Gaia HIP cross-match pairs the HIP with a source the binding gate refuses.
+classic-ids.hr.bound	classic-ids	none	outcome	live		7.1.21	The HR reaches Gaia sources through its V/50 HD, and the binding gate keeps at least one.
+classic-ids.hr.gated	classic-ids	none	outcome	live		7.1.21	The HR reaches Gaia sources through its V/50 HD, and the binding gate refuses every one.
+classic-ids.hr.no-hd	classic-ids	none	outcome	live		7.1.21	V/50 prints no HD for the HR, so no route reaches a Gaia source.
+classic-ids.hr.no-source	classic-ids	none	outcome	live		7.1.21	The HR's V/50 HD reaches no Gaia source.
+classic-ids.route.agree	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD route and HIP route reach the same Gaia source.
+classic-ids.route.disagree	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD route and HIP route reach different Gaia sources; the HD route keeps its designations and the row is queued for review.
+classic-ids.route.hip-only	classic-ids	none	outcome	live		7.1.21	The IV/27A row's HD reaches no Gaia source and its HIP reaches one, so the HIP route carries its designations.
+classic-ids.unweighed-no-pulled-row	classic-ids	none	outcome	live		7.1.21	A Gaia source the designation reached, passed unweighed because the astrometry pull holds no row for it.
 coherence.anchor	coherence	none	outcome	retired	7.1.16	7.1.12	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance.
 coherence.anchor.anchor-won	coherence	none	outcome	live		7.1.16	The record is its WDS system's distance anchor, the best-tier member, and the system's snapped members move onto its distance: the pair primary, outranked by no member.
 coherence.anchor.inconsistent	coherence	none	outcome	retired	7.1.16	7.1.12	The record wins its system's anchor pick, but its catalogue distance contradicts its own parallax by more than 3 sigma and 20%, so the system is skipped.
