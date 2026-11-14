@@ -6,6 +6,9 @@ import {
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
+import type { GlieseRow } from '../../gliese-parse-pure';
+import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
+import { cns5Gl } from '../additions/addition-items-pure';
 
 /** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
 export const PAIR_REVIEW_REASONS = ['no_hip_source', 'no_entry_matches', 'several_match'] as const;
@@ -31,9 +34,9 @@ export interface MergeLinks {
   /** Tycho-2's own `hip` column, inverted: every entry naming the HIP. */
   hipEntries: ReadonlyMap<number, readonly string[]>;
   hdHr: ReadonlyMap<number, number>;
-  /** CNS5's rows by their `hip`, as `GJ <number><comp>`. */
+  /** CNS5's rows by their `hip`, in the record's GJ form. */
   cns5ByHip: ReadonlyMap<number, readonly string[]>;
-  /** V/70A's rows by their `HD`, as the entry's own name. */
+  /** V/70A's rows by their `HD`, in the record's GJ form. */
   v70aByHd: ReadonlyMap<number, readonly string[]>;
   held: SpineKeys;
 }
@@ -50,9 +53,9 @@ export function mergeLinksFrom(tables: PrimaryTables, held: SpineKeys): MergeLin
   for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
   for (const entries of hipEntries.values()) entries.sort();
   const cns5ByHip = new Map<number, string[]>();
-  for (const r of tables.cns5) if (r.hip !== null) push(cns5ByHip, r.hip, `GJ ${r.gj}${r.gjComp ?? ''}`);
+  for (const r of tables.cns5) if (r.hip !== null) push(cns5ByHip, r.hip, cns5Gl(r)!);
   const v70aByHd = new Map<number, string[]>();
-  for (const r of tables.gliese.byKey.values()) if (r.hd !== null) push(v70aByHd, r.hd, `${r.name}${r.comp}`);
+  for (const r of tables.gliese.byKey.values()) if (r.hd !== null) push(v70aByHd, r.hd, v70aGl(r));
   return {
     links,
     hipEntries,
@@ -87,9 +90,9 @@ export function pairOwner(
 
 const intOf = (cell: string): number | null => (cell === '' ? null : Number(cell));
 
-/** A GJ key on the bare number, whichever of V/70A's four prefixes the name carries (../../gliese-parse-pure.ts). */
-function v70aNumberKey(name: string): string | null {
-  return normaliseGjKey(`GJ ${name.replace(/^(Gl|GJ|NN|Wo)\s+/i, '')}`);
+/** A V/70A entry in the record's GJ form, whichever of the catalogue's four prefixes it prints (../../gliese-parse-pure.ts). */
+function v70aGl(row: GlieseRow): string {
+  return formatGlieseDisplay(`${row.name.replace(/^(Gl|GJ|NN|Wo)\s+/i, '')}${row.comp}`.replace(/\s+/g, ''));
 }
 
 /** The pair rule's verdict on a spine row whose HIP Tycho-2 gives to two or
@@ -140,10 +143,10 @@ function derivedOnlyCells(row: SpineRow, hip: number | null, m: MergeLinks): Mer
     ];
     const byKey = new Map<string, string>();
     for (const gl of gls) {
-      const key = v70aNumberKey(gl);
+      const key = normaliseGjKey(gl);
       if (key !== null && !byKey.has(key)) byKey.set(key, gl);
     }
-    derivedOnly('gl', byKey.values(), (v) => m.held.glKeys.has(v70aNumberKey(v)!));
+    derivedOnly('gl', byKey.values(), (v) => m.held.glKeys.has(normaliseGjKey(v)!));
   }
   return out;
 }

@@ -37,7 +37,7 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     hipEntries: new Map([[10, [A, B]], [20, ['2-2-2']]]),
     hdHr: new Map([[100, 7], [300, 9]]),
     cns5ByHip: new Map([[20, ['GJ 1234']]]),
-    v70aByHd: new Map([[300, ['NN 1234']]]),
+    v70aByHd: new Map([[300, ['GJ 1234']]]),
     held: spineKeys(spine),
   };
 }
