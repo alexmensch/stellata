@@ -64,8 +64,8 @@ send `GPU_DONE` when no further run is planned. `await-go.sh` gives up after
 15 minutes unarmed (`PERF_GO_WAIT_S`): send `GPU_DONE unarmed`, carry on with
 work that needs no run, and send a new `GPU_REQUEST` when the owner says
 they are ready. On `PAUSE`, reply `PAUSED` once the current command ends —
-never kill a build part-way. A command still queued in `heavy.sh` has not
-started: stop it (the queue frees its ticket), reply `PAUSED`, and rerun it
+never kill a build part-way. A command still queued in `heavy.sh` — no
+`heavy: running` line in its output yet — has not started: stop it (the queue frees its ticket), reply `PAUSED`, and rerun it
 at `RESUME`.
 
 ## Heavy commands share the CPU
