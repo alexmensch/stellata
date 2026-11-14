@@ -3,6 +3,7 @@
 import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
 import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export const DESIGNATION_KINDS = ['bayer', 'flamsteed', 'gould'] as const;
 export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a'] as const;
@@ -115,9 +116,7 @@ function designationSortKey(d: DesignationRow): string {
 }
 
 export function compareDesignationRows(a: DesignationRow, b: DesignationRow): number {
-  const ka = designationSortKey(a);
-  const kb = designationSortKey(b);
-  return ka < kb ? -1 : ka > kb ? 1 : 0;
+  return compareCodeUnits(designationSortKey(a), designationSortKey(b));
 }
 
 export function duplicateDesignationRows(rows: readonly DesignationRow[]): number {

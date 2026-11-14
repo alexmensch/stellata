@@ -33,6 +33,7 @@ import {
   PROBE_SAMPLE_COLUMNS,
   type ProbeTrajectoryFile,
 } from '../../src/catalog-format/probes/probe-trajectory-schema';
+import { ascending } from '../../src/astro-core/order-pure';
 
 
 /** Last epoch the JPL spacecraft SPKs cover; all five reach it. */
@@ -88,7 +89,7 @@ class SampleSet {
   }
 
   async load(mus: number[]): Promise<void> {
-    const missing = [...new Set(mus.filter((mu) => !this.rows.has(mu)))].sort((a, b) => a - b);
+    const missing = [...new Set(mus.filter((mu) => !this.rows.has(mu)))].sort(ascending);
     if (missing.length === 0) return;
     for (const request of planEpochRequests(missing, MAX_RANGE_ROWS, MAX_LIST_EPOCHS)) {
       const { header, rows } = await fetchVectorRows(this.probe.horizonsId, request);
@@ -200,7 +201,7 @@ async function fetchProbe(probe: ProbeMission, retrievedUtc: string): Promise<st
   base.push(endMu);
   await samples.load(base);
 
-  const kept = [...(await refine(samples, base))].sort((a, b) => a - b);
+  const kept = [...(await refine(samples, base))].sort(ascending);
   const refined = kept.map((mu) => samples.at(mu));
   const emitted = decimateByChordError(refined, CHORD_TOLERANCE_AU);
   const { worstAu, atJd, floor } = await verify(samples, emitted);

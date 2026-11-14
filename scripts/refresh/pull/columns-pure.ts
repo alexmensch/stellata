@@ -1,7 +1,7 @@
 // A pulled table's columns: the ADQL projection, the reply's schema check, the write order, and the TSV it writes. See README.md#columns.
 
 import { formatExponent, formatFixed, formatRepr } from '../../util/round-pure';
-import { compareCodeUnits } from '../../util/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { nullableCell, tsvLine, tsvText } from '../../util/tsv/artifact-pure';
 import type { TapResult } from './tap-pure';
 
@@ -67,7 +67,7 @@ export function cellReader(columns: readonly Column[], label: string): (row: Row
 }
 
 const COMPARE: Record<SortKey['as'], (a: string, b: string) => number> = {
-  integer: (a, b) => { const d = BigInt(a) - BigInt(b); return d < 0n ? -1 : d > 0n ? 1 : 0; },
+  integer: (a, b) => ascending(BigInt(a), BigInt(b)),
   decimal: (a, b) => Number(a) - Number(b),
   text: compareCodeUnits,
 };

@@ -15,6 +15,7 @@ import {
 import { DWELL_METHOD, contextOrder } from '../run-pure';
 import { PERF_SCHEMA, type AdapterProbe, type DwellRecord, type GitProvenance, type PerfFile, type ScenarioRecord } from '../schema';
 import { BACKENDS, SCENARIO_NAMES, isScenarioName, type Backend, type ScenarioName } from '../scenarios';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** Removing a field or changing what one MEANS bumps the suffix; adding one
  *  does not — the same contract as `PERF_SCHEMA`. */
@@ -315,7 +316,7 @@ export interface PinSummary {
  * Stable, so runs finishing in the same millisecond keep the order given.
  */
 function oldestFirst(sources: readonly RunSource[]): readonly RunSource[] {
-  return [...sources].sort((a, b) => a.file.run.finishedAt.localeCompare(b.file.run.finishedAt));
+  return [...sources].sort((a, b) => compareCodeUnits(a.file.run.finishedAt, b.file.run.finishedAt));
 }
 
 /** Why these runs are not one machine measuring one tree. */

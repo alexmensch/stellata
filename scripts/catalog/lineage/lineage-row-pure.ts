@@ -1,7 +1,7 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { fold } from '../../util/counts/tally-pure';
-import { compareCodeUnits } from '../../util/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 
@@ -72,9 +72,9 @@ function compareCodePoints(a: string, b: string): number {
     const y = b.charCodeAt(i);
     if (x === y) continue;
     if (isSurrogate(x) !== isSurrogate(y)) return isSurrogate(x) ? 1 : -1;
-    return x < y ? -1 : 1;
+    return ascending(x, y);
   }
-  return a.length === b.length ? 0 : a.length < b.length ? -1 : 1;
+  return ascending(a.length, b.length);
 }
 
 /** See README.md#sourcerowref for why the control characters below tab are refused. */

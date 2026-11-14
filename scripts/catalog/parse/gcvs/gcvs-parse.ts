@@ -14,6 +14,7 @@ import {
 } from '../../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../constellations/constellations';
 import type { Star } from '../stars-parse';
+import { ascending } from '../../../../src/astro-core/order-pure';
 
 export function splitPipeDelimited(text: string): string[][] {
   const out: string[][] = [];
@@ -241,7 +242,7 @@ export function bridgeGcvsByGaia(
     else hipsByGaia.set(gaia, [hip]);
   }
   for (const [gaia, hips] of hipsByGaia) {
-    hips.sort((a, b) => a - b);
+    hips.sort(ascending);
     if (hips.length > 1) {
       console.warn(
         `GCVS bridge: gaia_source_id ${gaia} reached from HIPs [${hips.join(', ')}] — keeping first.`,
