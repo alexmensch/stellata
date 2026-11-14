@@ -13,6 +13,7 @@ import {
   keplerRelationParams,
   type KeplerRelationParams,
 } from '../binaries/orbit-relation-cache';
+import { ascending } from '../../astro-core/order-pure';
 
 export interface StarNameContext {
   starLabels: Map<number, string>;
@@ -72,7 +73,7 @@ function connectedMemberIndices(
   }
   const members: number[] = [];
   const emitted = new Set<number>();
-  for (const ri of [...relIdxs].sort((a, b) => a - b)) {
+  for (const ri of [...relIdxs].sort(ascending)) {
     for (const m of [binaries.relations[ri].primaryIdx, binaries.relations[ri].secondaryIdx]) {
       if (!emitted.has(m)) {
         emitted.add(m);

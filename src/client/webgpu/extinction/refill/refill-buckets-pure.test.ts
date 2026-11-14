@@ -3,6 +3,7 @@ import {
   REFILL_BUCKETS, refillBucketAt, refillBucketBase, refillBucketCapacity, refillBucketOf,
   refillBucketPrefix, refillWorklistLength,
 } from './refill-buckets-pure';
+import { ascending } from '../../../../astro-core/order-pure';
 
 describe('the Morton-range partition', () => {
   it('is a power of two, which is what lets the kernel search without a bound test', () => {
@@ -106,7 +107,7 @@ describe('the producer writes where the refill kernel reads', () => {
     expect(marched).not.toContain(undefined);
     expect(new Set(marched)).toEqual(new Set(admitted));
     const buckets = marched.map((s) => refillBucketOf(slotOf[s as number], count));
-    expect(buckets).toEqual([...buckets].sort((a, b) => a - b));
+    expect(buckets).toEqual([...buckets].sort(ascending));
   });
 
   // The whole catalogue admitted is the case the capacity argument covers:

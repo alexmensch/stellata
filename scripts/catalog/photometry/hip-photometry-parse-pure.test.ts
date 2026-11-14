@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { parseHipPhotometryTsv, printedByHip } from './hip-photometry-parse-pure';
 import { HIP_PHOTOMETRY as SOURCE } from './hip-photometry-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const FROM = { ...SOURCE, file: 'fixture.tsv', hint: 'h' };
 
@@ -45,7 +46,7 @@ describe('hip-photometry-parse-pure / parseHipPhotometryTsv', () => {
 
   it('lists every published HIP and HD, and pairs them where a row carries both', () => {
     const { hips, hds, hdByHip } = parseHipPhotometryTsv(HIP_PHOTOMETRY, FROM);
-    expect([...hips].sort((a, b) => a - b)).toEqual([0, 32349, 71681, 88888, 99999]);
+    expect([...hips].sort(ascending)).toEqual([0, 32349, 71681, 88888, 99999]);
     expect([...hds]).toEqual([48915]);
     expect([...hdByHip]).toEqual([[32349, 48915]]);
   });

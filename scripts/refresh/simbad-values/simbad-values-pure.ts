@@ -15,6 +15,7 @@ import {
   PLX_VALUE, PMDEC, PMRA, PM_BIBCODE, PM_QUAL, RA, RVZ_BIBCODE, RVZ_ERR, RVZ_QUAL, RVZ_RADVEL, RVZ_TYPE, TYC,
   fluxColumns, fluxGroup, type FluxBand,
 } from '../simbad/simbad-specs-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export const BASIC = [
   OID, MAIN_ID,
@@ -95,7 +96,7 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
       for (const line of requestReport(resolved)) log(line);
       const gained = [...resolved.gainedByWidening.values()].reduce((n, g) => n + g, 0);
       log(`oids: ${resolved.oids.size} (+${gained} the widening reached alone)`);
-      const oids = [...resolved.oids].sort((a, b) => a - b);
+      const oids = [...resolved.oids].sort(ascending);
       const basic = await fetchBasic(ask, VALUES_PHASES, oids);
       const idents = await fetchIdents(ask, VALUES_PHASES, IDENTS, oids, ledger);
       const flux = await fetchFlux(ask, VALUES_PHASES, FLUX_BANDS, oids);

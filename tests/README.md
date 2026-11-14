@@ -264,6 +264,9 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
+sort-comparator-rules.test.ts
+                         No sort writes its own ascending order
+                         (#sort-comparators).
 step-coverage.test.ts    Every declareOutputs constant under scripts/,
                          imported from the *-outputs.ts module it must live
                          in and be exported from, is a steps.ts entry's or a
@@ -544,7 +547,7 @@ direction:
 
 | tree | root | may import |
 | --- | --- | --- |
-| shared physics | `src/astro-core/` | itself |
+| shared physics and primitives | `src/astro-core/` | itself |
 | format | `src/catalog-format/` | itself, astro-core |
 | viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
 | pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
@@ -561,7 +564,7 @@ tooling roots drive or check the built viewer — the perf runner its frame-cost
 instrument, the release check its share-URL grammar — so they read it by
 design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
-a file name, a rule over record fields) or astro-core (physics), never into
+a file name, a rule over record fields) or astro-core (physics and shared primitives, such as the sort order), never into
 the side that happens to compute it first.
 
 ## Record codec imports
@@ -614,3 +617,17 @@ the catalogue manifest or a `catalog.bin.<i>` chunk outside
 a loader's error message interpolates the constant too, so a rename reaches
 it. Tests are not scanned; one that addresses a real artifact imports the
 constant.
+
+## Sort comparators
+
+`sort-comparator-rules.test.ts` scans every TypeScript file under `src/`,
+`scripts/` and `tests/`, tests included, and fails on ascending order spelled
+inline: a three-way `? -1 : … ? 1 : 0`, a two-way `x < y ? -1 : 1`, a
+`(a, b) => a - b` comparator, or `localeCompare`. Each goes through
+`ascending` / `compareCodeUnits` in `/src/astro-core/order-pure.ts`, the one
+file exempt. A subtraction answers NaN on a NaN key, and a two-way form
+answers 1 both ways on a tie, so the engine picks the order; `localeCompare`
+orders by the machine's locale. A sort meant for people to read in their
+locale is exempt by name (`LOCALE_ORDER_ALLOWED`, each with its reason), and
+an exemption that no longer sorts by locale fails. A projection subtraction
+inside a chain (`a.n - b.n || …`) is not matched.

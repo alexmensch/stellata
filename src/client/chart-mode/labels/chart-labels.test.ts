@@ -29,6 +29,7 @@ import { LateCell } from '../../util/late/late';
 import { lateAbsent, lateReady } from '../../util/late/late-fixture';
 import type { CloudCatalog } from '../../molecular-clouds/cloud-loader';
 import { makeMockCatalog, makeMockCloud } from '../../molecular-clouds/cloud-mock';
+import { ascending } from '../../../astro-core/order-pure';
 
 describe('chart-labels / computeAppMag', () => {
   it('equals absmag at exactly 10 pc (distance modulus = 0)', () => {
@@ -463,7 +464,7 @@ describe('chart-labels / index.html paint order', () => {
 
   it('declares the chart groups in CHART_LAYER_IDS order', () => {
     const at = CHART_LAYER_IDS.map(positionOf);
-    expect(at).toEqual([...at].sort((a, b) => a - b));
+    expect(at).toEqual([...at].sort(ascending));
   });
 
   it('puts every chart group under the HUD stack', () => {
