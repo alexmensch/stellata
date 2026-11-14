@@ -60,9 +60,10 @@ export function ids(c: ResolvedComponent | undefined): Side | undefined {
   return { ...rest, gaiaSourceId: valueOf(gaia), resolveVia: resolveViaOf(c), hip: valueOf(hip), athygRow: valueOf(athyg) };
 }
 
+const FIXTURE_GAIA_VIA: GaiaVia = 'simbad_xid';
+
 /** A component's fields, its identifiers given bare; each binds under its
- *  `*Origin`, else as the component's own. A Gaia source's tier defaults to
- *  `simbad_xid`. */
+ *  `*Origin`, else as the component's own, a Gaia source by FIXTURE_GAIA_VIA. */
 export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & {
   gaiaSourceId?: string | null;
   resolveVia?: ResolveVia;
@@ -79,7 +80,7 @@ function bindGaia(id: string | null | undefined, via: ResolveVia | undefined, or
     return null;
   }
   if (via === 'unresolved') throw new Error(`fixture: Gaia source ${id} tagged unresolved`);
-  return { value: id, origin: origin ?? OWN, via: via ?? 'simbad_xid' };
+  return { value: id, origin: origin ?? OWN, via: via ?? FIXTURE_GAIA_VIA };
 }
 
 function bind<T>(value: T | null | undefined, origin: IdOrigin | undefined): Bound<T> | null {
@@ -87,7 +88,7 @@ function bind<T>(value: T | null | undefined, origin: IdOrigin | undefined): Bou
 }
 
 /** A side bound to `gaiaSourceId` by `via`, or to nothing. */
-export function sourced(gaiaSourceId: string | null, via: GaiaVia = 'orb6_hip'): Side {
+export function sourced(gaiaSourceId: string | null, via: GaiaVia = FIXTURE_GAIA_VIA): Side {
   return gaiaSourceId === null ? { gaiaSourceId } : { gaiaSourceId, resolveVia: via };
 }
 
@@ -164,7 +165,7 @@ export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): Gai
   });
 }
 
-/** A side's Gaia source and HIP; its tier defaults to `simbad_xid` when bound. */
+/** A side's Gaia source, HIP, and the source's tier. */
 type BiSide = readonly [gaia: string | null, hip: number | null, via?: ResolveVia];
 
 export type BiRow = readonly [
