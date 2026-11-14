@@ -78,7 +78,6 @@ interface DesignationParams {
   hr: { hr: string; hd?: string };
   gj: { gj: string; hip?: string };
 }
-type KindOf<B extends DesignationBranch> = B extends `${infer K extends DesignationKind}.${string}` ? K : never;
 type BranchOf<K extends DesignationKind> = Extract<DesignationBranch, `${K}.${string}`>;
 
 /** A source a designation reached, named by that designation: a key can state two (two HDs on one Tycho-2 id). */
@@ -86,12 +85,14 @@ type ReachedParams = { source_id: string; via: string; kind: DesignationKind; de
 /** The gate's facts on a refused source: the same on every row refusing it. */
 type RefusedParams = ReachedParams & { hip?: string; v_mag?: string; v_via?: string; g_mag?: string };
 
-/** Each code's params, the one declaration its writer and its views share. */
-type ParamsOf<B extends Branch> =
+/** The codes other than a designation's own, whose params `DesignationParams` types where the row is built. */
+type FactBranch = Exclude<Branch, DesignationBranch>;
+
+/** Each such code's params, the one declaration its writer and its views share. */
+type ParamsOf<B extends FactBranch> =
   B extends GateBranch ? RefusedParams
   : B extends 'unweighed-no-pulled-row' ? ReachedParams
   : B extends RouteBranch ? { hd: string; hip: string; hd_route_source_ids?: string; hip_route_source_id: string }
-  : B extends DesignationBranch ? DesignationParams[KindOf<B>] & (B extends `${string}.bound` ? { source_ids: string } : unknown)
   : never;
 
 export const CLASSIC_ID_INVARIANTS: readonly LineageInvariant[] = [
@@ -112,11 +113,11 @@ export interface ClassicIdKeys {
   readonly cns5: (cns5: number) => string;
 }
 
-function row<B extends Branch>(key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = []): LineageRow {
+function row<B extends FactBranch>(key: string, branch: B, params: ParamsOf<B>, evidence: readonly string[] = []): LineageRow {
   return stageRow(CLASSIC_ID_CODES, key, branch, params as LineageParams, evidence);
 }
 
-function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
+function paramsAs<B extends FactBranch>(r: LineageRow, branch: B): ParamsOf<B> {
   if (r.code !== CLASSIC_ID_CODES.code(branch)) throw new Error(`${r.key}: ${r.code} read as ${branch}`);
   return paramsOf(r) as ParamsOf<B>;
 }
