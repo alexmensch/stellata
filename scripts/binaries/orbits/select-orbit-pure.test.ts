@@ -8,8 +8,7 @@ import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type PairAstrometry } 
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { mscOrbit } from '../load/load-fixture';
 import type { MscOrbitRow } from '../load/msc-pure';
-import type { ResolvedComponent } from '../resolve/components-pure';
-import { decomposed } from '../resolve/resolve-fixture';
+import { decomposed , type Side } from '../resolve/resolve-fixture';
 import { nssOrbitalRow } from './nss-fixture';
 import { keplerSemimajorAxisAu, nssSeparationConsistent, selectOrbit, type PairOrbit } from './select-orbit-pure';
 
@@ -18,8 +17,8 @@ const ast = (parallaxMas: number | null = 10): ComponentAstrometry => ({
 });
 
 interface Case {
-  primary?: Partial<ResolvedComponent>;
-  secondary?: Partial<ResolvedComponent>;
+  primary?: Side;
+  secondary?: Side;
   components?: string;
   rho?: number | null;
   plx?: number | null;

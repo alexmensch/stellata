@@ -70,6 +70,43 @@ export type OrbitViaOnFile = {
 export const ORBIT_VIA_ON_FILE: readonly OrbitViaOnFile[] = ORBIT_VIA.filter(
   (v): v is OrbitViaOnFile => ORBIT_VIA_PROPERTIES[v].hasElements,
 );
+/** How a component came by an identifier another component holds: `blend`, a
+ *  ρ = 0 pair's secondary from its primary; `letter`, a bare letter from its
+ *  sub-letter (A ← Aa); `parent`, a sub-letter from its parent (Aa ← A);
+ *  `partner`, a synthesized pair's secondary from its primary at any ρ. */
+export const INHERITANCE_KINDS = ['blend', 'letter', 'parent', 'partner'] as const;
+export type InheritanceKind = (typeof INHERITANCE_KINDS)[number];
+
+/** Where one bound identifier came from: earned by the component itself, or
+ *  copied from the component `from` (a WDS token of the same system). */
+export type IdOrigin =
+  | { readonly kind: 'own' }
+  | { readonly kind: 'inherited'; readonly from: string; readonly how: InheritanceKind };
+
+export const OWN: IdOrigin = Object.freeze({ kind: 'own' });
+
+export function inheritedFrom(from: string, how: InheritanceKind): IdOrigin {
+  return Object.freeze({ kind: 'inherited', from, how });
+}
+
+export function isInherited(origin: IdOrigin | null, how?: InheritanceKind): boolean {
+  return origin !== null && origin.kind === 'inherited' && (how === undefined || origin.how === how);
+}
+
+/** `own`, or `<how>:<from>` (`blend:A`, `letter:Aa`). */
+export function formatIdOrigin(origin: IdOrigin): string {
+  return origin.kind === 'own' ? 'own' : `${origin.how}:${origin.from}`;
+}
+
+export function parseIdOrigin(cell: string): IdOrigin | null {
+  if (cell === 'own') return OWN;
+  const colon = cell.indexOf(':');
+  const how = cell.slice(0, colon);
+  const from = cell.slice(colon + 1);
+  if (colon < 0 || from === '' || !(INHERITANCE_KINDS as readonly string[]).includes(how)) return null;
+  return inheritedFrom(from, how as InheritanceKind);
+}
+
 export type SpectVia = (typeof SPECT_VIA)[number];
 export type PhotometryVia = (typeof PHOTOMETRY_VIA)[number];
 export type OrbitRole = (typeof ORBIT_ROLES)[number];

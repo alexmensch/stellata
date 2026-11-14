@@ -5,38 +5,40 @@ import {
 } from '../component-tokens-pure';
 import type { WdsPair } from '../../wds/wds-pure';
 import {
-  findOwningPair, pairsByDiscoverer, priorityOf, working,
-  type DecomposedPair, type Draft, type ResolvedComponent,
+  findOwningPair, inheritAs, pairsByDiscoverer, priorityOf, working,
+  type Bound, type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
-import type { ResolveVia } from '../multiples-tsv';
+import { inheritedFrom, type IdOrigin, type InheritanceKind, type ResolveVia } from '../multiples-tsv';
 
 interface SourceBinding {
-  readonly gaia: string;
+  readonly gaia: Bound<string>;
   readonly via: ResolveVia;
 }
 
 /** Each donor's strongest-tier source and first HIP, grouped under `donorKey`
- *  (null: no donor), filled into every heir's gaps under its own key. */
+ *  (null: no donor), filled into every heir's gaps under its own key; `origin`
+ *  is what an heir records for an identifier the donor holds. */
 function inheritWithin(
   out: readonly Draft[], donorKey: (c: Draft) => ComponentKey | null, isHeir: (c: Draft) => boolean,
+  origin: (donor: Draft, held: IdOrigin) => IdOrigin,
 ): void {
   const sources = new Map<ComponentKey, SourceBinding>();
-  const hips = new Map<ComponentKey, number>();
+  const hips = new Map<ComponentKey, Bound<number>>();
   for (const c of out) {
     const key = donorKey(c);
     if (key === null) continue;
     const cur = sources.get(key);
-    if (c.gaiaSourceId !== null && (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via))) {
-      sources.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia });
+    if (c.gaia !== null && (cur === undefined || priorityOf(c.resolveVia) < priorityOf(cur.via))) {
+      sources.set(key, { gaia: inheritAs(c.gaia, origin(c, c.gaia.origin)), via: c.resolveVia });
     }
-    if (c.hip !== null && !hips.has(key)) hips.set(key, c.hip);
+    if (c.hip !== null && !hips.has(key)) hips.set(key, inheritAs(c.hip, origin(c, c.hip.origin)));
   }
   for (const c of out) {
     if (!isHeir(c)) continue;
     const key = componentKey(c.wdsId, c.component);
     const binding = sources.get(key);
-    if (c.gaiaSourceId === null && binding !== undefined) {
-      c.gaiaSourceId = binding.gaia;
+    if (c.gaia === null && binding !== undefined) {
+      c.gaia = binding.gaia;
       c.resolveVia = binding.via;
     }
     if (c.hip === null) c.hip = hips.get(key) ?? null;
@@ -45,7 +47,7 @@ function inheritWithin(
 
 export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonly DecomposedPair[] {
   const w = working(pairs);
-  inheritWithin(w.components, (c) => componentKey(c.wdsId, c.component), () => true);
+  inheritWithin(w.components, (c) => componentKey(c.wdsId, c.component), () => true, (_, held) => held);
   inheritWithin(
     w.components,
     (c) => {
@@ -53,6 +55,7 @@ export function propagateWithinSystem(pairs: readonly DecomposedPair[]): readonl
       return top === null ? null : componentKey(c.wdsId, top);
     },
     (c) => c.component === c.component.toUpperCase() && c.component.length === 1,
+    (donor) => inheritedFrom(donor.component, 'letter'),
   );
   return w.pairs;
 }
@@ -64,36 +67,32 @@ export function propagateBlendIdentity(
   const seeded: Draft[] = [];
   for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (pair.rhoLast === null || pair.rhoLast > 0) continue;
-    if (s.gaiaSourceId !== null || s.hip !== null || s.athygRow !== null) continue;
-    if (p.gaiaSourceId === null && p.hip === null && p.athygRow === null) continue;
-    s.gaiaSourceId = p.gaiaSourceId;
-    s.hip = p.hip;
-    s.athygRow = p.athygRow;
-    if (p.gaiaSourceId !== null) s.resolveVia = p.resolveVia;
-    seeded.push(s);
+    if (s.gaia !== null || s.hip !== null || s.athyg !== null) continue;
+    if (copyBinding(s, p, 'blend')) seeded.push(s);
   }
   return { pairs: w.pairs, seeded };
 }
 
 /** Gaia, then HIP, then AT-HYG row: what an in-system donor is ranked by. */
 function strength(c: ResolvedComponent): number {
-  return (c.gaiaSourceId !== null ? 4 : 0) + (c.hip !== null ? 2 : 0) + (c.athygRow !== null ? 1 : 0);
+  return (c.gaia !== null ? 4 : 0) + (c.hip !== null ? 2 : 0) + (c.athyg !== null ? 1 : 0);
 }
 
-/** Fills only what `dst` lacks; true when anything moved. */
-function copyBinding(dst: Draft, src: ResolvedComponent): boolean {
+/** Fills only what `dst` lacks, each copy inherited from `src` by `how`; true when anything moved. */
+function copyBinding(dst: Draft, src: ResolvedComponent, how: InheritanceKind): boolean {
+  const origin = inheritedFrom(src.component, how);
   let changed = false;
-  if (dst.gaiaSourceId === null && src.gaiaSourceId !== null) {
-    dst.gaiaSourceId = src.gaiaSourceId;
+  if (dst.gaia === null && src.gaia !== null) {
+    dst.gaia = inheritAs(src.gaia, origin);
     dst.resolveVia = src.resolveVia;
     changed = true;
   }
   if (dst.hip === null && src.hip !== null) {
-    dst.hip = src.hip;
+    dst.hip = inheritAs(src.hip, origin);
     changed = true;
   }
-  if (dst.athygRow === null && src.athygRow !== null) {
-    dst.athygRow = src.athygRow;
+  if (dst.athyg === null && src.athyg !== null) {
+    dst.athyg = inheritAs(src.athyg, origin);
     changed = true;
   }
   return changed;
@@ -121,19 +120,19 @@ export function seedSynthesizedComponentBindings(
     if (!c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     if (pair === null) continue;
-    if (c.gaiaSourceId === null) {
+    if (c.gaia === null) {
       const parent = parentComponentToken(c.component);
       const donor = parent === null ? undefined : donors.get(componentKey(c.wdsId, parent));
-      if (donor !== undefined && copyBinding(c, donor)) seeded.push(c);
+      if (donor !== undefined && copyBinding(c, donor, 'parent')) seeded.push(c);
     }
     primaryByPair.set(pair, c);
   }
   for (const c of out) {
     if (c.isPrimary) continue;
     const pair = findOwningPair(c, index);
-    if (pair === null || c.gaiaSourceId !== null) continue;
+    if (pair === null || c.gaia !== null) continue;
     const primary = primaryByPair.get(pair);
-    if (primary !== undefined && copyBinding(c, primary)) seeded.push(c);
+    if (primary !== undefined && copyBinding(c, primary, 'partner')) seeded.push(c);
   }
   return { pairs: w.pairs, seeded };
 }
@@ -146,25 +145,26 @@ export function inheritDownwardParentBindings(
   pairs: readonly DecomposedPair[], onlyWdsIds: ReadonlySet<string>,
 ): { pairs: readonly DecomposedPair[]; seeded: readonly ResolvedComponent[] } {
   const w = working(pairs);
-  const bound = new Map<ComponentKey, { gaia: string; via: ResolveVia; hip: number | null }>();
+  const bound = new Map<ComponentKey, { gaia: Bound<string>; via: ResolveVia; hip: Bound<number> | null }>();
   const canon: { token: string; c: Draft }[] = [];
   for (const { pair, primary: p, secondary: s } of w.pairs) {
     if (!onlyWdsIds.has(pair.wdsId)) continue;
     for (const [token, c] of [[p.component, p], [canonicalCompLetter(p.component, s.component), s]] as const) {
       canon.push({ token, c });
       const key = componentKey(pair.wdsId, token);
-      if (c.gaiaSourceId !== null && !bound.has(key)) bound.set(key, { gaia: c.gaiaSourceId, via: c.resolveVia, hip: c.hip });
+      if (c.gaia !== null && !bound.has(key)) bound.set(key, { gaia: c.gaia, via: c.resolveVia, hip: c.hip });
     }
   }
   const seeded: Draft[] = [];
   for (const { token, c } of canon) {
-    if (c.gaiaSourceId !== null) continue;
+    if (c.gaia !== null) continue;
     const parent = parentComponentToken(token);
     const binding = parent === null ? undefined : bound.get(componentKey(c.wdsId, parent));
     if (binding === undefined) continue;
-    c.gaiaSourceId = binding.gaia;
+    const origin = inheritedFrom(parent!, 'parent');
+    c.gaia = inheritAs(binding.gaia, origin);
     c.resolveVia = binding.via;
-    if (c.hip === null && binding.hip !== null) c.hip = binding.hip;
+    if (c.hip === null && binding.hip !== null) c.hip = inheritAs(binding.hip, origin);
     seeded.push(c);
   }
   return { pairs: w.pairs, seeded };

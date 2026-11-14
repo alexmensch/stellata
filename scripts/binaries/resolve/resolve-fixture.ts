@@ -9,7 +9,8 @@ import { athygRow, gaiaAstrometryRow } from '../load/load-fixture';
 import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { componentsOf, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { componentsOf, valueOf, type Bound, type DecomposedPair, type ResolvedComponent } from './components-pure';
+import { OWN, type IdOrigin } from '../multiples-tsv';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
@@ -51,11 +52,34 @@ export function indices(over: {
   });
 }
 
-export function resolved(over: Partial<ResolvedComponent> = {}): ResolvedComponent {
+/** A component with its identifiers read bare, for matching against a `Side`. */
+export function ids(c: ResolvedComponent | undefined): Side | undefined {
+  if (c === undefined) return undefined;
+  const { gaia, hip, athyg, ...rest } = c;
+  return { ...rest, gaiaSourceId: valueOf(gaia), hip: valueOf(hip), athygRow: valueOf(athyg) };
+}
+
+/** A component's fields, its identifiers given bare; each binds under its
+ *  `*Origin`, else as the component's own. */
+export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & {
+  gaiaSourceId?: string | null;
+  hip?: number | null;
+  athygRow?: AthygRow | null;
+  gaiaOrigin?: IdOrigin;
+  hipOrigin?: IdOrigin;
+  athygOrigin?: IdOrigin;
+};
+
+function bind<T>(value: T | null | undefined, origin: IdOrigin | undefined): Bound<T> | null {
+  return value === null || value === undefined ? null : { value, origin: origin ?? OWN };
+}
+
+export function resolved(over: Side = {}): ResolvedComponent {
+  const { gaiaSourceId, hip, athygRow, gaiaOrigin, hipOrigin, athygOrigin, ...rest } = over;
   return {
-    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true,
-    gaiaSourceId: null, resolveVia: 'unresolved', hip: null, athygRow: null, hd: null,
-    ...over,
+    wdsId: 'WDS-1', discoverer: 'TST   1', component: 'A', isPrimary: true, resolveVia: 'unresolved', hd: null,
+    ...rest,
+    gaia: bind(gaiaSourceId, gaiaOrigin), hip: bind(hip, hipOrigin), athyg: bind(athygRow, athygOrigin),
   };
 }
 
@@ -83,7 +107,6 @@ export const BI_WDS = '10000+0000';
 /** Bound to a source no test asks about, so the cascade passes skip it. */
 export const BYSTANDER_SOURCE = '0';
 
-export type Side = Partial<ResolvedComponent>;
 
 /** `pair` with its split tokens; a side not given is a bound bystander. */
 export function decomposed(pair: WdsPair, sides: { primary?: Side; secondary?: Side } = {}): DecomposedPair {
@@ -98,7 +121,8 @@ export function decomposed(pair: WdsPair, sides: { primary?: Side; secondary?: S
 /** One component on a pair row of its own, partnered by a bound bystander `Q`. */
 export function alone(c: ResolvedComponent): DecomposedPair {
   const pair = wdsPair({ wdsId: c.wdsId, discoverer: c.discoverer, components: c.isPrimary ? `${c.component},Q` : `Q,${c.component}` });
-  return c.isPrimary ? decomposed(pair, { primary: c }) : decomposed(pair, { secondary: c });
+  const p = decomposed(pair);
+  return c.isPrimary ? { ...p, primary: c } : { ...p, secondary: c };
 }
 
 /** The components `alone` wrapped, without their bystanders. */

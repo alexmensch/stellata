@@ -12,7 +12,7 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, type AstrometryVia, type MultiplesRecord, type PhotometryVia } from '../multiples-tsv';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
-import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
+import { valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
 import { propagatePosition } from '../sky-geometry-pure';
 import type { AnchorOffsets } from './anchor-offsets-pure';
 import { gaiaPhotometryAbsmagCi } from './gaia-photometry-pure';
@@ -101,9 +101,10 @@ function componentFields(
   let ci = athyg?.ci ?? null;
   let photometryVia: PhotometryVia = athyg === null ? 'none'
     : isPrimary || athyg !== primaryAthyg ? 'athyg_own' : 'athyg_system_inherited';
-  const sharesAthygPartnerSource = partner.hasAthyg && partner.gaiaSourceId !== null && partner.gaiaSourceId === c.gaiaSourceId;
-  if (athyg === null && astrometryVia === 'gaia_5p' && c.gaiaSourceId !== null && !sharesAthygPartnerSource) {
-    const gaia = indices.srcToAstrometry.get(c.gaiaSourceId);
+  const gaiaSourceId = valueOf(c.gaia);
+  const sharesAthygPartnerSource = partner.hasAthyg && partner.gaiaSourceId !== null && partner.gaiaSourceId === gaiaSourceId;
+  if (athyg === null && astrometryVia === 'gaia_5p' && gaiaSourceId !== null && !sharesAthygPartnerSource) {
+    const gaia = indices.srcToAstrometry.get(gaiaSourceId);
     const derived = gaia === undefined ? null : gaiaPhotometryAbsmagCi(gaia);
     if (derived !== null) {
       ({ absmag, ci } = derived);
@@ -111,7 +112,7 @@ function componentFields(
     }
   }
   return {
-    comp: c.component, hip: c.hip, gaiaSourceId: c.gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
+    comp: c.component, hip: valueOf(c.hip), gaiaSourceId, hd: athyg?.hd ?? c.hd, ...positionFields(position),
     absmag, ci, spect, name: athyg?.proper ?? '', source: athyg === null ? 'wds' : 'athyg',
     resolveVia: c.resolveVia, astrometryVia, spectVia, photometryVia,
   };
@@ -187,10 +188,10 @@ export function pairRows(
   if (systemAnchor === null && ps.own === null && ss.own === null) return null;
   const { wdsId } = p.pair;
   const pri = componentFields(wdsId, ps, systemAnchor, null, true, {
-    gaiaSourceId: p.secondary.gaiaSourceId, hasAthyg: ss.athyg !== null,
+    gaiaSourceId: valueOf(p.secondary.gaia), hasAthyg: ss.athyg !== null,
   }, indices);
   const sec = componentFields(wdsId, ss, systemAnchor, ps.athyg, false, {
-    gaiaSourceId: p.primary.gaiaSourceId, hasAthyg: ps.athyg !== null,
+    gaiaSourceId: valueOf(p.primary.gaia), hasAthyg: ps.athyg !== null,
   }, indices);
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);

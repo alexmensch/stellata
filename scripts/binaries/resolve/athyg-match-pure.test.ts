@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
 import { athygPositionAtEpoch, buildAthygGrid, findNearestAthyg, pairAthygMatches } from './athyg-match-pure';
 import { athygAt, decomposed, pairAt } from './resolve-fixture';
+import { OWN, inheritedFrom } from '../multiples-tsv';
 
 describe('findNearestAthyg', () => {
   const east = (arcsec: number, decDeg: number) => 100 + arcsec / 3600 / Math.cos((decDeg * Math.PI) / 180);
@@ -46,10 +47,10 @@ describe('pairAthygMatches', () => {
   it('gives a ρ = 0 secondary its primary\'s row only when blend inheritance is allowed', () => {
     const allowed = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: true });
     expect(allowed.matches).toEqual([
-      { componentIdx: 0, athygIdx: 0, blendInherit: false },
-      { componentIdx: 1, athygIdx: 0, blendInherit: true },
+      { componentIdx: 0, athygIdx: 0, origin: OWN },
+      { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'blend') },
     ]);
     const refused = pairAthygMatches(pairs, athyg, { skip: () => false, allowBlendInherit: false });
-    expect(refused.matches).toEqual([{ componentIdx: 0, athygIdx: 0, blendInherit: false }]);
+    expect(refused.matches).toEqual([{ componentIdx: 0, athygIdx: 0, origin: OWN }]);
   });
 });

@@ -53,8 +53,8 @@ A component the cascade leaves `unresolved` is position-matched against
 AT-HYG through Stage 2's `pairAthygMatches`
 ([The AT-HYG position match](../resolve/README.md#the-at-hyg-position-match)),
 with blend inheritance: a secondary whose own predicted match misses takes its
-primary's row. The matched row becomes the component's `athygRow` when it had
-none, so `routePairs` returns new pairs; a row with no positive distance is
+primary's row, inherited from it as `blend`. The matched row becomes the
+component's `athyg` when it had none, so `routePairs` returns new pairs; a row with no positive distance is
 no parallax, and the component stays `unresolved`. The sibling-identity
 guard's refusals come back as `siblingClaimed`, each naming the returned
 pair's component and the HIP another letter binds; `attachStage3` freezes the
@@ -141,6 +141,6 @@ also written to every `multiples.tsv` row in Stage 6 (with a Stage-6-owned
 extra value, `system_inherited`, for components that inherit a
 system-anchor position because their own row resolved to `unresolved`).
 The `athyg_position` route also surfaces the matched AT-HYG row reference
-on `ResolvedComponent.athygRow`; Stage 6's photometry / proper-name
+on `ResolvedComponent.athyg`; Stage 6's photometry / proper-name
 lookup consults that reference first, ahead of the gaia / HIP indexes,
 so AT-HYG-HD-only rows still surface their absmag / spect / proper name.

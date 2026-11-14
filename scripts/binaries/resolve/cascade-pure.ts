@@ -14,7 +14,7 @@ import {
 import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
-  findOwningPair, pairRows, pairsByDiscoverer, unresolvedComponent, working,
+  findOwningPair, own, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import {
@@ -82,14 +82,14 @@ export function resolveComponent(
       candidates.push(e.hip);
       if (!hdByHip.has(e.hip)) hdByHip.set(e.hip, e.hd);
       const gaia = indices.hipToGaia.get(e.hip);
-      if (gaia !== undefined) return { ...base, gaiaSourceId: gaia, resolveVia: 'orb6_hip', hip: e.hip, hd: hdByHip.get(e.hip)! };
+      if (gaia !== undefined) return { ...base, gaia: own(gaia), resolveVia: 'orb6_hip', hip: own(e.hip), hd: hdByHip.get(e.hip)! };
     }
   }
   for (const hip of candidates) {
     const gaia = gaiaFromAthygViaHip(hip, indices);
-    if (gaia !== null) return { ...base, gaiaSourceId: gaia, resolveVia: 'athyg_gaia_native', hip, hd: hdByHip.get(hip)! };
+    if (gaia !== null) return { ...base, gaia: own(gaia), resolveVia: 'athyg_gaia_native', hip: own(hip), hd: hdByHip.get(hip)! };
   }
-  return candidates.length === 0 ? base : { ...base, hip: candidates[0], hd: hdByHip.get(candidates[0])! };
+  return candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! };
 }
 
 /** A SIMBAD cross-ID for a still-unbound component: its DR3 source binds as
@@ -99,16 +99,14 @@ export function resolveViaSimbad(
 ): readonly DecomposedPair[] {
   const w = working(pairs);
   for (const c of w.components) {
-    if (c.gaiaSourceId !== null) continue;
+    if (c.gaia !== null) continue;
     const xid = xids.get(componentKey(c.wdsId, c.component));
     if (xid === undefined) continue;
     if (xid.gaiaSourceId !== null) {
-      c.gaiaSourceId = xid.gaiaSourceId;
+      c.gaia = own(xid.gaiaSourceId);
       c.resolveVia = 'simbad_xid';
-      if (c.hip === null && xid.hip !== null) c.hip = xid.hip;
-    } else if (xid.hip !== null && c.hip === null) {
-      c.hip = xid.hip;
     }
+    if (c.hip === null && xid.hip !== null) c.hip = own(xid.hip);
   }
   return w.pairs;
 }
@@ -198,10 +196,10 @@ function ccdmCandidateHip(
 
 /** Binds the HIP if none is bound yet; a Gaia source through it tags `ccdm_hip`. */
 function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
-  if (c.hip === null) c.hip = hip;
+  if (c.hip === null) c.hip = own(hip);
   const gaia = indices.hipToGaia.get(hip) ?? gaiaFromAthygViaHip(hip, indices);
   if (gaia !== null) {
-    c.gaiaSourceId = gaia;
+    c.gaia = own(gaia);
     c.resolveVia = 'ccdm_hip';
   }
 }
@@ -224,14 +222,14 @@ export function resolveViaCcdm(
   const primaryHipByPair = new Map<WdsPair, number>();
 
   for (const c of out) {
-    if (c.gaiaSourceId !== null || !c.isPrimary) continue;
+    if (c.gaia !== null || !c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     if (pair === null || pair.precise === null) continue;
     const candidates = indices.ccdmToHips.get(pair.wdsId);
     if (!candidates || candidates.length === 0) continue;
-    if (c.hip !== null && candidates.includes(c.hip)) {
-      primaryHipByPair.set(pair, c.hip);
-      bindCcdmHip(c, c.hip, indices);
+    if (c.hip !== null && candidates.includes(c.hip.value)) {
+      primaryHipByPair.set(pair, c.hip.value);
+      bindCcdmHip(c, c.hip.value, indices);
       continue;
     }
     const [, partner] = pairComponentTokens(pair.components)!;
@@ -246,7 +244,7 @@ export function resolveViaCcdm(
   }
 
   for (const c of out) {
-    if (c.gaiaSourceId !== null || c.isPrimary) continue;
+    if (c.gaia !== null || c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     const offset = pair === null ? null : measuredOffset(pair);
     if (pair === null || pair.precise === null || offset === null) continue;
@@ -255,8 +253,8 @@ export function resolveViaCcdm(
     const primaryHip = primaryHipByPair.get(pair);
     const narrowed = candidates.filter((h) => h !== primaryHip);
     if (narrowed.length === 0) continue;
-    if (c.hip !== null && narrowed.includes(c.hip)) {
-      bindCcdmHip(c, c.hip, indices);
+    if (c.hip !== null && narrowed.includes(c.hip.value)) {
+      bindCcdmHip(c, c.hip.value, indices);
       continue;
     }
     const [primaryToken] = splitComponents(pair.components)!;
@@ -279,7 +277,7 @@ export function resolveViaPosition(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
 ): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
   const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, {
-    skip: (_i, c) => c.gaiaSourceId !== null,
+    skip: (_i, c) => c.gaia !== null,
     allowBlendInherit: false,
   });
   const w = working(pairs);
@@ -287,10 +285,10 @@ export function resolveViaPosition(
   for (const m of matches) {
     const c = out[m.componentIdx];
     const row = athyg[m.athygIdx];
-    if (c.athygRow === null) c.athygRow = row;
-    if (c.hip === null && row.hip !== null) c.hip = row.hip;
+    if (c.athyg === null) c.athyg = own(row);
+    if (c.hip === null && row.hip !== null) c.hip = own(row.hip);
     if (row.gaia !== null) {
-      c.gaiaSourceId = row.gaia;
+      c.gaia = own(row.gaia);
       c.resolveVia = 'athyg_gaia_native';
     }
   }

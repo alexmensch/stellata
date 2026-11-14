@@ -16,9 +16,10 @@ scripts/binaries/resolve/
                                resolveCascade (the tiers and propagations
                                alone), Stage2Result, astrometryRequestIds,
                                stage2Counts.
-  components-pure.ts           ResolvedComponent, DecomposedPair,
-                               decompose (the split), working (a pass's
-                               copy), findOwningPair, RESOLVE_VIA_PRIORITY.
+  components-pure.ts           ResolvedComponent, DecomposedPair, Bound
+                               (an identifier and its origin), decompose
+                               (the split), working (a pass's copy),
+                               findOwningPair, RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
@@ -72,6 +73,24 @@ parent folder's `build-binaries.test.ts`.
 A pass reaches a component through its pair. One that works per component
 iterates `working(pairs).components`, a view of the same drafts in pair
 order, primary then secondary, so pairing never rests on position.
+
+## Identifier origins
+
+Each of a component's Gaia source, HIP and AT-HYG row is a `Bound`: the value
+and its `IdOrigin` (`../multiples-tsv.ts`), `own` or inherited from a named
+token of the same system. Every tier binds `own`; a rebind by the audit is
+`own`. The passes that copy record the kind:
+
+| Kind | Copied by | From |
+| --- | --- | --- |
+| `blend` | `propagateBlendIdentity`; Stage 3's AT-HYG fallback | a ρ = 0 pair's primary |
+| `letter` | `propagateWithinSystem` (A ← Aa) | the sub-letter donor |
+| `parent` | `seedSynthesizedComponentBindings` (primary), `inheritDownwardParentBindings`, Stage 3's NSS inner pairs | the parent token |
+| `partner` | `seedSynthesizedComponentBindings` (secondary) | the synthesized pair's primary, at any ρ |
+
+The same-letter smear across a letter's rows copies the origin unchanged:
+one letter is one star, so its binding is its own on every row or inherited
+on every row. A copy names its immediate donor, never the donor's donor.
 
 ## Choices the outputs rest on
 
@@ -191,7 +210,7 @@ exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
 
 The two stages compose:
 
-- **Stage 2** binds identifiers — sets `athygRow` always on match,
+- **Stage 2** binds identifiers — sets `athyg` always on match,
   and surfaces `gaia` / `hip` from the row when the row carries them
   (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
   Opts OUT of secondary blend-inheritance because copying the
