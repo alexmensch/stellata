@@ -17,7 +17,6 @@ export const MIN_COMPONENT_REACH = 0.36;
 
 const CORE = simbadPhases({ basic: [OID, MAIN_ID], idents: [HIP, GAIA_DR3] });
 
-/** Phase A and the cascade both ask ids for their oids; the cascade's order decides which of two disagreeing aliases binds, so it is the server's. */
 export const XIDS_PHASES = {
   resolve: CORE.resolve,
   aliases: identPhase([HIP, HD]),
@@ -124,7 +123,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const cascade = cascadeRecoveries(rows.map(([oid, id]) => ({ id: id ?? '', oid: oidOf(oid) })), candidates, new Set(oids.values()), ledger);
         for (const [key, { oid }] of cascade.recoveries) oids.set(key, oid);
         log(`cascade: ${ids.length} candidates, ${cascade.recoveries.size} components recovered (alias hits HD ${cascade.hits.HD}, CCDM ${cascade.hits.CCDM}, HIP ${cascade.hits.HIP})`);
-        for (const conflict of cascade.conflicts) log(`  cascade kept the first of two objects for ${conflict}`);
+        for (const conflict of cascade.conflicts) log(`  cascade bound neither of the objects named for ${conflict}`);
       }
       for (const o of overrides) oids.set(componentId(o), o.oid);
 

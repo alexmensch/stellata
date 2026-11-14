@@ -106,11 +106,14 @@ describe('cascadeRecoveries', () => {
     expect(stray.hits).toEqual({ HD: 0, CCDM: 0, HIP: 0 });
   });
 
-  it('keeps the first of two objects and reports the second, uncounted', () => {
-    const out = cascadeRecoveries([{ id: 'HD  12345B', oid: 111 }, { id: 'CCDM J00000+0000B', oid: 222 }], candidates, new Set(), parseLedger());
-    expect([...out.recoveries.values()]).toEqual([{ component: b, oid: 111 }]);
-    expect(out.hits).toEqual({ HD: 1, CCDM: 0, HIP: 0 });
-    expect(out.conflicts).toEqual(['00000+0000 B: 111, then 222 (CCDM J00000+0000B)']);
+  it('binds neither of two objects one component\'s aliases name, whichever order they answer in', () => {
+    const hits = [{ id: 'HD  12345B', oid: 111 }, { id: 'CCDM J00000+0000B', oid: 222 }];
+    for (const order of [hits, [...hits].reverse()]) {
+      const out = cascadeRecoveries(order, candidates, new Set(), parseLedger());
+      expect(out.recoveries.size).toBe(0);
+      expect(out.hits).toEqual({ HD: 0, CCDM: 0, HIP: 0 });
+      expect(out.conflicts).toEqual(['00000+0000 B: 111 (HD  12345B), 222 (CCDM J00000+0000B)']);
+    }
   });
 
   it('counts each agreeing alias against its own strategy', () => {

@@ -57,8 +57,9 @@ changed override stales the record.
    namespace rules cannot read fails the parse ledger.
    An answered WDS ident naming no asked component fails the pull. An alias naming an
    object the lookup already found names that object again and is dropped;
-   two aliases naming different objects keep the first in SIMBAD's id
-   order, and the run log prints each such conflict.
+   aliases naming different objects for one component bind it to none, and
+   the run log prints each such conflict, so neither the reply order nor
+   where a batch boundary falls decides a binding.
 3. **Overrides** replace whatever the first two found.
 4. **Cross-IDs** for every object: `main_id` from `basic`, the HIP and Gaia
    DR3 ids from `ident`. A bare HIP wins; a lettered one (`HIP 55203B`)

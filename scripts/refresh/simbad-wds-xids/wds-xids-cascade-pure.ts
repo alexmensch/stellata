@@ -83,32 +83,38 @@ export interface CascadeResult {
   readonly recoveries: ReadonlyMap<string, { readonly component: WdsComponent; readonly oid: number }>;
   /** Hits per strategy, each alias row counted, so two strategies may count one recovery. */
   readonly hits: Readonly<Record<CascadeStrategy, number>>;
-  /** Components a later alias named a different object for than the first. */
+  /** Components whose aliases named more than one object, each bound to none. */
   readonly conflicts: readonly string[];
 }
 
-/** Hits in the order given; one on an object an ident already resolved names that object again, not a new component, and is dropped. */
+/** A hit on an object an ident already resolved names that object again, not a new component, and is dropped; aliases naming two objects for one component bind neither, so the reply order decides nothing. */
 export function cascadeRecoveries(
   hits: readonly CascadeHit[],
   candidates: ReadonlyMap<string, CascadeCandidate>,
   resolvedOids: ReadonlySet<number>,
   ledger: ParseLedger,
 ): CascadeResult {
-  const recoveries = new Map<string, { component: WdsComponent; oid: number }>();
-  const counts: Record<CascadeStrategy, number> = { HD: 0, CCDM: 0, HIP: 0 };
-  const conflicts: string[] = [];
+  const named = new Map<string, { component: WdsComponent; byOid: Map<number, { id: string; strategy: CascadeStrategy }[]> }>();
   for (const { id, oid } of hits) {
     const asked = replyKey(id, ledger);
     const candidate = asked === null ? undefined : candidates.get(asked);
     if (candidate === undefined || resolvedOids.has(oid)) continue;
     const key = componentId(candidate.component);
-    const held = recoveries.get(key);
-    if (held !== undefined && held.oid !== oid) {
-      conflicts.push(`${key}: ${held.oid}, then ${oid} (${id})`);
+    const entry = named.get(key) ?? { component: candidate.component, byOid: new Map() };
+    named.set(key, entry);
+    entry.byOid.set(oid, [...(entry.byOid.get(oid) ?? []), { id, strategy: candidate.strategy }]);
+  }
+  const recoveries = new Map<string, { component: WdsComponent; oid: number }>();
+  const counts: Record<CascadeStrategy, number> = { HD: 0, CCDM: 0, HIP: 0 };
+  const conflicts: string[] = [];
+  for (const [key, { component, byOid }] of named) {
+    const oids = [...byOid.keys()].sort((a, b) => a - b);
+    if (oids.length > 1) {
+      conflicts.push(`${key}: ${oids.map((oid) => `${oid} (${(byOid.get(oid) ?? []).map((h) => h.id).join(', ')})`).join(', ')}`);
       continue;
     }
-    recoveries.set(key, { component: candidate.component, oid });
-    counts[candidate.strategy]++;
+    recoveries.set(key, { component, oid: oids[0] });
+    for (const { strategy } of byOid.get(oids[0]) ?? []) counts[strategy]++;
   }
-  return { recoveries, hits: counts, conflicts };
+  return { recoveries, hits: counts, conflicts: conflicts.sort() };
 }
