@@ -64,20 +64,19 @@ export function wingRenderablePrimaries(
   resolved: readonly ResolvedPair[],
   stars: Star[],
 ): Pick<MultiplicityCounts, 'renderableCompanionWinged'> {
-  const members = new Map<string, Set<number>>();
-  const drawsAPair = new Set<string>();
+  const systems = new Map<string, { members: Set<number>; drawsAPair: boolean }>();
   for (const { pair, own, rendered } of resolved) {
-    let set = members.get(pair.wdsId);
-    if (!set) { set = new Set(); members.set(pair.wdsId, set); }
+    let system = systems.get(pair.wdsId);
+    if (!system) { system = { members: new Set(), drawsAPair: false }; systems.set(pair.wdsId, system); }
     for (const idx of [own.primary, own.secondary, rendered.primary, rendered.secondary]) {
-      if (idx !== null) set.add(idx);
+      if (idx !== null) system.members.add(idx);
     }
-    if (distinctEnds(rendered)) drawsAPair.add(pair.wdsId);
+    if (distinctEnds(rendered)) system.drawsAPair = true;
   }
 
   let renderableCompanionWinged = 0;
-  for (const root of drawsAPair) {
-    const indices = members.get(root) as Set<number>;
+  for (const { members: indices, drawsAPair } of systems.values()) {
+    if (!drawsAPair) continue;
     let anchor = -1;
     let alreadyWinged = false;
     for (const idx of indices) {
@@ -118,13 +117,14 @@ export interface ComponentDesignation {
  *
  *  The anchor is included with its own comp letter so "α Cen A" focuses it,
  *  and a record shared across pairs takes first-write-wins. */
+type AnchoredPair = ResolvedPair & { readonly own: { readonly primary: number; readonly secondary: number | null } };
+
 export function buildComponentDesignations(
   resolved: readonly ResolvedPair[],
 ): Pick<MultiplicityCounts, 'componentDesignations'> & { designations: Map<number, ComponentDesignation> } {
-  const anchored = resolved.flatMap(({ pair, own }) =>
-    (own.primary === null ? [] : [{ pair, primary: own.primary, secondary: own.secondary }]));
+  const anchored = resolved.filter((r): r is AnchoredPair => r.own.primary !== null);
   const anchors = new Map<string, { comp: string; idx: number }>();
-  for (const { pair, primary } of anchored) {
+  for (const { pair, own: { primary } } of anchored) {
     const incumbent = anchors.get(pair.wdsId);
     if (!incumbent || isMoreCanonicalAnchor(pair.primaryComp, incumbent.comp)) {
       anchors.set(pair.wdsId, { comp: pair.primaryComp, idx: primary });
@@ -133,7 +133,7 @@ export function buildComponentDesignations(
 
   // Which roots hold each record as a component that is not their anchor.
   const heldBy = new Map<number, Set<string>>();
-  for (const { pair, primary, secondary } of anchored) {
+  for (const { pair, own: { primary, secondary } } of anchored) {
     const anchorIdx = anchors.get(pair.wdsId)?.idx;
     for (const idx of [primary, secondary]) {
       if (idx === null || idx === anchorIdx) continue;
@@ -155,7 +155,7 @@ export function buildComponentDesignations(
     if (idx === null || out.has(idx)) return;
     out.set(idx, { comp, primaryIdx: anchorIdx });
   };
-  for (const { pair, primary, secondary } of anchored) {
+  for (const { pair, own: { primary, secondary } } of anchored) {
     const anchor = anchors.get(pair.wdsId);
     if (anchor === undefined) continue;
     designate(primary, pair.primaryComp, anchor.idx);
