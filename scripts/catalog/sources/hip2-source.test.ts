@@ -40,5 +40,7 @@ describe('hip2-source', () => {
     expect(() => parseHip2Tsv(tsv, HIP2)).toThrow(
       `${HIP2.file}:4: HIP 7 has more than one row; which was meant is not the reader's to guess. ${HIP2.hint}`,
     );
+    const zeros = ['hip\tra_icrs\tde_icrs\tplx\te_plx\tpm_ra\tpm_de', '0\t\t\t\t\t\t', '0\t\t\t\t\t\t'].join('\n');
+    expect(() => parseHip2Tsv(zeros, HIP2)).toThrow(`${HIP2.file}:3: HIP 0 has more than one row`);
   });
 });

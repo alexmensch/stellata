@@ -25,8 +25,9 @@ scripts/catalog/sources/
                                   lists every HIP the table publishes,
                                   positioned or not, for
                                   ../spine/primaries-tables.ts. A HIP on
-                                  two rows stops the read; hip <= 0 is
-                                  dropped from the astrometry map.
+                                  two rows stops the read, before
+                                  hip <= 0 is dropped from the
+                                  astrometry map.
   gaia-nss-source.ts (+ test)     GAIA_NSS, a column table
                                   (../../util/tsv/README.md#reading-a-table),
                                   and parseNssIndex: the source_ids carrying
