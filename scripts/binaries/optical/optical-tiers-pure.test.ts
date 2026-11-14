@@ -5,7 +5,7 @@ import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type MeasuredAstrometry } from '../astrometry/routes-pure';
 import type { Parallax } from '../astrometry/system-anchors-pure';
-
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import { UNKNOWN_COMPONENT_MASS_MSUN } from '../masses/pair-masses';
 import type { OrbitVia } from '../multiples-record-pure';
@@ -18,7 +18,6 @@ import {
   pairBeyondSeparationLimit, separationAu, separationExceedsLimit, transverseVelocityKmS, type PairContext,
 } from './optical-tiers-pure';
 import { orbitalPmBudgetKmS } from './pm-budget-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 const DEFAULT_TOTAL_MASS = 2 * UNKNOWN_COMPONENT_MASS_MSUN;
 const plx = (parallaxMas: number, parallaxErrorMas: number | null): Parallax => ({ parallaxMas, parallaxErrorMas });

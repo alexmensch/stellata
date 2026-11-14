@@ -4,7 +4,7 @@ import { HIP2_REF_EPOCH, hip2PmDisagrees } from '../../catalog/distance/directio
 import { gaia5pUnreliable } from '../../catalog/distance/gaia-distrust';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { AthygRow } from '../load/athyg-pure';
-
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
@@ -12,7 +12,6 @@ import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
 import { ATHYG_REFERENCE_EPOCH } from '../sky-geometry-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** The routes Stage 3 tags, in priority order: every `astrometry_via` but Stage 6's `system_inherited`. */
 export type RoutedVia = Exclude<AstrometryVia, 'system_inherited'>;

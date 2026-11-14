@@ -7,7 +7,6 @@ import { FIXTURE, athygRow, gaiaAstrometryRow } from './load-fixture';
 import type { AthygRow } from './athyg-pure';
 import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
-
 function indices(over: Partial<IndexInputs> = {}) {
   return buildIndices({
     athyg: [], hip2: new Map(), hipToGaia: new Map(), tycToGaia: new Map(), srcToNss: new Map(),

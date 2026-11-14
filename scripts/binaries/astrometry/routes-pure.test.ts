@@ -5,14 +5,13 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constants';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { AthygRow } from '../load/athyg-pure';
-
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { OWN } from '../multiples-record-pure';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved, type Side } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
-import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 const hip2Map = (rows: readonly (readonly [number, Partial<Hip2AstrometryRow>])[]): Map<number, Hip2AstrometryRow> =>
   new Map(rows.map(([hip, over]) => [hip, hip2AstrometryRow(over)]));

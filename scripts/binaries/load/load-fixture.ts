@@ -1,10 +1,9 @@
 // Test-only builders for the Stage 1 row types.
 
 import type { AthygRow } from './athyg-pure';
-
+import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
 import { gaiaAstrometryRow as catalogGaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
-import { GAIA_ASTROMETRY, type GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 
 export const FIXTURE = { file: 'fixture/binaries.tsv', hint: 'h' } as const;
