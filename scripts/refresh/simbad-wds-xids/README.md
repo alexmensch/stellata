@@ -60,12 +60,11 @@ changed override stales the record.
    a component they cannot letter (`2`, `Aa1`, `S17`) asks CCDM only: glued
    on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
    components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
-   reply the namespace rules cannot read fails the parse ledger.
-   An alias naming an
-   object the lookup already found names that object again and is dropped;
-   aliases naming different objects for one component bind it to none, and
-   the run log prints each such conflict, so neither the reply order nor
-   where a batch boundary falls decides a binding.
+   reply the namespace rules cannot read fails the parse ledger. An alias
+   naming an object the lookup already found names that object again and is
+   dropped; aliases naming different objects for one component bind it to
+   none, and the run log prints each such conflict, so neither the reply
+   order nor where a batch boundary falls decides a binding.
 3. **Overrides** replace whatever the first two found.
 4. **Cross-IDs** for every object: `main_id` from `basic`, the HIP and Gaia
    DR3 ids from `ident`. A bare HIP wins; a lettered one (`HIP 55203B`)
