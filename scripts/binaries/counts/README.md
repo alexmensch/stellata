@@ -37,6 +37,8 @@ the stages with a second argument that is `true` only when they are exactly
 once, so a key left out, invented or filed twice, or a stage outside the list,
 fails to compile, naming it.
 
-A rate's denominator is never empty on real data; `share` throws if it is
-(`stellata-hhaw.45.17.19`). `pnpm run build:binaries --update-snapshots`
-refreshes the snapshot.
+A rate with an empty denominator is `no-denominator`, never 0
+(`../../util/counts/tally-pure.ts`'s `share`), and its report line prints
+`n/a`, so the build reaches the snapshot check, whose diff names every count
+that moved. `pnpm run build:binaries --update-snapshots` refreshes the
+snapshot.

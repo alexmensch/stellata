@@ -25,7 +25,9 @@ classic_id_overlay.tsv             ~11 MB, LFS. Pipeline-derived: every
                                    designation above keyed on Gaia DR3
                                    source_id (357,265 rows, post-gate).
 hd_hip_route_disagreements.tsv     21 rows. Pipeline-derived review queue
-                                   (README.md#classic_id_overlaytsv--the-derived-overlay).
+                                   (README.md#classic_id_overlaytsv--the-derived-overlay),
+                                   a view of build:classic-ids' lineage
+                                   (/scripts/catalog/classic-ids/README.md#classic-id-lineage).
 hd_hip_route_disagreements_review.tsv
                                    Hand-curated dispositions for the queue,
                                    joined row-for-row by
@@ -34,7 +36,8 @@ hd_hip_route_disagreements_review.tsv
                                    grows the queue fails until reviewed.
 rejected_bindings.tsv              Pipeline-derived review queue —
                                    the bindings the gate dropped
-                                   (README.md#the-binding-gate).
+                                   (README.md#the-binding-gate), a view
+                                   of the same lineage.
 label_flips.tsv                    Pipeline-derived, and by
                                    `build:membership` rather than by this
                                    folder's build — that is where the merge
@@ -157,12 +160,12 @@ gaia_source_id  hd  hr  hip  gj  bayer  flamsteed
 - Rows are sorted by numeric source_id (ids exceed 2^53, so the sort is
   BigInt, matching the astrometry request files).
 
-`hd_hip_route_disagreements.tsv` enumerates the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> IV/27A rows whose
+`hd_hip_route_disagreements.tsv` enumerates the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> IV/27A rows whose
 HD→TYC→source_id and HIP→source_id routes land on different sources
 (every pair differs only in its low digits — resolved close pairs where
 the two walks pick different components). The HD route is the authority;
 these are a review queue for the parity ledger, not a mechanical
-resolution. All <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> are disposed `no-identity-event` in
+resolution. All <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> are disposed `no-identity-event` in
 `hd_hip_route_disagreements_review.tsv`: in every row one spine record
 holds both designations, so the disagreement is over which component's
 source the walks bound, never over which record the star is
@@ -197,7 +200,9 @@ that fired — so their sum, **460**, is the queue's size
 A firing gate drops the **whole row**, not just its `hip` cell: if the source
 is not the star then every designation keyed on it is misattributed, and the
 labels ride the inherited spine exactly as they do for a record the build
-scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`
+scrubs. The dropped bindings are enumerated in `rejected_bindings.tsv`, one row
+per refused source, grouped from the lineage's refused rows
+([Classic-ID lineage](/scripts/catalog/classic-ids/README.md#classic-id-lineage))
 (`gaia_source_id`, `hip`, `v_mag`, `v_via`, `g_mag`, `reason`, `designations`;
 a blank `hip` is a row no HIP reaches at all, a blank `designations` means the
 HIP was the row's only label, a blank `g_mag` means the sibling gate fired
@@ -206,8 +211,8 @@ row no printed tier reaches). `v_via` says which printed tier the rejection rest
 218 printed_hip · 165 tycho2 · 27 gliese on the magnitude arm.
 
 The HD/HIP route cross-check above cannot substitute for this. Both walks
-routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/hdHipRouteAgree -->2,635<!-- /count -->
-route agreements, not the <!-- count:classic-id-overlay/hdHipRouteDisagree -->21<!-- /count --> disagreements.
+routinely land on the *same* wrong source, so α Cen B counted among the <!-- count:classic-id-overlay/classic-ids.route.agree -->2,635<!-- /count -->
+route agreements, not the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> disagreements.
 
 **The gate reads the V cascade's three printed tiers**, keyed on designations
 the overlay row itself carries — deliberately not on AT-HYG, which the overlay
@@ -225,7 +230,8 @@ magnitude comparison away, and taking that comparison caught **192 more
 mis-bindings** (`gateRejectedMag` 218 → 410). One helper serves both sides so
 they cannot drift again ([The gate's evidence has to be pulled](/scripts/catalog/classic-ids/README.md#the-gates-evidence-has-to-be-pulled)),
 and widening the gate meant widening the astrometry
-request by 295 ids and re-pulling, to hold `gateSkippedNoGMag` at zero.
+request by 295 ids and re-pulling, so that no source the gate weighs is
+missing from the pull (`classic-ids.unweighed-no-pulled-row`, a lineage invariant).
 
 **Ask the Gliese arm through `lookupGliese`**
 (`scripts/catalog/gliese-parse.ts`), not by the printed name: V/70A numbers the

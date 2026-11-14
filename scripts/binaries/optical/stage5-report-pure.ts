@@ -1,6 +1,7 @@
 // Stage 5's build-log lines, read off the Stage5Result it returned.
 
-import { count, countsListed, droppedPairSample, percent } from '../build-log-pure';
+import { formatShare } from '../../util/counts/tally-pure';
+import { count, countsListed, droppedPairSample } from '../build-log-pure';
 import { opticalRejected, opticalTally, stage5Counts, stage5Rates, type Stage5Result } from './attach-optical';
 
 export function stage5Report(result: Stage5Result): string[] {
@@ -9,7 +10,7 @@ export function stage5Report(result: Stage5Result): string[] {
   const sepLimit = [...result.optical].flatMap(([p, via]) => (via === 'sep_limit_rejected' ? [`${p.pair.wdsId}${p.pair.components}`] : []));
   return [
     `optical-pair cascade: ${countsListed(opticalTally(result))}`,
-    `optical rejected rate: ${percent(rate)} (${count(opticalRejected(counts))} / ${count(result.optical.size)})`,
+    `optical rejected rate: ${formatShare(rate)} (${count(opticalRejected(counts))} / ${count(result.optical.size)})`,
     ...droppedPairSample('separation-limit rejections: optical doubles dropped', sepLimit),
   ];
 }

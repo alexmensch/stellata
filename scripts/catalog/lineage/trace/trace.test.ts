@@ -12,7 +12,7 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BRIGHTNESS_COLOUR_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
+  BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
@@ -67,8 +67,24 @@ const SIZE = [
   'size\tspine:3\trefused\tsize.refused.apsis-teff-out-of-window\t{"solution":"gspphot"}\tgaia-dr3-apsis:222',
 ].join('\n') + '\n';
 
+const BACKGROUND = '5877748442128924544';
+const REFUSED_FACTS = '"hip":"71681","v_mag":"1.33","v_via":"printed_hip","g_mag":"20.95"';
+
+/** α Cen B's designations: HD 128621 and HR 5460 both reach the G = 20.95
+ *  background source beside the saturated star, which the gate refuses. */
+const CLASSIC_IDS = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'classic-ids\tiv25:9007-5849-1\toutcome\tclassic-ids.hd.gated\t{"hd":"hd:128621"}\t',
+  `classic-ids\tiv25:9007-5849-1\trefused\tclassic-ids.gate-mag\t{"source_id":"${BACKGROUND}","via":"tyc",${REFUSED_FACTS}}\t`,
+  'classic-ids\tv50:5460\toutcome\tclassic-ids.hr.gated\t{"hr":"hr:5460","hd":"hd:128621"}\t',
+  `classic-ids\tv50:5460\trefused\tclassic-ids.gate-mag\t{"source_id":"${BACKGROUND}","via":"hd",${REFUSED_FACTS}}\t`,
+].join('\n') + '\n';
+
 const identity = [...identityRows(IDENTITY, 'fixture/identity.tsv')];
-const stages = [{ stage: 'membership', rows: () => lineageRows(MEMBERSHIP, 'fixture/membership.tsv') }];
+const stages = [
+  { stage: 'classic-ids', rows: () => lineageRows(CLASSIC_IDS, 'fixture/classic-ids.tsv') },
+  { stage: 'membership', rows: () => lineageRows(MEMBERSHIP, 'fixture/membership.tsv') },
+];
 /** SID 7's canonical key is HD 5; record 0, "Fixture Star", "Yunü" or "Yunu", is the
  *  record on HD 5; records 1 and 2 are case-only designation twins; records 3
  *  and 4 both display "54 Leo". */
@@ -146,6 +162,19 @@ describe('traceRecords over the fixture lineage', () => {
     expect(trace('fixture star').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
     expect(trace('Yunu').map((r) => r.key)).toEqual(['spine:3', 'spine:4']);
     expect(() => trace('a car')).toThrow(/"a car" reaches more than one record: "a Car" \(record 1\), "A Car" \(record 2\)/);
+  });
+
+  it('finds every designation row a designation reaches, the binding the gate refused included', () => {
+    const records = trace('hd:128621');
+    expect(records.map((r) => r.key)).toEqual(['iv25:9007-5849-1', 'v50:5460']);
+    expect(records.every((r) => r.identity === null)).toBe(true);
+    expect(records[0].rows.map((r) => `${r.role} ${r.code}`)).toEqual([
+      'outcome classic-ids.hd.gated', 'refused classic-ids.gate-mag',
+    ]);
+  });
+
+  it('finds every designation that reached a refused source from its Gaia id', () => {
+    expect(trace(BACKGROUND).map((r) => r.key)).toEqual(['iv25:9007-5849-1', 'v50:5460']);
   });
 
   it('says so when nothing names the query', () => {
@@ -234,6 +263,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.identity!), gzipText(CLOUD_IDENTITY));
   writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.stage), gzipText(CLOUD_ALLOCATION));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
+  writeFileSync(stageFile(dir, CLASSIC_IDS_LINEAGE.stage), gzipText(CLASSIC_IDS));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
   writeFileSync(stageFile(dir, BRIGHTNESS_COLOUR_LINEAGE.stage), gzipText(BRIGHTNESS_COLOUR));
@@ -273,6 +303,14 @@ describe('pnpm run trace', () => {
     expect(out).toMatch(/brightness-colour\.v\.printed-hip[\s\S]*size\.apsis-teff/);
     expect(out).toMatch(/size\.apsis-teff +\{"absmag":"1\.2345","solution":"gspspec","class_index":"stated"\}/);
     expect(out).toMatch(/refused  size\.refused\.apsis-teff-out-of-window/);
+  });
+
+  it('prints a designation\'s classic-id rows, the refused binding included', () => {
+    const out = run('hd:128621');
+    expect(out.split('\n')[0]).toBe('iv25:9007-5849-1');
+    expect(out).toMatch(/outcome  classic-ids\.hd\.gated/);
+    expect(out).toContain(`refused  classic-ids.gate-mag  {"source_id":"${BACKGROUND}","via":"tyc",`);
+    expect(out).toMatch(/v50:5460\n  outcome  classic-ids\.hr\.gated/);
   });
 
   it('reads the promotion stage and its identity file', () => {
