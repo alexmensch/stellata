@@ -57,4 +57,4 @@ HD 128621 and HR 5460 on the background source beside it), a
 record the catalogue parks, prints a record's placement,
 brightness-colour and size rows with their refused tiers, finds the record that
 refused a source no identity row carries, every component row of a promoted system from its anchor's
-designation, and a cloud from its `cloud:` slug.
+designation, a minted companion's absmag-source, colour and A_V rows, and a cloud from its `cloud:` slug.
