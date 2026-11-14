@@ -30,7 +30,7 @@ a code stage: `subdivide` holds Stage 1's ORB6 orphan and MSC inner-pair
 counts and Stage 3's NSS inner pairs; `ingest` holds Stage 3's
 `wds_pairs_total`, which its inner pairs add to. `binariesCounts` places each
 key by name, in the snapshot's order, and hands each snapshot stage to
-`nestByStage` as a counted block in `BINARIES_STAGES` order
+`nestByStage` as a counted block in `SNAPSHOT_STAGES` order
 ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)), so
 a refresh rewrites the file unchanged. Every input is required, so no block is
 ever `absent`. `filed` takes
@@ -39,10 +39,11 @@ the stages with a second argument that is `true` only when they are exactly
 once, so a key left out, invented or filed twice, or a stage outside the list,
 fails to compile, naming it.
 
-The last block is the `component-binding` lineage stage's, keyed on its reason codes:
-`binariesCounts` takes it as the shell's `countedStageLineage` folded it from
-the stage's lines ([Binding lineage](../resolve/README.md#binding-lineage)),
-and files it after `BINARIES_STAGES`.
+`SNAPSHOT_STAGES` is `BINARIES_STAGES` then the `component-binding` lineage
+stage, whose block is keyed on its reason codes: `binariesCounts` takes it as
+the shell's `countedStageLineage` folded it from the stage's lines
+([Binding lineage](../resolve/README.md#binding-lineage)), beside `filed`'s
+checked blocks.
 
 A rate with an empty denominator is `no-denominator`, never 0
 (`../../util/counts/tally-pure.ts`'s `share`), and its report line prints
