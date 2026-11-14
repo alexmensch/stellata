@@ -1,6 +1,6 @@
 // The Stage 2 cascade's tiers: ORB6 HIP, AT-HYG-native, SIMBAD cross-ID, CCDM sibling, AT-HYG position. See README.md.
 
-import type { SkyPosition } from '../../../src/astro-core/equatorial-basis';
+import { skyPositionAtEpoch, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import {
   canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, type ComponentKey, type PairRowKey,
 } from '../component-tokens-pure';
@@ -9,7 +9,7 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '../../wds/wds-pure';
 import {
-  WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition, propagatePosition,
+  WDS_PRECISE_COORD_EPOCH, chordSq, chordSqForTolerance, positionsWithin, predictSecondaryPosition,
 } from '../sky-geometry-pure';
 import { athygPositionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
@@ -51,7 +51,7 @@ function hipSkyPosition(hip: number, indices: IdentifierIndices): SkyPosition | 
   const gaia = indices.hipToGaia.get(hip);
   const astro = gaia === undefined ? undefined : indices.srcToAstrometry.get(gaia);
   if (astro === undefined) return null;
-  return propagatePosition(
+  return skyPositionAtEpoch(
     { raDeg: astro.raDeg, decDeg: astro.decDeg },
     { pmRaMasyr: astro.pmraMasyr, pmDecMasyr: astro.pmdecMasyr },
     astro.refEpoch, WDS_PRECISE_COORD_EPOCH,

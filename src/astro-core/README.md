@@ -67,8 +67,10 @@ Each has its own README.
   linear along the tangent basis and renormalised, exact in cos δ and
   stable through the poles, taking a `ProperMotion` whose μ_α* is already
   cos δ-applied; either component missing returns the position unmoved.
-  Shared by the catalog build's PM propagation
-  (`scripts/catalog/distance/direction-cascade.ts`) and space-motion velocity
+  `skyPositionAtEpoch` is the same read back as (ra, dec), for the binaries
+  stages' position matches and audit offsets. Shared by the catalog build's
+  PM propagation (`scripts/catalog/distance/direction-cascade.ts`), every
+  binaries-pipeline propagation (`scripts/binaries/`), space-motion velocity
   (`scripts/catalog/distance/velocity.ts`), the
   companion tangent-projection (`scripts/catalog/companions/companion-promotion.ts`),
   and the runtime Tier-1 sky→ICRS orbit projection

@@ -1,12 +1,12 @@
 // The WDS-pair → AT-HYG position match Stages 2 and 3 share. See README.md#the-at-hyg-position-match.
 
-import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
+import { skyPositionAtEpoch, unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { pyMod } from '../python-float-pure';
 import {
-  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
+  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition,
 } from '../sky-geometry-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
@@ -20,7 +20,7 @@ import { pushTo } from '../../util/map-buckets-pure';
 export const ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0;
 
 export function athygPositionAtEpoch(row: AthygRow, targetEpoch: number): SkyPosition {
-  return propagatePosition(
+  return skyPositionAtEpoch(
     { raDeg: row.raDeg, decDeg: row.decDeg },
     { pmRaMasyr: row.pmRaMasyr, pmDecMasyr: row.pmDecMasyr },
     ATHYG_REFERENCE_EPOCH, targetEpoch,

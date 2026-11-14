@@ -5,6 +5,8 @@ import {
   equatorialTangentBasis,
   equatorialTangentBasisAt,
   equatorialTangentBasisRad,
+  raDecFromUnitVector,
+  skyPositionAtEpoch,
   unitVectorFromRaDec,
   type UnitVector,
 } from './equatorial-basis';
@@ -181,5 +183,27 @@ describe('directionAtEpoch', () => {
     const u = directionAtEpoch({ raDeg: 10, decDeg: 89.95 }, { pmRaMasyr: 5000, pmDecMasyr: 2000 }, 2000, 2016);
     const norm = Math.hypot(u.x, u.y, u.z);
     expect(norm).toBeCloseTo(1, 12);
+  });
+});
+
+describe('skyPositionAtEpoch', () => {
+  it('returns the position object itself when either PM component is missing', () => {
+    const pos = { raDeg: 100, decDeg: 20 };
+    expect(skyPositionAtEpoch(pos, { pmRaMasyr: null, pmDecMasyr: 5 }, 2016, 2000)).toBe(pos);
+    expect(skyPositionAtEpoch(pos, { pmRaMasyr: 5, pmDecMasyr: null }, 2016, 2000)).toBe(pos);
+  });
+
+  it('is directionAtEpoch read back as (ra, dec), RA wrapped into [0, 360)', () => {
+    const pos = { raDeg: 0.001, decDeg: 0 };
+    const pm = { pmRaMasyr: 7200, pmDecMasyr: 0 };
+    const back = skyPositionAtEpoch(pos, pm, 2000, 1999);
+    expect(back).toEqual(raDecFromUnitVector(directionAtEpoch(pos, pm, 2000, 1999)));
+    expect(back.raDeg).toBeCloseTo(359.999, 9);
+  });
+
+  it('moves a source at the pole by its on-sky rate', () => {
+    const pole = { raDeg: 10, decDeg: 90 };
+    const moved = skyPositionAtEpoch(pole, { pmRaMasyr: 3600, pmDecMasyr: 0 }, 2000, 2001);
+    expect(90 - moved.decDeg).toBeCloseTo(3.6 / 3600, 9);
   });
 });

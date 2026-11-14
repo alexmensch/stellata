@@ -128,8 +128,6 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  propagatePosition (linear in RA/Dec
-                                  degrees, cos δ floored at 1e-3),
                                   tangentOffset, polarToTangent (a WDS
                                   ρ, θ as an east / north offset),
                                   distancePc (1000 /
@@ -137,11 +135,10 @@ scripts/binaries/
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
                                   offset), and the AT-HYG / WDS
-                                  reference epochs. Not the catalogue's
-                                  tangent-basis propagation
-                                  (../catalog/distance/direction-cascade.ts);
-                                  one formula for both is
-                                  stellata-hhaw.45.17.8.
+                                  reference epochs. Proper motion
+                                  propagates through astro-core's
+                                  directionAtEpoch / skyPositionAtEpoch,
+                                  the formula the catalogue uses.
   python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
                                   where JavaScript's default differs: pyMod,
                                   `%` with the divisor's sign; pySum, a

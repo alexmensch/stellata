@@ -89,6 +89,15 @@ export function directionAtEpoch(
   return { x: x / norm, y: y / norm, z: z / norm };
 }
 
+/** `directionAtEpoch` as (ra, dec); a position with no motion comes back
+ *  exactly as given, not through the round trip. */
+export function skyPositionAtEpoch(
+  pos: SkyPosition, pm: ProperMotion, fromEpoch: number, toEpoch: number,
+): SkyPosition {
+  if (pm.pmRaMasyr === null || pm.pmDecMasyr === null) return pos;
+  return raDecFromUnitVector(directionAtEpoch(pos, pm, fromEpoch, toEpoch));
+}
+
 /** The inverse of `unitVectorFromRaDec`, with ra wrapped to [0, 360). */
 export function raDecFromUnitVector(v: UnitVector): SkyPosition {
   const raDeg = Math.atan2(v.y, v.x) * RAD_TO_DEG;
