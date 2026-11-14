@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { diffLineage, stageDiffText, tallyKeyChanges } from './lineage-diff-pure';
 import {
   compareUtf8, decodeLineageLine, encodeLineageLine, evidenceTexts, foldStageLines, lineageLineKey, lineageLines, lineageRows, paramsOf,
-  paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, type LineageLine, type LineageRow,
+  paramsText, sortLineageLines, sortUtf8, stageLineageLine, stageLineageText, stageRow, type LineageLine, type LineageRow,
 } from './lineage-row-pure';
 import { admissionCode, outcomeCode, refusalCode, stageCodes } from './reason-codes/reason-codes-pure';
 
@@ -26,6 +26,10 @@ describe('evidenceTexts', () => {
 
   it('cites nothing when every row is the origin', () => {
     expect(evidenceTexts('spine:1', ['spine:1'])).toEqual([]);
+  });
+
+  it('is applied by stageRow, whatever a stage passes', () => {
+    expect(stageRow(CODES, 'spine:1', 'kept', {}, ['gaia:2', 'spine:1', 'gaia:2']).evidence).toEqual(['gaia:2']);
   });
 });
 

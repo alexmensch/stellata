@@ -97,7 +97,7 @@ Every stage writes the same envelope:
 | `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
-| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
+| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`, which `stageRow` applies) |
 
 - Each stage declares its own payload columns next to its reason codes and
   serialises its outcome union through one function, so a variant with no
