@@ -3,7 +3,7 @@
 import {
   CLASSICAL_CELLS,
   attestHd,
-  attestSpineRow,
+  attestIdentifiers,
   type PrimaryIndex,
   type PrimaryTables,
   type RowAttestation,
@@ -25,7 +25,7 @@ export interface AttestedRow {
 }
 
 export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): AttestedRow {
-  return { row, attestation: attestSpineRow(MEMBERSHIP_MANIFEST.encode(row), tables, idx) };
+  return { row, attestation: attestIdentifiers(row, tables, idx) };
 }
 
 /** The spine-label cells a row keeps once those no primary attests leave it —
@@ -60,6 +60,7 @@ export function routedRow({ row, attestation: a }: AttestedRow): { row: Manifest
   }
   if (a.attestation.tyc !== null) routes.push('tyc:tycho2');
   const routed = { ...row, routes: joinManifestValues(routes) };
+  if (a.unattested.length === 0) return { row: routed, outcomes: [] };
   const cells = MEMBERSHIP_MANIFEST.encode(routed);
   const key = routed.originKey;
   const outcomes = a.unattested.map((cell): KeyedOutcome => {
