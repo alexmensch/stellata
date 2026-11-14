@@ -4,7 +4,9 @@ import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '.
 import { outcomeCode, stageCodes, type CodeDeclaration, type StageCounts } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import { MULTIPLES_ROW_KEY } from '../multiples-row-key-pure';
-import { INHERITANCE_KINDS, type IdOrigin, type InheritanceKind, type MultiplesRecord } from '../multiples-record-pure';
+import {
+  INHERITANCE_KINDS, type IdentifierWithOrigin, type InheritanceKind, type MultiplesRecord,
+} from '../multiples-record-pure';
 import { BINDING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const BINDING_LINEAGE_BUDGET = { gzipBytes: 1_000_000, writeMs: 2_000 };
@@ -38,10 +40,9 @@ export const BINDING_CODES = stageCodes(BINDING_LINEAGE.stage, {
 /** Binding's count block: its lines folded per live code. */
 export type BindingCounts = StageCounts<typeof BINDING_CODES>;
 
-function identifierRow<I extends Identifier>(
-  key: string, id: I, value: string | null, origin: IdOrigin | null,
-): LineageRow {
-  if (value === null || origin === null) return stageRow(BINDING_CODES, key, `${id}.unbound`, {}, []);
+function identifierRow<I extends Identifier>(key: string, id: I, bound: IdentifierWithOrigin<string> | null): LineageRow {
+  if (bound === null) return stageRow(BINDING_CODES, key, `${id}.unbound`, {}, []);
+  const { value, origin } = bound;
   if (origin.kind === 'own') return stageRow(BINDING_CODES, key, `${id}.own`, { [id]: value }, []);
   return stageRow(BINDING_CODES, key, `${id}.inherited.${origin.how}`, { [id]: value, from: origin.from }, []);
 }
@@ -49,8 +50,8 @@ function identifierRow<I extends Identifier>(
 export function* bindingLineageRows(records: readonly MultiplesRecord[]): Generator<LineageRow> {
   for (const r of records) {
     const key = rowKeyText(MULTIPLES_ROW_KEY, r);
-    yield identifierRow(key, 'gaia', r.gaiaSourceId, r.gaiaOrigin);
-    yield identifierRow(key, 'hip', r.hip === null ? null : `hip:${r.hip}`, r.hipOrigin);
+    yield identifierRow(key, 'gaia', r.gaiaSourceId === null ? null : { value: r.gaiaSourceId, origin: r.gaiaOrigin });
+    yield identifierRow(key, 'hip', r.hip === null ? null : { value: `hip:${r.hip}`, origin: r.hipOrigin });
   }
 }
 
