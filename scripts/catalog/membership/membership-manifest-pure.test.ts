@@ -26,7 +26,7 @@ import {
   ADDITION_REASONS, BINDING_CLASSES, COMPONENT_REASON_PREFIX, LABEL_DROP_COLUMNS, LEDGER_COLUMNS,
 } from './ledger-rows-pure';
 import { BINDING_REVIEW } from './binding-review-tsv';
-import { bindingReviewKey } from './ledger-rows-pure';
+import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import {
   MEMBERSHIP_MANIFEST,
@@ -35,14 +35,14 @@ import {
   type ManifestColumn,
   type ManifestRecord,
 } from './membership-manifest-tsv';
-import { recordKey } from '../lineage/identity-pure';
+import { identityRow, recordKey } from '../lineage/identity-pure';
 import { diffLineage, stageDiffText } from '../lineage/lineage-diff-pure';
 import {
   decodeLineageLine, paramsOf, sortLineageLines, stageLineageLine, type LineageLine, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
-  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLineageRow, withLead, membershipSummary, membershipTotals,
+  CONTESTED_LEADS, MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, membershipLedgers, membershipLineageRow, withLead, membershipSummary, membershipTotals,
   type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
@@ -918,6 +918,32 @@ describe('codecs', () => {
     expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\n`)).toThrow(/3 cells, expected 6/);
     const drops = `${LABEL_DROP_COLUMNS.join('\t')}\n`;
     expect(() => LABEL_DROPS.parse(`${drops}1-1-1\t\t\n`)).toThrow(/3 cells, expected 8/);
+  });
+
+  it('refuses a malformed key cell or drop value, naming the file and line', () => {
+    const ledger = `${LEDGER_COLUMNS.join('\t')}\n`;
+    expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\tx\t\t\t\tadmitted:hd_omitted\n`))
+      .toThrow(new RegExp(`${ADDITIONS_LEDGER.file}:2: .*not an integer`));
+    expect(() => ADDITIONS_LEDGER.parse(`${ledger}1-1-1\t\t\t\t01\tadmitted:hd_omitted\n`))
+      .toThrow(new RegExp(`${ADDITIONS_LEDGER.file}:2:`));
+    const drops = `${LABEL_DROP_COLUMNS.join('\t')}\n`;
+    expect(() => LABEL_DROPS.parse(`${drops}\t70\t\t\t\thd\t\thd_unattested\n`))
+      .toThrow(new RegExp(`${LABEL_DROPS.file}:2: value`));
+    expect(() => LABEL_DROPS.parse(`${drops}\t70\t\t\t\tbayer\t5\thd_unattested\n`))
+      .toThrow(new RegExp(`${LABEL_DROPS.file}:2: cell`));
+  });
+
+  it('refuses a label-drop lineage row whose cell or value the ledger cannot carry', () => {
+    const key = 'spine:9';
+    const identity = new Map([[key, identityRow(key, { tyc: '', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
+    const dropRow = (cell: string, value: string) => membershipLineageRow({
+      key, outcome: { kind: 'label-drop', reason: 'hd_unattested', cell: cell as LabelDropCell, value },
+    });
+    expect(() => membershipLedgers([dropRow('hd', '')], identity)).toThrow(/spine:9's label drop: the value is empty/);
+    expect(() => membershipLedgers([dropRow('bayer', '5')], identity)).toThrow(/spine:9's label drop: "bayer" is not one of hd \| flam/);
+    expect(membershipLedgers([dropRow('hd', '70000')], identity).labelDrops).toEqual([{
+      tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested',
+    }]);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
