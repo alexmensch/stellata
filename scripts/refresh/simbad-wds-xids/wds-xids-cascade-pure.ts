@@ -1,7 +1,7 @@
 // The HD / CCDM / HIP alias cascade for WDS components SIMBAD holds under no WDS ident, and the HIP an object's aliases name. See README.md#the-run.
 
 import type { ParseLedger } from '../simbad/simbad-fetch-pure';
-import { HD, HIP, compose, identKey, parseIdent, type Namespace, type ParsedIdent } from '../simbad/simbad-specs-pure';
+import { HD, HIP, compose, identKey, parseIdent, replyJoiner, type Namespace, type ParsedIdent } from '../simbad/simbad-specs-pure';
 import { componentId, type WdsComponent } from './wds-components-pure';
 
 export const CASCADE_STRATEGIES = ['HD', 'CCDM', 'HIP'] as const;
@@ -42,13 +42,13 @@ const LETTERED = [HD, HIP] as const;
 const letteredKey = (ns: Namespace, parsed: ParsedIdent): string | null =>
   parsed.kind === 'component' ? `${ns.name} ${parsed.number} ${parsed.letter}` : null;
 
-/** An HD or HIP id by the number and letter it names, so `HD 193562` never answers `HD 19356` + `2`, and an unreadable one fails `ledger`; any other id by `identKey`. */
+/** An HD or HIP id by the number and letter it names, so `HD 193562` never answers `HD 19356` + `2`, and null for an unreadable one, which fails `ledger`; any other id by `identKey`. */
 export function replyKey(id: string, ledger: ParseLedger): string | null {
   const ns = LETTERED.find((n) => id.startsWith(n.prefix));
   if (ns === undefined) return identKey(id);
   const parsed = parseIdent(ns, id);
   ledger.note(parsed);
-  return letteredKey(ns, parsed);
+  return parsed.kind === 'suffix' ? `${ns.name} ${parsed.suffix}` : letteredKey(ns, parsed);
 }
 
 /** Each unresolved component's CCDM id, and its letter on every HD and HIP a resolved sibling holds, by the key a reply joins on; a component no HD or HIP id can letter (`2`, `Aa1`) asks CCDM only. An id two components would ask keeps the first. */
@@ -91,20 +91,31 @@ export interface CascadeResult {
   readonly hits: Readonly<Record<CascadeStrategy, number>>;
   /** Components whose aliases named more than one object, each bound to none. */
   readonly conflicts: readonly string[];
+  /** Hits naming an asked alias only case-folded (`…AB` for `…Ab`): another component, so bound to none. */
+  readonly folded: readonly string[];
 }
 
-/** A hit on an object an ident already resolved names that object again, not a new component, and is dropped; aliases naming two objects for one component bind neither, so the reply order decides nothing. */
+/** A hit on an object an ident already resolved names that object again, not a new component, and is dropped, as is one naming an asked alias only case-folded; one naming none even so is refused. Aliases naming two objects for one component bind neither, so the reply order decides nothing. */
 export function cascadeRecoveries(
   hits: readonly CascadeHit[],
   candidates: ReadonlyMap<string, CascadeCandidate>,
   resolvedOids: ReadonlySet<number>,
   ledger: ParseLedger,
 ): CascadeResult {
+  const join = replyJoiner(candidates);
   const named = new Map<string, { component: WdsComponent; byOid: Map<number, { id: string; strategy: CascadeStrategy }[]> }>();
+  const folded: string[] = [];
   for (const { id, oid } of hits) {
     const asked = replyKey(id, ledger);
-    const candidate = asked === null ? undefined : candidates.get(asked);
-    if (candidate === undefined || resolvedOids.has(oid)) continue;
+    if (asked === null) continue;
+    const joined = join(asked);
+    if (joined.kind === 'unasked') throw new Error(`SIMBAD answered ${id}, which names no alias the cascade asked`);
+    if (joined.kind === 'folded') {
+      folded.push(`${id} → ${oid}`);
+      continue;
+    }
+    const candidate = joined.value;
+    if (resolvedOids.has(oid)) continue;
     const key = componentId(candidate.component);
     const entry = named.get(key) ?? { component: candidate.component, byOid: new Map() };
     named.set(key, entry);
@@ -125,5 +136,5 @@ export function cascadeRecoveries(
     recoveries.set(key, { component, oid });
     for (const { strategy } of aliases) counts[strategy]++;
   }
-  return { recoveries, hits: counts, conflicts: conflicts.sort() };
+  return { recoveries, hits: counts, conflicts: conflicts.sort(), folded: folded.sort() };
 }

@@ -60,7 +60,9 @@ changed override stales the record.
    a component they cannot letter (`2`, `Aa1`, `S17`) asks CCDM only: glued
    on, Algol's `2` would ask `HD 193562`, another star SIMBAD answers (the 22
    components named `2` reached 4 such stars on 2026-11-14). An HD or HIP
-   reply the namespace rules cannot read fails the parse ledger. An alias
+   reply the namespace rules cannot read fails the parse ledger. A reply
+   naming an asked alias only case-folded is dropped and printed in the run
+   log, and one naming none even so fails the pull, as in the lookup. An alias
    naming an object the lookup already found names that object again and is
    dropped; aliases naming different objects for one component bind it to
    none, and the run log prints each such conflict, so neither the reply

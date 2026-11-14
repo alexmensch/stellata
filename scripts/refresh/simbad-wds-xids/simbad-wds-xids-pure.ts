@@ -5,7 +5,7 @@ import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchBasic, identPhase, oidOf, parseLedger, resolveOids, simbadPhases, type ParseLedger } from '../simbad/simbad-fetch-pure';
-import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, compose, identKey, parseIdent, simbadMatchKey } from '../simbad/simbad-specs-pure';
+import { GAIA_DR3, HD, HIP, MAIN_ID, OID, WDS, compose, identKey, parseIdent, replyJoiner } from '../simbad/simbad-specs-pure';
 import { componentId, identSuffix, type WdsComponent } from './wds-components-pure';
 import {
   cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
@@ -63,17 +63,17 @@ interface IdentResolution {
 
 /** Each component's object by its WDS ident: Phase A. An answer naming an asked component only under SIMBAD's case-folded match is dropped; one naming none even so is refused. */
 async function resolveByIdent(ask: Ask, components: readonly WdsComponent[], ledger: ParseLedger): Promise<IdentResolution> {
-  const ident = (c: WdsComponent): string => compose(WDS, identSuffix(c));
-  const byKey = new Map(components.map((c) => [identKey(ident(c)), c]));
-  const foldedKeys = new Set(components.map((c) => simbadMatchKey(ident(c))));
+  const join = replyJoiner(new Map(components.map((c) => [identKey(compose(WDS, identSuffix(c))), c])));
   const oids = new Map<string, number>();
   const folded: string[] = [];
   for (const [suffix, oid] of await resolveOids(ask, CORE, WDS, components.map(identSuffix), ledger)) {
     const id = compose(WDS, suffix);
-    const c = byKey.get(identKey(id));
-    if (c !== undefined) oids.set(componentId(c), oid);
-    else if (foldedKeys.has(simbadMatchKey(id))) folded.push(`${id} → ${oid}`);
-    else throw new Error(`SIMBAD answered ${id}, which names no component the request asked`);
+    const joined = join(identKey(id));
+    switch (joined.kind) {
+      case 'asked': oids.set(componentId(joined.value), oid); break;
+      case 'folded': folded.push(`${id} → ${oid}`); break;
+      case 'unasked': throw new Error(`SIMBAD answered ${id}, which names no component the request asked`);
+    }
   }
   return { oids, folded: folded.sort() };
 }
@@ -137,6 +137,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         for (const [key, { oid }] of cascade.recoveries) oids.set(key, oid);
         log(`cascade: ${ids.length} candidates, ${cascade.recoveries.size} components recovered (alias hits HD ${cascade.hits.HD}, CCDM ${cascade.hits.CCDM}, HIP ${cascade.hits.HIP})`);
         for (const conflict of cascade.conflicts) log(`  cascade bound neither of the objects named for ${conflict}`);
+        for (const answer of cascade.folded) log(`  cascade alias answered only case-folded, bound to none: ${answer}`);
       }
       for (const o of overrides) oids.set(componentId(o), o.oid);
 
