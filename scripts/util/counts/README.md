@@ -13,8 +13,9 @@ tally-pure.ts (+ test)          fold and its zero case, emptyTallyPartition;
                                 snapshot keys;
                                 sumOf, a prefixed subset's total;
                                 share, a rate or `no-denominator` on an
-                                empty whole, never 0; formatShare, its
-                                one-decimal percentage, `n/a` when absent;
+                                empty whole, never 0; formatFraction, the
+                                one-decimal percentage; formatShare, a
+                                share through it, `n/a` when absent;
                                 percentOf, the two composed for a log line;
                                 formatPartition, a partition's one-line
                                 `bucket=n` rundown.

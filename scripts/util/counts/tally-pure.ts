@@ -47,9 +47,14 @@ export function share(part: number, whole: number): Share {
   return whole === 0 ? { kind: 'no-denominator' } : { kind: 'rated', value: part / whole };
 }
 
+/** A fraction as a percentage to one decimal: `formatFraction(0.125)` is `12.5%`. */
+export function formatFraction(v: number): string {
+  return `${(100 * v).toFixed(1)}%`;
+}
+
 /** A share as a percentage to one decimal, `n/a` when it has no denominator. */
 export function formatShare(s: Share): string {
-  return s.kind === 'no-denominator' ? 'n/a' : `${(100 * s.value).toFixed(1)}%`;
+  return s.kind === 'no-denominator' ? 'n/a' : formatFraction(s.value);
 }
 
 /** `part` as a percentage of `whole` to one decimal, `n/a` for an empty whole. */
