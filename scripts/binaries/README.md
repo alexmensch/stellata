@@ -84,8 +84,7 @@ scripts/binaries/
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the codec for
                                   multiples.tsv — column roster, closed
                                   value sets and the properties a set's
-                                  members carry (which resolve tiers
-                                  anchor on a Gaia source_id; each
+                                  members carry (each
                                   orbit route's elements, regime and
                                   Stage 6 estimates), per-column
                                   decimal places,
@@ -128,20 +127,17 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  propagatePosition (linear in RA/Dec
-                                  degrees, cos δ floored at 1e-3),
                                   tangentOffset, polarToTangent (a WDS
                                   ρ, θ as an east / north offset),
                                   distancePc (1000 /
-                                  parallax), chordSq / positionsWithin
+                                  parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
                                   offset), and the AT-HYG / WDS
-                                  reference epochs. Not the catalogue's
-                                  tangent-basis propagation
-                                  (../catalog/distance/direction-cascade.ts);
-                                  one formula for both is
-                                  stellata-hhaw.45.17.8.
+                                  reference epochs. Proper motion
+                                  propagates through astro-core's
+                                  directionAtEpoch / skyPositionAtEpoch,
+                                  the formula the catalogue uses.
   python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
                                   where JavaScript's default differs: pyMod,
                                   `%` with the divisor's sign; pySum, a

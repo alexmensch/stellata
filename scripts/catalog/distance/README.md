@@ -104,12 +104,11 @@ same trust cascade the binaries pipeline implements in
 | `curated` | Sol alone — it carries no identifier any tier above can key on, so its curated record ([Curated records](../record/README.md#curated-records)) supplies the solution. The vector is arbitrary and unobservable: Sol's distance is zero, so the walk multiplies it to the origin whatever it points at. | <!-- count:build-catalog/placement.direction.curated -->1<!-- /count --> |
 
 Epoch propagation advances the measured unit vector to the
-`CATALOG_SCENE_EPOCH` (J2016.0) linearly along the local east/north
-tangent basis and renormalises — exact in cos δ, stable
-through the poles, <0.002″ error at Barnard's-scale PM over the 24.75-yr
-HIP2 J1991.25→J2016 interval. Gaia rows are native J2016.0 → a zero-Δt
-no-op. Radial velocity (perspective acceleration) is deliberately
-omitted; the full tuple belongs to future current-epoch propagation.
+`CATALOG_SCENE_EPOCH` (J2016.0) along the local east/north tangent basis
+and renormalises; its accuracy budget is
+[Proper-motion accuracy](/src/astro-core/README.md#proper-motion-accuracy).
+Gaia rows are native J2016.0 → a zero-Δt no-op. The full tuple, radial
+velocity included, belongs to future current-epoch propagation.
 μ_α* inputs are the cos δ-applied rates straight from the tier — never
 divide by cos δ.
 
@@ -118,8 +117,9 @@ The two Tycho-2 cells were the trap: `ra_mdeg` is stated at J2000 while
 `ep_ra`/`ep_de` date the OBSERVATIONS behind it, and `ra_icrs` is the observed
 position at J1991.25 — so reading either epoch off the column beside it is
 wrong, in opposite directions. [Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)
-carries the measurement; `directionAtEpoch` is the single form
-every tier reaches through `directionOnPm`.
+carries the measurement; `directionAtEpoch`
+(`src/astro-core/equatorial-basis.ts`) is the single form every tier
+reaches through `directionOnPm`.
 
 **`resolveDirection` selects a solution; it does not advance one.**
 `DirectionSolution` carries the tier's position, its own epoch and its own PM,

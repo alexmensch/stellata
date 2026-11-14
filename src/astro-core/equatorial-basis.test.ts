@@ -1,9 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  angularSeparationArcsec,
+  directionAtEpoch,
   equatorialTangentBasis,
   equatorialTangentBasisAt,
   equatorialTangentBasisRad,
+  raDecFromUnitVector,
+  skyPositionAtEpoch,
   unitVectorFromRaDec,
   type UnitVector,
 } from './equatorial-basis';
@@ -114,5 +118,101 @@ describe('equatorialTangentBasisAt', () => {
 
   it('returns null at the origin, where no direction exists', () => {
     expect(equatorialTangentBasisAt(0, 0, 0)).toBeNull();
+  });
+});
+
+describe('directionAtEpoch', () => {
+  it('returns the measured direction unchanged when either PM is missing', () => {
+    const u = directionAtEpoch({ raDeg: 100, decDeg: 20 }, { pmRaMasyr: null, pmDecMasyr: -10 }, 2016, 2000);
+    const v = directionAtEpoch({ raDeg: 100, decDeg: 20 }, { pmRaMasyr: 10, pmDecMasyr: null }, 2016, 2000);
+    const raw = unitVectorFromRaDec(100, 20);
+    expect(angularSeparationArcsec(u, raw)).toBe(0);
+    expect(angularSeparationArcsec(v, raw)).toBe(0);
+  });
+
+  it('positive pmra moves east (+RA), positive pmdec moves north (+Dec)', () => {
+    // 1000 mas/yr over +10 yr = 10″. At (0, 0) east is +y, north is +z.
+    const east = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 1000, pmDecMasyr: 0 }, 2000, 2010);
+    expect(east.y).toBeGreaterThan(0);
+    expect(east.z).toBeCloseTo(0, 12);
+    expect(angularSeparationArcsec(east, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
+
+    const north = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 0, pmDecMasyr: 1000 }, 2000, 2010);
+    expect(north.z).toBeGreaterThan(0);
+    expect(north.y).toBeCloseTo(0, 12);
+    expect(angularSeparationArcsec(north, unitVectorFromRaDec(0, 0))).toBeCloseTo(10, 6);
+  });
+
+  it('backwards propagation (toEpoch < fromEpoch) flips the displacement sign', () => {
+    const fwd = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 1000, pmDecMasyr: 0 }, 2000, 2016);
+    const back = directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 1000, pmDecMasyr: 0 }, 2016, 2000);
+    expect(fwd.y).toBeGreaterThan(0);
+    expect(back.y).toBeLessThan(0);
+  });
+
+  it('pmra is the cos δ-applied on-sky rate: displacement is dec-independent', () => {
+    // If the implementation wrongly divided (or multiplied) by cos δ,
+    // the on-sky displacement at dec 60° would be 2× (or ½×) the
+    // equatorial one.
+    const atEquator = angularSeparationArcsec(
+      directionAtEpoch({ raDeg: 0, decDeg: 0 }, { pmRaMasyr: 500, pmDecMasyr: 0 }, 2000, 2010),
+      unitVectorFromRaDec(0, 0),
+    );
+    const atDec60 = angularSeparationArcsec(
+      directionAtEpoch({ raDeg: 0, decDeg: 60 }, { pmRaMasyr: 500, pmDecMasyr: 0 }, 2000, 2010),
+      unitVectorFromRaDec(0, 60),
+    );
+    expect(atDec60).toBeCloseTo(atEquator, 5);
+  });
+
+  it('round-trips through an epoch and back', () => {
+    const there = directionAtEpoch({ raDeg: 269.45, decDeg: 4.74 }, { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 }, 2016, 2000);
+    // Convert back to (ra, dec) and re-propagate with the same PM.
+    const home = directionAtEpoch(raDecFromUnitVector(there), { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 }, 2000, 2016);
+    expect(angularSeparationArcsec(home, unitVectorFromRaDec(269.45, 4.74))).toBeCloseTo(0.000853, 6);
+  });
+
+  it('stays finite and unit-length near the celestial pole', () => {
+    const u = directionAtEpoch({ raDeg: 10, decDeg: 89.95 }, { pmRaMasyr: 5000, pmDecMasyr: 2000 }, 2000, 2016);
+    const norm = Math.hypot(u.x, u.y, u.z);
+    expect(norm).toBeCloseTo(1, 12);
+  });
+});
+
+describe('angularSeparationArcsec', () => {
+  it('resolves a micro-arcsecond separation that acos would round to zero', () => {
+    const a = unitVectorFromRaDec(30, 10);
+    const b = directionAtEpoch({ raDeg: 30, decDeg: 10 }, { pmRaMasyr: 0, pmDecMasyr: 1e-3 }, 2000, 2001);
+    expect(angularSeparationArcsec(a, b)).toBeCloseTo(1e-6, 12);
+  });
+});
+
+describe('skyPositionAtEpoch', () => {
+  it('returns the position object itself when either PM component is missing', () => {
+    const pos = { raDeg: 100, decDeg: 20 };
+    expect(skyPositionAtEpoch(pos, { pmRaMasyr: null, pmDecMasyr: 5 }, 2016, 2000)).toBe(pos);
+    expect(skyPositionAtEpoch(pos, { pmRaMasyr: 5, pmDecMasyr: null }, 2016, 2000)).toBe(pos);
+  });
+
+  it('is directionAtEpoch read back as (ra, dec), RA wrapped into [0, 360)', () => {
+    const pos = { raDeg: 0.001, decDeg: 0 };
+    const pm = { pmRaMasyr: 7200, pmDecMasyr: 0 };
+    const back = skyPositionAtEpoch(pos, pm, 2000, 1999);
+    expect(back).toEqual(raDecFromUnitVector(directionAtEpoch(pos, pm, 2000, 1999)));
+    expect(back.raDeg).toBeCloseTo(359.999, 9);
+  });
+
+  it('moves a source at the pole by its on-sky rate', () => {
+    const pole = { raDeg: 10, decDeg: 90 };
+    const moved = skyPositionAtEpoch(pole, { pmRaMasyr: 3600, pmDecMasyr: 0 }, 2000, 2001);
+    expect(90 - moved.decDeg).toBeCloseTo(3.6 / 3600, 9);
+  });
+});
+
+describe('raDecFromUnitVector', () => {
+  it('keeps RA in [0, 360): a tiny negative angle and −0 both read 0', () => {
+    expect(raDecFromUnitVector({ x: 1, y: -1e-17, z: 0 }).raDeg).toBe(0);
+    expect(Object.is(raDecFromUnitVector({ x: 1, y: -0, z: 0 }).raDeg, 0)).toBe(true);
+    expect(raDecFromUnitVector({ x: 1, y: -1e-3, z: 0 }).raDeg).toBeCloseTo(360 - Math.atan(1e-3) * 180 / Math.PI, 9);
   });
 });
