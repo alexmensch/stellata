@@ -3,7 +3,7 @@
 import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
-import type { IdentityRow } from '../lineage/identity-pure';
+import type { IdentityRow } from '../lineage/identity/identity-pure';
 import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';

@@ -2,7 +2,7 @@
 // identifier key the parity gate matches it on.
 // See README.md#why-the-residual-drops-rather-than-degrading.
 
-import type { RecordIdentifiers } from '../../lineage/identity-pure';
+import type { RecordIdentifiers } from '../../lineage/identity/identity-pure';
 
 /** The closed enum record parity (/docs/catalog-driver.md#61-record-parity) requires, for this membership event.
  *  `refused_no_defensible_parallax` is a row whose only measurement a skip rule

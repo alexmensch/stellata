@@ -15,7 +15,7 @@ import {
 } from './parallax/parked-ledger-pure';
 import {
   recordIdentifiersOf, recordKeyCells, type IdentityCells, type RecordIdentifiers,
-} from '../lineage/identity-pure';
+} from '../lineage/identity/identity-pure';
 import { VELOCITY_VIA_BY_PM_RESCUE, pmRescueOutcome, type PmRescueOutcome, type PmRescueResolution } from './pm-rescue/pm-rescue';
 import type { SpeedBand, VelocityVia } from './velocity';
 import { rvErrorBand, type RadialVelocityResolution, type RvErrorBand } from './radial-velocity/radial-velocity';

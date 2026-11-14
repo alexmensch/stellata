@@ -1,5 +1,6 @@
 // The SIMBAD WDS cross-ID pull: each WDS component's object, with its main_id, Gaia DR3 source_id and HIP. See README.md.
 
+import { percentOf } from '../../util/counts/tally-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
@@ -52,8 +53,6 @@ export interface XidsInputs {
   readonly overridesFile: string;
   readonly requestFrom: readonly string[];
 }
-
-const share = (n: number, of: number): string => `${n}/${of} (${of === 0 ? '0.0' : ((100 * n) / of).toFixed(1)}%)`;
 
 interface IdentResolution {
   /** By `componentId`. */
@@ -118,7 +117,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
     async run(ask, log) {
       const ledger = parseLedger();
       const { oids, folded } = await resolveByIdent(ask, components, ledger);
-      log(`WDS idents: ${share(oids.size, components.length)} components matched`);
+      log(`WDS idents: ${oids.size}/${components.length} (${percentOf(oids.size, components.length)}) components matched`);
       for (const answer of folded) log(`  WDS ident answered only case-folded, bound to none: ${answer}`);
 
       const siblings = new Map<string, number[]>();

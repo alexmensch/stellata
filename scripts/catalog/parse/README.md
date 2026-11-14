@@ -231,7 +231,7 @@ post-build distance-regression check has the input to measure drift against.
 Both are null on Sol, which sits at distance zero by construction, and on
 records minted rather than walked. `originKey` is build-time-only too: the
 row's `origin_key`, which a later stage's lineage cites the record by
-([Identity](../lineage/README.md#identity--the-origin-source-row)). Beside
+([Identity](../lineage/identity/README.md)). Beside
 the records the walk hands `readStars`' `onRow` each row's outcome, parked or
 shipped — its `Placement`, its `BrightnessColour` wherever the row reached
 V, and a shipped record's `Size` — and keeps none of them: the caller turns

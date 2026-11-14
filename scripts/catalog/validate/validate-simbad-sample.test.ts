@@ -244,6 +244,16 @@ describe('formatReport', () => {
     expect(md).toMatch(/Top-50 outliers/);
   });
 
+  it('prints match and outlier shares to two decimals, and an empty sample as n/a', () => {
+    const md = formatReport(buildReport([mkResidual({ isOutlier: true })], emptyStats(3), 'now'));
+    expect(md).toContain('- Matched: 3 (100.00%)');
+    expect(md).toContain('Total outliers: 1 of 3 (33.33%).');
+
+    const empty = formatReport(buildReport([], emptyStats(0), 'now'));
+    expect(empty).toContain('- Matched: 0 (n/a)');
+    expect(empty).toContain('Total outliers: 0 of 0 (n/a).');
+  });
+
   it('derives the histogram bin width from the edges, not a hard-coded literal', () => {
     const report = buildReport([mkResidual({})], emptyStats(1), 'now');
     expect(formatReport(report)).toMatch(/bin = 0\.05, range \[-1, \+1\]/);

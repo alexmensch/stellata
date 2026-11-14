@@ -1,10 +1,10 @@
-// Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md#identity--the-origin-source-row.
+// Identity rows: one per record, its origin key with the attributes the ledger views and trace key on. See README.md.
 
-import { nullableCell } from '../../util/tsv/artifact-pure';
+import { nullableCell } from '../../../util/tsv/artifact-pure';
 import {
   intCell, readTable, sourceIdCell, textCell, type TableRow, type TableSpec,
-} from '../../util/tsv/table-pure';
-import { sortUtf8 } from './lineage-row-pure';
+} from '../../../util/tsv/table-pure';
+import { sortUtf8 } from '../lineage-row-pure';
 
 /** The five identifier cells a record's ledger rows and its identity row carry. */
 export const RECORD_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl', 'gaia_source_id'] as const;

@@ -82,6 +82,20 @@
       "spect_msc": 3811,
       "spect_athyg": 9399,
       "spect_none": 22646
+    },
+    "component-binding": {
+      "component-binding.gaia.own": 31540,
+      "component-binding.gaia.inherited.blend": 757,
+      "component-binding.gaia.inherited.letter": 68,
+      "component-binding.gaia.inherited.parent": 1101,
+      "component-binding.gaia.inherited.partner": 101,
+      "component-binding.gaia.unbound": 13454,
+      "component-binding.hip.own": 14017,
+      "component-binding.hip.inherited.blend": 819,
+      "component-binding.hip.inherited.letter": 127,
+      "component-binding.hip.inherited.parent": 385,
+      "component-binding.hip.inherited.partner": 43,
+      "component-binding.hip.unbound": 31630
     }
   }
 }

@@ -132,12 +132,16 @@ describe('the step table', () => {
     );
   });
 
-  it.skipIf(!lfsContentReadable(MANIFEST))('describes every pull: Python under python3 -I -S, TypeScript through tsx', () => {
-    const tree = pipelineTree(REPO_ROOT);
-    for (const step of MANUAL_STEPS.filter((s) => s.kind === 'pull')) {
-      expect(describeStep(step, tree), step.name).toMatchObject({ kind: 'pull', query: expect.any(String) });
-    }
-  }, SLOW_TIMEOUT_MS);
+  const tree = pipelineTree(REPO_ROOT);
+  const pulls = MANUAL_STEPS.filter((s) => s.kind === 'pull');
+
+  it.skipIf(!lfsContentReadable(MANIFEST)).each(pulls.map((step) => [step.name, step] as const))(
+    'describes the pull %s: Python under python3 -I -S, TypeScript through tsx',
+    (_, step) => {
+      expect(describeStep(step, tree)).toMatchObject({ kind: 'pull', query: expect.any(String) });
+    },
+    SLOW_TIMEOUT_MS,
+  );
 
   const describingBakes = MANUAL_STEPS.filter((s) => s.kind === 'bake' && describesItself(s));
 
@@ -146,7 +150,6 @@ describe('the step table', () => {
   });
 
   describe.each(describingBakes.map((step) => [step.name, step] as const))('%s', (_, step) => {
-    const tree = pipelineTree(REPO_ROOT);
     const read = readManualRecord(step, tree.manualStamp(step.name));
     const projected = read.kind === 'read' ? read.record.requestFrom : [];
 

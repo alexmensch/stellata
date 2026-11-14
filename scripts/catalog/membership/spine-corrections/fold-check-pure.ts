@@ -1,7 +1,7 @@
 // Each fold's lineage and identity rows, and the check that a fold is a merge rather than a drop. See README.md#correcting-a-merge-decision.
 
 import { spineDesignations, type SpineRow } from '../../spine/inherited-spine-pure';
-import { identityRow, type IdentityRow } from '../../lineage/identity-pure';
+import { identityRow, type IdentityRow } from '../../lineage/identity/identity-pure';
 import { bindingReviewKey } from '../ledger-rows-pure';
 import type { KeyedOutcome } from '../membership-lineage-pure';
 import { manifestDesignations, type ManifestRecord } from '../membership-manifest-tsv';

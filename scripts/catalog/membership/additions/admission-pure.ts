@@ -13,7 +13,7 @@ import {
 } from '../../spine/primaries-audit-pure';
 import { UnionFind, compareDesignations } from '../../../sid/sid-pure';
 import { nullableCell } from '../../../util/tsv/artifact-pure';
-import { identityRow, type IdentityCells, type IdentityRow } from '../../lineage/identity-pure';
+import { identityRow, type IdentityCells, type IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   BINDING_SOURCES,
   type BindingSource,
