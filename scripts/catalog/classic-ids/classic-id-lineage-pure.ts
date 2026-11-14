@@ -2,7 +2,9 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
+import {
+  outcomeCode, refusalCode, stageCodes, type CodeDeclaration, type LIVE,
+} from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from '../membership/binding/binding-gate-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 import { OVERLAY_VALUE_SEPARATOR, type DesignationReach, type GateRefusal, type RouteCheck } from './classic-id-overlay-pure';
@@ -18,22 +20,30 @@ export const CLASSIC_ID_LINEAGE_BUDGET = { gzipBytes: 9_800_000, writeMs: 10_000
 const KEPT = 'and the binding gate keeps at least one.';
 const REFUSED = 'and the binding gate refuses every one.';
 
+/** An IV/27A designation kind: Bayer and Flamsteed route alike, through the row's HD, else its HIP. */
+type Iv27aKind = 'bayer' | 'flamsteed';
+type Iv27aBranch<K extends Iv27aKind> = `${K}.${'hd-route' | 'hip-route'}.${'bound' | 'gated'}` | `${K}.no-source`;
+
+function iv27aCodes<K extends Iv27aKind>(kind: K, label: string): Record<Iv27aBranch<K>, CodeDeclaration<typeof LIVE, true>> {
+  const viaHd = `The ${label} designation reaches Gaia sources through its IV/27A HD,`;
+  const viaHip = `The ${label} designation's IV/27A HD reaches no Gaia source and its HIP reaches one,`;
+  return {
+    [`${kind}.hd-route.bound`]: outcomeCode(`${viaHd} ${KEPT}`),
+    [`${kind}.hd-route.gated`]: outcomeCode(`${viaHd} ${REFUSED}`),
+    [`${kind}.hip-route.bound`]: outcomeCode(`${viaHip} ${KEPT}`),
+    [`${kind}.hip-route.gated`]: outcomeCode(`${viaHip} ${REFUSED}`),
+    [`${kind}.no-source`]: outcomeCode(`Neither the ${label} designation's IV/27A HD nor its HIP reaches a Gaia source.`),
+  } as Record<Iv27aBranch<K>, CodeDeclaration<typeof LIVE, true>>;
+}
+
 export const CLASSIC_ID_CODES = stageCodes(CLASSIC_IDS_LINEAGE.stage, {
   'hd.bound': outcomeCode(`The HD's IV/25 Tycho-2 entries reach Gaia sources through the Gaia TYC cross-match, ${KEPT}`),
   'hd.gated': outcomeCode(`The HD's IV/25 Tycho-2 entries reach Gaia sources through the Gaia TYC cross-match, ${REFUSED}`),
   'hd.no-source': outcomeCode('None of the HD\'s IV/25 Tycho-2 entries is in the Gaia TYC cross-match.'),
   'hip.bound': outcomeCode('The Gaia HIP cross-match pairs the HIP with a source the binding gate keeps.'),
   'hip.gated': outcomeCode('The Gaia HIP cross-match pairs the HIP with a source the binding gate refuses.'),
-  'bayer.hd-route.bound': outcomeCode(`The Bayer designation reaches Gaia sources through its IV/27A HD, ${KEPT}`),
-  'bayer.hd-route.gated': outcomeCode(`The Bayer designation reaches Gaia sources through its IV/27A HD, ${REFUSED}`),
-  'bayer.hip-route.bound': outcomeCode(`The Bayer designation's IV/27A HD reaches no Gaia source and its HIP reaches one, ${KEPT}`),
-  'bayer.hip-route.gated': outcomeCode(`The Bayer designation's IV/27A HD reaches no Gaia source and its HIP reaches one, ${REFUSED}`),
-  'bayer.no-source': outcomeCode('Neither the Bayer designation\'s IV/27A HD nor its HIP reaches a Gaia source.'),
-  'flamsteed.hd-route.bound': outcomeCode(`The Flamsteed designation reaches Gaia sources through its IV/27A HD, ${KEPT}`),
-  'flamsteed.hd-route.gated': outcomeCode(`The Flamsteed designation reaches Gaia sources through its IV/27A HD, ${REFUSED}`),
-  'flamsteed.hip-route.bound': outcomeCode(`The Flamsteed designation's IV/27A HD reaches no Gaia source and its HIP reaches one, ${KEPT}`),
-  'flamsteed.hip-route.gated': outcomeCode(`The Flamsteed designation's IV/27A HD reaches no Gaia source and its HIP reaches one, ${REFUSED}`),
-  'flamsteed.no-source': outcomeCode('Neither the Flamsteed designation\'s IV/27A HD nor its HIP reaches a Gaia source.'),
+  ...iv27aCodes('bayer', 'Bayer'),
+  ...iv27aCodes('flamsteed', 'Flamsteed'),
   'hr.bound': outcomeCode(`The HR reaches Gaia sources through its V/50 HD, ${KEPT}`),
   'hr.gated': outcomeCode(`The HR reaches Gaia sources through its V/50 HD, ${REFUSED}`),
   'hr.no-source': outcomeCode('The HR\'s V/50 HD reaches no Gaia source.'),
@@ -57,12 +67,14 @@ type RouteBranch = `route.${RouteCheck['outcome']}`;
 type DesignationKind = DesignationReach['kind'];
 type DesignationBranch = Exclude<Branch, GateBranch | RouteBranch | 'unweighed-no-pulled-row'>;
 
+type Iv27aParams<K extends Iv27aKind> = { [P in K]: string } & { hd: string; hip?: string };
+
 /** Each designation row's own params: the designation in the form trace matches, and the cells its route read. */
 interface DesignationParams {
   hd: { hd: string };
   hip: { hip: string };
-  bayer: { bayer: string; hd: string; hip?: string };
-  flamsteed: { flamsteed: string; hd: string; hip?: string };
+  bayer: Iv27aParams<'bayer'>;
+  flamsteed: Iv27aParams<'flamsteed'>;
   hr: { hr: string; hd?: string };
   gj: { gj: string; hip?: string };
 }
@@ -111,9 +123,10 @@ function paramsAs<B extends Branch>(r: LineageRow, branch: B): ParamsOf<B> {
 
 const hdText = (hd: number): string => `hd:${hd}`;
 const hipText = (hip: number): string => `hip:${hip}`;
+const hrText = (hr: number): string => `hr:${hr}`;
 const optionalHip = (hip: number | null): { hip?: string } => (hip === null ? {} : { hip: hipText(hip) });
 
-/** The number in a designation param written by `hdText` / `hipText` / the `hr` form. */
+/** The number in a designation param written by `hdText` / `hipText` / `hrText`. */
 function designationNumber(value: string, ns: 'hd' | 'hip' | 'hr'): number {
   const prefix = `${ns}:`;
   const n = Number(value.slice(prefix.length));
@@ -167,22 +180,16 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
         { key: keys.hipXmatch(r.hip), evidence: [], designation: hip, params: { hip } }, 'xmatch', [r.source], 'hip.bound', 'hip.gated',
       );
     }
-    case 'bayer': {
-      const d = { key: keys.iv27a(r.hd), evidence: [], designation: r.value, params: { bayer: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
-      if (r.reach.kind === 'unreached') return none(d, 'bayer.no-source');
-      return r.reach.route === 'hd'
-        ? outcome(d, 'hd', r.reach.sources, 'bayer.hd-route.bound', 'bayer.hd-route.gated')
-        : outcome(d, 'hip', r.reach.sources, 'bayer.hip-route.bound', 'bayer.hip-route.gated');
-    }
+    case 'bayer':
     case 'flamsteed': {
-      const d = { key: keys.iv27a(r.hd), evidence: [], designation: r.value, params: { flamsteed: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } };
-      if (r.reach.kind === 'unreached') return none(d, 'flamsteed.no-source');
-      return r.reach.route === 'hd'
-        ? outcome(d, 'hd', r.reach.sources, 'flamsteed.hd-route.bound', 'flamsteed.hd-route.gated')
-        : outcome(d, 'hip', r.reach.sources, 'flamsteed.hip-route.bound', 'flamsteed.hip-route.gated');
+      const params = { [r.kind]: r.value, hd: hdText(r.hd), ...optionalHip(r.hip) } as DesignationParams[typeof r.kind];
+      const d = { key: keys.iv27a(r.hd), evidence: [], designation: r.value, params };
+      if (r.reach.kind === 'unreached') return none(d, `${r.kind}.no-source`);
+      const route = `${r.kind}.${r.reach.route}-route` as const;
+      return outcome(d, r.reach.route, r.reach.sources, `${route}.bound`, `${route}.gated`);
     }
     case 'hr': {
-      const hr = `hr:${r.hr}`;
+      const hr = hrText(r.hr);
       const d = { key: keys.v50(r.hr), evidence: [], designation: hr, params: { hr, ...(r.hd === null ? {} : { hd: hdText(r.hd) }) } };
       if (r.reach.kind === 'reached') return outcome(d, r.reach.route, r.reach.sources, 'hr.bound', 'hr.gated');
       return none(d, r.hd === null ? 'hr.no-hd' : 'hr.no-source');
