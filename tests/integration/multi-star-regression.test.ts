@@ -32,7 +32,8 @@ import {
 } from '../../src/client/binaries/orbit-relation-cache';
 import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure';
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
-import { AU_PC, AU_PER_PC } from '../../src/astro-core/astronomy-constants';
+import { AU_PC, AU_PER_PC, RAD_TO_DEG } from '../../src/astro-core/astronomy-constants';
+import { pyMod } from '../../src/astro-core/angles';
 import { readMultiplesTsv } from '../../scripts/catalog/companions/companion-promotion';
 import { wdsRootOf } from '../../scripts/binaries/component-tokens-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
@@ -221,7 +222,7 @@ function skySeparationAtPrimary(
   const radial = dx * u.x + dy * u.y + dz * u.z;
   return {
     sepAu: Math.hypot(north, east) * AU_PER_PC,
-    paDeg: (Math.atan2(east, north) * (180 / Math.PI) + 360) % 360,
+    paDeg: pyMod(Math.atan2(east, north) * RAD_TO_DEG, 360),
     radialAu: radial * AU_PER_PC,
   };
 }
@@ -384,7 +385,7 @@ describe.runIf(FIXTURES_READY)('multi-star regression corpus', () => {
       // Same eval path the runtime cache uses for its ΔR baseline.
       const sky = evaluateOrbitSkyAU(relationToElements(relation), relation.sepPaEpochJd);
       const sepArcsec = Math.hypot(sky.northAU, sky.eastAU) / distancePc(primary);
-      const paDeg = (Math.atan2(sky.eastAU, sky.northAU) * (180 / Math.PI) + 360) % 360;
+      const paDeg = pyMod(Math.atan2(sky.eastAU, sky.northAU) * RAD_TO_DEG, 360);
       if (row.orbitSepTolArcsec !== null) {
         const sepDiff = Math.abs(sepArcsec - row.sepArcsec);
         expect(
