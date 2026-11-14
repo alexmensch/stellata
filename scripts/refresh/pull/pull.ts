@@ -103,7 +103,7 @@ export interface PhasedPull<K extends string> {
 /** A query's limit over the rows it should return, so the band, not the overflow, reports a moved table. */
 export const LIMIT_HEADROOM = 2;
 /** The most cells one whole or sliced table may hold within the CI heap budget: README.md#how-big-a-table-may-be. */
-export const MAX_TABLE_CELLS = 30_000_000;
+export const MAX_TABLE_CELLS = 48_000_000;
 const REQUEST = '{request}';
 const SLICE = '{slice}';
 const SYNC_TIMEOUT_MS = 300_000;
