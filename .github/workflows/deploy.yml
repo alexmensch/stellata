@@ -103,6 +103,21 @@ jobs:
           pnpm exec wrangler versions deploy "$VERSION_ID@100%" --message "$GITHUB_SHA" --yes
           pnpm exec wrangler triggers deploy
 
+  publish-releases:
+    needs: [plan-releases, deploy]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            scripts/release
+            scripts/util
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
       - name: Mint release token
         id: release-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
@@ -116,4 +131,8 @@ jobs:
       - name: Publish releases
         env:
           GH_TOKEN: ${{ steps.release-token.outputs.token }}
-        run: node scripts/release/cut-releases.ts publish --plan "$RUNNER_TEMP/release-plan.json"
+          PLAN: ${{ needs.plan-releases.outputs.plan }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' "$PLAN" > "$RUNNER_TEMP/release-plan.json"
+          node scripts/release/cut-releases.ts publish --plan "$RUNNER_TEMP/release-plan.json"

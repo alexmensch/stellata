@@ -734,11 +734,13 @@ On every push to `main`, `deploy.yml`:
    but untagged: re-run the job (it re-uploads, re-checks and re-deploys)
    or cut the tag by [Manual release](#manual-release-fallback). Detail:
    [The pre-traffic check](scripts/release/README.md#the-pre-traffic-check).
-4. Runs `cut-releases.ts publish`, which creates each planned
-   release, and with it its `v<version>` tag, from that commit's own PR
-   body. Falls back to `--generate-notes` where the section is missing,
-   and skips any version already released. It runs on a GitHub App token
-   minted for the step, never `GITHUB_TOKEN`
+4. In its own job, after the deploy job succeeds, runs `cut-releases.ts
+   publish`, which creates each planned release, and with it its
+   `v<version>` tag, from that commit's own PR body. Falls back to
+   `--generate-notes` where the section is missing, and skips any version
+   already released. It runs on a GitHub App token minted in that job,
+   never `GITHUB_TOKEN`; the job checks out only `scripts/release` and
+   `scripts/util` and installs nothing
    ([The publish token](scripts/release/README.md#the-publish-token)).
 
 Step 4 is what makes a range of several releasing commits correct (a
