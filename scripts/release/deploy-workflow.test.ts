@@ -62,6 +62,7 @@ describe('deploy.yml Publish releases token', () => {
   it('leaves GITHUB_TOKEN read-only, so the App token is the one writer', () => {
     const block = WORKFLOW.match(/^permissions:\n((?: {2}.+\n)+)/m)?.[1] ?? '';
     expect(field(block, 'contents')).toBe('read');
+    expect(jobs.filter((job) => /^ {4}permissions:/m.test(job))).toEqual([]);
   });
 });
 
