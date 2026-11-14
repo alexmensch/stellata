@@ -31,9 +31,8 @@ import {
   RIELLO_G_MINUS_V_SIGMA,
   vTierIsSystemBlend,
 } from '../photometry/v-magnitude-pure';
-import {
-  MULTIPLES_TSV, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia,
-} from '../../binaries/multiples-tsv';
+import { MULTIPLES_TSV } from '../../binaries/multiples-tsv';
+import { type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../../binaries/multiples-record-pure';
 import {
   canonicalCompLetter, composeSyntheticId, isMoreCanonicalAnchor, parentComponentToken, wdsRootOf,
 } from '../../binaries/component-tokens-pure';

@@ -1,17 +1,17 @@
 // The WDS-pair → AT-HYG position match Stages 2 and 3 share. See README.md#the-at-hyg-position-match.
 
-import { unitVectorFromRaDec, type SkyPosition } from '../../../src/astro-core/equatorial-basis';
+import { directionAtEpoch, unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { pyMod } from '../python-float-pure';
 import {
-  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition, propagatePosition,
+  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition,
 } from '../sky-geometry-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
 } from './components-pure';
-import { OWN, inheritedFrom, type IdOrigin } from '../multiples-tsv';
+import { OWN, inheritedFrom, type IdOrigin } from '../multiples-record-pure';
 import { measuredOffset, splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { buildSystemHipClaims, hipClaimedByDisjointLetter } from './sibling-identity-pure';
 import { pushTo } from '../../util/map-buckets-pure';
@@ -19,8 +19,8 @@ import { pushTo } from '../../util/map-buckets-pure';
 /** Below the typical AT-HYG inter-source separation outside the densest clusters. */
 export const ATHYG_POSITION_MATCH_TOLERANCE_ARCSEC = 2.0;
 
-export function athygPositionAtEpoch(row: AthygRow, targetEpoch: number): SkyPosition {
-  return propagatePosition(
+export function athygDirectionAtEpoch(row: AthygRow, targetEpoch: number): UnitVector {
+  return directionAtEpoch(
     { raDeg: row.raDeg, decDeg: row.decDeg },
     { pmRaMasyr: row.pmRaMasyr, pmDecMasyr: row.pmDecMasyr },
     ATHYG_REFERENCE_EPOCH, targetEpoch,
@@ -58,8 +58,10 @@ export function findNearestAthyg(
       for (const i of grid.get(cellKey(raCell, baseDec + dDec)) ?? []) {
         if (i === excludeIdx) continue;
         const row = athyg[i];
-        const cand = targetEpoch === null ? row : athygPositionAtEpoch(row, targetEpoch);
-        const d = unitChordSq(unitVectorFromRaDec(cand.raDeg, cand.decDeg), q);
+        const cand = targetEpoch === null
+          ? unitVectorFromRaDec(row.raDeg, row.decDeg)
+          : athygDirectionAtEpoch(row, targetEpoch);
+        const d = unitChordSq(cand, q);
         if (d < best) {
           best = d;
           bestIdx = i;

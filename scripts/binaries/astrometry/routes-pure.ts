@@ -4,14 +4,15 @@ import { HIP2_REF_EPOCH, hip2PmDisagrees } from '../../catalog/distance/directio
 import { gaia5pUnreliable } from '../../catalog/distance/gaia-distrust';
 import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { AthygRow } from '../load/athyg-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+
 import type { IdentifierIndices } from '../load/indices-pure';
-import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-tsv';
+import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
 import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
 import { ATHYG_REFERENCE_EPOCH } from '../sky-geometry-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** The routes Stage 3 tags, in priority order: every `astrometry_via` but Stage 6's `system_inherited`. */
 export type RoutedVia = Exclude<AstrometryVia, 'system_inherited'>;
@@ -41,7 +42,7 @@ export interface PairAstrometry {
 /** A source in any pair this close routes through HIP2 when the two catalogues' PMs disagree. */
 export const HIP2_COMPANION_SEPARATION_ARCSEC = 5.0;
 
-export function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
+export function fromGaia(row: GaiaAstrometryCatalogRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
   return Object.freeze({
     astrometryVia, raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.parallaxMas, parallaxErrorMas: row.parallaxErrorMas,
     pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch,
@@ -77,7 +78,7 @@ export function routeAstrometry(c: ResolvedComponent, minRhoArcsec: number | nul
     if (hip2 !== null) return fromHip2(hip2);
     if (gaia === null) return UNRESOLVED_ASTROMETRY;
   }
-  if (indices.srcToNss.has(gaia.sourceId) && gaia5pUnreliable(gaia)) return fromGaia(gaia, 'gaia_nss_systemic');
+  if (indices.srcToNss.has(gaia.ref.row) && gaia5pUnreliable(gaia)) return fromGaia(gaia, 'gaia_nss_systemic');
   if (minRhoArcsec !== null && minRhoArcsec <= HIP2_COMPANION_SEPARATION_ARCSEC) {
     const hip2 = componentHip2(c, indices);
     if (hip2 !== null && hip2PmDisagrees(gaia, hip2)) return fromHip2(hip2);

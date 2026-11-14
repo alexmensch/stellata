@@ -4,6 +4,7 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { HIP2 } from '../../catalog/sources/hip2-source';
 import { GAIA_HIP_XMATCH } from '../../catalog/parse/gaia-hip-xmatch-source';
 import { GAIA_TYC_XMATCH } from '../../catalog/parse/gaia-tyc-xmatch-source';
+import { GAIA_ASTROMETRY } from '../../catalog/sources/gaia-astrometry-source';
 import { GAIA_NSS } from '../../catalog/sources/gaia-nss-source';
 import { HIP_CCDM } from '../../catalog/multiplicity/hip-ccdm-source';
 import { ATHYG_CLASSIC_IDS } from '../../catalog/spine/athyg-classic-ids-source';
@@ -13,14 +14,11 @@ import type { Check } from '../../util/emit-artifacts';
 import { fold } from '../../util/counts/tally-pure';
 import type { ComponentKey, DiscovererKey } from '../component-tokens-pure';
 import { parseAthygRows, type AthygRow } from './athyg-pure';
-import { BINARIES_ASTROMETRY } from './binaries-astrometry-source';
 import {
   BLANK_RESCUE_OUTCOMES, rescueBlankComponents, type BlankRescueOutcome,
 } from './blank-rescue-pure';
 import { ASTROMETRY_EXCLUSIONS, COMPONENT_SPTYPE_OVERRIDES, ORB6_COMPONENT_OVERRIDES } from './curated-source';
-import {
-  applyAstrometryExclusions, parseNssOrbits, type AstrometryExclusionOutcome, type GaiaAstrometryRow, type NssOrbitRow,
-} from './gaia-pure';
+import { applyAstrometryExclusions, parseNssOrbits, type AstrometryExclusionOutcome, type NssOrbitRow } from './gaia-pure';
 import {
   buildIndices, parseCcdmIndex, scrubAthygGaia, type CcdmIndex, type IdentifierIndices,
 } from './indices-pure';
@@ -39,6 +37,7 @@ import {
   type WdsPair,
 } from '../../wds/wds-pure';
 import { ORB6, WDS_SUMM } from '../../wds/wds-source';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** Expected parse cardinalities, about 10% either side of the frozen
  *  catalogues; a new upstream release re-pins them deliberately. CCDM is the
@@ -62,7 +61,7 @@ export interface Stage1Inputs {
   readonly hipToGaia: ReadonlyMap<number, string>;
   readonly tycToGaia: ReadonlyMap<string, string>;
   readonly nss: ReadonlyMap<string, NssOrbitRow>;
-  readonly astrometry: ReadonlyMap<string, GaiaAstrometryRow>;
+  readonly astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>;
   readonly astrometryExclusions: ReadonlyMap<string, string>;
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly simbadSptypeByOid: ReadonlyMap<number, string>;
@@ -167,7 +166,7 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
     hipToGaia: GAIA_HIP_XMATCH.read(),
     tycToGaia: await GAIA_TYC_XMATCH.read(),
     nss: parseNssOrbits(GAIA_NSS.read()),
-    astrometry: BINARIES_ASTROMETRY.read(),
+    astrometry: GAIA_ASTROMETRY.read(),
     astrometryExclusions: ASTROMETRY_EXCLUSIONS.read(),
     simbadWdsXids: simbadXids,
     simbadSptypeByOid: SIMBAD_WDS_SPTYPE.read(),

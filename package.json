@@ -25,7 +25,6 @@
     "refresh:gaia-nss": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-nss",
     "refresh:bailer-jones": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:bailer-jones",
     "refresh:gaia-apsis": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-apsis",
-    "refresh:gaia-astrometry": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-astrometry",
     "refresh:gaia-astrometry-catalog": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-astrometry-catalog",
     "refresh:gaia-dr2-neighbourhood": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-dr2-neighbourhood",
     "refresh:gaia-gspc": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:gaia-gspc",

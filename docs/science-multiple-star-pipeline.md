@@ -53,10 +53,11 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
   says only that the archive carries them, not how they are built). Committed as
   `data/gaia/gaia_dr3_hip_xmatch.tsv` + `gaia_dr3_tyc_xmatch.tsv`.
 - **Gaia DR3 5-parameter astrometry** — `gaiadr3.gaia_source`,
-  queried for the deduped source_id list the WDS resolution stage
-  produces. Per-source RA/Dec/parallax/PM with errors and ref_epoch
-  J2016.0; ~99% coverage on resolved WDS components. Committed as
-  `data/gaia/gaia_dr3_astrometry.tsv`.
+  queried for the one astrometry request, which unions the source_ids
+  the WDS resolution stage weighs with the catalogue's. Per-source
+  RA/Dec/parallax/PM with errors and ref_epoch J2016.0; ~99% coverage on
+  resolved WDS components. Committed as
+  `data/gaia/gaia_dr3_astrometry_catalog.tsv`.
 - **Gaia DR3 NSS two-body orbits** — `gaiadr3.nss_two_body_orbit`,
   the non-single-star catalogue, with Thiele-Innes orbital fits
   ([Halbwachs 2023](/data/papers/index.md#halbwachs2023)). Covers the period regime

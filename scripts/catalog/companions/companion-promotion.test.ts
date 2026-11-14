@@ -37,7 +37,7 @@ import type { Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { multiplesRow, type MultiplesRowOverrides } from './multiples-fixture';
-import { OWN } from '../../binaries/multiples-tsv';
+import { OWN } from '../../binaries/multiples-record-pure';
 import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';

@@ -5,7 +5,7 @@ import { unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
-import type { OrbitViaOnFile } from '../multiples-tsv';
+import type { OrbitViaOnFile } from '../multiples-record-pure';
 import { indices, xid } from '../resolve/resolve-fixture';
 import {
   CIRCULAR_ORBIT_OMEGA_RAD, UNKNOWN_COMPANION_MASS_RATIO_Q, orbitFields, positionPc, standaloneRow, wdsYearToJd,

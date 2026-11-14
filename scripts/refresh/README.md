@@ -77,9 +77,8 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:gaia-hip` | `gaia-whole-table/refresh-gaia-hip-xmatch.ts` | `data/gaia/gaia_dr3_hip_xmatch.tsv` | HIP → Gaia DR3 source_id cross-walk from `hipparcos2_best_neighbour`. |
 | `refresh:gaia-tyc` | `gaia-whole-table/refresh-gaia-tyc-xmatch.ts` | `data/gaia/gaia_dr3_tyc_xmatch.tsv` | Tycho-2 → Gaia DR3 cross-walk from `tycho2tdsc_merge_best_neighbour`. |
 | `refresh:gaia-nss` | `gaia-whole-table/refresh-gaia-nss.ts` | `data/gaia/gaia_dr3_nss_two_body.tsv` | Gaia DR3 `nss_two_body_orbit` (binary orbits Gaia detected astrometrically). |
-| `refresh:gaia-astrometry` | `gaia-request/refresh-gaia-astrometry.ts` | `data/gaia/gaia_dr3_astrometry.tsv` | Gaia DR3 5-parameter astrometry for the binaries request (`data/gaia/gaia_astrometry_source_id_request.tsv`): the source_ids Stage 2 resolved plus every candidate a Stage-2 gate weighed — `write_astrometry_request` owns the list. Run AFTER `refresh:gaia-hip` + `refresh:gaia-tyc` + a fresh `pnpm run build:binaries`. |
-| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | Full-catalog deduped Gaia DR3 source_id request list — the union of four contributions ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks and `multiples.tsv`'s kept pairs, which Stage 5 decides from `gaia_dr3_astrometry.tsv`, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc` and a `build:binaries` that follows `refresh:gaia-astrometry`. |
-| `refresh:gaia-astrometry-catalog` | `gaia-request/refresh-gaia-astrometry-catalog.ts` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every catalog source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades. Same schema/query as `refresh:gaia-astrometry`; reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
+| `build:astrometry-request` | `scripts/catalog/astrometry-request/export-astrometry-request.ts` | `data/gaia/gaia_catalog_source_id_request.tsv` | The one Gaia DR3 astrometry source_id request — the union of four contributions, the binaries' Stage 2 candidates among them ([The request is a union](../catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull. Reads both Gaia cross-walks, so it runs AFTER `refresh:gaia-hip` / `refresh:gaia-tyc`; its binaries share reads the astrometry pull it requests, a loop the stale-pull stop converges ([The binaries' share](../catalog/astrometry-request/README.md#the-binaries-share-closes-a-loop-through-the-pull)). |
+| `refresh:gaia-astrometry-catalog` | `gaia-request/refresh-gaia-astrometry-catalog.ts` | `data/gaia/gaia_dr3_astrometry_catalog.tsv` | Gaia DR3 5p astrometry + `radial_velocity` for every requested source_id ([the request](../catalog/astrometry-request/README.md)) — tier 1 of the direction, rv, V and ci cascades, and the binaries' per-component astrometry. Reads `gaia_catalog_source_id_request.tsv`. Run AFTER `build:astrometry-request`. |
 | `refresh:gaia-magnitude` | `magnitude/refresh-gaia-magnitude.ts` | `data/gaia/gaia_dr3_magnitude_pull.tsv` | Every `gaiadr3.gaia_source` row at `G ≤ 11` (<!-- count:membership-manifest/magnitudeTerm.rows -->1,247,240<!-- /count -->) — membership's magnitude term ([§ 1](/docs/catalog-driver.md#1-the-driver-model)), on `ASTROMETRY_COLUMNS`. The one Gaia pull with **no request set**: its selection is the magnitude bound, so it reads nothing under `data/` and has no ordering constraint. Floor rationale — why `G ≤ 11` needs no margin over `V ≤ 11` — [Why the floor carries no margin](/data/gaia/README.md#why-the-floor-carries-no-margin). |
 | `refresh:gaia-apsis` | `magnitude/refresh-gaia-apsis.ts` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + the ESP-ELS `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:gaia-gspc` | `gaia-request/refresh-gaia-gspc.ts` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_catalog_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
@@ -185,7 +184,7 @@ stays a pinned count:
 | `placement.distance.bailer-jones-absent` rows | **none**: a lineage invariant fails the build naming each one ([Invariants](/scripts/catalog/lineage/README.md#invariants)) | an eligible row has its own DR3 parallax, so [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) publishes a posterior for it; an absence is only ever this request set drifting |
 | `apsisSourcesUnpulled` | reviewed residual | **<!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count -->**, down from 5,126 when the request was manifest-keyed and 5,076 of it was promoted companions — RECORDS but not manifest rows, so unrequestable at any magnitude. The union reaches all but <!-- count:build-catalog/apsisSourcesUnpulled -->484<!-- /count --> of them; that remainder plus genuine upstream absence is what the pin now holds |
 | `gspcSourcesUnpulled` | reviewed residual | Gaia genuinely lacks parameters for part of the catalogue; its request is the exported union, which does cover pair members |
-| `gateSkippedNoGMag` · `membership.binding.unweighed-no-pulled-row` rows | **0** · **none**, a lineage invariant | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
+| `classic-ids.unweighed-no-pulled-row` · `membership.binding.unweighed-no-pulled-row` rows | **none**, a lineage invariant each | the original instance of this rule, on the two binding gates ([The request is a union](/scripts/catalog/astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise)) |
 
 Adding a per-source consumer therefore means adding its shortfall gate in
 the same change: a lineage invariant on the code its consumer writes for a
@@ -319,19 +318,17 @@ are pulled over — lives in `scripts/refresh/magnitude/` with its own README.
 
 ### The astrometry schema
 
-Both astrometry scopes (`refresh:gaia-astrometry`, binaries; and
-`refresh:gaia-astrometry-catalog`, full catalogue) are one `PullTable` over
-`ASTROMETRY_COLUMNS` ([gaia-request/](gaia-request/README.md)), so **a column
-added to it lands in both scopes** — but only in whichever output is
-actually re-pulled. The column list is part of both scopes' query, so an
+`refresh:gaia-astrometry-catalog` and `refresh:gaia-magnitude` are
+`PullTable`s over one `ASTROMETRY_COLUMNS` ([gaia-request/](gaia-request/README.md)),
+so **a column added to it lands in both tables** — but only in whichever
+output is actually re-pulled. The column list is part of both queries, so an
 added column stales both records and the build names both refreshes.
 
-Both scopes carry `radial_velocity` and `radial_velocity_error`. The catalog
-scope's rv cascade reads them, and `parseGaiaAstrometryCatalogTsv` requires
-the error column; its consumer is the build-counts ratchet, not a filter —
-the cascade takes DR3's value whatever error it states
-(`../catalog/distance/radial-velocity/README.md`). Nothing reads rv from the
-binaries-scope `gaia_dr3_astrometry.tsv`.
+Both carry `radial_velocity` and `radial_velocity_error`. The rv cascade
+reads them, and `parseGaiaAstrometryCatalogTsv` requires the error column;
+its consumer is the build-counts ratchet, not a filter — the cascade takes
+DR3's value whatever error it states
+(`../catalog/distance/radial-velocity/README.md`). The binaries read no rv.
 
 ### Resuming a long pull
 
@@ -366,7 +363,7 @@ catalogue inconsistent. Order matters:
    nor the frozen spine, so the swap moves no record.
 2. **Refresh the Gaia DR4-keyed side-files** — `refresh:gaia-hip`,
    `refresh:gaia-tyc`, `refresh:gaia-nss`, `refresh:gaia-magnitude`,
-   `refresh:gaia-astrometry`, `build:astrometry-request`,
+   `build:astrometry-request`,
    `refresh:gaia-astrometry-catalog`, `refresh:gaia-apsis`,
    `refresh:gaia-gspc`, `refresh:bailer-jones`, then `build:membership`
    (it reads the astrometry catalog and the magnitude pull) and

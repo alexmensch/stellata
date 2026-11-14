@@ -6,7 +6,7 @@ import { parseAthygRows } from './athyg-pure';
 import {
   parseAstrometryExclusions, parseComponentSptypeOverrides, parseOrb6ComponentOverrides,
 } from './curated-pure';
-import { parseGaiaAstrometry, parseNssOrbits } from './gaia-pure';
+import { parseNssOrbits } from './gaia-pure';
 import { FIXTURE } from './load-fixture';
 import { parseMscOrbits, parseMscSystems } from './msc-pure';
 import { joinSimbadWdsSpectra, parseSimbadWdsXids, parseSptypeByOid } from './simbad-pure';
@@ -84,26 +84,6 @@ describe('curated tables', () => {
       '# preamble\ngaia_source_id\tcomponent\twds_id\treason\n2947050466531873024\tB\t06451-1643\tSirius B blended\n', FIXTURE,
     );
     expect(out.get('2947050466531873024')).toContain('Sirius B');
-  });
-});
-
-describe('parseGaiaAstrometry', () => {
-  const HEADER = 'source_id\tra\tra_error\tdec\tdec_error\tparallax\tparallax_error\tpmra\tpmra_error\tpmdec\tpmdec_error'
-    + '\tref_epoch\truwe\tipd_frac_multi_peak\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag';
-
-  it('reads every field', () => {
-    const m = parseGaiaAstrometry(`${HEADER}\n2947050466531873024\t101.287155\t0.04\t-16.716116\t0.03\t374.49\t0.23\t-461.57\t0.05\t-914.52\t0.03\t2016.00\t1.78\t0.012\t-1.30\t-0.92\t-1.74\n`, FIXTURE);
-    expect(m.get('2947050466531873024')).toMatchObject({
-      pmraMasyr: -461.57, parallaxErrorMas: 0.23, pmraErrorMasyr: 0.05, pmdecErrorMasyr: 0.03,
-      refEpoch: 2016, ruwe: 1.78, ipdFracMultiPeak: 0.012, gMag: -1.3,
-    });
-  });
-
-  it('skips a row with no position, and throws on a missing column', () => {
-    const m = parseGaiaAstrometry(`${HEADER}\n1\t10\t\t20\t\t5\t\t1\t\t1\t\t2016\t1\t0\t\t\t\n2\t\t\t30\t\t5\t\t1\t\t1\t\t2016\t1\t0\t\t\t\n`, FIXTURE);
-    expect([...m.keys()]).toEqual(['1']);
-    expect(() => parseGaiaAstrometry('source_id\tra\tdec\tref_epoch\n1\t10\t20\t2016\n', FIXTURE))
-      .toThrow(/missing required columns: parallax/);
   });
 });
 

@@ -11,7 +11,7 @@ import {
   canonicalCompLetter, composeSyntheticId, compoundContains, parentComponentToken, relatedHier,
   wdsRootOf,
 } from './component-tokens-pure';
-import type { MultiplesRecord } from './multiples-tsv';
+import type { MultiplesRecord } from './multiples-record-pure';
 import type { Check } from '../util/emit-artifacts';
 
 /** One physical pair: a system's primary and secondary rows joined. */

@@ -1,16 +1,18 @@
 // The binding-integrity audit: verdicts on one source across disjoint letters and one letter across sources, then their enforcement. See README.md#the-binding-integrity-audit.
 
 import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type ComponentKey } from '../component-tokens-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+import { skyPositionAtEpoch } from '../../../src/astro-core/equatorial-basis';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
+import { compareCodeUnits } from '../../util/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
-import { polarToTangent, propagatePosition, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
+import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
 import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export const BINDING_SHAPES = ['source_letters', 'letter_sources'] as const;
 export type BindingShape = (typeof BINDING_SHAPES)[number];
@@ -138,7 +140,7 @@ export function walk<E, V>(
   for (let head = 0; head < queue.length; head++) {
     const tok = queue[head];
     const nbrs = [...(adj.get(tok) ?? [])];
-    if (order === 'token') nbrs.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    if (order === 'token') nbrs.sort(([a], [b]) => compareCodeUnits(a, b));
     for (const [nbr, edge] of nbrs) {
       if (out.has(nbr)) continue;
       out.set(nbr, step(out.get(tok)!, edge));
@@ -157,16 +159,16 @@ export function bfsOffset(adj: SystemContext['adj'], start: string, goal: string
   })).get(goal) ?? null;
 }
 
-function sourceOffset(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, epoch: number | null): TangentOffset {
+function sourceOffset(src: GaiaAstrometryCatalogRow, ref: GaiaAstrometryCatalogRow, epoch: number | null): TangentOffset {
   if (epoch === null) return tangentOffset({ raDeg: src.raDeg, decDeg: src.decDeg }, { raDeg: ref.raDeg, decDeg: ref.decDeg });
-  const at = (r: GaiaAstrometryRow) => propagatePosition(
+  const at = (r: GaiaAstrometryCatalogRow) => skyPositionAtEpoch(
     { raDeg: r.raDeg, decDeg: r.decDeg }, { pmRaMasyr: r.pmraMasyr, pmDecMasyr: r.pmdecMasyr }, r.refEpoch, epoch,
   );
   return tangentOffset(at(src), at(ref));
 }
 
 /** The better of J2016.0 and, when the chain carries one, the WDS edge epoch. */
-function arbitrationError(src: GaiaAstrometryRow, ref: GaiaAstrometryRow, predicted: Edge): number {
+function arbitrationError(src: GaiaAstrometryCatalogRow, ref: GaiaAstrometryCatalogRow, predicted: Edge): number {
   const miss = (o: TangentOffset) => Math.hypot(o.eastArcsec - predicted.eastArcsec, o.northArcsec - predicted.northArcsec);
   const err = miss(sourceOffset(src, ref, null));
   return predicted.epoch === null ? err : Math.min(err, miss(sourceOffset(src, ref, predicted.epoch)));
@@ -207,7 +209,7 @@ export type VerdictAction =
 interface Reference {
   readonly token: string;
   readonly sourceId: string;
-  readonly astro: GaiaAstrometryRow;
+  readonly astro: GaiaAstrometryCatalogRow;
 }
 
 /** A letter whose one source has astrometry, every predicted offset's anchor:

@@ -8,7 +8,7 @@ import {
 } from './binding-audit-pure';
 import { componentsOf } from './components-pure';
 import { BI_WDS, astrometryMap, biAstro, biSystem, indices, xid, ids, type BiRow } from './resolve-fixture';
-import { OWN } from '../multiples-tsv';
+import { OWN } from '../multiples-record-pure';
 
 describe('bfsOffset', () => {
   const edge = (eastArcsec: number, epoch: number): Edge => ({ eastArcsec, northArcsec: 0, epoch });

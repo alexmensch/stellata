@@ -77,7 +77,7 @@ order, primary then secondary, so pairing never rests on position.
 ## Identifier origins
 
 Each of a component's Gaia source, HIP and AT-HYG row is a `Bound`: the value
-and its `IdOrigin` (`../multiples-tsv.ts`), `own` or inherited from a named
+and its `IdOrigin` (`../multiples-record-pure.ts`), `own` or inherited from a named
 token of the same system. Every tier binds `own`; a rebind by the audit is
 `own`. The passes that copy record the kind:
 
@@ -118,9 +118,10 @@ produces — `ccdm_sibling_owned_rejected` and the seven binding-integrity keys
 `resolve` keys also count Stage 3's work, so Stage 3's `stage3Counts` returns
 them ([Counts](../astrometry/README.md#counts)).
 
-`astrometryRequestIds` is the Gaia astrometry request's id set; the
-real-data case holds `serialiseSourceIdRequest` of it to the committed
-`data/gaia/gaia_astrometry_source_id_request.tsv` byte for byte.
+`astrometryRequestIds` is the binaries' share of the one Gaia astrometry
+request: `build:astrometry-request` runs Stages 1–2 and unions it in
+(`../../catalog/astrometry-request/`), and the real-data case holds every id
+of it to the committed request.
 
 ## The spot-check
 
@@ -155,15 +156,17 @@ conflict).
 Every WDS pair row decomposes into a primary and a secondary letter
 (`AB` → `A`+`B`, `Aa,Ab` → `Aa`+`Ab`); each letter resolves through a
 strict-priority cascade (`cascade-pure.ts`). The
-canonical tag set is `RESOLVE_VIA`:
+canonical tag set is `RESOLVE_VIA`. Every tag but `unresolved` is set only
+when its tier binds a Gaia source, so `gaia_resolve_rate`
+([Counts](../astrometry/README.md#counts)) counts every other tier:
 
 | Tag | When it fires |
 | --- | --- |
 | `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated — but gated on a WDS-coordinate sanity check (`orb6HipMatchesPairCoord`): ORB6 occasionally carries a typo'd HIP that points at an unrelated star tens of degrees away (ε Equ STF2737 lists HIP 103579 for the true HIP 103569), so a HIP whose known position sits >5′ from the pair's WDS precise coord is dropped entirely and the component falls through to the coordinate-validated tiers below. |
-| `athyg_gaia_native` | HIP-mediated: ORB6's HIP, an AT-HYG row's HIP, or a CCDM sibling's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). Also reused for the position-match pass below, which lands on the same AT-HYG-native field by a different path. |
+| `athyg_gaia_native` | ORB6's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). The position-match pass below tags it too, binding the matched AT-HYG row's `gaia` directly, with no HIP involved. A CCDM sibling's HIP that falls through to AT-HYG's `gaia` column tags `ccdm_hip`. |
 | `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
 | `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
-| `position_pm` / `position_nopm` | Reserved placeholders in `RESOLVE_VIA` for a future PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`. Not yet wired. |
+| `position_pm` / `position_nopm` | Reserved placeholders in `RESOLVE_VIA` for a future PM-propagated match against `data/gaia/gaia_dr3_astrometry_catalog.tsv`. Not yet wired. |
 | `unresolved` | All strategies missed. The component still binds a HIP whenever any tier surfaced one — Stage 3's HIP2 long-baseline fallback can attach astrometry to a Gaia-source-less Sirius A or α Cen B from the bare HIP. |
 
 Before any tier runs, Stage 1's `buildIndices` applies a one-sided

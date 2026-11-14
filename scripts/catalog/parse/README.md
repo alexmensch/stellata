@@ -22,7 +22,9 @@ scripts/catalog/parse/
                                   imports.
   walk-stats-pure.ts (+ test)     walkStatsFold — the walk's counts, folded
                                   from each RowOutcome as it passes, so no
-                                  outcome outlives its row.
+                                  outcome outlives its row; and
+                                  walkVelocitySummary, the build log's
+                                  velocity samples it folded.
   read-stars-inputs.ts            loadReadStarsInputs — every reference
                                   table readStars consumes, each read through
                                   its declared source (../../util/sources/),
@@ -38,7 +40,9 @@ scripts/catalog/parse/
                                   the snapshot's inputs count block.
   gaia-hip-xmatch-source.ts       GAIA_HIP_XMATCH / GAIA_TYC_XMATCH, the two
   gaia-tyc-xmatch-source.ts       cross-walks declared one per module, so a
-                                  step reaches only the one it reads.
+                                  step reaches only the one it reads. The HIP
+                                  walk keys classic-ID lineage's HIP rows
+                                  (`gaia-dr3-hip:<hip>`).
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator). The HIP
                                   walk now serves the GCVS byGaia bridge in
@@ -253,9 +257,5 @@ Each record's `vx/vy/vz` is assembled after its direction resolves, by
 `velocityPcPerYr` in `../distance/`:
 [Space-motion velocity](../distance/README.md#space-motion-velocity).
 
-After the per-row pass: GCVS cross-match (`bridgeGcvsByGaia`), CCDM
-visual-doubles flagging (`visual-doubles.ts`), and the 100-byte v9
-record write per star including the seven `float32` Apsis fields, the
-`uint32` `sid`, the three `float32` velocity components, plus the
-`uint8` multiplicity status. See sections
-below.
+The passes after the walk are `../README.md`'s; the record write is
+`encodeCatalog` (`../record/`).

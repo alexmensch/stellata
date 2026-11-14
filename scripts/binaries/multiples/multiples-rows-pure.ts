@@ -1,7 +1,7 @@
 // One multiples.tsv record per component: a kept pair's two, and a SIMBAD-known component's standalone one. See README.md.
 
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
-import { unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
+import { directionAtEpoch } from '../../../src/astro-core/equatorial-basis';
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { athygRowFor, resolveSpect } from '../components/component-spect-pure';
 import { canonicalCompLetter, componentKey } from '../component-tokens-pure';
@@ -10,13 +10,9 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
-import {
-  ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields,
-  type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia,
-} from '../multiples-tsv';
+import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
 import { valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
-import { propagatePosition } from '../sky-geometry-pure';
 import type { AnchorOffsets } from './anchor-offsets-pure';
 import { gaiaPhotometryAbsmagCi } from './gaia-photometry-pure';
 import { pairMagnitudes, wdsDmag, type PairMagnitudes } from './pair-photometry-pure';
@@ -40,11 +36,10 @@ export interface ScenePosition {
 /** The position at the scene epoch; null without a measured position and a positive parallax. */
 export function positionPc(a: ComponentAstrometry): ScenePosition | null {
   if (a.astrometryVia === 'unresolved' || a.parallaxMas === null || a.parallaxMas <= 0) return null;
-  const at = propagatePosition(
+  const u = directionAtEpoch(
     { raDeg: a.raDeg, decDeg: a.decDeg }, { pmRaMasyr: a.pmraMasyr, pmDecMasyr: a.pmdecMasyr }, a.refEpoch, CATALOG_SCENE_EPOCH,
   );
   const distPc = 1000.0 / a.parallaxMas;
-  const u = unitVectorFromRaDec(at.raDeg, at.decDeg);
   return { xPc: u.x * distPc, yPc: u.y * distPc, zPc: u.z * distPc, distPc };
 }
 

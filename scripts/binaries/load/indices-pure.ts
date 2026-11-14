@@ -5,8 +5,9 @@ import { gMinusVRejects } from '../../catalog/membership/binding/binding-gate-pu
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { ComponentKey } from '../component-tokens-pure';
 import type { AthygRow } from './athyg-pure';
-import type { GaiaAstrometryRow, NssOrbitRow } from './gaia-pure';
+import type { NssOrbitRow } from './gaia-pure';
 import type { MscLookup } from './msc-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 export interface RejectedBinding {
   readonly hip: number | null;
@@ -19,7 +20,7 @@ export interface IdentifierIndices {
   /** The inverse of `hipToGaia`; a source several HIPs reach keeps the first. */
   readonly srcToHip: ReadonlyMap<string, number>;
   readonly srcToNss: ReadonlyMap<string, NssOrbitRow>;
-  readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryRow>;
+  readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>;
   readonly hipToAthyg: ReadonlyMap<number, AthygRow>;
   readonly tycToAthyg: ReadonlyMap<string, AthygRow>;
   readonly srcToAthyg: ReadonlyMap<string, AthygRow>;
@@ -41,7 +42,7 @@ export interface IdentifierIndices {
  *  cannot carry the light the HIP names. Missing V, an unpulled source or a
  *  missing G is unverifiable, and trusted. */
 function magInconsistent(
-  vMag: number | null, sourceId: string, astrometry: ReadonlyMap<string, GaiaAstrometryRow>,
+  vMag: number | null, sourceId: string, astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>,
 ): boolean {
   if (vMag === null) return false;
   const gMag = astrometry.get(sourceId)?.gMag ?? null;
@@ -49,7 +50,7 @@ function magInconsistent(
 }
 
 export function scrubAthygGaia(
-  athyg: readonly AthygRow[], astrometry: ReadonlyMap<string, GaiaAstrometryRow>,
+  athyg: readonly AthygRow[], astrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>,
 ): { rows: readonly AthygRow[]; rejected: readonly RejectedBinding[] } {
   const rejected: RejectedBinding[] = [];
   const rows = athyg.map((row) => {
@@ -93,7 +94,7 @@ export interface IndexInputs {
   readonly hipToGaia: ReadonlyMap<number, string>;
   readonly tycToGaia: ReadonlyMap<string, string>;
   readonly srcToNss: ReadonlyMap<string, NssOrbitRow>;
-  readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryRow>;
+  readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryCatalogRow>;
   readonly ccdm: CcdmIndex;
   readonly simbadWdsSpectra: ReadonlyMap<ComponentKey, string>;
   readonly componentSptypeOverrides: ReadonlyMap<ComponentKey, string>;

@@ -26,8 +26,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   cascade's curated tier reads. The on-disk contract itself is
   `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
-  gates' candidates (overlay and derivation), the bound-pair siblings and the
-  review dispositions' kept ids. Input prep, off `build:catalog`.
+  gates' candidates (overlay and derivation), the binaries' Stage 2
+  candidates and the review dispositions' kept ids. Input prep, off
+  `build:catalog`.
 - `parse/` — the per-row pipeline (`readStars`) and reference-catalogue
   parsers. Its `gcvs/` subfolder owns the
   variable-star parsing and the variability cross-match; `constellations/`
@@ -95,7 +96,11 @@ scripts/catalog/
                                   catalogue, runs the per-row pipeline and
                                   each cross-match pass in order, then
                                   allocates every record's SID, then
-                                  emits the chunked binary, manifests,
+                                  encodes the binary (encodeCatalog,
+                                  record/) and, through catalogEmission,
+                                  the one assembly of every output file,
+                                  family member and check, emits the
+                                  chunked binary, manifests,
                                   both committed ledgers, the SID registry
                                   and placement's, brightness-colour's,
                                   size's, coherence's, promotion's,
@@ -227,7 +232,7 @@ The runtime reader (`catalog-loader.ts`) decodes the column into
 
 `loadReadStarsInputs` (`parse/read-stars-inputs.ts`) loads `data/gaia/gaia_dr3_apsis.tsv`
 through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, ApsisRow>`, and
-`build-catalog.ts` writes
+`encodeCatalog` (`record/encode-catalog-pure.ts`) writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
 52–79; see [Binary catalog format](../../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
 match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,439<!-- /count --> of <!-- count:build-catalog/recordCount -->979,634<!-- /count -->); 88.3% of the catalogue has a

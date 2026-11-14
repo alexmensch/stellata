@@ -21,6 +21,7 @@ describe('gaia-astrometry-source', () => {
       pmraMasyr: 10.5, pmdecMasyr: -3.5,
       ruwe: 1.2, ipdFracMultiPeak: 0,
       gMag: 8.0, bpMag: 8.6, rpMag: 7.3,
+      refEpoch: 2016,
       radialVelocityKmS: -110.51,
       radialVelocityErrorKmS: 0.22,
       ref: sourceRowRef(GAIA_ASTROMETRY, '123'),
@@ -31,10 +32,23 @@ describe('gaia-astrometry-source', () => {
       pmraMasyr: null, pmdecMasyr: null,
       ruwe: null, ipdFracMultiPeak: null,
       gMag: 9.0, bpMag: null, rpMag: null,
+      refEpoch: 2016,
       radialVelocityKmS: null,
       radialVelocityErrorKmS: null,
       ref: sourceRowRef(GAIA_ASTROMETRY, '456'),
     });
+  });
+
+  it('parseGaiaAstrometryCatalogTsv skips a row with no position or epoch', () => {
+    const header = 'source_id\tra\tdec\tparallax\tparallax_error\tpmra\tpmdec\tref_epoch\truwe\tipd_frac_multi_peak'
+      + '\tphot_g_mean_mag\tphot_bp_mean_mag\tphot_rp_mean_mag\tradial_velocity\tradial_velocity_error';
+    const map = parseGaiaAstrometryCatalogTsv([
+      header,
+      '1\t10\t20\t\t\t\t\t2016.0\t\t\t\t\t\t\t',
+      '2\t\t20\t\t\t\t\t2016.0\t\t\t\t\t\t\t',
+      '3\t10\t20\t\t\t\t\t\t\t\t\t\t\t\t',
+    ].join('\n'), GAIA_ASTROMETRY);
+    expect([...map.keys()]).toEqual(['1']);
   });
 
   it('parseGaiaAstrometryCatalogTsv throws on a missing column', () => {

@@ -5,25 +5,13 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
-  HEADER_SIZE,
-  RECORD_SIZE,
   BINARY_VERSION,
-  NO_COMPANION,
-  NO_GAIA_SOURCE_ID,
-  NO_APSIS,
-  NO_CONSTELLATION_INDEX,
-  APSIS_FIELDS,
-  type ApsisField,
-  writeStarRecord,
-  writeCatalogHeader,
-  encodeNameTable,
   catalogChunkFilename,
   planCatalogChunks,
   recordsInChunkPrefix,
   type CatalogManifest,
   SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
-import { encodeSpectralBytes } from '../../src/catalog-format/spectral/spectral-record-bytes';
 import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
 import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
@@ -31,7 +19,8 @@ import {
 import { SIMBAD_OTYPE_MULTIPLE } from './spectral/spectral-resolve';
 import { apparentVFromSol, assertSolFirst } from './record/record-order-pure';
 import { buildSearchIndex, searchIndexSummary } from './record/search-index-pure';
-import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './record/records-stage-pure';
+import { apsisCoverageSummary, recordsCounts } from './record/records-stage-pure';
+import { encodeCatalog, type EncodedCatalog } from './record/encode-catalog-pure';
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
@@ -75,7 +64,7 @@ import {
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
-  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageRun,
+  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageEmission, type StageLineageRun,
 } from './lineage/stage-lineage';
 import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import {
@@ -85,10 +74,13 @@ import { SIZE_CODES, SIZE_LINEAGE_BUDGET, sizeLineageLines } from './spectral/si
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
+  type ComponentDesignation,
   renderableOrbitRelations,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
-import { serializeCatalogRowIndexSidecar } from './companions/record-index/catalog-row-index-map-pure';
+import {
+  serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
+} from './companions/record-index/catalog-row-index-map-pure';
 import { MULTIPLES_TSV } from '../binaries/multiples-tsv';
 import {
   applySystemCoherence, systemCoherenceVerdicts, type SystemVerdict,
@@ -101,7 +93,6 @@ import {
   applyVariability,
   gcvsSummary,
 } from './parse/gcvs/gcvs-parse';
-import { VELOCITY_SANITY_CEILING_KM_S, GALACTIC_ESCAPE_VELOCITY_KM_S } from './distance/velocity';
 import {
   applyDesignationConstellations,
   loadDesignationConstellationIndex,
@@ -116,6 +107,7 @@ import {
   NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines, namingSummary, type NamingCounts,
 } from './naming/naming-lineage-pure';
 import { readStars, type ReadStarsOptions, type Star } from './parse/stars-parse';
+import { walkVelocitySummary } from './parse/walk-stats-pure';
 import { PARKED_LEDGER } from './distance/parallax/parked-ledger-tsv';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
@@ -124,7 +116,8 @@ import { placementSummary } from './distance/placement-counts-pure';
 import {
   SIMBAD_SOURCED_DISTANCES,
 } from './distance/parallax/simbad-sourced-ledger-tsv';
-import { loadReadStarsInputs } from './parse/read-stars-inputs';
+import { loadReadStarsInputs, type ReadStarsInputs } from './parse/read-stars-inputs';
+import type { IauConstellationLookup } from '../../src/astro-core/iau-geometry/iau-boundaries-pure';
 import { GAIA_HIP_XMATCH } from './parse/gaia-hip-xmatch-source';
 import { STELLARIUM } from './parse/constellations/stellarium-source';
 import { GCVS, GCVS_CROSSID } from './parse/gcvs/gcvs-source';
@@ -140,13 +133,13 @@ import {
   CATALOG_CHUNK_DIR, CATALOG_OUTPUTS,
 } from './catalog-outputs';
 import {
-  emitArtifacts, sweepStaged, type ArtifactContents, type Check,
+  emitArtifacts, sweepStaged, type ArtifactContents, type Check, type Emission,
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
 import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
-import { sidSuccessorPairs } from '../sid/events-pure';
+import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
 import {
   ALLOCATION_CODES, ALLOCATION_LINEAGE_BUDGET, allocationSidRows, allocationSidsText,
@@ -167,6 +160,8 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
+type CatalogOutputKey = keyof (typeof CATALOG_OUTPUTS)['files'] & string;
+
 const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
 
 const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
@@ -175,35 +170,45 @@ const EXPECTED_OUTLIERS = resolve(
   'distance/refinement/build-distance-outliers-expected.json',
 );
 
-/** A build:catalog stage whose lineage is one file named for the stage. */
-function catalogStageRun<S extends string>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<string, NoInfer<S>>, lines: () => readonly LineageLine[],
-  budget: LineageBudget, invariants: readonly LineageInvariant[], stepInputs: FileHashes,
-): StageLineageRun<S, S> {
+/** A build:catalog stage's lineage: its lines file, named for the stage, and any sibling file its spec declares. */
+type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
+  readonly spec: StageLineageSpec<F, S>;
+  readonly codes: C;
+  readonly lines: () => readonly LineageLine[];
+  readonly budget: LineageBudget;
+  readonly invariants: readonly LineageInvariant[];
+  readonly inputs: FileHashes;
+} & ([Exclude<F, S>] extends [never]
+  ? { readonly siblings?: never }
+  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+
+function catalogStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
+  stage: CatalogStage<F, S, C>,
+): StageLineageRun<F, S> {
+  const { spec, codes, siblings } = stage;
   return {
     layout: LINEAGE_LAYOUT,
     spec,
-    inputs: stepInputs,
+    inputs: stage.inputs,
     diffed: spec.stage,
-    lines,
-    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted) }) as Record<S, Uint8Array>,
+    lines: stage.lines,
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
     joins: () => [],
-    budget,
-    invariants,
+    budget: stage.budget,
+    invariants: stage.invariants,
     argv: process.argv.slice(2),
     upstream: UPSTREAM_LINEAGE,
   };
 }
 
-function catalogStageLineage<S extends string>(...run: Parameters<typeof catalogStageRun<S>>) {
-  return stageLineage(catalogStageRun(...run));
+function catalogStageLineage<F extends string, S extends F, C extends StageCodes<string, S>>(stage: CatalogStage<F, S, C>) {
+  return stageLineage(catalogStageRun(stage));
 }
 
-function catalogCountedStageLineage<S extends string, B extends string, L extends B>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>,
-  ...rest: Parameters<typeof catalogStageRun<S>> extends [unknown, unknown, ...infer R] ? R : never
+function catalogCountedStageLineage<F extends string, S extends F, B extends string, L extends B>(
+  stage: CatalogStage<F, S, StageCodes<B, S, L>>,
 ) {
-  return countedStageLineage(catalogStageRun(spec, codes, ...rest), codes);
+  return countedStageLineage(catalogStageRun(stage), stage.codes);
 }
 
 // A function of its own so the walk's lines are unreachable once it returns:
@@ -228,18 +233,20 @@ function walkManifest(inputs: ReadStarsOptions, stepInputs: FileHashes) {
       });
       const parkedLedger = parkedLedgerTsv(placementLines);
       const placementRemovals = placementLines.filter((line) => PLACEMENT_EFFECTS.get(lineageLineCode(line)) !== 'none');
-      const placementEmission = catalogCountedStageLineage(
-        PLACEMENT_LINEAGE, PLACEMENT_CODES, () => placementLines, PLACEMENT_LINEAGE_BUDGET, PLACEMENT_INVARIANTS, stepInputs,
-      );
+      const placementEmission = catalogCountedStageLineage({
+        spec: PLACEMENT_LINEAGE, codes: PLACEMENT_CODES, lines: () => placementLines,
+        budget: PLACEMENT_LINEAGE_BUDGET, invariants: PLACEMENT_INVARIANTS, inputs: stepInputs,
+      });
       // Released before brightness-colour's lines are read back, or both stages' lines are held at once.
       placementLines = [];
-      const brightnessEmission = catalogCountedStageLineage(
-        BRIGHTNESS_COLOUR_LINEAGE, BRIGHTNESS_COLOUR_CODES, () => brightnessSpill.lines(), BRIGHTNESS_COLOUR_LINEAGE_BUDGET, [],
-        stepInputs,
-      );
-      const sizeEmission = catalogStageLineage(
-        SIZE_LINEAGE, SIZE_CODES, () => sizeSpill.lines(), SIZE_LINEAGE_BUDGET, [], stepInputs,
-      );
+      const brightnessEmission = catalogCountedStageLineage({
+        spec: BRIGHTNESS_COLOUR_LINEAGE, codes: BRIGHTNESS_COLOUR_CODES, lines: () => brightnessSpill.lines(),
+        budget: BRIGHTNESS_COLOUR_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+      });
+      const sizeEmission = catalogStageLineage({
+        spec: SIZE_LINEAGE, codes: SIZE_CODES, lines: () => sizeSpill.lines(),
+        budget: SIZE_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+      });
       return { stars, stats, parkedLedger, placementEmission, brightnessEmission, sizeEmission, manifestFounded, placementRemovals };
     } finally {
       sizeSpill.dispose();
@@ -254,18 +261,18 @@ const PLACEMENT_EFFECTS = codeEffects([PLACEMENT_CODES]);
 // A function of its own so its line per record is unreachable once it returns:
 // inlined into main, the lines outlive promotion and raise the build's peak heap.
 function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogCountedStageLineage(
-    COHERENCE_LINEAGE, COHERENCE_CODES, () => coherenceLineageLines(verdicts, stars), COHERENCE_LINEAGE_BUDGET, [],
-    stepInputs,
-  );
+  return catalogCountedStageLineage({
+    spec: COHERENCE_LINEAGE, codes: COHERENCE_CODES, lines: () => coherenceLineageLines(verdicts, stars),
+    budget: COHERENCE_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
+  });
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
 function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
-  return catalogCountedStageLineage(
-    NAMING_LINEAGE, NAMING_CODES, () => namingLineageLines(records, stars, CONSTELLATIONS), NAMING_LINEAGE_BUDGET,
-    NAMING_INVARIANTS, stepInputs,
-  );
+  return catalogCountedStageLineage({
+    spec: NAMING_LINEAGE, codes: NAMING_CODES, lines: () => namingLineageLines(records, stars, CONSTELLATIONS),
+    budget: NAMING_LINEAGE_BUDGET, invariants: NAMING_INVARIANTS, inputs: stepInputs,
+  });
 }
 
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
@@ -308,21 +315,7 @@ export async function main() {
   console.log(`  kept ${stars.length} stars; parked ${stats.parked.length}`);
   console.log(placementSummary(placementEmission.counts, stats.placementDerived));
   console.log(brightnessColourSummary(brightnessEmission.counts));
-  if (stats.rvRadialRejectedSample.length > 0) {
-    console.log(
-      `  radial term rejected (>${VELOCITY_SANITY_CEILING_KM_S} km/s, proper motion kept):`,
-    );
-    for (const s of stats.rvRadialRejectedSample) console.log(`    ${s}`);
-  }
-  if (stats.velocityClampedSample.length > 0) {
-    console.log(`  velocity clamped (>${VELOCITY_SANITY_CEILING_KM_S} km/s, zeroed as artifacts):`);
-    for (const s of stats.velocityClampedSample) console.log(`    ${s}`);
-  }
-  console.log(
-    `  velocity above escape (>${GALACTIC_ESCAPE_VELOCITY_KM_S} km/s, kept + tracked) — `
-      + `sample (first ${stats.velocityAboveEscapeSample.length}):`,
-  );
-  for (const s of stats.velocityAboveEscapeSample) console.log(`    ${s}`);
+  console.log(walkVelocitySummary(stats));
   const simbadSourcedDistances = simbadSourcedDistancesTsv(stars);
 
   // The labels are the manifest's (/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries); what the
@@ -375,7 +368,7 @@ export async function main() {
   const sortKey = new Float64Array(stars.length);
   for (let i = 0; i < stars.length; i++) {
     const s = stars[i];
-    const v = apparentVFromSol(s, dustGrid ? avSolToStar(dustGrid, s.x, s.y, s.z) : 0);
+    const v = apparentVFromSol(s, avSolToStar(dustGrid, s.x, s.y, s.z));
     // On the key, before the sort — /src/catalog-format/record/README.md#record-order.
     if (!Number.isFinite(v)) {
       throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
@@ -491,109 +484,123 @@ export async function main() {
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
 
-  // Build name table — the NAME tiers only. Every designation is composed
-  // at runtime off search-index.json so the main binary stays compact.
-  const nameTable = encodeNameTable(stars.map((s) => s.proper));
-  const nameOffsets = nameTable.offsets;
-  const nameTableLength = nameTable.bytes.length;
-  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: nameTable.entries };
+  const promotionEmission = catalogStageLineage({
+    spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
+    siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
+    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+  });
+  const allocationEmission = catalogCountedStageLineage({
+    spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
+    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    siblings: () => ({ [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)) }),
+    budget: ALLOCATION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+  });
+  console.log(allocationSummary(allocationEmission.counts, allocation.events.length));
+
+  const encoded = encodeCatalog({ stars, apsisMap, sids: recordSids, multiplicityStatus });
+  const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(namingEmission.counts, namingDerived));
 
-  // Allocate output buffer.
-  const recordsLength = stars.length * RECORD_SIZE;
-  const totalLength = HEADER_SIZE + nameTableLength + recordsLength;
-  const out = new ArrayBuffer(totalLength);
-  const view = new DataView(out);
-  const bytes = new Uint8Array(out);
+  emitArtifacts(catalogEmission({
+    stars,
+    sortedKey: order.map((i) => sortKey[i]),
+    encoded,
+    apsisMap,
+    gspcMap: inputs.gspcMap,
+    conLookup: conAssignment.lookup,
+    inputHashes: inputHashesAtStart,
+    figureLines,
+    componentDesignations,
+    rowIndexMap,
+    sidEvents: [...registry.events, ...allocation.events],
+    ledgers: {
+      parkedLedger,
+      simbadSourcedDistances,
+      ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
+    },
+    lineage: {
+      placement: placementEmission,
+      brightnessColour: brightnessEmission,
+      size: sizeEmission,
+      coherence: coherenceEmission,
+      promotion: promotionEmission,
+      allocation: allocationEmission,
+      naming: namingEmission,
+    },
+    stageCounts: [
+      { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+      { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
+      { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
+      { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
+      { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+      { stage: 'allocation', block: { kind: 'counted', counts: allocationEmission.counts } },
+      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
+      { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
+      { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
+      { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
+      { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
+      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
+    ],
+    heap,
+  }));
+}
 
-  // Header, then the name table, then the records — the order the first
-  // transport chunk needs to decode standalone (`/src/catalog-format/record/README.md#on-disk-transport-chunking`).
-  writeCatalogHeader(view, {
-    count: stars.length,
-    nameTableOffset: HEADER_SIZE,
-    nameTableLength,
-  });
+type EmissionOf<T> = T extends StageLineageSpec<infer F, infer S> ? StageLineageEmission<F, S> : never;
 
-  bytes.set(nameTable.bytes, HEADER_SIZE);
-  let off = HEADER_SIZE + nameTableLength;
+interface CatalogEmissionInputs {
+  /** Sorted: record order. */
+  readonly stars: readonly Star[];
+  /** Each record's apparent-V sort key, in record order. */
+  readonly sortedKey: readonly number[];
+  readonly encoded: EncodedCatalog;
+  readonly apsisMap: ReadStarsInputs['apsisMap'];
+  readonly gspcMap: ReadStarsInputs['gspcMap'];
+  readonly conLookup: IauConstellationLookup;
+  readonly inputHashes: FileHashes;
+  readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
+  readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
+  readonly rowIndexMap: CatalogRowIndexMap;
+  /** The registry's events and this run's. */
+  readonly sidEvents: readonly EventRow[];
+  readonly ledgers: {
+    readonly parkedLedger: string;
+    readonly simbadSourcedDistances: string;
+  } & ReturnType<typeof registryTexts<typeof CATALOG_PARTITION>>;
+  readonly lineage: {
+    readonly placement: EmissionOf<typeof PLACEMENT_LINEAGE>;
+    readonly brightnessColour: EmissionOf<typeof BRIGHTNESS_COLOUR_LINEAGE>;
+    readonly size: EmissionOf<typeof SIZE_LINEAGE>;
+    readonly coherence: EmissionOf<typeof COHERENCE_LINEAGE>;
+    readonly promotion: EmissionOf<typeof PROMOTION_LINEAGE>;
+    readonly allocation: EmissionOf<typeof ALLOCATION_LINEAGE>;
+    readonly naming: EmissionOf<typeof NAMING_LINEAGE>;
+  };
+  /** Every stage's count block but the four this assembly tallies: records, search, boundaries, figures. */
+  readonly stageCounts: readonly StageBlock<CatalogCountStage, CountValue>[];
+  readonly heap: { check(): Check };
+}
 
-  // Records.
-  const unclassifiedCon: number[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const s = stars[i];
-    const { ampUnits, periodUnits } = variabilityUnits(s);
-    // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER; parse the
-    // manifest column as BigInt to preserve every bit before writing.
-    const gaiaSourceId = s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID;
-
-    // Apsis lookup keyed by gaia_source_id string (BigInt key would
-    // require a parallel string map). NO_APSIS (NaN) fills every cell
-    // when the source_id is absent from the TSV or the row's cell is blank.
-    const apsisRow = s.gaiaSourceId !== null ? apsisMap.get(s.gaiaSourceId) : undefined;
-    const apsis = {} as Record<ApsisField, number>;
-    for (const name of APSIS_FIELDS) apsis[name] = apsisRow?.[name] ?? NO_APSIS;
-
-    writeStarRecord(view, off, {
-      x: s.x, y: s.y, z: s.z,
-      vx: s.vx, vy: s.vy, vz: s.vz,
-      absmag: s.absmag,
-      ci: s.ci,
-      physRadius: s.physicalRadius,
-      companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
-      nameOffset: s.proper ? nameOffsets[i] : 0,
-      ...encodeSpectralBytes(s.spectral),
-      conIndex: s.conIndex,
-      flags: s.flags,
-      ampUnits,
-      periodUnits,
-      varType: s.varType ?? 0,
-      hip: s.hip ?? 0,
-      gaiaSourceId,
-      apsis,
-      sid: recordSids[i],
-      multiplicityStatus: multiplicityStatus[i],
-    });
-
-    if (s.conIndex === NO_CONSTELLATION_INDEX) unclassifiedCon.push(i);
-    off += RECORD_SIZE;
-  }
-
-  // The IAU boundaries partition the whole sphere, so byte 34's sentinel is
-  // unreachable for anything with a direction. Sol sits at the origin and is
-  // the one record that has none — any other holder means an assignment path
-  // was skipped, which surfaces downstream as a blank constellation row
-  // rather than an error.
-  if (unclassifiedCon.length !== 1 || unclassifiedCon[0] !== SOL_RECORD_INDEX) {
-    throw new Error(
-      `Expected Sol (record ${SOL_RECORD_INDEX}) to be the only record without a `
-      + `constellation; got ${unclassifiedCon.length}: `
-      + `${unclassifiedCon.slice(0, 10).join(', ')}`,
-    );
-  }
-
-  if (off !== totalLength) {
-    throw new Error(`Size mismatch: wrote ${off}, expected ${totalLength}`);
-  }
-
+/** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
+function catalogEmission({
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stageCounts, heap,
+}: CatalogEmissionInputs): Emission<CatalogOutputKey> {
+  const totalLength = encoded.buffer.byteLength;
   const chunkBytes = planCatalogChunks(totalLength);
+  const recordsThroughChunk = (i: number) => recordsInChunkPrefix(chunkBytes, i + 1, encoded.recordsOffset, stars.length);
   // What first paint actually gets. Pinned because it is the number the
   // progressive load's whole latency argument rests on, and it moves with
   // the name table's length as well as the chunk target.
-  const recordsInFirstChunk = recordsInChunkPrefix(
-    chunkBytes, 1, HEADER_SIZE + nameTableLength, stars.length,
-  );
+  const recordsInFirstChunk = recordsThroughChunk(0);
   assertFigureVerticesInFirstChunk(figureLines, recordsInFirstChunk);
-  const records = recordsCounts(stars, apsisMap, inputs.gspcMap, recordsInFirstChunk);
+  const records = recordsCounts(stars, apsisMap, gspcMap, recordsInFirstChunk);
   // /src/catalog-format/record/README.md#on-disk-transport-chunking is measured from this line.
-  const sortedKey = order.map((i) => sortKey[i]);
   const chunkRows = chunkBytes.map((_, i) => {
-    const n = recordsInChunkPrefix(
-      chunkBytes, i + 1, HEADER_SIZE + nameTableLength, stars.length,
-    );
+    const n = recordsThroughChunk(i);
     return `${i} ${n} records to V ${sortedKey[n - 1]?.toFixed(2) ?? '—'}`;
   });
   console.log(`  transport chunks — ${chunkRows.join(' · ')}`);
-  const sidSuccessors = sidSuccessorPairs([...registry.events, ...allocation.events]);
+  const sidSuccessors = sidSuccessorPairs(sidEvents);
   const manifest: CatalogManifest = {
     chunkBytes,
     totalBytes: totalLength,
@@ -602,34 +609,24 @@ export async function main() {
   const chunks = new Map<string, ArtifactContents>();
   let chunkOff = 0;
   for (let i = 0; i < chunkBytes.length; i++) {
-    chunks.set(
-      resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)),
-      new Uint8Array(out, chunkOff, chunkBytes[i]),
-    );
+    chunks.set(resolve(CATALOG_CHUNK_DIR, catalogChunkFilename(i)), new Uint8Array(encoded.buffer, chunkOff, chunkBytes[i]));
     chunkOff += chunkBytes[i];
   }
-  const manifestJson = JSON.stringify(manifest) + '\n';
 
-  // Constellations JSON (unchanged from v1 format).
   const constellationsOut = CONSTELLATIONS.map((c, idx) => {
     const lines = figureLines.get(idx);
     return lines ? { ...c, lines } : { ...c };
   });
-  const constellationsJson = JSON.stringify(constellationsOut) + '\n';
 
-  // Boundary polylines, region label anchors, the runtime membership grid and
-  // the fade-quantile table. The quantiles are keyed to apparent magnitude
-  // and measured over the shipped population, so this runs against the same
-  // `stars` the binary was written from.
-  const boundaries = renderBoundaryArtifact(stars, conAssignment.lookup);
+  // The fade quantiles are measured over the shipped population, so this
+  // runs against the same `stars` the binary was written from.
+  const boundaries = renderBoundaryArtifact(stars, conLookup);
   console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(
-    handedFileHash(inputHashesAtStart, MULTIPLES_TSV.file), rowIndexMap,
-  );
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap);
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
@@ -648,92 +645,40 @@ export async function main() {
   console.log(`Built ${CATALOG_OUTPUTS.files.searchIndex} (${searchIndexSummary(search.counts, Buffer.byteLength(searchJson))})`);
   const sol = stars[SOL_RECORD_INDEX];
   console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
-
   console.log(apsisCoverageSummary(records));
 
-  const lineage = stageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: PROMOTION_LINEAGE,
-    inputs: inputHashesAtStart,
-    diffed: 'promotion',
-    lines: () => promotionLines,
-    render: (sorted) => ({
-      promotion: stageLineageText(PROMOTION_CODES, sorted),
-      'promotion.identity': identityText(promotionIdentity),
-    }),
-    joins: () => [],
-    budget: PROMOTION_LINEAGE_BUDGET,
-    invariants: [],
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  });
-  const allocationLineage = countedStageLineage({
-    layout: LINEAGE_LAYOUT,
-    spec: ALLOCATION_LINEAGE,
-    inputs: inputHashesAtStart,
-    diffed: 'allocation',
-    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
-    render: (sorted) => ({
-      allocation: stageLineageText(ALLOCATION_CODES, sorted),
-      [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)),
-    }),
-    joins: () => [],
-    budget: ALLOCATION_LINEAGE_BUDGET,
-    invariants: [],
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  }, ALLOCATION_CODES);
-  console.log(allocationSummary(allocationLineage.counts, allocation.events.length));
-  const files = {
-    manifest: manifestJson,
-    constellations: constellationsJson,
-    boundaries: boundaries.json,
-    searchIndex: searchJson,
-    rowIndexMap: rowIndexMapJson,
-    parkedLedger,
-    simbadSourcedDistances,
-    ...placementEmission.files,
-    ...brightnessEmission.files,
-    ...sizeEmission.files,
-    ...coherenceEmission.files,
-    ...lineage.files,
-    ...allocationLineage.files,
-    ...namingEmission.files,
-    ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
-  };
-  const members = new Map([
-    ...chunks, ...placementEmission.members, ...brightnessEmission.members, ...sizeEmission.members, ...coherenceEmission.members, ...lineage.members, ...allocationLineage.members,
-    ...namingEmission.members,
-  ]);
-
-  emitArtifacts({
+  const stages = Object.values(lineage);
+  return {
     outputs: CATALOG_OUTPUTS,
-    files,
-    members,
+    files: {
+      manifest: JSON.stringify(manifest) + '\n',
+      constellations: JSON.stringify(constellationsOut) + '\n',
+      boundaries: boundaries.json,
+      searchIndex: searchJson,
+      rowIndexMap: rowIndexMapJson,
+      ...ledgers,
+      ...lineage.placement.files,
+      ...lineage.brightnessColour.files,
+      ...lineage.size.files,
+      ...lineage.coherence.files,
+      ...lineage.promotion.files,
+      ...lineage.allocation.files,
+      ...lineage.naming.files,
+    },
+    members: new Map([...chunks, ...stages.flatMap((e) => [...e.members])]),
     checks: [
-      ...placementEmission.checks, ...brightnessEmission.checks, ...sizeEmission.checks, ...coherenceEmission.checks, ...lineage.checks, ...allocationLineage.checks,
-      ...namingEmission.checks,
+      ...stages.flatMap((e) => e.checks),
       buildCountsCheck([
-        { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
-        { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
-        { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
-        { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
-        { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
-        { stage: 'allocation', block: { kind: 'counted', counts: allocationLineage.counts } },
-        { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
-        { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
+        ...stageCounts,
         { stage: 'records', block: { kind: 'counted', counts: records } },
         { stage: 'search', block: { kind: 'counted', counts: search.counts } },
         { stage: 'boundaries', block: { kind: 'counted', counts: boundaries.counts } },
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
-        { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
-        { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
-        { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
-        { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
-      ]), distanceOutliersCheck(stars),
+      ]),
+      distanceOutliersCheck(stars),
       heap.check(),
     ],
-  });
+  };
 }
 
 function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {

@@ -140,8 +140,8 @@ refusal path has to be classified before it can hide in prose. That input
 exceeds the request's own id count ([The request is a union](../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise))
 because the dedup is per ROOT: a source under two WDS
 roots is a candidate for each, and counted once for each. **`unpulled` is the
-gated one**: it is the astrometry request under-covering the pair-row half of
-its union, the one cause a re-pull can fix, so `buildPairMemberParallaxIndex`
+gated one**: it is the astrometry request under-covering the binaries'
+candidates, which hold every pair member, the one cause a re-pull can fix, so `buildPairMemberParallaxIndex`
 lists those sources and `loadReadStarsInputs` fails the build on any, before
 the walk (`unpulledSiblingsMessage`). It is a check on an input index rather
 than on a record, so it sits beside lineage, not in it. `notAnchorGrade` dominating is the finding — four in five of the 7,858

@@ -60,9 +60,8 @@ rows and is a correctness change, never a refactor.
 scripts/binaries/
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
-                                  multiples.tsv, the Gaia astrometry
-                                  request and the binding verdicts to
-                                  emitArtifacts behind the row bands and
+                                  multiples.tsv and the binding verdicts
+                                  to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
                                   inputs, holds the records to the
@@ -81,14 +80,18 @@ scripts/binaries/
   masses/                         A component's mass from its spectral
                                   type, and each pair's total mass, which
                                   Stage 5 reads. Own README.
+  multiples-record-pure.ts        MultiplesRecord, the closed value sets
+                                  and the properties a set's members
+                                  carry (each orbit route's elements,
+                                  regime and Stage 6 estimates), and
+                                  IdOrigin. The stages
+                                  import these from here, so a step that
+                                  runs a stage without reading the file
+                                  never reaches the codec
+                                  (../pipeline/step-table/README.md).
   multiples-tsv.ts (+ test)       MULTIPLES_TSV: the codec for
-                                  multiples.tsv — column roster, closed
-                                  value sets and the properties a set's
-                                  members carry (which resolve tiers
-                                  anchor on a Gaia source_id; each
-                                  orbit route's elements, regime and
-                                  Stage 6 estimates), per-column
-                                  decimal places,
+                                  multiples.tsv — column roster,
+                                  per-column decimal places,
                                   P and a positive and 0 ≤ e < 1, a
                                   comp and a WDS id on every row, so
                                   every row composes a synthetic key —
@@ -128,20 +131,17 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  propagatePosition (linear in RA/Dec
-                                  degrees, cos δ floored at 1e-3),
                                   tangentOffset, polarToTangent (a WDS
                                   ρ, θ as an east / north offset),
                                   distancePc (1000 /
-                                  parallax), chordSq / positionsWithin
+                                  parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
                                   offset), and the AT-HYG / WDS
-                                  reference epochs. Not the catalogue's
-                                  tangent-basis propagation
-                                  (../catalog/distance/direction-cascade.ts);
-                                  one formula for both is
-                                  stellata-hhaw.45.17.8.
+                                  reference epochs. Proper motion
+                                  propagates through astro-core's
+                                  directionAtEpoch / skyPositionAtEpoch,
+                                  the formula the catalogue uses.
   python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
                                   where JavaScript's default differs: pyMod,
                                   `%` with the divisor's sign; pySum, a
@@ -203,10 +203,11 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    cross-IDs + SIMBAD per-component spectra + the MSC. Emits
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
-   reach — with the Gaia astrometry request
-   (`data/gaia/gaia_astrometry_source_id_request.tsv`) and the
-   binding-integrity verdicts (`build/binding-integrity-verdicts.tsv`, a
-   gitignored review surface). All three land through `emitArtifacts`
+   reach — with the binding-integrity verdicts
+   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface).
+   The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
+   runs Stages 1–2 itself and unions them into the one astrometry request
+   (`../catalog/astrometry-request/`). Both land through `emitArtifacts`
    only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).

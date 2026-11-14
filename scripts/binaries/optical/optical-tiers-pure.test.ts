@@ -5,10 +5,10 @@ import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type MeasuredAstrometry } from '../astrometry/routes-pure';
 import type { Parallax } from '../astrometry/system-anchors-pure';
-import type { GaiaAstrometryRow } from '../load/gaia-pure';
+
 import { gaiaAstrometryRow } from '../load/load-fixture';
 import { UNKNOWN_COMPONENT_MASS_MSUN } from '../masses/pair-masses';
-import type { OrbitVia } from '../multiples-tsv';
+import type { OrbitVia } from '../multiples-record-pure';
 import { NO_ORBIT, type PairOrbit } from '../orbits/select-orbit-pure';
 import type { OrbitElements } from '../orbits/nss-elements-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
@@ -18,10 +18,11 @@ import {
   pairBeyondSeparationLimit, separationAu, separationExceedsLimit, transverseVelocityKmS, type PairContext,
 } from './optical-tiers-pure';
 import { orbitalPmBudgetKmS } from './pm-budget-pure';
+import type { GaiaAstrometryCatalogRow } from '../../catalog/sources/gaia-astrometry-source';
 
 const DEFAULT_TOTAL_MASS = 2 * UNKNOWN_COMPONENT_MASS_MSUN;
 const plx = (parallaxMas: number, parallaxErrorMas: number | null): Parallax => ({ parallaxMas, parallaxErrorMas });
-const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryRow>): GaiaAstrometryRow => gaiaAstrometryRow({ sourceId, ...over });
+const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryCatalogRow>): GaiaAstrometryCatalogRow => gaiaAstrometryRow({ sourceId, ...over });
 const measured = (over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry => ({
   astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05, pmraMasyr: 4100, pmdecMasyr: -3200, refEpoch: 2016,
   ...over,
@@ -33,7 +34,7 @@ interface Case {
   secondaryGaia?: string | null;
   primaryHip?: number | null;
   secondaryHip?: number | null;
-  rows?: readonly GaiaAstrometryRow[];
+  rows?: readonly GaiaAstrometryCatalogRow[];
   hip2?: readonly (readonly [number, number])[];
   magPri?: number | null;
   magSec?: number | null;
@@ -55,7 +56,7 @@ function classify(c: Case = {}) {
   });
   const p = decomposed(pair, { primary: side(c.primaryGaia, c.primaryHip), secondary: side(c.secondaryGaia, c.secondaryHip) });
   const ix = indices({
-    srcToAstrometry: new Map((c.rows ?? []).map((r) => [r.sourceId, r])),
+    srcToAstrometry: new Map((c.rows ?? []).map((r) => [r.ref.row, r])),
     hip2: new Map((c.hip2 ?? []).map(([hip, plxMas]) => [hip, hip2AstrometryRow({ plxMas })])),
   });
   return classifyPairOptical(p, {
@@ -77,7 +78,7 @@ describe('classifyPairOptical: WDS notes', () => {
 });
 
 describe('classifyPairOptical: both Gaia', () => {
-  const both = (p: Partial<GaiaAstrometryRow>, s: Partial<GaiaAstrometryRow>, rest: Case = {}) =>
+  const both = (p: Partial<GaiaAstrometryCatalogRow>, s: Partial<GaiaAstrometryCatalogRow>, rest: Case = {}) =>
     classify({ primaryGaia: '1', secondaryGaia: '2', rows: [gaiaRow('1', p), gaiaRow('2', s)], ...rest });
 
   it('keeps concordant parallax and proper motion', () => {
@@ -231,9 +232,9 @@ describe('cpmBaselineVerdict (61 Cyg: 5.2″/yr over a century)', () => {
 
 describe('pairBeyondSeparationLimit', () => {
   const ANCHOR = plx(96.5, 0.3);
-  const run = (rows: readonly GaiaAstrometryRow[], p: string | null, s: string | null, anchor: Parallax | null, rho: number) => {
+  const run = (rows: readonly GaiaAstrometryCatalogRow[], p: string | null, s: string | null, anchor: Parallax | null, rho: number) => {
     const pair = decomposed(wdsPair(), { primary: { gaiaSourceId: p, resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: s, resolveVia: 'orb6_hip' } });
-    return pairBeyondSeparationLimit(pair.primary, pair.secondary, anchor, rho, indices({ srcToAstrometry: new Map(rows.map((r) => [r.sourceId, r])) }));
+    return pairBeyondSeparationLimit(pair.primary, pair.secondary, anchor, rho, indices({ srcToAstrometry: new Map(rows.map((r) => [r.ref.row, r])) }));
   };
 
   it('splits a companion from the anchor its partner inherits (Pollux F)', () => {

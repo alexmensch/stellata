@@ -20,7 +20,8 @@ scripts/catalog/sources/
                                   `../parse/README.md#streaming-a-committed-table`),
                                   and the SIMBAD values pull streams it row by
                                   row without holding it
-                                  (gaiaAstrometryLineReader).
+                                  (gaiaAstrometryLineReader). The binaries
+                                  read their rows through the same fold.
   hip2-source.ts (+ test)         HIP2 and Hip2AstrometryRow. The parse also
                                   lists every HIP the table publishes,
                                   positioned or not, for
