@@ -22,12 +22,25 @@ export type DerivedOnlyCell = (typeof DERIVED_ONLY_CELLS)[number];
 export const HELD_STATES = ['free', 'held'] as const;
 export type HeldState = (typeof HELD_STATES)[number];
 
+/** A primary's link from one cell of the row to another: `to` is the cell
+ *  it fills, `from` the cell it reads. */
+export const DIFFERS_LINKS = [
+  { to: 'hip', from: 'tyc', key: 'hip<tyc' },
+  { to: 'hd', from: 'tyc', key: 'hd<tyc' },
+  { to: 'hd', from: 'hip', key: 'hd<hip' },
+  { to: 'hr', from: 'hd', key: 'hr<hd' },
+  { to: 'gl', from: 'hip', key: 'gl<hip' },
+  { to: 'gl', from: 'hd', key: 'gl<hd' },
+] as const satisfies readonly { to: KeyCell; from: KeyCell; key: string }[];
+export type DiffersLink = (typeof DIFFERS_LINKS)[number];
+
 export type MergeDivergence =
   | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
   | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
   | { readonly kind: 'pair-moves'; readonly hip: number; readonly owner: string; readonly sourceId: string }
   | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
-  | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState };
+  | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
+  | { readonly kind: 'differs'; readonly link: DiffersLink; readonly spine: string; readonly derived: readonly string[] };
 
 export interface MergeLinks {
   links: LinkTables;
@@ -151,6 +164,33 @@ function derivedOnlyCells(row: SpineRow, hip: number | null, m: MergeLinks): Mer
   return out;
 }
 
+type LinkKey = DiffersLink['key'];
+
+/** see README.md#the-divergence-ledger */
+function differsCells(row: SpineRow, inPair: boolean, m: MergeLinks): MergeDivergence[] {
+  const hip = intOf(row.hip);
+  const hd = intOf(row.hd);
+  const one = (v: number | undefined): number[] => (v === undefined ? [] : [v]);
+  const derivedBy = {
+    'hip<tyc': () => one(m.links.tycHip.get(row.tyc)),
+    'hd<tyc': () => (inPair ? [] : [...(m.links.tycHd.get(row.tyc) ?? [])]),
+    'hd<hip': () => [...(m.links.hipHd.get(hip!) ?? [])],
+    'hr<hd': () => one(m.hdHr.get(hd!)),
+    'gl<hip': () => (m.links.glHip(row.gl) === hip ? [] : m.cns5ByHip.get(hip!) ?? []),
+    'gl<hd': () => (m.links.glHd(row.gl) === hd ? [] : m.v70aByHd.get(hd!) ?? []),
+  } satisfies Record<LinkKey, () => readonly (number | string)[]>;
+  const spine = { hip, hd, hr: intOf(row.hr), gl: row.gl === '' ? null : row.gl } satisfies Record<DiffersLink['to'], number | string | null>;
+  const out: MergeDivergence[] = [];
+  for (const link of DIFFERS_LINKS) {
+    const value = spine[link.to];
+    if (value === null || row[link.from] === '') continue;
+    const derived: readonly (number | string)[] = derivedBy[link.key]();
+    if (derived.length === 0 || derived.includes(value)) continue;
+    out.push({ kind: 'differs', link, spine: String(value), derived: [...new Set(derived.map(String))].sort() });
+  }
+  return out;
+}
+
 export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[] {
   const partition = partitionRow(row, m.links);
   const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
@@ -166,5 +206,6 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
     ...unlinked,
     ...(pair.divergence === null ? [] : [pair.divergence]),
     ...derivedOnlyCells(row, pair.hip, m),
+    ...differsCells(row, pair.divergence !== null, m),
   ];
 }

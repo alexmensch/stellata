@@ -265,6 +265,12 @@ membership.merge.derived-only.hip.free	membership	none	outcome	live		7.1.23	A pr
 membership.merge.derived-only.hip.held	membership	none	outcome	live		7.1.23	A primary's own link puts a hip value on the spine row where the spine leaves the cell empty; another spine row already carries it.
 membership.merge.derived-only.hr.free	membership	none	outcome	live		7.1.23	A primary's own link puts a hr value on the spine row where the spine leaves the cell empty; no other spine row carries it.
 membership.merge.derived-only.hr.held	membership	none	outcome	live		7.1.23	A primary's own link puts a hr value on the spine row where the spine leaves the cell empty; another spine row already carries it.
+membership.merge.differs.gl.hd	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's hd fills its gl with values that leave out the spine's, outside the pair rule.
+membership.merge.differs.gl.hip	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's hip fills its gl with values that leave out the spine's, outside the pair rule.
+membership.merge.differs.hd.hip	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's hip fills its hd with values that leave out the spine's, outside the pair rule.
+membership.merge.differs.hd.tyc	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's tyc fills its hd with values that leave out the spine's, outside the pair rule.
+membership.merge.differs.hip.tyc	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's tyc fills its hip with values that leave out the spine's, outside the pair rule.
+membership.merge.differs.hr.hd	membership	none	outcome	live		7.1.23	A primary's own link from the spine row's hd fills its hr with values that leave out the spine's, outside the pair rule.
 membership.merge.pair.confirmed	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the HIP's Gaia source is the spine entry's own.
 membership.merge.pair.moves	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the HIP's Gaia source is another entry's, so the pair rule moves the record onto that entry.
 membership.merge.pair.review.no-entry-matches	membership	none	outcome	live		7.1.23	Tycho-2 gives the spine row's HIP to two or more entries, and the pair rule names no owner: no entry's Gaia TYC cross-match names the HIP's source.

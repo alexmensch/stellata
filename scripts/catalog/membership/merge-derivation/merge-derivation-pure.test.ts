@@ -99,4 +99,18 @@ describe('mergeDivergences', () => {
     const d = mergeDivergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
     expect(d[0]).toEqual({ kind: 'unlinked', cells: ['hd'], witnessed: 'tyc+hip | hd', published: 'tyc+hip | hd' });
   });
+
+  it('reports a filled cell a primary\'s link fills with other values', () => {
+    const d = mergeDivergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
+    expect(d.filter((x) => x.kind === 'differs')).toEqual([
+      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, spine: '999', derived: ['300'] },
+    ]);
+  });
+
+  it('leaves a pair row\'s TYC-to-HD link to the pair rule, but not its HIP-to-HD link', () => {
+    const d = mergeDivergences(row({ tyc: B, hip: '10', hd: '555', hr: '7' }), mergeLinks(links({ [B]: 'S1' })));
+    expect(d.filter((x) => x.kind === 'differs')).toEqual([
+      { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, spine: '555', derived: ['100'] },
+    ]);
+  });
 });

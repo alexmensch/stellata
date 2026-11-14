@@ -84,7 +84,8 @@ label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parit
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·
-                         pair_moves · pair_review · derived_only — with the
+                         pair_moves · pair_review · derived_only · differs —
+                         with the
                          derived value and its witness. Moves no manifest
                          row; it is the surface the switch off the spine
                          settles (/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger).

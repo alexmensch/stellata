@@ -27,8 +27,8 @@ import {
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, HELD_STATES, PAIR_REVIEW_REASONS,
-  type DerivedOnlyCell, type HeldState, type MergeDivergence, type PairReviewReason,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES, PAIR_REVIEW_REASONS,
+  type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence, type PairReviewReason,
 } from './merge-derivation/merge-derivation-pure';
 import type { MergeDivergenceKind, MergeDivergenceRow } from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -270,7 +270,9 @@ const PAIR_REVIEW_BRANCHES = {
 type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
 type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
 const derivedOnlyBranch = (c: DerivedOnlyCell, h: HeldState): DerivedOnlyBranch => `merge.derived-only.${c}.${h}`;
-type MergeBranch = 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | PairReviewBranch | DerivedOnlyBranch;
+type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`;
+const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
+type MergeBranch = 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
 
 /** Which ledger kind each divergence writes; a confirmed pair writes none. */
 const MERGE_LEDGER_KINDS = {
@@ -279,6 +281,7 @@ const MERGE_LEDGER_KINDS = {
   'pair-moves': 'pair_moves',
   'pair-review': 'pair_review',
   'derived-only': 'derived_only',
+  differs: 'differs',
 } as const satisfies Record<MergeDivergence['kind'], MergeDivergenceKind | null>;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
@@ -302,6 +305,10 @@ const MERGE_BRANCHES: readonly { branch: MergeBranch; of: MergeDivergence['kind'
     branch: derivedOnlyBranch(c, h), of: 'derived-only' as const,
     description: `A primary's own link puts a ${c} value on the spine row where the spine leaves the cell empty; ${HELD_DESCRIPTIONS[h]}.`,
   }))),
+  ...DIFFERS_LINKS.map((l) => ({
+    branch: differsBranch(l), of: 'differs' as const,
+    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`,
+  })),
 ];
 
 const MERGE_CODES = Object.fromEntries(
@@ -592,6 +599,10 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
     case 'derived-only':
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
+    case 'differs':
+      return row(key, differsBranch(d.link), {
+        cells: d.link.to, derived: d.derived.join('|'), evidence: `from ${d.link.from}; spine ${d.spine}`,
+      });
     default: {
       const unmapped: never = d;
       throw new Error(`merge divergence with no row mapping: ${JSON.stringify(unmapped)}`);

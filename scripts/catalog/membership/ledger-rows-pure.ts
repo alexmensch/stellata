@@ -69,7 +69,7 @@ export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as c
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
 export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;
-export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'pair_review', 'derived_only'] as const;
+export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'pair_review', 'derived_only', 'differs'] as const;
 export type MergeDivergenceKind = (typeof MERGE_DIVERGENCE_KINDS)[number];
 /** see merge-derivation/README.md#the-divergence-ledger */
 export interface MergeDivergenceRow extends RecordIdentifiers {
