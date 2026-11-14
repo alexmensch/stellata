@@ -5,6 +5,7 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 
+import { formatFraction } from '../util/counts/tally-pure';
 import { REPO_ROOT } from '../util/paths';
 import {
   ASSET_WARN_FRACTION,
@@ -43,7 +44,7 @@ export function main(): number {
   for (const a of nearLimit) {
     console.log(
       `::warning file=dist/${a.path}::${a.path} is ${formatMiB(a.bytes)}, over `
-        + `${ASSET_WARN_FRACTION * 100}% of the ${limit} Workers per-asset limit`,
+        + `${formatFraction(ASSET_WARN_FRACTION, 0)} of the ${limit} Workers per-asset limit`,
     );
   }
 

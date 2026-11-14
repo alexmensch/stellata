@@ -35,6 +35,7 @@ import {
   parseOptionalRef,
   type RecordRef,
 } from '../parse/corpus-tsv';
+import { formatFraction } from '../../util/counts/tally-pure';
 import { floatCell, intCell, textCell } from '../../util/tsv/table-pure';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../binaries/multiples-tsv';
@@ -406,7 +407,7 @@ function assertPrimary(row: CorpusRow, record: CatalogRecord): void {
     const rel = Math.abs(record.physicalRadius - row.primaryRadiusRsun) / row.primaryRadiusRsun;
     expect(
       rel,
-      `${row.systemName}: expected physicalRadius ${row.primaryRadiusRsun} R☉, got ${record.physicalRadius.toFixed(3)} (relative diff ${(rel * 100).toFixed(1)}% > ${(relTol * 100).toFixed(0)}%)`,
+      `${row.systemName}: expected physicalRadius ${row.primaryRadiusRsun} R☉, got ${record.physicalRadius.toFixed(3)} (relative diff ${formatFraction(rel)} > ${formatFraction(relTol, 0)})`,
     ).toBeLessThanOrEqual(relTol);
   }
 }
@@ -648,7 +649,7 @@ describe.runIf(FIXTURES_READY)('known-stars corpus', () => {
       const rel = Math.abs((observed as number) - expected) / expected;
       expect(
         rel,
-        `${row.systemName}: expected orbital period ${expected} d, multiples.tsv has ${observed} d (relative diff ${(rel * 100).toFixed(2)}% > ${(PERIOD_REL_TOLERANCE * 100).toFixed(0)}%)`,
+        `${row.systemName}: expected orbital period ${expected} d, multiples.tsv has ${observed} d (relative diff ${formatFraction(rel, 2)} > ${formatFraction(PERIOD_REL_TOLERANCE, 0)})`,
       ).toBeLessThanOrEqual(PERIOD_REL_TOLERANCE);
     });
   });

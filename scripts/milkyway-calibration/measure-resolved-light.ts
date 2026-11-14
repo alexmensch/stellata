@@ -4,6 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { CATALOG_MANIFEST_FILENAME } from '../../src/catalog-format/record/catalog-pure';
 import { catalogColumnsProjection, readCatalogColumns } from '../catalog/columns/catalog-columns';
+import { NO_FIGURE, share } from '../util/counts/tally-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { publicFile } from '../util/paths';
 import {
@@ -47,6 +48,10 @@ function unit(v: { x: number; y: number; z: number }): Vec3 {
 
 const mag = (flux: number) => -2.5 * Math.log10(flux);
 const fmt = (n: number, digits = 4) => n.toFixed(digits);
+const ofModel = (light: number, model: number): string => {
+  const s = share(light, model);
+  return s.kind === 'rated' ? fmt(s.value, 3) : NO_FIGURE;
+};
 
 type Caps = Record<'galacticCentre' | 'northGalacticPole', CapSurfaceBrightness>;
 
@@ -82,7 +87,7 @@ function printShells(title: string, rows: readonly ShellTotal[], removed: readon
     console.log(
       `  ${fmt(c.innerPc, 0).padStart(6)}–${fmt(c.outerPc, 0).padEnd(6)} ${String(c.stars).padStart(9)}` +
         `  ${c.catalogue.toExponential(3).padStart(11)}  ${c.model.toExponential(3).padStart(10)}` +
-        `  ${fmt(c.model > 0 ? c.catalogue / c.model : 0, 3).padStart(6)}   ${fmt(removed[c.shell] / c.model, 3)}`,
+        `  ${ofModel(c.catalogue, c.model).padStart(6)}   ${ofModel(removed[c.shell], c.model)}`,
     );
   }
 }

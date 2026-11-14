@@ -30,7 +30,7 @@ value, and ρ's `999.9` field overflow (`WDS_RHO_OVERFLOW_SENTINEL_ARCSEC`),
 both read as no measurement. A row with no WDS id or discoverer is skipped. A
 precise-coordinate fill under `WDS_SUMM_PRECISE_COORD_FLOOR`, or an ORB6
 period fill under `ORB6_PERIOD_COVERAGE_FLOOR`, throws: the fixed-width
-offsets moved.
+offsets moved. A file parsing to no rows throws on the same floor.
 
 ## The components field
 
