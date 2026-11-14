@@ -210,14 +210,14 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach — with the binding-integrity verdicts
-   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface)
+   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface),
    each component's Gaia and HIP binding provenance as the
    `component-binding` lineage stage
    (`build/lineage/component-binding.tsv.gz`), and every pair row's fate as
    the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
-   (`../catalog/astrometry-request/`). All three land through `emitArtifacts`
+   (`../catalog/astrometry-request/`). Every output lands through `emitArtifacts`
    only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
