@@ -23,7 +23,7 @@ export function claimHip(claims: HipClaims, wdsId: string, hip: number, token: s
 
 export function buildSystemHipClaims(components: readonly ResolvedComponent[]): HipClaims {
   const claims: HipClaims = new Map();
-  for (const c of components) if (c.hip !== null) claimHip(claims, c.wdsId, c.hip, c.component);
+  for (const c of components) if (c.hip !== null) claimHip(claims, c.wdsId, c.hip.value, c.component);
   return claims;
 }
 

@@ -6,7 +6,7 @@ import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import type { BindingVerdict } from './binding-audit-pure';
 import { componentsOf, type DecomposedPair } from './components-pure';
 import { astrometryRequestIds, resolveCascade, type Stage2Result } from './resolve-pairs';
-import { decomposed, indices, xid, type Side } from './resolve-fixture';
+import { decomposed, indices, ids, xid, type Side } from './resolve-fixture';
 
 describe('resolveCascade', () => {
   it('emits the primary and secondary of each decomposing pair', () => {
@@ -16,8 +16,8 @@ describe('resolveCascade', () => {
       indices: indices({ hipToGaia: new Map([[1, '1001']]) }), athyg: [], simbadWdsXids: new Map(),
     });
     expect(pairs).toHaveLength(1);
-    expect(pairs[0].primary).toMatchObject({ isPrimary: true, resolveVia: 'orb6_hip', gaiaSourceId: '1001' });
-    expect(pairs[0].secondary).toMatchObject({ isPrimary: false, resolveVia: 'unresolved', gaiaSourceId: null });
+    expect(ids(pairs[0].primary)).toMatchObject({ isPrimary: true, resolveVia: 'orb6_hip', gaiaSourceId: '1001' });
+    expect(ids(pairs[0].secondary)).toMatchObject({ isPrimary: false, resolveVia: 'unresolved', gaiaSourceId: null });
   });
 
   it('skips a blank components row', () => {
@@ -33,7 +33,7 @@ describe('resolveCascade', () => {
       simbadWdsXids: new Map([[componentKey('00491+5749', 'B'), xid('00491+5749', 'B', '425040000962497792')]]),
     });
     expect(pairs[0].primary.resolveVia).toBe('unresolved');
-    expect(pairs[0].secondary).toMatchObject({ resolveVia: 'simbad_xid', gaiaSourceId: '425040000962497792' });
+    expect(ids(pairs[0].secondary)).toMatchObject({ resolveVia: 'simbad_xid', gaiaSourceId: '425040000962497792' });
   });
 });
 
@@ -49,7 +49,7 @@ describe('astrometryRequestIds', () => {
       pair('X', { gaiaSourceId: '222', resolveVia: 'orb6_hip' }, { gaiaSourceId: '111', resolveVia: 'athyg_gaia_native' }),
       pair('Y', { gaiaSourceId: '222', resolveVia: 'athyg_gaia_native' }, {}),
     ];
-    expect(componentsOf(pairs).filter((c) => c.gaiaSourceId === null)).toHaveLength(1);
+    expect(componentsOf(pairs).filter((c) => c.gaia === null)).toHaveLength(1);
     expect(astrometryRequestIds(result(pairs), indices())).toEqual(new Set(['111', '222']));
   });
 

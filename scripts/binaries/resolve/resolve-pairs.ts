@@ -70,7 +70,7 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
 export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIndices): Set<string> {
   const ids = new Set<string>();
   for (const p of result.pairs) {
-    for (const c of [p.primary, p.secondary]) if (c.gaiaSourceId !== null) ids.add(c.gaiaSourceId);
+    for (const c of [p.primary, p.secondary]) if (c.gaia !== null) ids.add(c.gaia.value);
   }
   for (const r of [...indices.xwalkMagRejected, ...indices.athygGaiaMagRejected]) ids.add(r.sourceId);
   for (const id of bindingAuditSourceIds(result.verdicts)) ids.add(id);

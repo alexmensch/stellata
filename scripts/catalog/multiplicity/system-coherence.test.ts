@@ -16,7 +16,7 @@ import { HIP2 } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/companion-promotion';
-import { multiplesRow } from '../companions/multiples-fixture';
+import { multiplesRow, type MultiplesRowOverrides } from '../companions/multiples-fixture';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 
 function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources) {
@@ -33,7 +33,7 @@ function star(overrides: Partial<Star>): Star {
 }
 
 function pairRow(
-  overrides: Partial<MultiplesTsvRow> & { systemId: string; comp: string },
+  overrides: MultiplesRowOverrides & { systemId: string; comp: string },
 ): MultiplesTsvRow {
   return multiplesRow({
     x_pc: null, y_pc: null, z_pc: null, absmag: null, ci: null,
