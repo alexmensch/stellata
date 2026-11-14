@@ -46,7 +46,11 @@ describe('attachStage5', () => {
     expect(counts.optical_gaia_rejected).toBe(1);
     expect(counts.optical_mag_heuristic_kept).toBe(0);
     expect(Object.keys(counts)).toHaveLength(12);
-    expect(stage5Rates(counts).optical_rejected_rate).toBe(1);
+    expect(stage5Rates(counts).optical_rejected_rate).toEqual({ kind: 'rated', value: 1 });
+  });
+
+  it('logs the rejected rate as n/a when no pair was classified', () => {
+    expect(stage5Report(run([], []))).toContain('optical rejected rate: n/a (0 / 0)');
   });
 
   it('logs the cascade, the rate, and no sample line when the separation gate dropped nothing', () => {

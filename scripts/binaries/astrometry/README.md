@@ -98,7 +98,8 @@ pair's children inherit their carrier's tier) and
 fallback), typed `Stage3Counts` so a key read is a key returned.
 `stage3Rates` derives `gaia_resolve_rate`, over the tiers the codec's
 `RESOLVE_VIA_ANCHORS_SOURCE_ID` marks, and `hip2_fallback_rate`, each through
-`share`, which throws on zero components; `stage3Report` logs both. Every
+`share`, `no-denominator` on zero components; `stage3Report` logs both,
+`n/a` when absent. Every
 key is held exactly to the committed snapshot
 ([Stage 7](../counts/README.md)), so a rate needs no pin of its own: it can
 move only if a count does.
