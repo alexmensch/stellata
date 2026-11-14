@@ -89,11 +89,15 @@ export interface StarDesignationFields {
   syntheticId: string | null;
 }
 
+export function hipDesignation(hip: number): string {
+  return `hip:${hip}`;
+}
+
 /** External designations for one catalog star: the one extractor (README.md#designation-extraction--where-each-namespace-comes-from). */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
   if (f.isSol) d.push('sol:sun');
-  if (f.hip !== null && f.hip > 0) d.push(`hip:${f.hip}`);
+  if (f.hip !== null && f.hip > 0) d.push(hipDesignation(f.hip));
   if (f.hd !== null) d.push(`hd:${f.hd}`);
   for (const hd of f.hdAlt) d.push(`hd:${hd}`);
   if (f.hr !== null) d.push(`hr:${f.hr}`);

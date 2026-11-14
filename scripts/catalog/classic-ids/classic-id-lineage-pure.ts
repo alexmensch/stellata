@@ -5,6 +5,7 @@ import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../line
 import {
   outcomeCode, refusalCode, stageCodes, type CodeDeclaration, type LIVE,
 } from '../lineage/reason-codes/reason-codes-pure';
+import { hipDesignation } from '../../sid/sid-pure';
 import type { GateReason } from '../membership/binding/binding-gate-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 import { OVERLAY_VALUE_SEPARATOR, type DesignationReach, type GateRefusal, type RouteCheck } from './classic-id-overlay-pure';
@@ -123,11 +124,10 @@ function paramsAs<B extends FactBranch>(r: LineageRow, branch: B): ParamsOf<B> {
 }
 
 const hdText = (hd: number): string => `hd:${hd}`;
-const hipText = (hip: number): string => `hip:${hip}`;
 const hrText = (hr: number): string => `hr:${hr}`;
-const optionalHip = (hip: number | null): { hip?: string } => (hip === null ? {} : { hip: hipText(hip) });
+const optionalHip = (hip: number | null): { hip?: string } => (hip === null ? {} : { hip: hipDesignation(hip) });
 
-/** The number in a designation param written by `hdText` / `hipText` / `hrText`. */
+/** The number in a designation param written by `hdText` / `hipDesignation` / `hrText`. */
 function designationNumber(value: string, ns: 'hd' | 'hip' | 'hr'): number {
   const prefix = `${ns}:`;
   const n = Number(value.slice(prefix.length));
@@ -176,7 +176,7 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
         : none(d, 'hd.no-source');
     }
     case 'hip': {
-      const hip = hipText(r.hip);
+      const hip = hipDesignation(r.hip);
       return outcome(
         { key: keys.hipXmatch(r.hip), evidence: [], designation: hip, params: { hip } }, 'xmatch', [r.source], 'hip.bound', 'hip.gated',
       );
@@ -245,7 +245,7 @@ export function classicIdLineage(
   for (const c of routeChecks) {
     rows.push(row(keys.iv27a(c.hd), `route.${c.outcome}`, {
       hd: hdText(c.hd),
-      hip: hipText(c.hip),
+      hip: hipDesignation(c.hip),
       ...(c.hdRouteSourceIds.length === 0 ? {} : { hd_route_source_ids: c.hdRouteSourceIds.join(OVERLAY_VALUE_SEPARATOR) }),
       hip_route_source_id: c.hipRouteSourceId,
     }));

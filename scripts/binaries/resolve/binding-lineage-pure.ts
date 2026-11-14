@@ -2,6 +2,7 @@
 
 import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, type CodeDeclaration, type StageCounts } from '../../catalog/lineage/reason-codes/reason-codes-pure';
+import { hipDesignation } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import { MULTIPLES_ROW_KEY } from '../multiples-row-key-pure';
 import {
@@ -51,7 +52,7 @@ export function* bindingLineageRows(records: readonly MultiplesRecord[]): Genera
   for (const r of records) {
     const key = rowKeyText(MULTIPLES_ROW_KEY, r);
     yield identifierRow(key, 'gaia', r.gaiaSourceId === null ? null : { value: r.gaiaSourceId, origin: r.gaiaOrigin });
-    yield identifierRow(key, 'hip', r.hip === null ? null : { value: `hip:${r.hip}`, origin: r.hipOrigin });
+    yield identifierRow(key, 'hip', r.hip === null ? null : { value: hipDesignation(r.hip), origin: r.hipOrigin });
   }
 }
 
