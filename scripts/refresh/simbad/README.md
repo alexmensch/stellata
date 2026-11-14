@@ -91,8 +91,10 @@ asks on 2026-11-14). Anything joining a
 returned id back to its request goes through `parseIdent` (Python:
 `IdentLookup.parse_suffix`), or, for an id asked whole, `identKey`, which
 drops all whitespace as SIMBAD does but keeps case, so a component letter
-differing only in case is refused; keying on the raw returned id silently
-loses those rows. The fake matches the same way (`simbadMatchKey`).
+differing only in case does not join; keying on the raw returned id silently
+loses those rows. What a caller does with an answer that joins only
+case-folded is its own rule: [The run](../simbad-wds-xids/README.md#the-run).
+The fake matches the same way (`simbadMatchKey`).
 
 **A suffix is interpolated into an ADQL string literal**, so
 `resolveOids` (Python: `resolve_oids_by_prefix`) refuses any suffix outside
