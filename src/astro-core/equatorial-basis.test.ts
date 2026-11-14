@@ -208,3 +208,11 @@ describe('skyPositionAtEpoch', () => {
     expect(90 - moved.decDeg).toBeCloseTo(3.6 / 3600, 9);
   });
 });
+
+describe('raDecFromUnitVector', () => {
+  it('keeps RA in [0, 360): a tiny negative angle and −0 both read 0', () => {
+    expect(raDecFromUnitVector({ x: 1, y: -1e-17, z: 0 }).raDeg).toBe(0);
+    expect(Object.is(raDecFromUnitVector({ x: 1, y: -0, z: 0 }).raDeg, 0)).toBe(true);
+    expect(raDecFromUnitVector({ x: 1, y: -1e-3, z: 0 }).raDeg).toBeCloseTo(360 - Math.atan(1e-3) * 180 / Math.PI, 9);
+  });
+});
