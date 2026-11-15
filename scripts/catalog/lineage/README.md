@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are component-binding's and classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs' and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -56,7 +56,10 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call; countedStageLineage, the same plus
-                                 its count block.
+                                 its count block; namedStageRun, the run of
+                                 a stage whose lines file is named for it,
+                                 which build:catalog and build:binaries
+                                 build their stages with.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -97,7 +100,7 @@ Every stage writes the same envelope:
 | `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
-| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
+| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`, which `stageRow` applies) |
 
 - Each stage declares its own payload columns next to its reason codes and
   serialises its outcome union through one function, so a variant with no
@@ -123,12 +126,14 @@ Every stage writes the same envelope:
 `{ source, row }`: `source` is the source's declaration constant (a
 `defineSource` or `defineArtifact` constant,
 `../../util/sources/README.md#sourcerowref`) and `row` is that source's typed
-row key — never a path string. A source's licence is credited once, on the
+row key — never a path string. A source whose key names a group of rows
+(WDS, ORB6, the MSC orbits, Gaia NSS) is cited as `{ source, key, lines }`
+instead, every line of the group carried. A source's licence is credited once, on the
 site's credits surface; whether a public lineage surface must also filter its
 citations by licence is the release design's question, and the filter would
 be a join on `source`.
 
-Its text form is `<source>:<row>`. Every lineage file sorts by the byte
+Its text form is `<source>:<row>` (`<source>:<key>` for a group). Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, `evidence`. A stage
 hands its rows over as lines (`LineageLine`, made only by `stageLineageLine`
 or read from a stage file), and a tab sorts below every character a cell may
@@ -230,6 +235,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
+[pairs'](/scripts/binaries/README.md#pairs-lineage),
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/README.md#promotion-lineage),
@@ -300,7 +306,9 @@ and count against the [CI heap budget](../../util/heap-budget/README.md):
 ## Cross-stage joins
 
 One stage's rows join another's on the origin key, never on a
-re-derivation. A `multiples.tsv` component founds no record, so its
+re-derivation. A `pairs` row is keyed on its pair's founding row, which no
+other stage keys on; trace reaches it through the Gaia sources and `hip:`
+designations its `params` carry. A `multiples.tsv` component founds no record, so its
 component-binding rows are keyed on its row (`multiples:<system_id>/<comp>`,
 a promoted companion's own key) and reached, as classic-ids' rows are, by the
 designations their `params` carry
@@ -340,9 +348,17 @@ and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.m
 named token of its system. Its contract lives beside its module, in
 [Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
 
+## The pairs stage
+
+`build:binaries` writes it too, after component-binding: every WDS pair row
+the binaries stages decide — a duplicate, a blank row left out, each Stage 5
+verdict, a position-less drop — keyed on the row that founded the pair. Its
+contract lives beside its module, in
+[Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
+
 ## The classic-ids stage
 
-`build:classic-ids` is the stage after component-binding, run before membership; its contract
+`build:classic-ids` is the stage after pairs, run before membership; its contract
 lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage

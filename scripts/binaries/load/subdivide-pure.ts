@@ -6,6 +6,7 @@ import {
   type DiscovererKey, type PairRowKey,
 } from '../component-tokens-pure';
 import { mscRenderable, type MscLookup, type MscPairOrbits } from './msc-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
@@ -52,9 +53,11 @@ function isSynthesizableSubpair(components: string): boolean {
 }
 
 /** A synthesized pair row: sub-resolution, no date, photometry or notes. */
-export function subResolutionPair(wdsId: string, discoverer: string, components: string, precise: SkyPosition | null): WdsPair {
+export function subResolutionPair(
+  origin: AnySourceRowRef, wdsId: string, discoverer: string, components: string, precise: SkyPosition | null,
+): WdsPair {
   return {
-    wdsId, discoverer, components, precise,
+    origin, wdsId, discoverer, components, precise,
     dateLast: null,
     rhoLast: SYNTH_SUB_RESOLUTION_RHO_ARCSEC,
     thetaLast: SYNTH_SUB_RESOLUTION_THETA_DEG,
@@ -99,9 +102,9 @@ export function synthesizeOrb6OrphanPairs(wdsPairs: readonly WdsPair[], orb6: re
     const donor = blankByWdsDisc.get(discovererKey(e.wdsId, e.discoverer));
     const precise = donor?.precise ?? e.precise ?? systemPrecise.get(e.wdsId) ?? null;
     out.push(donor === undefined
-      ? subResolutionPair(e.wdsId, e.discoverer, e.components, precise)
+      ? subResolutionPair(e.origin, e.wdsId, e.discoverer, e.components, precise)
       : {
-        ...subResolutionPair(e.wdsId, e.discoverer, e.components, precise),
+        ...subResolutionPair(e.origin, e.wdsId, e.discoverer, e.components, precise),
         dateLast: donor.dateLast,
         rhoLast: donor.rhoLast,
         thetaLast: donor.thetaLast,
@@ -170,7 +173,7 @@ export function synthesizeMscInnerPairs(
     outcomes.push(outcome);
     if (outcome !== 'synthesized') continue;
     pairs.push(subResolutionPair(
-      o.wdsId, SYNTH_MSC_DISCOVERER, `${o.primary},${o.secondary}`, systemPrecise.get(o.wdsId) ?? null,
+      o.rows[0].origin, o.wdsId, SYNTH_MSC_DISCOVERER, `${o.primary},${o.secondary}`, systemPrecise.get(o.wdsId) ?? null,
     ));
     setOf(pairTokensByWds, o.wdsId).add(unorderedPairKey(o.primary, o.secondary));
     setOf(tokensByWds, o.wdsId).add(o.primary).add(o.secondary);

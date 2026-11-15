@@ -1,6 +1,7 @@
 // Stage 6: the multiples.tsv records, kept pairs then standalone components, and the counts it completes. See README.md.
 
 import { fold, prefixed } from '../../util/counts/tally-pure';
+import { pairLabel } from '../build-log-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { firstPerSystem } from '../astrometry/system-anchors-pure';
 import { componentKey, type ComponentKey } from '../component-tokens-pure';
@@ -9,14 +10,15 @@ import { A_VIA, ASTROMETRY_VIA, ORBIT_ROLES, SPECT_VIA, type MultiplesRecord } f
 import { OPTICAL_VIA_PROPERTIES } from '../optical/optical-tiers-pure';
 import type { Stage5Result } from '../optical/attach-optical';
 import type { Stage4Result } from '../orbits/attach-orbits';
+import type { DecomposedPair } from '../resolve/components-pure';
 import { computeAnchorOffsets } from './anchor-offsets-pure';
 import { pairRows, positionPc, standaloneRow } from './multiples-rows-pure';
 
 export interface Stage6Result {
   /** Two per kept, placed pair in Stage 3's order, then one per standalone component. */
   readonly rows: readonly MultiplesRecord[];
-  /** `<wds_id><components>` of each kept pair with no position: they never reach the file. */
-  readonly droppedNoPosition: readonly string[];
+  /** Each kept pair with no position: they never reach the file. */
+  readonly droppedNoPosition: readonly DecomposedPair[];
   /** `<wds_id><components>` of each pair whose magnitudes the MSC filled. */
   readonly mscMagFills: readonly string[];
 }
@@ -29,21 +31,20 @@ export function attachStage6(
   const systemAnchors = firstPerSystem(stage3.pairs, stage3.astrometry, positionPc);
   const anchors = computeAnchorOffsets(stage3.pairs, stage5.optical, indices.msc);
   const rows: MultiplesRecord[] = [];
-  const droppedNoPosition: string[] = [];
+  const droppedNoPosition: DecomposedPair[] = [];
   const mscMagFills: string[] = [];
   const emitted = new Set<ComponentKey>();
   for (const p of stage3.pairs) {
     if (!OPTICAL_VIA_PROPERTIES[stage5.optical.get(p)!].physical) continue;
-    const label = `${p.pair.wdsId}${p.pair.components}`;
     const built = pairRows(
       p, stage3.astrometry.get(p)!, stage4.orbits.get(p)!, systemAnchors.get(p.pair.wdsId) ?? null, { indices, anchors },
     );
     if (built === null) {
-      droppedNoPosition.push(label);
+      droppedNoPosition.push(p);
       continue;
     }
     rows.push(...built.rows);
-    if (built.mscMags) mscMagFills.push(label);
+    if (built.mscMags) mscMagFills.push(pairLabel(p));
     emitted.add(componentKey(p.pair.wdsId, p.primary.component));
     emitted.add(componentKey(p.pair.wdsId, p.secondary.component));
   }
@@ -68,7 +69,6 @@ export function stage6Counts(result: Stage6Result) {
   return {
     msc_pair_mags_filled: result.mscMagFills.length,
     multiples_rows_emitted: rows.length,
-    multiples_pairs_dropped_no_position: result.droppedNoPosition.length,
     multiples_astrometry_system_inherited: fold(ASTROMETRY_VIA, rows, (r) => r.astrometryVia).system_inherited,
     multiples_standalone_emitted: fold(ORBIT_ROLES, rows, (r) => r.orbitRole).standalone,
     multiples_hd_populated: populated(rows, (r) => r.hd),

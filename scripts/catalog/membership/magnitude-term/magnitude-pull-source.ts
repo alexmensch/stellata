@@ -7,6 +7,6 @@ import { MAGNITUDE_PULL_HINT } from './magnitude-term-pure';
 export const MAGNITUDE_PULL = defineSource({
   file: DATA_FILES.gaiaMagnitudePull,
   hint: MAGNITUDE_PULL_HINT,
-  rowKey: { id: 'gaia-dr3', text: (sourceId: string) => sourceId },
+  rowKey: { id: 'gaia-dr3', cardinality: 'one', text: (sourceId: string) => sourceId },
   parse: (input, onLine: (line: string) => void) => input.lines(onLine),
 });

@@ -1,7 +1,7 @@
 // Brightness and colour as a lineage stage: its reason codes and the one serialiser over each walked record's V, spectral class, B−V and de-extinction. See README.md#brightness-colour-lineage.
 
 import {
-  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
+  stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { codeCount, outcomeCode, refusalCode, stageCodes, retired, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { percentOf } from '../../util/counts/tally-pure';
@@ -186,7 +186,7 @@ export function brightnessColourLineageRows(b: BrightnessColour): LineageRow[] {
   const { key } = b;
   const out: LineageRow[] = [];
   const push = (branch: Branch, params: LineageParams, refs: readonly AnySourceRowRef[]): void => {
-    out.push(stageRow(BRIGHTNESS_COLOUR_CODES, key, branch, params, evidenceTexts(key, refs.map(sourceRowRefText))));
+    out.push(stageRow(BRIGHTNESS_COLOUR_CODES, key, branch, params, refs.map(sourceRowRefText)));
   };
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
     push(branch, params, refs);

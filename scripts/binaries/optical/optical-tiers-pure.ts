@@ -11,26 +11,6 @@ import type { IdentifierIndices } from '../load/indices-pure';
 import { ORBIT_VIA_PROPERTIES, type OrbitVia } from '../multiples-record-pure';
 import type { DecomposedPair, ResolvedComponent } from '../resolve/components-pure';
 
-/** Each tag, in the cascade's order, and whether it keeps the pair. */
-export const OPTICAL_VIA_PROPERTIES = {
-  wds_notes_kept: { physical: true },
-  wds_notes_rejected: { physical: false },
-  orbit_kept: { physical: true },
-  sep_limit_rejected: { physical: false },
-  gaia_kept: { physical: true },
-  gaia_rejected: { physical: false },
-  asymm_kept: { physical: true },
-  asymm_rejected: { physical: false },
-  cpm_baseline_kept: { physical: true },
-  cpm_baseline_rejected: { physical: false },
-  mag_heuristic_kept: { physical: true },
-  mag_heuristic_rejected: { physical: false },
-} as const satisfies Record<string, { readonly physical: boolean }>;
-
-export type OpticalVia = keyof typeof OPTICAL_VIA_PROPERTIES;
-export const OPTICAL_VIA = Object.keys(OPTICAL_VIA_PROPERTIES) as readonly OpticalVia[];
-export const OPTICAL_REJECT_VIA: readonly OpticalVia[] = OPTICAL_VIA.filter((v) => !OPTICAL_VIA_PROPERTIES[v].physical);
-
 const WDS_NOTES_PHYSICAL_CHARS = new Set(['T', 'V', 'Z']);
 const WDS_NOTES_OPTICAL_CHARS = new Set(['S', 'U', 'X', 'Y']);
 
@@ -54,6 +34,42 @@ export const CPM_SLIP_MIN_ARCSEC = 10.0;
 export const CPM_DRIFT_REJECT_FRACTION = 0.5;
 export const CPM_DRIFT_KEEP_FLOOR_ARCSEC = 2.0;
 export const MAG_GAP_HEURISTIC_THRESHOLD = 5.0;
+
+const listed = (chars: ReadonlySet<string>): string => [...chars].join(', ');
+
+/** Each tag, in the cascade's order, whether it keeps the pair, and its lineage code's description (`../pairs-lineage-pure.ts`). */
+export const OPTICAL_VIA_PROPERTIES = {
+  wds_notes_kept: {
+    physical: true, description: `Stage 5 kept the pair on a WDS note flag marking it physical (${listed(WDS_NOTES_PHYSICAL_CHARS)}).`,
+  },
+  wds_notes_rejected: {
+    physical: false, description: `Stage 5 rejected the pair on a WDS note flag marking it optical (${listed(WDS_NOTES_OPTICAL_CHARS)}).`,
+  },
+  orbit_kept: { physical: true, description: 'Stage 5 kept the pair because Stage 4 found it an orbit.' },
+  sep_limit_rejected: {
+    physical: false, description: `Stage 5 rejected the pair: its components sit over ${SEPARATION_LIMIT_PC} pc apart in 3D.`,
+  },
+  gaia_kept: { physical: true, description: 'Stage 5 kept the pair: both sides have Gaia astrometry, consistent with a bound pair.' },
+  gaia_rejected: {
+    physical: false, description: 'Stage 5 rejected the pair on both sides\' Gaia parallaxes or its escape-velocity gate.',
+  },
+  asymm_kept: { physical: true, description: 'Stage 5 kept the pair: one side\'s Gaia parallax agrees with the other\'s HIP2 anchor.' },
+  asymm_rejected: {
+    physical: false, description: 'Stage 5 rejected the pair: one side\'s Gaia parallax disagrees with the other\'s HIP2 anchor.',
+  },
+  cpm_baseline_kept: { physical: true, description: 'Stage 5 kept the pair: its WDS separation held still while the primary moved.' },
+  cpm_baseline_rejected: {
+    physical: false, description: 'Stage 5 rejected the pair: its WDS separation drifted as a background star\'s would.',
+  },
+  mag_heuristic_kept: { physical: true, description: 'Stage 5 kept the pair on the magnitude-gap backstop, or for want of magnitudes.' },
+  mag_heuristic_rejected: {
+    physical: false, description: `Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > ${MAG_GAP_HEURISTIC_THRESHOLD}).`,
+  },
+} as const satisfies Record<string, { readonly physical: boolean; readonly description: string }>;
+
+export type OpticalVia = keyof typeof OPTICAL_VIA_PROPERTIES;
+export const OPTICAL_VIA = Object.keys(OPTICAL_VIA_PROPERTIES) as readonly OpticalVia[];
+export const OPTICAL_REJECT_VIA: readonly OpticalVia[] = OPTICAL_VIA.filter((v) => !OPTICAL_VIA_PROPERTIES[v].physical);
 
 /** A side with no independent parallax: what the CPM tier exists for. */
 const INHERITED_SECONDARY_ASTROMETRY_VIAS: ReadonlySet<ComponentAstrometry['astrometryVia']> = new Set(['unresolved', 'athyg_position']);

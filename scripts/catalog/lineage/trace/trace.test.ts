@@ -245,6 +245,18 @@ describe('traceRecords over a promoted system', () => {
     expect(traceSystem('gaia_dr3:999').map((r) => r.key)).toEqual(['multiples:S-CD/C', 'multiples:S-CD/D']);
   });
 
+  it('finds a pair the binaries pipeline rejected from a Gaia source one of its sides carries', () => {
+    const pairs = [
+      'stage\tkey\trole\tcode\tparams\tevidence',
+      'pairs\twds:S/STF   1/CE\toutcome\tpairs.optical.sep-limit-rejected\t{"primary":"C","primary_gaia":"999","secondary":"E"}\t',
+    ].join('\n') + '\n';
+    const withPairs = [...withPromotion, { stage: 'pairs', rows: () => lineageRows(pairs, 'fixture/pairs.tsv') }];
+    const traced = traceRecords(
+      queryTerms(parseTraceQuery('gaia_dr3:999'), LOOKUPS), [...identity, ...promotionIdentity], [], withPairs,
+    );
+    expect(traced.find((r) => r.key === 'wds:S/STF   1/CE')?.rows.map((r) => r.code)).toEqual(['pairs.optical.sep-limit-rejected']);
+  });
+
   it('finds a minted companion through the identity row promotion writes for it', () => {
     const [minted] = traceSystem(MINTED);
     expect(minted.key).toBe('multiples:S-AB/B');

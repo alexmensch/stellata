@@ -15,9 +15,19 @@ scripts/wds/
   wds-pure.ts (+ test)   parseWdsSumm, parseOrb6 (the fixed-width formats),
                          splitComponents (a components field as its two
                          tokens), dedupWdsPairRows (the duplicate-row
-                         collapse) and measuredOffset (a row's ρ > 0 and θ,
+                         collapse over each WDS key's group, a decision
+                         per row) and measuredOffset (a row's ρ > 0 and θ,
                          or null), which every (ρ, θ) consumer reads.
-  wds-source.ts          WDS_SUMM, ORB6: the two files, declared.
+  wds-source.ts          WDS_SUMM, ORB6: the two files, declared, each
+                         keyed by wdsPairRowKey (wds_id/discoverer/
+                         components as printed), a group key: each file
+                         prints some pairs on several rows
+                         (../util/sources/README.md#sourcerowref).
+                         Every WdsPair and Orb6Entry carries its `origin`,
+                         stamped at parse: its key's group of rows. A
+                         binaries-synthesized pair's is the ORB6, MSC or
+                         Gaia NSS group it stands for; curated ORB6 letters
+                         never change an entry's origin.
   wds-fixture.ts         Test-only WdsPair and Orb6Entry builders.
 ```
 

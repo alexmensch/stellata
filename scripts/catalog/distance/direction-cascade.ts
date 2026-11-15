@@ -9,7 +9,7 @@ import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constan
 import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-pure';
 import type { SimbadRecordKeys } from '../simbad/simbad-namespace-ladder-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import type { AnySourceRowRef, SourceRowRef } from '../../util/sources/row-ref-pure';
+import type { AnySourceRowRef, GroupRowRef } from '../../util/sources/row-ref-pure';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import {
@@ -37,7 +37,7 @@ export interface DirectionSources {
   gaiaAstrometry: Map<string, GaiaAstrometryRow>;
   hip2: Map<number, Hip2AstrometryRow>;
   /** Every source with an NSS two-body orbit, to its row. */
-  nss: ReadonlyMap<string, SourceRowRef<string>>;
+  nss: ReadonlyMap<string, GroupRowRef<string>>;
   tycho2: Map<string, Tycho2Row>;
   cns5: Map<string, Cns5Astrometry>;
 }
