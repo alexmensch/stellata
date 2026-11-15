@@ -218,8 +218,10 @@
       "companionBlendDimOutside": 1428,
       "companionBlendDimGaiaResolved": 4317,
       "companionBlendDimBeyondSeparation": 3931,
-      "companionBlendDimMisfit": 847,
-      "physicalOverlaps": 55
+      "companionBlendDimMisfit": 847
+    },
+    "overlap": {
+      "overlap.inside": 55
     },
     "multiplicity": {
       "binaryPairs": 13480,

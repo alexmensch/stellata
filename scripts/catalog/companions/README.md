@@ -109,8 +109,7 @@ own (the list is [Promotion lineage](promotion-lineage/README.md#promotion-linea
 count is a fold of its lineage codes. The [post-passes](post-passes/README.md) act on records,
 not rows; each writes rows keyed on the records it changes
 ([Promotion lineage](promotion-lineage/README.md#promotion-lineage)), and `PromotionStats`, promotion's
-derived count block with `physicalOverlaps`
-([Overlap gate](../overlap/README.md#overlap-gate)), counts what no row records.
+derived count block, counts what no row records.
 
 Per-row gates and resolution:
 

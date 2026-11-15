@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are component-binding's, pairs', runtime-pairs' and classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs', runtime-pairs', overlap's and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -178,6 +178,8 @@ Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
 Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
 and named rows alone for two codes
 ([Promotion's invariants](../companions/promotion-lineage/README.md#promotions-invariants)).
+Overlap's (`OVERLAP_INVARIANTS`): named pairs alone, by key and params
+([Overlap lineage](../overlap/README.md#overlap-lineage)).
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
@@ -254,6 +256,7 @@ measured budget sits beside its contract: [component-binding's](/scripts/binarie
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/promotion-lineage/README.md#promotion-lineage),
+[overlap's](../overlap/README.md#overlap-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
 [size's](../spectral/README.md#size-lineage),
@@ -423,6 +426,12 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 
 `build:catalog`'s companion promotion is the stage after coherence; its
 contract lives beside its module, in [Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage).
+
+## The overlap stage
+
+`build:catalog`'s overlap gate is the stage after promotion: one row per
+pair of records drawn inside one another, keyed on one of the two. Its
+contract lives beside its module, in [Overlap lineage](../overlap/README.md#overlap-lineage).
 
 ## The runtime-pairs stage
 

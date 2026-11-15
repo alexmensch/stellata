@@ -11,11 +11,12 @@ import { PLACEMENT_CODES } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
 import { COHERENCE_CODES } from '../multiplicity/coherence-lineage-pure';
 import { NAMING_CODES } from '../naming/naming-lineage-pure';
+import { OVERLAP_CODES } from '../overlap/overlap-lineage-pure';
 import { BRIGHTNESS_COLOUR_CODES } from '../photometry/brightness-colour-lineage-pure';
 import { SIZE_CODES } from '../spectral/size-lineage-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
-  ALLOCATION_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
+  ALLOCATION_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, OVERLAP_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
   NAMING_LINEAGE, PAIRS_LINEAGE, RUNTIME_PAIRS_LINEAGE, SIZE_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -35,6 +36,7 @@ export const LINEAGE_STAGES: readonly LineageStage[] = [
   { codes: SIZE_CODES, spec: SIZE_LINEAGE },
   { codes: COHERENCE_CODES, spec: COHERENCE_LINEAGE },
   { codes: PROMOTION_CODES, spec: PROMOTION_LINEAGE },
+  { codes: OVERLAP_CODES, spec: OVERLAP_LINEAGE },
   { codes: ALLOCATION_CODES, spec: ALLOCATION_LINEAGE },
   { codes: NAMING_CODES, spec: NAMING_LINEAGE },
   { codes: RUNTIME_PAIRS_CODES, spec: RUNTIME_PAIRS_LINEAGE },

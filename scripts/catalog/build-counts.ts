@@ -18,6 +18,7 @@ import type { RecordsCounts } from './record/records-stage-pure.ts';
 import type { NamingCounts } from './naming/naming-lineage-pure.ts';
 import type { NamingDerivedCounts } from './naming/display-names.ts';
 import type { AllocationCounts } from '../sid/allocation-lineage-pure.ts';
+import type { OverlapCounts } from './overlap/overlap-lineage-pure.ts';
 
 /** The committed snapshot's figures: what the catalogue build last pinned. */
 export function committedBuildCounts(): BuildCounts {
@@ -26,12 +27,12 @@ export function committedBuildCounts(): BuildCounts {
 
 /** Every count the snapshot holds, by name: each stage's count block. */
 export type BuildCounts = InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
-  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & MultiplicityCounts & GcvsCounts & AllocationCounts
+  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & OverlapCounts & MultiplicityCounts & GcvsCounts & AllocationCounts
   & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */
 export const CATALOG_COUNT_STAGES = [
-  'inputs', 'placement', 'brightness-colour', 'coherence', 'promotion',
+  'inputs', 'placement', 'brightness-colour', 'coherence', 'promotion', 'overlap',
   'multiplicity', 'gcvs', 'allocation', 'naming', 'records', 'search', 'boundaries', 'figures',
 ] as const;
 export type CatalogCountStage = (typeof CATALOG_COUNT_STAGES)[number];

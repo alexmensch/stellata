@@ -106,10 +106,7 @@ export type PromotionStats = {
 
 
 /** Promotion's derived count block: its counts with no per-row decision. */
-export type PromotionDerivedCounts = PromotionStats & {
-  /** ../overlap/README.md#overlap-gate. Ratchets DOWN. */
-  physicalOverlaps: number;
-};
+export type PromotionDerivedCounts = PromotionStats;
 
 /** `own` = the row's observed B−V; `spectral_derived` = its class's
  *  intrinsic colour; `none` = no derivable class, so the solar B−V. */
