@@ -108,6 +108,12 @@ describe('parseNssOrbits', () => {
     });
   });
 
+  it('cites every solution of the source from the picked row', () => {
+    const m = pick(solution('SB1', 1, '5'), solution('Orbital', 2, '9'), solution('SB1', 3, '5', '8'));
+    expect(m.get('7')).toMatchObject({ solutionType: 'Orbital', origin: { kind: 'group', key: '7', lines: [2, 3] } });
+    expect(m.get('8')?.origin.lines).toEqual([4]);
+  });
+
   it('keeps a source\'s best-tier solution, in either file order', () => {
     const tiers: Array<[string, string]> = [
       ['SB1', 'EclipsingBinary'], ['SB2', 'SB1C'], ['EclipsingSpectro', 'SB1'], ['SB2C', 'EclipsingBinary'],
@@ -203,5 +209,18 @@ describe('MSC tables', () => {
       '23300+5833\tAa,Ab\t6.0663\td\t40087.1914\t0.25\t\t\t31.4\t\t56.7\t\t-13.4\tB\tSB9_1445',
     ].join('\n'), { ...MSC_ORBITS, ...FIXTURE });
     expect(r).toMatchObject({ syst: 'Aa,Ab', per: 6.0663, perUnit: 'd', aArcsec: null, longpDeg: 31.4 });
+  });
+
+  it('founds the rows sharing wds_id and syst on one group holding only those key fields', () => {
+    const [a, b, c] = parseMscOrbits([
+      'wds_id\tsyst\tper\tper_unit\tt0\te\ta_arcsec\tnode_deg\tlongp_deg\tincl_deg\tnote',
+      '23300+5833\tAa,Ab\t6.0663\td\t\t\t\t\t\t\t',
+      '23300+5833\tAa,Ab\t6.0664\td\t\t\t\t\t\t\t',
+      '23300+5833\tAab,Ac\t9.1\ty\t\t\t\t\t\t\t',
+    ].join('\n'), { ...MSC_ORBITS, ...FIXTURE });
+    expect(a.origin).toBe(b.origin);
+    expect(a.origin.lines).toEqual([2, 3]);
+    expect(Object.keys(a.origin.key)).toEqual(['wdsId', 'syst']);
+    expect(c.origin).toMatchObject({ key: { wdsId: '23300+5833', syst: 'Aab,Ac' }, lines: [4] });
   });
 });
