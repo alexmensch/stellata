@@ -2,7 +2,7 @@
 
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
-import type { Column, Row, SortKey } from '../pull/columns-pure';
+import { cellReader, type Column, type Row, type SortKey } from '../pull/columns-pure';
 import { near, type RowBand, type SpotRow } from '../pull/gates-pure';
 import type { Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { VIZIER } from '../pull/tap-pure';
@@ -131,7 +131,13 @@ export function bandPhase(table: Tycho2Table, [lo, hi]: readonly [number, number
   };
 }
 
-const rowTyc = (row: Row): string => tycKey([Number(row[0]), Number(row[1]), Number(row[2])]);
+function tycReader(table: Tycho2Table): (row: Row) => string {
+  const cells = cellReader(table.columns, table.vizierId);
+  return (row) => {
+    const cell = cells(row);
+    return tycKey([Number(cell('tyc1')), Number(cell('tyc2')), Number(cell('tyc3'))]);
+  };
+}
 
 /** A component IV/25 resolves that Tycho-2 merged into its pair's TYC3=1 entry, so it never had a row to pull. */
 export function pairCarriedAsOneStar(key: string, reached: ReadonlySet<string>): boolean {
@@ -188,9 +194,10 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
       }
       log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new)`);
       const kept = { main: new Map<string, Row>(), suppl1: new Map<string, Row>() };
+      const tycOf = { main: tycReader(MAIN), suppl1: tycReader(SUPPL1) };
       for (const { key, phase } of phases.values()) {
         for (const row of await ask(phase)) {
-          const tyc = rowTyc(row);
+          const tyc = tycOf[key](row);
           if (request.mentioned.has(tyc)) kept[key].set(tyc, row);
         }
       }
