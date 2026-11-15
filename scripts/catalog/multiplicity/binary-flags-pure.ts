@@ -127,7 +127,6 @@ export function resolveGroups(
 // double. Mirrors the binaries pipeline's Stage-5 SEPARATION_LIMIT_PC.
 export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
-// Fields isOpticalDoubleMember reads. Star satisfies this structurally.
 /** Whether a record's distance rests on a Gaia parallax, raw or through the
  *  Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) posterior
  *  over it. The optical-double suppression needs it
@@ -145,9 +144,7 @@ export interface OpticalDoubleStar {
   z: number;
   hip: number | null;
   gaiaSourceId: string | null;
-  /** The tier this record's own distance came from — see `hasGaiaQualityDistance`.
-   *  Was the spine's editorial `dist_src` cell until the parallax cascade gave
-   *  the build a first-hand answer to the same question. */
+  /** The tier this record's own distance came from — see `hasGaiaQualityDistance`. */
   distVia: DistVia | null;
   varType: number;
 }
@@ -204,13 +201,7 @@ export function isOpticalDoubleMember(
   return nearestSq > ctx.minSepPc * ctx.minSepPc;
 }
 
-// Spatial-grid nearest-neighbour pass: each star's nearest neighbour within
-// BINARY_MAX_SEP_PC, -1 for none, which the sorted stage attaches as
-// `companionIdx`. It is the **directed** nearest (A's nearest may be B while
-// B's nearest is some third star C); the renderer reads it as "the partner
-// for SVG disc-mask cutouts and chart-mode wings," which is well-defined even
-// when the relationship is one-way. `mutual` is the groups the geometric
-// claimant claims from.
+/** README.md#geometric-binary-inference; `nearest` is -1 where no neighbour lies within BINARY_MAX_SEP_PC. */
 export function inferBinaries(
   stars: Sorted<BinaryStar>,
 ): {
