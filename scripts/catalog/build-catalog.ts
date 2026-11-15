@@ -432,14 +432,10 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
-  // Serialized here so the tree objects are not held through emission (the CI heap budget).
-  const systems = (() => {
-    const result = buildSystemMembership({
-      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
-      geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
-    });
-    return { json: serializeSystemMembership(result.membership), counts: result.counts };
-  })();
+  const systems = buildSystemMembership({
+    records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
+    geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
+  });
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
     ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
@@ -459,7 +455,7 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     placementDerived: stats.placementDerived,
     starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
-    systemMembership: systems.json,
+    systemMembership: serializeSystemMembership(systems.membership),
   };
 }
 
