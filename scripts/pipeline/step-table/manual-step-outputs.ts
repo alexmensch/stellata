@@ -68,7 +68,9 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   vizierPull('refresh:hip-vmag', 'refresh-hipparcos-vmag.ts', 'HIP_VMAG_OUTPUTS'),
   vizierPull('refresh:classic-ids', 'refresh-classic-ids.ts', 'CLASSIC_IDS_OUTPUTS'),
   pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', [DATA_FILES.wgsnNec, DATA_FILES.wgsnFaints]),
-  pull('refresh:tycho2', 'refresh-tycho2.py', [DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1]),
+  tsManual(
+    { kind: 'pull' }, 'refresh:tycho2', 'scripts/refresh/tycho2/refresh-tycho2.ts', 'scripts/refresh/tycho2/tycho2-outputs.ts', 'TYCHO2_OUTPUTS',
+  ),
   vizierPull('refresh:gliese', 'refresh-gliese.ts', 'GLIESE_OUTPUTS'),
   vizierPull('refresh:msc', 'refresh-msc.ts', 'MSC_OUTPUTS'),
   tsManual(
