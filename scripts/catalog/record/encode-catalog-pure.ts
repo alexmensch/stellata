@@ -78,7 +78,7 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPri
         | (s.bayer ? FLAG_HAS_BAYER : 0)
         | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
       ...variabilityUnits(s),
-      varType: s.varType ?? 0,
+      varType: s.varType,
       hip: s.hip ?? 0,
       // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER: BigInt off the string, never through a number.
       gaiaSourceId: s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID,
