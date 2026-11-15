@@ -25,13 +25,17 @@ const ARITHMETIC = new Set([
 const isCall = (e: ts.Expression): boolean =>
   ts.isCallExpression(e) || (ts.isAwaitExpression(e) && ts.isCallExpression(e.expression));
 
-/** Every way a function body in `source` departs from wiring: a statement
- *  other than a `const` initialised by a call, a closing `return` or the one
- *  closing `emitArtifacts` call, and any loop, `throw` or arithmetic anywhere. */
+/** Every way `source` departs from wiring: a top-level statement but an import
+ *  or a function, a function statement but a `const` initialised by a call, a
+ *  closing `return` or the one closing `emitArtifacts` call, and any loop,
+ *  `throw` or arithmetic anywhere in the file. */
 function wiringViolations(file: string, source: string): string[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const out: string[] = [];
   const at = (n: ts.Node) => `${n.getText(sf).split('\n')[0]} (line ${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1})`;
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) && !ts.isFunctionDeclaration(st)) out.push(`top level: ${at(st)}`);
+  }
   for (const fn of sf.statements.filter(ts.isFunctionDeclaration)) {
     const statements = fn.body?.statements ?? [];
     statements.forEach((st, i) => {
@@ -44,16 +48,16 @@ function wiringViolations(file: string, source: string): string[] {
         && st.expression.expression.getText(sf) === 'emitArtifacts';
       if (!callConst && !closingReturn && !closingEmit) out.push(`statement: ${at(st)}`);
     });
-    const visit = (n: ts.Node): void => {
-      if (ts.isIterationStatement(n, false)) out.push(`loop: ${at(n)}`);
-      else if (ts.isThrowStatement(n)) out.push(`throw: ${at(n)}`);
-      else if (ts.isBinaryExpression(n) && ARITHMETIC.has(n.operatorToken.kind)) out.push(`arithmetic: ${at(n)}`);
-      else if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n))
-        && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) out.push(`arithmetic: ${at(n)}`);
-      ts.forEachChild(n, visit);
-    };
-    if (fn.body) visit(fn.body);
   }
+  const visit = (n: ts.Node): void => {
+    if (ts.isIterationStatement(n, false)) out.push(`loop: ${at(n)}`);
+    else if (ts.isThrowStatement(n)) out.push(`throw: ${at(n)}`);
+    else if (ts.isBinaryExpression(n) && ARITHMETIC.has(n.operatorToken.kind)) out.push(`arithmetic: ${at(n)}`);
+    else if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n))
+      && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) out.push(`arithmetic: ${at(n)}`);
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
   return out;
 }
 
@@ -104,17 +108,20 @@ describe('build-catalog.ts wiring ratchet', () => {
       '  log();',
       '  return { a: stage() };',
       '}',
+      'const helper = (x: number) => x * 2;',
     ].join('\n');
     expect(wiringViolations('probe.ts', probe)).toEqual([
+      'top level: const helper = (x: number) => x * 2; (line 15)',
       'statement: let c = stage(); (line 4)',
       'statement: const d = a.length; (line 5)',
       'statement: for (const x of b) log(x); (line 6)',
       'statement: if (a) throw new Error("no"); (line 7)',
+      'statement: log(); (line 12)',
       'loop: for (const x of b) log(x); (line 6)',
       'throw: throw new Error("no"); (line 7)',
       'arithmetic: a + 1 (line 8)',
       'arithmetic: n++ (line 8)',
-      'statement: log(); (line 12)',
+      'arithmetic: x * 2 (line 15)',
     ]);
   });
 });

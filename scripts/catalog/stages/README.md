@@ -61,8 +61,9 @@ allocation. Held longer, either runs the build out of heap
 ## The wiring ratchet
 
 `../build-catalog.test.ts` parses `../build-catalog.ts` and fails on any
-loop, `throw` or arithmetic in it, and on any statement but a `const`
+loop, `throw` or arithmetic anywhere in it, on any top-level statement but
+an import or a function, and on any function statement but a `const`
 initialised by a call, `preAllocationStages`' closing `return` and `main`'s
 closing `emitArtifacts` call: logic lands in a stage, never in the wiring.
 It also pins each phase's `enterPhase` call to the one pass that completes
-that phase.
+that phase, and the SIDs' `allocatedSids` tag to the allocation stage.
