@@ -11,7 +11,7 @@ import {
   phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
 import { checkpoint } from './checkpoint';
-import { GAIA, SIMBAD, TapOverflow, VIZIER, type TapArchive, type TapClientDeps } from './tap-pure';
+import { GAIA, SIMBAD, TapOverflow, VIZIER, textReply, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'pull-')); });
@@ -51,12 +51,12 @@ function deps(answer: (adql: string) => string | Error) {
   const reported: string[] = [];
   const d: TapClientDeps = {
     transport: async (_url, form) => {
-      if (!form) return { status: 200, contentType: 'text/xml', body: '<capabilities/>' };
+      if (!form) return textReply(200, 'text/xml', '<capabilities/>');
       const adql = form.get('QUERY') ?? '';
       asked.push(adql);
       const body = answer(adql);
       if (body instanceof Error) throw body;
-      return { status: 200, contentType: 'text/csv', body };
+      return textReply(200, 'text/csv', body);
     },
     sleep: async () => {},
     report: (service) => reported.push(service),
@@ -182,6 +182,13 @@ describe('runPull', () => {
     expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
   });
 
+  it('refuses, before asking anything, a table an ASU mirror of its archive could not ask', async () => {
+    const withAsu: TapArchive = { ...GAIA, mirrors: [...GAIA.mirrors, { name: 'ASU', protocol: 'asu', verified: true, url: 'https://asu.example' }] };
+    const { deps: d, asked } = deps(GOOD);
+    await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }, withAsu), d)).rejects.toThrow('ASU answers ASU only, and these phases have no ASU form: stars, pairs');
+    expect(asked).toEqual([]);
+  });
+
   it('refuses a reply whose columns are not the declared ones, and caches no refused reply', async () => {
     const { deps: d } = deps((adql) => (adql.includes('gaia_source') ? 'source_id,plx\n1,0.5\n' : GOOD(adql)));
     await expect(runPull(pullOf({ stars: STARS, pairs: PAIRS }), d)).rejects.toThrow(/are not the declared/);
@@ -217,6 +224,15 @@ describe('describePull', () => {
       services: ['ESA-sync', 'ARI-sync'],
       release: 'Gaia DR3',
     });
+  });
+
+  it('states a whole table\'s ASU form beside its query, so a changed ASU form stales the pull', () => {
+    const asu = { source: 'gaia_source', columns: [{ archive: 'SOURCE', name: 'source_id' }, { archive: 'PLX', name: 'parallax' }], constraints: {} };
+    const withAsu = (source: string): PullTable => ({ ...STARS, scope: { kind: 'whole-table', asu: { ...asu, source } } });
+    const { query } = describePull(pullOf({ stars: withAsu('gaia_source'), pairs: PAIRS }));
+    expect(JSON.parse(query).stars.asu).toEqual(asu);
+    const hash = (source: string) => pullQueryHash(describePull(pullOf({ stars: withAsu(source), pairs: PAIRS })));
+    expect(hash('a')).not.toBe(hash('b'));
   });
 
   it('a changed rounding changes the query hash', () => {

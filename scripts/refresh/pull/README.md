@@ -1,14 +1,15 @@
 # Pull — the TypeScript refresh runtime
 
-What a TypeScript pull does when it runs: one TAP backend for Gaia, VizieR and
-SIMBAD. A pull is a `pull` step on the step table
+What a TypeScript pull does when it runs: one backend for Gaia, VizieR and
+SIMBAD, over TAP and, for VizieR's CfA mirror, ASU. A pull is a `pull` step on the step table
 ([Step kinds](../../pipeline/README.md#step-kinds)); the runner never runs it,
 `record.ts` does, and its committed record is `data/stamps/<step>.json`.
 
 ## Files
 
-- `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, `tapClient`, `withRetry` (which the WGSN
+- `tap-pure.ts` (+ test) — the backend: the three archives, the TAP sync
+  query and the ASU URL, the reply's classification, `csvText`, `tapClient`,
+  `withRetry` (which the WGSN
   pull's plain fetch shares), `SIMBAD_BATCH_SIZE`, the ids
   one SIMBAD `IN (…)` batch may carry, and `GAIA_SLICE_ROWS`, the rows one
   sliced Gaia query holds.
@@ -152,7 +153,9 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
-Each answered query's CSV reply is cached once it passes the column check, under
+Each answered query is cached as CSV (a FITS answer written as the CSV
+`readCsv` reads back to the same cells, `csvText`) once it passes the column
+check, under
 `<first output>.ckpt/`, named by the hash of the query's text, beside the
 mirror that answered it; a re-run replays a cached reply (re-checked against
 the limit and the columns) and asks only what is missing. **A replay reports
@@ -167,18 +170,34 @@ gitignored (`data/**/*.tsv.ckpt*/`) and deleting it is always safe.
 
 ## The TAP backend
 
-**One request shape for every service; only the URL differs.** `POST
-<mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`, `FORMAT=csv`, and
-`MAXREC = limit + 1`. An archive (`GAIA`, `VIZIER`, `SIMBAD`) is its mirrors
-in fallback order, its retry delays and how it quotes an identifier (VizieR
-double-quotes every one: table ids carry `/`, columns carry case and
-parentheses).
+**One request shape for every TAP service; only the URL differs.** `POST
+<mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`, `FORMAT=<the archive's
+format>`, and `MAXREC = limit + 1`. An archive (`GAIA`, `VIZIER`, `SIMBAD`)
+is its mirrors in fallback order, the format its TAP mirrors answer in (`csv`,
+or `fits` where a text reply would round a stored double:
+[FITS replies](#fits-replies)), its retry delays and how it quotes an
+identifier (VizieR double-quotes every one: table ids carry `/`, columns carry
+case and parentheses).
+
+**An ASU mirror is VizieR's own interface, for a mirror that serves no TAP.**
+A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked `GET
+<mirror>?-source=<table>&-out=<columns>&<constraints>&-out.max=<limit + 1>`
+for FITS, from the query's ASU form (`AsuQuery`: each archive column under
+the name it answers as, and `column=value` constraints). The reply's leading
+columns must be the asked ones in order, else it is refused: ASU silently
+drops a column it does not know. It appends link columns of its own
+(`recno`, Hipparcos' `Sn`), which are cut. A file with no table is no rows.
+An ASU mirror has no `/capabilities` and no hard row limit. Only a
+whole-table scope carries an ASU form, and a pull whose archive has an ASU
+mirror refuses, before any query, a phase without one; the form is part of
+its describe.
 
 **Overflow is refused by row count, never by a status flag.** A CSV reply
 carries no `QUERY_STATUS`: truncated at MAXREC it is HTTP 200 with exactly
 MAXREC rows and nothing else (measured 2026-11-05 on ESA, ARI and
 SIMBAD-Harvard). So a query of limit `n` asks for `n + 1` rows, and a reply
-holding more than `n` raises `TapOverflow` (`readCsv`). It is permanent: every
+holding more than `n` raises `TapOverflow`, a FITS or ASU reply as a CSV one.
+It is permanent: every
 mirror truncates the same query the same way, so it neither retries nor falls
 back.
 
@@ -195,8 +214,8 @@ Measured 2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000.
 query's reply is a VOTable whatever FORMAT asked for, its `QUERY_STATUS` INFO
 naming the clause it rejected (`queryStatus`). A message naming a query fault
 (unknown column, parse error, …) is `TapRefused` on any status, since a 5xx
-can carry one; otherwise a 5xx, a network failure or a non-CSV 2xx is
-transient (retried through the archive's delays, then the next mirror), and
+can carry one; otherwise a 5xx, a network failure, a 2xx in another format
+than asked or a FITS reply cut short is transient (retried through the archive's delays, then the next mirror), and
 any other 4xx is refused. Only the parsed message is matched: a proxy's HTML
 page saying "not found" is about the service and must still fall back. An
 HTML page is reported by its text.
