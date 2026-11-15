@@ -20,6 +20,7 @@ export interface BuildStep extends StepBase {
   readonly kind: 'build';
   readonly language: 'ts';
   readonly outputs: OutputsRef;
+  readonly heap?: 'ci-budget';
 }
 
 /** A pull always describes itself; a bake does only when it reads a file

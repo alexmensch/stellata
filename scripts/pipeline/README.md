@@ -297,7 +297,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
   `readManualRecord`'s encoder, the one writer of `data/stamps/`.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
-  `failed`, `skipped`) matched exhaustively, and the exit status. The runner
+  `failed`, `skipped`) matched exhaustively, and the exit status. A step
+  marked `heap: 'ci-budget'` starts with its heap capped at the CI budget,
+  and fails unrun under a Node major other than `.nvmrc`'s
+  ([CI heap budget](../util/heap-budget/README.md)). The runner
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
   under `--update-snapshots`, all of them) re-hashed after
@@ -333,6 +336,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python pull or
   bake under the recorder, whose `RunRecord` is read only when it exits 0.
+  `tsxCommand` starts `tsx`'s CLI under the runner's own Node
+  (`process.execPath`), never a `PATH` lookup, so a step and its describe
+  run on the Node major the runner checked.
 
 ## Design pass
 
