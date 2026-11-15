@@ -663,8 +663,12 @@ membership's.
 
 Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
 59,713 facet rows (two of them, colour and dust, per minted record), 16,611
-size rows (one per record promotion sized: <!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mints, <!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> re-split,
-<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> dimmed anchors) and 1,945 held-record brightness rows — and 31,908
+size rows (one per record promotion sized, by its last pass:
+<!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
+<!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
+<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> anchor-dimmed,
+<!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
+<!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 31,908
 identity rows (the minted companions and the 17,232 rows promotion retires,
 parks or merges), 1.55 MB gzipped in 0.24 s (header, diff, write and
 invariants; 109 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
