@@ -168,9 +168,9 @@ same thing — single-use helpers stay with their consumer.
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
   its git call, in a given folder; `blobsAt(commit, paths)`, each file's bytes
-  as a commit stores it, read through one `git cat-file --batch` (a spawn per
-  file costs ~50 ms, which a branch's lineage baseline pays per changed input
-  inside its write budget), is what `input-hashes-at.ts` hashes and
+  as a commit stores it, read through one `git cat-file --batch` (build:binaries' 40 changed
+  inputs read in 15 ms, against 985 ms at two spawns per file, inside the
+  lineage write budget; 2026-11-15), is what `input-hashes-at.ts` hashes and
   `fileAtMergeBase` decodes.
 - `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
   `inputHashes` map with each path that differs on disk from `commit`

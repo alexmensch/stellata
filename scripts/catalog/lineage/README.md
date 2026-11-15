@@ -217,8 +217,8 @@ adds to the build — the baseline headers' file re-hash, the base's input
 re-hash each verdict asks for, producing the lines (`lines`, a function the
 window calls: a spill reads back there), the diff, rendering,
 gzip and invariants: about 8.2 s with a diff
-against a full baseline. The merge-base input re-hash measured 128 ms for
-membership on a branch where 9 of its 163 inputs differ (2026-11-04,
+against a full baseline. The merge-base input re-hash measured 116 ms for
+membership on a branch where 34 of its 167 inputs differ (2026-11-15,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
 changed 204 MB LFS input adds its own hash of the local object. The header's input map is not in it: a stage hands
 `stageLineage` the input hashes the runner took for its step's stamp before
