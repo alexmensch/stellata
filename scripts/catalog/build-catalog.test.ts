@@ -6,12 +6,13 @@ import ts from 'typescript';
 const REPO = resolve(__dirname, '../..');
 const WIRING = resolve(__dirname, 'build-catalog.ts');
 
-/** Each phase's one `enterPhase` call site, by the pass that completes it. */
+/** Each phase's one `enterPhase` call site, by the pass that completes it, and the allocated SIDs' one tag. */
 const PHASE_ENTRIES: Record<string, string> = {
   walked: 'scripts/catalog/stages/walk-stage.ts',
   named: 'scripts/catalog/stages/naming-stage.ts',
   promoted: 'scripts/catalog/stages/promotion-stage.ts',
   sorted: 'scripts/catalog/record/record-order-pure.ts',
+  allocatedSids: 'scripts/catalog/stages/allocation-stage.ts',
 };
 
 const ARITHMETIC = new Set([
@@ -64,12 +65,13 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** `enterPhase('<phase>', …)` call sites outside tests: phase → files. */
-function phaseEntries(): Record<string, string[]> {
+/** Outside tests, each `enterPhase('<phase>', …)` call site by phase, and each `allocatedSids(` call site. */
+function tagConstructors(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const path of [...sourceFiles(resolve(REPO, 'scripts')), ...sourceFiles(resolve(REPO, 'src'))]) {
     const text = readFileSync(path, 'utf8');
     for (const m of text.matchAll(/\benterPhase\(\s*'(\w+)'/g)) (out[m[1]] ??= []).push(relative(REPO, path));
+    for (const _ of text.matchAll(/(?<!function )\ballocatedSids\(/g)) (out.allocatedSids ??= []).push(relative(REPO, path));
   }
   return out;
 }
@@ -82,8 +84,8 @@ describe('build-catalog.ts wiring ratchet', () => {
     ).toEqual([]);
   });
 
-  it('enters each phase once, in the pass that completes it', () => {
-    expect(phaseEntries()).toEqual(Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])));
+  it('enters each phase once, in the pass that completes it, and tags the SIDs only in allocation', () => {
+    expect(tagConstructors()).toEqual(Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])));
   });
 
   it('catches each departure from wiring', () => {

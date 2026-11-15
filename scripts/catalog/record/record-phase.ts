@@ -4,6 +4,7 @@
 import type { Star } from '../parse/stars-parse';
 
 declare const phase: unique symbol;
+declare const allocated: unique symbol;
 
 export type RecordPhase = 'walked' | 'named' | 'promoted' | 'sorted';
 
@@ -13,10 +14,13 @@ export type Records<P extends RecordPhase, S = Star> = readonly S[] & { readonly
 /** Records in apparent-V order: an index is a record's final address. */
 export type Sorted<S = Star> = Records<'sorted', S>;
 
+/** Each record's SID in record order, as SID allocation assigned it. */
+export type AllocatedSids = readonly number[] & { readonly [allocated]: true };
+
 /** The sorted records with what is decided once every record is final, each per record. */
 export interface Finalised<S = Star> {
   readonly records: Sorted<S>;
-  readonly sids: readonly number[];
+  readonly sids: AllocatedSids;
   /** The name table's string, or null where the runtime composes a designation. */
   readonly displayNames: readonly (string | null)[];
 }
@@ -25,4 +29,10 @@ export interface Finalised<S = Star> {
  *  pass that completes it; tests call it to build a fixture. */
 export function enterPhase<P extends RecordPhase, S>(_phase: P, records: readonly S[]): Records<P, S> {
   return records as Records<P, S>;
+}
+
+/** Tags `sids` as SID allocation's answer. Called once, by the allocation
+ *  stage; tests call it to build a fixture. */
+export function allocatedSids(sids: readonly number[]): AllocatedSids {
+  return sids as AllocatedSids;
 }

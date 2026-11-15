@@ -9,9 +9,9 @@ This folder holds the build's own halves of it.
 scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
-  record-phase.ts                 The phase tag on the build's record list,
-                                  `Sorted` and `Finalised`, and `enterPhase`,
-                                  the tag's one constructor (#record-phases).
+  record-phase.ts (+ test)        The phase tag on the build's record list,
+                                  `Sorted`, `AllocatedSids` and `Finalised`,
+                                  and the tags' constructors (#record-phases).
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
                                   records on — `sortByApparentV`, the sort
                                   that hands on `Sorted` records, and
@@ -71,7 +71,8 @@ Each order it holds, and why:
 - **Designation constellations, then variability** — GCVS fills `desigCon`
   only where IV/27A left it empty.
 - **SID allocation, then display names** — the curated overrides key on SIDs,
-  and the finalise stage takes the allocation's result.
+  and `assignDisplayNames` takes `AllocatedSids`, which only the allocation
+  stage tags (`allocatedSids`).
 
 Passes in one phase are free to run in either order: naming and coherence,
 GCVS and CCDM. The `FLAG_BINARY_PRIMARY` writers' order — geometric, CCDM,
@@ -81,9 +82,10 @@ eclipsing, renderable wings — is code order within the sorted phase.
 what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
 printed name (`printedName`), so no reader can take the one for the other.
 
-`enterPhase` is the tag's only constructor. Each phase is entered once, by
-the pass that completes it, and `../build-catalog.test.ts` pins those call
-sites; tests call it to build fixtures.
+`enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
+is entered once, by the pass that completes it, the SIDs are tagged once, by
+the allocation stage, and `../build-catalog.test.ts` pins those call sites;
+tests call both to build fixtures.
 
 ## Curated records
 

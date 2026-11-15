@@ -12,7 +12,7 @@ import {
   type DisplayName,
   type DisplayNameInput,
 } from '../../../src/catalog-format/naming/star-naming-pure';
-import type { Sorted } from '../record/record-phase';
+import type { AllocatedSids, Sorted } from '../record/record-phase';
 
 /** Structural subset of `Star` the display-name pass reads. */
 export interface DisplayNameSource {
@@ -121,7 +121,7 @@ export function assignDisplayNames(
   components: Map<number, ComponentDesignation>,
   constellations: readonly { code: string }[],
   overrides: Map<number, string>,
-  recordSids: readonly number[],
+  recordSids: AllocatedSids,
 ): DisplayNameResult {
   // A curated row is the one tier no published source can be re-read to
   // check, so an unmatched SID has to fail rather than count as applied —

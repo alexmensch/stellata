@@ -12,7 +12,6 @@ import { applyStarNames, type StarNamingInputs } from '../naming/apply-star-name
 import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
-import { finaliseStage } from '../stages/finalise-stage';
 import { sortByApparentV } from './record-order-pure';
 import { enterPhase } from './record-phase';
 
@@ -52,8 +51,8 @@ describe('record phases', () => {
       () => applyVariability(walked, new Map(), { byHip: new Map(), byHd: new Map(), byGaia: new Map() }),
       // @ts-expect-error display names take the sorted records
       () => assignDisplayNames(promoted, new Map(), [], new Map(), []),
-      // @ts-expect-error display names key on the allocation's SIDs
-      () => finaliseStage(sorted, { recordSids: [] }, new Map(), {}),
+      // @ts-expect-error display names key on the SIDs allocation assigned
+      () => assignDisplayNames(sorted, new Map(), [], new Map(), [1]),
     ];
     expect(reorderings).toHaveLength(12);
   });

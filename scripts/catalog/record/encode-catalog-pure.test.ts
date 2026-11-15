@@ -18,7 +18,7 @@ import {
 } from '../../../src/catalog-format/record/catalog-pure';
 import { makeStar } from '../parse/star-fixture';
 import { encodeCatalog } from './encode-catalog-pure';
-import { enterPhase, type Finalised } from './record-phase';
+import { allocatedSids, enterPhase, type Finalised } from './record-phase';
 import type { Star } from '../parse/stars-parse';
 
 const GAIA_ID = '4472832130942575872';
@@ -36,7 +36,7 @@ const STAR = makeStar({
 });
 
 const finalised = (stars: Star[], sids: number[], displayNames: (string | null)[]): Finalised => ({
-  records: enterPhase('sorted', stars), sids, displayNames,
+  records: enterPhase('sorted', stars), sids: allocatedSids(sids), displayNames,
 });
 
 const encode = (stars = [SOL, makeStar({ conIndex: 3 }), STAR]) => encodeCatalog({

@@ -16,7 +16,7 @@ import { CATALOG_PARTITION } from '../../../src/catalog-format/pipeline-outputs/
 import type { FileHashes } from '../../util/build-stamp';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { stageLineageLine } from '../lineage/lineage-row-pure';
-import type { Sorted } from '../record/record-phase';
+import { allocatedSids, type AllocatedSids, type Sorted } from '../record/record-phase';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
 
 export type Allocated = Extract<Allocation, { kind: 'allocated' }>;
@@ -24,8 +24,7 @@ export type Allocated = Extract<Allocation, { kind: 'allocated' }>;
 /** A successful allocation over the catalogue: the display names key on `recordSids`. */
 export interface AllocatedCatalog {
   readonly allocation: Allocated;
-  /** Per record, in record order. */
-  readonly recordSids: readonly number[];
+  readonly recordSids: AllocatedSids;
   readonly registry: ReturnType<typeof loadRegistry>;
   readonly emission: ReturnType<typeof allocationLineage>;
 }
@@ -54,7 +53,7 @@ export function allocationStage(
   console.log(allocationSummary(emission.counts, allocation.events.length));
   return {
     allocation, registry, emission,
-    recordSids: allocation.outcomes.slice(0, sorted.length).map((o) => o.sid),
+    recordSids: allocatedSids(allocation.outcomes.slice(0, sorted.length).map((o) => o.sid)),
   };
 }
 
