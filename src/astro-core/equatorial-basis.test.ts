@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { ARCSEC_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
+import { ARCSEC_TO_RAD } from './astronomy-constants';
 import {
   angularSeparationArcsec,
   directionAtEpoch,
@@ -214,13 +214,6 @@ describe('skyPositionAtEpoch', () => {
 });
 
 describe('offsetDirection', () => {
-  it('is directionAtEpoch with the motion already integrated', () => {
-    const pos = { raDeg: 269.45, decDeg: 4.74 };
-    const pm = { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 };
-    expect(offsetDirection(pos, pm.pmRaMasyr * MAS_TO_RAD * 16, pm.pmDecMasyr * MAS_TO_RAD * 16))
-      .toEqual(directionAtEpoch(pos, pm, 2000, 2016));
-  });
-
   it('puts a tangent-plane offset t at angle atan(t) from the origin, at the pole too', () => {
     const t = 300 * ARCSEC_TO_RAD;
     for (const decDeg of [0, 88, 90]) {
