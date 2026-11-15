@@ -186,8 +186,9 @@ describe('tapClient', () => {
     ].join('\n');
     const tsv = (rows: readonly Row[], header?: string) => textReply(200, 'text/tab-separated-values', tsvText(rows, header));
     const asu = (rows: readonly Row[], replies: { tsv?: () => HttpReply; fits?: () => HttpReply } = {}) => ({ url }: Call) => {
-      if (url.startsWith('https://tap.example')) return new Error('connect ETIMEDOUT');
-      return url.includes('/asu-tsv?') ? (replies.tsv ?? (() => tsv(rows)))() : (replies.fits ?? (() => binfits(rows)))();
+      const { host, pathname } = new URL(url);
+      if (host === 'tap.example') return new Error('connect ETIMEDOUT');
+      return pathname.endsWith('/asu-tsv') ? (replies.tsv ?? (() => tsv(rows)))() : (replies.fits ?? (() => binfits(rows)))();
     };
     const ROWS: readonly Row[] = [[493, null, 1.5], [3, 33, 104.550895415]];
 
@@ -203,7 +204,7 @@ describe('tapClient', () => {
     it('falls back to ASU: floats from its FITS, every other cell from its TSV, whose blank is the null its FITS writes as 0', async () => {
       const { client, calls, reported } = fake(asu(ROWS));
       const answer = await client(ARCHIVE).query(QUERY, 5);
-      const asked = calls.filter((c) => c.url.startsWith('https://asu.example')).map((c) => new URL(c.url));
+      const asked = calls.map((c) => new URL(c.url)).filter((u) => u.host === 'asu.example');
       expect(asked.map((u) => u.pathname)).toEqual(['/viz-bin/asu-tsv', '/viz-bin/asu-binfits']);
       expect([...asked[1].searchParams]).toEqual([['-source', 'IV/27A/catalog'], ['-out', 'HD,Fl,RA(ICRS)'], ['HD', '1..800'], ['-out.max', '6']]);
       expect(answer.result).toEqual({ columns: ['hd', 'flamsteed', 'ra'], rows: [['493', null, '1.50000000'], ['3', '33', '104.55089542']] });
