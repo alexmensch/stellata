@@ -143,7 +143,6 @@ import {
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
 import { derivedStage, nestByStage, type CountValue, type StageBlock } from '../util/counts/count-stages-pure';
-import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
@@ -455,7 +454,6 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
 }
 
 export async function main() {
-  const heap = watchHeap('build:catalog');
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
 
@@ -557,7 +555,6 @@ export async function main() {
       { stage: 'promotion', block: { kind: 'counted', counts: built.promotionCounts satisfies PromotionCounts } },
       { stage: derivedStage('promotion'), block: { kind: 'counted', counts: built.promotionDerived } },
     ],
-    heap,
   }));
 }
 
@@ -595,13 +592,12 @@ interface CatalogEmissionInputs {
   };
   /** Every stage's count block but the four this assembly tallies: records, search, boundaries, figures. */
   readonly stageCounts: readonly StageBlock<CatalogCountStage, CountValue>[];
-  readonly heap: { check(): Check };
 }
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
   stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, systemMembership, sidEvents, ledgers, lineage,
-  stageCounts, heap,
+  stageCounts,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
   const chunkBytes = planCatalogChunks(totalLength);
@@ -701,7 +697,6 @@ function catalogEmission({
         { stage: 'figures', block: { kind: 'counted', counts: figures } },
       ]),
       distanceOutliersCheck(stars),
-      heap.check(),
     ],
   };
 }

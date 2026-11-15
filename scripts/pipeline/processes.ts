@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { mkdirSync, readFileSync, rmSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
 
 import type { FileHashes } from '../util/build-stamp';
@@ -11,7 +12,10 @@ import { REPO_ROOT } from '../util/paths';
 import { STEP_INPUTS_ENV, writeStepInputs } from '../util/step-input-hashes';
 import type { PipelineTree } from './pipeline-tree';
 
-export const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
+const TSX_PACKAGE = createRequire(import.meta.url).resolve('tsx/package.json');
+const TSX_CLI = resolve(dirname(TSX_PACKAGE), (JSON.parse(readFileSync(TSX_PACKAGE, 'utf8')) as { bin: string }).bin);
+/** `tsx` started under this process's Node, never `.bin/tsx`'s PATH lookup: the runner checks its own Node major for a capped step. */
+export const tsxCommand = (tsxArgs: readonly string[]): [string, string[]] => [process.execPath, [TSX_CLI, ...tsxArgs]];
 /** `tsx`'s arguments for a TypeScript entry: through the launcher, which runs its `main`. */
 export const launchArgs = (entry: string, args: readonly string[] = []): string[] => [resolve(REPO_ROOT, LAUNCHER), entry, ...args];
 const RUN_PYTHON_STEP = resolve(REPO_ROOT, 'scripts/pipeline/run_python_step.py');
@@ -30,7 +34,7 @@ export async function runTs(
   mkdirSync(dirname(handed), { recursive: true });
   writeStepInputs(handed, inputs);
   try {
-    return await exec(TSX, launchArgs(entry, args), { ...env, [STEP_INPUTS_ENV]: handed });
+    return await exec(...tsxCommand(launchArgs(entry, args)), { ...env, [STEP_INPUTS_ENV]: handed });
   } finally {
     rmSync(handed, { force: true });
   }

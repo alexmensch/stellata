@@ -3,7 +3,6 @@
 // merge's review queue. See README.md.
 
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
@@ -49,7 +48,6 @@ import { stageFile, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipel
 
 
 export async function main(): Promise<void> {
-  const heap = watchHeap('build:membership');
   const spine = readArtifact(INHERITED_SPINE);
   const multiples = readMultiplesTsv();
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
@@ -113,7 +111,7 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, heap.check(), countSnapshotCheck(MEMBERSHIP_COUNTS, {
+    checks: [...lineage.checks, countSnapshotCheck(MEMBERSHIP_COUNTS, {
       actual: nestByStage(MEMBERSHIP_COUNT_STAGES, [
         { stage: 'magnitude-term', block: magnitudeBlock },
         { stage: 'membership', block: { kind: 'counted', counts: lineage.counts } },
