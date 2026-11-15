@@ -107,7 +107,9 @@ file nothing cites needs no declaration.
 `script` the step whose `--update-snapshots` run rewrites it. The step passes
 it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), the one
 place a snapshot is opened, so it is an input of exactly the steps whose
-closure names it. Each lives in a `*-expected-json.ts` leaf beside its file,
+closure names it. Each lives in a `*-expected-json.ts` leaf beside its file
+(`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts` holds every
+`defineSnapshot` call to it),
 imported only by its step's check (`build:clouds` and `build:local-group`
 hand theirs to `siblingLineage`). Its `use` is `read` wherever the closure's
 other modules name the constant: the leaf exports nothing else, so naming it

@@ -7,7 +7,7 @@ import { gitFiles } from './git-files';
 import { entryClosure } from './import-closure';
 import { REPO_ROOT } from './paths';
 import { declaredFiles, declaredInputs, isRead } from './sources/declared-inputs';
-import type { Snapshot } from './sources/snapshot-pure';
+import { SNAPSHOT_MODULE_SUFFIX, type Snapshot } from './sources/snapshot-pure';
 import { entryInputPaths } from './step-inputs';
 
 const rel = (path: string): string => relative(REPO_ROOT, path);
@@ -24,7 +24,7 @@ const steps = await Promise.all(STEPS.steps.filter((s) => s.language === 'ts').m
 
 const keyedBy = (file: string): string[] => steps.filter((s) => s.inputs.includes(file)).map((s) => s.name);
 
-const declarations = await Promise.all(gitFiles(REPO_ROOT, ['scripts/**/*-expected-json.ts']).map(async (module) =>
+const declarations = await Promise.all(gitFiles(REPO_ROOT, [`scripts/**/*${SNAPSHOT_MODULE_SUFFIX}`]).map(async (module) =>
   Object.values(await import(resolve(REPO_ROOT, module)) as Record<string, Snapshot<unknown>>)[0]));
 
 describe('entryInputPaths over every TypeScript step', () => {

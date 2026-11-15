@@ -10,7 +10,10 @@ import type { Snapshot } from './snapshot-pure';
 import { REPO_ROOT } from '../paths';
 import { listingFiles, type Source } from './source';
 
-/** The only module names a `defineSource` / `defineArtifact` / `defineJsonArtifact` may live in. */
+/** A call to a declaration factory, type arguments allowed. */
+export const DECLARATION_CALL = /(?<!function )\b(defineSource|defineFolder|defineArtifact|defineJsonArtifact|defineSnapshot)\s*(<[^()]*>)?\(/;
+
+/** The only module names a `DECLARATION_CALL` may live in: the closure walk imports no other to find declarations. */
 export const DECLARING_MODULE = /-(source|tsv|json)\.ts$/;
 
 export type DeclaredValue =

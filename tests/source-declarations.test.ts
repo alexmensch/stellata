@@ -5,7 +5,8 @@ import { resolve } from 'node:path';
 import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
-import { declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
+import { DECLARATION_CALL, declaredInputs, DECLARING_MODULE } from '../scripts/util/sources/declared-inputs';
+import { SNAPSHOT_MODULE_SUFFIX } from '../scripts/util/sources/snapshot-pure';
 import { entryClosure, packageScripts } from '../scripts/util/import-closure';
 import { RUNNER, scriptParts, tsxEntries } from '../scripts/util/import-closure-pure';
 import { closureReadingWriters } from '../scripts/pipeline/step-table/non-step-writers';
@@ -145,11 +146,26 @@ describe('source declarations', () => {
     for (const file of walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })) {
       const rel = file.slice(REPO_ROOT.length + 1);
       if (DECLARATION_FACTORIES.includes(rel)) continue;
-      if (/\b(defineSource|defineFolder|defineArtifact|defineJsonArtifact)\(/.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
+      if (DECLARATION_CALL.test(readFileSync(file, 'utf8')) && !DECLARING_MODULE.test(rel)) {
         misplaced.push(rel);
       }
     }
     expect(misplaced).toEqual([]);
+  });
+
+  it('declares snapshots only in a module named for one', () => {
+    const misplaced = [...walkFiles(resolve(REPO_ROOT, 'scripts'), { include: isProductionTs })]
+      .map((file) => file.slice(REPO_ROOT.length + 1))
+      .filter((rel) => [...readFileSync(resolve(REPO_ROOT, rel), 'utf8').matchAll(new RegExp(DECLARATION_CALL, 'g'))]
+        .some(([, factory]) => factory === 'defineSnapshot'))
+      .filter((rel) => !rel.endsWith(SNAPSHOT_MODULE_SUFFIX));
+    expect(misplaced).toEqual([]);
+  });
+
+  it('reads a declaration call with type arguments, never a factory\'s own definition', () => {
+    expect(DECLARATION_CALL.test('defineSnapshot<{ n: number }>({')).toBe(true);
+    expect(DECLARATION_CALL.test('defineArtifact({')).toBe(true);
+    expect(DECLARATION_CALL.test('export function defineFolder<T, A extends unknown[] = []>(spec')).toBe(false);
   });
 
   it('opens a declared file only inside the sources core', () => {

@@ -2,6 +2,9 @@
 
 import type { Declaration } from './row-ref-pure.ts';
 
+/** The only module names a `defineSnapshot` may live in, each declaring one snapshot and nothing else. */
+export const SNAPSHOT_MODULE_SUFFIX = '-expected-json.ts';
+
 declare const payload: unique symbol;
 
 export interface Snapshot<T> extends Declaration {
