@@ -205,7 +205,7 @@ function loadBinariesSync(): BinariesData {
 /** Decompose the catalog Δxyz between two records into the WDS-comparable
  *  sky-tangent frame at the primary: separation (AU) + position angle
  *  (deg E of N) in the tangent plane, plus the line-of-sight component.
- *  Inverse of companion-promotion's `projectFromSepPa` / the runtime's
+ *  Inverse of companions/placement's `projectFromSepPa` / the runtime's
  *  `projectSkyToICRS` — same north/east basis. */
 function skySeparationAtPrimary(
   primary: CatalogRecord,
