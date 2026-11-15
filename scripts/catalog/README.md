@@ -110,9 +110,10 @@ scripts/catalog/
                                   allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
                                   checks, the seven lineage budgets,
-                                  placement's and naming's lineage
-                                  invariants (lineage/README.md#invariants)
-                                  pass. Runs under the CI heap cap
+                                  placement's, promotion's and naming's
+                                  lineage invariants
+                                  (lineage/README.md#invariants) pass.
+                                  Runs under the CI heap cap
                                   (../util/heap-budget/README.md).
                                   A failed allocation throws before
                                   anything is staged

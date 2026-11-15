@@ -27,7 +27,7 @@ import type { PhotometryVia } from '../../binaries/multiples-record-pure';
 import { canonicalCompLetter, composeSyntheticId, wdsRootOf } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { fold } from '../../util/counts/tally-pure';
-import { promotionOriginKey } from './promotion-lineage-pure';
+import { promotionOriginKey } from './promotion-lineage/promotion-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';

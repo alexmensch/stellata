@@ -86,8 +86,9 @@ baked a twin 93 AU off its own original and `binaries.bin` drew the pair's
 468-yr orbit between the two copies. The naming authority's component
 attribution is the independent witness: where it already letters the ANCHOR
 as the row's own component, that record IS the component. Counted
-`promotion.dropped.anchor-is-component` (<!-- count:build-catalog/promotion.dropped.anchor-is-component -->3<!-- /count -->: p Eri B, `f Pup C`, `α Psc` B), a
-ratchet-down metric, since each is a mis-keyed multiples.tsv row upstream.
+`promotion.dropped.anchor-is-component` (<!-- count:build-catalog/promotion.dropped.anchor-is-component -->3<!-- /count -->: p Eri B, `f Pup C`, `α Psc` B), each
+a mis-keyed multiples.tsv row upstream and a named exception in
+[Promotion's invariants](../promotion-lineage/README.md#promotions-invariants).
 The letters themselves are contested — WDS, the authority and Gliese disagree
 per system — so the gate refuses the duplicate without adjudicating the
 letter. It **reaches only roots the authority attributes a Bayer designation
@@ -128,8 +129,9 @@ twice, 100 pc apart. The SID registry's same-as edges are the only witness
 of the link (`syntheticGaiaBridges` over `data/sid/sameas-overrides.tsv` +
 `bridges/`, [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)): a bridged
 source already in the catalog IS this component, so the mint is refused and
-that record is held (`promotion.adopted.sameas-bridge`, a ratchet-DOWN
-metric).
+that record is held (`promotion.adopted.sameas-bridge`), each row a named
+exception in [Promotion's invariants](../promotion-lineage/README.md#promotions-invariants):
+the fix is upstream, the row carrying the source as its own id.
 
 Every held answer — own id, own HIP, same-as bridge — reaches
 `adoptExistingMember` in the walk: the anchor's designation constellation,

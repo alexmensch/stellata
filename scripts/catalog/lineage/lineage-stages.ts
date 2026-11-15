@@ -5,7 +5,7 @@ import { BINDING_CODES } from '../../binaries/resolve/binding-lineage-pure';
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
 import { CLASSIC_ID_CODES } from '../classic-ids/classic-id-lineage-pure';
-import { PROMOTION_CODES } from '../companions/promotion-lineage-pure';
+import { PROMOTION_CODES } from '../companions/promotion-lineage/promotion-lineage-pure';
 import { PLACEMENT_CODES } from '../distance/placement-lineage-pure';
 import { MEMBERSHIP_CODES } from '../membership/membership-lineage-pure';
 import { COHERENCE_CODES } from '../multiplicity/coherence-lineage-pure';
