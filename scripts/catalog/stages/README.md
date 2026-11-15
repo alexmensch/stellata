@@ -22,8 +22,9 @@ scripts/catalog/stages/
                            distance.
   sorted-stage.ts          sortedPasses: every index-keyed pass over the
                            sorted records — figures, geometric binaries,
-                           GCVS, CCDM, the eclipsing sweep, pair resolution
-                           and the wings, overlaps, component designations,
+                           GCVS, the CCDM evidence, pair resolution, the
+                           four binary-primary claimants in their one
+                           combine, overlaps, component designations,
                            multiplicity statuses and system membership.
   allocation-stage.ts      allocationStage: SID allocation, throwing before
                            anything is staged when it fails

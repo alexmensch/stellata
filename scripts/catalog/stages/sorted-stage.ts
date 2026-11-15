@@ -9,16 +9,18 @@ import type { FileHashes } from '../../util/build-stamp';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { resolvePairs } from '../companions/record-index/pair-resolution-pure';
 import {
-  buildCatalogRowIndexMap, buildComponentDesignations, renderableOrbitRelations, resolvedMemberIndices,
-  wingRenderablePrimaries,
+  buildCatalogRowIndexMap, buildComponentDesignations, renderableCompanionClaims, renderableOrbitRelations,
+  resolvedMemberIndices,
 } from '../companions/record-index/record-index';
-import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from '../multiplicity/binary-flags-pure';
+import {
+  binaryPrimaries, buildHipToIndex, eclipsingClaims, inferBinaries, mutualPairClaims,
+} from '../multiplicity/binary-flags-pure';
 import { HIP_CCDM } from '../multiplicity/hip-ccdm-source';
 import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
 } from '../multiplicity/multiplicity-stage-pure';
 import {
-  applyDoublesFlag, collectPhysicalPairKeys, doublesEvidence, parseHipCcdm,
+  ccdmClaims, collectPhysicalPairKeys, doublesEvidence, parseHipCcdm,
 } from '../multiplicity/visual-doubles';
 import { orbitChainExemption, overlapLabel, physicalOverlaps } from '../overlap/overlap-gate-pure';
 import {
@@ -64,14 +66,16 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   const doubles = doublesEvidence(
     parseHipCcdm(HIP_CCDM.read()), collectPhysicalPairKeys(inputs.multiplesRows), hipToIndex,
   );
-  const ccdm = applyDoublesFlag(sorted, doubles);
   console.log(`  in ${Date.now() - tCcdm}ms`);
-
-  const eclipsing = wingEclipsingBinaries(sorted);
 
   const rowIndexMap = buildCatalogRowIndexMap(sorted, inputs.synthGaiaBridges);
   const resolvedPairs = resolvePairs(pairsFromRows(inputs.multiplesRows), rowIndexMap);
-  const renderableWings = wingRenderablePrimaries(resolvedPairs, sorted);
+  const { primaries: binaryPrimaryIndices, counts: [geometric, ccdm, eclipsing, renderableWings] } = binaryPrimaries(
+    () => ({ claims: mutualPairClaims(sorted, binaries.mutual), counts: binaries.counts }),
+    (claimed) => ccdmClaims(sorted, doubles, claimed),
+    (claimed) => eclipsingClaims(sorted, claimed),
+    (claimed) => renderableCompanionClaims(resolvedPairs, sorted, claimed),
+  );
 
   const overlaps = physicalOverlaps(sorted, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
@@ -94,13 +98,14 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   });
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
-    ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
+    ...geometric, ...ccdm, ...eclipsing, ...renderableWings,
     ...componentCount, ...statuses.counts, ...systems.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
   return {
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, overlapEmission, multiplicity,
+    binaryPrimaries: binaryPrimaryIndices,
     multiplicityStatus: statuses.status,
     systemMembership: serializeSystemMembership(systems.membership),
   };

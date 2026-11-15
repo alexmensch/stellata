@@ -1,8 +1,6 @@
-// Geometric binary inference and the CCDM doubles flag with its optical-double
-// gate. See README.md.
+// Binary inference and the wings-bit claimants. See README.md.
 
 import {
-  FLAG_BINARY_PRIMARY,
   VAR_TYPE_ECLIPSING,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
@@ -24,14 +22,12 @@ export interface BinaryStar {
   y: number;
   z: number;
   absmag: number;
-  flags: number;
   companionIdx: number;
 }
 
 // Index of the brightest (lowest absmag) star in `indices`, or -1 when
 // empty. Single point of truth for the "primary = brightest of group"
-// convention shared by every binary-flagging path (geometric mutual pairs
-// in inferBinaries; CCDM groups + curated doubles in flagGroupPrimaries).
+// convention every claimant of FLAG_BINARY_PRIMARY shares.
 export function pickBrightest(
   stars: readonly Pick<BinaryStar, 'absmag'>[],
   indices: readonly number[],
@@ -48,79 +44,55 @@ export function pickBrightest(
   return bestIdx;
 }
 
-// Pick the brightest star of `indices` and OR FLAG_BINARY_PRIMARY onto it.
-// Returns the picked index, or -1 if the group is empty.
-//
-// Idempotent: re-running on a group whose primary is already flagged
-// produces the same flag bits.
-export function markPrimary(
-  stars: readonly Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: readonly number[],
-): number {
-  const bestIdx = pickBrightest(stars, indices);
-  if (bestIdx === -1) return -1;
-  stars[bestIdx].flags |= FLAG_BINARY_PRIMARY;
-  return bestIdx;
+/** The records one claimant picks as their system's primary, with the counts it reports. */
+export interface PrimaryClaims<C> {
+  readonly claims: readonly number[];
+  readonly counts: C;
 }
 
-// Vetoes a freshly-picked primary before its FLAG_BINARY_PRIMARY bit is
-// set — the CCDM optical-double gate (see isOpticalDoubleMember).
+/** A claimant, handed every record an earlier claimant took. Holds no reference to it past the call. */
+export type PrimaryClaimant<C> = (claimed: ReadonlySet<number>) => PrimaryClaims<C>;
+
+/** README.md#binary-primary-claims. */
+export function binaryPrimaries<T extends readonly unknown[]>(
+  ...claimants: { readonly [K in keyof T]: PrimaryClaimant<T[K]> }
+): { readonly primaries: ReadonlySet<number>; readonly counts: T } {
+  const claimed = new Set<number>();
+  const counts = claimants.map((claimant: PrimaryClaimant<unknown>) => {
+    const r = claimant(claimed);
+    for (const i of r.claims) claimed.add(i);
+    return r.counts;
+  });
+  return { primaries: claimed, counts: counts as unknown as T };
+}
+
+// Vetoes a freshly-picked primary before it is claimed — the CCDM
+// optical-double gate (see isOpticalDoubleMember).
 export type SuppressPredicate = (
   primaryIdx: number,
   memberIndices: readonly number[],
 ) => boolean;
 
-// Like markPrimary, but a no-op when any star in `indices` already carries
-// FLAG_BINARY_PRIMARY. Used by the CCDM pass: a star flagged by
-// inferBinaries' mutual-pair pick should not get re-picked here, since
-// the two passes can disagree on which of a triple is "primary" (e.g. a
-// non-mutual {A, B, C} where the geometric pair is (B, C) but A is
-// brightest in the CCDM group). Honouring the existing pick keeps the
-// "at most one primary per physical system" contract — re-flagging would
-// produce two wings glyphs for the same system.
-//
-// `suppress`, when supplied, vetoes the fresh flag after the primary is
-// picked but before the bit is set (the CCDM optical-double gate). The
-// already-flagged short-circuit runs first, so a primary the geometric
-// pass already winged is never subject to suppression.
-//
-// Returns the picked index, -1 if no in-catalog members, -2 if a member
-// was already flagged, or -3 if `suppress` vetoed the pick.
-export function markPrimaryIfUnflagged(
-  stars: readonly Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: readonly number[],
+/** README.md#ccdm-double-star-cross-match. */
+export function groupPrimaryClaims(
+  stars: readonly Pick<BinaryStar, 'absmag'>[],
+  groups: readonly (readonly number[])[],
+  claimed: ReadonlySet<number>,
   suppress?: SuppressPredicate,
-): number {
-  if (indices.length === 0) return -1;
-  for (const i of indices) {
-    if ((stars[i].flags & FLAG_BINARY_PRIMARY) !== 0) return -2;
+): PrimaryClaims<{ systems: number; flagged: number; suppressed: number }> {
+  const claims: number[] = [];
+  const mine = new Set<number>();
+  let suppressed = 0;
+  for (const indices of groups) {
+    if (indices.some((i) => claimed.has(i) || mine.has(i))) continue;
+    const bestIdx = pickBrightest(stars, indices);
+    if (bestIdx === -1) continue;
+    if (suppress?.(bestIdx, indices)) { suppressed++; continue; }
+    claims.push(bestIdx);
+    mine.add(bestIdx);
   }
-  const bestIdx = pickBrightest(stars, indices);
-  if (bestIdx === -1) return -1;
-  if (suppress?.(bestIdx, indices)) return -3;
-  stars[bestIdx].flags |= FLAG_BINARY_PRIMARY;
-  return bestIdx;
+  return { claims, counts: { systems: groups.length, flagged: claims.length, suppressed } };
 }
-
-// Apply FLAG_BINARY_PRIMARY across groups of record indices (resolveGroups).
-// Each group's brightest component (lowest absmag) gets the bit,
-// idempotent with any pre-existing flags from `inferBinaries` (the
-// geometric mutual-pair pass can have already marked one member).
-//
-// `suppress` (optional) is forwarded to `markPrimaryIfUnflagged` to veto
-// optical doubles — see isOpticalDoubleMember.
-//
-// Returns:
-//   systems     — count of groups.
-//   flagged     — count of groups where this pass set a fresh primary
-//                 (i.e. excludes groups whose primary was already set by a
-//                 prior pass).
-//   suppressed  — count of groups whose fresh primary was vetoed as an
-//                 optical double.
-//
-// Mutates `stars[i].flags` in place via `markPrimaryIfUnflagged`. Pure
-// otherwise — does not read or write any other fields.
-export interface DoublesStar { absmag: number; flags: number; hip: number | null; }
 
 // When the same HIP appears on multiple rows (rare; binary companions sharing
 // an identifier) the FIRST occurrence wins, so against the apparent-V-sorted
@@ -149,21 +121,6 @@ export function resolveGroups(
     if (indices.length > 0) out.push(indices);
   }
   return out;
-}
-
-export function flagGroupPrimaries(
-  stars: readonly DoublesStar[],
-  groups: readonly (readonly number[])[],
-  suppress?: SuppressPredicate,
-): { systems: number; flagged: number; suppressed: number } {
-  let flagged = 0;
-  let suppressed = 0;
-  for (const indices of groups) {
-    const picked = markPrimaryIfUnflagged(stars, indices, suppress);
-    if (picked >= 0) flagged++;
-    else if (picked === -3) suppressed++;
-  }
-  return { systems: groups.length, flagged, suppressed };
 }
 
 // ---- CCDM optical-double suppression ------------------------------------
@@ -219,8 +176,8 @@ export interface OpticalDoubleContext {
 // ctx.minSepPc in 3D. It never fires on mere absence of physical evidence, so
 // a noisy parallax can't strip a real pair. Returns false when any holds:
 //  - the member is a component of a kept physical pair, or eclipsing — the
-//    geometric mutual-pair flag is honoured upstream by
-//    markPrimaryIfUnflagged's already-flagged short-circuit;
+//    geometric claim is honoured upstream, by groupPrimaryClaims skipping a
+//    group with a claimed member;
 //  - the member lacks a Gaia-quality distance (separation untrustworthy);
 //  - no same-group sibling with a Gaia-quality distance exists to measure.
 export function isOpticalDoubleMember(
@@ -257,13 +214,8 @@ export function isOpticalDoubleMember(
 // as "the partner for SVG disc-mask cutouts and chart-mode wings,"
 // which is well-defined even when the relationship is one-way.
 //
-// The `0x10` flag is stricter: set only on the brighter member of a
-// **mutual** pair (A's nearest is B AND B's nearest is A). The chart-
-// mode wings glyph is anchored on `0x10`, so mutual-only avoids
-// over-flagging in dense clusters where one star's nearest happens to
-// be a third star that's actually paired with someone else.
-//
-// Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
+// Mutates `stars[i].companionIdx` in place. `mutual` is what the geometric
+// claimant (mutualPairClaims) claims from.
 export function inferBinaries(
   stars: Sorted<BinaryStar>,
 ): { counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>; mutual: (readonly [number, number])[] } {
@@ -323,8 +275,6 @@ export function inferBinaries(
   }
 
   const mutual = mutualPairs(stars);
-  for (const pair of mutual) markPrimary(stars, [...pair]);
-
   return { counts: { binaryPairs: pairs, binaryMutualPairs: mutual.length }, mutual };
 }
 
@@ -338,18 +288,25 @@ export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]):
   return out;
 }
 
-/** ORs FLAG_BINARY_PRIMARY onto every eclipsing record the earlier passes
- *  left unflagged (../parse/gcvs/README.md): eclipsers surface as multi-star
+/** The geometric claim: the brighter member of each **mutual** pair (A's nearest is B AND B's nearest is A).
+ *  Mutual-only avoids over-flagging in dense clusters where one star's nearest is a third star paired with
+ *  someone else. Mutual pairs are disjoint, so no two claims collide. */
+export function mutualPairClaims(
+  stars: readonly Pick<BinaryStar, 'absmag'>[],
+  mutual: readonly (readonly [number, number])[],
+): number[] {
+  return mutual.map((pair) => pickBrightest(stars, pair));
+}
+
+/** Every eclipsing record no earlier claimant took (../parse/gcvs/README.md): eclipsers surface as multi-star
  *  systems, not intrinsic-variable rings. */
-export function wingEclipsingBinaries(
-  stars: Sorted<{ flags: number; readonly varType: number }>,
-): Pick<MultiplicityCounts, 'eclipsingWinged'> {
-  let eclipsingWinged = 0;
-  for (const s of stars) {
-    if (s.varType === VAR_TYPE_ECLIPSING && (s.flags & FLAG_BINARY_PRIMARY) === 0) {
-      s.flags |= FLAG_BINARY_PRIMARY;
-      eclipsingWinged++;
-    }
-  }
-  return { eclipsingWinged };
+export function eclipsingClaims(
+  stars: Sorted<{ readonly varType: number }>,
+  claimed: ReadonlySet<number>,
+): PrimaryClaims<Pick<MultiplicityCounts, 'eclipsingWinged'>> {
+  const claims: number[] = [];
+  stars.forEach((s, i) => {
+    if (s.varType === VAR_TYPE_ECLIPSING && !claimed.has(i)) claims.push(i);
+  });
+  return { claims, counts: { eclipsingWinged: claims.length } };
 }

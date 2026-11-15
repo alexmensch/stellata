@@ -5,7 +5,7 @@ import type { DesignationConIndex } from '../classic-ids/designation-constellati
 import { promoteCompanions, type PromotionInputs } from '../companions/companion-promotion';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { ResolvedPair } from '../companions/record-index/pair-resolution-pure';
-import { buildCatalogRowIndexMap, wingRenderablePrimaries } from '../companions/record-index/record-index';
+import { buildCatalogRowIndexMap, renderableCompanionClaims } from '../companions/record-index/record-index';
 import { buildHipToIndex, inferBinaries } from '../multiplicity/binary-flags-pure';
 import { applySystemCoherence, type SystemVerdict } from '../multiplicity/system-coherence';
 import { applyStarNames, type StarNamingInputs } from '../naming/apply-star-names';
@@ -70,8 +70,8 @@ describe('record phases', () => {
       ],
       [
         // @ts-expect-error the wings follow the sort; the map precedes them only through the resolved pairs they take
-        () => wingRenderablePrimaries(pairs, promoted),
-        () => wingRenderablePrimaries(pairs, sorted),
+        () => renderableCompanionClaims(pairs, promoted, new Set()),
+        () => renderableCompanionClaims(pairs, sorted, new Set()),
       ],
       [
         // @ts-expect-error designation constellations precede variability

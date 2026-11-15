@@ -13,28 +13,24 @@ export type MultiplicityCounts = MultiplicityPassCounts & SystemMembershipCounts
 export type MultiplicityPassCounts = {
   /** `inferBinaries` companion assignments. */
   binaryPairs: number;
-  /** Pairs where both stars chose each other (sets FLAG_BINARY_PRIMARY). */
+  /** Pairs where both stars chose each other (the geometric claim). */
   binaryMutualPairs: number;
   /** Total CCDM systems in the source TSV. */
   ccdmGroups: number;
   /** CCDM systems resolved against catalog records. */
   ccdmResolved: number;
-  /** New FLAG_BINARY_PRIMARY bits set by the CCDM pass (excludes ones
-   *  already set by `inferBinaries`). */
+  /** FLAG_BINARY_PRIMARY claims the CCDM claimant made (excludes groups
+   *  the geometric claim already reached). */
   ccdmFlagged: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
    *  pair / eclipsing / geometric evidence. See isOpticalDoubleMember. */
   ccdmSuppressedOptical: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
-   *  varType == ECLIPSING records not already flagged by the geometric
-   *  or CCDM passes. */
+  /** FLAG_BINARY_PRIMARY claims the eclipsing claimant made:
+   *  varType == ECLIPSING records the geometric and CCDM claims left. */
   eclipsingWinged: number;
-  /** FLAG_BINARY_PRIMARY bits newly set by the renderable-companion pass:
-   *  physical systems whose primary/secondary resolve to distinct catalog
-   *  records (a promoted companion or a binaries.bin orbit) but which the
-   *  geometric, CCDM, and eclipsing passes all left unflagged. One per WDS
-   *  system anchor; excludes systems already flagged. Canopus, 16 Cyg A. */
+  /** FLAG_BINARY_PRIMARY claims the renderable-companion claimant made
+   *  (../companions/record-index/README.md#renderable-companion-wings). Canopus, 16 Cyg A. */
   renderableCompanionWinged: number;
   /** Catalog records carrying a multiples.tsv component designation
    *  (`cl`/`cp` on their SearchEntry) — the WDS root's naming anchor plus

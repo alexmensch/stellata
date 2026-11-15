@@ -19,13 +19,16 @@ scripts/catalog/multiplicity/
   vizier-rule-pure.ts (+ test)    skipVizierRule: that table past the rule.
                                   A reformatted rule (`=====`) reaches the
                                   readers, whose HIP cell then throws.
-  binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
-                                  geometric mutual-pair pass
+  binary-flags-pure.ts (+ test)   Geometric binary inference
                                   (inferBinaries, over mutualPairs), the
-                                  per-group CCDM walk and the optical-double
-                                  gate it consults (isOpticalDoubleMember,
-                                  per member), and the eclipsing sweep
-                                  (wingEclipsingBinaries). Pure.
+                                  FLAG_BINARY_PRIMARY claimants — geometric
+                                  (mutualPairClaims), the per-group walk
+                                  CCDM's claim runs (groupPrimaryClaims) with
+                                  the optical-double gate it consults
+                                  (isOpticalDoubleMember, per member),
+                                  eclipsing (eclipsingClaims) — and
+                                  binaryPrimaries, the one combine
+                                  (#binary-primary-claims). Pure.
   multiplicity-stage-pure.ts      MultiplicityCounts, the snapshot's
     (+ test)                      multiplicity count block, which each pass
                                   returns its share of under its snapshot
@@ -102,8 +105,9 @@ relation is one-way. The renderer reads this as "the partner to keep
 in frame" (zoom-fit, disc-mask), which is well-defined even when
 asymmetric.
 
-Flag bit 4 (`0x10`) is stricter: set only on the **brighter member of
-a mutual pair** — A↔B where each is the other's directed nearest.
+The geometric claim on flag bit 4 (`0x10`, `mutualPairClaims`) is
+stricter: only the **brighter member of a mutual pair** — A↔B where each
+is the other's directed nearest ([Binary-primary claims](#binary-primary-claims)).
 Mutual-only avoids over-flagging in dense clusters where a star's
 directed nearest happens to be a third star already paired with
 someone else, and ensures the chart-mode wings glyph appears once
@@ -203,9 +207,9 @@ same predicate to every member of a group
   `data/binaries/multiples.tsv` (the binaries pipeline's Stage-5
   optical filter already vetted it as bound — the `physicalHips` /
   `physicalGaia` sets), when it is eclipsing (extrinsic wings
-  earned), or when the geometric mutual-pair pass already winged it
-  (honoured upstream by `markPrimaryIfUnflagged`'s already-flagged
-  short-circuit). The curated `KNOWN_VISUAL_DOUBLES` HIPs are folded
+  earned), or when the geometric claim already took a member of its group
+  (honoured upstream: `groupPrimaryClaims` skips the group before the gate
+  runs). The curated `KNOWN_VISUAL_DOUBLES` HIPs are folded
   into `physicalHips` so they are never suppressed. This is the gate
   that keeps η Cas (Achird A, its real A/B pair) and β¹ Cyg
   (Albireo, its resolved Aa/Ac inner pair) winged even though each
@@ -231,20 +235,45 @@ key of its own for one. `doublesEvidence` unions the two as bare component
 lists rather than keyed groups, so a curated system never needs a CCDM
 identifier it does not have, and resolves each to its catalogue records
 once (`resolveGroups`: deduplicated, ascending, empty groups dropped) for
-both the wings pass and system membership.
-`flagGroupPrimaries` (`binary-flags-pure.ts`) then walks each group, picks the **brightest** catalog member (lowest
-`absmag`), and — unless the optical-double gate above vetoes it —
-ORs `0x10` onto only that one, so each Hipparcos-resolved system
-contributes exactly one chart-mode wings glyph, matching the
-geometric pass's mutual-primary semantics. Stars that
-are CCDM secondaries do not get the bit; they remain in the
-catalog with their other flags intact. No `companionIdx` write —
+both the wings claim and system membership.
+`ccdmClaims` (`visual-doubles.ts`, over `groupPrimaryClaims`) then walks
+each group, skips it when any member is already claimed, picks the
+**brightest** catalog member (lowest `absmag`), and — unless the
+optical-double gate above vetoes it — claims only that one, so each
+Hipparcos-resolved system contributes exactly one chart-mode wings
+glyph, matching the geometric claim's mutual-primary semantics. CCDM
+secondaries are never claimed. No `companionIdx` write —
 the secondary often isn't a catalog record at all, and
 the renderer's zoom-fit code at `stellata.ts` already guards on
 `companion ≥ 0`, so a flagged-but-unpaired primary is fine.
 
 `HIP_CCDM` is a declared source, so a missing CCDM file fails the build
 with its re-fetch hint.
+
+## Binary-primary claims
+
+Four passes decide which records carry `FLAG_BINARY_PRIMARY`, the
+chart-mode wings bit, and none of them writes it. Each is a claimant
+(`PrimaryClaimant`): handed the set of records every earlier claimant
+took, it returns the records it claims and its counts. `binaryPrimaries`
+(`binary-flags-pure.ts`) runs them in its argument order and unions the
+claims; `sortedPasses` (`../stages/sorted-stage.ts`) is its one caller,
+and the precedence is that call's argument order:
+
+1. **Geometric** — `mutualPairClaims`, the brighter of each mutual pair
+   ([Geometric binary inference](#geometric-binary-inference)).
+2. **CCDM** — `ccdmClaims` ([CCDM double-star cross-match](#ccdm-double-star-cross-match)).
+3. **Eclipsing** — `eclipsingClaims`, every `VAR_TYPE_ECLIPSING` record
+   not yet claimed (`../parse/gcvs/README.md`).
+4. **Renderable companions** — `renderableCompanionClaims`
+   ([Renderable-companion wings](../companions/record-index/README.md#renderable-companion-wings)).
+
+A claimant that skips a group with a claimed member also skips one with a
+member it claimed itself earlier in the same pass, so its order among its
+own groups is part of its answer. `encodeCatalog` sets the bit from the
+union (`../record/README.md`); a record's own `flags` never carries it.
+Each claimant's count is the claims it made, so a claim one claimant
+gains is a skip for every later one.
 
 ## System distance coherence
 

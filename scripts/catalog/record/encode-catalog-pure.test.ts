@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  FLAG_BINARY_PRIMARY,
   FLAG_HAS_BAYER,
   FLAG_HAS_NAME,
   HEADER_SIZE,
@@ -38,9 +39,9 @@ const STAR = makeStar({
 const finalised = (stars: Star[], sids: number[], displayNames: (string | null)[]): Finalised =>
   finalise(enterPhase('sorted', stars), allocatedSids(sids), displayNames);
 
-const encode = (stars = [SOL, makeStar({ conIndex: 3 }), STAR]) => encodeCatalog({
+const encode = (stars = [SOL, makeStar({ conIndex: 3 }), STAR], binaryPrimaries = new Set<number>()) => encodeCatalog({
   catalog: finalised(stars, stars.map((_, i) => 100 + i), ['Sol', null, 'Fixture']),
-  apsisMap: new Map([[GAIA_ID, APSIS]]), multiplicityStatus: Uint8Array.of(0, 1, 2),
+  apsisMap: new Map([[GAIA_ID, APSIS]]), multiplicityStatus: Uint8Array.of(0, 1, 2), binaryPrimaries,
 });
 
 describe('encodeCatalog', () => {
@@ -86,14 +87,24 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
   });
 
+  it('sets FLAG_BINARY_PRIMARY on exactly the claimed records, beside the flags each record carries', () => {
+    const { buffer, recordsOffset: offset } = encode(undefined, new Set([1, 2]));
+    const view = new DataView(buffer);
+    expect([0, 1, 2].map((i) => readRecordField(view, offset + i * RECORD_SIZE, 'flags')))
+      .toEqual([0, FLAG_BINARY_PRIMARY, FLAG_HAS_NAME | FLAG_HAS_BAYER | FLAG_BINARY_PRIMARY]);
+  });
+
   it('throws on a multiplicity status list that does not pair with the records, and on NO_SID', () => {
     const stars = [SOL, STAR];
     const apsisMap = new Map<string, ApsisRow>();
     const displayNames = ['Sol', null];
-    expect(() => encodeCatalog({ catalog: finalised(stars, [1, 2], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0) }))
-      .toThrow(/2 records but 1 multiplicity statuses/);
-    expect(() => encodeCatalog({ catalog: finalised(stars, [1, NO_SID], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0, 0) }))
-      .toThrow(/record 1 carries NO_SID/);
+    const binaryPrimaries = new Set<number>();
+    expect(() => encodeCatalog({
+      catalog: finalised(stars, [1, 2], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0), binaryPrimaries,
+    })).toThrow(/2 records but 1 multiplicity statuses/);
+    expect(() => encodeCatalog({
+      catalog: finalised(stars, [1, NO_SID], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0, 0), binaryPrimaries,
+    })).toThrow(/record 1 carries NO_SID/);
   });
 
   it('throws unless Sol, at record 0, is the only record without a constellation', () => {

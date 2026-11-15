@@ -4,7 +4,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
-import { FLAG_BINARY_PRIMARY } from '../../../../src/catalog-format/record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
 import type { Star } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../multiples-row';
@@ -14,7 +13,7 @@ import {
   buildComponentDesignations,
   renderableOrbitRelations,
   resolvedMemberIndices,
-  wingRenderablePrimaries,
+  renderableCompanionClaims,
 } from './record-index';
 import { pairsFromRows } from '../../../binaries/pairs-pure';
 import { resolvePairs } from './pair-resolution-pure';
@@ -91,10 +90,17 @@ describe('buildCatalogRowIndexMap', () => {
   });
 });
 
-describe('wingRenderablePrimaries', () => {
-  const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(resolved(rows, stars), enterPhase('sorted', stars)).renderableCompanionWinged;
-  const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
+describe('renderableCompanionClaims', () => {
+  let winged: Star[] = [];
+  /** `earlier`: the records an earlier claimant took. */
+  const wing = (rows: MultiplesTsvRow[], stars: Star[], earlier: Star[] = []) => {
+    const { claims, counts } = renderableCompanionClaims(
+      resolved(rows, stars), enterPhase('sorted', stars), new Set(earlier.map((s) => stars.indexOf(s))),
+    );
+    winged = [...earlier, ...claims.map((i) => stars[i])];
+    return counts.renderableCompanionWinged;
+  };
+  const isWinged = (s: Star) => winged.includes(s);
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
@@ -124,14 +130,14 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(c)).toBe(false);
   });
 
-  it('skips a system a prior pass already flagged on a drawn-pair end', () => {
+  it('skips a system an earlier claimant already took on a drawn-pair end', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0, flags: FLAG_BINARY_PRIMARY });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
     const rows = [
       multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
       multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
     ];
-    expect(wing(rows, [a, b])).toBe(0);
+    expect(wing(rows, [a, b], [b])).toBe(0);
     expect(isWinged(a)).toBe(false);
   });
 
@@ -151,8 +157,8 @@ describe('wingRenderablePrimaries', () => {
     expect([a, b, c].map(isWinged)).toEqual([false, true, false]);
   });
 
-  it('still wings the drawn pair when a prior pass flagged only a member with no drawn companion', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0, flags: FLAG_BINARY_PRIMARY });
+  it('still wings the drawn pair when an earlier claimant took only a member with no drawn companion', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
     const b = makeStar({ hip: 200, absmag: 4.0 });
     const c = makeStar({ hip: 300, absmag: 6.0 });
     const rows = [
@@ -161,7 +167,7 @@ describe('wingRenderablePrimaries', () => {
       multiplesRow({ systemId: 'W1-BC', comp: 'B', hip: 200, orbitRole: 'primary' }),
       multiplesRow({ systemId: 'W1-BC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
     ];
-    expect(wing(rows, [a, b, c])).toBe(1);
+    expect(wing(rows, [a, b, c], [a])).toBe(1);
     expect([a, b, c].map(isWinged)).toEqual([true, true, false]);
   });
 

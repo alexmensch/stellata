@@ -2,6 +2,7 @@
 
 import {
   APSIS_FIELDS,
+  FLAG_BINARY_PRIMARY,
   HEADER_SIZE,
   NO_APSIS,
   NO_COMPANION,
@@ -25,6 +26,8 @@ export interface CatalogEncodeInputs {
   readonly apsisMap: ReadonlyMap<string, ApsisRow>;
   /** Per record, in record order. */
   readonly multiplicityStatus: Uint8Array;
+  /** The records carrying FLAG_BINARY_PRIMARY: binaryPrimaries' combined claims. */
+  readonly binaryPrimaries: ReadonlySet<number>;
 }
 
 export interface EncodedCatalog {
@@ -34,7 +37,7 @@ export interface EncodedCatalog {
   readonly nameTableEntries: number;
 }
 
-export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
+export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPrimaries }: CatalogEncodeInputs): EncodedCatalog {
   const { records: stars, sids, displayNames } = catalog;
   if (multiplicityStatus.length !== stars.length) {
     throw new Error(`encodeCatalog: ${stars.length} records but ${multiplicityStatus.length} multiplicity statuses`);
@@ -68,7 +71,7 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: Catalog
       nameOffset: displayNames[i] ? nameTable.offsets[i] : 0,
       ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
-      flags: s.flags,
+      flags: s.flags | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
       ...variabilityUnits(s),
       varType: s.varType ?? 0,
       hip: s.hip ?? 0,

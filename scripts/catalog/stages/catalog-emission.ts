@@ -98,6 +98,7 @@ export function catalogEmission(
   });
   const encoded = encodeCatalog({
     catalog: final.finalised, apsisMap: built.apsisMap, multiplicityStatus: passes.multiplicityStatus,
+    binaryPrimaries: passes.binaryPrimaries,
   });
   const namingDerived: NamingDerivedCounts = { ...final.displayCounts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(final.namingEmission.counts, namingDerived));

@@ -771,7 +771,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
 
   it('wings a wide physical pair the geometric/CCDM/eclipsing passes miss, not an optical double', () => {
     // 16 Cyg A: promoted placement exceeds the 0.005 pc geometric cell,
-    // not CCDM C/G/O, not eclipsing — wingRenderablePrimaries recovers it.
+    // not CCDM C/G/O, not eclipsing — renderableCompanionClaims recovers it.
     expect(winged(96895), '16 Cygni A / HIP 96895').toBe(true);
     // Canopus's sole WDS companion is a 999.9-overflow optical double.
     // With the overflow sentinel nulled at parse it no longer projects to
@@ -781,7 +781,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
   });
 
   it('every system rendering a companion in binaries.bin carries the wings bit', () => {
-    // Ground truth for the TS wingRenderablePrimaries mirror: binaries.bin IS
+    // Ground truth for the TS renderableCompanionClaims mirror: binaries.bin IS
     // the set of rendered pairs, and the wings contract is one glyph per
     // physical system on the brightest participant. A "system" is the union of
     // (a) catalog rows sharing a WDS root — one glyph covers a root's disjoint

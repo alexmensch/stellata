@@ -34,8 +34,11 @@ scripts/catalog/record/
                                   the quantised period and amplitude each
                                   record writes. Pure.
   encode-catalog-pure.ts (+ test) encodeCatalog — the finalised records
-                                  (their SIDs and display names) and their
-                                  multiplicity statuses to the assembled
+                                  (their SIDs and display names), their
+                                  multiplicity statuses and the
+                                  binary-primary claims' union (each
+                                  claimed record's FLAG_BINARY_PRIMARY) to
+                                  the assembled
                                   catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
                                   with its Apsis cells. Throws on a status
@@ -57,7 +60,7 @@ not compile:
 | `walked` | the manifest walk | `applyDesignationConstellations`, `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
 | `named` | the walked passes | `promoteCompanions` |
 | `promoted` | promotion | `sortByApparentV` |
-| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `applyDoublesFlag`, `wingEclipsingBinaries`, `buildCatalogRowIndexMap`, `wingRenderablePrimaries`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
+| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `ccdmClaims`, `eclipsingClaims`, `buildCatalogRowIndexMap`, `renderableCompanionClaims`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
 
 A reader of positions taken before the sort — `coherenceLineageLines`,
 `promotionLineage`, `anchorMovedRecords` — takes `Unsorted`, any phase but
@@ -80,9 +83,11 @@ Each order it holds, and why:
   and `assignDisplayNames` takes `AllocatedSids`, which only the allocation
   stage tags (`allocatedSids`).
 
-Passes in one phase are free to run in either order: naming and coherence,
-GCVS and CCDM. The `FLAG_BINARY_PRIMARY` writers' order — geometric, CCDM,
-eclipsing, renderable wings — is code order within the sorted phase.
+Passes in one phase are free to run in either order: naming and coherence.
+The `FLAG_BINARY_PRIMARY` claimants' precedence — geometric, CCDM,
+eclipsing, renderable wings — is the argument order of the one
+`binaryPrimaries` call ([Binary-primary claims](../multiplicity/README.md#binary-primary-claims)),
+and `encodeCatalog` sets the bit from its union.
 
 `Finalised` is the sorted records with each one's SID and display name, built
 only by `finalise`, which throws unless the three pair one-for-one, and is

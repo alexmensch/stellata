@@ -2,11 +2,12 @@
 // the chart-mode wings glyph. See /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import {
-  flagGroupPrimaries,
+  groupPrimaryClaims,
   isOpticalDoubleMember,
   resolveGroups,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
+  type PrimaryClaims,
 } from './binary-flags-pure';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
@@ -17,8 +18,8 @@ import type { Sorted } from '../record/record-phase';
 // them as single stars (`MultFlag` blank, `Ncomp=1`). Each entry is a
 // system: a list of HIPs (one or more components found in this
 // catalog) plus a justification. doublesEvidence appends each as a
-// group of its own, so the primary-only flagging in applyDoublesFlag
-// picks exactly one component per system.
+// group of its own, so the primary-only claim in ccdmClaims picks exactly
+// one component per system.
 //
 // Visual review of new chart-mode renders may surface more — extend
 // conservatively, only for systems where the pair is canonical enough
@@ -150,17 +151,22 @@ export function doublesEvidence(
   };
 }
 
-// Delegates to `flagGroupPrimaries` for the per-group "brightest in-catalog
-// component, idempotent with existing flags" logic, vetoing an optical
-// double's primary (isOpticalDoubleMember): CCDM keeps a tail of wide
-// line-of-sight optical pairs whose brightest member would otherwise get
-// spurious chart-mode wings.
-export function applyDoublesFlag(
+// The CCDM claim: each group's brightest member, vetoing an optical double's
+// (isOpticalDoubleMember) — CCDM keeps a tail of wide line-of-sight optical
+// pairs whose brightest member would otherwise get spurious chart-mode wings.
+export function ccdmClaims(
   stars: Sorted,
   evidence: DoublesEvidence,
-): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
+  claimed: ReadonlySet<number>,
+): PrimaryClaims<Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'>> {
   const suppress = (primaryIdx: number, memberIndices: readonly number[]): boolean =>
     isOpticalDoubleMember(primaryIdx, memberIndices, stars, evidence.optical);
-  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, evidence.groups, suppress);
-  return { ccdmGroups: evidence.ccdmGroupCount, ccdmResolved: systems, ccdmFlagged: flagged, ccdmSuppressedOptical: suppressed };
+  const { claims, counts } = groupPrimaryClaims(stars, evidence.groups, claimed, suppress);
+  return {
+    claims,
+    counts: {
+      ccdmGroups: evidence.ccdmGroupCount, ccdmResolved: counts.systems,
+      ccdmFlagged: counts.flagged, ccdmSuppressedOptical: counts.suppressed,
+    },
+  };
 }
