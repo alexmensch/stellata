@@ -575,7 +575,6 @@ function promoteRow(
     tyc: null,
     gaiaSourceId: companionGaia,
     spectDisplay: spectral.display,
-    companionIdx: -1,
     plxDistPc: null,
     plxVia: null,
     distVia: inheritAnchor?.distVia ?? null,

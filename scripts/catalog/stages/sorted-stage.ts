@@ -29,11 +29,11 @@ import {
 import { buildFigureLines } from '../parse/constellations/constellations';
 import { STELLARIUM } from '../parse/constellations/stellarium-source';
 import { GAIA_HIP_XMATCH } from '../parse/gaia-hip-xmatch-source';
-import { applyVariability, bridgeGcvsByGaia, gcvsSummary } from '../parse/gcvs/gcvs-parse';
+import { applyVariability, bridgeGcvsByGaia, gcvsSummary, type VariabilitySource } from '../parse/gcvs/gcvs-parse';
 import { GCVS, GCVS_CROSSID } from '../parse/gcvs/gcvs-source';
 import type { ReadStarsInputs } from '../parse/read-stars-inputs';
-import type { NamedStar } from '../parse/stars-parse';
-import type { Sorted } from '../record/record-phase';
+import type { MultiplicityFields, NamedStar } from '../parse/stars-parse';
+import { attach, type Sorted } from '../record/record-phase';
 import { SIMBAD_OTYPE_MULTIPLE } from '../spectral/spectral-resolve';
 import { buildSystemMembership, lentDistanceRecords, systemMembershipSummary } from '../system-membership/system-membership-pure';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
@@ -57,9 +57,10 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   console.log('Inferring binary/multiple systems...');
   const tBin = Date.now();
   const binaries = inferBinaries(sorted);
+  const linked = attach(sorted, (_, i): MultiplicityFields => ({ companionIdx: binaries.nearest[i] }));
   console.log(`  in ${Date.now() - tBin}ms`);
 
-  const { records, counts: gcvsCounts } = variability(sorted);
+  const { records, counts: gcvsCounts } = variability(linked);
 
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
@@ -113,7 +114,7 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
 
 /** GCVS onto the records: xref.byGaia is bridged from byHip through the Gaia
  *  DR3 ↔ HIP cross-walk, so a record with a gaia_source_id but no HIP still resolves. */
-function variability(sorted: Sorted) {
+function variability<S extends VariabilitySource>(sorted: Sorted<S>) {
   console.log('Parsing GCVS variable-star catalogue...');
   const tGcvs = Date.now();
   const gcvsData = GCVS.read();

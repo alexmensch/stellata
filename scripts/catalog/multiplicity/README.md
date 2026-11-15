@@ -99,7 +99,7 @@ finds. The separation threshold, not catalogue membership, is what bounds
 it — every wider bound pair reaches chart mode through the CCDM pass or
 through companion promotion instead.
 
-Each star records its **directed** nearest in `companionIdx`: A's
+Each star's **directed** nearest, `inferBinaries`' `nearest`, is attached as `companionIdx` ([Field groups](../record/README.md#field-groups)): A's
 nearest may be B while B's nearest is some third star C. The
 relation is one-way. The renderer reads this as "the partner to keep
 in frame" (zoom-fit, disc-mask), which is well-defined even when

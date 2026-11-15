@@ -110,6 +110,7 @@ group member on an earlier handle does not compile.
 | Group | Fields | Attached by |
 | --- | --- | --- |
 | `NamingFields` | `desigCon`, `iauName`, `eponym`, `bayer`, `bayerSup`, `bayerComponent`, `gould`, `gouldHalf`, `aliases` | `applyStarNames`, from IV/27A's `desigCon` (`designationConstellation`) |
+| `MultiplicityFields` | `companionIdx` | `sortedPasses`, from `inferBinaries`' nearest neighbours |
 | `VariableFields` | `periodDays`, `amplitudeMag`, `varType`, `gcvsName` | `applyVariability`, in `sortedPasses` |
 
 Each phase's record type is the default of `Records<P>`: `walked` records are

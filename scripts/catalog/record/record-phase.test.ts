@@ -103,8 +103,13 @@ describe('record phases', () => {
         (r: Sorted) => r[0].varType,
         (r: Sorted<Star>) => r[0].varType,
       ],
+      [
+        // @ts-expect-error the sorted stage attaches the companion pointer from geometric inference
+        (r: Sorted) => r[0].companionIdx,
+        (r: Sorted<Star>) => r[0].companionIdx,
+      ],
     ];
-    expect(readBeforeBeside).toHaveLength(2);
+    expect(readBeforeBeside).toHaveLength(3);
   });
 
   it('finalises only when the SIDs and display names pair one-for-one with the records', () => {

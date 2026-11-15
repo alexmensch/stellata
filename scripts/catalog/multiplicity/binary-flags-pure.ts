@@ -14,15 +14,12 @@ import type { Sorted } from '../record/record-phase';
 // renderable cases.
 export const BINARY_MAX_SEP_PC = 0.005;
 
-// Structural type of a star record consumed by `inferBinaries`. The build
-// script's full Star type extends this; the helper only reads/writes the
-// fields named here.
+/** The fields `inferBinaries` and the claimants read. */
 export interface BinaryStar {
-  x: number;
-  y: number;
-  z: number;
-  absmag: number;
-  companionIdx: number;
+  readonly x: number;
+  readonly y: number;
+  readonly z: number;
+  readonly absmag: number;
 }
 
 // Index of the brightest (lowest absmag) star in `indices`, or -1 when
@@ -207,18 +204,20 @@ export function isOpticalDoubleMember(
   return nearestSq > ctx.minSepPc * ctx.minSepPc;
 }
 
-// Spatial-grid nearest-neighbour pass. For each star, find its nearest
-// neighbour within BINARY_MAX_SEP_PC and record it as `companionIdx`.
-// `companionIdx` is the **directed** nearest neighbour (A's nearest may
-// be B while B's nearest is some third star C); the renderer reads it
-// as "the partner for SVG disc-mask cutouts and chart-mode wings,"
-// which is well-defined even when the relationship is one-way.
-//
-// Mutates `stars[i].companionIdx` in place. `mutual` is what the geometric
-// claimant (mutualPairClaims) claims from.
+// Spatial-grid nearest-neighbour pass: each star's nearest neighbour within
+// BINARY_MAX_SEP_PC, -1 for none, which the sorted stage attaches as
+// `companionIdx`. It is the **directed** nearest (A's nearest may be B while
+// B's nearest is some third star C); the renderer reads it as "the partner
+// for SVG disc-mask cutouts and chart-mode wings," which is well-defined even
+// when the relationship is one-way. `mutual` is what the geometric claimant
+// (mutualPairClaims) claims from.
 export function inferBinaries(
   stars: Sorted<BinaryStar>,
-): { counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>; mutual: (readonly [number, number])[] } {
+): {
+  nearest: Int32Array;
+  counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>;
+  mutual: (readonly [number, number])[];
+} {
   const cell = BINARY_MAX_SEP_PC;
   const cellInv = 1 / cell;
   const grid = new Map<number, number[]>();
@@ -239,6 +238,7 @@ export function inferBinaries(
   }
 
   const sepSq = BINARY_MAX_SEP_PC * BINARY_MAX_SEP_PC;
+  const nearest = new Int32Array(n).fill(-1);
   let pairs = 0;
 
   for (let i = 0; i < n; i++) {
@@ -269,21 +269,21 @@ export function inferBinaries(
       }
     }
     if (bestIdx !== -1) {
-      stars[i].companionIdx = bestIdx;
+      nearest[i] = bestIdx;
       pairs++;
     }
   }
 
-  const mutual = mutualPairs(stars);
-  return { counts: { binaryPairs: pairs, binaryMutualPairs: mutual.length }, mutual };
+  const mutual = mutualPairs(nearest);
+  return { nearest, counts: { binaryPairs: pairs, binaryMutualPairs: mutual.length }, mutual };
 }
 
-/** Each A↔B where each is the other's directed nearest (`companionIdx`), once, as [lower index, higher]. */
-export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]): (readonly [number, number])[] {
+/** Each A↔B where each is the other's directed nearest, once, as [lower index, higher]. */
+export function mutualPairs(nearest: ArrayLike<number>): (readonly [number, number])[] {
   const out: (readonly [number, number])[] = [];
-  for (let i = 0; i < stars.length; i++) {
-    const j = stars[i].companionIdx;
-    if (j > i && stars[j].companionIdx === i) out.push([i, j]);
+  for (let i = 0; i < nearest.length; i++) {
+    const j = nearest[i];
+    if (j > i && nearest[j] === i) out.push([i, j]);
   }
   return out;
 }

@@ -24,8 +24,8 @@ import {
 import { enterPhase } from '../record/record-phase';
 
 describe('binary-flags-pure / inferBinaries', () => {
-  function makeStar(opts: Partial<BinaryStar> & { x: number; y: number; z: number; absmag: number }): BinaryStar {
-    return { companionIdx: -1, ...opts };
+  function makeStar(opts: BinaryStar): BinaryStar {
+    return opts;
   }
   const geometricClaims = (stars: BinaryStar[]) => mutualPairClaims(stars, inferBinaries(enterPhase('sorted', stars)).mutual);
 
@@ -35,11 +35,11 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: 0.001, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
+    const { counts: stats, nearest } = inferBinaries(enterPhase('sorted', stars));
     expect(stats.binaryPairs).toBe(2); // both record the other as companion
     expect(stats.binaryMutualPairs).toBe(1);
-    expect(stars[0].companionIdx).toBe(1);
-    expect(stars[1].companionIdx).toBe(0);
+    expect(nearest[0]).toBe(1);
+    expect(nearest[1]).toBe(0);
   });
 
   it('claims the brighter (lower absmag) star as the primary', () => {
@@ -55,10 +55,10 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: BINARY_MAX_SEP_PC * 2, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
+    const { counts: stats, nearest } = inferBinaries(enterPhase('sorted', stars));
     expect(stats.binaryPairs).toBe(0);
-    expect(stars[0].companionIdx).toBe(-1);
-    expect(stars[1].companionIdx).toBe(-1);
+    expect(nearest[0]).toBe(-1);
+    expect(nearest[1]).toBe(-1);
   });
 
   it('ignores stars exactly at the cutoff (strict less-than)', () => {
@@ -66,8 +66,8 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: BINARY_MAX_SEP_PC, y: 0, z: 0, absmag: 6 }),
     ];
-    inferBinaries(enterPhase('sorted', stars));
-    expect(stars[0].companionIdx).toBe(-1);
+    const { nearest } = inferBinaries(enterPhase('sorted', stars));
+    expect(nearest[0]).toBe(-1);
   });
 
   it('picks the nearest neighbour when several are within range', () => {
@@ -76,17 +76,17 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.0008, y: 0, z: 0, absmag: 6 }),
       makeStar({ x: 0.003,  y: 0, z: 0, absmag: 5 }),
     ];
-    inferBinaries(enterPhase('sorted', stars));
-    expect(stars[0].companionIdx).toBe(1); // nearest, not brightest
+    const { nearest } = inferBinaries(enterPhase('sorted', stars));
+    expect(nearest[0]).toBe(1); // nearest, not brightest
   });
 
   it('does not pair a star with itself', () => {
     const stars: BinaryStar[] = [
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
     ];
-    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
+    const { counts: stats, nearest } = inferBinaries(enterPhase('sorted', stars));
     expect(stats.binaryPairs).toBe(0);
-    expect(stars[0].companionIdx).toBe(-1);
+    expect(nearest[0]).toBe(-1);
   });
 
   it('handles a triple system by pairing each member with its nearest', () => {
@@ -95,13 +95,13 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.001,  y: 0, z: 0, absmag: 5 }),    // B
       makeStar({ x: 0.0009, y: 0, z: 0, absmag: 6 }),    // C
     ];
-    const { counts, mutual } = inferBinaries(enterPhase('sorted', stars));
+    const { counts, mutual, nearest } = inferBinaries(enterPhase('sorted', stars));
     // Distances: A-B=0.001, A-C=0.0009, B-C=0.0001.
     //   A's nearest is C (0.0009). C's nearest is B (0.0001). B's nearest is C.
     // Only B↔C is mutual; A→C is one-way (C points back to B).
-    expect(stars[0].companionIdx).toBe(2);
-    expect(stars[1].companionIdx).toBe(2);
-    expect(stars[2].companionIdx).toBe(1);
+    expect(nearest[0]).toBe(2);
+    expect(nearest[1]).toBe(2);
+    expect(nearest[2]).toBe(1);
     expect(counts.binaryMutualPairs).toBe(1);
     // Primary = brighter of mutual pair B↔C → B (absmag=5 < C's 6). A is in no
     // mutual pair, so it is NOT claimed even though it is the brightest.
@@ -124,11 +124,11 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.0040, y: 0, z: 0, absmag: 5 }),
       makeStar({ x: 0.0070, y: 0, z: 0, absmag: 6 }),
     ];
-    const { counts, mutual } = inferBinaries(enterPhase('sorted', stars));
-    expect(stars[0].companionIdx).toBe(1);
-    expect(stars[1].companionIdx).toBe(2);
-    expect(stars[2].companionIdx).toBe(1);
-    expect(stars[3].companionIdx).toBe(2);
+    const { counts, mutual, nearest } = inferBinaries(enterPhase('sorted', stars));
+    expect(nearest[0]).toBe(1);
+    expect(nearest[1]).toBe(2);
+    expect(nearest[2]).toBe(1);
+    expect(nearest[3]).toBe(2);
     expect(counts.binaryMutualPairs).toBe(1);
     expect(mutualPairClaims(stars, mutual)).toEqual([1]);
   });
@@ -154,8 +154,8 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0,     absmag: 4 }),
       makeStar({ x: 0, y: 0, z: 0.001, absmag: 6 }),
     ];
-    inferBinaries(enterPhase('sorted', stars));
-    expect(stars[0].companionIdx).toBe(1);
+    const { nearest } = inferBinaries(enterPhase('sorted', stars));
+    expect(nearest[0]).toBe(1);
   });
 });
 
@@ -370,7 +370,6 @@ describe('binary-flags-pure / eclipsingClaims', () => {
 
 describe('binary-flags-pure / mutualPairs', () => {
   it('lists each pair whose members chose each other once, lower index first; one-way choices are not pairs', () => {
-    const stars = [3, 2, 1, 0, 3, -1].map((companionIdx) => ({ companionIdx }));
-    expect(mutualPairs(stars)).toEqual([[0, 3], [1, 2]]);
+    expect(mutualPairs([3, 2, 1, 0, 3, -1])).toEqual([[0, 3], [1, 2]]);
   });
 });
