@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { SearchEntrySource } from '../../../src/catalog-format/record/catalog-pure';
-import { allocatedSids, enterPhase, type Finalised } from './record-phase';
+import { allocatedSids, enterPhase, finalise, type Finalised } from './record-phase';
 import { buildSearchIndex, searchIndexSummary } from './search-index-pure';
 
 function source(over: Partial<SearchEntrySource>): SearchEntrySource {
@@ -13,7 +13,7 @@ function source(over: Partial<SearchEntrySource>): SearchEntrySource {
 }
 
 function finalised(records: SearchEntrySource[], displayNames: (string | null)[]): Finalised<SearchEntrySource> {
-  return { records: enterPhase('sorted', records), sids: allocatedSids(records.map((_, i) => i + 1)), displayNames };
+  return finalise(enterPhase('sorted', records), allocatedSids(records.map((_, i) => i + 1)), displayNames);
 }
 
 describe('buildSearchIndex', () => {

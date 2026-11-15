@@ -5,6 +5,7 @@ import type { Star } from '../parse/stars-parse';
 
 declare const phase: unique symbol;
 declare const allocated: unique symbol;
+declare const finalised: unique symbol;
 
 export type RecordPhase = 'walked' | 'named' | 'promoted' | 'sorted';
 
@@ -17,12 +18,14 @@ export type Sorted<S = Star> = Records<'sorted', S>;
 /** Each record's SID in record order, as SID allocation assigned it. */
 export type AllocatedSids = readonly number[] & { readonly [allocated]: true };
 
-/** The sorted records with what is decided once every record is final, each per record. */
+/** The sorted records with what is decided once every record is final, one
+ *  each per record; built only by `finalise`. */
 export interface Finalised<S = Star> {
   readonly records: Sorted<S>;
   readonly sids: AllocatedSids;
   /** The name table's string, or null where the runtime composes a designation. */
   readonly displayNames: readonly (string | null)[];
+  readonly [finalised]: true;
 }
 
 /** Tags `records` as having reached `_phase`. Called once per phase, by the
@@ -35,4 +38,14 @@ export function enterPhase<P extends RecordPhase, S>(_phase: P, records: readonl
  *  stage; tests call it to build a fixture. */
 export function allocatedSids(sids: readonly number[]): AllocatedSids {
   return sids as AllocatedSids;
+}
+
+/** Throws unless the SIDs and display names pair one-for-one with the records. */
+export function finalise<S>(
+  records: Sorted<S>, sids: AllocatedSids, displayNames: readonly (string | null)[],
+): Finalised<S> {
+  if (sids.length !== records.length || displayNames.length !== records.length) {
+    throw new Error(`finalise: ${records.length} records but ${sids.length} SIDs and ${displayNames.length} display names`);
+  }
+  return { records, sids, displayNames } as Finalised<S>;
 }

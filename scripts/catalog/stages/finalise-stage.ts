@@ -11,7 +11,7 @@ import {
 } from '../naming/naming-lineage-pure';
 import { CONSTELLATIONS } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
-import type { Finalised, Sorted } from '../record/record-phase';
+import { finalise, type Sorted } from '../record/record-phase';
 import type { AllocatedCatalog } from './allocation-stage';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
 
@@ -26,8 +26,11 @@ export function finaliseStage(
   const display = assignDisplayNames(
     sorted, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), allocated.recordSids,
   );
-  const finalised: Finalised = { records: sorted, sids: allocated.recordSids, displayNames: display.displayNames };
-  return { finalised, displayCounts: display.counts, namingEmission: namingLineage(display.records, sorted, stepInputs) };
+  return {
+    finalised: finalise(sorted, allocated.recordSids, display.displayNames),
+    displayCounts: display.counts,
+    namingEmission: namingLineage(display.records, sorted, stepInputs),
+  };
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.

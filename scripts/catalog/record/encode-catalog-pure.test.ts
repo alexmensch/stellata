@@ -18,7 +18,7 @@ import {
 } from '../../../src/catalog-format/record/catalog-pure';
 import { makeStar } from '../parse/star-fixture';
 import { encodeCatalog } from './encode-catalog-pure';
-import { allocatedSids, enterPhase, type Finalised } from './record-phase';
+import { allocatedSids, enterPhase, finalise, type Finalised } from './record-phase';
 import type { Star } from '../parse/stars-parse';
 
 const GAIA_ID = '4472832130942575872';
@@ -35,9 +35,8 @@ const STAR = makeStar({
   periodDays: 10, amplitudeMag: 0.5,
 });
 
-const finalised = (stars: Star[], sids: number[], displayNames: (string | null)[]): Finalised => ({
-  records: enterPhase('sorted', stars), sids: allocatedSids(sids), displayNames,
-});
+const finalised = (stars: Star[], sids: number[], displayNames: (string | null)[]): Finalised =>
+  finalise(enterPhase('sorted', stars), allocatedSids(sids), displayNames);
 
 const encode = (stars = [SOL, makeStar({ conIndex: 3 }), STAR]) => encodeCatalog({
   catalog: finalised(stars, stars.map((_, i) => 100 + i), ['Sol', null, 'Fixture']),
@@ -87,16 +86,12 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
   });
 
-  it('throws on a SID, display-name or multiplicity status list that does not pair with the records, and on NO_SID', () => {
+  it('throws on a multiplicity status list that does not pair with the records, and on NO_SID', () => {
     const stars = [SOL, STAR];
     const apsisMap = new Map<string, ApsisRow>();
     const displayNames = ['Sol', null];
-    expect(() => encodeCatalog({ catalog: finalised(stars, [1], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0, 0) }))
-      .toThrow(/2 records but 1 SIDs, 2 display names and 2 multiplicity statuses/);
-    expect(() => encodeCatalog({ catalog: finalised(stars, [1, 2], ['Sol']), apsisMap, multiplicityStatus: Uint8Array.of(0, 0) }))
-      .toThrow(/2 records but 2 SIDs, 1 display names and 2 multiplicity statuses/);
     expect(() => encodeCatalog({ catalog: finalised(stars, [1, 2], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0) }))
-      .toThrow(/2 records but 2 SIDs, 2 display names and 1 multiplicity statuses/);
+      .toThrow(/2 records but 1 multiplicity statuses/);
     expect(() => encodeCatalog({ catalog: finalised(stars, [1, NO_SID], displayNames), apsisMap, multiplicityStatus: Uint8Array.of(0, 0) }))
       .toThrow(/record 1 carries NO_SID/);
   });

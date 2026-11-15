@@ -13,7 +13,7 @@ import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
-import { allocatedSids, enterPhase } from './record-phase';
+import { allocatedSids, enterPhase, finalise } from './record-phase';
 
 declare const rows: MultiplesTsvRow[];
 declare const promotionInputs: PromotionInputs;
@@ -95,5 +95,12 @@ describe('record phases', () => {
       ],
     ];
     expect(refusedBesideInPlace).toHaveLength(12);
+  });
+
+  it('finalises only when the SIDs and display names pair one-for-one with the records', () => {
+    const sorted = enterPhase('sorted', [makeStar(), makeStar()]);
+    expect(finalise(sorted, allocatedSids([1, 2]), ['Vega', null]).displayNames).toEqual(['Vega', null]);
+    expect(() => finalise(sorted, allocatedSids([1]), ['Vega', null])).toThrow('2 records but 1 SIDs and 2 display names');
+    expect(() => finalise(sorted, allocatedSids([1, 2]), ['Vega'])).toThrow('2 records but 2 SIDs and 1 display names');
   });
 });

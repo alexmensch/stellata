@@ -37,9 +37,9 @@ scripts/catalog/record/
                                   multiplicity statuses to the assembled
                                   catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
-                                  with its Apsis cells. Throws on a SID,
-                                  display-name or status list that does not
-                                  pair one-for-one with the records, on NO_SID,
+                                  with its Apsis cells. Throws on a status
+                                  list that does not pair one-for-one with
+                                  the records, on NO_SID,
                                   and unless Sol is the one record without
                                   a constellation. Pure.
 ```
@@ -78,7 +78,8 @@ Passes in one phase are free to run in either order: naming and coherence,
 GCVS and CCDM. The `FLAG_BINARY_PRIMARY` writers' order — geometric, CCDM,
 eclipsing, renderable wings — is code order within the sorted phase.
 
-`Finalised` is the sorted records with each one's SID and display name, and is
+`Finalised` is the sorted records with each one's SID and display name, built
+only by `finalise`, which throws unless the three pair one-for-one, and is
 what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
 printed name (`printedName`), so no reader can take the one for the other.
 

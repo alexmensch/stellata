@@ -36,11 +36,8 @@ export interface EncodedCatalog {
 
 export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
   const { records: stars, sids, displayNames } = catalog;
-  if (sids.length !== stars.length || displayNames.length !== stars.length || multiplicityStatus.length !== stars.length) {
-    throw new Error(
-      `encodeCatalog: ${stars.length} records but ${sids.length} SIDs, ${displayNames.length} display names `
-      + `and ${multiplicityStatus.length} multiplicity statuses`,
-    );
+  if (multiplicityStatus.length !== stars.length) {
+    throw new Error(`encodeCatalog: ${stars.length} records but ${multiplicityStatus.length} multiplicity statuses`);
   }
   const unallocated = sids.indexOf(NO_SID);
   if (unallocated !== -1) throw new Error(`encodeCatalog: record ${unallocated} carries NO_SID`);
