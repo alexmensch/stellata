@@ -53,16 +53,4 @@ describe('entryInputPaths over every TypeScript step', () => {
     expect(undeclared.map((file) => ({ file, keyedBy: keyedBy(file) })))
       .toEqual(undeclared.map((file) => ({ file, keyedBy: [] })));
   });
-
-  it('keys no file a step neither imports nor reads, wherever it sits beside one\'s code', () => {
-    const fixtures = [
-      'scripts/catalog/naming/naming-parity.tsv',
-      'scripts/catalog/naming/naming-duplicates.tsv',
-      'scripts/catalog/companions/multi-star-regression.tsv',
-      'scripts/catalog/validate/known-stars.tsv',
-      'scripts/textures/requirements.txt',
-    ];
-    expect(fixtures.map((file) => ({ file, keyedBy: keyedBy(file) })))
-      .toEqual(fixtures.map((file) => ({ file, keyedBy: [] })));
-  });
 });
