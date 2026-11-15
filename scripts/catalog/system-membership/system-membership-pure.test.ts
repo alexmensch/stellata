@@ -40,13 +40,14 @@ function doubles(groups: number[][], physicalHips: number[] = []): DoublesEviden
   };
 }
 
-// 0–5 Castor (WDS); 6 a CCDM extra of Castor (shares record 0's group);
+// 0–5 Castor (WDS), 5 minted and a geometric partner of 2; 6 a CCDM extra of Castor (shares record 0's group);
 // 7 a geometric partner of 4; 8–9 a CCDM-only pair; 10 + 11 a CCDM pair 50 pc apart
 // along the sightline, so each member is the other's optical double; 12–13 a geometric-only pair; 14–15 a geometric pair with
 // a minted member; 16 eclipsing; 17 SIMBAD multiple; 18 alone in its CCDM group.
 function fixture(): SystemMembershipInputs {
   const records: MembershipRecord[] = [
-    star(CASTOR, 15, { hip: 100 }), star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15),
+    star(CASTOR, 15, { hip: 100 }), star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15),
+    star(CASTOR, 15, { flags: FLAG_BINARY_COMPANION_ONLY }),
     star(CASTOR, 15, { hip: 106 }), star(CASTOR, 15),
     star(OTHER, 40, { hip: 108 }), star(OTHER, 40, { hip: 109 }),
     star(OTHER, 60, { hip: 110 }), star(OTHER, 110, { hip: 111 }),
@@ -64,7 +65,7 @@ function fixture(): SystemMembershipInputs {
       pair(CASTOR, 'Aa', 'Ab', 0, 3), pair(CASTOR, 'Ba', 'Bb', 1, 4), pair(CASTOR, 'Ca', 'Cb', 2, 5),
     ],
     doubles: doubles([[0, 6], [8, 9], [10, 11], [18]]),
-    geometricPairs: [[4, 7], [12, 13], [14, 15], [0, 3]],
+    geometricPairs: [[4, 7], [12, 13], [14, 15], [0, 3], [2, 5]],
     lentDistance: lentDistanceRecords(records, new Set()),
   };
 }
@@ -86,8 +87,8 @@ describe('buildSystemMembership', () => {
     ]);
   });
 
-  it('drops the optical CCDM member and the pair whose distance is lent, and counts both', () => {
-    expect(counts).toMatchObject({ systemCcdmOpticalMembers: 2, systemGeometricLentPairs: 1 });
+  it('drops the optical CCDM member and the pair whose distance is lent, counting a lent pair only when nothing else joins it', () => {
+    expect(counts).toMatchObject({ systemCcdmOpticalMembers: 2, systemGeometricLentDropped: 1 });
     const all = membership.systems.flatMap((s) => JSON.stringify(s.root));
     for (const gone of [10, 11, 14, 15]) expect(all.join()).not.toMatch(new RegExp(`"record":${gone}\\b`));
   });
@@ -101,7 +102,7 @@ describe('buildSystemMembership', () => {
       systemWdsIdentityGated: 0, systemWdsAmbiguous: 0, systemWdsTokenConflicts: 0,
       systems: 3, systemRecords: 12,
       systemsWithWds: 1, systemsWithCcdm: 2, systemsWithGeometric: 2,
-      systemCcdmOpticalMembers: 2, systemGeometricLentPairs: 1,
+      systemCcdmOpticalMembers: 2, systemGeometricLentDropped: 1,
       companionEclipsingPartner: 1, companionSimbadMultiple: 1, companionCcdm: 1,
     });
   });

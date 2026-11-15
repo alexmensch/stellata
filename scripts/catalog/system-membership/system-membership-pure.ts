@@ -41,8 +41,8 @@ export type SystemMembershipCounts = WdsTreeCounts & {
   systemsWithGeometric: number;
   /** CCDM members the optical-double gate dropped. */
   systemCcdmOpticalMembers: number;
-  /** Geometric mutual pairs dropped because a member's distance is lent. */
-  systemGeometricLentPairs: number;
+  /** Geometric mutual pairs with a lent-distance member that no other evidence puts in one system. */
+  systemGeometricLentDropped: number;
   companionEclipsingPartner: number;
   companionSimbadMultiple: number;
   companionCcdm: number;
@@ -165,7 +165,8 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
   const geometric = inputs.geometricPairs
     .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as const)
     .sort((p, q) => ascending(p[0], q[0]) || ascending(p[1], q[1]));
-  const qualified = geometric.filter(([a, b]) => !inputs.lentDistance.has(a) && !inputs.lentDistance.has(b));
+  const lent = ([a, b]: readonly [number, number]) => inputs.lentDistance.has(a) || inputs.lentDistance.has(b);
+  const qualified = geometric.filter((p) => !lent(p));
 
   const components = new Components();
   for (const t of wds.trees) components.link(nodeRecords(t.root));
@@ -197,7 +198,7 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
       systemsWithCcdm: withSource('ccdm'),
       systemsWithGeometric: withSource('geometric'),
       systemCcdmOpticalMembers,
-      systemGeometricLentPairs: geometric.length - qualified.length,
+      systemGeometricLentDropped: geometric.filter((p) => lent(p) && components.find(p[0]) !== components.find(p[1])).length,
       companionEclipsingPartner: kindCount('eclipsing-partner'),
       companionSimbadMultiple: kindCount('simbad-multiple'),
       companionCcdm: kindCount('ccdm-companion'),
@@ -209,6 +210,6 @@ export function systemMembershipSummary(c: SystemMembershipCounts): string {
   return `system membership: ${c.systems} systems over ${c.systemRecords} records (WDS ${c.systemsWithWds}, CCDM ${c.systemsWithCcdm}, `
     + `geometric ${c.systemsWithGeometric}); WDS shared records ${c.systemWdsIdentityGated} identity-gated, ${c.systemWdsAmbiguous} ambiguous, `
     + `${c.systemWdsTokenConflicts} token conflicts; ${c.systemCcdmOpticalMembers} optical CCDM members, `
-    + `${c.systemGeometricLentPairs} geometric pairs on a lent distance; no-record companions: ${c.companionEclipsingPartner} eclipsing, `
+    + `${c.systemGeometricLentDropped} geometric pairs dropped on a lent distance; no-record companions: ${c.companionEclipsingPartner} eclipsing, `
     + `${c.companionSimbadMultiple} SIMBAD multiple, ${c.companionCcdm} CCDM`;
 }

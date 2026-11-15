@@ -58,8 +58,11 @@ measurements. `lentDistanceRecords` marks the others: a minted companion
 `pair_member_parallax` (a sibling's parallax), and a member coherence snapped
 or promotion re-curated onto its anchor's distance. Two records sharing one
 distance sit 0.005 pc apart only because of the sharing, so the pair is an
-artefact (`systemGeometricLentPairs`). Measured 2026-11-15 before the gate:
-of 48 mutual pairs no WDS or CCDM system backs, 9 had a lent member.
+artefact. Most such pairs are a WDS pair's minted companion, which WDS joins
+anyway; `systemGeometricLentDropped` counts the ones no other evidence puts
+in one system — the pairs the gate actually separates. Measured 2026-11-15
+before the gate: of 48 mutual pairs no WDS or CCDM system backs, 9 had a
+lent member.
 
 ## WDS trees
 
