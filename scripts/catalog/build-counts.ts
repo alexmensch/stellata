@@ -4,7 +4,7 @@ import { flattenStages } from '../util/counts/count-stages-pure.ts';
 import { committedSnapshot } from '../util/sources/source.ts';
 import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json.ts';
 import type { PlacementCounts, PlacementDerivedCounts } from './distance/placement-counts-pure.ts';
-import type { PromotionDerivedCounts } from './companions/promotion-outcome';
+import type { PromotionStats } from './companions/promotion-outcome';
 import type { PromotionCounts } from './companions/promotion-lineage/promotion-lineage-pure.ts';
 import type { CoherenceCounts } from './multiplicity/coherence-lineage-pure.ts';
 import type { BrightnessColourCounts } from './photometry/brightness-colour-lineage-pure.ts';
@@ -27,7 +27,7 @@ export function committedBuildCounts(): BuildCounts {
 
 /** Every count the snapshot holds, by name: each stage's count block. */
 export type BuildCounts = InputsCounts & PlacementCounts & PlacementDerivedCounts & BrightnessColourCounts
-  & CoherenceCounts & PromotionCounts & PromotionDerivedCounts & OverlapCounts & MultiplicityCounts & GcvsCounts & AllocationCounts
+  & CoherenceCounts & PromotionCounts & PromotionStats & OverlapCounts & MultiplicityCounts & GcvsCounts & AllocationCounts
   & NamingCounts & NamingDerivedCounts & RecordsCounts & SearchCounts & BoundariesCounts & FiguresCounts;
 
 /** The snapshot's stage order, the build's pipeline order; its lineage stages keep LINEAGE_STAGES' order. */

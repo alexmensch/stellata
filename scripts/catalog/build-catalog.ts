@@ -51,7 +51,7 @@ import {
 import { parkedRefusals } from './companions/identity/parked-refusals';
 import { promoteCompanions, type PromotionInputs } from './companions/companion-promotion';
 import { readMultiplesTsv, type MultiplesTsvRow } from './companions/multiples-row';
-import { recuratedRecords, type PromotionDerivedCounts } from './companions/promotion-outcome';
+import { recuratedRecords } from './companions/promotion-outcome';
 import {
   PROMOTION_CODES, PROMOTION_INVARIANTS, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
 } from './companions/promotion-lineage/promotion-lineage-pure';
@@ -412,9 +412,8 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
 
   const renderableWings = wingRenderablePrimaries(resolvedPairs, stars);
 
-  const promotionDerived: PromotionDerivedCounts = ps;
   console.log(promotionSummary(
-    promotionCounts, promotionDerived, secondaryRows,
+    promotionCounts, ps, secondaryRows,
   ));
   const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
@@ -452,7 +451,7 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     parkedLedger, simbadSourcedDistances,
     placementEmission, brightnessEmission, sizeEmission, coherenceEmission, overlapEmission, placementRemovals,
     placementDerived: stats.placementDerived,
-    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived: ps,
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
     systemMembership: serializeSystemMembership(systems.membership),
   };

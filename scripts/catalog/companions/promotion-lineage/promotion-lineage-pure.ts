@@ -16,7 +16,7 @@ import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from '../companion-dust-pure';
 import type { MultiplesTsvRow } from '../multiples-row';
 import type {
-  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
+  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionStats, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
 } from '../promotion-outcome';
 import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -326,7 +326,7 @@ function recuratedPartition(counts: PromotionCounts): Record<RecuratedBrightness
   };
 }
 
-export function promotionSummary(counts: PromotionCounts, derived: PromotionDerivedCounts, pairRows: number): string {
+export function promotionSummary(counts: PromotionCounts, derived: PromotionStats, pairRows: number): string {
   const c = (branch: LiveBranch): number => counts[PROMOTION_CODES.liveCode(branch)];
   return `  scanned ${pairRows} pair rows; promoted ${familyTotal(counts, 'minted')} `
     + `(${c('minted.synthetic')} via synthetic ID); `

@@ -9,7 +9,7 @@ import { SEEDED_BRANCH, seededCodeCheck } from '../../lineage/count-block-fixtur
 import { makeStar } from '../../parse/star-fixture';
 import type { RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type {
-  MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
+  MintedBrightness, PromotedRow, PromotionStats, RecordRewrite, RowOutcome,
 } from '../promotion-outcome';
 import { multiplesRow } from '../multiples-fixture';
 import {
@@ -151,7 +151,7 @@ describe('promotion count block', () => {
   });
 
   it('summarises the families as the build log has them', () => {
-    const derived: PromotionDerivedCounts = {
+    const derived: PromotionStats = {
       companionRepositionedInnerToParent: 0,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
