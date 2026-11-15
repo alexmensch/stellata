@@ -14,8 +14,7 @@ import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/b
 import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { group, normalized, wdsTrees, type WdsPairEnds, type WdsTree, type WdsTreeCounts } from './wds-trees-pure';
-import type { Sorted } from '../record/record-phase';
-import type { Unsorted } from '../record/record-phase';
+import type { Sorted, Unsorted } from '../record/record-phase';
 
 export interface MembershipRecord extends OpticalDoubleStar {
   readonly flags: number;
