@@ -100,7 +100,7 @@ still pins the baked catalogue against the real artifact.
 **`bySynth` also carries bridged keys.** A component whose row carries no
 identifier is addressable only under its synth key, and where promotion
 refused the mint because a stored same-as edge names a Gaia source already in
-the catalogue ([Same-as bridge to an already-admitted source](../README.md#same-as-bridge-to-an-already-admitted-source)),
+the catalogue ([Same-as bridge to an already-admitted source](../identity/README.md#same-as-bridge-to-an-already-admitted-source)),
 the key maps onto that source's record — or the star ships with no component
 letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own

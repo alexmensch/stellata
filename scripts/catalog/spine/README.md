@@ -157,7 +157,7 @@ moved that is not a retired gate traces to these four**:
 | `systemCoherenceSystems` (now the sum of the `coherence.anchor.*` codes) | +1 | ξ UMa B: the coherence pass resolves members by source_id then HIP, so B used to collapse onto A's record on the shared HIP 55203 and the root never reached two members |
 | `bjEligible` | −1 | none of the four — the one `tooFar` row the old walk counted as eligible before dropping it; the spine never carried it |
 
-[Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass) carries the
+[Anchor flux conservation](../companions/post-passes/README.md#anchor-flux-conservation) carries the
 consequence of the V-tier move: three records ship as unsplit blends.
 
 ## Six source_ids DR3 does not publish

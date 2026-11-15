@@ -3,7 +3,7 @@
 // cascade tier that reads it is in parallax-cascade.ts. See README.md.
 
 import type { GaiaAstrometryRow } from '../../sources/gaia-astrometry-source';
-import type { MultiplesTsvRow } from '../../companions/companion-promotion';
+import type { MultiplesTsvRow } from '../../companions/multiples-row';
 import { wdsRootOf } from '../../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';

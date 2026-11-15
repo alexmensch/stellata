@@ -58,7 +58,7 @@ export type ParallaxTier = Exclude<DistVia, 'bailer_jones' | 'lmc_kinematic'>;
  *  measurement this build will not stand behind — the residual policy
  *  (/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) counts the
  *  two apart — and `mas` is what companion promotion matches a pair row's
- *  stated distance against (`../../companions/README.md#refused-parallax-refusal`). */
+ *  stated distance against (`../../companions/identity/README.md#refused-parallax-refusal`). */
 export type ParallaxRefusal =
   CascadeRefusal<ParallaxTier, 'below_sn_floor' | RefusedPublication> & { readonly mas: number };
 

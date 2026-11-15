@@ -16,7 +16,7 @@ import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { HIP2 } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
-import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { multiplesRow, type MultiplesRowOverrides } from '../companions/multiples-fixture';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 

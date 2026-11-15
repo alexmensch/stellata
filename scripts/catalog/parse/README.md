@@ -165,7 +165,7 @@ never a membership decision — so the walk throws, naming the row.
    both a place and a brightness. The tier that won is kept on the record as
    `vVia`, because it decides whether the magnitude is the system's blend or
    one component's — companion promotion's flux conservation may only subtract
-   a companion's light from a blend ([Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass)).
+   a companion's light from a blend ([Anchor flux conservation](../companions/post-passes/README.md#anchor-flux-conservation)).
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
    selects the tier's solution. See [Direction resolution](../distance/README.md#direction-resolution).
    Every solution propagates rather than shipping its source's own
