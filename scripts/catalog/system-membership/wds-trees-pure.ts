@@ -2,10 +2,10 @@
 // resolved first. See README.md#wds-trees.
 
 import { angularSeparationArcsec, unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
-import { compareCodeUnits } from '../../../src/astro-core/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import type { GroupNode, SystemNode } from '../../../src/catalog-format/system-membership/system-membership-format';
 import {
-  compoundContains, isComponentToken, isMoreCanonicalAnchor, parentComponentToken, relatedHier, tokenLetters,
+  compoundContains, isComponentToken, parentComponentToken, relatedHier, tokenLetters,
 } from '../../binaries/component-tokens-pure';
 import type { MultiplesPair } from '../../binaries/pairs-pure';
 import { wdsIdPosition } from '../../wds/wds-pure';
@@ -59,11 +59,9 @@ function sharedToken(a: string, b: string): string | null {
 }
 
 function tokenRank(a: string | null, b: string | null): number {
-  if (a === null || b === null) return (a === null ? 1 : 0) - (b === null ? 1 : 0);
-  const compound = (t: string) => (isComponentToken(t) ? 0 : 1);
-  if (compound(a) !== compound(b)) return compound(a) - compound(b);
-  if (a.length !== b.length) return b.length - a.length;
-  return isMoreCanonicalAnchor(a, b) ? -1 : isMoreCanonicalAnchor(b, a) ? 1 : 0;
+  if (a === null || b === null) return ascending(Number(a === null), Number(b === null));
+  const compound = (t: string) => Number(!isComponentToken(t));
+  return ascending(compound(a), compound(b)) || ascending(b.length, a.length) || compareCodeUnits(a, b);
 }
 
 function related(a: string | null, b: string | null): boolean {
@@ -77,7 +75,7 @@ function smallestEnclosingCompound(token: string, tokens: readonly string[]): st
     const outer = tokenLetters(c);
     return outer.size > letters.size && [...letters].every((l) => outer.has(l));
   });
-  enclosing.sort((a, b) => tokenLetters(a).size - tokenLetters(b).size || compareCodeUnits(a, b));
+  enclosing.sort((a, b) => ascending(tokenLetters(a).size, tokenLetters(b).size) || compareCodeUnits(a, b));
   return enclosing[0] ?? null;
 }
 
@@ -95,7 +93,7 @@ function systemTree(tokenRecords: ReadonlyMap<string | null, ReadonlySet<number>
   for (const [t, rs] of tokenRecords) for (const r of rs) recordTokens.set(r, [...(recordTokens.get(r) ?? []), t]);
 
   const leaves = new Map<string | null, number[]>();
-  for (const [r, ts] of [...recordTokens].sort((a, b) => a[0] - b[0])) {
+  for (const [r, ts] of [...recordTokens].sort((a, b) => ascending(a[0], b[0]))) {
     const at = [...ts].sort(tokenRank)[0];
     if (ts.some((t) => !related(at, t))) counts.systemWdsTokenConflicts++;
     leaves.set(at, [...(leaves.get(at) ?? []), r]);

@@ -2,6 +2,7 @@
 // physical system, plus each record's companions with no record. See README.md.
 
 import type { UnitVector } from '../../../src/astro-core/equatorial-basis';
+import { ascending } from '../../../src/astro-core/order-pure';
 import {
   FLAG_BINARY_COMPANION_ONLY, MULTIPLICITY_UNRESOLVED, VAR_TYPE_ECLIPSING,
 } from '../../../src/catalog-format/record/catalog-pure';
@@ -120,7 +121,7 @@ function systemOf(e: ComponentEvidence): MembershipSystem {
     placed.add(a);
     placed.add(b);
   }
-  for (const r of [...new Set(e.ccdm.flat())].sort((x, y) => x - y)) {
+  for (const r of [...new Set(e.ccdm.flat())].sort(ascending)) {
     if (!placed.has(r)) { extras.push({ kind: 'record', record: r }); placed.add(r); }
   }
   const root = normalized(group(null, [...base, ...extras]));
@@ -155,7 +156,7 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
   const ccdmSingles = new Set<number>();
   let systemCcdmOpticalMembers = 0;
   for (const hips of inputs.doubles.groups) {
-    const members = [...new Set(hips.flatMap((h) => inputs.hipToIndex.get(h) ?? []))].sort((a, b) => a - b);
+    const members = [...new Set(hips.flatMap((h) => inputs.hipToIndex.get(h) ?? []))].sort(ascending);
     if (members.length === 1) ccdmSingles.add(members[0]);
     if (members.length < 2) continue;
     const kept = members.filter((m) => !isOpticalDoubleMember(m, members, inputs.records, inputs.doubles.optical));
@@ -165,7 +166,7 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
 
   const geometric = inputs.geometricPairs
     .map(([a, b]) => [Math.min(a, b), Math.max(a, b)] as const)
-    .sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+    .sort((p, q) => ascending(p[0], q[0]) || ascending(p[1], q[1]));
   const qualified = geometric.filter(([a, b]) => !inputs.lentDistance.has(a) && !inputs.lentDistance.has(b));
 
   const components = new Components();
@@ -184,7 +185,7 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
   for (const g of ccdmGroups) at(g[0]).ccdm.push(g);
   for (const p of qualified) at(p[0]).geometric.push(p);
 
-  const systems = [...evidence.entries()].sort((a, b) => a[0] - b[0]).map(([, e]) => systemOf(e));
+  const systems = [...evidence.entries()].sort((a, b) => ascending(a[0], b[0])).map(([, e]) => systemOf(e));
   const companions = companionsOf(inputs, ccdmSingles);
   const withSource = (s: EvidenceSource) => systems.filter((sys) => sys.sources.includes(s)).length;
   const kindCount = (k: NoRecordCompanion) => [...companions.values()].filter((ks) => ks.includes(k)).length;
