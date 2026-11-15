@@ -179,6 +179,17 @@ export function parsePreciseCoord(field: string): SkyPosition | null {
   };
 }
 
+/** A WDS id `HHMMm±DDMM` (J2000, RA to 0.1 min, Dec to 1′) → its RA/Dec in degrees; null when it does not parse. */
+export function wdsIdPosition(wdsId: string): SkyPosition | null {
+  const m = /^(\d\d)(\d\d)(\d)([+-])(\d\d)(\d\d)$/.exec(wdsId);
+  if (m === null) return null;
+  const [raH, raM, raTenth, , decD, decM] = [m[1], m[2], m[3], m[4], m[5], m[6]].map(Number);
+  return {
+    raDeg: (raH + (raM + raTenth / 10) / 60) * RA_HOURS_TO_DEG,
+    decDeg: (m[4] === '-' ? -1 : 1) * (decD + decM / 60),
+  };
+}
+
 function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, present: (r: T) => boolean, floor: number): void {
   const ok = rows.filter(present).length;
   const rate = share(ok, rows.length);

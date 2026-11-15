@@ -15,6 +15,7 @@ export const PUBLIC_FILES = {
   cloudSurfaces: CLOUD_SURFACES_SCHEMA.fileName,
   clouds: CLOUDS_JSON_SCHEMA.fileName,
   localGroup: 'local-group.json',
+  systemMembership: 'system-membership.json',
 } as const;
 
 export const PUBLIC_FOLDERS = {

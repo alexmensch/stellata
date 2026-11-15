@@ -232,7 +232,20 @@
       "renderableCompanionWinged": 2853,
       "componentDesignations": 24451,
       "multiplicityResolved": 24016,
-      "multiplicityUnresolved": 10648
+      "multiplicityUnresolved": 10648,
+      "systemWdsIdentityGated": 3,
+      "systemWdsAmbiguous": 14,
+      "systemWdsTokenConflicts": 15,
+      "systems": 10284,
+      "systemRecords": 26072,
+      "systemsWithWds": 10062,
+      "systemsWithCcdm": 485,
+      "systemsWithGeometric": 43,
+      "systemCcdmOpticalMembers": 1012,
+      "systemGeometricLentDropped": 10,
+      "companionEclipsingPartner": 1529,
+      "companionSimbadMultiple": 10648,
+      "companionCcdm": 11359
     },
     "gcvs": {
       "gcvsEntries": 41217,

@@ -7,7 +7,7 @@ import { ORB6, WDS_SUMM } from './wds-source';
 const FIXTURE = { file: 'fixture/wds.txt', hint: 'h' } as const;
 const SUMM_FIXTURE = { ...WDS_SUMM, ...FIXTURE };
 const ORB6_FIXTURE = { ...ORB6, ...FIXTURE };
-import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm, splitComponents } from './wds-pure';
+import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm, splitComponents, wdsIdPosition } from './wds-pure';
 
 describe('measuredOffset', () => {
   it('is the last ρ and θ when ρ is measured and positive', () => {
@@ -97,6 +97,20 @@ describe('parsePreciseCoord', () => {
     expect(parsePreciseCoord('073435.86-315317.8')?.decDeg).toBeCloseTo(-31.888278, 5);
     expect(parsePreciseCoord('0734')).toBeNull();
     expect(parsePreciseCoord('0x3435.86+315317.8')).toBeNull();
+  });
+});
+
+describe('wdsIdPosition', () => {
+  it('reads RA to a tenth of a minute and Dec to the arcminute, either sign', () => {
+    const p = wdsIdPosition('07346+3153');
+    expect(p?.raDeg).toBeCloseTo((7 + 34.6 / 60) * 15, 10);
+    expect(p?.decDeg).toBeCloseTo(31 + 53 / 60, 10);
+    expect(wdsIdPosition('00111-0008')?.decDeg).toBeCloseTo(-8 / 60, 10);
+  });
+
+  it('refuses anything not shaped like a WDS id', () => {
+    expect(wdsIdPosition('07346+315')).toBeNull();
+    expect(wdsIdPosition('07346 3153')).toBeNull();
   });
 });
 

@@ -5,7 +5,8 @@ Single-star catalogue build pipeline: the membership manifest + GCVS + CCDM +
 Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
-`public/search-index.json` + `public/constellation-boundaries.json`, plus the
+`public/search-index.json` + `public/constellation-boundaries.json` +
+`public/system-membership.json`, plus the
 build-only `build/catalog-row-index-map.json` and `build/catalog-pair-ends.json` ([What ships](../README.md#what-ships)).
 Run via `pnpm run build:catalog`.
 
@@ -55,6 +56,9 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 - `multiplicity/` — multiplicity status, geometric binary inference, the
   CCDM double-star cross-match with its optical-double suppression
   cascade, and system distance coherence.
+- `system-membership/` — `public/system-membership.json`: those passes' and
+  the pair resolution's evidence unioned into one tree per physical system,
+  plus each record's companions with no record.
 - `distance/` — direction resolution, space-motion velocity, build-time
   de-extinction, and the
   multi-layer distance-refinement override stack with its authoring
@@ -123,7 +127,8 @@ scripts/catalog/
                                   outputs.
   catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build
                                   writes, as its emitArtifacts declaration
-                                  (../util/README.md): the public/ sidecars,
+                                  (../util/README.md): the public/ sidecars
+                                  (system-membership.json among them),
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
                                   partition (registryFiles), placement's,
