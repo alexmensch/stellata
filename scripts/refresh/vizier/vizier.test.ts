@@ -36,9 +36,7 @@ describe.each(TABLES)('$name', ({ name, file, table }) => {
   recordedTableCases(name, file, table, recorded(name, table));
 });
 
-const TIED_ON_KEYS = TABLES.filter(({ name }) => ['tyc2Hd', 'systems', 'orbits', 'components'].includes(name));
-
-describe.each(TIED_ON_KEYS)('$name', ({ name, file, table }) => {
+describe.each(TABLES)('$name', ({ name, file, table }) => {
   it.skipIf(!lfsContentReadable(join(REPO_ROOT, file)))('ties no two distinct committed lines under its sort', () => {
     const { lines, rows } = committedRows(file);
     const order = rowOrder(table.columns, table.sortBy, name);

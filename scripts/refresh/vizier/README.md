@@ -30,8 +30,8 @@ all; there is no per-table run.
 - `<table>.cfa.{tsv,fits}` — each table's [replies](#replies) recorded from CfA.
 - `vizier.test.ts` — each table's replies replayed into lines of its
   committed table, its spot rows and its sort order ([Replies](#replies)),
-  that the four tables with key ties hold no two distinct lines tied under
-  their sort ([Order](#order)),
+  that no table ties two distinct committed lines under its sort
+  ([Order](#order)),
   and every query one quoted whole-table query to CDS with the same table's
   ASU form for CfA.
 
