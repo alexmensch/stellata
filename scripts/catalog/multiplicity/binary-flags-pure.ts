@@ -265,7 +265,7 @@ export function isOpticalDoubleMember(
 // Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
 export function inferBinaries(
   stars: BinaryStar[],
-): Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'> {
+): { counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>; mutual: (readonly [number, number])[] } {
   const cell = BINARY_MAX_SEP_PC;
   const cellInv = 1 / cell;
   const grid = new Map<number, number[]>();
@@ -324,7 +324,7 @@ export function inferBinaries(
   const mutual = mutualPairs(stars);
   for (const pair of mutual) markPrimary(stars, [...pair]);
 
-  return { binaryPairs: pairs, binaryMutualPairs: mutual.length };
+  return { counts: { binaryPairs: pairs, binaryMutualPairs: mutual.length }, mutual };
 }
 
 /** Each A↔B where each is the other's directed nearest (`companionIdx`), once, as [lower index, higher]. */

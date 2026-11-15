@@ -35,7 +35,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: 0.001, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     expect(stats.binaryPairs).toBe(2); // both record the other as companion
     expect(stats.binaryMutualPairs).toBe(1);
     expect(stars[0].companionIdx).toBe(1);
@@ -57,7 +57,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: BINARY_MAX_SEP_PC * 2, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
     expect(stars[1].companionIdx).toBe(-1);
@@ -86,7 +86,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     const stars: BinaryStar[] = [
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
   });
@@ -97,7 +97,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.001,  y: 0, z: 0, absmag: 5 }),    // B
       makeStar({ x: 0.0009, y: 0, z: 0, absmag: 6 }),    // C
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     // Distances: A-B=0.001, A-C=0.0009, B-C=0.0001.
     //   A's nearest is C (0.0009). C's nearest is B (0.0001). B's nearest is C.
     // Only B↔C is mutual; A→C is one-way (C points back to B).
@@ -129,7 +129,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.0040, y: 0, z: 0, absmag: 5 }),
       makeStar({ x: 0.0070, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     expect(stars[0].companionIdx).toBe(1);
     expect(stars[1].companionIdx).toBe(2);
     expect(stars[2].companionIdx).toBe(1);
@@ -150,7 +150,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 100,       y: 0, z: 0, absmag: 3 }),  // pair 2 (brightest in catalog)
       makeStar({ x: 100.001,   y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars);
+    const stats = inferBinaries(stars).counts;
     expect(stats.binaryMutualPairs).toBe(2);
     expect(stars[0].flags & FLAG_BINARY_PRIMARY).toBeTruthy(); // pair 1 brighter
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeFalsy();
@@ -159,7 +159,7 @@ describe('binary-flags-pure / inferBinaries', () => {
   });
 
   it('returns zero counts for an empty input', () => {
-    expect(inferBinaries([])).toEqual({ binaryPairs: 0, binaryMutualPairs: 0 });
+    expect(inferBinaries([]).counts).toEqual({ binaryPairs: 0, binaryMutualPairs: 0 });
   });
 
   it('uses 3D distance, not 2D', () => {

@@ -48,7 +48,7 @@ build's:
   leave. The gate never fires on missing evidence, nor on a member with
   physical-pair evidence or an eclipsing type — the wings pass's exemptions,
   one predicate.
-- **Geometric** — `mutualPairs` over the 0.005 pc pass's `companionIdx`.
+- **Geometric** — the mutual pairs `inferBinaries` (the 0.005 pc pass) returns.
 
 ### Geometric pairs
 

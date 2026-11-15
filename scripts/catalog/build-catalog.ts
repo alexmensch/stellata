@@ -11,7 +11,7 @@ import {
   type CatalogManifest,
   SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
-import { buildHipToIndex, inferBinaries, mutualPairs, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
+import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
 import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
 } from './multiplicity/multiplicity-stage-pure';
@@ -421,13 +421,13 @@ export async function main() {
   const systems = (() => {
     const built = buildSystemMembership({
       records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
-      geometricPairs: mutualPairs(stars), lentDistance: lentDistanceRecords(stars, anchorMoved),
+      geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
     });
     return { json: serializeSystemMembership(built.membership), counts: built.counts };
   })();
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
-    ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
+    ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
     ...componentCount, ...statuses.counts, ...systems.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
