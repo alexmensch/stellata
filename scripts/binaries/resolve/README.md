@@ -119,8 +119,8 @@ over the stage's <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- 
 On 2026-11-14, 94,042 rows came to 898 KB gzipped in 386–752 ms across two
 runs, neither diffing against a baseline. A branch that changes this stage's
 inputs re-reads each changed file at the merge-base in one batched git read
-to refuse the baseline: 320 ms for the whole window, 179 of it the baseline,
-with 40 of the stage's 145 inputs changed (2026-11-15).
+to refuse the baseline: 622 ms for the whole window on CI, 269 of it the
+baseline (f7a87137, 2026-11-15).
 
 ## Choices the outputs rest on
 
