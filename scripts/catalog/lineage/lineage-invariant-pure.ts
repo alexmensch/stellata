@@ -8,7 +8,11 @@ import {
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 
 export type InvariantExceptions =
-  | { readonly kind: 'rule'; readonly allows: (params: LineageParams) => boolean }
+  | {
+    readonly kind: 'rule';
+    /** A function of the params alone: asked once per distinct params text. */
+    readonly allows: (params: LineageParams) => boolean;
+  }
   | { readonly kind: 'named'; readonly named: ReadonlyMap<string, string> };
 
 export interface LineageInvariant {
@@ -16,7 +20,6 @@ export interface LineageInvariant {
   readonly holds: string;
   /** The full code whose rows break it. */
   readonly code: string;
-  /** Asked once per distinct params text. */
   readonly exceptions: InvariantExceptions;
 }
 
