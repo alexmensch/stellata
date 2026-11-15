@@ -85,9 +85,7 @@ import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pu
 import {
   anchorMovedRecords, buildSystemMembership, lentDistanceRecords, systemMembershipSummary,
 } from './system-membership/system-membership-pure';
-import {
-  serializeSystemMembership, type SystemMembership,
-} from '../../src/catalog-format/system-membership/system-membership-format';
+import { serializeSystemMembership } from '../../src/catalog-format/system-membership/system-membership-format';
 import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -419,10 +417,14 @@ export async function main() {
     stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
-  const systems = buildSystemMembership({
-    records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles, hipToIndex,
-    geometricPairs: mutualPairs(stars), lentDistance: lentDistanceRecords(stars, anchorMoved),
-  });
+  // Serialized here so the tree objects are not held through emission (the CI heap budget).
+  const systems = (() => {
+    const built = buildSystemMembership({
+      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles, hipToIndex,
+      geometricPairs: mutualPairs(stars), lentDistance: lentDistanceRecords(stars, anchorMoved),
+    });
+    return { json: serializeSystemMembership(built.membership), counts: built.counts };
+  })();
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
     ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
@@ -493,7 +495,7 @@ export async function main() {
     componentDesignations,
     rowIndexMap,
     resolvedPairs,
-    systemMembership: systems.membership,
+    systemMembership: systems.json,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
       parkedLedger,
@@ -543,7 +545,7 @@ interface CatalogEmissionInputs {
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
   readonly resolvedPairs: readonly ResolvedPair[];
-  readonly systemMembership: SystemMembership;
+  readonly systemMembership: string;
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -646,7 +648,7 @@ function catalogEmission({
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
       pairEnds: pairEndsJson,
-      systemMembership: serializeSystemMembership(systemMembership),
+      systemMembership,
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,
