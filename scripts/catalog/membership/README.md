@@ -126,6 +126,9 @@ scripts/catalog/membership/
                                   Pinned count snapshot, staged by
                                   MEMBERSHIP_COUNT_STAGES. Refresh with
                                   --update-snapshots.
+  membership-manifest-expected-json.ts
+                                  MEMBERSHIP_COUNTS, its declaration
+                                  (../../util/sources/README.md#a-snapshot).
   additions/                      The primaries' rows the spine lacks: their
                                   items, grouping, admission and outcomes.
                                   Own README.

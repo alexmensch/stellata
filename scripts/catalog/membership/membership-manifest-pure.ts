@@ -40,9 +40,6 @@ import {
   applySpineCorrections, SPINE_CORRECTION_CELLS, type SpineCorrectionRow,
 } from './spine-corrections/spine-corrections-pure';
 
-export const MEMBERSHIP_EXPECTED_FILE =
-  'scripts/catalog/membership/membership-manifest-expected.json';
-
 /** The snapshot's stages in pipeline order; each has a `-derived` slot beside it. */
 export const MEMBERSHIP_COUNT_STAGES = ['magnitude-term', 'membership'] as const;
 
