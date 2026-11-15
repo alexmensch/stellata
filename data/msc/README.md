@@ -41,8 +41,10 @@ labels.
 - **Citation**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018) (updated MSC).
   Maintained by the author; VizieR copy tracks updates.
 - **VizieR**: `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables),
-  over the CDS TAP endpoint `scripts/refresh/pull/tap-pure.ts`'s `VIZIER` names.
-- **Retrieved**: 2026-07-11.
+  over `scripts/refresh/pull/tap-pure.ts`'s `VIZIER`: CDS, or the CfA mirror
+  when CDS is unreachable. The stamp (`data/stamps/refresh-msc.json`,
+  `answeredBy`) names which answered.
+- **Retrieved**: 2026-07-11; re-pulled from CfA 2026-11-15, same rows.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Tokovinin 2018](/data/papers/index.md#tokovinin2018).
 

@@ -3,8 +3,10 @@
   "outputs": {
     "data/hipparcos/hip_main_vmag.tsv": "02d689361c6eea56369e9f8f696b5c789cdbae10"
   },
-  "query": "b5be629161e31d4645e353c5d6e6b504cc93a5da",
-  "answeredBy": [],
+  "query": "4e680bd5de667ddd20c631075cb3a797ce713b7a",
+  "answeredBy": [
+    "CfA"
+  ],
   "release": "VizieR I/239/hip_main",
   "requestFrom": []
 }

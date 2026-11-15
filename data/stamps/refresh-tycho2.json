@@ -4,8 +4,10 @@
     "data/tycho2/tycho2_main.tsv": "ac3bc9a83bf5abf2b8045017c9ebc9d6bcdd8bf4",
     "data/tycho2/tycho2_suppl1.tsv": "de0c1700d005fea964317facfc18204987833b69"
   },
-  "query": "aba053ec89a776910acbfd8a825a2ea9a950f827",
-  "answeredBy": [],
+  "query": "ccfb145f4471c6d98a77c6dc354f3e1e8bb0ce48",
+  "answeredBy": [
+    "CfA"
+  ],
   "release": "VizieR I/259/tyc2, VizieR I/259/suppl_1",
   "request": "f96f93bb5fc5c9d3a16126a699aa75aea567ac78",
   "requestFrom": [

@@ -3,8 +3,10 @@
   "outputs": {
     "data/hipparcos/hip2_van_leeuwen.tsv": "841445b6b5cbeb1eaf873fe0bfae0437948ff049"
   },
-  "query": "7707d237404944ad8e51740292cf8ad9c5eaa7e6",
-  "answeredBy": [],
+  "query": "8491761a114d5f868e85cab9059580cd92785f92",
+  "answeredBy": [
+    "CfA"
+  ],
   "release": "VizieR I/311/hip2",
   "requestFrom": []
 }
