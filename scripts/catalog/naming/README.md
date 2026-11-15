@@ -36,6 +36,9 @@ scripts/catalog/naming/
                                 faints file's reader of
                                 data/iau-wgsn/wgsn_faints_corrections.tsv
                                 sets its three G-in-V cells first.
+                                Both headers and the null spellings are
+                                also refresh:iau-wgsn's gates
+                                (../../refresh/iau-wgsn/).
   wgsn-normalise-pure.ts        Both /docs/star-naming.md#4-canonical-designation-forms normalisers. NEC `Bayer/other`
     (+ test)                    grammar → structured bayer / flamsteed /
                                 gould / variable / non-stellar /

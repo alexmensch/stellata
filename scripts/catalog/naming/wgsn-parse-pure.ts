@@ -27,7 +27,7 @@ export interface WgsnRow {
   source: 'nec' | 'faints';
 }
 
-const NULL_SPELLINGS = new Set(['', '_', '~', '-', 'null']);
+export const NULL_SPELLINGS: ReadonlySet<string> = new Set(['', '_', '~', '-', 'null']);
 
 function strCell(cells: string[], i: number): string | null {
   const s = textCell(cells[i]);

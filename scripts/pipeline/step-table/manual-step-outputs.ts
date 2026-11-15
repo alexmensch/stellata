@@ -1,6 +1,5 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
-import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import {
   DUST_CHUNK, DUST_MANIFEST, PUBLIC_FILES, TEXTURE_MEMBERS,
 } from '../../../src/catalog-format/public-artifacts/public-artifacts';
@@ -67,7 +66,9 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
   vizierPull('refresh:hip2', 'refresh-hipparcos2.ts', 'HIP2_OUTPUTS'),
   vizierPull('refresh:hip-vmag', 'refresh-hipparcos-vmag.ts', 'HIP_VMAG_OUTPUTS'),
   vizierPull('refresh:classic-ids', 'refresh-classic-ids.ts', 'CLASSIC_IDS_OUTPUTS'),
-  pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', [DATA_FILES.wgsnNec, DATA_FILES.wgsnFaints]),
+  tsManual(
+    { kind: 'pull' }, 'refresh:iau-wgsn', 'scripts/refresh/iau-wgsn/refresh-iau-wgsn.ts', 'scripts/refresh/iau-wgsn/iau-wgsn-outputs.ts', 'IAU_WGSN_OUTPUTS',
+  ),
   tsManual(
     { kind: 'pull' }, 'refresh:tycho2', 'scripts/refresh/tycho2/refresh-tycho2.ts', 'scripts/refresh/tycho2/tycho2-outputs.ts', 'TYCHO2_OUTPUTS',
   ),
