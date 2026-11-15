@@ -255,7 +255,7 @@ function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], 
 }
 
 // A function of its own so promotion's rows and rewrites are unreachable once
-// it returns, leaving only its lines, as coherence's and naming's are.
+// it returns, as coherence's and naming's are.
 function promoteAndTrace(
   multiplesRows: MultiplesTsvRow[], stars: Star[], inputs: PromotionInputs, founded: ReadonlySet<string>,
 ) {
