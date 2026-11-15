@@ -104,6 +104,16 @@ A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot
 be reported without being applied.
 
+## The pair-review queue
+
+`data/membership/pair-review.tsv`, keyed on the record's five identifier cells,
+one row per HIP the pair rule names no owner for: `entries`, every Tycho-2
+entry naming the HIP, and `reason` — `no_hip_source`, `no_entry_matches`,
+`several_match`, `gate_refused` or `simbad_refused`, as
+[Applying the pair rule](#applying-the-pair-rule) defines them. It is a view of
+the `merge.pair.review.*` lineage rows, and the spine's entry ships on every
+row it lists.
+
 ## The divergence ledger
 
 `data/membership/merge-divergence.tsv`, keyed on the record's five identifier
@@ -113,7 +123,6 @@ cells like the other ledgers, one row per divergence:
 |---|---|---|---|
 | `unlinked` | the cells outside the row's largest connected group | the witnessed partition | the published partition |
 | `pair_moves` | `hip` | the entry the pair rule moved the HIP onto, another spine record's | the HIP's Gaia source |
-| `pair_review` | `hip` | every entry naming the HIP | why no owner is named |
 | `derived_only` | the cell | the value a primary's link puts there | `held` if another spine row carries it, else `free` |
 | `differs` | the filled cell | the values a primary's link puts there, none of them the spine's | the cell the link reads, and the spine's value |
 

@@ -48,6 +48,7 @@ import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { BINDING_REVIEW } from './binding-review-tsv';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
+import { PAIR_REVIEW } from './pair-review-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
@@ -118,6 +119,7 @@ export async function main(): Promise<void> {
       bindingReview: BINDING_REVIEW.serialize(result.bindingReview),
       labelDrops: LABEL_DROPS.serialize(result.labelDrops),
       mergeDivergence: MERGE_DIVERGENCE.serialize(result.mergeDivergence),
+      pairReview: PAIR_REVIEW.serialize(result.pairReview),
       ...lineage.files,
     },
     members: lineage.members,

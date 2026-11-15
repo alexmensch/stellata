@@ -84,14 +84,17 @@ label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parit
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·
-                         pair_moves · pair_review · derived_only · differs —
-                         with the
+                         pair_moves · derived_only · differs — with the
                          derived value and its witness. Moves no manifest
                          row; it is the surface the switch off the spine
                          settles (/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger).
+pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
+                         a Tycho-2 pair the pair rule names no owner for:
+                         the pair's entries and why
+                         (/scripts/catalog/membership/merge-derivation/README.md#the-pair-review-queue).
 ```
 
-The four ledgers above that `build:membership` writes, and
+The five ledgers above that `build:membership` writes, and
 `../classic-ids/label_flips.tsv`, are views of the stage's lineage
 ([Membership lineage](/scripts/catalog/membership/README.md#membership-lineage)):
 no code writes their rows except by generating them from it.

@@ -27,10 +27,12 @@ import {
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES, PAIR_REVIEW_REASONS,
-  type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence, type PairReviewReason,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES,
+  type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence,
 } from './merge-derivation/merge-derivation-pure';
-import type { MergeDivergenceKind, MergeDivergenceRow } from './ledger-rows-pure';
+import {
+  PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
+} from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
@@ -306,7 +308,7 @@ const MERGE_BRANCHES: readonly {
     description: `${PAIR} the HIP's Gaia source is the entry another spine record sits on, so the pair rule moves the HIP onto that record.`,
   },
   ...PAIR_REVIEW_REASONS.map((r) => ({
-    branch: PAIR_REVIEW_BRANCHES[r], of: 'pair-review' as const, ledger: 'pair_review' as const,
+    branch: PAIR_REVIEW_BRANCHES[r], of: 'pair-review' as const, ledger: null,
     description: `${PAIR} the pair rule names no owner: ${PAIR_REVIEW_DESCRIPTIONS[r]}.`,
   })),
   ...DERIVED_ONLY_CELLS.flatMap((c) => HELD_STATES.map((h) => ({
@@ -634,6 +636,7 @@ export interface MembershipLedgers {
   labelDrops: LabelDropRow[];
   flips: LabelFlip[];
   mergeDivergence: MergeDivergenceRow[];
+  pairReview: PairReviewRow[];
 }
 
 export function membershipLedgers(
@@ -674,7 +677,10 @@ export function membershipLedgers(
   const merged = new Map<string, [MergeDivergenceKind, MergeBranch]>(MERGE_BRANCHES.flatMap(({ branch, ledger }) => (
     ledger === null ? [] : [[MEMBERSHIP_CODES.code(branch), [ledger, branch]] as const]
   )));
-  const out: MembershipLedgers = { ledger: [], bindingReview: [], labelDrops: [], flips: [], mergeDivergence: [] };
+  const pairReviews = invert(PAIR_REVIEW_BRANCHES);
+  const out: MembershipLedgers = {
+    ledger: [], bindingReview: [], labelDrops: [], flips: [], mergeDivergence: [], pairReview: [],
+  };
   const review = new Map<string, BindingReviewRow>();
   const reviewRow = (verdict: BindingReviewVerdict, cells: BindingReviewCells): BindingReviewRow => (
     Object.fromEntries(BINDING_REVIEW_COLUMNS.map((c) => [c, c === 'verdict' ? verdict : cells[c]])) as BindingReviewRow
@@ -686,7 +692,11 @@ export function membershipLedgers(
     const queue = queued.get(r.code);
     const disposal = disposed.get(r.code);
     const merge = merged.get(r.code);
-    if (merge !== undefined) {
+    const pairReview = pairReviews.get(r.code);
+    if (pairReview !== undefined) {
+      const { derived } = paramsAs(r, pairReview[1]);
+      out.pairReview.push({ ...tuple(of(r.key)), entries: derived.split('|'), reason: pairReview[0] });
+    } else if (merge !== undefined) {
       out.mergeDivergence.push({ ...tuple(of(r.key)), divergence: merge[0], ...paramsAs(r, merge[1]) });
     } else if (addition !== undefined) out.ledger.push({ ...tuple(of(r.key)), reason: addition });
     else if (r.code === MEMBERSHIP_CODES.code('component')) {

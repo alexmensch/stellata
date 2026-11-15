@@ -33,10 +33,11 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The four ledgers' codecs, one leaf each:
+  additions-ledger-tsv.ts         The five ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts
   merge-divergence-tsv.ts
+  pair-review-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,
                                   apart from the codecs so the row-assembly
                                   rules reach no ledger file. The review
@@ -54,7 +55,7 @@ scripts/catalog/membership/
                                   module's, so no phase reaches a declaration.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
     (+ test)                      outcome union and its serialiser, the
-                                  five ledgers as views of it
+                                  six ledgers as views of it
                                   (#membership-lineage), its count blocks'
                                   types, membershipTotals and the build
                                   log's summary, and the change
@@ -112,7 +113,7 @@ scripts/catalog/membership/
                                   lineage files included (MEMBERSHIP_LINEAGE,
                                   /src/catalog-format/pipeline-outputs/).
                                   Side-effect free.
-  committed-artifacts.test.ts     Each of the four codecs above round-trips
+  committed-artifacts.test.ts     Each of the codecs above round-trips
                                   its committed file byte for byte.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
@@ -389,10 +390,11 @@ addition's binding, each label flip and label drop — and
 new variant without a row fails typecheck. `ParamsOf` declares each code's
 params beside the codes; the writer and the views both read through it, so
 a renamed key fails typecheck on both sides. Every record gets an admission
-row. `membershipLedgers` generates the five ledgers from those rows and the
+row. `membershipLedgers` generates the six ledgers from those rows and the
 identity rows alone; the first four are byte-identical to the files they
-replaced as writers, and `merge-divergence.tsv` was born a view
-([The divergence ledger](merge-derivation/README.md#the-divergence-ledger)).
+replaced as writers, and `merge-divergence.tsv` and `pair-review.tsv` were
+born views ([The divergence ledger](merge-derivation/README.md#the-divergence-ledger),
+[The pair-review queue](merge-derivation/README.md#the-pair-review-queue)).
 
 **The count snapshot is a fold of these rows.** `membership-manifest-expected.json`
 is staged ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)):

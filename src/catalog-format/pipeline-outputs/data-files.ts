@@ -6,6 +6,7 @@ export const DATA_FILES = {
   bindingReview: 'data/membership/binding-review.tsv',
   labelDrops: 'data/membership/label-drops.tsv',
   mergeDivergence: 'data/membership/merge-divergence.tsv',
+  pairReview: 'data/membership/pair-review.tsv',
   parkedLedger: 'data/membership/parked-ledger.tsv',
   labelFlips: 'data/classic-ids/label_flips.tsv',
   classicIdOverlay: 'data/classic-ids/classic_id_overlay.tsv',

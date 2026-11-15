@@ -10,12 +10,8 @@ import type { GlieseRow } from '../../gliese-parse-pure';
 import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
+import type { PairReviewReason } from '../ledger-rows-pure';
 
-/** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
-export const PAIR_REVIEW_REASONS = [
-  'no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused', 'simbad_refused',
-] as const;
-export type PairReviewReason = (typeof PAIR_REVIEW_REASONS)[number];
 
 /** The cells a spine row can leave empty that a primary's link fills. */
 export const DERIVED_ONLY_CELLS = ['hip', 'hd', 'hr', 'gl'] as const satisfies readonly KeyCell[];
