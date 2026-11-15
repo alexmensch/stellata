@@ -113,7 +113,9 @@ Every stage writes the same envelope:
   folds or ledgers each one — has no such variant, since a code nothing
   emits is a placeholder. A missing row then always means the record left
   that stage, never a silent pass-through; identical-code rows cost almost
-  nothing compressed.
+  nothing compressed. A stage recording a fact about a pair of records
+  writes rows only for the pairs it holds for, so there a missing row means
+  the fact does not hold ([Overlap lineage](../overlap/README.md#overlap-lineage)).
 - SID, record index and designations live on the identity row only; the
   build version — the release the build stood on as it ran (`releaseAt()`),
   which for a releasing commit can be the release before it or its own,
