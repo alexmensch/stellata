@@ -2,7 +2,7 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, stageLineageLine,
+  decodeLineageLine, lineageLineCode, paramsOf, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
@@ -303,8 +303,7 @@ export function parkReason(p: ParkedPlacement): ParkedReason {
 export function placementLineageRows(p: Placement): LineageRow[] {
   const { key } = p;
   const out: LineageRow[] = [];
-  const evidence = (refs: readonly AnySourceRowRef[]): string[] =>
-    evidenceTexts(key, refs.map(sourceRowRefText));
+  const evidence = (refs: readonly AnySourceRowRef[]): string[] => refs.map(sourceRowRefText);
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
     out.push(stageRow(PLACEMENT_CODES, key, branch, params as LineageParams, evidence(refs)));
   };

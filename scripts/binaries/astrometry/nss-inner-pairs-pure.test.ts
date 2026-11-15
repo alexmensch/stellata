@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constants';
 
 import { fold } from '../../util/counts/tally-pure';
+import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { nssOrbitalRow, nssRow } from '../orbits/nss-fixture';
@@ -45,6 +46,15 @@ describe('synthesizeNssInnerPairs', () => {
     expect([inner.primary.isPrimary, inner.secondary.isPrimary]).toEqual([true, false]);
     expect(r.astrometry.get(inner)).toEqual({ primary: AST, secondary: AST });
     expect(r.astrometry.get(inner)!.primary).toBe(AST);
+  });
+
+  it('founds the inner pair on the carrier\'s Gaia NSS row', () => {
+    expect(sourceRowRefText(run([abPair()], inRegime).pairs[0].pair.origin)).toBe('gaia-dr3-nss:42');
+  });
+
+  it('stops the build when one source would found inner pairs in two systems', () => {
+    const elsewhere = decomposed(wdsPair({ wdsId: 'W2', components: 'AB' }), { primary: side('42'), secondary: side('98') });
+    expect(() => run([abPair(), elsewhere], inRegime)).toThrow(/Gaia NSS source 42 founds inner pairs in W1 and W2/);
   });
 
   it('synthesizes nothing where the partner shares the blended source', () => {

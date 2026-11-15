@@ -67,11 +67,14 @@ What the pass decides, and its gates, is Stage 1's README's
 ([Sub-pair synthesis](../load/README.md#sub-pair-synthesis)); the NSS
 conversion and regime it gates on are `../orbits/`'s. Each new
 `DecomposedPair` is sub-resolution, named one hierarchy level below the
-carrier (`A` → `Aa,Ab`, `Aa` → `Aa1,Aa2`), placed at the carrier's position
-(none when the carrier has no astrometry), and both its sides take the
-carrier's identifiers and its `ComponentAstrometry`. A pair synthesized for
+carrier (`A` → `Aa,Ab`, `Aa` → `Aa1,Aa2`), founded on the carrier's Gaia
+NSS solutions (its `origin`, every one the file holds for the source), placed at the carrier's position (none when the
+carrier has no astrometry), and both its sides take the carrier's
+identifiers and its `ComponentAstrometry`. A pair synthesized for
 one carrier counts as existing for the next, so two carriers never mint the
-same children.
+same children. A source founding inner pairs in two systems stops the build:
+both would share its `gaia-dr3-nss:` lineage key
+([Pairs lineage](../README.md#pairs-lineage)).
 
 ## System anchors
 

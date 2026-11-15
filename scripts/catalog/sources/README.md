@@ -33,7 +33,9 @@ scripts/catalog/sources/
                                   (../../util/tsv/README.md#reading-a-table),
                                   and parseNssIndex: the source_ids carrying
                                   an NSS two-body orbit, the only signal the
-                                  catalogue reads.
+                                  catalogue reads, each cited with every
+                                  solution's line (a group key,
+                                  ../../util/sources/README.md#sourcerowref).
   gaia-astrometry-fixture.ts      Test-only GaiaAstrometryRow builder.
                                   A module, not an export from a test file:
                                   suites in distance/, multiplicity/, parse/

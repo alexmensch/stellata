@@ -58,4 +58,5 @@ record the catalogue parks, prints a record's placement,
 brightness-colour and size rows with their refused tiers, finds the record that
 refused a source no identity row carries, every component row of a promoted system from its anchor's
 designation, each component's binding provenance (its own, or copied from a
-named token), the components holding a Gaia source no identity row carries, a minted companion's absmag-source, colour and A_V rows, and a cloud from its `cloud:` slug.
+named token), the components holding a Gaia source no identity row carries, a
+WDS pair the binaries pipeline rejected from a Gaia source one side carries, a minted companion's absmag-source, colour and A_V rows, and a cloud from its `cloud:` slug.

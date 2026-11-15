@@ -8,7 +8,7 @@ import { curatedSpectralValue, type CuratedSpectral, type SpectralSources } from
 export const SPTYPE_OVERRIDES = defineSource({
   file: 'data/simbad/sptype_overrides.tsv',
   hint: 'It is committed and hand-curated (/data/simbad/README.md#provenance).',
-  rowKey: { id: 'sptype-overrides', text: (hip: number) => String(hip) },
+  rowKey: { id: 'sptype-overrides', cardinality: 'one', text: (hip: number) => String(hip) },
   parse: (input): SpectralSources['sptypeOverrides'] => {
     const byHip = new Map<number, CuratedSpectral>();
     for (const row of readTable({ ...input, columns: ['hip', 'sp_type', 'source'], comments: true }, input.text())) {
