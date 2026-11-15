@@ -196,40 +196,15 @@ export interface PromotedRow {
   synthKey: string;
 }
 
-/** What promoteCompanions tallies beyond its lineage; field names are snapshot keys in promotion-derived. */
+/** What promoteCompanions tallies beyond its lineage; field names are snapshot keys in promotion-derived.
+ *  Each folds from a post-pass's outcomes — post-passes/README.md. */
 export type PromotionStats = {
-  /** Sub-resolution inner-pair secondaries re-collocated onto their true
-   *  parent component in the post-pass. Their cursor primary's blended
-   *  identifier baked them on a sibling (Castor Bb on A); this moves them
-   *  onto B so the catalog placement matches the binaries.bin pair anchor
-   *  (record-index/pair-resolution-pure.ts's parent re-home). */
   companionRepositionedInnerToParent: number;
-  /** Dim members reaching the subtraction but not applied: the guard
-   *  M_member > M_blend + 0.05 (a member as bright as its anchor's blend would
-   *  zero or invert the residual flux), or no observed magnitude to subtract at
-   *  all — which only a structural member can be, since the fit already drops
-   *  its own participants for that (`companionBlendDimUnfit`). */
   companionBlendDimSkipped: number;
-  /** Dim candidates no magnitude comparison could reach — no observed WDS
-   *  magnitude for the member or the anchor, no distance, or a pathologically
-   *  large fit group. Left un-dimmed. */
   companionBlendDimUnfit: number;
-  /** Non-structural dim candidates the winning subset left OUT (or the
-   *  whole fit was indecisive within the decisive margin): their light is
-   *  not in the anchor's blend, so no dim. 36 Oph D vs A+B's blend. */
   companionBlendDimOutside: number;
-  /** Dim candidates dropped before the fit because Gaia had already resolved
-   *  them out of the anchor's magnitude — the member carries its own DR3
-   *  source_id and the anchor's V came from Gaia's, so its light was never in
-   *  there and dimming would subtract it twice. */
   companionBlendDimGaiaResolved: number;
-  /** Dim candidates dropped before the fit because the pair sits wider than the
-   *  anchor tier's blending scale (or WDS published no separation at all), so no
-   *  entry of that catalogue sums both. Structural members are exempt. */
   companionBlendDimBeyondSeparation: number;
-  /** Dim candidates whose WINNING hypothesis still missed the anchor's observed
-   *  magnitude by more than the input's error scale — the anchor matches
-   *  neither "alone" nor any blend, so the fit's pick carries no information. */
   companionBlendDimMisfit: number;
 };
 
@@ -522,13 +497,7 @@ function recordRewrite(
   if (brightness !== undefined) held.brightness.push(brightness);
 }
 
-/** A member that is already its own record never reaches the minting path below,
- *  so the subset solve could not see it and an anchor on a printed blend tier
- *  kept the pair's combined light (ξ UMa, ξ Sco, HD 75632 all shipped ~0.5–0.8
- *  mag too bright). The record's absmag is an independent measurement, so it
- *  enters as `source: 'own'` — flux subtraction, never the Δmag re-split, which
- *  would overwrite a first-class record's own brightness. A re-curated member's
- *  absmag is the curated one instead, and enters as the mint path's would. */
+/** post-passes/README.md#registration. */
 function registerExistingMemberForAnchorDim(
   ctx: PromoteRowContext,
   state: PromotionState,
@@ -542,9 +511,6 @@ function registerExistingMemberForAnchorDim(
       || !anchorMagIsCatalogued(anchorStar)) {
     return;
   }
-  // One subtraction per (anchor, member). The same record arrives here from
-  // every cursor pairing it with the anchor, and a second registration would
-  // subtract its flux twice.
   const pairKey = `${anchorCatalogIdx} ${memberIdx}`;
   if (state.existingDimMembers.has(pairKey)) return;
   state.existingDimMembers.add(pairKey);
@@ -555,10 +521,7 @@ function registerExistingMemberForAnchorDim(
     memberSpectral: recordSpectralInfo(member),
     source: recurated === null || recurated === 'held' ? 'own' : recurated,
     dmag: row.dmag,
-    // Never structural, and the asymmetry with the mint path is load-bearing:
-    // the identity bypass is for a member with no other evidence, and one that
-    // is already a record has its own measured magnitude AND a published
-    // separation, so the fit and the separation bound can both judge it.
+    // post-passes/README.md#the-separation-gate: never structural.
     structural: false,
     ...anchorDimGeometry(row, anchorPrimaryRow),
     av: avSolToStar(state.dustGrid, member.x, member.y, member.z),
@@ -734,18 +697,8 @@ function promoteRow(
   const brightness: MintedBrightness = {
     source: imputed.source, spectMsFromOwnAbsmag, ci: ci.via, av, adjustment: null,
   };
-  // Falls back to the WDS-root system primary when the local anchor never made
-  // it into the catalog (δ Vel CD class — local primary C never promotes).
-  // Velocity and the DESIGNATION constellation are the two inherited fields
-  // and must resolve one anchor, else a companion takes one without the other
-  // and desynchronises from its system. The positional constellation below is
-  // the companion's own.
+  // README.md#promoted-companion-field-inheritance.
   const inheritAnchor = anchorStar ?? systemAnchorStar;
-  // A promoted companion carries no own PM (multiples.tsv has no PM columns),
-  // and a Tier-3 static companion is baked into catalog.bin and SKIPPED by the
-  // runtime BinaryOrbitField — only a shared velocity keeps it glued to the
-  // primary through the epoch-advance pass instead of shearing away. The
-  // systemic-velocity pass below reconciles renderable-orbit pairs.
   const anchorVel = inheritAnchor
     ? { x: inheritAnchor.vx, y: inheritAnchor.vy, z: inheritAnchor.vz }
     : { x: 0, y: 0, z: 0 };
@@ -780,8 +733,6 @@ function promoteRow(
     conIndex,
     desigCon,
     flags,
-    // Every display name is composed post-sort from the structured
-    // designation set, so a minted record ships none of its own.
     proper: null,
     iauName: null,
     eponym: null,
@@ -794,10 +745,6 @@ function promoteRow(
     hip: companionHip,
     hd: null,
     hr: null,
-    // An anchor's alternative HD is often the pair's OTHER component number,
-    // and the overlay asserts both numbers against one Gaia source while
-    // naming no component — so inheriting one here would invent evidence.
-    // They stay search aliases of the record holding the blended light.
     hdAlt: [],
     hrAlt: [],
     flam: null,
@@ -812,11 +759,6 @@ function promoteRow(
     gcvsName: null,
     plxDistPc: null,
     plxVia: null,
-    // A promoted companion is placed at its anchor's distance, so it inherits
-    // the anchor's tier rather than claiming a parallax of its own — the
-    // optical-double suppression must weigh both members the same way. Null
-    // where there is no anchor to inherit from, never `none`: that value is a
-    // membership event, and this record ships.
     distVia: inheritAnchor?.distVia ?? null,
     vVia: null,
     syntheticId: usesSynth ? synthId : null,
@@ -824,14 +766,7 @@ function promoteRow(
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
   recordRewrite(state, state.newStars[state.newStars.length - 1], 'mint', mintRadius);
-  // Flux conservation: a member whose light is embedded in whatever
-  // catalogue tier gave the anchor its V must dim the anchor or the
-  // system double-counts it. Blend membership is structural for
-  // inherited-then-stripped ids; every other own-brightness member
-  // (identifier-carrying AND identifier-less synth alike) is a
-  // candidate whose membership the post-pass subset solve decides —
-  // see post-passes/README.md#anchor-flux-conservation. Deferred to a post-pass so
-  // each anchor's members are judged jointly.
+  // post-passes/README.md#anchor-flux-conservation.
   if (OWN_BRIGHTNESS_ABSMAG_SOURCES.has(imputed.source)
       && anchorCatalogIdx !== null && anchorStar !== null
       && anchorMagIsCatalogued(anchorStar)) {
@@ -847,12 +782,7 @@ function promoteRow(
       minted: brightness,
     });
   }
-  // A gaia_photometry absmag is the backing source's magnitude. When that
-  // source is an unresolved blend shared by ≥2 records, it's the pair's
-  // COMBINED light; register the record under the backing source so the
-  // post-pass can split it. Keyed on row.gaiaSourceId (pre-strip) so an
-  // inherited-Gaia secondary (companionGaia=null → synth) still groups
-  // with its blend partner.
+  // post-passes/README.md#blend-split: keyed on the source before the strip.
   if (imputed.source === 'own' && row.photometryVia === PHOTOMETRY_VIA_GAIA
       && row.gaiaSourceId !== null) {
     const bucket = state.gaiaPhotometryByBackingSource.get(row.gaiaSourceId);

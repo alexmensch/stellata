@@ -222,14 +222,19 @@ off `../../validate/known-stars.tsv`.
 
 Once per anchor with exact conservation: `own` / `wds_mag` members subtract
 their actual flux, guarded against a member as bright as the blend itself
-(M_member > M_blend + 0.05, `companionBlendDimSkipped`); `dmag_imputed`
+(M_member > M_blend + 0.05, which would zero or invert the residual) or with
+no observed magnitude at all — only a structural member can be, since the
+fit drops its own participants for that (`companionBlendDimSkipped`); `dmag_imputed`
 members re-split the residual,
 F_A · (1 + Σ 10^(−0.4·Δ_i)) = F_blend − Σ F_own, which reduces to "anchor
 barely dims" for a faint companion and to the equal split at Δ = 0, where a
 naive subtraction would gut a near-equal anchor. Counted
 `promotion.existing.anchor-dimmed`, one row per anchor. Each candidate's
-`AnchorDimVerdict`: left outside by the fit `companionBlendDimOutside`; no
-usable WDS magnitudes `companionBlendDimUnfit`; past the tier's blending
+`AnchorDimVerdict`: left outside by the winning subset, or the whole fit
+indecisive within the decisive margin, `companionBlendDimOutside` (36 Oph D
+against A+B's blend); no comparison possible — no observed WDS magnitude for
+member or anchor, no distance, or more than 16 fitted members —
+`companionBlendDimUnfit`; past the tier's blending
 scale `companionBlendDimBeyondSeparation`; resolved out by its own Gaia
 source `companionBlendDimGaiaResolved`; plus `subtracted` and `re-split` for
 the applied ones and `unapplied` for a re-split member the apply could not
