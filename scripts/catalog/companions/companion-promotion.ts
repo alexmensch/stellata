@@ -236,7 +236,7 @@ export type HeldRecordBrightness =
 /** See README.md#promotion-lineage. */
 export interface RecordRewrite {
   sizing: { pass: SizingPass; radius: RadiusResolution };
-  readonly brightness: HeldRecordBrightness[];
+  brightness: HeldRecordBrightness[];
 }
 
 /** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
@@ -1627,7 +1627,7 @@ export function promoteCompanions(
   inputs: PromotionInputs,
 ): {
   newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[];
-  rewrites: ReadonlyMap<Star, RecordRewrite>;
+  rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>;
 } {
   const promoted = new Map<MultiplesTsvRow, PromotedRow>();
   const record = (r: PromotedRow): void => {

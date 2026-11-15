@@ -241,7 +241,7 @@ const absmagText = (absmag: number): string => absmag.toFixed(ABSMAG_PARAM_DECIM
 const avText = (av: number): string => av.toFixed(AV_PARAM_DECIMALS);
 
 /** A rewritten record's rows, keyed on its own origin key: its last sizing pass with that radius's route params, then each change to a held record's brightness. */
-export function rewriteRows(key: string, rewrite: RecordRewrite, recordKey: (idx: number) => string): LineageRow[] {
+export function rewriteRows(key: string, rewrite: Readonly<RecordRewrite>, recordKey: (idx: number) => string): LineageRow[] {
   const sized = (code: SizeCode, params: RadiusRouteParams): LineageRow => stageRow(PROMOTION_CODES, key, code, params, []);
   const held = <C extends HeldCode>(code: C, params: HeldParamsOf<C>, evidence: readonly string[] = []): LineageRow => (
     stageRow(PROMOTION_CODES, key, code, params as LineageParams, evidence)
@@ -310,7 +310,7 @@ export interface PromotionLineage {
 /** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
   rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
-  rewrites: ReadonlyMap<Star, RecordRewrite>,
+  rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>,
 ): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
   const decided = rows.map((r) => promotionDecision(r, recordKey));
