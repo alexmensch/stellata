@@ -237,6 +237,18 @@ export function main(): void {
     expect(Number(read('free.out'))).toBeGreaterThan(cappedMib);
   });
 
+  it('runs a TypeScript step under the runner\'s own Node, the one its Node-major check reads', async () => {
+    const step = tsStep('a', 'a.out');
+    write('steps/a.ts', `
+import { writeFileSync } from 'node:fs';
+export function main(): void {
+  writeFileSync(${JSON.stringify(at('a.out'))}, process.execPath);
+}
+`);
+    await run([step], ['a']);
+    expect(read('a.out')).toBe(process.execPath);
+  });
+
   it('hands a TypeScript step the input hashes its stamp records, and removes the file once it exits', async () => {
     write('a.in', 'x');
     const step = tsStep('a', 'a.out', ['a.in']);

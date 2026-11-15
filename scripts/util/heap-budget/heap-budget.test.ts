@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { heapCappedEnv } from './heap-budget-pure';
-import { TSX } from '../../pipeline/processes';
+import { tsxCommand } from '../../pipeline/processes';
 
 const CAP_MIB = 64;
 const dir = mkdtempSync(join(tmpdir(), 'heap-cap-'));
@@ -19,7 +19,7 @@ const held: number[][] = [];
 for (let i = 0; i < ${liveMib}; i++) held.push(new Array<number>(2 ** 17).fill(i + 0.5));
 console.log(held.length);
 `);
-  return spawnSync(TSX, [script], { env, stdio: 'ignore' }).status;
+  return spawnSync(...tsxCommand([script]), { env, stdio: 'ignore' }).status;
 }
 
 describe('heapCappedEnv under tsx', () => {

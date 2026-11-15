@@ -337,6 +337,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python pull or
   bake under the recorder, whose `RunRecord` is read only when it exits 0.
+  `tsxCommand` starts `tsx`'s CLI under the runner's own Node
+  (`process.execPath`), never a `PATH` lookup, so a step and its describe
+  run on the Node major the runner checked.
 
 ## Design pass
 
