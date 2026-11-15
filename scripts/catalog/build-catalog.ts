@@ -139,7 +139,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check, type Emission,
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
-import { derivedStage, nestByStage, type CountValue, type StageBlock} from '../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue, type StageBlock } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';

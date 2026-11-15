@@ -24,7 +24,7 @@ import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { countSnapshotCheck } from '../../util/snapshot-check';
-import { derivedStage, nestByStage, type CountValue} from '../../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue } from '../../util/counts/count-stages-pure';
 import { CLASSIC_ID_OVERLAY_COUNTS } from './classic-id-overlay-expected-json';
 import { codeCount, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
