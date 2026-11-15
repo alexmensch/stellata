@@ -106,8 +106,9 @@ scripts/catalog/
                                   allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
                                   checks, the seven lineage budgets,
-                                  placement's and naming's lineage
-                                  invariants (lineage/README.md#invariants)
+                                  placement's, promotion's and naming's
+                                  lineage invariants
+                                  (lineage/README.md#invariants)
                                   and the CI heap budget
                                   (../util/heap-budget/README.md) pass.
                                   A failed allocation throws before

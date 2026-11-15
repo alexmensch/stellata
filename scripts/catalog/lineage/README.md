@@ -168,6 +168,9 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 ([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
+Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
+and named records alone for two codes
+([Promotion's invariants](../companions/README.md#promotions-invariants)).
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row

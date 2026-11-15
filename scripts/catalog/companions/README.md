@@ -145,7 +145,9 @@ Per-row gates and resolution:
   `bridges/`, [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)): a bridged source already in the catalog
   IS this component, so the mint is refused and that record takes the
   re-curation and anchor-dim registration an already-in-catalog hit gets.
-  Counted `promotion.adopted.sameas-bridge`, a ratchet-DOWN metric.
+  Counted `promotion.adopted.sameas-bridge`, each of whose rows is a named
+  exception in [Promotion's invariants](#promotions-invariants): the fix is upstream, the
+  row carrying the source as its own id.
 - <a id="re-curation-of-an-already-in-catalog-member"></a>**Re-curation of an already-in-catalog member.** An existing member's
   position, brightness and velocity all descend from its own 5p solution.
   Where **Gaia rejects that solution** — `isCoherenceAnchorGrade`
@@ -190,8 +192,8 @@ Per-row gates and resolution:
   copies. The naming authority's component attribution is the independent
   witness: where it already letters the ANCHOR as the row's own component, that
   record IS the component. Counted `promotion.dropped.anchor-is-component` (<!-- count:build-catalog/promotion.dropped.anchor-is-component -->3<!-- /count -->: p Eri B,
-  `f Pup C`, `α Psc` B), a ratchet-down metric, since each is a mis-keyed
-  multiples.tsv row upstream. The letters themselves are contested — WDS, the
+  `f Pup C`, `α Psc` B), each a mis-keyed multiples.tsv row upstream and a
+  named exception in [Promotion's invariants](#promotions-invariants). The letters themselves are contested — WDS, the
   authority and Gliese disagree per system — so the gate refuses the duplicate
   without adjudicating the letter. It **reaches only roots the authority
   attributes a Bayer designation in**; one with no Bayer letter offers no
@@ -325,8 +327,8 @@ Per-row gates and resolution:
   full-luminosity twins (Betelgeuse Ab). Those rows drop — unless the
   pair carries a renderable orbit binaries.bin must keep addressing,
   where the twin is kept and counted
-  (`promotion.brightness.inherited-twin`, a ratchet-down
-  metric: curate types to shrink it). For a **pair-row-primary
+  (`promotion.brightness.inherited-twin`, a genuine count:
+  [Promotion's invariants](#promotions-invariants)). For a **pair-row-primary
   escape** the row's Δmag describes the sub-pair it heads, not the
   anchor→row separation (40 Eri B's Δmag is the B→C delta), so both
   `primary + Δmag` paths are suppressed; and when the escape row carries
@@ -339,7 +341,8 @@ Per-row gates and resolution:
   claimed HIP 61910's blended V 5.17, which its A branch was claiming too. Absent any
   honest brightness the record inherits the anchor's collocated
   brightness (`promotion.brightness.anchor-collocated`) rather than a
-  corrupted A+Δmag.
+  corrupted A+Δmag; no row may take it
+  ([Promotion's invariants](#promotions-invariants)).
 - <a id="anchor-flux-conservation-post-pass"></a>**Anchor flux conservation (post-pass).** A member whose light is
   embedded in an `athyg_own` anchor's record magnitude double-counts the flux
   if minted without dimming the anchor. **Which members CAN be in there is set
@@ -676,3 +679,22 @@ parks or merges), 1.57 MB gzipped in 0.43 s (header, diff, write and
 invariants; 67 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
 1.67 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
+
+### Promotion's invariants
+
+`PROMOTION_INVARIANTS` ([Invariants](../lineage/README.md#invariants)) name
+the rows of each code a known defect produces, so a new one fails the build by
+name:
+
+- `dropped.anchor-is-component` and `adopted.sameas-bridge`: none but the
+  records named, by `params.record` — the three mis-keyed rows and the seven
+  bridged ones. A fix upstream that clears one fails the check until the
+  record is struck off its list.
+- `brightness.anchor-collocated`: none.
+
+`brightness.inherited-twin` (<!-- count:build-catalog/promotion.brightness.inherited-twin -->534<!-- /count -->)
+is a genuine count, pinned exactly in the snapshot and never listed row by
+row: each is a pair with a renderable orbit whose companion has no published
+per-component type yet. Curating types into
+`data/binaries/component_sptype_overrides.tsv` shrinks it; at zero it becomes
+a must-not-appear invariant.
