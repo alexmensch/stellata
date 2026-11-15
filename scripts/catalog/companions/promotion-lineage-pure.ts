@@ -4,19 +4,20 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity/identity-pure';
-import { stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
+import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
+import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
-import { dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
+import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
+import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../spectral/size-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type {
-  CompanionAbsmagSource, CompanionCiVia, MintedAdjustment, MintedBrightness, MultiplesTsvRow, PromotedRow,
-  PromotionDerivedCounts, RowOutcome,
+  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, MultiplesTsvRow,
+  PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
 } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_400_000, writeMs: 10_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
 
 const RETIRED_7_1_8 = retired('7.1.8');
 const RETIRED_7_1_20 = retired('7.1.20');
@@ -52,6 +53,32 @@ const FACET_CODES = {
   'fit.owned': outcomeCode('The refused row carries a per-component fit on an identifier of its own.'),
 };
 type Facet = keyof typeof FACET_CODES;
+
+const LAST_SIZED = 'and no later promotion pass re-sized it; params name the radius route and its inputs';
+
+const SIZE_CODES = {
+  'size.mint': outcomeCode(`Promotion sized the minted record from its absolute magnitude and spectral class, ${LAST_SIZED}.`),
+  'size.recurated': outcomeCode(`Re-curation re-derived the held record's radius from its new absolute magnitude, ${LAST_SIZED}.`),
+  'size.blend-split': outcomeCode(`Blend split re-derived the minted record's radius from its split absolute magnitude, ${LAST_SIZED}.`),
+  'size.anchor-dimmed': outcomeCode(`Anchor dimming re-derived the record's radius from its dimmed absolute magnitude, ${LAST_SIZED}.`),
+  'size.anchor-re-split': outcomeCode(`The anchor re-split re-derived the record's radius from its re-split absolute magnitude, ${LAST_SIZED}.`),
+} as const satisfies Record<`size.${SizingPass}`, unknown>;
+type SizeCode = keyof typeof SIZE_CODES;
+
+const RECURATED = 'Re-curation moved the held record onto its anchor\'s distance and replaced its absolute magnitude with';
+const HELD_CODES = {
+  'existing.recurated.dmag-imputed': outcomeCode(`${RECURATED} its anchor's plus the pair's magnitude difference, de-reddened by params.av at its new position, and its B−V by params.ci_via.`),
+  'existing.recurated.wds-mag': outcomeCode(`${RECURATED} the row's own WDS magnitude at the distance it now sits at, de-reddened by params.av at its new position, and its B−V by params.ci_via.`),
+  'existing.recurated.spectral': outcomeCode(`${RECURATED} its spectral class's absolute magnitude, and its B−V by params.ci_via de-reddened by params.av where observed.`),
+  'existing.recurated.held': outcomeCode('Re-curation moved the held record onto its anchor\'s distance with no curated brightness, so it keeps its apparent brightness: its absolute magnitude is re-derived across params.from_pc to params.to_pc and the A_V change params.av_from to params.av_to, its B−V untouched.'),
+  'existing.anchor-dimmed': outcomeCode('The record anchors members whose light its catalogued magnitude holds, so its absolute magnitude is dimmed to the residual once the light of the members it cites is removed.'),
+  'existing.anchor-re-split': outcomeCode('The held record\'s absolute magnitude is re-split by its magnitude difference from the anchor params.record, whose absolute magnitude anchor dimming lowered.'),
+};
+type HeldCode = keyof typeof HELD_CODES;
+
+type CuratedSource = Exclude<RecuratedBrightness, 'held'>;
+const recuratedCode = (source: CuratedSource) => `existing.recurated.${BRIGHTNESS_CODES[source]}` as const;
+
 
 const brightnessFacet = (source: CompanionAbsmagSource): BareFacet => `brightness.${BRIGHTNESS_CODES[source]}`;
 
@@ -93,6 +120,8 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
   'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
   ...FACET_CODES,
+  ...SIZE_CODES,
+  ...HELD_CODES,
 });
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
@@ -119,6 +148,13 @@ type FacetParamsOf<F extends Facet> =
   : F extends 'brightness.blend-split' ? { n: string }
   : F extends 'brightness.anchor-re-split' ? { record: string }
   : Record<string, never>;
+
+type AbsmagParam = { absmag: string };
+type HeldParamsOf<C extends HeldCode> =
+  C extends 'existing.recurated.held' ? AbsmagParam & { from_pc: string; to_pc: string; av_from: string; av_to: string }
+  : C extends `existing.recurated.${string}` ? AbsmagParam & { av: string; ci_via: CompanionCiVia }
+  : C extends 'existing.anchor-dimmed' ? AbsmagParam
+  : AbsmagParam & { record: string };
 
 type FacetEntry = readonly [Facet, LineageParams];
 type BareFacet = { [F in Facet]: FacetParamsOf<F> extends Record<string, never> ? F : never }[Facet];
@@ -202,6 +238,37 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
   }
 }
 
+const absmagText = (absmag: number): string => absmag.toFixed(ABSMAG_PARAM_DECIMALS);
+const avText = (av: number): string => av.toFixed(AV_PARAM_DECIMALS);
+
+/** A rewritten record's rows, keyed on its own origin key: its last sizing pass with that radius's route params, then each change to a held record's brightness. */
+export function rewriteRows(key: string, rewrite: Readonly<RecordRewrite>, recordKey: (idx: number) => string): LineageRow[] {
+  const sized = (code: SizeCode, params: RadiusRouteParams): LineageRow => stageRow(PROMOTION_CODES, key, code, params, []);
+  const held = <C extends HeldCode>(code: C, params: HeldParamsOf<C>, evidence: readonly string[] = []): LineageRow => (
+    stageRow(PROMOTION_CODES, key, code, params as LineageParams, evidence)
+  );
+  const brightnessRow = (b: HeldRecordBrightness): LineageRow => {
+    switch (b.pass) {
+      case 'recurated':
+        if (b.source === 'held') {
+          return held('existing.recurated.held', {
+            absmag: absmagText(b.absmag), from_pc: String(b.fromPc), to_pc: String(b.toPc), av_from: avText(b.avFrom), av_to: avText(b.avTo),
+          });
+        }
+        return held(recuratedCode(b.source), { absmag: absmagText(b.absmag), av: avText(b.av), ci_via: b.ci });
+      case 'anchor-dimmed':
+        return held('existing.anchor-dimmed', { absmag: absmagText(b.absmag) }, sortUtf8([...b.members], (k) => k));
+      case 'anchor-re-split':
+        return held('existing.anchor-re-split', { absmag: absmagText(b.absmag), record: recordKey(b.anchorIdx) });
+      default: {
+        const unmapped: never = b;
+        throw new Error(`held-record brightness with no row mapping: ${JSON.stringify(unmapped)}`);
+      }
+    }
+  };
+  return [sized(`size.${rewrite.sizing.pass}`, radiusRouteParams(rewrite.sizing.radius)), ...rewrite.brightness.map(brightnessRow)];
+}
+
 export function decisionRows(d: PromotionDecision): LineageRow[] {
   return [d.outcome, ...d.facets];
 }
@@ -214,12 +281,20 @@ export const familyTotal = (counts: PromotionCounts, family: string): number => 
   return PROMOTION_CODES.live.reduce((n, code) => (code.startsWith(prefix) ? n + counts[code] : n), 0);
 };
 
+function recuratedPartition(counts: PromotionCounts): Record<RecuratedBrightness, number> {
+  const c = (code: HeldCode): number => counts[PROMOTION_CODES.liveCode(code)];
+  return {
+    dmag_imputed: c(recuratedCode('dmag_imputed')), wds_mag: c(recuratedCode('wds_mag')),
+    spectral: c(recuratedCode('spectral')), held: c('existing.recurated.held'),
+  };
+}
+
 export function promotionSummary(counts: PromotionCounts, derived: PromotionDerivedCounts, pairRows: number): string {
   const c = (branch: LiveBranch): number => counts[PROMOTION_CODES.liveCode(branch)];
   return `  scanned ${pairRows} pair rows; promoted ${familyTotal(counts, 'minted')} `
     + `(${c('minted.synthetic')} via synthetic ID); `
     + `already-in-catalog ${familyTotal(counts, 'adopted')} `
-    + `(re-curated ${formatPartition(derived.companionExistingMemberRecurated)}, `
+    + `(re-curated ${formatPartition(recuratedPartition(counts))}, `
     + `${c('adopted.sameas-bridge')} via same-as bridge); `
     + `dropped (no-position=${c('dropped.no-position')}, beyond-tidal=${c('dropped.beyond-tidal-limit')}, `
     + `no-absmag=${c('dropped.no-absmag')}, compound-comp=${c('dropped.compound-comp')}, `
@@ -227,7 +302,7 @@ export function promotionSummary(counts: PromotionCounts, derived: PromotionDeri
     + `absmag spectral-derived=${c('brightness.spectral')}, spect ms-from-own-absmag=${c('spectral.ms-from-own-absmag')}, `
     + `wds-mag-derived=${c('brightness.wds-mag')}, inherited-twin-orbital=${c('brightness.inherited-twin')}, `
     + `blend-split=${c('brightness.blend-split')}, `
-    + `dimmed-anchors=${derived.companionBlendDimmedAnchors} (skipped ${derived.companionBlendDimSkipped}, `
+    + `dimmed-anchors=${c('existing.anchor-dimmed')} (skipped ${derived.companionBlendDimSkipped}, `
     + `unfit ${derived.companionBlendDimUnfit}, outside ${derived.companionBlendDimOutside}, `
     + `gaia-resolved ${derived.companionBlendDimGaiaResolved}, `
     + `beyond-separation ${derived.companionBlendDimBeyondSeparation}, misfit ${derived.companionBlendDimMisfit}), `
@@ -244,10 +319,14 @@ export interface PromotionLineage {
 /** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
   rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
+  rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>,
 ): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
   const decided = rows.map((r) => promotionDecision(r, recordKey));
-  const lineage = decided.flatMap(decisionRows);
+  const lineage = [
+    ...decided.flatMap(decisionRows),
+    ...[...rewrites].flatMap(([star, rewrite]) => rewriteRows(star.originKey, rewrite, recordKey)),
+  ];
   const minted = rows.flatMap(({ outcome: o }) => (o.kind === 'minted' ? [stars[o.idx]] : []))
     .map((s) => identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
   const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
