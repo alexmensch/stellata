@@ -3,9 +3,6 @@
 
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 import type { FileHashes } from '../../util/build-stamp';
-import {
-  designationConstellation, loadDesignationConstellationIndex,
-} from '../classic-ids/apply-designation-constellation';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import {
   COHERENCE_CODES, COHERENCE_LINEAGE_BUDGET, coherenceLineageLines, coherenceSummary,
@@ -26,10 +23,7 @@ export function namingStage(
   stepInputs: FileHashes,
 ) {
   console.log('Applying the IAU WGSN naming ladder over IV/27A\'s designation constellations...');
-  const iv27a = loadDesignationConstellationIndex();
-  const { named, counts: starNamingCounts } = applyStarNames(
-    walked, (star) => designationConstellation(iv27a, star), loadStarNamingInputs(), CONSTELLATIONS,
-  );
+  const { named, counts: starNamingCounts } = applyStarNames(walked, loadStarNamingInputs(), CONSTELLATIONS);
   console.log(starNamingSummary(starNamingCounts));
 
   const coherenceVerdicts = systemCoherenceVerdicts(multiplesRows, named, {

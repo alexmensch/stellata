@@ -6,7 +6,10 @@ import { readArtifact } from '../../util/sources/source';
 import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
-import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
+import {
+  buildDesignationConIndex, designationConstellation, type DesignationConIndex,
+} from '../classic-ids/designation-constellation-pure';
+import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -24,6 +27,8 @@ export interface StarNamingInputs {
   names: WgsnNameRow[];
   designations: DesignationRow[];
   dispositions: Map<string, ProperDisposition>;
+  /** IV/27A's designation constellations, the tier below the authority's. */
+  designationCons: DesignationConIndex;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
@@ -31,6 +36,7 @@ export function loadStarNamingInputs(): StarNamingInputs {
     names: readArtifact(WGSN_NAMES),
     designations: readArtifact(WGSN_DESIGNATIONS),
     dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
+    designationCons: buildDesignationConIndex(CROSS_INDEX.read()),
   };
 }
 
@@ -78,10 +84,9 @@ export function starNamingSummary(counts: StarNamingCounts): string {
     + `${counts.namingAliases} aliases on ${counts.namingAliasRecords} records`;
 }
 
-/** Attaches each walked record's `NamingFields`, its `desigCon` starting from `iv27a`'s tier. */
+/** Attaches each walked record's `NamingFields`, its `desigCon` starting from IV/27A's tier. */
 export function applyStarNames<S extends NamingSource>(
   stars: Records<'walked', S>,
-  iv27a: (star: S) => DesignationCon,
   inputs: StarNamingInputs,
   constellations: readonly { code: string }[],
 ): { named: Records<'walked', S & NamingFields>; counts: StarNamingCounts } {
@@ -103,7 +108,7 @@ export function applyStarNames<S extends NamingSource>(
 
   const named = attach(stars, (star): NamingFields => {
     const fields: NamingFields = {
-      desigCon: iv27a(star),
+      desigCon: designationConstellation(inputs.designationCons, star),
       iauName: null,
       eponym: null,
       bayer: null,

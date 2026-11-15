@@ -112,7 +112,7 @@ scripts/catalog/classic-ids/
                                   cross_index_corrections.tsv applied
                                   (README.md#one-designation-two-hd-numbers). Four
                                   call sites take it — this build, the
-                                  designation-constellation pass, ../naming/'s
+                                  naming ladder's IV/27A tier, ../naming/'s
                                   Bayer union and ../spine/primaries-tables.ts
                                   — so no reader can miss a correction.
   designation-constellation-pure.ts
@@ -120,20 +120,14 @@ scripts/catalog/classic-ids/
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for — and
                                   `DesignationCon`, a record's value with
-                                  the cascade tier that wrote it. A `cst`
+                                  the cascade tier that wrote it, and
+                                  `designationConstellation`, a record's
+                                  IV/27A value: the tier the naming ladder
+                                  starts from, the record build's one
+                                  classic-ID step. A `cst`
                                   naming no IAU-88 constellation fails the
                                   build: the table's abbreviations are the
                                   IAU set. Pure.
-  apply-designation-constellation.ts
-    (+ test)                      The record build's one remaining classic-ID
-                                  step: loads IV/27A's cross-index and answers
-                                  each walked record's designation
-                                  constellation through
-                                  designation-constellation-pure, the tier
-                                  the naming ladder starts from. The label
-                                  merge does NOT run here —
-                                  the manifest's cells are already final
-                                  (label-merge/README.md).
   designation-constellation.test.ts
                                   Pins the cascade's output on the WIRE
                                   (ρ Aql, 15 LMi, Fomalhaut C) against the

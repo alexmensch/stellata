@@ -13,7 +13,6 @@ import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
 import { allocatedSids, enterPhase, finalise, type Records, type Sorted } from './record-phase';
 import type { Star } from '../parse/stars-parse';
-import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 
 declare const rows: MultiplesTsvRow[];
 declare const promotionInputs: PromotionInputs;
@@ -39,8 +38,8 @@ describe('record phases', () => {
       ],
       [
         // @ts-expect-error naming runs before promotion
-        () => applyStarNames(promoted, (s) => s.desigCon, namingInputs, []),
-        () => applyStarNames(walked, () => NO_DESIGNATION_CON, namingInputs, []),
+        () => applyStarNames(promoted, namingInputs, []),
+        () => applyStarNames(walked, namingInputs, []),
       ],
       [
         // @ts-expect-error coherence runs before promotion

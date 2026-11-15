@@ -60,6 +60,14 @@ export type StatedDesignationCon = Exclude<DesignationCon, { via: 'none' }>;
 
 export const NO_DESIGNATION_CON: DesignationCon = { via: 'none' };
 
+/** IV/27A's tier of the cascade: where the naming ladder starts each walked record's `desigCon`. */
+export function designationConstellation(
+  index: DesignationConIndex, star: { readonly hd: number | null; readonly hip: number | null },
+): DesignationCon {
+  const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
+  return conIndex === NO_CONSTELLATION_INDEX ? NO_DESIGNATION_CON : { via: 'iv27a', index: conIndex };
+}
+
 /** A companion's designation constellation, taken from its system anchor. */
 export function inheritedDesignationCon(anchor: DesignationCon): DesignationCon {
   return anchor.via === 'none' ? NO_DESIGNATION_CON : { via: 'anchor', index: anchor.index };
