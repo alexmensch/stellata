@@ -288,7 +288,7 @@ describe('rewriteRows', () => {
 
 describe('PROMOTION_INVARIANTS', () => {
   const violations = (lines: LineageLine[]) => invariantViolations(PROMOTION_INVARIANTS, lines);
-  const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.key));
+  const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.name));
   const rowAt = (key: string) => {
     const [systemId, comp] = key.slice(`${MULTIPLES_ROW_KEY.id}:`.length).split('/');
     return multiplesRow({ systemId, comp });

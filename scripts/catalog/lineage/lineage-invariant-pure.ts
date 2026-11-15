@@ -2,8 +2,8 @@
 
 import type { Check } from '../../util/emit-artifacts';
 import {
-  decodeLineageLine, lineageLineCode, lineageLineKey, lineageLineParams, parseParams, type LineageLine, type LineageParams,
-  type LineageRow,
+  decodeLineageLine, lineageLineCode, lineageLineKey, lineageLineParams, paramsText, parseParams, type LineageLine,
+  type LineageParams, type LineageRow,
 } from './lineage-row-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 
@@ -13,7 +13,18 @@ export type InvariantExceptions =
     /** A function of the params alone: asked once per distinct params text. */
     readonly allows: (params: LineageParams) => boolean;
   }
-  | { readonly kind: 'named'; readonly named: ReadonlyMap<string, string> };
+  | { readonly kind: 'named'; readonly by: NamedBy; readonly named: ReadonlyMap<string, string> };
+
+export type NamedBy = 'key' | 'key-and-params';
+
+/** A listed row's name under `key-and-params`, for the declaration's map. */
+export function namedRow(key: string, params: LineageParams): string {
+  return rowName(key, paramsText(params));
+}
+
+function rowName(key: string, params: string): string {
+  return `${key}\t${params}`;
+}
 
 export interface LineageInvariant {
   /** What holds, as one line; every violation report leads with it. */
@@ -32,15 +43,15 @@ export function lineageInvariant<B extends string>(
 }
 
 export function namedExceptionsInvariant<B extends string>(
-  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<string, string>,
+  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<string, string>, by: NamedBy = 'key',
 ): LineageInvariant {
-  return { holds, code: codes.code(branch), exceptions: { kind: 'named', named } };
+  return { holds, code: codes.code(branch), exceptions: { kind: 'named', by, named } };
 }
 
 export interface InvariantViolations {
   readonly invariant: LineageInvariant;
   readonly rows: readonly LineageRow[];
-  readonly stale: readonly { readonly key: string; readonly what: string }[];
+  readonly stale: readonly { readonly name: string; readonly what: string }[];
 }
 
 interface Watch {
@@ -64,19 +75,21 @@ function watchRule(invariant: LineageInvariant, allows: (params: LineageParams) 
   };
 }
 
-function watchNamed(invariant: LineageInvariant, named: ReadonlyMap<string, string>): Watch {
+function watchNamed(invariant: LineageInvariant, by: NamedBy, named: ReadonlyMap<string, string>): Watch {
   const matched = new Set<string>();
   const rows: LineageRow[] = [];
+  const nameOf = (line: LineageLine): string =>
+    by === 'key' ? lineageLineKey(line) : rowName(lineageLineKey(line), lineageLineParams(line));
   return {
     code: invariant.code,
     see: (line) => {
-      const key = lineageLineKey(line);
-      if (named.has(key)) matched.add(key);
+      const name = nameOf(line);
+      if (named.has(name)) matched.add(name);
       else rows.push(decodeLineageLine(line));
     },
     result: () => ({
       invariant, rows,
-      stale: [...named].filter(([key]) => !matched.has(key)).map(([key, what]) => ({ key, what })),
+      stale: [...named].filter(([name]) => !matched.has(name)).map(([name, what]) => ({ name, what })),
     }),
   };
 }
@@ -85,7 +98,7 @@ function watch(invariant: LineageInvariant): Watch {
   const { exceptions } = invariant;
   return exceptions.kind === 'rule'
     ? watchRule(invariant, exceptions.allows)
-    : watchNamed(invariant, exceptions.named);
+    : watchNamed(invariant, exceptions.by, exceptions.named);
 }
 
 export function invariantViolations(
@@ -115,7 +128,7 @@ export function invariantCheck(v: InvariantViolations): Check {
   ];
   const lapsed = stale.length === 0 ? [] : [
     `${stale.length} declared ${code} exceptions no row carries any more; delete them: ${holds}`,
-    ...listedRows(stale.map(({ key, what }) => `${key}\t${what}`)),
+    ...listedRows(stale.map(({ name, what }) => `${name}\t${what}`)),
   ];
   return { kind: 'fail', message: [...broken, ...lapsed].join('\n') };
 }

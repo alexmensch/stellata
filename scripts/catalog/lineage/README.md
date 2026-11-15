@@ -157,9 +157,12 @@ count says a number moved, a query names the rows that moved it. Each
 `LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
 appear, what holds while it does not, and its allowed exceptions: a rule, a
 predicate over the row's `params` (`lineageInvariant`; `NO_EXCEPTIONS` for a
-zero-pin), or a list of named rows, by each row's own key, with what it is
-(`namedExceptionsInvariant`); any other row fails, whatever its params share
-with a listed one. A named row no line carries any more fails the check too,
+zero-pin), or a list of named rows with what each is
+(`namedExceptionsInvariant`). A row is named by its own key, or — for a stage
+whose key alone recurs on rows of one code, a row about a pair of records
+keyed on one of them — by its key and params together (`by:
+'key-and-params'`, each listed as `namedRow(key, params)`); any other row
+fails, whatever it shares with a listed one. A named row no line carries any more fails the check too,
 naming it, so the list only shrinks: a
 known defect fixed upstream is deleted from it in the same change. A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
