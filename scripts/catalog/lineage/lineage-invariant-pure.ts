@@ -37,8 +37,7 @@ export function namedExceptionsInvariant<B extends string>(
 export interface InvariantViolations {
   readonly invariant: LineageInvariant;
   readonly rows: readonly LineageRow[];
-  /** Named exceptions no row carries, as `<key>\t<what it is>`. */
-  readonly stale: readonly string[];
+  readonly stale: readonly { readonly key: string; readonly what: string }[];
 }
 
 interface Watch {
@@ -74,7 +73,7 @@ function watchNamed(invariant: LineageInvariant, named: ReadonlyMap<string, stri
     },
     result: () => ({
       invariant, rows,
-      stale: [...named].filter(([key]) => !matched.has(key)).map(([key, what]) => `${key}\t${what}`),
+      stale: [...named].filter(([key]) => !matched.has(key)).map(([key, what]) => ({ key, what })),
     }),
   };
 }
@@ -113,7 +112,7 @@ export function invariantCheck(v: InvariantViolations): Check {
   ];
   const lapsed = stale.length === 0 ? [] : [
     `${stale.length} declared ${code} exceptions no row carries any more; delete them: ${holds}`,
-    ...listedRows(stale),
+    ...listedRows(stale.map(({ key, what }) => `${key}\t${what}`)),
   ];
   return { kind: 'fail', message: [...broken, ...lapsed].join('\n') };
 }

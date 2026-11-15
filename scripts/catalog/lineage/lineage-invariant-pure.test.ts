@@ -77,7 +77,7 @@ describe('named exceptions', () => {
   it('fails naming each listed row no line carries any more', () => {
     const [v] = invariantViolations([inv], [line('a:1', 'gap')]);
     expect(v.rows).toEqual([]);
-    expect(v.stale).toEqual(['a:2\tthe second reviewed row']);
+    expect(v.stale).toEqual([{ key: 'a:2', what: 'the second reviewed row' }]);
     const check = invariantCheck(v);
     if (check.kind !== 'fail') throw new Error('expected a failed check');
     expect(check.message).toBe(
