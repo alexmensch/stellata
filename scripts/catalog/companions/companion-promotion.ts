@@ -221,8 +221,7 @@ export type MintedAdjustment =
   | { pass: 'blend-split'; n: number }
   | { pass: 'anchor-re-split'; anchorIdx: number };
 
-export const SIZING_PASSES = ['mint', 'recurated', 'blend-split', 'anchor-dimmed', 'anchor-re-split'] as const;
-export type SizingPass = (typeof SIZING_PASSES)[number];
+export type SizingPass = 'mint' | 'recurated' | 'blend-split' | 'anchor-dimmed' | 'anchor-re-split';
 
 /** A change promotion made to the brightness of a record the catalogue already held. */
 export type HeldRecordBrightness =
@@ -1212,10 +1211,7 @@ function ownFitFailsAnchorGrade(
 
 /** Where a re-curated member's brightness came from: a curated source, or
  *  `held` — its own apparent brightness, carried across the move. */
-export const RECURATED_BRIGHTNESS = [
-  'dmag_imputed', 'wds_mag', 'spectral', 'held',
-] as const;
-export type RecuratedBrightness = (typeof RECURATED_BRIGHTNESS)[number];
+export type RecuratedBrightness = 'dmag_imputed' | 'wds_mag' | 'spectral' | 'held';
 
 function isCuratedRecurationSource(
   source: CompanionAbsmag['source'],
