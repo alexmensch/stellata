@@ -12,5 +12,5 @@ const { rowId } = SIBLING_ARTIFACTS.clouds;
 export const CLOUDS_JSON = defineJsonArtifact<CloudsFile, { readonly id: string }, typeof rowId>({
   file: publicRepoPath(PUBLIC_FILES.clouds),
   hint: rerunCommand(SIBLING_ARTIFACTS.clouds.step),
-  rowKey: { id: rowId, text: (cloud) => cloud.id },
+  rowKey: { id: rowId, cardinality: 'one', text: (cloud) => cloud.id },
 });

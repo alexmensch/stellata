@@ -4,7 +4,7 @@
 
 import { HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import type { Declared } from '../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
 
 /** `pflag='P'` on the main table: the mean solution is an unresolved double's
@@ -58,7 +58,7 @@ export interface Tycho2Row {
    *  cascades reading the row need it: the direction tier counts it, and a V
    *  from it is a system blend. */
   isPhotocentre: boolean;
-  ref: SourceRowRef<string>;
+  ref: OneRowRef<string>;
   /** The HIP number Tycho-2 itself names for this entry, its own cross-index
    *  to I/239 rather than a walk's verdict. */
   hip: number | null;

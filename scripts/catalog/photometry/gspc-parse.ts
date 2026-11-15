@@ -2,7 +2,7 @@
 // See README.md#the-ci-cascade.
 
 import type { Declared } from '../../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 
 const GSPC_COLUMNS = ['source_id', 'b_jkc_mag', 'b_jkc_flag', 'v_jkc_mag', 'v_jkc_flag'] as const;
@@ -24,7 +24,7 @@ export interface GspcColour {
    *  the measured one (README.md#why-the-gspc-tier-does-not-gate-on-the-flag).
    * Its count is pinned so an upstream polarity flip surfaces. */
   inValidatedRange: boolean;
-  ref: SourceRowRef<string>;
+  ref: OneRowRef<string>;
 }
 
 /** Rows with either band absent yield no colour and are skipped, so a

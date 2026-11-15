@@ -37,8 +37,9 @@ scripts/binaries/multiples/
 `Stage6Result.rows` is the file's row order: two rows per kept, placed pair in
 Stage 3's pair order, then the standalone rows in the SIMBAD cross-ID file's
 order. A kept pair with no position on either side and no system anchor is not
-a row; its `<wds_id><components>` is in `droppedNoPosition`, the only record of
-it. `mscMagFills` names the pairs whose magnitudes came from the MSC.
+a row; the pair itself is in `droppedNoPosition`, which the `pairs` lineage
+stage reads ([Pairs lineage](../README.md#pairs-lineage)). `mscMagFills`
+names the pairs whose magnitudes came from the MSC.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,
@@ -137,10 +138,10 @@ Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
 (`dedupWdsPairRows`, most-observed row wins — Pismis 24 CD carried
-two contradictory geometries; counted
-`wds_duplicate_pair_rows_dropped`), and Stage-5-kept pairs with no
-astrometry and no system anchor — which never reach the TSV — are
-counted `multiples_pairs_dropped_no_position` with a capped
+two contradictory geometries; a `pairs.duplicate-row` lineage row), and
+Stage-5-kept pairs with no astrometry and no system anchor — which never
+reach the TSV — are each a `pairs.no-position` lineage row
+([Pairs lineage](../README.md#pairs-lineage)), with a capped
 `droppedPairSample` build-log sample, mirroring the Stage-5
 separation-limit audit line.
 

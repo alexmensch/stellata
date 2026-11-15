@@ -4,7 +4,7 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity/identity-pure';
-import { evidenceTexts, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
@@ -151,7 +151,7 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
   const key = promotionOriginKey(r.row);
   const o: RowOutcome = r.outcome;
   const cited = o.kind === 'dropped' && o.reason === 'parked-record' ? o.parked : null;
-  const evidence = evidenceTexts(key, [r.anchor, r.systemAnchor, cited].filter((k): k is string => k !== null));
+  const evidence = [r.anchor, r.systemAnchor, cited].filter((k): k is string => k !== null);
   const via = r.via;
   const row = <B extends Exclude<Branch, Facet>>(branch: B, params: ParamsOf<B>): LineageRow => (
     stageRow(PROMOTION_CODES, key, branch, params as LineageParams, evidence)

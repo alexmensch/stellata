@@ -25,7 +25,7 @@ import { HIP2, type Hip2AstrometryRow } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
 import { TYCHO2 } from '../tycho2-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
-import { sourceRowRef, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import { groupRowRef, sourceRowRef, type GroupRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
 import {
   angularSeparationArcsec,
@@ -36,8 +36,8 @@ import {
 
 const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
-const nssIndex = (sourceId: string): Map<string, SourceRowRef<string>> =>
-  new Map([[sourceId, sourceRowRef(GAIA_NSS, sourceId)]]);
+const nssIndex = (sourceId: string): Map<string, GroupRowRef<string>> =>
+  new Map([[sourceId, groupRowRef(GAIA_NSS, sourceId, [1])]]);
 
 // The cascade returns a solution, not a direction — production advances it at
 // the one call site in stars-parse, on the motion the row ends up with. These

@@ -4,7 +4,8 @@ import type { AthygRow } from './athyg-pure';
 import { GAIA_ASTROMETRY, type GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
 import { gaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
-import { sourceRowRef } from '../../util/sources/row-ref-pure';
+import { groupRowRef, sourceRowRef } from '../../util/sources/row-ref-pure';
+import { MSC_ORBITS } from './msc-source';
 
 export const FIXTURE = { file: 'fixture/binaries.tsv', hint: 'h' } as const;
 
@@ -16,12 +17,14 @@ export function mscSystem(over: Partial<MscSystemRow> = {}): MscSystemRow {
   };
 }
 
+/** Founded on its own key's group unless `over.origin` names another. */
 export function mscOrbit(over: Partial<MscOrbitRow> = {}): MscOrbitRow {
-  return {
+  const fields = {
     wdsId: '10000+0000', syst: 'Aa,Ab', per: 6.0663, perUnit: 'd', t0: 40087.19, e: 0.25,
     aArcsec: null, nodeDeg: null, longpDeg: 31.4, inclDeg: null, note: '',
     ...over,
   };
+  return { ...fields, origin: over.origin ?? groupRowRef(MSC_ORBITS, fields, [1]) };
 }
 
 export function athygRow(over: Partial<AthygRow> = {}): AthygRow {

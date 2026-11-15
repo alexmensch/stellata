@@ -6,7 +6,7 @@ import { sourceRowRef, sourceRowRefText } from './row-ref-pure';
 const FIXTURE = defineJsonArtifact<{ items: { id: string }[] }, { id: string }>({
   file: 'fixture/things.json',
   hint: 'fixture',
-  rowKey: { id: 'things', text: (row) => row.id },
+  rowKey: { id: 'things', cardinality: 'one', text: (row) => row.id },
 });
 
 describe('defineJsonArtifact', () => {

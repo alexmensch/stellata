@@ -7,6 +7,8 @@ import {
   parseAstrometryExclusions, parseComponentSptypeOverrides, parseOrb6ComponentOverrides,
 } from './curated-pure';
 import { parseNssOrbits } from './gaia-pure';
+import { GAIA_NSS } from '../../catalog/sources/gaia-nss-source';
+import { MSC_ORBITS } from './msc-source';
 import { FIXTURE } from './load-fixture';
 import { parseMscOrbits, parseMscSystems } from './msc-pure';
 import { joinSimbadWdsSpectra, parseSimbadWdsXids, parseSptypeByOid } from './simbad-pure';
@@ -92,18 +94,24 @@ describe('parseNssOrbits', () => {
     + '\tf_thiele_innes\tg_thiele_innes\tinclination\targ_periastron\tmass_ratio\tsignificance';
   const solution = (type: string, period: number, significance: string, sourceId = '7'): string =>
     `${sourceId}\t${type}\t${period}\t\t\t\t\t\t\t\t\t\t${significance}`;
-  const pick = (...rows: string[]) => parseNssOrbits(tsv([header, ...rows].join('\n')));
+  const pick = (...rows: string[]) => parseNssOrbits(tsv([header, ...rows].join('\n')), GAIA_NSS);
 
   it('throws on a renamed column rather than reading every orbit without it', () => {
-    expect(() => parseNssOrbits(tsv(`${header.replace('\tperiod\t', '\torbital_period\t')}\n1\tSB1\t9.1\t\t\t\t\t\t\t\t\t\t\n`)))
+    expect(() => parseNssOrbits(tsv(`${header.replace('\tperiod\t', '\torbital_period\t')}\n1\tSB1\t9.1\t\t\t\t\t\t\t\t\t\t\n`), GAIA_NSS))
       .toThrow(/missing required columns: period/);
   });
 
   it('reads the orbit columns', () => {
-    const m = parseNssOrbits(tsv(`${header}\n33711199137024\tOrbital\t773.09\t143.0\t0.33\t-0.83\t-0.69\t0.45\t-0.99\t\t\t\t41.2\n`));
+    const m = parseNssOrbits(tsv(`${header}\n33711199137024\tOrbital\t773.09\t143.0\t0.33\t-0.83\t-0.69\t0.45\t-0.99\t\t\t\t41.2\n`), GAIA_NSS);
     expect(m.get('33711199137024')).toMatchObject({
       solutionType: 'Orbital', period: 773.09, tPeriastron: 143.0, eccentricity: 0.33, gThieleInnes: -0.99, argPeriastron: null,
     });
+  });
+
+  it('cites every solution of the source from the picked row', () => {
+    const m = pick(solution('SB1', 1, '5'), solution('Orbital', 2, '9'), solution('SB1', 3, '5', '8'));
+    expect(m.get('7')).toMatchObject({ solutionType: 'Orbital', origin: { kind: 'group', key: '7', lines: [2, 3] } });
+    expect(m.get('8')?.origin.lines).toEqual([4]);
   });
 
   it('keeps a source\'s best-tier solution, in either file order', () => {
@@ -199,7 +207,20 @@ describe('MSC tables', () => {
     const [r] = parseMscOrbits([
       'wds_id\tsyst\tper\tper_unit\tt0\te\ta_arcsec\tnode_deg\tlongp_deg\tincl_deg\tk1_kms\tk2_kms\tv0_kms\tnode_flag\tnote',
       '23300+5833\tAa,Ab\t6.0663\td\t40087.1914\t0.25\t\t\t31.4\t\t56.7\t\t-13.4\tB\tSB9_1445',
-    ].join('\n'), FIXTURE);
+    ].join('\n'), { ...MSC_ORBITS, ...FIXTURE });
     expect(r).toMatchObject({ syst: 'Aa,Ab', per: 6.0663, perUnit: 'd', aArcsec: null, longpDeg: 31.4 });
+  });
+
+  it('founds the rows sharing wds_id and syst on one group holding only those key fields', () => {
+    const [a, b, c] = parseMscOrbits([
+      'wds_id\tsyst\tper\tper_unit\tt0\te\ta_arcsec\tnode_deg\tlongp_deg\tincl_deg\tnote',
+      '23300+5833\tAa,Ab\t6.0663\td\t\t\t\t\t\t\t',
+      '23300+5833\tAa,Ab\t6.0664\td\t\t\t\t\t\t\t',
+      '23300+5833\tAab,Ac\t9.1\ty\t\t\t\t\t\t\t',
+    ].join('\n'), { ...MSC_ORBITS, ...FIXTURE });
+    expect(a.origin).toBe(b.origin);
+    expect(a.origin.lines).toEqual([2, 3]);
+    expect(Object.keys(a.origin.key)).toEqual(['wdsId', 'syst']);
+    expect(c.origin).toMatchObject({ key: { wdsId: '23300+5833', syst: 'Aab,Ac' }, lines: [4] });
   });
 });

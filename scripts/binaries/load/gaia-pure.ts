@@ -1,10 +1,13 @@
 // The binaries' Gaia DR3 tables: the astrometry exclusions and the NSS two-body orbits.
 
+import { groupRowRef, type GroupRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
 /** The NSS two-body columns the orbit stages read. */
 export interface NssOrbitRow {
+  /** Every solution the file holds for the source, not only the one picked. */
+  readonly origin: GroupRowRef<string>;
   readonly sourceId: string;
   readonly solutionType: string;
   readonly period: number | null;
@@ -71,8 +74,11 @@ const NSS_COLUMNS = [
   'inclination', 'arg_periastron', 'mass_ratio', 'significance',
 ] as const;
 
+type NssSolution = Omit<NssOrbitRow, 'origin'>;
+
 interface NssCandidate {
-  readonly row: NssOrbitRow;
+  readonly row: NssSolution;
+  readonly line: number;
   readonly significance: number | null;
   /** Throws naming this candidate's file line. */
   readonly refuse: (message: string) => never;
@@ -102,7 +108,7 @@ function compareRanked(a: RankedCandidate, b: RankedCandidate): number {
 
 /** The best of one source's solutions; every pair is compared, so whether
  *  the rule refuses does not depend on file order. */
-function pickNssSolution(candidates: readonly NssCandidate[]): NssOrbitRow {
+function pickNssSolution(candidates: readonly NssCandidate[]): NssSolution {
   if (candidates.length === 1) return candidates[0].row;
   const ranked = candidates.map(rankCandidate);
   for (let i = 0; i < ranked.length; i++) for (let j = i + 1; j < ranked.length; j++) compareRanked(ranked[i], ranked[j]);
@@ -110,12 +116,13 @@ function pickNssSolution(candidates: readonly NssCandidate[]): NssOrbitRow {
 }
 
 /** source_id → its orbit. README.md#gaia-nss-one-solution-per-source */
-export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
-  const bySource = new Map<string, NssCandidate[]>();
+export function parseNssOrbits(table: ColumnTable, from: RowKeyed<string, 'group'>): Map<string, NssOrbitRow> {
+  const bySource = new Map<string, [NssCandidate, ...NssCandidate[]]>();
   for (const row of table(NSS_COLUMNS)) {
     const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
     const candidate: NssCandidate = {
+      line: row.line,
       significance: row.float('significance'),
       refuse: (message) => row.fail(message),
       row: {
@@ -137,5 +144,8 @@ export function parseNssOrbits(table: ColumnTable): Map<string, NssOrbitRow> {
     if (held === undefined) bySource.set(sourceId, [candidate]);
     else held.push(candidate);
   }
-  return new Map([...bySource].map(([sourceId, candidates]) => [sourceId, pickNssSolution(candidates)]));
+  return new Map([...bySource].map(([sourceId, [first, ...rest]]) => [sourceId, {
+    ...pickNssSolution([first, ...rest]),
+    origin: groupRowRef(from, sourceId, [first.line, ...rest.map((c) => c.line)]),
+  }]));
 }

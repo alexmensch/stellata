@@ -10,8 +10,10 @@ tier decides, its thresholds and why: [What each tier decides](#what-each-tier-d
 ```
 scripts/binaries/optical/
   optical-tiers-pure.ts (+ test)  OPTICAL_VIA_PROPERTIES (each tag, in
-                                  cascade order, and whether it keeps the
-                                  pair); the tier thresholds; each tier's
+                                  cascade order, whether it keeps the
+                                  pair, and its pairs lineage code's
+                                  description, built from the thresholds
+                                  it names); the tier thresholds; each tier's
                                   test; classifyPairOptical, the cascade
                                   for one pair.
   pm-budget-pure.ts               orbitalPmBudgetKmS: the orbital motion a
@@ -19,7 +21,7 @@ scripts/binaries/optical/
                                   sub-pairs of their system.
   attach-optical.ts (+ test)      attachStage5 (every pair's context, then
                                   the cascade), Stage5Result, opticalTally,
-                                  stage5Counts, stage5Rates.
+                                  stage5Rates.
   stage5-report-pure.ts           The build-log lines, read off the result.
 ```
 
@@ -47,12 +49,14 @@ motion therefore does not reach the escape-velocity gate; whether it should is
 
 ## Counts
 
-`stage5Counts` returns the twelve `optical_*` keys, one per tag, folded
-through the one tally helper; `stage5Rates` derives `optical_rejected_rate`,
-the rejecting tags over every classified pair, through `share`
-(`no-denominator` when none was classified), which `stage5Report` logs,
-`n/a` when absent. The keys are held to the committed count snapshot, as
-Stage 4's are ([Counts](../orbits/README.md#counts)).
+`opticalTally` folds every pair's tag through the one tally helper;
+`stage5Rates` derives `optical_rejected_rate` from it, the rejecting tags
+over every classified pair, through `share` (`no-denominator` when none was
+classified), which `stage5Report` logs, `n/a` when absent. The stage files
+no snapshot keys of its own: each tag is a `pairs.optical.<tag>` lineage
+code, its underscores as dashes, written per pair
+([Pairs lineage](../README.md#pairs-lineage)), and the snapshot pins those
+codes' fold.
 
 ## Choices the outputs rest on
 
