@@ -1,6 +1,6 @@
 // Systemic velocity: the members of each renderable-orbit system share one velocity. See README.md#systemic-velocity.
 
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 
 interface SystemicGroup {
   anchorIdx: number | null;
@@ -22,7 +22,7 @@ export class SystemicGroups {
   }
 
   /** Writes each group's systemic velocity onto its members. */
-  reconcile(starAt: (idx: number) => Star): void {
+  reconcile(starAt: (idx: number) => NamedStar): void {
     for (const g of this.byRoot.values()) {
       if (g.pairs.length === 1) {
         const { pIdx, sIdx, q } = g.pairs[0];

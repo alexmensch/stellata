@@ -1,6 +1,6 @@
 // Which record a pair row names: one already held, one minted earlier this build, a refusal, or a new one. See README.md#row-identity.
 
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../multiples-row';
 import type { HeldVia, RowOutcome } from '../promotion-outcome';
 import { hasIndependentFitRoute } from '../placement/placement';
@@ -42,7 +42,7 @@ export class MintedIds {
 export interface RowAnchor {
   /** The anchor primary's multiples row — the inheritance gates' reference. */
   primaryRow: MultiplesTsvRow;
-  star: Star | null;
+  star: NamedStar | null;
   catalogIdx: number | null;
 }
 

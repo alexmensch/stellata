@@ -145,10 +145,6 @@ export interface WalkedStar {
   gaiaSourceId: string | null; // Gaia DR3 source_id as decimal string; >2^53, never coerce to number
   spectDisplay: string | null; // cleaned-up spectral string for tooltip display
   companionIdx: number;     // assigned later in inferBinaries; -1 = none
-  periodDays: number;       // 0 = not a variable known to GCVS
-  amplitudeMag: number;     // 0 if not variable
-  varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
-  gcvsName: string | null;  // GCVS designation attached by applyVariability (R CrB, VY CMa, V0645 Cen); null when not cross-matched
   /** Build-time-only diagnostics: the parallax cascade's own inversion, before
    *  any override layer fires, and the tier that supplied it. The post-build
    *  distance-regression check measures override drift against them; neither
@@ -209,7 +205,17 @@ export interface NamingFields {
   aliases: string[];
 }
 
-export type Star = WalkedStar & NamingFields;
+export type NamedStar = WalkedStar & NamingFields;
+
+/** What the GCVS step attaches, after the sort. */
+export interface VariableFields {
+  periodDays: number;       // 0 = not a variable known to GCVS
+  amplitudeMag: number;     // 0 if not variable
+  varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
+  gcvsName: string | null;  // GCVS designation (R CrB, VY CMa, V0645 Cen); null when not cross-matched
+}
+
+export type Star = NamedStar & VariableFields;
 
 /** What a shipped row's build-log samples quote that no lineage type records. */
 export interface ShippedFacts {
@@ -586,10 +592,6 @@ export function rowResolver({
       gaiaSourceId,
       spectDisplay: spectral.via === 'none' ? null : spectral.value.spectDisplay,
       companionIdx: -1,
-      periodDays: 0,
-      amplitudeMag: 0,
-      varType: 0,
-      gcvsName: null,
       plxDistPc,
       plxVia: plxRes.via,
       distVia,

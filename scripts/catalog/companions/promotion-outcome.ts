@@ -1,7 +1,7 @@
 // What companion promotion decides per row and per record, and the counts it keeps beyond its lineage. See README.md#companion-promotion-from-databinariesmultiplestsv.
 
 import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
-import type { Star } from '../parse/stars-parse';
+import type { NamedStar } from '../parse/stars-parse';
 import type { MultiplesTsvRow } from './multiples-row';
 
 /** How a pair row reached a record the catalogue already held — identity/README.md#row-identity. */
@@ -68,7 +68,7 @@ export interface RecordRewrite {
 }
 
 /** The held records promotion re-curated onto their anchor's position. */
-export function recuratedRecords(rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>): Star[] {
+export function recuratedRecords(rewrites: ReadonlyMap<NamedStar, Readonly<RecordRewrite>>): NamedStar[] {
   return [...rewrites].flatMap(([star, r]) => (r.brightness.some((b) => b.pass === 'recurated') ? [star] : []));
 }
 

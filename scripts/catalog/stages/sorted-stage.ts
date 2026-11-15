@@ -32,7 +32,7 @@ import { GAIA_HIP_XMATCH } from '../parse/gaia-hip-xmatch-source';
 import { applyVariability, bridgeGcvsByGaia, gcvsSummary } from '../parse/gcvs/gcvs-parse';
 import { GCVS, GCVS_CROSSID } from '../parse/gcvs/gcvs-source';
 import type { ReadStarsInputs } from '../parse/read-stars-inputs';
-import type { Star } from '../parse/stars-parse';
+import type { NamedStar } from '../parse/stars-parse';
 import type { Sorted } from '../record/record-phase';
 import { SIMBAD_OTYPE_MULTIPLE } from '../spectral/spectral-resolve';
 import { buildSystemMembership, lentDistanceRecords, systemMembershipSummary } from '../system-membership/system-membership-pure';
@@ -43,11 +43,11 @@ export interface SortedPassInputs {
   readonly synthGaiaBridges: ReadonlyMap<string, string>;
   readonly simbadSpectral: ReadStarsInputs['simbadSpectral'];
   /** Records coherence snapped or promotion re-curated onto their anchor's distance. */
-  readonly anchorMoved: ReadonlySet<Star>;
+  readonly anchorMoved: ReadonlySet<NamedStar>;
   readonly stepInputs: FileHashes;
 }
 
-export type SortedPasses = ReturnType<typeof sortedPasses>;
+export type SortedPasses = Omit<ReturnType<typeof sortedPasses>, 'records'>;
 
 export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   const hipToIndex = buildHipToIndex(sorted);
@@ -59,7 +59,7 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   const binaries = inferBinaries(sorted);
   console.log(`  in ${Date.now() - tBin}ms`);
 
-  const gcvsCounts = variability(sorted);
+  const { records, counts: gcvsCounts } = variability(sorted);
 
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
@@ -68,33 +68,33 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   );
   console.log(`  in ${Date.now() - tCcdm}ms`);
 
-  const rowIndexMap = buildCatalogRowIndexMap(sorted, inputs.synthGaiaBridges);
+  const rowIndexMap = buildCatalogRowIndexMap(records, inputs.synthGaiaBridges);
   const resolvedPairs = resolvePairs(pairsFromRows(inputs.multiplesRows), rowIndexMap);
   const { primaries: binaryPrimaryIndices, counts: [geometric, ccdm, eclipsing, renderableWings] } = binaryPrimaries(
-    () => ({ claims: mutualPairClaims(sorted, binaries.mutual), counts: binaries.counts }),
-    (claimed) => ccdmClaims(sorted, doubles, claimed),
-    (claimed) => eclipsingClaims(sorted, claimed),
-    (claimed) => renderableCompanionClaims(resolvedPairs, sorted, claimed),
+    () => ({ claims: mutualPairClaims(records, binaries.mutual), counts: binaries.counts }),
+    (claimed) => ccdmClaims(records, doubles, claimed),
+    (claimed) => eclipsingClaims(records, claimed),
+    (claimed) => renderableCompanionClaims(resolvedPairs, records, claimed),
   );
 
-  const overlaps = physicalOverlaps(sorted, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
+  const overlaps = physicalOverlaps(records, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
   for (const [a, b] of overlaps) {
-    console.log(`    ${overlapLabel(sorted[a], a)} | ${overlapLabel(sorted[b], b)}`);
+    console.log(`    ${overlapLabel(records[a], a)} | ${overlapLabel(records[b], b)}`);
   }
   const overlapEmission = catalogCountedStageLineage({
-    spec: OVERLAP_LINEAGE, codes: OVERLAP_CODES, lines: () => overlapLineageLines(overlaps, sorted),
+    spec: OVERLAP_LINEAGE, codes: OVERLAP_CODES, lines: () => overlapLineageLines(overlaps, records),
     budget: OVERLAP_LINEAGE_BUDGET, invariants: OVERLAP_INVARIANTS, inputs: inputs.stepInputs,
   });
 
   const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(resolvedPairs);
   const statuses = multiplicityStatuses(
-    sorted, resolvedMemberIndices(resolvedPairs),
+    records, resolvedMemberIndices(resolvedPairs),
     (sourceId) => inputs.simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const systems = buildSystemMembership({
-    records: sorted, multiplicityStatus: statuses.status, wdsPairs: resolvedPairs, doubles,
-    geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(sorted, inputs.anchorMoved),
+    records, multiplicityStatus: statuses.status, wdsPairs: resolvedPairs, doubles,
+    geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(records, inputs.anchorMoved),
   });
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
@@ -104,7 +104,7 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
   return {
-    figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, overlapEmission, multiplicity,
+    records, figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, overlapEmission, multiplicity,
     binaryPrimaries: binaryPrimaryIndices,
     multiplicityStatus: statuses.status,
     systemMembership: serializeSystemMembership(systems.membership),
@@ -122,7 +122,7 @@ function variability(sorted: Sorted) {
   const hipToGaia = GAIA_HIP_XMATCH.read();
   console.log(`  Gaia DR3 ↔ HIP cross-walk: ${hipToGaia.size} entries in ${Date.now() - tX}ms`);
   bridgeGcvsByGaia(xref, hipToGaia);
-  const counts = applyVariability(sorted, gcvsData, xref);
-  console.log(`  ${gcvsSummary(counts)} in ${Date.now() - tGcvs}ms`);
-  return counts;
+  const variable = applyVariability(sorted, gcvsData, xref);
+  console.log(`  ${gcvsSummary(variable.counts)} in ${Date.now() - tGcvs}ms`);
+  return variable;
 }

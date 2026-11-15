@@ -2,10 +2,10 @@
 
 import { physicalRadius, type RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type { SpectralInfo } from '../../../../src/catalog-format/spectral/spectral-classify';
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 
 export interface BlendSplitCandidate {
-  star: Star;
+  star: NamedStar;
   spectral: SpectralInfo;
 }
 

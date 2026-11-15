@@ -110,12 +110,16 @@ group member on an earlier handle does not compile.
 | Group | Fields | Attached by |
 | --- | --- | --- |
 | `NamingFields` | `desigCon`, `iauName`, `eponym`, `bayer`, `bayerSup`, `bayerComponent`, `gould`, `gouldHalf`, `aliases` | `applyStarNames`, from IV/27A's `desigCon` (`designationConstellation`) |
+| `VariableFields` | `periodDays`, `amplitudeMag`, `varType`, `gcvsName` | `applyVariability`, in `sortedPasses` |
 
 Each phase's record type is the default of `Records<P>`: `walked` records are
-`WalkedStar`, every later phase `Star`. The walk's own copy of the manifest's
-Bayer cell is `printedBayer`, read only for the ladder's added / dropped
-counts. A record promotion mints is a `Star` literal, so it states every
-naming field; leaving one to a default does not compile.
+`WalkedStar`, `named`, `promoted` and `sorted` ones `NamedStar`. The groups
+attached inside the sorted phase ride the handle `sortedPasses` returns, which
+every later stage takes as `Sorted<Star>`. The walk's own copy of the
+manifest's Bayer cell is `printedBayer`, read only for the ladder's added /
+dropped counts. A record promotion mints is a `NamedStar` literal, so it
+states every naming field and no later group; leaving one to a default does
+not compile.
 
 `enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
 is entered once, by the pass that completes it, the SIDs are tagged once, by

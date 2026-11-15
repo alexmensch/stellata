@@ -11,7 +11,8 @@ import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
-import { allocatedSids, enterPhase, finalise, type Records } from './record-phase';
+import { allocatedSids, enterPhase, finalise, type Records, type Sorted } from './record-phase';
+import type { Star } from '../parse/stars-parse';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 
 declare const rows: MultiplesTsvRow[];
@@ -97,8 +98,13 @@ describe('record phases', () => {
         (r: Records<'walked'>) => r[0].bayer,
         (r: Records<'named'>) => r[0].bayer,
       ],
+      [
+        // @ts-expect-error the GCVS step attaches the variable-star fields, after the sort
+        (r: Sorted) => r[0].varType,
+        (r: Sorted<Star>) => r[0].varType,
+      ],
     ];
-    expect(readBeforeBeside).toHaveLength(1);
+    expect(readBeforeBeside).toHaveLength(2);
   });
 
   it('finalises only when the SIDs and display names pair one-for-one with the records', () => {

@@ -46,12 +46,12 @@ async function preAllocationStages(inputHashes: FileHashes): Promise<PreAllocati
     synthGaiaBridges,
   }, walk.manifestFounded, naming.coherenceVerdicts);
   const { sorted, sortedKey } = sortByApparentV(promoted, (s) => avSolToStar(inputs.dustGrid, s.x, s.y, s.z));
-  const passes = sortedPasses(sorted, {
+  const { records, ...passes } = sortedPasses(sorted, {
     multiplesRows, synthGaiaBridges, simbadSpectral: inputs.simbadSpectral, anchorMoved: promotion.anchorMoved,
     stepInputs: inputHashes,
   });
   return {
-    walk, naming, promotion, sorted, sortedKey, passes, multiplesRows,
+    walk, naming, promotion, sorted: records, sortedKey, passes, multiplesRows,
     apsisMap: inputs.apsisMap,
     gspcMap: inputs.gspcMap,
     conLookup: inputs.conAssignment.lookup,

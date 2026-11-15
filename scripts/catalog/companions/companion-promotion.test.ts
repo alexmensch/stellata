@@ -28,7 +28,7 @@ import { CONSTELLATIONS, createConstellationAssignment, iauEdgeRecords } from '.
 import { STELLARIUM } from '../parse/constellations/stellarium-source';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
-import type { Star } from '../parse/stars-parse';
+import type { NamedStar, Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { multiplesRow, type MultiplesRowOverrides } from './multiples-fixture';
@@ -1211,7 +1211,7 @@ describe('promoteCompanions build-time de-extinction', () => {
   function promoteAt(
     grid: DustGrid,
     rowOverrides: MultiplesRowOverrides,
-  ): { star: Star } & Pick<ReturnType<typeof promote>, 'codes'> {
+  ): { star: NamedStar } & Pick<ReturnType<typeof promote>, 'codes'> {
     const primaryStar = makeStar({ gaiaSourceId: '111', x: 40, y: 0, z: 0 });
     const primaryRow = multiplesRow({
       comp: 'A', orbitRole: 'primary', gaiaSourceId: '111',

@@ -1,7 +1,7 @@
 // The build's record list tagged with the phase it has reached, so each pass
 // states the phase it runs in and the compiler holds the order. See README.md#record-phases.
 
-import type { Star, WalkedStar } from '../parse/stars-parse';
+import type { NamedStar, Star, WalkedStar } from '../parse/stars-parse';
 
 declare const phase: unique symbol;
 declare const allocated: unique symbol;
@@ -12,9 +12,9 @@ export type RecordPhase = 'walked' | 'named' | 'promoted' | 'sorted';
 /** The fields a record carries on entering each phase; later steps attach the rest (README.md#field-groups). */
 interface RecordAt {
   walked: WalkedStar;
-  named: Star;
-  promoted: Star;
-  sorted: Star;
+  named: NamedStar;
+  promoted: NamedStar;
+  sorted: NamedStar;
 }
 
 export type Records<P extends RecordPhase, S = RecordAt[P]> = readonly S[] & { readonly [phase]: P };

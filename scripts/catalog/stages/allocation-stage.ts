@@ -17,6 +17,7 @@ import type { FileHashes } from '../../util/build-stamp';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { stageLineageLine } from '../lineage/lineage-row-pure';
 import { allocatedSids, type AllocatedSids, type Sorted } from '../record/record-phase';
+import type { Star } from '../parse/stars-parse';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
 
 export type Allocated = Extract<Allocation, { kind: 'allocated' }>;
@@ -30,7 +31,7 @@ export interface AllocatedCatalog {
 }
 
 export function allocationStage(
-  sorted: Sorted,
+  sorted: Sorted<Star>,
   upstream: CatalogLineage,
   multiplesRows: readonly MultiplesTsvRow[],
   stepInputs: FileHashes,

@@ -12,6 +12,7 @@ import {
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
 import type { Sorted } from '../record/record-phase';
+import type { Star } from '../parse/stars-parse';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
 // parseHipCcdm) drops because Hipparcos's main catalogue modelled
@@ -155,7 +156,7 @@ export function doublesEvidence(
 // (isOpticalDoubleMember) — CCDM keeps a tail of wide line-of-sight optical
 // pairs whose brightest member would otherwise get spurious chart-mode wings.
 export function ccdmClaims(
-  stars: Sorted,
+  stars: Sorted<Star>,
   evidence: DoublesEvidence,
   claimed: ReadonlySet<number>,
 ): PrimaryClaims<Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'>> {
