@@ -6,14 +6,15 @@ import ts from 'typescript';
 const REPO = resolve(__dirname, '../..');
 const WIRING = resolve(__dirname, 'build-catalog.ts');
 
-/** Each phase's one `enterPhase` call site, by the pass that completes it, and the allocated SIDs' one tag. */
+/** Each phase's one `enterPhase` call site, in phase order, by the pass that completes it. */
 const PHASE_ENTRIES: Record<string, string> = {
   walked: 'scripts/catalog/stages/walk-stage.ts',
   named: 'scripts/catalog/stages/naming-stage.ts',
   promoted: 'scripts/catalog/stages/promotion-stage.ts',
   sorted: 'scripts/catalog/record/record-order-pure.ts',
-  allocatedSids: 'scripts/catalog/stages/allocation-stage.ts',
 };
+const SIDS_ENTRY = 'scripts/catalog/stages/allocation-stage.ts';
+const SUPERSEDED_PHASES = Object.keys(PHASE_ENTRIES).slice(0, -1);
 
 const ARITHMETIC = new Set([
   ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken,
@@ -27,8 +28,8 @@ const isCall = (e: ts.Expression): boolean =>
 
 /** Every way `source` departs from wiring: a top-level statement but an import
  *  or a function, a function statement but a `const` initialised by a call, a
- *  closing `return` or the one closing `emitArtifacts` call, and any loop,
- *  `throw` or arithmetic anywhere in the file. */
+ *  closing `return` or the one closing `emitArtifacts` call, any loop, `throw`
+ *  or arithmetic, and a superseded phase's handle read other than once. */
 function wiringViolations(file: string, source: string): string[] {
   const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   const out: string[] = [];
@@ -58,7 +59,30 @@ function wiringViolations(file: string, source: string): string[] {
     ts.forEachChild(n, visit);
   };
   visit(sf);
-  return out;
+  return [...out, ...handleReuse(sf)];
+}
+
+function handleReuse(sf: ts.SourceFile): string[] {
+  const declared = new Set<ts.Node>();
+  const reads = new Map<string, number>();
+  const collect = (n: ts.Node): void => {
+    if ((ts.isBindingElement(n) || ts.isVariableDeclaration(n)) && ts.isIdentifier(n.name)
+      && SUPERSEDED_PHASES.includes(n.name.text)) {
+      declared.add(n.name);
+      reads.set(n.name.text, reads.get(n.name.text) ?? 0);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+  const count = (n: ts.Node): void => {
+    if (ts.isIdentifier(n) && reads.has(n.text) && !declared.has(n)
+      && !((ts.isPropertyAccessExpression(n.parent) || ts.isPropertyAssignment(n.parent)) && n.parent.name === n)) {
+      reads.set(n.text, reads.get(n.text)! + 1);
+    }
+    ts.forEachChild(n, count);
+  };
+  count(sf);
+  return [...reads].filter(([, k]) => k !== 1).map(([name, k]) => `phase handle: ${name} read ${k} times`);
 }
 
 function sourceFiles(dir: string): string[] {
@@ -89,7 +113,10 @@ describe('build-catalog.ts wiring ratchet', () => {
   });
 
   it('enters each phase once, in the pass that completes it, and tags the SIDs only in allocation', () => {
-    expect(tagConstructors()).toEqual(Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])));
+    expect(tagConstructors()).toEqual({
+      ...Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])),
+      allocatedSids: [SIDS_ENTRY],
+    });
   });
 
   it('catches each departure from wiring', () => {
@@ -106,12 +133,15 @@ describe('build-catalog.ts wiring ratchet', () => {
       '}',
       'function pre() {',
       '  log();',
-      '  return { a: stage() };',
+      '  const { walked, ...w } = walkStage();',
+      '  const { named } = namingStage(walked, w.rows);',
+      '  const late = coherence(walked);',
+      '  return { a: stage(), named, late };',
       '}',
       'const helper = (x: number) => x * 2;',
     ].join('\n');
     expect(wiringViolations('probe.ts', probe)).toEqual([
-      'top level: const helper = (x: number) => x * 2; (line 15)',
+      'top level: const helper = (x: number) => x * 2; (line 18)',
       'statement: let c = stage(); (line 4)',
       'statement: const d = a.length; (line 5)',
       'statement: for (const x of b) log(x); (line 6)',
@@ -121,7 +151,8 @@ describe('build-catalog.ts wiring ratchet', () => {
       'throw: throw new Error("no"); (line 7)',
       'arithmetic: a + 1 (line 8)',
       'arithmetic: n++ (line 8)',
-      'arithmetic: x * 2 (line 15)',
+      'arithmetic: x * 2 (line 18)',
+      'phase handle: walked read 2 times',
     ]);
   });
 });

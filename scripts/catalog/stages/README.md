@@ -66,5 +66,8 @@ loop, `throw` or arithmetic anywhere in it, on any top-level statement but
 an import or a function, and on any function statement but a `const`
 initialised by a call, `preAllocationStages`' closing `return` and `main`'s
 closing `emitArtifacts` call: logic lands in a stage, never in the wiring.
-It also pins each phase's `enterPhase` call to the one pass that completes
+Each handle to a superseded phase (`walked`, `named`, `promoted`) must be
+read exactly once, by the stage that supersedes it: the phase tags refuse a
+pass given the wrong phase, but only this check refuses an old handle
+reused after a later stage has run. It also pins each phase's `enterPhase` call to the one pass that completes
 that phase, and the SIDs' `allocatedSids` tag to the allocation stage.
