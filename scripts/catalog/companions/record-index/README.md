@@ -16,7 +16,7 @@ scripts/catalog/companions/record-index/
                              the readers of resolvePairs' pairs:
                              wingRenderablePrimaries,
                              renderableOrbitRelations (the overlap gate's
-                             exemption, ../README.md#overlap-gate),
+                             exemption, ../../overlap/README.md#overlap-gate),
                              resolvedMemberIndices (the
                              MULTIPLICITY_RESOLVED set),
                              buildComponentDesignations.

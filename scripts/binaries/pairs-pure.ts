@@ -5,11 +5,15 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import { canonicalCompLetter, parentComponentToken, wdsRootOf } from './component-tokens-pure';
 import type { MultiplesRecord } from './multiples-record-pure';
+import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
+import { rowKeyText } from '../util/sources/row-ref-pure';
 
 /** One physical pair: a system's primary and secondary rows joined. */
 export interface MultiplesPair {
   readonly systemId: string;
   readonly wdsId: string;
+  /** Its secondary row's key, the row that founds its companion: README.md#runtime-pairs-lineage. */
+  readonly origin: string;
   readonly primaryComp: string;
   /** Canonical (`canonicalCompLetter`), so `Aa1,2`'s secondary is `Aa2`. */
   readonly secondaryComp: string;
@@ -49,6 +53,7 @@ export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
     pairs.push({
       systemId,
       wdsId,
+      origin: rowKeyText(MULTIPLES_ROW_KEY, s),
       primaryComp,
       secondaryComp: canonicalCompLetter(primaryComp, s.comp),
       primaryGaia: p.gaiaSourceId,

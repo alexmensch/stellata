@@ -68,6 +68,11 @@ export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identi
   identity: 'promotion.identity',
 };
 
+export const OVERLAP_LINEAGE: StageLineageSpec<'overlap', 'overlap'> = {
+  stage: 'overlap',
+  files: ['overlap'],
+};
+
 /** Allocation's key -> SID file: not `identity`, which names the rows of records a stage founds. */
 export const ALLOCATION_SIDS_STEM = 'allocation.sids';
 
@@ -79,6 +84,11 @@ export const ALLOCATION_LINEAGE: StageLineageSpec<'allocation' | typeof ALLOCATI
 export const NAMING_LINEAGE: StageLineageSpec<'naming', 'naming'> = {
   stage: 'naming',
   files: ['naming'],
+};
+
+export const RUNTIME_PAIRS_LINEAGE: StageLineageSpec<'runtime-pairs', 'runtime-pairs'> = {
+  stage: 'runtime-pairs',
+  files: ['runtime-pairs'],
 };
 
 /** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */

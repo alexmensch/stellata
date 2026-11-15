@@ -10,6 +10,8 @@ import {
 } from '../../src/catalog-format/binaries/binaries-format';
 import { MULTIPLES_TSV } from '../../scripts/binaries/multiples-tsv';
 import { encodeRuntimeBinaries, type RuntimeBinaries } from '../../scripts/binaries/runtime-binaries-pure';
+import { RUNTIME_PAIRS_CODES, runtimePairsLineageLines } from '../../scripts/binaries/runtime-pairs-lineage-pure';
+import { foldStageLines } from '../../scripts/catalog/lineage/lineage-row-pure';
 import { parseCatalogRowIndexMap } from '../../scripts/catalog/companions/record-index/catalog-row-index-map-pure';
 import {
   parseCatalogPairEnds, serializeCatalogPairEnds,
@@ -27,15 +29,17 @@ const UPDATE_ENV_VAR = 'UPDATE_BINARIES_GOLDEN';
 const UPDATE_COMMAND = `${UPDATE_ENV_VAR}=1 pnpm vitest run tests/integration/binaries-bin-golden.test.ts`;
 const EXPECTED_COUNTS = {
   pairs_total: 85,
-  pairs_emitted: 54,
-  pairs_dropped_primary_unresolved: 15,
-  pairs_dropped_secondary_unresolved: 6,
-  pairs_dropped_degenerate_idx: 5,
-  pairs_dropped_same_relation_alias: 3,
-  pairs_dropped_duplicate_relation: 2,
   pairs_with_orbit: 20,
   pairs_with_inclination: 16,
   pairs_inner_of_hierarchy: 19,
+};
+const EXPECTED_FATES = {
+  'runtime-pairs.emitted': 54,
+  'runtime-pairs.dropped.primary-unresolved': 15,
+  'runtime-pairs.dropped.secondary-unresolved': 6,
+  'runtime-pairs.dropped.degenerate-idx': 5,
+  'runtime-pairs.dropped.same-relation-alias': 3,
+  'runtime-pairs.dropped.duplicate-relation': 2,
 };
 
 function fieldAt(recordOffset: number): string {
@@ -70,7 +74,8 @@ describe('binaries.bin golden', () => {
 
   it('the fixture exercises every count', () => {
     expect(encoded.counts).toEqual(EXPECTED_COUNTS);
-    for (const count of Object.values(EXPECTED_COUNTS)) expect(count).toBeGreaterThan(0);
+    expect(foldStageLines(RUNTIME_PAIRS_CODES, runtimePairsLineageLines(encoded.pairs, encoded.fates))).toEqual(EXPECTED_FATES);
+    for (const count of [...Object.values(EXPECTED_COUNTS), ...Object.values(EXPECTED_FATES)]) expect(count).toBeGreaterThan(0);
   });
 
   it('the encoder reproduces the committed golden byte for byte', () => {
@@ -94,6 +99,6 @@ describe('binaries.bin golden', () => {
   it('the loader parses the golden', () => {
     const golden = readFileSync(GOLDEN);
     const buf = golden.buffer.slice(golden.byteOffset, golden.byteOffset + golden.byteLength);
-    expect(parseBinaries(buf).relations.length).toBe(EXPECTED_COUNTS.pairs_emitted);
+    expect(parseBinaries(buf).relations.length).toBe(EXPECTED_FATES['runtime-pairs.emitted']);
   });
 });
