@@ -21,6 +21,7 @@ import { runStages, type StageResults } from './build-binaries';
 import type { Stage3Result } from './astrometry/attach-astrometry';
 import { binariesCounts } from './counts/binaries-counts';
 import { foldStageLines } from '../catalog/lineage/lineage-row-pure';
+import { PAIRS_CODES, pairsLineageLines } from './pairs-lineage-pure';
 import { BINDING_CODES, bindingLineageLines } from './resolve/binding-lineage-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage4Result } from './orbits/attach-orbits';
@@ -134,7 +135,8 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
 
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     const binding = foldStageLines(BINDING_CODES, bindingLineageLines(results.multiples.rows));
-    expect(asWritten(binariesCounts(results, binding)) === snapshotText('build-binaries-expected.json')).toBe(true);
+    const pairs = foldStageLines(PAIRS_CODES, pairsLineageLines(results));
+    expect(asWritten(binariesCounts(results, { binding, pairs })) === snapshotText('build-binaries-expected.json')).toBe(true);
   });
 });
 

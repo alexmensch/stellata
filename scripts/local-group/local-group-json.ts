@@ -12,5 +12,5 @@ const { rowId } = SIBLING_ARTIFACTS['local-group'];
 export const LOCAL_GROUP_JSON = defineJsonArtifact<LocalGroupFile, { readonly id: string }, typeof rowId>({
   file: publicRepoPath(PUBLIC_FILES.localGroup),
   hint: rerunCommand(SIBLING_ARTIFACTS['local-group'].step),
-  rowKey: { id: rowId, text: (galaxy) => galaxy.id },
+  rowKey: { id: rowId, cardinality: 'one', text: (galaxy) => galaxy.id },
 });

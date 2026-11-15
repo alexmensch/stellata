@@ -17,11 +17,11 @@ export function stage1Report(c: ReferenceCatalogs): string[] {
   const wdsRows = c.pairs.length - c.synthesizedOrb6Pairs.length - c.synthesizedMscPairs.length;
   const athygGaia = c.athyg.filter((r) => r.gaia !== null).length + indices.athygGaiaMagRejected.length;
   const coverage = share(athygGaia, c.athyg.length);
-  const dedup = fold(WDS_DEDUP_OUTCOMES, c.wdsDedup, (o) => o);
+  const dedup = fold(WDS_DEDUP_OUTCOMES, c.wdsDedup, (d) => d.outcome);
   const grades = fold(ORB6_GRADE_OUTCOMES, c.orb6Grades, (o) => o);
   const overrides = fold(ORB6_OVERRIDE_OUTCOMES, c.orb6Overrides, (o) => o);
   const exclusion = fold(ASTROMETRY_EXCLUSION_OUTCOMES, c.astrometryExclusion, (o) => o);
-  const rescue = fold(BLANK_RESCUE_OUTCOMES, c.blankRescue, (o) => o);
+  const rescue = fold(BLANK_RESCUE_OUTCOMES, c.blankRescue, (d) => d.outcome);
   const { synthesized, ...mscSkips } = fold(MSC_SYNTHESIS_OUTCOMES, c.mscSynthesis, (o) => o);
   const lines = [
     `loaded ${count(wdsRows)} WDS pair rows (dropped ${count(dedup.dropped)} duplicates, kept most-observed)`,

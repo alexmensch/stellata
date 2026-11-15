@@ -276,7 +276,7 @@ sources, physics, decisions); `scripts/binaries/README.md` (engineer audience
 implied single A,B pair). The rescue tier ingests the high-confidence
 subset (an ORB6 orbit or a SIMBAD xid anchors the system —
 [Blank-components rescue](/scripts/binaries/load/README.md#blank-components-rescue)); the remaining
-~<!-- count:build-binaries/blank_components_deferred k4 -->112.8k<!-- /count -->-row tail was instrumented before deciding whether to ingest it
+~<!-- count:build-binaries/pairs.blank-deferred k4 -->112.8k<!-- /count -->-row tail was instrumented before deciding whether to ingest it
 wholesale:
 
 - 22.0% of the tail resolves ≥1 component through the Stage-2 cascade,

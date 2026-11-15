@@ -61,8 +61,9 @@ scripts/binaries/
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
                                   multiples.tsv, the binding verdicts and
-                                  the component-binding lineage stage
-                                  (resolve/README.md#binding-lineage)
+                                  the component-binding
+                                  (resolve/README.md#binding-lineage) and
+                                  pairs (#pairs-lineage) lineage stages
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
@@ -73,6 +74,9 @@ scripts/binaries/
                                   (pnpm run test:spotcheck,
                                   resolve/README.md#the-spot-check).
   binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
+  pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
+                                  pair row the stages decide, as the pairs
+                                  lineage stage (#pairs-lineage).
   load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
   orbits/ optical/ multiples/
   counts/
@@ -159,7 +163,8 @@ scripts/binaries/
                                   (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
-                                  every stage's report; and
+                                  every stage's report; pairLabel
+                                  (<wds_id><components>); and
                                   droppedPairSample, the capped sample of
                                   a gate's dropped pairs.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
@@ -217,13 +222,14 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach — with the binding-integrity verdicts
-   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface)
-   and each component's Gaia and HIP binding provenance as the
+   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface),
+   each component's Gaia and HIP binding provenance as the
    `component-binding` lineage stage
-   (`build/lineage/component-binding.tsv.gz`).
+   (`build/lineage/component-binding.tsv.gz`), and every pair row's fate as
+   the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
-   (`../catalog/astrometry-request/`). All three land through `emitArtifacts`
+   (`../catalog/astrometry-request/`). Every output lands through `emitArtifacts`
    only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
@@ -296,3 +302,35 @@ two DISTINCT stars collapsed onto one record; those are counted
 `pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
 missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
 Ba/Bb sub-letter blend the inner-pair hierarchy owns).
+
+## Pairs lineage
+
+`build:binaries` writes every pair row the stages decide as the `pairs`
+lineage stage, after `component-binding` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-pairs-stage)), from
+`pairs-lineage-pure.ts`. A pair founds no record, so its rows are keyed on
+the rows that founded it, the pair's `origin`
+([the WDS readers](../wds/README.md#files-in-this-area)), each a group key
+([SourceRowRef](../util/sources/README.md#sourcerowref)): its WDS summary
+key (`wds:<wds_id>/<discoverer>/<components>`, a blank row keeping its blank
+components when rescued), an ORB6 orphan's ORB6 key (`orb6:`, the same
+form, components as printed), an MSC inner pair's first orbit row's key
+(`msc-orbits:<wds_id>/<syst>`) or a Gaia NSS inner pair's carrier source
+(`gaia-dr3-nss:<source_id>`).
+
+| Code | Written for |
+| --- | --- |
+| `pairs.duplicate-row` | a WDS row the duplicate collapse dropped; the kept row shares its key |
+| `pairs.blank-deferred` / `-donor` / `-enumerated` | a blank-components row the rescue did not rescue ([Blank-components rescue](load/README.md#blank-components-rescue)); a donor cites the ORB6 orphans it donated to as evidence |
+| `pairs.optical.<tag>` | every pair Stage 5 classified, one code per `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.no-position` | a pair Stage 5 kept that Stage 6 could not place, beside its optical row |
+
+A decomposed pair's `params` carry each side's letter and, where bound, its
+Gaia source bare and its HIP as `hip:` — the forms trace matches a query on.
+Every code is an outcome with no removal effect, and the stage writes no
+identity rows. Its counts fold into the snapshot's `pairs` stage
+([Composition, not counting](counts/README.md#composition-not-counting)).
+
+`PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
+bytes gzipped in 379–384 ms across two runs, neither diffing against a
+baseline (2026-11-14).
