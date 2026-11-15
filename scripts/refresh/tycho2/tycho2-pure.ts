@@ -140,6 +140,7 @@ export function pairCarriedAsOneStar(key: string, reached: ReadonlySet<string>):
 }
 
 const SHOWN = 10;
+const sample = (keys: readonly string[]): string => `${keys.slice(0, SHOWN).join(', ')}${keys.length > SHOWN ? ' …' : ''}`;
 
 /** Every manifest TYC reaches a table row, or its pair's entry does: README.md#gates. */
 export function membershipCover(membership: ReadonlySet<string>, reached: ReadonlySet<string>): Check {
@@ -148,11 +149,10 @@ export function membershipCover(membership: ReadonlySet<string>, reached: Readon
   const report = `manifest TYCs reached: ${membership.size - missing.length}/${membership.size}, plus ${merged.length} carried by a pair entry`;
   const unresolved = missing.filter((key) => !pairCarriedAsOneStar(key, reached)).sort(compareCodeUnits);
   if (unresolved.length === 0) return { kind: 'pass', report };
-  const shown = `${unresolved.slice(0, SHOWN).join(', ')}${unresolved.length > SHOWN ? ' …' : ''}`;
   return {
     kind: 'fail',
     report,
-    message: `${unresolved.length} manifest TYC(s) reach neither I/259 table, and no pair entry of theirs was reached either (${shown}) `
+    message: `${unresolved.length} manifest TYC(s) reach neither I/259 table, and no pair entry of theirs was reached either (${sample(unresolved)}) `
       + '— adjudicate as a membership event before committing this pull. A component\'s pair entry is visible here only when the request set names it too.',
   };
 }
@@ -184,7 +184,7 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
       const outside = unscannable(request.mentioned);
       if (outside.length > 0) {
         throw new Error(`${outside.length} mentioned TYC(s) fall outside the scanned TYC1 span [${TYC1_MIN}, ${TYC1_MAX}] `
-          + `(${outside.slice(0, SHOWN).join(', ')}${outside.length > SHOWN ? ' …' : ''}); widen the span or fix the request set`);
+          + `(${sample(outside)}); widen the span or fix the request set`);
       }
       log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new)`);
       const kept = { main: new Map<string, Row>(), suppl1: new Map<string, Row>() };
