@@ -107,6 +107,11 @@ describe('encodeCatalog', () => {
     })).toThrow(/record 1 carries NO_SID/);
   });
 
+  it('throws on a binary-primary claim that addresses no record', () => {
+    expect(() => encode(undefined, new Set([3]))).toThrow(/binary-primary claim 3 addresses no record of 3/);
+    expect(() => encode(undefined, new Set([-1]))).toThrow(/claim -1/);
+  });
+
   it('throws unless Sol, at record 0, is the only record without a constellation', () => {
     expect(() => encode([SOL, makeStar(), STAR])).toThrow(/only record without a constellation; got 2: 0, 1/);
     expect(() => encode([STAR, SOL, STAR])).toThrow(/got 1: 1/);

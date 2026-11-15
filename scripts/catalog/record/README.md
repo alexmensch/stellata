@@ -47,7 +47,8 @@ scripts/catalog/record/
                                   (/src/catalog-format/record/README.md,
                                   byte 35). Throws on a status
                                   list that does not pair one-for-one with
-                                  the records, on NO_SID,
+                                  the records, on a binary-primary claim
+                                  addressing no record, on NO_SID,
                                   and unless Sol is the one record without
                                   a constellation. Pure.
 ```

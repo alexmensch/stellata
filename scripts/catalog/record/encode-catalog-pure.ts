@@ -44,6 +44,10 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPri
   if (multiplicityStatus.length !== stars.length) {
     throw new Error(`encodeCatalog: ${stars.length} records but ${multiplicityStatus.length} multiplicity statuses`);
   }
+  const strayClaim = [...binaryPrimaries].find((i) => !(Number.isInteger(i) && i >= 0 && i < stars.length));
+  if (strayClaim !== undefined) {
+    throw new Error(`encodeCatalog: binary-primary claim ${strayClaim} addresses no record of ${stars.length}`);
+  }
   const unallocated = sids.indexOf(NO_SID);
   if (unallocated !== -1) throw new Error(`encodeCatalog: record ${unallocated} carries NO_SID`);
   const nameTable = encodeNameTable(displayNames);
