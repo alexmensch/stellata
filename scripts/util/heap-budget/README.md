@@ -40,6 +40,19 @@ full collections, which is what the headroom covers. Over budget, the check
 fails the emission like any other, so nothing lands; the build log prints
 the peak beside the budget either way.
 
+## Measured need — build:catalog
+
+`build:catalog` completes at `--max-old-space-size=2925` and runs out of
+heap at 2,900 (Node 26.7, 2026-11-15, the step run with `--any-baseline` so
+all three record-walk lineage diffs ran, each against a baseline from the same
+inputs). That is 16% under the 3,481 MiB budget. The peak is placement
+lineage's sort and diff inside `walkManifest`, while the reference tables are
+still held; `finalRecords` releases them before SID allocation, whose working
+set otherwise pushed the step past the budget. A diff against a baseline
+that differs by many keys holds its changed lines briefly on top
+([Run-to-run diff](../../catalog/lineage/README.md#run-to-run-diff)), which
+this figure does not include.
+
 When the step is legitimately bigger, shrink what it holds first — the
 placement lineage keeps lines, not objects
 ([Storage and cost](../../catalog/lineage/README.md#storage-and-cost)). Raising
