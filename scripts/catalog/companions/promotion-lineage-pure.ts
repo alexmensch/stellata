@@ -12,7 +12,7 @@ import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type {
   CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, MultiplesTsvRow,
-  PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome, SizingPass,
+  PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
 } from './companion-promotion';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -75,9 +75,9 @@ const HELD_CODES = {
 };
 type HeldCode = keyof typeof HELD_CODES;
 
-const RECURATED_CODES = {
-  dmag_imputed: 'existing.recurated.dmag-imputed', wds_mag: 'existing.recurated.wds-mag', spectral: 'existing.recurated.spectral',
-} as const satisfies Record<Exclude<HeldRecordBrightness & { pass: 'recurated' }, { source: 'held' }>['source'], HeldCode>;
+type CuratedSource = Exclude<RecuratedBrightness, 'held'>;
+const recuratedCode = (source: CuratedSource) => `existing.recurated.${BRIGHTNESS_CODES[source]}` as const;
+
 
 const brightnessFacet = (source: CompanionAbsmagSource): BareFacet => `brightness.${BRIGHTNESS_CODES[source]}`;
 
@@ -254,7 +254,7 @@ export function rewriteRows(key: string, rewrite: RecordRewrite, recordKey: (idx
             absmag: absmagText(b.absmag), from_pc: String(b.fromPc), to_pc: String(b.toPc), av_from: avText(b.avFrom), av_to: avText(b.avTo),
           });
         }
-        return held(RECURATED_CODES[b.source], { absmag: absmagText(b.absmag), av: avText(b.av), ci_via: b.ci });
+        return held(recuratedCode(b.source), { absmag: absmagText(b.absmag), av: avText(b.av), ci_via: b.ci });
       case 'anchor-dimmed':
         return held('existing.anchor-dimmed', { absmag: absmagText(b.absmag) }, sortUtf8([...b.members], (k) => k));
       case 'anchor-re-split':
