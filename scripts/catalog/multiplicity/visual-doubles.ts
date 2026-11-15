@@ -9,8 +9,8 @@ import {
   type OpticalDoubleContext,
 } from './binary-flags-pure';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
-import type { Star } from '../parse/stars-parse';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
+import type { Sorted } from '../record/record-phase';
 
 // Curated visual-double systems that the CCDM+MultFlag filter (see
 // parseHipCcdm) drops because Hipparcos's main catalogue modelled
@@ -156,7 +156,7 @@ export function doublesEvidence(
 // line-of-sight optical pairs whose brightest member would otherwise get
 // spurious chart-mode wings.
 export function applyDoublesFlag(
-  stars: Star[],
+  stars: Sorted,
   evidence: DoublesEvidence,
 ): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
   const suppress = (primaryIdx: number, memberIndices: readonly number[]): boolean =>

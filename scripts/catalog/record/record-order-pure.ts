@@ -3,6 +3,7 @@
 
 import { apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
 import { FLAG_IS_SOL, SOL_RECORD_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { enterPhase, type Records, type Sorted } from './record-phase';
 
 export interface ApparentOrderStar {
   x: number;
@@ -18,6 +19,23 @@ export interface ApparentOrderStar {
  *  first with no special case. */
 export function apparentVFromSol(star: ApparentOrderStar, avSolToStar: number): number {
   return apparentMagnitude(star.absmag, Math.hypot(star.x, star.y, star.z)) + avSolToStar;
+}
+
+/** A NaN key scrambles the whole sort, so each key is checked finite before it. */
+export function sortByApparentV<S extends ApparentOrderStar & { readonly flags: number }>(
+  records: Records<'promoted', S>,
+  avSolToStar: (record: S) => number,
+): { sorted: Sorted<S>; sortedKey: number[] } {
+  const key = new Float64Array(records.length);
+  records.forEach((record, i) => {
+    const v = apparentVFromSol(record, avSolToStar(record));
+    if (!Number.isFinite(v)) throw new Error(`Record ${i} has a non-finite apparent V sort key: ${v}`);
+    key[i] = v;
+  });
+  const order = Array.from(records.keys()).sort((a, b) => key[a] - key[b]);
+  const sorted = order.map((i) => records[i]);
+  assertSolFirst(sorted);
+  return { sorted: enterPhase('sorted', sorted), sortedKey: order.map((i) => key[i]) };
 }
 
 /** Throws unless exactly one record is flagged Sol and it sorted to SOL_RECORD_INDEX. */

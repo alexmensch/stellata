@@ -1,0 +1,188 @@
+import { describe, expect, it } from 'vitest';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { join, relative, resolve } from 'node:path';
+import ts from 'typescript';
+
+const REPO = resolve(__dirname, '../..');
+const WIRING = resolve(__dirname, 'build-catalog.ts');
+
+/** Each phase's one `enterPhase` call site, in phase order, by the pass that completes it. */
+const PHASE_ENTRIES: Record<string, string> = {
+  walked: 'scripts/catalog/stages/walk-stage.ts',
+  named: 'scripts/catalog/stages/naming-stage.ts',
+  promoted: 'scripts/catalog/stages/promotion-stage.ts',
+  sorted: 'scripts/catalog/record/record-order-pure.ts',
+};
+const SIDS_ENTRY = 'scripts/catalog/stages/allocation-stage.ts';
+const SUPERSEDED_PHASES = Object.keys(PHASE_ENTRIES).slice(0, -1);
+
+const ARITHMETIC = new Set([
+  ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken, ts.SyntaxKind.AsteriskToken, ts.SyntaxKind.SlashToken,
+  ts.SyntaxKind.PercentToken, ts.SyntaxKind.AsteriskAsteriskToken, ts.SyntaxKind.PlusEqualsToken,
+  ts.SyntaxKind.MinusEqualsToken, ts.SyntaxKind.AsteriskEqualsToken, ts.SyntaxKind.SlashEqualsToken,
+  ts.SyntaxKind.PercentEqualsToken, ts.SyntaxKind.AsteriskAsteriskEqualsToken,
+]);
+
+const isCall = (e: ts.Expression): boolean =>
+  ts.isCallExpression(e) || (ts.isAwaitExpression(e) && ts.isCallExpression(e.expression));
+
+/** Every way `source` departs from wiring: a top-level statement but an import
+ *  or a function, a function statement but a `const` initialised by a call, a
+ *  closing `return` or the one closing `emitArtifacts` call, any loop, `throw`
+ *  or arithmetic, and a superseded phase's handle read other than once. */
+function wiringViolations(file: string, source: string): string[] {
+  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
+  const out: string[] = [];
+  const at = (n: ts.Node) => `${n.getText(sf).split('\n')[0]} (line ${sf.getLineAndCharacterOfPosition(n.getStart(sf)).line + 1})`;
+  for (const st of sf.statements) {
+    if (!ts.isImportDeclaration(st) && !ts.isFunctionDeclaration(st)) out.push(`top level: ${at(st)}`);
+  }
+  for (const fn of sf.statements.filter(ts.isFunctionDeclaration)) {
+    const statements = fn.body?.statements ?? [];
+    statements.forEach((st, i) => {
+      const last = i === statements.length - 1;
+      const callConst = ts.isVariableStatement(st)
+        && (st.declarationList.flags & ts.NodeFlags.Const) !== 0
+        && st.declarationList.declarations.every((d) => d.initializer !== undefined && isCall(d.initializer));
+      const closingReturn = last && ts.isReturnStatement(st);
+      const closingEmit = last && ts.isExpressionStatement(st) && ts.isCallExpression(st.expression)
+        && st.expression.expression.getText(sf) === 'emitArtifacts';
+      if (!callConst && !closingReturn && !closingEmit) out.push(`statement: ${at(st)}`);
+    });
+  }
+  const visit = (n: ts.Node): void => {
+    if (ts.isIterationStatement(n, false)) out.push(`loop: ${at(n)}`);
+    else if (ts.isThrowStatement(n)) out.push(`throw: ${at(n)}`);
+    else if (ts.isBinaryExpression(n) && ARITHMETIC.has(n.operatorToken.kind)) out.push(`arithmetic: ${at(n)}`);
+    else if ((ts.isPrefixUnaryExpression(n) || ts.isPostfixUnaryExpression(n))
+      && (n.operator === ts.SyntaxKind.PlusPlusToken || n.operator === ts.SyntaxKind.MinusMinusToken)) out.push(`arithmetic: ${at(n)}`);
+    ts.forEachChild(n, visit);
+  };
+  visit(sf);
+  return [...out, ...handleReuse(sf)];
+}
+
+function handleReuse(sf: ts.SourceFile): string[] {
+  const declared = new Set<ts.Node>();
+  const reads = new Map<string, number>();
+  const collect = (n: ts.Node): void => {
+    if ((ts.isBindingElement(n) || ts.isVariableDeclaration(n)) && ts.isIdentifier(n.name)
+      && SUPERSEDED_PHASES.includes(n.name.text)) {
+      declared.add(n.name);
+      reads.set(n.name.text, reads.get(n.name.text) ?? 0);
+    }
+    ts.forEachChild(n, collect);
+  };
+  collect(sf);
+  const count = (n: ts.Node): void => {
+    if (ts.isIdentifier(n) && reads.has(n.text) && !declared.has(n)
+      && !((ts.isPropertyAccessExpression(n.parent) || ts.isPropertyAssignment(n.parent)) && n.parent.name === n)) {
+      reads.set(n.text, reads.get(n.text)! + 1);
+    }
+    ts.forEachChild(n, count);
+  };
+  count(sf);
+  return [...reads].filter(([, k]) => k !== 1).map(([name, k]) => `phase handle: ${name} read ${k} times`);
+}
+
+function sourceFiles(dir: string): string[] {
+  return readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    if (statSync(path).isDirectory()) return name === 'node_modules' ? [] : sourceFiles(path);
+    return /\.ts$/.test(name) && !/\.test\.ts$/.test(name) ? [path] : [];
+  });
+}
+
+const PHASE_MODULE = 'scripts/catalog/record/record-phase.ts';
+const PHASE_TYPES = new Set(['Records', 'Sorted', 'Unsorted', 'AllocatedSids', 'Finalised']);
+
+/** Outside tests, each `enterPhase` call site keyed by its phase literal (or
+ *  `non-literal phase`), each `allocatedSids` call site, and each cast to a phase type
+ *  outside the phase module, through whatever local names the imports give them. */
+function tagConstructors(): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const path of [...sourceFiles(resolve(REPO, 'scripts')), ...sourceFiles(resolve(REPO, 'src'))]) {
+    const file = relative(REPO, path);
+    const text = readFileSync(path, 'utf8');
+    if (file === PHASE_MODULE || !text.includes('record-phase')) continue;
+    const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+    const imported = new Map<string, string>();
+    for (const st of sf.statements) {
+      if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)
+        || !st.moduleSpecifier.text.endsWith('/record-phase')) continue;
+      const bindings = st.importClause?.namedBindings;
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const el of bindings.elements) imported.set(el.name.text, (el.propertyName ?? el.name).text);
+      }
+    }
+    const visit = (n: ts.Node): void => {
+      if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+        const callee = imported.get(n.expression.text);
+        const [first] = n.arguments;
+        if (callee === 'enterPhase') {
+          (out[first && ts.isStringLiteralLike(first) ? first.text : 'non-literal phase'] ??= []).push(file);
+        } else if (callee === 'allocatedSids') (out.allocatedSids ??= []).push(file);
+      }
+      if ((ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) && ts.isTypeReferenceNode(n.type)
+        && ts.isIdentifier(n.type.typeName) && PHASE_TYPES.has(imported.get(n.type.typeName.text) ?? '')) {
+        (out.cast ??= []).push(file);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
+  }
+  return out;
+}
+
+describe('build-catalog.ts wiring ratchet', () => {
+  it('holds only stage calls: no loop, throw or arithmetic, and no statement but a call-initialised const', () => {
+    expect(
+      wiringViolations(WIRING, readFileSync(WIRING, 'utf8')),
+      'build-catalog.ts is wiring only: move the logic into a stage (stages/README.md#the-wiring-ratchet)',
+    ).toEqual([]);
+  });
+
+  it('enters each phase once, in the pass that completes it, tags the SIDs only in allocation, and casts to no phase type', () => {
+    expect(tagConstructors()).toEqual({
+      ...Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])),
+      allocatedSids: [SIDS_ENTRY],
+    });
+  });
+
+  it('catches each departure from wiring', () => {
+    const probe = [
+      'async function main() {',
+      '  const a = stage();',
+      '  const b = await other(a);',
+      '  let c = stage();',
+      '  const d = a.length;',
+      '  for (const x of b) log(x);',
+      '  if (a) throw new Error("no");',
+      '  const e = stage(a + 1, () => { n++; });',
+      '  emitArtifacts(e);',
+      '}',
+      'function pre() {',
+      '  log();',
+      '  const { walked, ...w } = walkStage();',
+      '  const { named } = namingStage(walked, w.rows);',
+      '  const late = coherence(walked);',
+      '  return { a: stage(), named, late };',
+      '}',
+      'const helper = (x: number) => x * 2;',
+    ].join('\n');
+    expect(wiringViolations('probe.ts', probe)).toEqual([
+      'top level: const helper = (x: number) => x * 2; (line 18)',
+      'statement: let c = stage(); (line 4)',
+      'statement: const d = a.length; (line 5)',
+      'statement: for (const x of b) log(x); (line 6)',
+      'statement: if (a) throw new Error("no"); (line 7)',
+      'statement: log(); (line 12)',
+      'loop: for (const x of b) log(x); (line 6)',
+      'throw: throw new Error("no"); (line 7)',
+      'arithmetic: a + 1 (line 8)',
+      'arithmetic: n++ (line 8)',
+      'arithmetic: x * 2 (line 18)',
+      'phase handle: walked read 2 times',
+    ]);
+  });
+});

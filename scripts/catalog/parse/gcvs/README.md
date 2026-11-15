@@ -2,7 +2,7 @@
 
 Parsing `data/gcvs/` and cross-matching it onto catalog records: which
 stars are named as variables, and which of those carry a period the
-renderer can pulsate. Consumed by `build-catalog.ts` only; the row walk
+renderer can pulsate. Consumed by `../../stages/sorted-stage.ts` only; the row walk
 that owns everything else about a record is `../README.md`.
 
 ## Files in this area
@@ -21,7 +21,7 @@ scripts/catalog/parse/gcvs/
                            (gcvsSummary is its log line).
 ```
 
-`parseGcvsMain` + `parseGcvsCrossref` in `build-catalog.ts` read two
+`parseGcvsMain` + `parseGcvsCrossref`, through the sorted stage, read two
 files from `data/`:
 
 - `gcvs5.txt` — pipe-delimited fixed-width; we pull the GCVS designation,

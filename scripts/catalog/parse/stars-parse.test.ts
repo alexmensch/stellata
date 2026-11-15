@@ -164,8 +164,8 @@ describe('readStars build-time de-extinction of ci', () => {
     expect(dust).toEqual([{ av, ciDereddened: false }, { av, ciDereddened: true }]);
     expect(av).toBeGreaterThan(1); // the gate must have something to bite on
 
-    const blank = stars.find((s) => s.proper === 'BlankCi')!;
-    const observed = stars.find((s) => s.proper === 'ObservedCi')!;
+    const blank = stars.find((s) => s.printedName === 'BlankCi')!;
+    const observed = stars.find((s) => s.printedName === 'ObservedCi')!;
     // The fallback ci is already intrinsic — de-reddening it fabricates
     // a hot-blue colour on dusty sightlines.
     expect(blank.ci).toBe(SOLAR_BV_FALLBACK);

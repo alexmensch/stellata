@@ -46,7 +46,7 @@ scripts/catalog/parse/
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator). The HIP
                                   walk now serves the GCVS byGaia bridge in
-                                  build-catalog.ts, not the record walk. The
+                                  ../stages/sorted-stage.ts, not the record walk. The
                                   TYC reader streams and takes a keep-set —
                                   its table is 2.5 M rows. The binaries
                                   pipeline's Stage 1 reads both walks too.

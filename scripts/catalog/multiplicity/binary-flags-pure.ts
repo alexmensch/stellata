@@ -8,6 +8,7 @@ import {
 } from '../../../src/catalog-format/record/catalog-pure';
 import { ascending } from '../../../src/astro-core/order-pure';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
+import type { Sorted } from '../record/record-phase';
 
 // Pairs within this 3D distance are flagged as a physical binary/multiple
 // system. 0.005 pc ≈ 1030 AU — wide-binary territory. Gaia resolves most
@@ -32,7 +33,7 @@ export interface BinaryStar {
 // convention shared by every binary-flagging path (geometric mutual pairs
 // in inferBinaries; CCDM groups + curated doubles in flagGroupPrimaries).
 export function pickBrightest(
-  stars: Pick<BinaryStar, 'absmag'>[],
+  stars: readonly Pick<BinaryStar, 'absmag'>[],
   indices: readonly number[],
 ): number {
   let bestIdx = -1;
@@ -53,7 +54,7 @@ export function pickBrightest(
 // Idempotent: re-running on a group whose primary is already flagged
 // produces the same flag bits.
 export function markPrimary(
-  stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
+  stars: readonly Pick<BinaryStar, 'absmag' | 'flags'>[],
   indices: readonly number[],
 ): number {
   const bestIdx = pickBrightest(stars, indices);
@@ -86,7 +87,7 @@ export type SuppressPredicate = (
 // Returns the picked index, -1 if no in-catalog members, -2 if a member
 // was already flagged, or -3 if `suppress` vetoed the pick.
 export function markPrimaryIfUnflagged(
-  stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
+  stars: readonly Pick<BinaryStar, 'absmag' | 'flags'>[],
   indices: readonly number[],
   suppress?: SuppressPredicate,
 ): number {
@@ -122,12 +123,12 @@ export function markPrimaryIfUnflagged(
 export interface DoublesStar { absmag: number; flags: number; hip: number | null; }
 
 // When the same HIP appears on multiple rows (rare; binary companions sharing
-// an identifier) the FIRST occurrence wins, so against the absmag-sorted star
-// array build-catalog.ts produces the value is the brightest row. Shared
+// an identifier) the FIRST occurrence wins, so against the apparent-V-sorted
+// records the value is the apparently brightest row. Shared
 // between the stick-figure resolver and the CCDM doubles pass so the two never
 // disagree on a duplicate.
 export function buildHipToIndex(
-  stars: { hip: number | null }[],
+  stars: Sorted<{ readonly hip: number | null }>,
 ): Map<number, number> {
   const m = new Map<number, number>();
   for (let i = 0; i < stars.length; i++) {
@@ -151,7 +152,7 @@ export function resolveGroups(
 }
 
 export function flagGroupPrimaries(
-  stars: DoublesStar[],
+  stars: readonly DoublesStar[],
   groups: readonly (readonly number[])[],
   suppress?: SuppressPredicate,
 ): { systems: number; flagged: number; suppressed: number } {
@@ -264,7 +265,7 @@ export function isOpticalDoubleMember(
 //
 // Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
 export function inferBinaries(
-  stars: BinaryStar[],
+  stars: Sorted<BinaryStar>,
 ): { counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>; mutual: (readonly [number, number])[] } {
   const cell = BINARY_MAX_SEP_PC;
   const cellInv = 1 / cell;
@@ -341,7 +342,7 @@ export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]):
  *  left unflagged (../parse/gcvs/README.md): eclipsers surface as multi-star
  *  systems, not intrinsic-variable rings. */
 export function wingEclipsingBinaries(
-  stars: readonly { flags: number; readonly varType: number }[],
+  stars: Sorted<{ flags: number; readonly varType: number }>,
 ): Pick<MultiplicityCounts, 'eclipsingWinged'> {
   let eclipsingWinged = 0;
   for (const s of stars) {

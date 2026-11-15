@@ -20,7 +20,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     conIndex: NO_CONSTELLATION_INDEX,
     desigCon: NO_DESIGNATION_CON,
     flags: 0,
-    proper: null,
+    printedName: null,
     iauName: null,
     eponym: null,
     bayer: null,

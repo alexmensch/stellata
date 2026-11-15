@@ -15,6 +15,7 @@ import { multiplesRow } from '../multiples-fixture';
 import {
   decisionRows, PROMOTION_CODES, PROMOTION_INVARIANTS, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
 } from './promotion-lineage-pure';
+import { enterPhase } from '../../record/record-phase';
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
 const promoted = (outcome: RowOutcome, anchors: Partial<PromotedRow> = {}): PromotedRow => (
@@ -177,7 +178,7 @@ describe('promotionLineage identity', () => {
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
       promoted({ kind: 'pair-anchor' }),
-    ], stars, new Set(), new Map());
+    ], enterPhase('promoted', stars), new Set(), new Map());
     expect(identity).toEqual([{
       key: 'multiples:22266-1645-AB/B', tyc: '', hip: '', hd: '', gl: '',
       gaia_source_id: '2595463996992115840',
@@ -190,7 +191,7 @@ describe('promotionLineage identity', () => {
     const { identity } = promotionLineage([
       { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: 'synth-19082+3829-C' },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
-    ], stars, new Set(['synth:22266-1645-B']), new Map());
+    ], enterPhase('promoted', stars), new Set(['synth:22266-1645-B']), new Map());
     expect(identity).toEqual([
       {
         key: 'multiples:19082+3829-_C/C', tyc: '', hip: '42', hd: '', gl: '',
@@ -207,7 +208,7 @@ describe('promotionLineage identity', () => {
         row: multiplesRow({ systemId: '22266-1645-AC', comp: 'C' }), synthKey: 'synth-22266-1645-C',
       }),
       promoted({ kind: 'pair-anchor' }, { row: multiplesRow({ systemId: '22266-1645-AD', comp: 'A' }), synthKey: 'synth-22266-1645-A' }),
-    ], stars, new Set(), new Map());
+    ], enterPhase('promoted', stars), new Set(), new Map());
     expect(identity.map((r) => [r.key, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', ['synth:22266-1645-B']],
       ['multiples:22266-1645-AC/C', ['synth:22266-1645-C']],
@@ -224,7 +225,7 @@ describe('promotionLineage identity', () => {
       unpaired('A', { hip: 104066 }),
       unpaired('B', { gaiaSourceId: '2595463996992115840' }),
       unpaired('C', { hip: 104066, gaiaSourceId: '77' }),
-    ], stars, new Set(['hip:104066', 'synth:21050+1243-A', 'synth:21050+1243-B']), new Map());
+    ], enterPhase('promoted', stars), new Set(['hip:104066', 'synth:21050+1243-A', 'synth:21050+1243-B']), new Map());
     expect(identity.map((r) => [r.key, r.hip, r.gaia_source_id, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', '', '2595463996992115840', ['synth:22266-1645-B', 'gaia_dr3:2595463996992115840']],
       ['multiples:21050+1243-_X/C', '', '77', ['synth:21050+1243-C', 'gaia_dr3:77']],
@@ -275,7 +276,7 @@ describe('rewriteRows', () => {
 
   it('adds the rewrites to the stage\'s lines, each a code the writer accepts', () => {
     const star = makeStar({ originKey: 'spine:3' });
-    const { lineage } = promotionLineage([], [star], new Set(), new Map([[star, {
+    const { lineage } = promotionLineage([], enterPhase('promoted', [star]), new Set(), new Map([[star, {
       sizing: { pass: 'recurated', radius: classTeff },
       brightness: [{ pass: 'recurated', source: 'spectral', absmag: 5, av: 0, ci: 'spectral_derived' }],
     }]]));

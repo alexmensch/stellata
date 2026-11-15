@@ -13,9 +13,11 @@ byte-identical in CI so artifact and code always land together:
 - `pnpm run build:wgsn` — the keyed tables under `data/iau-wgsn/`.
 - `pnpm run build:naming-parity` — the parity ledger ([The parity ledger](#the-parity-ledger)).
 
-`build-catalog.ts` calls this folder twice: `applyStarNames` right after the
-classic-ID label merge, and `assignDisplayNames` post-sort just before the
-name table is written.
+`build:catalog` calls this folder in two phases
+([Record phases](../record/README.md#record-phases)): `applyStarNames` on the
+walked records (`../stages/naming-stage.ts`), and `assignDisplayNames` on the
+sorted ones once their SIDs are allocated (`../stages/finalise-stage.ts`). Its
+display names ride the finalised catalogue, never a record.
 
 ## Files in this area
 
@@ -94,7 +96,8 @@ scripts/catalog/naming/
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its naming
                                 outcome (`NamedRecord`), with the NAME
-                                tiers written into `proper`, and
+                                tiers as the name table's strings
+                                (`displayNames`, per record), and
                                 NamingDerivedCounts, the naming-derived
                                 block. Also the curated override's join,
                                 which hard-fails on an unmatched SID.
@@ -208,7 +211,7 @@ wrong; the order here is the measured one.
 authority approves reach no record by identifier: Albireo B, whose spine
 row is HD 183914 against the authority's 183913, and the faints hosts
 Kaewkosin and Maru, whose spine rows carry no identifier at all. A record
-whose own `proper` folds to an approved name IS that star, and AT-HYG
+whose own printed `proper` cell (`printedName`) folds to an approved name IS that star, and AT-HYG
 asserting the same string is evidence rather than invention.
 `namingIauNamedByProper` pins it at <!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count -->.
 

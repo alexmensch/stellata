@@ -3,15 +3,15 @@
 import {
   FLAG_BINARY_PRIMARY,
 } from '../../../../src/catalog-format/record/catalog-pure';
-import type { Star } from '../../parse/stars-parse';
 import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
 import { isMoreCanonicalAnchor } from '../../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
 import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { distinctEnds, type ResolvedPair } from './pair-resolution-pure';
+import type { Sorted } from '../../record/record-phase';
 
 export function buildCatalogRowIndexMap(
-  stars: Star[],
+  stars: Sorted,
   /** README.md#the-sidecar-and-how-a-component-resolves. */
   synthGaiaBridges: ReadonlyMap<string, string> = new Map(),
 ): CatalogRowIndexMap {
@@ -62,7 +62,7 @@ export function resolvedMemberIndices(resolved: readonly ResolvedPair[]): Set<nu
 /** See ./README.md#renderable-companion-wings. */
 export function wingRenderablePrimaries(
   resolved: readonly ResolvedPair[],
-  stars: Star[],
+  stars: Sorted,
 ): Pick<MultiplicityCounts, 'renderableCompanionWinged'> {
   const drawnPerSystem = new Map<string, Set<number>>();
   for (const { pair, rendered } of resolved) {

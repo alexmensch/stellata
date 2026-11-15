@@ -59,8 +59,8 @@ measurements. `lentDistanceRecords` marks the others: a minted companion
 (`FLAG_BINARY_COMPANION_ONLY`, placed at its anchor's distance), a record on
 `pair_member_parallax` (a sibling's parallax), and a member coherence snapped
 onto its anchor's distance (`snapped`) or promotion re-curated onto it
-(`recuratedRecords` over promotion's rewrites, returned by `build-catalog.ts`'s
-`promoteAndTrace`). A member coherence found already at the anchor's distance
+(`recuratedRecords` over promotion's rewrites, returned by
+`../stages/promotion-stage.ts`). A member coherence found already at the anchor's distance
 (`at-anchor-distance`) is not moved, so this rule does not mark it: the
 Bailer-Jones table publishes distances to 0.001 pc, so two independent
 measurements of a close pair can coincide exactly (61 Cyg A and B both

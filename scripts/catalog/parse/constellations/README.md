@@ -37,7 +37,7 @@ Two properties follow from the boundaries partitioning the whole sphere:
 
 - **`NO_CONSTELLATION_INDEX` is unreachable for anything with a
   direction.** Sol sits at the origin and has none, so it is the sole
-  holder — asserted at the record write in `../../build-catalog.ts`. Every
+  holder — asserted at the record write (`encodeCatalog`, `../../record/encode-catalog-pure.ts`). Every
   other record, promoted companions included, carries a real
   constellation.
 - **A row needs no catalogue entry to be classified.** The uncatalogued
@@ -96,7 +96,7 @@ committed to `data/stellarium/stellarium-modern-skyculture.json` — it essentia
 never changes, so fetching it at build time each time would be wasted
 work.
 
-Pipeline in `scripts/catalog/build-catalog.ts`:
+Pipeline in `build:catalog` (steps 2–3 are `../../stages/sorted-stage.ts`):
 
 1. `readStars` reads the manifest's `hip` column into each star record.
 2. After the apparent-V sort ([Record order](../../../../src/catalog-format/record/README.md#record-order)) fixes the record indices, a

@@ -19,11 +19,12 @@ import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { multiplesRow, type MultiplesRowOverrides } from '../companions/multiples-fixture';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
+import { enterPhase } from '../record/record-phase';
 
 function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources) {
-  const verdicts = systemCoherenceVerdicts(rows, stars, src);
-  const counts = foldStageLines(COHERENCE_CODES, coherenceLineageLines(verdicts, stars));
-  applySystemCoherence(stars, verdicts);
+  const verdicts = systemCoherenceVerdicts(rows, enterPhase('walked', stars), src);
+  const counts = foldStageLines(COHERENCE_CODES, coherenceLineageLines(verdicts, enterPhase('promoted', stars)));
+  applySystemCoherence(enterPhase('walked', stars), verdicts);
   return coherenceFigures(counts);
 }
 
@@ -442,7 +443,7 @@ describe('systemCoherenceVerdicts', () => {
       hip2: new Map([[11767, hip2Row({ plxMas: 7.54, plxErrorMas: 0.11 })]]),
       gaiaAstrometry: new Map([['576', gaia]]),
     });
-    expect(systemCoherenceVerdicts(rows, [primary, member], src)).toEqual([{
+    expect(systemCoherenceVerdicts(rows, enterPhase('walked', [primary, member]), src)).toEqual([{
       kind: 'coherent', root: '02318+8916', anchorPc: 137.233,
       anchor: { idx: 1, tier: 'gaia-clean', ref: gaia.ref, memberWon: true, precisionVetoed: false },
       members: [{
@@ -463,8 +464,8 @@ describe('systemCoherenceVerdicts', () => {
       pairRow({ systemId: '00002+0002-AB', comp: 'B', hip: 300, orbitRole: 'secondary' }),
     ];
     const stars = [a, b, c];
-    const verdicts = systemCoherenceVerdicts(rows, stars, sources());
-    applySystemCoherence(stars, verdicts);
+    const verdicts = systemCoherenceVerdicts(rows, enterPhase('walked', stars), sources());
+    applySystemCoherence(enterPhase('walked', stars), verdicts);
     const second = verdicts[1];
     if (second.kind !== 'coherent') throw new Error(`expected a coherent second system, got ${second.kind}`);
     expect(second.anchor.idx).toBe(1);
@@ -480,9 +481,9 @@ describe('systemCoherenceVerdicts', () => {
       pairRow({ systemId: '00003+0003-AB', comp: 'B', hip: 9, orbitRole: 'secondary' }),
     ];
     const bj = sources({ bailerJones: { source: BAILER_JONES, distPc: new Map([['7', 50]]) } });
-    const [withBj] = systemCoherenceVerdicts(rows, [a, b], bj);
+    const [withBj] = systemCoherenceVerdicts(rows, enterPhase('walked', [a, b]), bj);
     expect(withBj.anchor).toMatchObject({ idx: 0, tier: 'bailer-jones', ref: { source: BAILER_JONES, row: '7' } });
-    const [inherited] = systemCoherenceVerdicts(rows, [a, b], sources());
+    const [inherited] = systemCoherenceVerdicts(rows, enterPhase('walked', [a, b]), sources());
     expect(inherited.anchor).toEqual({ idx: 0, tier: 'inherited', memberWon: false, precisionVetoed: false });
   });
 });

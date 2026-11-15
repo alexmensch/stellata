@@ -19,6 +19,7 @@ import type {
   CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionStats, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
 } from '../promotion-outcome';
 import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { Unsorted } from '../../record/record-phase';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
 
@@ -355,7 +356,7 @@ export interface PromotionLineage {
 
 /** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
-  rows: readonly PromotedRow[], stars: readonly Star[], founded: ReadonlySet<string>,
+  rows: readonly PromotedRow[], stars: Unsorted, founded: ReadonlySet<string>,
   rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>,
 ): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;

@@ -4,6 +4,7 @@ import {
   MULTIPLICITY_RESOLVED, MULTIPLICITY_SINGLE, MULTIPLICITY_UNRESOLVED,
 } from '../../../src/catalog-format/record/catalog-pure';
 import type { SystemMembershipCounts } from '../system-membership/system-membership-pure';
+import type { Sorted } from '../record/record-phase';
 
 /** The multiplicity stage's count block; system membership's share is ../system-membership/README.md#counts. */
 export type MultiplicityCounts = MultiplicityPassCounts & SystemMembershipCounts;
@@ -51,7 +52,7 @@ export type MultiplicityPassCounts = {
 
 /** Each record's multiplicity_status byte (README.md#multiplicity-status), and how many took each non-single value. */
 export function multiplicityStatuses(
-  records: readonly { readonly gaiaSourceId: string | null }[],
+  records: Sorted<{ readonly gaiaSourceId: string | null }>,
   resolvedMembers: ReadonlySet<number>,
   isSimbadMultiple: (gaiaSourceId: string) => boolean,
 ): { status: Uint8Array; counts: Pick<MultiplicityCounts, 'multiplicityResolved' | 'multiplicityUnresolved'> } {

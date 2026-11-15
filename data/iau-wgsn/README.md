@@ -105,7 +105,7 @@ verification reads the derived tables, `athyg_proper_dispositions.tsv` and
 the membership manifest in `scripts/catalog/membership/membership-manifest-gate.test.ts`
 ([The residual gate](/scripts/catalog/naming/README.md#the-residual-gate)).
 
-`build-catalog.ts` reads the derived tables through
+The catalogue build (`scripts/catalog/stages/naming-stage.ts`) reads the derived tables through
 `scripts/catalog/naming/apply-star-names.ts`, which writes each record's
 approved name, glyph-bearing designations, aliases and designation
 constellation. The display-name composer renders from those

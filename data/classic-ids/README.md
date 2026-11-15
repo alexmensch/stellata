@@ -336,7 +336,7 @@ than degrading.
 `classic_id_overlay.tsv` + `classic_id_overrides.tsv` are then read by
 `build:membership`, which runs `mergeClassicIdLabels` and writes
 `label_flips.tsv`: the overlay is the manifest's label layer. `cross_index.tsv`
-is read by `build-catalog.ts` itself, for IV/27A's `cst` — the only source for
+is read by the catalogue build itself (`scripts/catalog/stages/naming-stage.ts`), for IV/27A's `cst` — the only source for
 the constellation a Bayer / Flamsteed designation is NAMED for.
 
 ## Refresh

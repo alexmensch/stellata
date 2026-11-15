@@ -36,10 +36,11 @@ import { OWN } from '../../binaries/multiples-record-pure';
 import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
+import { enterPhase } from '../record/record-phase';
 
 /** promoteCompanions plus its lineage folded per code, as the build folds it. */
-function promote(...args: Parameters<typeof promoteCompanions>) {
-  const result = promoteCompanions(...args);
+function promote(rows: MultiplesTsvRow[], stars: readonly Star[], inputs: PromotionInputs) {
+  const result = promoteCompanions(rows, enterPhase('named', stars), inputs);
   const lines = [
     ...result.rows.flatMap((r) => decisionRows(promotionDecision(r, () => 'spine:0'))),
     ...[...result.rewrites].flatMap(([star, rewrite]) => rewriteRows(star.originKey, rewrite, () => 'spine:0')),
@@ -388,7 +389,7 @@ describe('anchor flux dimming', () => {
   // anchor to a printed tier.
   const blendAnchor = (overrides: Partial<Star> = {}) =>
     makeStar({
-      hip: 7777, absmag: 1.0, proper: 'Blendy', x: 10, y: 0, z: 0,
+      hip: 7777, absmag: 1.0, printedName: 'Blendy', x: 10, y: 0, z: 0,
       vVia: 'printed_hip', ...overrides,
     });
 
@@ -506,7 +507,7 @@ describe('anchor flux dimming', () => {
     // V = 7.331. B's light was never in it, so the pre-cascade dim of
     // +0.684 mag would subtract the companion a second time.
     const anchor = makeStar({
-      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      hip: 13772, gaiaSourceId: '5076269164798851712', printedName: 'Gaian',
       absmag: 8.040 - 5 * Math.log10(22.466861 / 10),
       x: 22.466861, y: 0, z: 0,
     });
@@ -526,7 +527,7 @@ describe('anchor flux dimming', () => {
     // as one photocentre, so the transformed V lands on the A+B blend and the
     // companion's light IS being double-counted.
     const anchor = makeStar({
-      hip: 13772, gaiaSourceId: '5076269164798851712', proper: 'Gaian',
+      hip: 13772, gaiaSourceId: '5076269164798851712', printedName: 'Gaian',
       absmag: blendMag(10.50, 10.50), x: 10, y: 0, z: 0,
     });
     const rows = gaiaAnchorRows(10.50, 10.50, 10);
@@ -1263,7 +1264,7 @@ describe('promoteCompanions', () => {
     x: -0.494, y: 2.477, z: -0.758,
     absmag: 1.45, ci: 0.01,
     spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 },
-    proper: 'Sirius',
+    printedName: 'Sirius',
     hip: 32349,
     gaiaSourceId: null,
   });
@@ -1324,7 +1325,7 @@ describe('promoteCompanions', () => {
     // shear from a drifting primary under the epoch-advance.
     const primary = makeStar({
       x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
-      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, proper: 'Sirius', hip: 32349,
+      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, printedName: 'Sirius', hip: 32349,
       gaiaSourceId: null,
       vx: 1.1e-5, vy: -2.3e-5, vz: 3.7e-6,
     });
@@ -1342,7 +1343,7 @@ describe('promoteCompanions', () => {
     expect(cma).toBeGreaterThanOrEqual(0);
     const primary = makeStar({
       x: -0.494, y: 2.477, z: -0.758, absmag: 1.45, ci: 0.01,
-      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, proper: 'Sirius', hip: 32349,
+      spectral: { kind: 'mk', letter: 2, subclass: null, lumClass: 2 }, printedName: 'Sirius', hip: 32349,
       gaiaSourceId: null, conIndex: cma,
     });
     const { newStars, codes } = promote(siriusRows(), [primary], inputs());
@@ -1359,7 +1360,7 @@ describe('promoteCompanions', () => {
     const vA = { x: 1e-5, y: 2e-5, z: -3e-5 };
     const vB = { x: 4e-5, y: -1e-5, z: 5e-5 };
     const a = makeStar({
-      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'PairA', gaiaSourceId: 'A',
+      x: 10, y: 0, z: 0, absmag: 1.0, printedName: 'PairA', gaiaSourceId: 'A',
       vx: vA.x, vy: vA.y, vz: vA.z,
     });
     const b = makeStar({
@@ -1400,7 +1401,7 @@ describe('promoteCompanions', () => {
     const psa = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'psa');
     const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
     const anchor = makeStar({
-      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
+      x: 10, y: 0, z: 0, absmag: 1.0, printedName: 'Fomalhaut', gaiaSourceId: 'A',
       conIndex: psa, desigCon: { via: 'iv27a', index: psa },
     });
     const member = makeStar({
@@ -1431,7 +1432,7 @@ describe('promoteCompanions', () => {
     const psa = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'psa');
     const aqr = CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === 'aqr');
     const anchor = makeStar({
-      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Fomalhaut', gaiaSourceId: 'A',
+      x: 10, y: 0, z: 0, absmag: 1.0, printedName: 'Fomalhaut', gaiaSourceId: 'A',
       conIndex: psa, desigCon: { via: 'iv27a', index: psa },
     });
     const member = makeStar({
@@ -1462,7 +1463,7 @@ describe('promoteCompanions', () => {
     // still names that record — promoting would mint a duplicate whose
     // HIP round-trips onto the existing record (06583-3525 C class).
     const anchor = makeStar({
-      x: 10, y: 0, z: 0, absmag: 1.0, proper: 'Anchor', hip: 111,
+      x: 10, y: 0, z: 0, absmag: 1.0, printedName: 'Anchor', hip: 111,
       gaiaSourceId: '1000',
     });
     const cExisting = makeStar({
@@ -1495,7 +1496,7 @@ describe('promoteCompanions', () => {
     const GA = '900900900';
     const a_existing: Star = makeStar({
       x: 10, y: 0, z: 0, absmag: 2.0, ci: 0.0,
-      proper: 'Castor', hip: 500, gaiaSourceId: GA,
+      printedName: 'Castor', hip: 500, gaiaSourceId: GA,
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1545,7 +1546,7 @@ describe('promoteCompanions', () => {
     const GA_C = '800800800';
     const castorA: Star = makeStar({
       x: 10, y: 0, z: 0, absmag: 1.6, ci: 0.0,
-      proper: 'Castor', hip: 500, gaiaSourceId: GA_A,
+      printedName: 'Castor', hip: 500, gaiaSourceId: GA_A,
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1591,7 +1592,7 @@ describe('promoteCompanions', () => {
     const COMBINED = 8.105;
     const castorA: Star = makeStar({
       x: 10, y: 0, z: 0, absmag: 1.6, ci: 0.0,
-      proper: 'Castor', hip: 500, gaiaSourceId: GA_A,
+      printedName: 'Castor', hip: 500, gaiaSourceId: GA_A,
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1705,7 +1706,7 @@ describe('promoteCompanions', () => {
     ];
     const algolPrimary = makeStar({
       x: 14.189408, y: 15.238769, z: 18.072089,
-      absmag: -0.112, hip: 14576, proper: 'Algol',
+      absmag: -0.112, hip: 14576, printedName: 'Algol',
     });
     const { newStars, codes } = promote(rows, [algolPrimary], inputs());
     expect(codes['promotion.minted.synthetic']).toBe(1);
@@ -1750,7 +1751,7 @@ describe('promoteCompanions', () => {
     // synth record, and NOT classify the row as alreadyInCatalog.
     const primaryWithGaia = makeStar({
       x: -0.494, y: 2.477, z: -0.758,
-      absmag: 1.45, proper: 'Testar', hip: 32349,
+      absmag: 1.45, printedName: 'Testar', hip: 32349,
       gaiaSourceId: '555000111',
     });
     const rows = siriusRows();
@@ -1861,7 +1862,7 @@ describe('promoteCompanions', () => {
     const algolPrimary = makeStar({
       // AT-HYG-truncated catalog xyz (Stage 3 vs catalog can also drift):
       x: 14.18941, y: 15.23877, z: 18.07209,
-      absmag: -0.112, hip: 14576, proper: 'Algol',
+      absmag: -0.112, hip: 14576, printedName: 'Algol',
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -1929,7 +1930,7 @@ describe('promoteCompanions', () => {
       photometryVia: 'athyg_own',
     });
     const existing = makeStar({
-      x: 0, y: 0, z: 2.637, absmag: 1.45, hip: 32349, proper: 'Test',
+      x: 0, y: 0, z: 2.637, absmag: 1.45, hip: 32349, printedName: 'Test',
     });
     const { newStars } = promote([primaryRow, secondaryRow], [existing], inputs());
     expect(newStars).toHaveLength(1);
@@ -2039,18 +2040,18 @@ describe('promoteCompanions', () => {
   it('fails the build on a membership record reached only by name, bit-identical on its anchor', () => {
     const primaryStar = makeStar({
       x: -0.494, y: 2.477, z: -0.758,
-      absmag: 4.24, proper: 'Testar', hip: 55203, originKey: 'spine:1',
+      absmag: 4.24, printedName: 'Testar', hip: 55203, originKey: 'spine:1',
     });
     const athygB = makeStar({
       x: -0.494, y: 2.477, z: -0.758,
-      absmag: 4.71, proper: 'Testar B', originKey: 'spine:2',
+      absmag: 4.71, printedName: 'Testar B', originKey: 'spine:2',
     });
     const rows = siriusRows();
     rows[0].hip = 55203;
     rows[0].name = 'Testar';
     rows[1].hip = null;
     rows[1].name = '';
-    expect(() => promoteCompanions(rows, [primaryStar, athygB], inputs()))
+    expect(() => promoteCompanions(rows, enterPhase('named', [primaryStar, athygB]), inputs()))
       .toThrow(/spine:2 \("Testar B"\) sits bit-identically on its anchor spine:1/);
   });
 
@@ -2106,7 +2107,7 @@ describe('promoteCompanions', () => {
     // exists to animate it away at runtime. Drop instead.
     const alsephina: Star = makeStar({
       gaiaSourceId: null, hip: 42913,
-      absmag: -0.033, proper: 'Alsephina',
+      absmag: -0.033, printedName: 'Alsephina',
       x: -9.394045, y: 10.739872, z: -20.158656,
     });
     const rows: MultiplesTsvRow[] = [
@@ -2141,7 +2142,7 @@ describe('promoteCompanions', () => {
     // wins over both the compound-proxy projection and the drop path.
     const anchor: Star = makeStar({
       gaiaSourceId: 'g_anchor_a', hip: 12345,
-      absmag: 4.0, proper: 'Testar',
+      absmag: 4.0, printedName: 'Testar',
       x: 10.0, y: 0.0, z: 0.0,
     });
     const rows: MultiplesTsvRow[] = [
@@ -2212,7 +2213,7 @@ describe('promoteCompanions', () => {
     // to the WDS-root system primary (A = "Alsephina") → "Alsephina D".
     const alsephina: Star = makeStar({
       gaiaSourceId: null, hip: 42913,
-      absmag: -0.033, proper: 'Alsephina',
+      absmag: -0.033, printedName: 'Alsephina',
       x: -9.394045, y: 10.739872, z: -20.158656,
     });
     const { newStars, codes } = promote(
@@ -2230,7 +2231,7 @@ describe('promoteCompanions', () => {
     expect(vel).toBeGreaterThanOrEqual(0);
     const alsephina: Star = makeStar({
       gaiaSourceId: null, hip: 42913,
-      absmag: -0.033, proper: 'Alsephina',
+      absmag: -0.033, printedName: 'Alsephina',
       x: -9.394045, y: 10.739872, z: -20.158656,
       conIndex: vel, vx: 0.011, vy: -0.022, vz: 0.033,
     });
@@ -2268,7 +2269,7 @@ describe('promoteCompanions', () => {
     // the WDS-root system primary → "Eps Equ C", not Unnamed.
     const epsEquA: Star = makeStar({
       gaiaSourceId: null, hip: 103569,
-      absmag: 1.5, proper: 'Eps Equ',
+      absmag: 1.5, printedName: 'Eps Equ',
       x: 30.0, y: 40.0, z: 10.0,
     });
     const epsEquB: Star = makeStar({
@@ -2317,7 +2318,7 @@ describe('promoteCompanions', () => {
     // AB orbital pair animates B at runtime).
     const keid: Star = makeStar({
       gaiaSourceId: '3195919528989223040', hip: 19849,
-      absmag: 5.931, proper: 'Keid',
+      absmag: 5.931, printedName: 'Keid',
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
@@ -2411,7 +2412,7 @@ describe('promoteCompanions', () => {
     // doesn't apply to D since D never appears as a primary).
     const keid: Star = makeStar({
       gaiaSourceId: '3195919528989223040', hip: 19849,
-      absmag: 5.931, proper: 'Keid',
+      absmag: 5.931, printedName: 'Keid',
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
@@ -2509,7 +2510,7 @@ describe('promoteCompanions', () => {
     // anchor offset (from the Stage-5-rejected AB row) gives an honest
     // placement, so it mints as "Acrux B" and the BC pair anchors there.
     const acrux: Star = makeStar({
-      hip: 60718, absmag: -3.77, proper: 'Acrux',
+      hip: 60718, absmag: -3.77, printedName: 'Acrux',
       x: 100, y: 0, z: 0,
       vVia: 'printed_hip',  // Gaia-saturated, so its V is the printed blend
     });
@@ -2650,7 +2651,7 @@ describe('promoteCompanions', () => {
     // attempt drops (promotion.dropped.collocated-primary) and the cursor falls back
     // to the anchor record, exactly the pre-escape behaviour.
     const anchor: Star = makeStar({
-      hip: 60718, absmag: -3.77, proper: 'Acrux', x: 100, y: 0, z: 0,
+      hip: 60718, absmag: -3.77, printedName: 'Acrux', x: 100, y: 0, z: 0,
     });
     const rows: MultiplesTsvRow[] = [
       multiplesRow({
@@ -2703,7 +2704,7 @@ describe('promoteCompanions', () => {
     // for lack of a primary's catalog row.
     const keid: Star = makeStar({
       gaiaSourceId: '3195919528989223040', hip: 19849,
-      absmag: 5.931, proper: 'Keid',
+      absmag: 5.931, printedName: 'Keid',
       x: 2.191467, y: 4.455210, z: -0.668480,
     });
     const rows: MultiplesTsvRow[] = [
@@ -2727,7 +2728,7 @@ describe('promoteCompanions', () => {
     ];
     const { newStars } = promote(rows, [keid], inputs());
     // No promotion for the no-ID X primary.
-    expect(newStars.find(s => s.proper === 'Keid X')).toBeUndefined();
+    expect(newStars.find(s => s.printedName === 'Keid X')).toBeUndefined();
   });
 
   it('skips standalone-role rows (orbit_role !== "secondary")', () => {
@@ -2754,7 +2755,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   const PARKED_HIP = 26549;
   const PARKED_SOURCE = '3216486443742786048';
   const anchor = makeStar({
-    hip: 26551, gaiaSourceId: '3216486478101982592', proper: 'Sibling',
+    hip: 26551, gaiaSourceId: '3216486478101982592', printedName: 'Sibling',
     x: 37.361449, y: 401.989966, z: -18.330760,
   });
   const rows: MultiplesTsvRow[] = [
@@ -2816,7 +2817,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   const BLEND_HIP = 7979;
   const BLEND_SOURCE = '405578335904111744';
   const blendedPrimary = makeStar({
-    hip: BLEND_HIP, gaiaSourceId: BLEND_SOURCE, proper: 'Blended Primary',
+    hip: BLEND_HIP, gaiaSourceId: BLEND_SOURCE, printedName: 'Blended Primary',
     x: 300, y: 900, z: -40,
   });
   const blendedRows: MultiplesTsvRow[] = [
@@ -2975,7 +2976,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
   const ALF_HER_BLEND_SOURCE = '4541877995116193408';
   const ALF_HER_REFUSED_MAS = 9.9114;
   const rasalgethi = makeStar({
-    hip: 84345, gaiaSourceId: null, proper: 'Rasalgethi',
+    hip: 84345, gaiaSourceId: null, printedName: 'Rasalgethi',
     x: -20.995612, y: -104.710117, z: 27.401246,
   });
   const alfHerRows: MultiplesTsvRow[] = [

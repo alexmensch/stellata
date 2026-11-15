@@ -54,6 +54,7 @@ import { ComponentSlots, reHomeInnerPairs } from './post-passes/inner-rehome';
 import {
   ANCHOR_DIM_VERDICTS, anchorMagIsCatalogued, componentDepth, dimAnchors, type AnchorDimCandidate, type AnchorDimVerdict,
 } from './post-passes/anchor-dim';
+import type { Records } from '../record/record-phase';
 
 
 export const PHOTOMETRY_VIA_OWN = 'athyg_own' satisfies PhotometryVia;
@@ -219,8 +220,8 @@ function athygDoubleProbeNames(
   const { row, anchorPrimaryRow, systemAnchorStar, canonicalComp } = ctx;
   if (!canonicalComp) return [];
   const bases = [
-    row.name, anchorPrimaryRow.name, anchorStar?.proper ?? '',
-    systemAnchorStar?.proper ?? '',
+    row.name, anchorPrimaryRow.name, anchorStar?.printedName ?? '',
+    systemAnchorStar?.printedName ?? '',
   ].map((b) => b.trim()).filter((b) => b !== '');
   return [...new Set(bases.map((base) => `${base} ${canonicalComp}`))];
 }
@@ -285,7 +286,7 @@ type SplitCandidate = BlendSplitCandidate & { brightness: MintedBrightness };
 interface PromotionState {
   index: SystemIndex;
   parked: ParkedRefusals;
-  existingStars: Star[];
+  existingStars: readonly Star[];
   existingStarsLength: number;
   newStars: Star[];
   readonly conAssignment: ConstellationAssignment;
@@ -554,7 +555,7 @@ function promoteRow(
     conIndex,
     desigCon,
     flags,
-    proper: null,
+    printedName: null,
     iauName: null,
     eponym: null,
     bayer: null,
@@ -635,7 +636,7 @@ export interface PromotionInputs {
 
 export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
-  existingStars: Star[],
+  existingStars: Records<'named'>,
   inputs: PromotionInputs,
 ): {
   newStars: Star[]; stats: PromotionStats; rows: PromotedRow[];

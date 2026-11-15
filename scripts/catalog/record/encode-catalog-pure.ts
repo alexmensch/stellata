@@ -17,15 +17,13 @@ import {
   type ApsisRow,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
-import type { Star } from '../parse/stars-parse';
 import { variabilityUnits } from './records-stage-pure';
+import type { Finalised } from './record-phase';
 
 export interface CatalogEncodeInputs {
-  readonly stars: readonly Star[];
+  readonly catalog: Finalised;
   readonly apsisMap: ReadonlyMap<string, ApsisRow>;
-  /** Per record, in `stars` order. */
-  readonly sids: readonly number[];
-  /** Per record, in `stars` order. */
+  /** Per record, in record order. */
   readonly multiplicityStatus: Uint8Array;
 }
 
@@ -36,15 +34,14 @@ export interface EncodedCatalog {
   readonly nameTableEntries: number;
 }
 
-export function encodeCatalog({ stars, apsisMap, sids, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
-  if (sids.length !== stars.length || multiplicityStatus.length !== stars.length) {
-    throw new Error(
-      `encodeCatalog: ${stars.length} records but ${sids.length} SIDs and ${multiplicityStatus.length} multiplicity statuses`,
-    );
+export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
+  const { records: stars, sids, displayNames } = catalog;
+  if (multiplicityStatus.length !== stars.length) {
+    throw new Error(`encodeCatalog: ${stars.length} records but ${multiplicityStatus.length} multiplicity statuses`);
   }
   const unallocated = sids.indexOf(NO_SID);
   if (unallocated !== -1) throw new Error(`encodeCatalog: record ${unallocated} carries NO_SID`);
-  const nameTable = encodeNameTable(stars.map((s) => s.proper));
+  const nameTable = encodeNameTable(displayNames);
   const recordsOffset = HEADER_SIZE + nameTable.bytes.length;
   const totalLength = recordsOffset + stars.length * RECORD_SIZE;
   const buffer = new ArrayBuffer(totalLength);
@@ -68,7 +65,7 @@ export function encodeCatalog({ stars, apsisMap, sids, multiplicityStatus }: Cat
       ci: s.ci,
       physRadius: s.physicalRadius,
       companionIdx: s.companionIdx >= 0 ? s.companionIdx : NO_COMPANION,
-      nameOffset: s.proper ? nameTable.offsets[i] : 0,
+      nameOffset: displayNames[i] ? nameTable.offsets[i] : 0,
       ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
       flags: s.flags,

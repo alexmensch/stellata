@@ -15,16 +15,20 @@ and nothing else — `data/athyg/` left this build's input set entirely. Classic
 designations arrive already merged, so this build applies no label layer of its
 own. Contract: `docs/catalog-driver.md`; term: `membership/README.md`.
 
-This file owns the **orchestration**: which stage runs when, SID allocation,
-and the Apsis surfacing. The on-disk contract the build writes — the record
+This file owns the **orchestration** — which stage runs when, whose
+mechanism is [Record phases](record/README.md#record-phases) — SID
+allocation, and the Apsis surfacing. The on-disk contract the build writes — the record
 layout, its codec, the chunk plan and the search-index wire entry — is
 `/src/catalog-format/record/README.md`; the per-stage work is in the other subfolders.
 
 ## Subfolders
 
+- `stages/` — the build's stages, one per phase of the record list, and the
+  one emission they feed; `build-catalog.ts` only wires them.
 - `record/` — the build's halves of the record contract: the record-order
-  key, the `GAIA_APSIS` source and the curated-records source every
-  cascade's curated tier reads. The on-disk contract itself is
+  key and sort, the phase tag every order-sensitive pass takes
+  ([Record phases](record/README.md#record-phases)), the `GAIA_APSIS` source
+  and the curated-records source every cascade's curated tier reads. The on-disk contract itself is
   `/src/catalog-format/record/`.
 - `astrometry-request/` — the Gaia 5p pull's source_id list: both binding
   gates' candidates (overlay and derivation), the binaries' Stage 2
@@ -97,29 +101,21 @@ layout, its codec, the chunk plan and the search-index wire entry — is
 
 ```
 scripts/catalog/
-  build-catalog.ts                Orchestrator. Reads every reference
-                                  catalogue, runs the per-row pipeline and
-                                  each cross-match pass in order, then
-                                  allocates every record's SID, then
-                                  encodes the binary (encodeCatalog,
-                                  record/) and, through catalogEmission,
-                                  the one assembly of every output file,
-                                  family member and check, emits the
-                                  chunked binary, manifests,
-                                  both committed ledgers, the SID registry
-                                  and placement's, brightness-colour's,
-                                  size's, coherence's, promotion's,
-                                  allocation's and naming's lineage through
-                                  emitArtifacts once its two snapshot
-                                  checks, the seven lineage budgets,
-                                  placement's, promotion's and naming's
-                                  lineage invariants
+  build-catalog.ts (+ test)       The wiring: each stage in phase order
+                                  (stages/README.md), then one
+                                  emitArtifacts of everything they built —
+                                  the chunked binary, manifests, both
+                                  committed ledgers, the SID registry and
+                                  every stage's lineage — once the two
+                                  snapshot checks, the lineage budgets and
+                                  the lineage invariants
                                   (lineage/README.md#invariants) pass.
                                   Runs under the CI heap cap
-                                  (../util/heap-budget/README.md).
-                                  A failed allocation throws before
-                                  anything is staged
-                                  ([SID allocation](#sid-allocation)).
+                                  (../util/heap-budget/README.md). A failed
+                                  allocation throws before anything is
+                                  staged ([SID allocation](#sid-allocation)).
+                                  The test is the wiring ratchet
+                                  (stages/README.md#the-wiring-ratchet).
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
                                   (../util/step-inputs.ts) — every file the
                                   build reads, which its content-hash stamp

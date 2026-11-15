@@ -1,6 +1,6 @@
 // Post-build self-consistency + SIMBAD distance gate: flags stars whose
 // shipped distance has drifted from the parallax cascade's own inversion or
-// from SIMBAD's parallax-derived value. Snapshot-pinned by build-catalog.ts.
+// from SIMBAD's parallax-derived value. Snapshot-pinned by ../../stages/catalog-emission.ts.
 
 import type { SimbadSampleRow } from '../../validate/simbad-sample-parse';
 import type { Star } from '../../parse/stars-parse';

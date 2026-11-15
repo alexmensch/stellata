@@ -129,12 +129,8 @@ export interface Star {
    *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
   desigCon: DesignationCon;
   flags: number;
-  /** The record's display name — what `catalog.bin`'s name table carries.
-   *  The manifest's printed cell until the naming ladder runs, then the
-   *  composer's output for the NAME tiers only; a record displaying a
-   *  designation carries null and the runtime composes its label from the
-   *  structure below (`../naming/README.md`). */
-  proper: string | null;
+  /** The manifest's printed `proper` cell, never the display name. */
+  readonly printedName: string | null;
   /** IAU WGSN approved name — the ladder's authority tier. */
   iauName: string | null;
   /** A published designation no structured source states, carried as a
@@ -580,7 +576,7 @@ export function rowResolver({
       // reads `conIndex`.
       desigCon: NO_DESIGNATION_CON,
       flags,
-      proper, bayer, hip,
+      printedName: proper, bayer, hip,
       hd: row.hd,
       hr: row.hr,
       flam: row.flam,

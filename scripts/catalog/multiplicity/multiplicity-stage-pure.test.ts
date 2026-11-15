@@ -4,12 +4,13 @@ import {
   MULTIPLICITY_RESOLVED, MULTIPLICITY_SINGLE, MULTIPLICITY_UNRESOLVED,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { multiplicityStatuses, multiplicitySummary } from './multiplicity-stage-pure';
+import { enterPhase } from '../record/record-phase';
 
 describe('multiplicityStatuses', () => {
   it('marks resolved members first, then SIMBAD multiples among the rest', () => {
     const records = [{ gaiaSourceId: '1' }, { gaiaSourceId: '2' }, { gaiaSourceId: null }, { gaiaSourceId: '4' }];
     const multiple = new Set(['1', '2']);
-    const { status, counts } = multiplicityStatuses(records, new Set([0]), (id) => multiple.has(id));
+    const { status, counts } = multiplicityStatuses(enterPhase('sorted', records), new Set([0]), (id) => multiple.has(id));
     expect([...status]).toEqual([MULTIPLICITY_RESOLVED, MULTIPLICITY_UNRESOLVED, MULTIPLICITY_SINGLE, MULTIPLICITY_SINGLE]);
     expect(counts).toEqual({ multiplicityResolved: 1, multiplicityUnresolved: 1 });
   });

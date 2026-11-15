@@ -347,7 +347,7 @@ same thing — single-use helpers stay with their consumer.
   message names the refresh command: `pnpm run <step> --update-snapshots`
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
-  `build-catalog.ts` (build counts and distance outliers), the classic-ID
+  `build:catalog` (build counts and distance outliers, `../catalog/stages/catalog-emission.ts`), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
   (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
   allocation counts of `build:clouds` and `build:local-group`

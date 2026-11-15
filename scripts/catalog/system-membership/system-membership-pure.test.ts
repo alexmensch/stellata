@@ -14,6 +14,7 @@ import {
   anchorMovedRecords, buildSystemMembership, lentDistanceRecords, type MembershipRecord, type SystemMembershipInputs,
 } from './system-membership-pure';
 import type { WdsPairEnds } from './wds-trees-pure';
+import { enterPhase } from '../record/record-phase';
 
 const CASTOR = '07346+3153';
 const OTHER = '18000+1000';
@@ -58,7 +59,7 @@ function fixture(): SystemMembershipInputs {
   const multiplicityStatus = new Uint8Array(records.length);
   multiplicityStatus[17] = MULTIPLICITY_UNRESOLVED;
   return {
-    records,
+    records: enterPhase('sorted', records),
     multiplicityStatus,
     wdsPairs: [
       pair(CASTOR, 'A', 'B', 0, 1), pair(CASTOR, 'A', 'C', 0, 2),
@@ -66,7 +67,7 @@ function fixture(): SystemMembershipInputs {
     ],
     doubles: doubles([[0, 6], [8, 9], [10, 11], [18]]),
     geometricPairs: [[4, 7], [12, 13], [14, 15], [0, 3], [2, 5]],
-    lentDistance: lentDistanceRecords(records, new Set()),
+    lentDistance: lentDistanceRecords(enterPhase('sorted', records), new Set()),
   };
 }
 
@@ -110,7 +111,7 @@ describe('buildSystemMembership', () => {
   it('merges two WDS systems a CCDM group joins under one new root', () => {
     const records = [star(CASTOR, 15, { hip: 1 }), star(CASTOR, 15), star(OTHER, 15, { hip: 3 }), star(OTHER, 15)];
     const out = buildSystemMembership({
-      records, multiplicityStatus: new Uint8Array(4),
+      records: enterPhase('sorted', records), multiplicityStatus: new Uint8Array(4),
       wdsPairs: [pair(CASTOR, 'A', 'B', 0, 1), pair(OTHER, 'A', 'B', 2, 3)],
       doubles: doubles([[0, 2]], [1, 3]),
       geometricPairs: [], lentDistance: new Set(),
@@ -123,7 +124,7 @@ describe('buildSystemMembership', () => {
   it('keeps a labelled WDS root intact when an outsider joins it', () => {
     const records = [star(CASTOR, 15), star(CASTOR, 15), star(CASTOR, 15)];
     const out = buildSystemMembership({
-      records, multiplicityStatus: new Uint8Array(3),
+      records: enterPhase('sorted', records), multiplicityStatus: new Uint8Array(3),
       wdsPairs: [pair(CASTOR, 'Aa', 'Ab', 0, 1)],
       doubles: doubles([]), geometricPairs: [[1, 2]], lentDistance: new Set(),
     });
@@ -161,7 +162,7 @@ describe('lentDistanceRecords', () => {
     const own = { flags: 0, distVia: 'bailer_jones' as DistVia };
     const moved = { flags: 0, distVia: 'gaia_dr3_inversion' as DistVia };
     const records = [own, { flags: FLAG_BINARY_COMPANION_ONLY, distVia: 'bailer_jones' as DistVia }, { flags: 0, distVia: 'pair_member_parallax' as DistVia }, moved];
-    expect([...lentDistanceRecords(records, new Set([moved]))]).toEqual([1, 2, 3]);
+    expect([...lentDistanceRecords(enterPhase('sorted', records), new Set([moved]))]).toEqual([1, 2, 3]);
   });
 });
 
@@ -169,7 +170,7 @@ describe('anchorMovedRecords', () => {
   it('takes coherence-snapped members and the re-curated records, never an unmoved member or one already at the anchor distance', () => {
     const stars = ['anchor', 'snapped', 'kept', 'recurated', 'at-anchor'];
     const anchor = { idx: 0, memberWon: false, precisionVetoed: false } as never;
-    const moved = anchorMovedRecords(stars, [{
+    const moved = anchorMovedRecords(enterPhase('promoted', stars), [{
       kind: 'coherent', root: '00001+0001', anchor, anchorPc: 10,
       members: [
         { kind: 'snapped', idx: 1, fromPc: 11, toPc: 10, toAbsmag: 5, radiusFactor: 1 },

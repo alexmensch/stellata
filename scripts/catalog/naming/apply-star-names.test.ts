@@ -4,6 +4,7 @@ import { CON_INDEX, CONSTELLATIONS } from '../parse/constellations/constellation
 import { makeStar } from '../parse/star-fixture';
 import { applyStarNames, starNamingSummary } from './apply-star-names';
 import type { DesignationRow } from './wgsn-tables-pure';
+import { enterPhase } from '../record/record-phase';
 
 const con = (code: string): number => CON_INDEX.get(code.toLowerCase())!;
 
@@ -13,7 +14,7 @@ const row = (over: Partial<DesignationRow>): DesignationRow => ({
 });
 
 const apply = (stars: ReturnType<typeof makeStar>[], designations: DesignationRow[]) =>
-  applyStarNames(stars, { names: [], designations, dispositions: new Map() }, CONSTELLATIONS);
+  applyStarNames(enterPhase('walked', stars), { names: [], designations, dispositions: new Map() }, CONSTELLATIONS);
 
 describe('applyStarNames: the designation constellation', () => {
   it('records the IV/27A constellation the authority\'s Bayer designation displaced (16 Lyn is ψ¹⁰ Aur)', () => {

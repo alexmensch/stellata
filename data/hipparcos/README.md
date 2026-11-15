@@ -36,7 +36,7 @@ consumers and refresh cadences differ.
 - **Why not TDSC / WDS directly**: TDSC saturates on the brightest
   stars (V ≲ 3); WDS doesn't carry HIP.
 
-Consumed by `scripts/catalog/build-catalog.ts` (visual-doubles flag
+Consumed by `scripts/catalog/stages/sorted-stage.ts` (visual-doubles flag
 in v6 bit 4) and `scripts/binaries/build-binaries.ts` Stage 2
 (CCDM tier of the WDS-component → Gaia source_id cascade). See
 [CCDM double-star cross-match](/scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match) for the gate semantics.

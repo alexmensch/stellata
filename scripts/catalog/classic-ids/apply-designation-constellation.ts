@@ -2,13 +2,13 @@
 // for each Bayer / Flamsteed designation, keyed on the record's HD / HIP.
 // See README.md#the-designation-constellation.
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
-import type { Star } from '../parse/stars-parse';
 import { CROSS_INDEX } from './cross-index-source';
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
   type DesignationConIndex,
 } from './designation-constellation-pure';
+import type { Records } from '../record/record-phase';
 
 export function loadDesignationConstellationIndex(): DesignationConIndex {
   return buildDesignationConIndex(CROSS_INDEX.read());
@@ -19,7 +19,7 @@ export function loadDesignationConstellationIndex(): DesignationConIndex {
  *  star across a 1930 boundary. Runs before companion promotion, so a promoted
  *  companion composes its name off an anchor already carrying it; the GCVS
  *  pass overwrites it downstream where a variable's own designation carries one. */
-export function applyDesignationConstellations(stars: Star[], index: DesignationConIndex): void {
+export function applyDesignationConstellations(stars: Records<'walked'>, index: DesignationConIndex): void {
   for (const star of stars) {
     const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
     if (conIndex === NO_CONSTELLATION_INDEX) continue;

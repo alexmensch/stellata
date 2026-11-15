@@ -7,6 +7,7 @@ import { invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
   NAMING_CODES, namingLabels, namingLineageLines, namingLineageRows, NAMING_INVARIANTS, namingSummary, type NamingLineageRecord,
 } from './naming-lineage-pure';
+import { enterPhase } from '../record/record-phase';
 
 const CONS = [{ code: 'Dra' }, { code: 'Her' }];
 const DRA = 0;
@@ -15,7 +16,7 @@ const HER = 1;
 const rec = (originKey: string): NamingLineageRecord => ({ originKey });
 
 const brief = (records: NamedRecord[], stars: NamingLineageRecord[]) =>
-  [...namingLineageRows(records, stars, CONS)].map((r) => ({ key: r.key, role: r.role, code: r.code, params: paramsOf(r) }));
+  [...namingLineageRows(records, enterPhase('sorted', stars), CONS)].map((r) => ({ key: r.key, role: r.role, code: r.code, params: paramsOf(r) }));
 
 describe('namingLineageRows', () => {
   it('writes the winning tier, every lower tier it refused, and the constellation the set renders against', () => {
@@ -111,7 +112,7 @@ describe('the naming count block', () => {
     },
     { name: { kind: 'unlabelled' }, set: {}, dc: { from: 'none' } },
   ];
-  const lines = namingLineageLines(records, [rec('spine:1'), rec('spine:2'), rec('spine:3'), rec('gaia_dr3:4')], CONS);
+  const lines = namingLineageLines(records, enterPhase('sorted', [rec('spine:1'), rec('spine:2'), rec('spine:3'), rec('gaia_dr3:4')]), CONS);
 
   it('keys every live code, zeros included, and no retired one', () => {
     const counts = foldStageLines(NAMING_CODES, lines);
@@ -185,7 +186,7 @@ describe('namingLabels', () => {
       },
       { name: { kind: 'unlabelled' }, set: {}, dc: { from: 'none' } },
     ];
-    const rows = namingLineageRows(records, [rec('spine:1'), rec('spine:2'), rec('gaia_dr3:3')], CONS);
+    const rows = namingLineageRows(records, enterPhase('sorted', [rec('spine:1'), rec('spine:2'), rec('gaia_dr3:3')]), CONS);
     expect([...namingLabels(rows)]).toEqual([['spine:1', 'Alrakis'], ['spine:2', 'Alrakis C'], ['gaia_dr3:3', null]]);
   });
 
@@ -210,7 +211,7 @@ describe('NAMING_INVARIANTS', () => {
       { name: { kind: 'own', label: 'HIP 1', tier: 'catalogue', letter: null }, set: { flamsteed: 21, hip: 1 }, dc: { from: 'none' } },
       { name: { kind: 'own', label: 'HIP 2', tier: 'catalogue', letter: null }, set: { hip: 2 }, dc: { from: 'none' } },
     ];
-    const [none] = invariantViolations(NAMING_INVARIANTS, namingLineageLines(records, [rec('spine:1'), rec('spine:2')], CONS));
+    const [none] = invariantViolations(NAMING_INVARIANTS, namingLineageLines(records, enterPhase('sorted', [rec('spine:1'), rec('spine:2')]), CONS));
     expect(none.rows.map((r) => r.key)).toEqual(['spine:1']);
   });
 });

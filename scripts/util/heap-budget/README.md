@@ -68,8 +68,9 @@ did.
 heap at 2,900 (Node 26.7, 2026-11-15, the step run with `--any-baseline` so
 all three record-walk lineage diffs ran, each against a baseline from the same
 inputs). That is 16% under the 3,481 MiB budget (0.85 × 4,096). The peak
-is placement lineage's sort and diff inside `walkManifest`, while the
-reference tables are still held; `preAllocationStages` releases them before SID allocation,
+is placement lineage's sort and diff inside `walkManifest`
+(`../../catalog/stages/walk-stage.ts`), while the reference tables are
+still held; `preAllocationStages` releases them before SID allocation,
 whose working set otherwise pushed the step past the budget. A diff against
 a baseline that differs by many keys holds its changed lines briefly on top
 ([Run-to-run diff](../../catalog/lineage/README.md#run-to-run-diff)), which
