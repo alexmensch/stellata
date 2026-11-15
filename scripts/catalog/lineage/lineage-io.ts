@@ -9,7 +9,7 @@ import type { ArtifactContents } from '../../util/emit-artifacts';
 import { headCommit } from '../../util/git-provenance';
 import { releaseAt } from '../../util/release-version';
 import { hashBytes } from '../../util/stamp-hash';
-import { identityRows, type IdentityRow } from './identity-pure';
+import { identityRows, type IdentityRow } from './identity/identity-pure';
 import { lineageLines, lineageRows, type LineageLine, type LineageRow } from './lineage-row-pure';
 import {
   headerText, parseHeader, type HeaderRead, type StageHeader, type StageProvenance,

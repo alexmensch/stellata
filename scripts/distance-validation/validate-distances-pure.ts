@@ -1,5 +1,6 @@
 // The Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) distances against Vaidman 2025 (/data/papers/index.md#vaidman2025): statistics, acceptance bars and the report. See README.md.
 
+import { NO_FIGURE, formatFraction } from '../util/counts/tally-pure';
 import { ADOPTED_BJ_OLD, ADOPTED_EDSD_NEW, type VaidmanRow } from './vaidman-tsv';
 import { ascending } from '../../src/astro-core/order-pure';
 
@@ -17,12 +18,9 @@ export interface Disagreement {
   readonly snrTot: number;
 }
 
-export interface Stats {
-  readonly median: number;
-  readonly p84: number;
-  readonly max: number;
-  readonly count: number;
-}
+export type Stats =
+  | { readonly kind: 'empty' }
+  | { readonly kind: 'measured'; readonly median: number; readonly p84: number; readonly max: number; readonly count: number };
 
 /** (catalog − paper) / paper; NaN for a non-positive paper distance. */
 export function fractionalDiff(catalogPc: number, paperPc: number): number {
@@ -41,11 +39,16 @@ export function percentile(sorted: readonly number[], p: number): number {
   return sorted[lo] * (1 - frac) + sorted[hi] * frac;
 }
 
-/** Median, 84th percentile and max of |diffs|, NaN diffs dropped first. */
+/** Median, 84th percentile and max of |diffs|, NaN diffs dropped first; `empty` when none remain. */
 export function aggregateStats(diffs: readonly number[]): Stats {
   const abs = diffs.filter((d) => !Number.isNaN(d)).map(Math.abs).sort(ascending);
-  if (abs.length === 0) return { median: Number.NaN, p84: Number.NaN, max: Number.NaN, count: 0 };
-  return { median: percentile(abs, 50), p84: percentile(abs, 84), max: abs[abs.length - 1], count: abs.length };
+  if (abs.length === 0) return { kind: 'empty' };
+  return { kind: 'measured', median: percentile(abs, 50), p84: percentile(abs, 84), max: abs[abs.length - 1], count: abs.length };
+}
+
+/** One statistic as a two-decimal percentage, `n/a` when there were no differences to take it over. */
+export function statFraction(stats: Stats, field: 'median' | 'p84' | 'max'): string {
+  return stats.kind === 'empty' ? NO_FIGURE : formatFraction(stats[field], 2);
 }
 
 export function topNDisagreements(items: readonly Disagreement[], n = TOP_N_REPORTED): Disagreement[] {
@@ -105,12 +108,8 @@ export function buildReport(refs: readonly VaidmanRow[], bjDistPc: ReadonlyMap<s
 }
 
 export function passesAcceptanceBars(report: ValidationReport): boolean {
-  const { median } = report.edsd.stats;
-  return !Number.isNaN(median) && median <= MEDIAN_FRAC_DIFF_MAX && report.edsd.large.length <= LARGE_DIFF_COUNT_MAX;
-}
-
-export function pct(x: number): string {
-  return Number.isNaN(x) ? 'n/a' : `${(x * 100).toFixed(2)}%`;
+  const { stats } = report.edsd;
+  return stats.kind === 'measured' && stats.median <= MEDIAN_FRAC_DIFF_MAX && report.edsd.large.length <= LARGE_DIFF_COUNT_MAX;
 }
 
 function signed(x: number, digits: number): string {
@@ -128,7 +127,7 @@ export function formatReport(report: ValidationReport): string {
   const { edsd, bj } = report;
   const lines = [
     `validate-distances: EDSD_new subset — compared ${edsd.compared}/${edsd.total} `
-      + `(median |frac diff|=${pct(edsd.stats.median)}, p84=${pct(edsd.stats.p84)}, max=${pct(edsd.stats.max)})`,
+      + `(median |frac diff|=${statFraction(edsd.stats, 'median')}, p84=${statFraction(edsd.stats, 'p84')}, max=${statFraction(edsd.stats, 'max')})`,
     ...(edsd.unresolved.length > 0
       ? [`validate-distances: EDSD_new unresolved (${edsd.unresolved.length}): ${edsd.unresolved.join(', ')}`]
       : []),
@@ -137,7 +136,7 @@ export function formatReport(report: ValidationReport): string {
     ...edsd.top.map((d) => `    ${formatDisagreement(d)}`),
     '',
     `validate-distances: BJ_old subset (report-only) — compared ${bj.compared}/${bj.total} `
-      + `(median |frac diff|=${pct(bj.stats.median)}, max=${pct(bj.stats.max)})`,
+      + `(median |frac diff|=${statFraction(bj.stats, 'median')}, max=${statFraction(bj.stats, 'max')})`,
     ...(bj.unresolved.length > 0
       ? [`validate-distances: BJ_old unresolved (${bj.unresolved.length}): ${bj.unresolved.join(', ')}`]
       : []),

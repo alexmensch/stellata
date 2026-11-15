@@ -19,13 +19,13 @@
       "athyg_match_sibling_claimed_rejected": 252,
       "decomposing_pairs": 45538,
       "components_total": 91076,
-      "resolution_orb6_hip": 1329,
-      "resolution_athyg_gaia_native": 7312,
-      "resolution_simbad_xid": 32839,
+      "resolution_orb6_hip": 1328,
+      "resolution_athyg_gaia_native": 7311,
+      "resolution_simbad_xid": 32842,
       "resolution_ccdm_hip": 3632,
       "resolution_position_pm": 0,
       "resolution_position_nopm": 0,
-      "resolution_unresolved": 45964,
+      "resolution_unresolved": 45963,
       "binding_conflicts_source_letters": 2129,
       "binding_conflicts_letter_sources": 5,
       "arbitrated_geometric": 320,
@@ -82,6 +82,20 @@
       "spect_msc": 3811,
       "spect_athyg": 9399,
       "spect_none": 22646
+    },
+    "component-binding": {
+      "component-binding.gaia.own": 31540,
+      "component-binding.gaia.inherited.blend": 757,
+      "component-binding.gaia.inherited.letter": 68,
+      "component-binding.gaia.inherited.parent": 1101,
+      "component-binding.gaia.inherited.partner": 101,
+      "component-binding.gaia.unbound": 13454,
+      "component-binding.hip.own": 14017,
+      "component-binding.hip.inherited.blend": 819,
+      "component-binding.hip.inherited.letter": 127,
+      "component-binding.hip.inherited.parent": 385,
+      "component-binding.hip.inherited.partner": 43,
+      "component-binding.hip.unbound": 31630
     }
   }
 }

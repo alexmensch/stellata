@@ -56,7 +56,7 @@ import {
 import {
   PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
 } from './companions/promotion-lineage-pure';
-import { identityText } from './lineage/identity-pure';
+import { identityText } from './lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
 import {

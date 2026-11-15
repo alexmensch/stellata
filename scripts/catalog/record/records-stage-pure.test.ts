@@ -36,4 +36,10 @@ describe('recordsCounts', () => {
       'Gaia DR3 Apsis: 2 / 4 records matched (50.0%), Teff (gspphot OR gspspec) on 1 (25.0%)',
     );
   });
+
+  it('summarises an empty record set as n/a, never 0.0% or NaN%', () => {
+    expect(apsisCoverageSummary(recordsCounts([], new Map(), new Map(), 0))).toBe(
+      'Gaia DR3 Apsis: 0 / 0 records matched (n/a), Teff (gspphot OR gspspec) on 0 (n/a)',
+    );
+  });
 });

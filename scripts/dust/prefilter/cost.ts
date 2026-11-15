@@ -16,12 +16,14 @@ import {
   STEPS,
 } from '../../../src/astro-core/milkyway/column/milkyway-column-pure';
 import { FIXED_MARCH_TAPS } from '../march-taps/march-taps-pure';
+import { formatFraction } from '../../util/counts/tally-pure';
 
 const BYTES_PER_TEXEL = 2;
 const STAR_COUNT = committedBuildCounts().recordCount;
 const PREPASS_FETCHES = STAR_COUNT * FIXED_MARCH_TAPS;
 
 const FOVS_DEG = [10, 50, 120];
+const ROTATION_FOV_DEG = 50;
 const ASPECT = 16 / 9;
 
 function mib(bytes: number): string {
@@ -134,8 +136,8 @@ export function main(): void {
     );
   }
 
-  console.log('\nrotation: fraction of the cone newly exposed per frame at 50° FOV');
+  console.log(`\nrotation: fraction of the cone newly exposed per frame at ${ROTATION_FOV_DEG}° FOV`);
   for (const degPerFrame of [0.5, 1, 2]) {
-    console.log(`  ${degPerFrame}°/frame → ${((degPerFrame / 50) * 100).toFixed(1)}% of the cone`);
+    console.log(`  ${degPerFrame}°/frame → ${formatFraction(degPerFrame / ROTATION_FOV_DEG)} of the cone`);
   }
 }

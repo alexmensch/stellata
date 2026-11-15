@@ -85,6 +85,9 @@ doc-pointer-resolution.test.ts
                          or anchor that exists — the codebase's wiki
                          links, checked. Grammar, scope and resolution:
                          README.md#doc-pointer-resolution.
+floor-modulo-rules.test.ts
+                         No floor modulo hand-rolled outside pyMod
+                         (#floor-modulos).
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
@@ -195,6 +198,13 @@ pr-body-guard.test.ts    Behavioural pins for scripts/hooks/pr-body-guard.sh
                          script the hook runs;
                          /scripts/hooks/README.md#how-pr-body-guard-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
+rate-denominators.test.ts
+                         No production module under scripts/ divides by
+                         `Math.max(1, …)` or guards a ratio with
+                         `> 0 ? … / … : 0`, either of which reads an empty
+                         whole as a rate of 0; rates go through tally-pure's `share`
+                         (/scripts/util/counts/README.md). Flag and pass
+                         cases on synthetic lines.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the
                          cap is a folder split, not a rewording pass.
@@ -350,6 +360,12 @@ import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          `*-fixture.ts`), shared by node-import-boundary,
                          pipeline-viewer-boundary, record-codec-imports
                          and vite-config-import-extensions.
+line-scan.ts             Not a test — `scanTree` (repo-relative paths under
+                         named folders, minus exclusions) and `lineHits` /
+                         `firstRule` (each line's first matching rule, as
+                         `path:line [rule] text`), for the pattern scanners
+                         with an owner file and an exemption list:
+                         sort-comparator-rules and floor-modulo-rules.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -357,9 +373,9 @@ walk-files.ts            Not a test — file enumeration the scanners above
                          A scan whose scope is the repo rather than a
                          folder list takes git's list instead,
                          /scripts/util/README.md#git-files.
-                         Also `isProductionTs`, the include predicate the
-                         TSL scanners share: a .ts that is neither a test
-                         nor an ambient declaration.
+                         Also `isProductionTs`, the include predicate for
+                         scans of production TypeScript: a .ts that is
+                         neither a test nor an ambient declaration.
                          webgpu-import-boundary.test.ts keeps
                          its own broader `isClientSource` — a declaration
                          file can carry an import, so that corpus wants
@@ -631,3 +647,20 @@ orders by the machine's locale. A sort meant for people to read in their
 locale is exempt by name (`LOCALE_ORDER_ALLOWED`, each with its reason), and
 an exemption that no longer sorts by locale fails. A projection subtraction
 inside a chain (`a.n - b.n || …`) is not matched.
+
+## Floor modulos
+
+`floor-modulo-rules.test.ts` scans every non-test, non-declaration
+TypeScript file under `src/` and `scripts/` and fails on a floor modulo
+spelled by hand: `((x % m) + m) % m`, `(x + m) % m`,
+`x < 0 ? x + m : x`, or `if (x < 0) x += m`, where every repeated token is
+the same. Each goes through
+`pyMod` in `/src/astro-core/angles.ts`, the one file exempt
+([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
+`(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
+since it is the add-once spelling of the same wrap.
+
+`HAND_ROLLED_ALLOWED` pins each pre-existing file to its exact hit count,
+so a new site in a listed file fails as surely as one elsewhere, and a
+site fixed without shrinking its entry fails too. The list is meant to
+empty, never to grow. Tests are not scanned.

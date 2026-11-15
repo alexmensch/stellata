@@ -79,6 +79,8 @@ Both sides of the ratio are luminosities in the band's own flux unit,
   all-sky share. The ratio is a sum over a heavy-tailed luminosity function
   and a single giant moves a thin cell by a quarter; the innermost and the
   outermost shells are where this bites, and both carry almost no band light.
+- **A cell or shell with no model light** has no share, and the bake throws
+  naming it rather than writing one.
 
 The shell average is over the whole sky, so the table cannot see structure in
 longitude — the Gould Belt, Sco–Cen, the dust toward the centre. It shows as

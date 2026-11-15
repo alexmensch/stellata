@@ -9,7 +9,8 @@ import { fold } from '../../util/counts/tally-pure';
 import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { polarToTangent, tangentOffset, type TangentOffset } from '../sky-geometry-pure';
-import { own, valueOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
+import { ownGaia, priorityOf, working, type DecomposedPair, type Draft, type DraftPair } from './components-pure';
+import type { GaiaVia } from '../multiples-record-pure';
 import { inheritDownwardParentBindings, propagateIdentities, smearIfSeeded } from './propagate-pure';
 import { addTo, groupBy, pushTo } from '../../util/map-buckets-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
@@ -76,7 +77,8 @@ export function pairVector(pair: WdsPair): TangentOffset | null {
 /** One WDS system's bindings, as the audit weighs them. */
 export interface SystemContext {
   readonly wdsId: string;
-  readonly tokenSources: Map<string, Set<string>>;
+  /** Token → each source bound to it → the strongest tier binding it there. */
+  readonly tokenSources: Map<string, Map<string, GaiaVia>>;
   readonly tokenMag: Map<string, number>;
   readonly blendPairs: [string, string][];
   /** Sources bound to both sides of a measured pair: Gaia blends. */
@@ -108,14 +110,21 @@ export function buildSystemContexts(pairs: readonly DecomposedPair[]): ReadonlyM
     else if (p.gaia !== null && p.gaia.value === s.gaia?.value) ctx.blendSources.add(p.gaia.value);
     for (const [tok, side, mag] of [[pTok, 'primary', pair.magPri], [sTok, 'secondary', pair.magSec]] as const) {
       pushTo(ctx.instances, tok, { pairIdx, side });
-      const src = valueOf((side === 'primary' ? p : s).gaia);
-      if (src !== null) addTo(ctx.tokenSources, tok, src);
+      const c = side === 'primary' ? p : s;
+      if (c.gaia !== null) bindStrongest(ctx.tokenSources, tok, c.gaia.value, c.gaia.via);
       if (mag !== null && mag < (ctx.tokenMag.get(tok) ?? Infinity)) ctx.tokenMag.set(tok, mag);
     }
     const v = pairVector(pair);
     if (v !== null) addEdge(ctx.adj, pTok, sTok, v, pair.dateLast);
   });
   return systems;
+}
+
+function bindStrongest(tokenSources: SystemContext['tokenSources'], tok: string, src: string, via: GaiaVia): void {
+  let sources = tokenSources.get(tok);
+  if (!sources) tokenSources.set(tok, (sources = new Map()));
+  const held = sources.get(src);
+  if (held === undefined || priorityOf(via) < priorityOf(held)) sources.set(src, via);
 }
 
 /** Sub-resolution blend-mates, transitively through ancestors: `A`/`B` are
@@ -202,8 +211,8 @@ export interface BindingVerdict {
 }
 
 export type VerdictAction =
-  /** Every instance of the letter rebinds to the source. */
-  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string }
+  /** Every instance of the letter: README.md#choices-the-outputs-rest-on */
+  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia }
   | { readonly kind: 'unbind'; readonly targets: readonly UnbindTarget[] };
 
 interface Reference {
@@ -220,7 +229,7 @@ function selectReference(
   let best: { rank: [number, number, string]; ref: Reference } | null = null;
   for (const [tok, sources] of ctx.tokenSources) {
     if (excludeTokens.has(tok) || sources.size !== 1) continue;
-    const [src] = sources;
+    const [src] = sources.keys();
     if (excludeSources.has(src)) continue;
     const astro = indices.srcToAstrometry.get(src);
     if (astro === undefined) continue;
@@ -311,13 +320,15 @@ function xidOwnSource(
   return indices.hipToGaia.get(xid.hip) ?? indices.hipToAthyg.get(xid.hip)?.gaia ?? null;
 }
 
+type RebindAction = Extract<VerdictAction, { kind: 'rebind' }>;
+
 /** A measured-pair "blend" where SIMBAD gives exactly one side the contested
  *  source and the other side a different one is a cross-walk mis-match. The
  *  loser must be one token: rebinding re-homes one letter. */
 function refutePhotocentreBlend(
   ctx: SystemContext, cands: readonly BindingCandidate[], src: string,
   indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
-): { owner: BindingCandidate; loserToken: string; loserSource: string } | null {
+): { owner: BindingCandidate; rebind: RebindAction } | null {
   if (cands.length !== 2) return null;
   const own = cands.map((c) => xidOwnSource(ctx.wdsId, c.label, indices, xids));
   if (own.some((o) => o === null)) return null;
@@ -328,7 +339,9 @@ function refutePhotocentreBlend(
   const loser = cands[loserIdx];
   const loserSource = own[loserIdx]!;
   if (loserSource === src || loser.tokens.length !== 1) return null;
-  return { owner, loserToken: loser.tokens[0], loserSource };
+  const letter = loser.tokens[0];
+  const via = ctx.tokenSources.get(letter)?.get(loserSource) ?? 'simbad_xid';
+  return { owner, rebind: { kind: 'rebind', letter, sourceId: loserSource, via } };
 }
 
 function auditSystem(
@@ -350,7 +363,7 @@ function auditSystem(
 
   const sourceTokens = new Map<string, Set<string>>();
   for (const [tok, sources] of ctx.tokenSources) {
-    for (const src of sources) {
+    for (const src of sources.keys()) {
       addTo(sourceTokens, src, tok);
     }
   }
@@ -378,11 +391,8 @@ function auditSystem(
     } else if (isBlend) {
       const refutation = refutePhotocentreBlend(ctx, cands, src, indices, xids);
       if (refutation !== null) {
-        identityRebound.add(refutation.loserToken);
-        verdict(
-          'source_letters', 'identity_refuted', contested, ref, refutation.owner, cands,
-          { kind: 'rebind', letter: refutation.loserToken, sourceId: refutation.loserSource },
-        );
+        identityRebound.add(refutation.rebind.letter);
+        verdict('source_letters', 'identity_refuted', contested, ref, refutation.owner, cands, refutation.rebind);
       } else {
         for (const c of cands) for (const t of c.tokens) blendLetters.add(t);
         verdict('source_letters', 'skipped_photocentre_blend', contested, ref, winner, cands, null);
@@ -394,7 +404,8 @@ function auditSystem(
   }
 
   for (const tok of [...ctx.tokenSources.keys()].sort()) {
-    const sources = [...ctx.tokenSources.get(tok)!].sort(compareSourceIds);
+    const held = ctx.tokenSources.get(tok)!;
+    const sources = [...held.keys()].sort(compareSourceIds);
     if (sources.length < 2) continue;
     const contested = `${tok}:${sources.join('/')}`;
     if (identityRebound.has(tok)) continue;
@@ -413,7 +424,9 @@ function auditSystem(
     });
     const winner = decide(cands);
     if (winner !== null) {
-      verdict('letter_sources', 'geometric', contested, ref, winner, cands, { kind: 'rebind', letter: tok, sourceId: winner.sourceId });
+      verdict('letter_sources', 'geometric', contested, ref, winner, cands, {
+        kind: 'rebind', letter: tok, sourceId: winner.sourceId, via: held.get(winner.sourceId)!,
+      });
     } else {
       verdict('letter_sources', 'unbound_ambiguous', contested, ref, null, cands, {
         kind: 'unbind', targets: sources.map((sourceId) => ({ token: tok, sourceId })),
@@ -463,7 +476,6 @@ function winnerHips(v: BindingVerdict, ctx: SystemContext, out: readonly DraftPa
 function unbindComponent(c: Draft, winner: ReadonlySet<number>, indices: IdentifierIndices): void {
   if (c.hip !== null && (indices.hipToGaia.get(c.hip.value) === c.gaia?.value || winner.has(c.hip.value))) c.hip = null;
   c.gaia = null;
-  c.resolveVia = 'unresolved';
 }
 
 export function enforceBindingVerdicts(
@@ -477,7 +489,9 @@ export function enforceBindingVerdicts(
     if (action === null) continue;
     enforced.add(v.wdsId);
     if (action.kind === 'rebind') {
-      for (const i of ctx.instances.get(action.letter) ?? []) instance(out, i).gaia = own(action.sourceId);
+      for (const i of ctx.instances.get(action.letter) ?? []) {
+        instance(out, i).gaia = ownGaia(action.sourceId, action.via);
+      }
       continue;
     }
     const winner = winnerHips(v, ctx, out, indices);

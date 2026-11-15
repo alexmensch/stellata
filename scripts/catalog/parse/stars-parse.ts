@@ -42,7 +42,7 @@ import {
 } from '../distance/velocity';
 import { lookupCns5Astrometry } from '../classic-ids/classic-ids-parse';
 import { resolveParallax } from '../distance/parallax/parallax-cascade';
-import type { RecordIdentifiers } from '../lineage/identity-pure';
+import type { RecordIdentifiers } from '../lineage/identity/identity-pure';
 import {
   shippedDistVia,
   type BailerJonesStep,
@@ -204,7 +204,7 @@ export interface Star {
    *  `data/binaries/multiples.tsv`. */
   syntheticId: string | null;
   /** Build-time-only lineage origin key
-   *  (../lineage/README.md#identity--the-origin-source-row). */
+   *  (../lineage/identity/README.md). */
   originKey: string;
 }
 
