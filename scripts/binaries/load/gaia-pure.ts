@@ -1,6 +1,6 @@
 // The binaries' Gaia DR3 tables: the astrometry exclusions and the NSS two-body orbits.
 
-import { groupRowRefs, type GroupRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
+import { groupRowRef, type GroupRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 
@@ -78,6 +78,7 @@ type NssSolution = Omit<NssOrbitRow, 'origin'>;
 
 interface NssCandidate {
   readonly row: NssSolution;
+  readonly line: number;
   readonly significance: number | null;
   /** Throws naming this candidate's file line. */
   readonly refuse: (message: string) => never;
@@ -116,13 +117,12 @@ function pickNssSolution(candidates: readonly NssCandidate[]): NssSolution {
 
 /** source_id → its orbit. README.md#gaia-nss-one-solution-per-source */
 export function parseNssOrbits(table: ColumnTable, from: RowKeyed<string, 'group'>): Map<string, NssOrbitRow> {
-  const bySource = new Map<string, NssCandidate[]>();
-  const lines: { key: string; line: number }[] = [];
+  const bySource = new Map<string, [NssCandidate, ...NssCandidate[]]>();
   for (const row of table(NSS_COLUMNS)) {
     const sourceId = row.sourceId('source_id');
     if (sourceId === null) continue;
-    lines.push({ key: sourceId, line: row.line });
     const candidate: NssCandidate = {
+      line: row.line,
       significance: row.float('significance'),
       refuse: (message) => row.fail(message),
       row: {
@@ -144,6 +144,8 @@ export function parseNssOrbits(table: ColumnTable, from: RowKeyed<string, 'group
     if (held === undefined) bySource.set(sourceId, [candidate]);
     else held.push(candidate);
   }
-  const origins = groupRowRefs(from, lines);
-  return new Map([...bySource].map(([sourceId, candidates]) => [sourceId, { ...pickNssSolution(candidates), origin: origins.get(sourceId)! }]));
+  return new Map([...bySource].map(([sourceId, [first, ...rest]]) => [sourceId, {
+    ...pickNssSolution([first, ...rest]),
+    origin: groupRowRef(from, sourceId, [first.line, ...rest.map((c) => c.line)]),
+  }]));
 }
