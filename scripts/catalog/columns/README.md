@@ -4,13 +4,6 @@ The readers a bake that measures the built catalogue imports, and the
 projection it records
 ([Freshness](../../pipeline/README.md#freshness--one-mechanism)).
 
-**Nothing but code lives in this folder.** A TypeScript step's inputs
-include every non-code file beside a module it imports
-(`closureWithSiblings`, [util/README.md](../../util/README.md)), so a count
-snapshot or data file placed here becomes an input of every bake that reads
-the catalogue, and a rebuild that re-pins it stales them all. That is why
-these modules sit apart from `../build-catalog-expected.json`.
-
 ## Files
 
 - `catalog-buffer.ts` — `readCatalogBuffer`: the manifest's transport chunks

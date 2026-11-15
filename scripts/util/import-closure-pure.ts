@@ -1,6 +1,4 @@
-// A build's code inputs: its import closure plus the non-code files beside it. See README.md.
-
-import { dirname, extname } from 'node:path';
+// What counts as code, and the package-script parsing that names a step's entries. See README.md.
 
 export const CODE_FILE = /\.(py|ts|mts)$/;
 
@@ -41,16 +39,3 @@ export function tsxEntries(scripts: Readonly<Record<string, string>>, name: stri
   return scriptParts(scripts, name).flatMap((p) => (p.kind === 'tsx' ? [p.entry] : []));
 }
 
-/** `closure` plus every file in `files` that sits in a closure module's folder
- *  and is not itself code or prose — the `*-expected.json` snapshots a build
- *  reads by path rather than by import. Repo-relative paths, sorted. */
-export function closureWithSiblings(closure: ReadonlySet<string>, files: Iterable<string>): string[] {
-  const closureDirs = new Set([...closure].map(dirname));
-  const keyed = new Set(closure);
-  for (const path of files) {
-    if (closureDirs.has(dirname(path)) && !CODE_FILE.test(path) && extname(path) !== '.md') {
-      keyed.add(path);
-    }
-  }
-  return [...keyed].sort();
-}

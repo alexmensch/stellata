@@ -15,7 +15,6 @@ import { REPO_ROOT, isLfsPointer } from '../../util/paths';
 import { isReadable, openDeclared, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import {
-  INHERITED_SPINE_EXPECTED_FILE,
   SPINE_COLUMNS,
   spineCounts,
   spineDesignations,
@@ -26,7 +25,7 @@ import { INHERITED_SPINE } from './inherited-spine-tsv';
 import { STALE_GAIA_SOURCE_IDS } from './stale-gaia-source-ids-source';
 
 const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
-const EXPECTED_PATH = resolve(REPO_ROOT, INHERITED_SPINE_EXPECTED_FILE);
+const EXPECTED_PATH = resolve(REPO_ROOT, 'scripts/catalog/spine/inherited-spine-expected.json');
 
 function* keyColumn(declared: Declared, column: string): Generator<string> {
   for (const row of readTable({ ...declared, columns: [column] }, openDeclared(declared).text())) {

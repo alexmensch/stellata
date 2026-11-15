@@ -50,15 +50,13 @@ files. A path the header does not name matches one the base does not hold
 The base (`Base`, chosen by `baseAt`):
 
 - **On a branch** (`fixed`) — the merge-base with `origin/main`, over the
-  header's paths, the branch's input paths and every path the branch deleted
-  since the merge-base that sat beside a code input (`deletedSiblingsSince`,
-  `../../../util/input-hashes-at.ts`, the sibling rule that makes a non-code
-  file beside a closure module an input). So a build from any commit is
+  header's paths and the branch's input paths. So a build from any commit is
   accepted when it read what the merge-base holds, whichever commit it names,
   and a build over uncommitted edits is refused exactly when an edit touched
   an input. A branch that adds an input the older build did not read differs
-  from it, and so does one that deletes a sibling file the merge-base gained
-  after the older build.
+  from it. An input reaches a step only through an import or a declaration
+  (`../../../util/step-inputs.ts`), so one the merge-base gained after the
+  older build changed a module both maps hold.
 - **On main** (`recorded`) — see [On main](#on-main).
 
 The base's map is `inputHashesAt` over the compared paths

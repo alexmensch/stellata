@@ -2,9 +2,6 @@
 // the record-parity additions ledger (/docs/catalog-driver.md#61-record-parity) and the binding review queue, plus the label
 // merge's review queue. See README.md.
 
-import { resolve } from 'node:path';
-
-import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { watchHeap } from '../../util/heap-budget/heap-budget';
 import { stepInputHashes } from '../../util/step-input-hashes';
@@ -16,7 +13,8 @@ import { readIdentity } from '../lineage/lineage-io';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { countedStageLineage } from '../lineage/stage-lineage';
-import { derivedStage, nestByStage, type StagedCounts } from '../../util/counts/count-stages-pure';
+import { derivedStage, nestByStage } from '../../util/counts/count-stages-pure';
+import { MEMBERSHIP_COUNTS } from './membership-manifest-expected-json';
 import {
   MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, identityLookup, membershipSummary,
   multiplesComponentJoin,
@@ -41,7 +39,6 @@ import { ORIGIN_KEYS } from './origin-keys';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import {
   MEMBERSHIP_COUNT_STAGES,
-  MEMBERSHIP_EXPECTED_FILE,
   buildMembership,
 } from './membership-manifest-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
@@ -119,15 +116,13 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, heap.check(), countSnapshotCheck<StagedCounts>({
-      snapshotPath: resolve(ROOT, MEMBERSHIP_EXPECTED_FILE),
+    checks: [...lineage.checks, heap.check(), countSnapshotCheck(MEMBERSHIP_COUNTS, {
       actual: nestByStage(MEMBERSHIP_COUNT_STAGES, [
         { stage: 'magnitude-term', block: magnitudeBlock },
         { stage: 'membership', block: { kind: 'counted', counts: lineage.counts } },
         { stage: derivedStage('membership'), block: { kind: 'counted', counts: result.derived } },
       ]),
       failureLabel: 'membership-manifest count',
-      script: 'build:membership',
     })],
   });
   for (const f of Object.values(MEMBERSHIP_OUTPUTS.files)) console.log(`wrote ${f}`);

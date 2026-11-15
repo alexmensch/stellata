@@ -112,8 +112,8 @@ way, through `catalogColumnsProjection` (`../catalog/columns/`):
 its record holds a hash of each float32 record column it reads, and
 `requestFrom` names `public/catalog-manifest.json`, ordering it after
 `build:catalog`. The catalogue's bytes are never an input, nor is the
-catalogue's count snapshot (the readers' folder holds code only, so no
-snapshot sits beside them), so a rebuild
+catalogue's count snapshot (declared, and named only by `build:catalog`'s
+check), so a rebuild
 that moves a name or any column the bake does not read leaves it fresh, and
 a committed record needs only those columns, not the whole build, to come
 out identical on another machine. The bake passes the same field list to
@@ -132,10 +132,6 @@ The audit hook records repo files only, so without that pull a new map
 version would never stale either bake.
 The pull's code is not an input: a refactor of the plumbing, or its port to
 TypeScript, does not make a pull stale; a changed column list or `WHERE` does.
-Nor is a file beside one of a TypeScript pull's modules, which a build's
-closure keys only so the build's by-path count snapshot reaches its stamp: a
-pull importing from `scripts/catalog/` would otherwise go stale on every
-catalogue count change.
 Each pull states its query as data, so the runner can hash the current query
 without a network call: every pull prints it under `--describe` (a
 TypeScript pull through its exported `describe`, which the launcher prints). A Python pull's describe

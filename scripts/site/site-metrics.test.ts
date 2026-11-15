@@ -4,20 +4,20 @@ import { creditCount, recordCountOf } from './site-metrics';
 
 describe('the catalogue size with no built artifact', () => {
   it('is the count snapshot beside the build', () => {
-    expect(recordCountOf(null, () => '{"recordCount":12345}', 'quote-snapshot')).toBe(12345);
-    expect(recordCountOf(null, () => '{"stages":{"records":{"recordCount":12345}}}', 'quote-snapshot')).toBe(12345);
+    expect(recordCountOf(null, () => ({ recordCount: 12345 }), 'quote-snapshot')).toBe(12345);
+    expect(recordCountOf(null, () => ({ stages: { records: { recordCount: 12345 } } }), 'quote-snapshot')).toBe(12345);
   });
 
   it.each([
-    ['no recordCount', '{}'],
-    ['a non-integer recordCount', '{"recordCount":"12,345"}'],
-    ['a zero recordCount', '{"recordCount":0}'],
+    ['no recordCount', {}],
+    ['a non-integer recordCount', { recordCount: '12,345' }],
+    ['a zero recordCount', { recordCount: 0 }],
   ])('refuses a snapshot with %s', (_, snapshot) => {
     expect(() => recordCountOf(null, () => snapshot, 'quote-snapshot')).toThrow(/states no recordCount/);
   });
 
   it('stops a production build rather than quoting the snapshot', () => {
-    const snapshot = (): string => { throw new Error('read the snapshot'); };
+    const snapshot = (): unknown => { throw new Error('read the snapshot'); };
     expect(() => recordCountOf(null, snapshot, 'refuse')).toThrow(/catalog\.bin\.0 is not built — run pnpm run build:catalog/);
   });
 });
@@ -26,7 +26,7 @@ describe('a figure that cannot be read stops the build', () => {
   it.each(['quote-snapshot', 'refuse'] as const)(
     'refuses a catalogue that is present but unreadable, rather than quoting the snapshot (%s)',
     (absent) => {
-      const snapshot = (): string => { throw new Error('read the snapshot'); };
+      const snapshot = (): unknown => { throw new Error('read the snapshot'); };
       expect(() => recordCountOf(Buffer.from('version https://git-lfs'), snapshot, absent)).toThrow(/magic/i);
     },
   );
