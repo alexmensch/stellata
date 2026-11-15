@@ -159,7 +159,7 @@ same thing — single-use helpers stay with their consumer.
   It throws where no tag is reachable, so a checkout reading it needs full
   history and tags (`fetch-depth: 0` in CI). Imports only `node:`
   builtins, because `../release/`'s plain-`node` scripts import it too.
-- `git-provenance.ts` — what a build or instrument records about its
+- `git-provenance.ts` (+ test) — what a build or instrument records about its
   checkout: `headCommit`, `headState` (HEAD and whether
   the tree is dirty), `onMainBranch` (HEAD is on the branch `MAIN_REF`
   tracks; false when detached), `inHeadHistory` (whether a commit is HEAD or an
