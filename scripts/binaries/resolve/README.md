@@ -114,9 +114,8 @@ twice. The stage covers Gaia and HIP only, since the binaries pipeline's
 AT-HYG binding retires with its AT-HYG read (stellata-hooj.17). The counts
 fold into the snapshot's `component-binding` stage ([Composition, not counting](../counts/README.md#composition-not-counting)).
 
-`BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s: 94,042 rows for
-<!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count -->
-components came to 898 KB gzipped in 386–752 ms across two runs, neither
+`BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s: 94,042 rows
+for <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> components came to 898 KB gzipped in 386–752 ms across two runs, neither
 diffing against a baseline (2026-11-14). A branch that changes this stage's
 inputs re-reads each changed file at the merge-base in one batched git read
 to refuse the baseline: 320 ms for the whole window, 179 of it the baseline,
