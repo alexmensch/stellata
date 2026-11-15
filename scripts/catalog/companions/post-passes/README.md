@@ -31,9 +31,10 @@ scripts/catalog/companions/post-passes/
                                 (#anchor-flux-conservation). Every candidate
                                 gets one AnchorDimVerdict, and the
                                 companionBlendDim* counts fold from them.
-  held-record.ts                starDistPc and recordSpectralInfo: what a
-                                pass reads back off a record already built
-                                (#reading-a-records-class-back).
+  held-record.ts                starDistPc and recordSpectralInfo: what
+                                promotion — these passes and the walk's
+                                re-curation — reads back off a record
+                                already built (#reading-a-records-class-back).
 ```
 
 ## Inner-pair re-home

@@ -1,4 +1,4 @@
-// What a post-pass reads back off a record already built: its distance from Sol and its class.
+// What promotion reads back off a record already built: its distance from Sol and its class.
 
 import { classifyFromSimbad, type SpectralInfo } from '../../../../src/catalog-format/spectral/spectral-classify';
 import { decodeSpectralBytes, encodeSpectralBytes } from '../../../../src/catalog-format/spectral/spectral-record-bytes';
