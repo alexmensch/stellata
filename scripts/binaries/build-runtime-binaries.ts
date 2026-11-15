@@ -1,19 +1,17 @@
 // Build public/binaries.bin from multiples.tsv and the catalogue row-index map. See README.md#runtime-side-artifact.
 
-import { relative, resolve } from 'node:path';
+import { relative } from 'node:path';
 
 import { CATALOG_ROW_INDEX_MAP } from '../catalog/companions/record-index/catalog-row-index-map-source';
 import { emitArtifacts } from '../util/emit-artifacts';
 import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
-import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import { readArtifact } from '../util/sources/source';
 import { MULTIPLES_TSV } from './multiples-tsv';
+import { RUNTIME_BINARIES_COUNTS } from './build-runtime-binaries-expected-json';
 import { RUNTIME_BINARIES_OUTPUTS } from './runtime-binaries-outputs';
 import { encodeRuntimeBinaries, multiplesHandshake } from './runtime-binaries-pure';
-
-const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-runtime-binaries-expected.json');
 
 const log = (msg: string): void => console.log(`[build-runtime-binaries] ${msg}`);
 
@@ -40,11 +38,9 @@ export function main(): void {
     files: { binaries: bytes },
     checks: [
       multiplesHandshake(map.multiplesSha1, handedFileHash(stepInputHashes(), MULTIPLES_TSV.file)),
-      countSnapshotCheck<StagedCounts>({
-        snapshotPath: EXPECTED_COUNTS,
+      countSnapshotCheck(RUNTIME_BINARIES_COUNTS, {
         actual: { stages: { encode: c } },
         failureLabel: 'build-runtime-binaries count',
-        script: 'build:binaries-runtime',
       }),
     ],
   });

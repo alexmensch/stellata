@@ -24,6 +24,8 @@ the clouds both cover.
 - `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
   (`../util/sources/README.md#a-json-artifact`): the writer serializes
   through it, and lineage cites a cloud as `clouds:<slug>`.
+- `build-clouds-expected-json.ts` — `CLOUDS_COUNTS`, the count snapshot's
+  declaration (`../util/sources/README.md#a-snapshot`).
 - `clouds-inputs.test.ts` — pins the step's derived input set,
   `stepInputPaths('build:clouds')`.
 - `clouds-payload.test.ts` pins the emitted payload (11 calibrated clouds, class

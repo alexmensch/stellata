@@ -41,8 +41,9 @@ Emits `public/local-group.json`, the `allocation-local-group` lineage stage
 `lg` SID registry partition through one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Its check includes the step's count
-snapshot, `build-local-group-expected.json`: the allocation stage's count
-block, keyed on its reason codes ([The staged snapshot](../util/counts/README.md#the-staged-snapshot));
+snapshot, `build-local-group-expected.json` (declared in
+`build-local-group-expected-json.ts`, `../util/sources/README.md#a-snapshot`):
+the allocation stage's count block, keyed on its reason codes ([The staged snapshot](../util/counts/README.md#the-staged-snapshot));
 `pnpm run build:local-group --update-snapshots` refreshes it. The output schema is
 `/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
 `LocalGroupFile`), which the client loader at

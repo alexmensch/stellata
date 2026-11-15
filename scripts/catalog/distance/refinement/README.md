@@ -18,7 +18,10 @@ scripts/catalog/distance/refinement/
   distance-regression-check.ts    Post-build check that no override layer
     (+ test)                      moved a star further than its budget,
                                   pinned by
-                                  build-distance-outliers-expected.json.
+                                  build-distance-outliers-expected.json,
+  build-distance-outliers-expected-json.ts
+                                  declared as DISTANCE_OUTLIERS
+                                  (../../../util/sources/README.md#a-snapshot).
 ```
 
 Layer 3's cutoff, `MAX_DIST_PC`, lives in `../../parse/stars-parse.ts`, which

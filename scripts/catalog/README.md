@@ -186,6 +186,9 @@ scripts/catalog/
                                   `nameTable` hands
                                   trace the same table for its folded one
                                   (lineage/trace/README.md).
+  build-catalog-expected-json.ts  BUILD_CATALOG_COUNTS, the count snapshot's
+                                  declaration
+                                  (../util/sources/README.md#a-snapshot).
   build-counts.ts (+ test)        The build's count snapshot,
                                   build-catalog-expected.json, which
                                   committedBuildCounts reads back for

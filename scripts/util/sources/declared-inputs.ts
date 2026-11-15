@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { escapeRegExp } from '../escape-regexp';
 import type { Artifact } from '../tsv/artifact-pure';
 import type { JsonArtifact } from './json-artifact-pure';
+import type { Snapshot } from './snapshot-pure';
 import { REPO_ROOT } from '../paths';
 import { listingFiles, type Source } from './source';
 
@@ -13,7 +14,8 @@ import { listingFiles, type Source } from './source';
 export const DECLARING_MODULE = /-(source|tsv|json)\.ts$/;
 
 export type DeclaredValue =
-  | Source<unknown, unknown[], unknown> | Artifact<string, unknown, unknown> | JsonArtifact<unknown, unknown>;
+  | Source<unknown, unknown[], unknown> | Artifact<string, unknown, unknown> | JsonArtifact<unknown, unknown>
+  | Snapshot<unknown>;
 
 export type DeclaredUse = 'read' | 'written' | 'both' | 'unused';
 
@@ -29,7 +31,7 @@ export interface DeclaredInput {
 function isDeclared(value: unknown): value is DeclaredValue {
   if (typeof value !== 'object' || value === null) return false;
   const { kind } = value as { kind?: unknown };
-  return kind === 'source' || kind === 'artifact';
+  return kind === 'source' || kind === 'artifact' || kind === 'snapshot';
 }
 
 /** An exported declaration, or each entry of an exported record whose values are all declarations, which a read through the record reads as one. */
@@ -43,9 +45,11 @@ function declaredEntries(name: string, value: unknown): [string, DeclaredValue][
 
 function useOf(name: string, value: DeclaredValue, texts: readonly string[]): DeclaredUse {
   const n = escapeRegExp(name);
-  const read = value.kind === 'source'
-    ? new RegExp(`\\b${n}\\.read\\(`)
-    : new RegExp(`\\b(readArtifact|artifactRows|artifactText|streamArtifact)\\(\\s*${n}\\b`);
+  const read = {
+    source: new RegExp(`\\b${n}\\.read\\(`),
+    artifact: new RegExp(`\\b(readArtifact|artifactRows|artifactText|streamArtifact)\\(\\s*${n}\\b`),
+    snapshot: new RegExp(`\\b${n}\\b`),
+  }[value.kind];
   const written = value.kind === 'artifact' ? new RegExp(`\\b${n}\\.(serialize|encodeLine)\\(`) : null;
   const isRead = texts.some((t) => read.test(t));
   const isWritten = written !== null && texts.some((t) => written.test(t));

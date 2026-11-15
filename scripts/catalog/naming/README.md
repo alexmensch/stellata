@@ -64,7 +64,9 @@ scripts/catalog/naming/
                                 (/src/catalog-format/pipeline-outputs/).
                                 Side-effect free.
   wgsn-expected.json            Pinned count snapshot
-                                (--update-snapshots refreshes).
+                                (--update-snapshots refreshes),
+  wgsn-expected-json.ts         declared as WGSN_COUNTS
+                                (../../util/sources/README.md#a-snapshot).
   manifest-naming-expected.json The manifest's naming figures — the residual
                                 gate's and the Bayer coverage — pinned by
                                 ../membership/membership-manifest-gate.test.ts,

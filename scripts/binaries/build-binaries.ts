@@ -1,11 +1,8 @@
 // build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the verdicts and the binding lineage. See README.md#pipeline-at-a-glance.
 
-import { resolve } from 'node:path';
-
-import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { emitArtifacts } from '../util/emit-artifacts';
-import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
+import { BUILD_BINARIES_COUNTS } from './build-binaries-expected-json';
 import { stepInputHashes } from '../util/step-input-hashes';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageText } from '../catalog/lineage/lineage-row-pure';
@@ -56,8 +53,6 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
   return { reference, resolved, astrometry, orbits, optical, multiples };
 }
 
-const EXPECTED_COUNTS = resolve(REPO_ROOT, 'scripts/binaries/build-binaries-expected.json');
-
 const log = (line: string): void => console.log(`[build-binaries] ${line}`);
 
 export async function main(): Promise<void> {
@@ -86,11 +81,9 @@ export async function main(): Promise<void> {
     checks: [
       ...reference.checks,
       ...lineage.checks,
-      countSnapshotCheck<StagedCounts>({
-        snapshotPath: EXPECTED_COUNTS,
+      countSnapshotCheck(BUILD_BINARIES_COUNTS, {
         actual: binariesCounts(results, lineage.counts),
         failureLabel: 'build-binaries count',
-        script: 'build:binaries',
       }),
     ],
   });

@@ -331,8 +331,9 @@ same thing — single-use helpers stay with their consumer.
 - `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
   spelling of a step's command, for the runner's refusals, the snapshot
   refresh hint and every artifact or registry hint naming its writer.
-- `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
-  snapshot against its committed JSON, answered as an `emitArtifacts`
+- `snapshot-check.ts` — `snapshotCheck(snapshot, spec)`: a build script's
+  computed snapshot against its committed JSON, the declared `snapshot`
+  ([A snapshot](sources/README.md#a-snapshot)), answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
   `UPDATE_SNAPSHOTS` (`UPDATE_SNAPSHOTS_ENV`) is `1`, the variable the
   runner's `--update-snapshots` sets. It writes nothing itself. A missing
