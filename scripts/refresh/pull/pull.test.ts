@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { pullQueryHash } from '../../pipeline/freshness';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import {
-  LIMIT_HEADROOM, MAX_TABLE_CELLS, assertTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
+  LIMIT_HEADROOM, MAX_TABLE_CELLS, answeredLine, assertTablesFit, batchQueries, describePhasedPull, describePull, phaseLimit,
   phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
 import { checkpoint } from './checkpoint';
@@ -206,6 +206,22 @@ describe('runPull', () => {
 
     await runPull(pullOf({ stars: STARS, pairs: withFloor(0.6) }), deps(missingThree).deps);
     expect([read('stars.tsv'), read('pairs.tsv')]).toEqual(['source_id\tparallax\n1\t0.5\n2\t\n', 'source_id\tperiod\n1\t5\n2\t10\n']);
+  });
+});
+
+describe('answeredLine', () => {
+  it('says which archive answered: the first mirror, or the fallback it was unreachable for', () => {
+    expect(answeredLine(VIZIER, ['CDS'])).toBe('answered by CDS');
+    expect(answeredLine(VIZIER, ['CfA'])).toBe('CDS unreachable, answered by CfA mirror');
+    expect(answeredLine(VIZIER, ['CfA', 'CDS'])).toBe('answered by CDS and the CfA mirror');
+    expect(answeredLine(VIZIER, [])).toBe('no archive answered: every reply replayed from a seeded checkpoint');
+  });
+
+  it('is the last line a pull prints, after its outputs land', async () => {
+    const lines: string[] = [];
+    const { deps: d } = deps(GOOD);
+    await runPull(pullOf({ stars: STARS, pairs: PAIRS }), { ...d, log: (line) => lines.push(line) });
+    expect(lines.at(-1)).toBe('answered by ESA-sync');
   });
 });
 

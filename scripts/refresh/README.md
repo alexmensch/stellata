@@ -258,6 +258,15 @@ Tycho-2 is a filtered subset rather than a whole table, scanned in TYC1
 bands and gated on kept rows as a share of the request set: a phased pull
 in `scripts/refresh/tycho2/`, with its own README.
 
+**Every VizieR pull asks CDS first and falls back to the CfA (Harvard)
+mirror only when CDS fails**, and writes the same bytes from either
+([Two mirrors, one answer](vizier/README.md#two-mirrors-one-answer)). Its
+last line, and its record's `answeredBy`, say which answered: `answered by
+CDS` or `CDS unreachable, answered by CfA mirror`. CDS has been unreachable
+since 2026-11-14. **A pull CDS answers is the signal that it is back**: start
+`stellata-hhaw.70`, which verifies the CDS mirrors live and records their
+replies.
+
 ### Gaia TAP: synchronous endpoints only
 
 Every `gaiadr3.*` pull asks a `/sync` endpoint — ESA primary, ARI Heidelberg

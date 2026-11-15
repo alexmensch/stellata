@@ -286,6 +286,18 @@ function phased<K extends string>(pull: Pull<K>): PhasedPull<K> {
 
 export const runPull = <K extends string>(pull: Pull<K>, deps: TapClientDeps = LIVE): Promise<void> => runPhasedPull(phased(pull), deps);
 
+/** Which mirror answered, in the archive's terms: its first mirror, or the fallbacks it was unreachable for; `answered` in first-answer order. */
+export function answeredLine(archive: TapArchive, answered: readonly string[]): string {
+  const [primary] = archive.mirrors;
+  if (answered.length === 0) return 'no archive answered: every reply replayed from a seeded checkpoint';
+  const fallbacks = answered.filter((name) => name !== primary.name);
+  if (fallbacks.length === 0) return `answered by ${primary.name}`;
+  const mirrors = `${fallbacks.join(' and ')} mirror${fallbacks.length > 1 ? 's' : ''}`;
+  return answered.includes(primary.name)
+    ? `answered by ${primary.name} and the ${mirrors}`
+    : `${primary.name} unreachable, answered by ${mirrors}`;
+}
+
 /** The resume cache sits beside the first output and goes only once every output has landed. */
 export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps: TapClientDeps = LIVE): Promise<void> {
   assertPhasesFit(pull.phases, pull.archive.quote);
@@ -293,7 +305,12 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
   const named = new Map(Object.entries(pull.phases).map(([name, phase]) => [phase, name]));
   const keys = keysOf(pull.tables);
   const cache = checkpoint(`${pull.outputs.files[keys[0]]}.ckpt`);
-  const client = tapClient(pull.archive, deps);
+  const answered: string[] = [];
+  const report = (service: string): void => {
+    if (!answered.includes(service)) answered.push(service);
+    deps.report(service);
+  };
+  const client = tapClient(pull.archive, { ...deps, report });
 
   const ask: Ask = async (phase, ids) => {
     const name = named.get(phase);
@@ -303,7 +320,7 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
     const rows: Row[] = [];
     for (const [i, query] of queries.entries()) {
       const cached = cache.load(query.adql);
-      if (cached?.service) deps.report(cached.service);
+      if (cached?.service) report(cached.service);
       const result = cached === null ? await client.query(query, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
       const checked = checkedRows(phase.columns, result.result, name);
       if (cached === null) cache.save(query.adql, result);
@@ -327,4 +344,5 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
   }
   emitArtifacts({ outputs: pull.outputs, files, checks });
   cache.clear();
+  deps.log(answeredLine(pull.archive, answered));
 }

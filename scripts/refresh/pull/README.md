@@ -224,7 +224,10 @@ HTML page is reported by its text.
 its retries once per run, and each answer is reported through
 `../../util/answered-by.ts`, which `record.ts` copies into the record's
 `answeredBy`. `services`, the declared mirror list, is what a pull's
-describe states.
+describe states. A pull's last line says the same in the archive's terms
+(`answeredLine`): `answered by CDS`, `CDS unreachable, answered by CfA
+mirror`, both when the answers were split, or that every reply replayed
+from a seeded checkpoint.
 
 **The `CDS` and `SIMBAD-CDS` mirrors are unverified, and the first PR a mirror
 answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
