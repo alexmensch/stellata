@@ -87,7 +87,7 @@ interface CorpusCompanion {
   /** Optional pin: companion's catalog.bin xyz must sit within this
    *  many AU of the primary's catalog.bin xyz. Regression-guards
    *  synth-promoted secondaries whose tangent-projected position
-   *  depends on companion-promotion's route-based collocation
+   *  depends on companions/placement's route-based collocation
    *  detector. */
   maxSepAuFromPrimary: number | null;
 }

@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
-import { foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
-import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
-import { makeStar } from '../parse/star-fixture';
-import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
+import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
+import { invariantCheck, invariantViolations } from '../../lineage/lineage-invariant-pure';
+import {
+  foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine,
+} from '../../lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../../lineage/count-block-fixture';
+import { makeStar } from '../../parse/star-fixture';
+import type { RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type {
   MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
-} from './companion-promotion';
-import { multiplesRow } from './multiples-fixture';
+} from '../promotion-outcome';
+import { multiplesRow } from '../multiples-fixture';
 import {
-  decisionRows, PROMOTION_CODES, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
+  decisionRows, PROMOTION_CODES, PROMOTION_INVARIANTS, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
 } from './promotion-lineage-pure';
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
@@ -279,5 +283,39 @@ describe('rewriteRows', () => {
     expect(lineage.map((r) => r.code)).toEqual(['promotion.size.recurated', 'promotion.existing.recurated.spectral']);
     const lines = sortLineageLines(lineage.map((r) => stageLineageLine(PROMOTION_CODES, r)));
     expect(() => stageLineageText(PROMOTION_CODES, lines)).not.toThrow();
+  });
+});
+
+describe('PROMOTION_INVARIANTS', () => {
+  const violations = (lines: LineageLine[]) => invariantViolations(PROMOTION_INVARIANTS, lines);
+  const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.key));
+  const rowAt = (key: string) => {
+    const [systemId, comp] = key.slice(`${MULTIPLES_ROW_KEY.id}:`.length).split('/');
+    return multiplesRow({ systemId, comp });
+  };
+  const linesOf = (keys: readonly string[], outcome: RowOutcome) => keys.flatMap((key) =>
+    decisionRows(promotionDecision({ ...promoted(outcome), row: rowAt(key) }, recordKey)).map((r) => stageLineageLine(PROMOTION_CODES, r)));
+  const anchorIsComponent: RowOutcome = { kind: 'dropped', reason: 'anchor-is-component', idx: 7 };
+  const sameasBridge: RowOutcome = { kind: 'adopted', idx: 3, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null };
+
+  it('excepts the 3 mis-keyed anchor rows and the 7 same-as bridged rows by row key, and no anchor-collocated mint', () => {
+    expect([miskeyed.length, bridged.length]).toEqual([3, 7]);
+    expect(PROMOTION_INVARIANTS.map((v) => v.exceptions.kind)).toEqual(['named', 'named', 'rule']);
+  });
+
+  it('holds over exactly the named rows', () => {
+    const lines = [...linesOf(miskeyed, anchorIsComponent), ...linesOf(bridged, sameasBridge)];
+    expect(violations(lines).map(invariantCheck).map((c) => c.kind)).toEqual(['pass', 'pass', 'pass']);
+  });
+
+  it('names an unlisted row onto a listed row\'s record, and every anchor-collocated mint', () => {
+    const anchorCollocated: MintedBrightness = { ...own, source: 'anchor_collocated' };
+    const lines = [
+      ...linesOf([...miskeyed, 'multiples:00001+0001-AB/B'], anchorIsComponent), ...linesOf(bridged, sameasBridge),
+      ...linesOf(['multiples:00002+0002-AB/B'], { kind: 'minted', idx: 5, synthetic: true, brightness: anchorCollocated, constellationSplit: false }),
+    ];
+    expect(violations(lines).map((v) => v.rows.map((r) => r.key))).toEqual([
+      ['multiples:00001+0001-AB/B'], [], ['multiples:00002+0002-AB/B'],
+    ]);
   });
 });

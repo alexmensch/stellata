@@ -33,7 +33,7 @@ export interface ParkedRecord extends ParkedLedgerEntry {
   /** Build-time only — no ledger column carries it. Every parallax a skip rule
    *  refused on this row, mas, which is what companion promotion needs to tell a
    *  pair row re-serving the refusal from one merely sharing the blend's id
-   *  (`../../companions/README.md#refused-parallax-refusal`). Empty on the
+   *  (`../../companions/identity/README.md#refused-parallax-refusal`). Empty on the
    *  three reasons that refused nothing. */
   refusedPlxMas: readonly number[];
   /** Build-time only: the record's lineage origin key, which a promotion row

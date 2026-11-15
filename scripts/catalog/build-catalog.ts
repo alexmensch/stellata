@@ -48,18 +48,13 @@ import {
   doublesEvidence,
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
+import { parkedRefusals } from './companions/identity/parked-refusals';
+import { promoteCompanions, type PromotionInputs } from './companions/companion-promotion';
+import { readMultiplesTsv, type MultiplesTsvRow } from './companions/multiples-row';
+import { recuratedRecords, type PromotionDerivedCounts } from './companions/promotion-outcome';
 import {
-  promoteCompanions,
-  readMultiplesTsv,
-  recuratedRecords,
-  parkedRefusals,
-  type MultiplesTsvRow,
-  type PromotionDerivedCounts,
-  type PromotionInputs,
-} from './companions/companion-promotion';
-import {
-  PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
-} from './companions/promotion-lineage-pure';
+  PROMOTION_CODES, PROMOTION_INVARIANTS, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
+} from './companions/promotion-lineage/promotion-lineage-pure';
 import { identityText } from './lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
@@ -502,7 +497,7 @@ export async function main() {
   const promotionEmission = catalogStageLineage({
     spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
     siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
-    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+    budget: PROMOTION_LINEAGE_BUDGET, invariants: PROMOTION_INVARIANTS, inputs: inputHashesAtStart,
   });
   const allocationEmission = catalogCountedStageLineage({
     spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,

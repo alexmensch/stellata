@@ -1,29 +1,20 @@
 import { describe, it, expect } from 'vitest';
-import type { Stage6Offset } from './anchor-offset-pure';
+import type { Stage6Offset } from './placement/anchor-offset-pure';
 import { polarToTangent, tangentToPolar } from '../../../src/astro-core/equatorial-basis';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
 import {
   decisionRows, familyTotal, PROMOTION_CODES, promotionDecision, rewriteRows, type PromotionCounts,
-} from './promotion-lineage-pure';
+} from './promotion-lineage/promotion-lineage-pure';
 import {
-  ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
-  componentDepth,
-  emptyParkedRefusals,
-  GAIA_BLEND_MAX_SEP_ARCSEC,
-  PRINTED_BLEND_MAX_SEP_ARCSEC,
-  imputeCompanionAbsmag,
-  adjustMinted,
-  companionCi,
-  isDisjointSingleLetter,
-  parseMultiplesTsv,
-  projectFromSepPa,
-  parkedRefusals,
-  promoteCompanions,
-  recuratedRecords,
-  type MintedBrightness,
-  type MultiplesTsvRow,
-  type PromotionInputs,
+  imputeCompanionAbsmag, companionCi, isDisjointSingleLetter, promoteCompanions, type PromotionInputs,
 } from './companion-promotion';
+import { parseMultiplesTsv, type MultiplesTsvRow } from './multiples-row';
+import { adjustMinted, recuratedRecords, type MintedBrightness } from './promotion-outcome';
+import {
+  ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG, componentDepth, GAIA_BLEND_MAX_SEP_ARCSEC, PRINTED_BLEND_MAX_SEP_ARCSEC,
+} from './post-passes/anchor-dim';
+import { emptyParkedRefusals, parkedRefusals } from './identity/parked-refusals';
+import { projectFromSepPa } from './placement/placement';
 import {
   FLAG_BINARY_COMPANION_ONLY,
   FLAG_BINARY_COMPANION_SYNTHETIC,
