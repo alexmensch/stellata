@@ -110,7 +110,9 @@ file nothing cites needs no declaration.
 it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), so it
 is an input of exactly the steps whose closure names it. `readSnapshot` (null
 when absent) and `committedSnapshot` (throws when absent), in `source.ts`, are
-the one place a snapshot is opened. Each lives in a `*-expected-json.ts` leaf
+the one place a step opens a snapshot (`../../doc-figures/` reads every
+`*-expected.json` by glob, and `../../perf/perf-section-guard.sh` the
+catalogue's, neither a step). Each lives in a `*-expected-json.ts` leaf
 beside its file (`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts`
 holds every `defineSnapshot` call to it), imported only by code that reads it:
 its step's check (`build:clouds` and `build:local-group` hand theirs to
