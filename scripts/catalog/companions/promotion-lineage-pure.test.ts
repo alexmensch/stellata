@@ -3,10 +3,13 @@ import { describe, expect, it } from 'vitest';
 import { foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
 import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { makeStar } from '../parse/star-fixture';
-import type { MintedBrightness, PromotedRow, PromotionDerivedCounts, RowOutcome } from './companion-promotion';
+import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
+import type {
+  MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
+} from './companion-promotion';
 import { multiplesRow } from './multiples-fixture';
 import {
-  decisionRows, PROMOTION_CODES, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary,
+  decisionRows, PROMOTION_CODES, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
 } from './promotion-lineage-pure';
 
 const row = multiplesRow({ systemId: '22266-1645-AB', comp: 'B' });
@@ -145,14 +148,15 @@ describe('promotion count block', () => {
 
   it('summarises the families as the build log has them', () => {
     const derived: PromotionDerivedCounts = {
-      companionRepositionedInnerToParent: 0, companionBlendDimmedAnchors: 3,
+      companionRepositionedInnerToParent: 0,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
-      companionExistingMemberRecurated: { dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 0 }, physicalOverlaps: 0,
+      physicalOverlaps: 0,
     };
     const summary = promotionSummary(foldStageLines(PROMOTION_CODES, LINES), derived, 7);
     expect(summary).toContain('scanned 7 pair rows; promoted 2 (1 via synthetic ID); already-in-catalog 2 ');
     expect(summary).toContain('refused-parked=2 (via gaia_5p 1, owned fit 1)');
+    expect(summary).toContain('(re-curated dmag_imputed=0, wds_mag=0, spectral=0, held=0, ');
   });
 });
 
@@ -170,7 +174,7 @@ describe('promotionLineage identity', () => {
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
       promoted({ kind: 'pair-anchor' }),
-    ], stars, new Set());
+    ], stars, new Set(), new Map());
     expect(identity).toEqual([{
       key: 'multiples:22266-1645-AB/B', tyc: '', hip: '', hd: '', gl: '',
       gaia_source_id: '2595463996992115840',
@@ -183,7 +187,7 @@ describe('promotionLineage identity', () => {
     const { identity } = promotionLineage([
       { row: standalone, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null, synthKey: 'synth-19082+3829-C' },
       promoted({ kind: 'dropped', reason: 'no-absmag' }),
-    ], stars, new Set(['synth:22266-1645-B']));
+    ], stars, new Set(['synth:22266-1645-B']), new Map());
     expect(identity).toEqual([
       {
         key: 'multiples:19082+3829-_C/C', tyc: '', hip: '42', hd: '', gl: '',
@@ -200,7 +204,7 @@ describe('promotionLineage identity', () => {
         row: multiplesRow({ systemId: '22266-1645-AC', comp: 'C' }), synthKey: 'synth-22266-1645-C',
       }),
       promoted({ kind: 'pair-anchor' }, { row: multiplesRow({ systemId: '22266-1645-AD', comp: 'A' }), synthKey: 'synth-22266-1645-A' }),
-    ], stars, new Set());
+    ], stars, new Set(), new Map());
     expect(identity.map((r) => [r.key, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', ['synth:22266-1645-B']],
       ['multiples:22266-1645-AC/C', ['synth:22266-1645-C']],
@@ -217,10 +221,63 @@ describe('promotionLineage identity', () => {
       unpaired('A', { hip: 104066 }),
       unpaired('B', { gaiaSourceId: '2595463996992115840' }),
       unpaired('C', { hip: 104066, gaiaSourceId: '77' }),
-    ], stars, new Set(['hip:104066', 'synth:21050+1243-A', 'synth:21050+1243-B']));
+    ], stars, new Set(['hip:104066', 'synth:21050+1243-A', 'synth:21050+1243-B']), new Map());
     expect(identity.map((r) => [r.key, r.hip, r.gaia_source_id, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', '', '2595463996992115840', ['synth:22266-1645-B', 'gaia_dr3:2595463996992115840']],
       ['multiples:21050+1243-_X/C', '', '77', ['synth:21050+1243-C', 'gaia_dr3:77']],
     ]);
+  });
+});
+
+describe('rewriteRows', () => {
+  const classTeff: RadiusResolution = {
+    route: 'class-teff', rSun: 1.2, absmag: 4.56789, teffK: 5800, classIndex: 'stated', clamp: null, refusedTeff: null,
+  };
+  const whiteDwarf: RadiusResolution = { route: 'white-dwarf', rSun: 0.013, refusedTeff: null };
+  const rows = (rewrite: RecordRewrite) => rewriteRows('spine:3', rewrite, recordKey);
+
+  it('keys every row on the rewritten record, uncited, its last sizing pass first with that radius\'s route params', () => {
+    const [size] = rows({ sizing: { pass: 'blend-split', radius: classTeff }, brightness: [] });
+    expect(size).toMatchObject({ key: 'spine:3', role: 'outcome', code: 'promotion.size.blend-split', evidence: [] });
+    expect(paramsOf(size)).toEqual({ route: 'class-teff', absmag: '4.5679', class_index: 'stated' });
+    expect(paramsOf(rows({ sizing: { pass: 'mint', radius: whiteDwarf }, brightness: [] })[0])).toEqual({ route: 'white-dwarf' });
+  });
+
+  it('writes each change to a held record\'s brightness with the value that pass set and its inputs, a dimmed anchor citing the members it lost', () => {
+    const out = rows({
+      sizing: { pass: 'anchor-re-split', radius: classTeff },
+      brightness: [
+        { pass: 'recurated', source: 'wds_mag', absmag: 11.36, av: 0.012345, ci: 'own' },
+        { pass: 'anchor-re-split', anchorIdx: 7, absmag: 11.4 },
+      ],
+    });
+    expect(out.map((r) => r.code)).toEqual([
+      'promotion.size.anchor-re-split', 'promotion.existing.recurated.wds-mag', 'promotion.existing.anchor-re-split',
+    ]);
+    expect(paramsOf(out[1])).toEqual({ absmag: '11.3600', av: '0.0123', ci_via: 'own' });
+    expect(paramsOf(out[2])).toEqual({ absmag: '11.4000', record: 'spine:7' });
+    const [, held, dimmed] = rows({
+      sizing: { pass: 'anchor-dimmed', radius: classTeff },
+      brightness: [
+        { pass: 'recurated', source: 'held', absmag: 9, fromPc: 10, toPc: 12.5, avFrom: 0.1, avTo: 0.2 },
+        { pass: 'anchor-dimmed', absmag: 1.2, members: ['spine:9', 'multiples:S-AB/B'] },
+      ],
+    });
+    expect(held.code).toBe('promotion.existing.recurated.held');
+    expect(paramsOf(held)).toEqual({ absmag: '9.0000', from_pc: '10', to_pc: '12.5', av_from: '0.1000', av_to: '0.2000' });
+    expect(dimmed.code).toBe('promotion.existing.anchor-dimmed');
+    expect(paramsOf(dimmed)).toEqual({ absmag: '1.2000' });
+    expect(dimmed.evidence).toEqual(['multiples:S-AB/B', 'spine:9']);
+  });
+
+  it('adds the rewrites to the stage\'s lines, each a code the writer accepts', () => {
+    const star = makeStar({ originKey: 'spine:3' });
+    const { lineage } = promotionLineage([], [star], new Set(), new Map([[star, {
+      sizing: { pass: 'recurated', radius: classTeff },
+      brightness: [{ pass: 'recurated', source: 'spectral', absmag: 5, av: 0, ci: 'spectral_derived' }],
+    }]]));
+    expect(lineage.map((r) => r.code)).toEqual(['promotion.size.recurated', 'promotion.existing.recurated.spectral']);
+    const lines = sortLineageLines(lineage.map((r) => stageLineageLine(PROMOTION_CODES, r)));
+    expect(() => stageLineageText(PROMOTION_CODES, lines)).not.toThrow();
   });
 });
