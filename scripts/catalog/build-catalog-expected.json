@@ -236,7 +236,7 @@
       "systemsWithCcdm": 485,
       "systemsWithGeometric": 43,
       "systemCcdmOpticalMembers": 1012,
-      "systemGeometricLentPairs": 6267,
+      "systemGeometricLentDropped": 10,
       "companionEclipsingPartner": 1529,
       "companionSimbadMultiple": 10648,
       "companionCcdm": 11359
