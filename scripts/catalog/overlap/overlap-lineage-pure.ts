@@ -1,6 +1,6 @@
 // Each pair of records drawn inside one another, as the `overlap` lineage stage, and its invariant. See README.md#overlap-lineage.
 
-import { namedExceptionsInvariant, namedRow, type LineageInvariant } from '../lineage/lineage-invariant-pure';
+import { namedRow, namedRowsInvariant, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import { compareUtf8, stageLineageLine, stageRow, type LineageLine } from '../lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { OVERLAP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -72,10 +72,10 @@ const KNOWN_OVERLAPS = new Map([
 ]);
 
 export const OVERLAP_INVARIANTS: readonly LineageInvariant[] = [
-  namedExceptionsInvariant(
+  namedRowsInvariant(
     OVERLAP_CODES, 'inside',
     'no record is drawn inside another outside an orbit chain but the pairs named (README.md#overlap-gate)',
-    KNOWN_OVERLAPS, 'key-and-params',
+    KNOWN_OVERLAPS,
   ),
 ];
 

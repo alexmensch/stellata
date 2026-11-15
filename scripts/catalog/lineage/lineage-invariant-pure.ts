@@ -13,17 +13,19 @@ export type InvariantExceptions =
     /** A function of the params alone: asked once per distinct params text. */
     readonly allows: (params: LineageParams) => boolean;
   }
-  | { readonly kind: 'named'; readonly by: NamedBy; readonly named: ReadonlyMap<string, string> };
+  | { readonly kind: 'named'; readonly by: 'key'; readonly named: ReadonlyMap<string, string> }
+  | { readonly kind: 'named'; readonly by: 'key-and-params'; readonly named: ReadonlyMap<NamedRow, string> };
 
-export type NamedBy = 'key' | 'key-and-params';
+declare const NAMED_ROW: unique symbol;
+/** A row named by its key and params together, made only by namedRow. */
+export type NamedRow = string & { readonly [NAMED_ROW]: true };
 
-/** A listed row's name under `key-and-params`, for the declaration's map. */
-export function namedRow(key: string, params: LineageParams): string {
+export function namedRow(key: string, params: LineageParams): NamedRow {
   return rowName(key, paramsText(params));
 }
 
-function rowName(key: string, params: string): string {
-  return `${key}\t${params}`;
+function rowName(key: string, params: string): NamedRow {
+  return `${key}\t${params}` as NamedRow;
 }
 
 export interface LineageInvariant {
@@ -43,9 +45,15 @@ export function lineageInvariant<B extends string>(
 }
 
 export function namedExceptionsInvariant<B extends string>(
-  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<string, string>, by: NamedBy = 'key',
+  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<string, string>,
 ): LineageInvariant {
-  return { holds, code: codes.code(branch), exceptions: { kind: 'named', by, named } };
+  return { holds, code: codes.code(branch), exceptions: { kind: 'named', by: 'key', named } };
+}
+
+export function namedRowsInvariant<B extends string>(
+  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<NamedRow, string>,
+): LineageInvariant {
+  return { holds, code: codes.code(branch), exceptions: { kind: 'named', by: 'key-and-params', named } };
 }
 
 export interface InvariantViolations {
@@ -75,11 +83,11 @@ function watchRule(invariant: LineageInvariant, allows: (params: LineageParams) 
   };
 }
 
-function watchNamed(invariant: LineageInvariant, by: NamedBy, named: ReadonlyMap<string, string>): Watch {
+function watchNamed(
+  invariant: LineageInvariant, named: ReadonlyMap<string, string>, nameOf: (line: LineageLine) => string,
+): Watch {
   const matched = new Set<string>();
   const rows: LineageRow[] = [];
-  const nameOf = (line: LineageLine): string =>
-    by === 'key' ? lineageLineKey(line) : rowName(lineageLineKey(line), lineageLineParams(line));
   return {
     code: invariant.code,
     see: (line) => {
@@ -98,7 +106,9 @@ function watch(invariant: LineageInvariant): Watch {
   const { exceptions } = invariant;
   return exceptions.kind === 'rule'
     ? watchRule(invariant, exceptions.allows)
-    : watchNamed(invariant, exceptions.by, exceptions.named);
+    : exceptions.by === 'key'
+      ? watchNamed(invariant, exceptions.named, lineageLineKey)
+      : watchNamed(invariant, exceptions.named, (line) => rowName(lineageLineKey(line), lineageLineParams(line)));
 }
 
 export function invariantViolations(
