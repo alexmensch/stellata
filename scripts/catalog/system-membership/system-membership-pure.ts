@@ -8,7 +8,7 @@ import {
 } from '../../../src/catalog-format/record/catalog-pure';
 import {
   EVIDENCE_SOURCES, NO_RECORD_COMPANIONS, nodeRecords,
-  type EvidenceSource, type GroupNode, type MembershipSystem, type NoRecordCompanion, type SystemMembership, type SystemNode,
+  type EvidenceSource, type MembershipSystem, type NoRecordCompanion, type SystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
 import { isRecuratedAdoption, type PromotedRow } from '../companions/companion-promotion';
 import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/binary-flags-pure';
@@ -126,7 +126,7 @@ function systemOf(e: ComponentEvidence): MembershipSystem {
   const root = normalized(group(null, [...base, ...extras]));
   if (root?.kind !== 'group') throw new Error(`system membership: a component of ${placed.size} records formed no group`);
   const has: Record<EvidenceSource, boolean> = { wds: e.trees.length > 0, ccdm: e.ccdm.length > 0, geometric: e.geometric.length > 0 };
-  return { sources: EVIDENCE_SOURCES.filter((s) => has[s]), root: root as GroupNode };
+  return { sources: EVIDENCE_SOURCES.filter((s) => has[s]), root };
 }
 
 function companionsOf(inputs: SystemMembershipInputs, ccdmSingles: ReadonlySet<number>): Map<number, NoRecordCompanion[]> {
