@@ -10,7 +10,7 @@ import {
   EVIDENCE_SOURCES, NO_RECORD_COMPANIONS, nodeRecords,
   type EvidenceSource, type GroupNode, type MembershipSystem, type NoRecordCompanion, type SystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
-import type { PromotedRow } from '../companions/companion-promotion';
+import { isRecuratedAdoption, type PromotedRow } from '../companions/companion-promotion';
 import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/binary-flags-pure';
 import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
@@ -57,7 +57,7 @@ export function anchorMovedRecords<S>(
 ): Set<S> {
   const moved = new Set<S>();
   for (const v of verdicts) if (v.kind === 'coherent') for (const m of v.members) if (m.kind === 'snapped') moved.add(stars[m.idx]);
-  for (const { outcome: o } of promoted) if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) moved.add(stars[o.idx]);
+  for (const { outcome: o } of promoted) if (isRecuratedAdoption(o)) moved.add(stars[o.idx]);
   return moved;
 }
 

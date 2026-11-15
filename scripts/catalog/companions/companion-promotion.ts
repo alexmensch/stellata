@@ -413,12 +413,17 @@ function emptyPostPassStats(): PostPassStats {
   };
 }
 
+type RecuratedAdoption = Extract<RowOutcome, { recurated: unknown }> & { recurated: RecuratedBrightness };
+
+/** An adoption whose existing member promotion re-curated onto its anchor. */
+export function isRecuratedAdoption(o: RowOutcome): o is RecuratedAdoption {
+  return o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null;
+}
+
 /** Members an adoption re-curated, per brightness source, once per member however many cursors reach it. */
 export function recuratedMembers(rows: readonly PromotedRow[]): Record<RecuratedBrightness, number> {
   const members = new Map<string, RecuratedBrightness>();
-  for (const { outcome: o } of rows) {
-    if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) members.set(`${o.recurated} ${o.idx}`, o.recurated);
-  }
+  for (const { outcome: o } of rows) if (isRecuratedAdoption(o)) members.set(`${o.recurated} ${o.idx}`, o.recurated);
   return fold(RECURATED_BRIGHTNESS, members.values(), (b) => b);
 }
 
