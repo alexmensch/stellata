@@ -209,6 +209,12 @@ describe('tapClient', () => {
       await expect(client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/ASU answered columns \[HIP, Sn\] for the asked \[HIP, RArad\]/);
     });
 
+    it('matches a column ASU\'s FITS spells with its parentheses as underscores', async () => {
+      const query = { adql: 'Q', asu: { source: 'I/259/tyc2', columns: [{ archive: 'RA(ICRS)', name: 'ra_icrs' }], constraints: {} } };
+      const { client } = fake(tapDown(() => fits(fitsBytes([{ name: 'RA_ICRS_', form: 'D' }], [[1.5]]))));
+      expect((await client(ARCHIVE).query(query, 5)).result).toEqual({ columns: ['ra_icrs'], rows: [['1.5']] });
+    });
+
     it('reads an ASU file with no table as no rows', async () => {
       const { client } = fake(tapDown(() => fits(fitsBytes(null))));
       expect((await client(ARCHIVE).query(QUERY, 5)).result).toEqual({ columns: ['hip', 'ra_icrs'], rows: [] });

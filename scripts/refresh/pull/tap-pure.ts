@@ -139,11 +139,14 @@ function readFits(reply: HttpReply, limit: number, label: string): TapResult | n
   return table.kind === 'no-table' ? null : withinLimit({ columns: table.columns, rows: table.rows }, limit, label);
 }
 
+/** How ASU's FITS writer spells a VizieR column name in TTYPE: `RA(ICRS)` answers as `RA_ICRS_`, while `B-V` keeps its hyphen. */
+export const asuFitsName = (archive: string): string => archive.replace(/[()]/g, '_');
+
 /** An ASU reply's leading columns must be the asked ones, in order, renamed to the names they answer as; ASU appends link columns of its own. */
 function asuResult(query: AsuQuery, result: TapResult | null, label: string): TapResult {
   const names = query.columns.map((c) => c.name);
   if (result === null) return { columns: names, rows: [] };
-  const asked = query.columns.map((c) => c.archive);
+  const asked = query.columns.map((c) => asuFitsName(c.archive));
   if (asked.some((name, i) => result.columns[i] !== name)) {
     throw new TapRefused(`${label}: ASU answered columns [${result.columns.join(', ')}] for the asked [${asked.join(', ')}]`);
   }

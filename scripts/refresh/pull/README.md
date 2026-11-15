@@ -185,7 +185,9 @@ A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked `GET
 for FITS, from the query's ASU form (`AsuQuery`: each archive column under
 the name it answers as, and `column=value` constraints). The reply's leading
 columns must be the asked ones in order, else it is refused: ASU silently
-drops a column it does not know. It appends link columns of its own
+drops a column it does not know. Its FITS spells a name's parentheses as
+underscores (`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen,
+measured 2026-11-15), and `asuFitsName` matches that. It appends link columns of its own
 (`recno`, Hipparcos' `Sn`), which are cut. A file with no table is no rows.
 An ASU mirror has no `/capabilities` and no hard row limit. Only a
 whole-table scope carries an ASU form, and a pull whose archive has an ASU
