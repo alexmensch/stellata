@@ -1,4 +1,4 @@
-// The sources and artifacts an import closure reaches, each classified by how the closure uses it. See README.md#reached-means-read.
+// The sources, artifacts and snapshots an import closure reaches, each classified by how the closure uses it. See README.md#reached-means-read.
 
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';

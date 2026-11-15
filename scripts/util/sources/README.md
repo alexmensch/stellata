@@ -20,8 +20,8 @@ scripts/util/sources/
                        config loader reaches it (vite.env.ts →
                        ../../site/), so its value imports name their
                        `.ts` extension.
-  declared-inputs.ts   declaredInputs(closure) — the sources and artifacts an
-                       import closure reaches, by importing its declaring
+  declared-inputs.ts   declaredInputs(closure) — the sources, artifacts and
+                       snapshots an import closure reaches, by importing its declaring
                        modules, each classified read / written / both /
                        unused; isRead, the step's data inputs among them;
                        declaredFiles, their repo-relative files. It may
