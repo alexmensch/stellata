@@ -55,10 +55,15 @@ describe('the TYC1 bands', () => {
     expect(tyc1Bands(1000).at(-1)?.[1]).toBe(TYC1_MAX);
   });
 
-  it('ask one quoted range query per band and table', () => {
-    const [query] = phaseQueries(bandPhase(MAIN, [401, 800]), undefined, VIZIER.quote);
-    expect(query).toContain('FROM "I/259/tyc2" WHERE TYC1 BETWEEN 401 AND 800');
+  it('ask one quoted range query per band and table, and the same range of CfA\'s ASU', () => {
+    const phase = bandPhase(MAIN, [401, 800]);
+    const [query] = phaseQueries(phase, undefined, VIZIER.quote);
+    expect(query).toContain('FROM "I/259/tyc2" WHERE "TYC1" BETWEEN 401 AND 800');
     expect(query).toContain('"RA(ICRS)" AS ra_icrs');
+    const asu = phase.scope.kind === 'whole-table' ? phase.scope.asu : undefined;
+    expect(asu?.source).toBe('I/259/tyc2');
+    expect(asu?.constraints).toEqual({ TYC1: '401..800' });
+    expect(asu?.columns.find((c) => c.name === 'ra_icrs')?.archive).toBe('RA(ICRS)');
     expect(tyc1Bands()).toHaveLength(24);
   });
 
@@ -126,6 +131,6 @@ describe('the run', () => {
     const described = describePhasedPull(tycho2Pull(OUTPUTS, { request, requestFrom: ['m', 't'] }));
     expect(Object.keys(JSON.parse(described.query).phases)).toHaveLength(48);
     expect(described.request).toEqual(['1-2-1', '4-5-1', '9000-3-1']);
-    expect(described.services).toEqual(['CDS']);
+    expect(described.services).toEqual(['CDS', 'CfA']);
   });
 });

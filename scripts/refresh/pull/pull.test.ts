@@ -86,7 +86,7 @@ describe('runPull', () => {
     expect(existsSync(ckpt())).toBe(false);
   });
 
-  it.each([['Gaia', GAIA], ['VizieR', VIZIER], ['SIMBAD', SIMBAD]] as const)(
+  it.each([['Gaia', GAIA], ['SIMBAD', SIMBAD]] as const)(
     '%s: an overflowed reply raises and writes nothing',
     async (_, archive) => {
       const overfull = `source_id,parallax\n${Array.from({ length: queryLimit(STARS) + 1 }, (_, i) => `${i},1`).join('\n')}\n`;

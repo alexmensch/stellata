@@ -61,14 +61,20 @@ describe.each(TABLES)('$name', ({ name, file, table }) => {
 const PULLS: readonly Pull<string>[] = [CLASSIC_IDS_PULL, HIP_VMAG_PULL, GLIESE_PULL, HIP2_PULL, MSC_PULL];
 
 describe('the pulls', () => {
-  it('ask each table in one quoted query to CDS', () => {
+  it('ask each table in one quoted query to CDS, and as the same whole table of CfA\'s ASU', () => {
     for (const pull of PULLS) {
       for (const table of Object.values(pull.tables)) {
         const queries = batchQueries(table, VIZIER.quote);
         expect(queries).toHaveLength(1);
         expect(queries[0]).toMatch(/ FROM "[^"]+"$/);
       }
-      expect(describePull(pull).services).toEqual(['CDS']);
+      expect(describePull(pull).services).toEqual(['CDS', 'CfA']);
+    }
+    for (const { table } of TABLES) {
+      const asu = table.scope.kind === 'whole-table' ? table.scope.asu : undefined;
+      expect(asu?.source).toBe(table.vizierId);
+      expect(asu?.columns.map((c) => c.name)).toEqual(table.columns.map((c) => c.name));
+      expect(asu?.constraints).toEqual({});
     }
   });
 

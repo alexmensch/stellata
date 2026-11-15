@@ -2,11 +2,11 @@
 
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
-import { cellReader, type Column, type Row, type SortKey } from '../pull/columns-pure';
+import { cellReader, type Row, type SortKey } from '../pull/columns-pure';
 import { near, type RowBand, type SpotRow } from '../pull/gates-pure';
 import type { Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { VIZIER } from '../pull/tap-pure';
-import { DOUBLE, FLOAT, vizierColumn, vizierRelease } from '../vizier/vizier-pure';
+import { DOUBLE, FLOAT, vizierColumn, vizierQuery, vizierRelease, type VizierColumn } from '../vizier/vizier-pure';
 
 export type Tyc = readonly [number, number, number];
 
@@ -62,26 +62,26 @@ export function unscannable(mentioned: Iterable<string>): string[] {
   }).sort(compareCodeUnits);
 }
 
-const tycColumns: readonly [Column, Column, Column] = [
+const tycColumns: readonly [VizierColumn, VizierColumn, VizierColumn] = [
   vizierColumn('TYC1', 'tyc1'), vizierColumn('TYC2', 'tyc2'), vizierColumn('TYC3', 'tyc3'),
 ];
 const SORT_BY: readonly [SortKey, ...SortKey[]] = [
   { column: 'tyc1', as: 'integer' }, { column: 'tyc2', as: 'integer' }, { column: 'tyc3', as: 'integer' },
 ];
-const photometry: readonly Column[] = [
+const photometry: readonly VizierColumn[] = [
   vizierColumn('BTmag', 'bt_mag', FLOAT), vizierColumn('e_BTmag', 'e_bt_mag', FLOAT),
   vizierColumn('VTmag', 'vt_mag', FLOAT), vizierColumn('e_VTmag', 'e_vt_mag', FLOAT),
   vizierColumn('prox', 'prox'), vizierColumn('HIP', 'hip'),
 ];
-const motion: readonly Column[] = [
+const motion: readonly VizierColumn[] = [
   vizierColumn('pmRA', 'pm_ra', FLOAT), vizierColumn('pmDE', 'pm_de', FLOAT),
   vizierColumn('e_pmRA', 'e_pm_ra', FLOAT), vizierColumn('e_pmDE', 'e_pm_de', FLOAT),
 ];
-const icrs: readonly Column[] = [vizierColumn('RA(ICRS)', 'ra_icrs', DOUBLE), vizierColumn('DE(ICRS)', 'de_icrs', DOUBLE)];
+const icrs: readonly VizierColumn[] = [vizierColumn('RA(ICRS)', 'ra_icrs', DOUBLE), vizierColumn('DE(ICRS)', 'de_icrs', DOUBLE)];
 
 interface Tycho2Table {
   readonly vizierId: string;
-  readonly columns: readonly [Column, ...Column[]];
+  readonly columns: readonly [VizierColumn, ...VizierColumn[]];
   /** Kept rows as a share of the mentioned TYCs, so the band moves with the request set. */
   readonly keptShare: { readonly min: number; readonly max: number };
   readonly spotRows: readonly [SpotRow, ...SpotRow[]];
@@ -123,12 +123,8 @@ export function keptBand(share: Tycho2Table['keptShare'], mentioned: number): Ro
 }
 
 export function bandPhase(table: Tycho2Table, [lo, hi]: readonly [number, number]): Phase {
-  return {
-    from: VIZIER.quote(table.vizierId),
-    where: `TYC1 BETWEEN ${lo} AND ${hi}`,
-    columns: table.columns,
-    scope: { kind: 'whole-table', maxRows: TYC1_BAND_ROWS },
-  };
+  const { asu, ...query } = vizierQuery(table.vizierId, table.columns, { column: 'TYC1', min: lo, max: hi });
+  return { ...query, scope: { kind: 'whole-table', maxRows: TYC1_BAND_ROWS, asu } };
 }
 
 function tycReader(table: Tycho2Table): (row: Row) => string {

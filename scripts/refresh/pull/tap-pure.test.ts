@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fitsBytes } from './fits-fixture';
 import {
-  GAIA, SIMBAD, TapOverflow, TapRefused, VIZIER, csvText, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
+  GAIA, GAIA_ESA, SIMBAD, TapOverflow, TapRefused, VIZIER, csvText, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
   type AsuQuery, type HttpReply, type TapArchive, type Transport,
 } from './tap-pure';
 
@@ -72,7 +72,7 @@ describe('queryStatus and hardRowLimit', () => {
 });
 
 describe('tapClient', () => {
-  it.each([['Gaia', GAIA], ['VizieR', VIZIER], ['SIMBAD', SIMBAD]] as const)(
+  it.each([['Gaia', GAIA], ['SIMBAD', SIMBAD]] as const)(
     '%s: a truncated answer raises, and no other mirror is asked',
     async (_, archive) => {
       const { client, syncCalls } = fake(({ url }) => (url.endsWith('/capabilities') ? capabilities(null) : csv(rowsCsv(6))));
@@ -82,6 +82,15 @@ describe('tapClient', () => {
       expect(syncCalls()[0].form?.get('FORMAT')).toBe('csv');
     },
   );
+
+  it('VizieR: asks CDS for FITS, and a truncated answer raises without asking CfA', async () => {
+    const asu = { source: 't', columns: [{ archive: 'ID', name: 'id' }], constraints: {} };
+    const { client, calls, syncCalls } = fake(({ url }) => (url.endsWith('/capabilities') ? capabilities(null)
+      : fits(fitsBytes([{ name: 'id', form: 'J' }], Array.from({ length: 6 }, (_, i) => [i])))));
+    await expect(client(VIZIER).query({ adql: 'SELECT id FROM t', asu }, 5)).rejects.toThrow(TapOverflow);
+    expect(syncCalls()[0].form?.get('FORMAT')).toBe('fits');
+    expect(calls.some((c) => c.url.includes('cfa'))).toBe(false);
+  });
 
   it('skips a mirror whose hard cap cannot hold limit + 1', async () => {
     const { client, syncCalls, reported } = fake(({ url }) => {
@@ -128,7 +137,7 @@ describe('tapClient', () => {
     const { client } = fake(({ url }) => (
       url.endsWith('/capabilities') ? capabilities(null) : textReply(503, 'text/html', page)
     ));
-    await expect(client(VIZIER).query({ adql: 'Q' }, 10)).rejects.toThrow('CDS: HTTP 503, Message: Server overloaded');
+    await expect(client(GAIA_ESA).query({ adql: 'Q' }, 10)).rejects.toThrow('ESA-sync: HTTP 503, Message: Server overloaded');
   });
 
   it('a network failure is transient too', async () => {

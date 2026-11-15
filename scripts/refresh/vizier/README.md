@@ -20,14 +20,26 @@ all; there is no per-table run.
 ## Files
 
 - `vizier-pure.ts` — the ten `PullTable`s: each VizieR column under the name
-  its TSV writes (`vizierColumn`), formats, sort keys, bands and spot rows.
+  its TSV writes (`vizierColumn`), formats, sort keys, bands and spot rows;
+  `vizierQuery`, one query as its ADQL parts and its ASU form, which the
+  Tycho-2 bands build on too.
 - `vizier.ts` — the five `Pull`s; `vizier-outputs.ts`, their
   `declareOutputs`.
 - `refresh-{classic-ids,hipparcos-vmag,hipparcos2,gliese,msc}.ts` — one entry
   per step.
 - `vizier.test.ts` — each table's replies replayed into lines of its
   committed table, its spot rows and its sort order ([Replies](#replies)),
-  and every query one quoted whole-table query to CDS.
+  and every query one quoted whole-table query to CDS with the same table's
+  ASU form for CfA.
+
+## Two mirrors, one answer
+
+`VIZIER` asks CDS's TAP first and falls back to the CfA (Harvard) mirror,
+which serves VizieR's ASU interface and no TAP
+([The TAP backend](../pull/README.md#the-tap-backend)). Both are asked for
+FITS, so a double is written as stored, and a table sorts totally
+([Order](#order)), so a pull either mirror answers writes the same bytes.
+`vizierQuery` states each query once as both forms.
 
 ## Columns and formats
 
@@ -35,10 +47,10 @@ VizieR's column names are case-sensitive and its table ids carry `/`, so
 every identifier is quoted (`VIZIER.quote`); a column whose TSV name differs
 is projected `"<VizieR name>" AS <tsv name>`. A VOTable `float` is written
 `FLOAT` (`{repr: true, float32: true}`) and a `double` `DOUBLE`
-(`{repr: true}`), the text numpy printed for the value astropy read, which
-is what the committed tables hold. Which columns are which was read from each
-table's VOTable `FIELD`s on the CfA mirror (2026-11-15); `V/70A`'s B1950
-position is a computed `double` over TAP, sexagesimal text on ASU. Hipparcos'
+(`{repr: true}`): the shortest digits that read back to the stored value.
+Which columns are which was read from each table's VOTable `FIELD`s on the
+CfA mirror (2026-11-15); `V/70A`'s B1950 position is a computed `double`,
+sexagesimal only in ASU's text output, which no pull reads. Hipparcos'
 printed V and B−V are `{fixed: 3, float32: true}`.
 
 ## Order

@@ -53,9 +53,13 @@ export const GAIA: TapArchive = {
 /** For a table only ESA publishes under its query's name: ARI hosts `external.*` under other schema names. */
 export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
 
+/** FITS, so a double reaches the TSV as stored: CDS's CSV and CfA's ASU text each round it their own way (README.md#fits-replies). */
 export const VIZIER: TapArchive = {
-  mirrors: [{ name: 'CDS', protocol: 'tap', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' }],
-  format: 'csv',
+  mirrors: [
+    { name: 'CDS', protocol: 'tap', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' },
+    { name: 'CfA', protocol: 'asu', verified: false, url: 'https://vizier.cfa.harvard.edu/viz-bin/asu-binfits' },
+  ],
+  format: 'fits',
   retryDelaysMs: [1_000, 2_000, 4_000],
   quote: (identifier) => `"${identifier}"`,
 };
