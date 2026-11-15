@@ -266,11 +266,9 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
 
-export async function main() {
-  const heap = watchHeap('build:catalog');
-  sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = stepInputHashes();
-
+// A function of its own so the reference tables are unreachable once it returns:
+// held through SID allocation, encoding and emission, the build runs out of heap.
+async function preAllocationStages(inputHashesAtStart: FileHashes) {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
@@ -417,6 +415,29 @@ export async function main() {
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
+  return {
+    stars,
+    sortedKey: order.map((i) => sortKey[i]),
+    apsisMap,
+    gspcMap: inputs.gspcMap,
+    conLookup: conAssignment.lookup,
+    inputsCounts: inputs.counts,
+    parkedLedger, simbadSourcedDistances,
+    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, placementRemovals,
+    placementDerived: stats.placementDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
+  };
+}
+
+export async function main() {
+  const heap = watchHeap('build:catalog');
+  sweepStaged(CATALOG_OUTPUTS);
+  const inputHashesAtStart = stepInputHashes();
+
+  const built = await preAllocationStages(inputHashesAtStart);
+  const { stars, promotionLines, promotionIdentity } = built;
+
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);
   const allocation = allocate({
@@ -426,13 +447,13 @@ export async function main() {
     events: registry.events,
     scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
-  }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
+  }, catalogUpstream({ placementRemovals: built.placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
     const synthOrphans = allocation.unexplained.flatMap((k) => (k.startsWith('synth:') ? [k.slice('synth:'.length)] : []));
     const liveSynth = sidObjects.flatMap((o) => o.designations.flatMap((d) => (d.startsWith('synth:') ? [d.slice('synth:'.length)] : [])));
     throw new Error(
       `SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`
-        + (synthOrphans.length === 0 ? '' : `\n${synthChurnReport(synthOrphans, liveSynth, multiplesRows)}`),
+        + (synthOrphans.length === 0 ? '' : `\n${synthChurnReport(synthOrphans, liveSynth, built.multiplesRows)}`),
     );
   }
   for (const { designation, objects } of allocation.ambiguous) {
@@ -447,7 +468,7 @@ export async function main() {
   // tiers alone — the runtime composes every designation off the search
   // index through the same pure function (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const display = assignDisplayNames(
-    stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
+    stars, built.componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
 
@@ -464,50 +485,52 @@ export async function main() {
   });
   console.log(allocationSummary(allocationEmission.counts, allocation.events.length));
 
-  const encoded = encodeCatalog({ stars, apsisMap, sids: recordSids, multiplicityStatus });
+  const encoded = encodeCatalog({
+    stars, apsisMap: built.apsisMap, sids: recordSids, multiplicityStatus: built.multiplicityStatus,
+  });
   const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(namingEmission.counts, namingDerived));
 
   emitArtifacts(catalogEmission({
     stars,
-    sortedKey: order.map((i) => sortKey[i]),
+    sortedKey: built.sortedKey,
     encoded,
-    apsisMap,
-    gspcMap: inputs.gspcMap,
-    conLookup: conAssignment.lookup,
+    apsisMap: built.apsisMap,
+    gspcMap: built.gspcMap,
+    conLookup: built.conLookup,
     inputHashes: inputHashesAtStart,
-    figureLines,
-    componentDesignations,
-    rowIndexMap,
-    resolvedPairs,
+    figureLines: built.figureLines,
+    componentDesignations: built.componentDesignations,
+    rowIndexMap: built.rowIndexMap,
+    resolvedPairs: built.resolvedPairs,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
-      parkedLedger,
-      simbadSourcedDistances,
+      parkedLedger: built.parkedLedger,
+      simbadSourcedDistances: built.simbadSourcedDistances,
       ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
     },
     lineage: {
-      placement: placementEmission,
-      brightnessColour: brightnessEmission,
-      size: sizeEmission,
-      coherence: coherenceEmission,
+      placement: built.placementEmission,
+      brightnessColour: built.brightnessEmission,
+      size: built.sizeEmission,
+      coherence: built.coherenceEmission,
       promotion: promotionEmission,
       allocation: allocationEmission,
       naming: namingEmission,
     },
     stageCounts: [
-      { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
-      { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
-      { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
-      { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
-      { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+      { stage: 'inputs', block: { kind: 'counted', counts: built.inputsCounts } },
+      { stage: 'placement', block: { kind: 'counted', counts: built.placementEmission.counts } },
+      { stage: derivedStage('placement'), block: { kind: 'counted', counts: built.placementDerived } },
+      { stage: 'multiplicity', block: { kind: 'counted', counts: built.multiplicity } },
+      { stage: 'gcvs', block: { kind: 'counted', counts: built.gcvsCounts } },
       { stage: 'allocation', block: { kind: 'counted', counts: allocationEmission.counts } },
-      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
+      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...built.starNamingCounts } satisfies NamingCounts } },
       { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
-      { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
-      { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
-      { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
-      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
+      { stage: 'brightness-colour', block: { kind: 'counted', counts: built.brightnessEmission.counts } },
+      { stage: 'coherence', block: { kind: 'counted', counts: built.coherenceEmission.counts } },
+      { stage: 'promotion', block: { kind: 'counted', counts: built.promotionCounts satisfies PromotionCounts } },
+      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: built.promotionDerived } },
     ],
     heap,
   }));
