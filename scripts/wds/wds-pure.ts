@@ -195,13 +195,13 @@ function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, pr
 
 export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowKey, 'group'>): WdsPair[] {
   const keep = (line: string): boolean => line.length >= 22 && !WDS_HEADER.test(line) && PY_INT.test(line.slice(0, 5));
-  const rows: LinedRow<Omit<WdsPair, 'origin'>>[] = [];
+  const rows: LinedRow<Omit<WdsPair, 'origin'>, WdsPairRowKey>[] = [];
   for (const l of fixedWidthLines(text, from, WDS_LINE_WIDTH, keep)) {
     const wdsId = l.slice(0, 10).trim();
     const discoverer = l.slice(10, 17).trim();
     if (!wdsId || !discoverer) continue;
     const components = l.slice(17, 22).trim();
-    rows.push({ line: l.lineNo, row: {
+    rows.push({ line: l.lineNo, key: { wdsId, discoverer, components }, row: {
       wdsId,
       discoverer,
       components,
@@ -229,7 +229,7 @@ export function parseOrb6(text: string, from: Declared & RowKeyed<WdsPairRowKey,
     if (line.length < 30) return false;
     return /^\d/.test(line.slice(0, 9).trim());
   };
-  const rows: LinedRow<Omit<Orb6Entry, 'origin'>>[] = [];
+  const rows: LinedRow<Omit<Orb6Entry, 'origin'>, WdsPairRowKey>[] = [];
   const grades: Orb6GradeOutcome[] = [];
   for (const l of fixedWidthLines(text, from, ORB6_LINE_WIDTH, keep)) {
     const wdsId = l.slice(19, 29).trim();
@@ -237,10 +237,12 @@ export function parseOrb6(text: string, from: Declared & RowKeyed<WdsPairRowKey,
     const gradeCell = l.slice(233, 234).trim();
     const graded = /^\d$/.test(gradeCell);
     grades.push(graded ? 'graded' : 'fallback');
-    rows.push({ line: l.lineNo, row: {
+    const discoverer = l.slice(30, 37).trim();
+    const components = l.slice(37, 44).trim();
+    rows.push({ line: l.lineNo, key: { wdsId, discoverer, components }, row: {
       wdsId,
-      discoverer: l.slice(30, 37).trim(),
-      components: l.slice(37, 44).trim(),
+      discoverer,
+      components,
       precise: parsePreciseCoord(l.slice(0, 18)),
       hd: l.int('hd', 51, 57),
       hip: l.int('hip', 58, 64),

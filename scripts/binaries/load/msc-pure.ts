@@ -114,7 +114,7 @@ export function parseMscSystems(text: string, from: Declared): MscSystemRow[] {
 }
 
 export function parseMscOrbits(text: string, from: Declared & RowKeyed<MscOrbitKey, 'group'>): MscOrbitRow[] {
-  const out: LinedRow<Omit<MscOrbitRow, 'origin'>>[] = [];
+  const out: LinedRow<Omit<MscOrbitRow, 'origin'>, MscOrbitKey>[] = [];
   const columns = [
     'wds_id', 'syst', 'per', 'per_unit', 't0', 'e', 'a_arcsec', 'node_deg', 'longp_deg', 'incl_deg', 'note',
   ] as const;
@@ -122,7 +122,7 @@ export function parseMscOrbits(text: string, from: Declared & RowKeyed<MscOrbitK
     const wdsId = row.text('wds_id');
     const syst = row.text('syst');
     if (wdsId === null || syst === null) continue;
-    out.push({ line: row.line, row: {
+    out.push({ line: row.line, key: { wdsId, syst }, row: {
       wdsId, syst,
       per: row.float('per'),
       perUnit: orEmpty(row.text('per_unit')),

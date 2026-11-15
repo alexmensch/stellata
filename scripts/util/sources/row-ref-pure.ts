@@ -69,17 +69,19 @@ export function groupRowRefs<K>(
   return new Map([...groups].map(([text, g]) => [text, groupRowRef(source, g.key, g.lines)]));
 }
 
-export interface LinedRow<T> {
+/** `key` holds only the key's fields: the group keeps it alive for the whole build. */
+export interface LinedRow<T, K> {
   readonly row: T;
+  readonly key: K;
   readonly line: number;
 }
 
 /** Each row with its key's group as `origin`, known only once every row is read. */
-export function withGroupOrigins<K, T extends K>(
-  source: RowKeyed<K, 'group'>, rows: readonly LinedRow<T>[],
+export function withGroupOrigins<K, T>(
+  source: RowKeyed<K, 'group'>, rows: readonly LinedRow<T, K>[],
 ): (T & { readonly origin: GroupRowRef<K> })[] {
-  const groups = groupRowRefs(source, rows.map(({ row, line }) => ({ key: row, line })));
-  return rows.map(({ row }) => ({ ...row, origin: groups.get(source.rowKey.text(row))! }));
+  const groups = groupRowRefs(source, rows);
+  return rows.map(({ row, key }) => ({ ...row, origin: groups.get(source.rowKey.text(key))! }));
 }
 
 export function rowKeyText<K, C extends Cardinality>(key: RowKey<K, C>, row: K): string {

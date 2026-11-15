@@ -54,6 +54,13 @@ describe('parseWdsSumm', () => {
     expect(second.origin).toMatchObject({ kind: 'group', lines: [5] });
   });
 
+  it('keeps only the key fields in a group, never the parsed row', () => {
+    const [pr] = parseWdsSumm(`${WDS_LINE}\n`, SUMM_FIXTURE);
+    expect(pr.origin.kind === 'group' && Object.keys(pr.origin.key as object)).toEqual(['wdsId', 'discoverer', 'components']);
+    const { entries } = parseOrb6(`banner\n${ORB6_STF1110}\n`, ORB6_FIXTURE);
+    expect(Object.keys(entries[0].origin.key)).toEqual(['wdsId', 'discoverer', 'components']);
+  });
+
   it('reads both ρ / θ sentinels as no measurement', () => {
     const noMeasurement = withCells(withCells(WDS_LINE, 42, '-1 '), 52, '-1.0 ');
     const overflow = withCells(WDS_LINE, 52, '999.9');
