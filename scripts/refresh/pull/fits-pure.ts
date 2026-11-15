@@ -50,7 +50,7 @@ interface Field {
   readonly read: (view: DataView, at: number) => string | null;
 }
 
-const NULL_BYTES = /[\0 ]+$/;
+const BLANK_ENDS = /^[\0 ]+|[\0 ]+$/g;
 
 /** One TFORM's reader; an array, a bit field or a heap descriptor is refused, since no pull asks for one. */
 function field(header: Header, n: number): Field {
@@ -66,7 +66,7 @@ function field(header: Header, n: number): Field {
   const repeat = parsed[1] === '' ? 1 : Number(parsed[1]);
   const type = parsed[2];
   if (type === 'A') {
-    return { name, width: repeat, read: (view, at) => ascii(new Uint8Array(view.buffer, view.byteOffset + at, repeat)).replace(NULL_BYTES, '') || null };
+    return { name, width: repeat, read: (view, at) => ascii(new Uint8Array(view.buffer, view.byteOffset + at, repeat)).replace(BLANK_ENDS, '') || null };
   }
   if (repeat !== 1) throw new Error(`FITS column ${name}: TFORM "${form}" is an array`);
   const tnull = header.get(`TNULL${n}`);

@@ -36,9 +36,9 @@ describe('readFitsTable', () => {
     expect(table.kind === 'table' && table.rows[0][0]).toBe('104.2');
   });
 
-  it('keeps a string\'s leading blanks and drops its padding', () => {
-    const table = readFitsTable(fitsBytes([{ name: 'Name', form: '10A' }], [['  3Alp Lyr']]));
-    expect(table.kind === 'table' && table.rows[0][0]).toBe('  3Alp Lyr');
+  it('drops a string\'s blanks at both ends, as CDS\'s text replies do, and keeps those inside', () => {
+    const table = readFitsTable(fitsBytes([{ name: 'DM', form: '16A' }], [['  BD+04  3561a']]));
+    expect(table.kind === 'table' && table.rows[0][0]).toBe('BD+04  3561a');
   });
 
   it('reads a file with no table as no-table, which ASU answers a query that matched no row with', () => {

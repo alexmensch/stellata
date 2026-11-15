@@ -256,8 +256,10 @@ text reply prints it: VizieR's ASU text cuts a double off at the catalogue's
 printed precision, and CDS's TAP CSV rounds it its own way. `readFitsTable`
 writes a `D` cell as the shortest digits that read back to the double and an
 `E` cell as the shortest that read back to the float32 (`formatRepr`), an
-integer equal to its `TNULLn` or a NaN as `null`, and a string without its
-trailing blanks or NULs, `null` when nothing is left. Arrays, bit fields,
+integer equal to its `TNULLn` or a NaN as `null`, and a string without the
+blanks or NULs at either end, `null` when nothing is left: CfA's FITS keeps
+a right-justified field's leading blanks (`  3Alp Lyr` in V/50) where
+CDS's text replies drop them. Arrays, bit fields,
 heaps and scaled columns throw: no pull asks for one.
 
 A file whose bytes end inside a header block or the rows is `incomplete`,
