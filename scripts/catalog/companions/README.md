@@ -99,9 +99,9 @@ a pair's primary is `pair-anchor` when it anchors its pair and
 Each outcome is a lineage row, and each flag it carries a facet row of its
 own (the list is [Promotion lineage](#promotion-lineage)'s), so every per-row
 count is a fold of its lineage codes. The post-passes below act on records,
-not rows; blend split and the anchor re-split write a facet on each minted
-record they change, and `PromotionStats`, promotion's derived count block
-with `physicalOverlaps`, counts what no row records.
+not rows; each writes rows keyed on the records it changes
+([Promotion lineage](#promotion-lineage)), and `PromotionStats`, promotion's
+derived count block with `physicalOverlaps`, counts what no row records.
 
 Per-row gates and resolution:
 
@@ -176,9 +176,9 @@ Per-row gates and resolution:
   11.360 and B−V −0.224 against the DA1.9
   [Ballesteros 2012](/data/papers/index.md#ballesteros2012) −0.443, and fed the
   systemic blend below a proper motion that dragged **Sirius A** from
-  1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, per
-  brightness source (`held` for the fallback), once per member however many
-  cursors reach it.
+  1339.4 mas/yr to 1282.7. Counted `promotion.existing.recurated.<source>`
+  (`held` for the fallback), one row per member however many cursors reach
+  it ([Promotion lineage](#promotion-lineage)).
 - **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
   record has no second star to mint. `01398-5612`'s A row carries the B
   record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's
@@ -422,7 +422,7 @@ Per-row gates and resolution:
   Apply, once per anchor with exact conservation: `own` / `wds_mag` members
   subtract their actual flux, guarded against a member as bright as the blend
   itself (`companionBlendDimSkipped`); `dmag_imputed` members re-split the residual by
-  Δmag. Counted `companionBlendDimmedAnchors` per anchor; members the fit leaves outside
+  Δmag. Counted `promotion.existing.anchor-dimmed`, one row per anchor; members the fit leaves outside
   are `companionBlendDimOutside`, with no usable WDS magnitudes
   `companionBlendDimUnfit`, past the tier's blending scale
   `companionBlendDimBeyondSeparation`, resolved out by their own Gaia source

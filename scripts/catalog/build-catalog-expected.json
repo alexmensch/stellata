@@ -213,19 +213,12 @@
     },
     "promotion-derived": {
       "companionRepositionedInnerToParent": 299,
-      "companionBlendDimmedAnchors": 1883,
       "companionBlendDimSkipped": 0,
       "companionBlendDimUnfit": 35,
       "companionBlendDimOutside": 1428,
       "companionBlendDimGaiaResolved": 4317,
       "companionBlendDimBeyondSeparation": 3931,
       "companionBlendDimMisfit": 847,
-      "companionExistingMemberRecurated": {
-        "dmag_imputed": 38,
-        "wds_mag": 4,
-        "spectral": 0,
-        "held": 19
-      },
       "physicalOverlaps": 55
     },
     "multiplicity": {

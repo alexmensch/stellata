@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import type { Stage6Offset } from './anchor-offset-pure';
 import { polarToTangent, tangentToPolar } from '../../../src/astro-core/equatorial-basis';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
-import { decisionRows, familyTotal, PROMOTION_CODES, promotionDecision } from './promotion-lineage-pure';
+import {
+  decisionRows, familyTotal, PROMOTION_CODES, promotionDecision, rewriteRows, type PromotionCounts,
+} from './promotion-lineage-pure';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG,
   componentDepth,
@@ -17,11 +19,9 @@ import {
   projectFromSepPa,
   parkedRefusals,
   promoteCompanions,
-  recuratedMembers,
   type MintedBrightness,
   type MultiplesTsvRow,
   type PromotionInputs,
-  type PromotionStats,
 } from './companion-promotion';
 import {
   FLAG_BINARY_COMPANION_ONLY,
@@ -45,11 +45,13 @@ import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fi
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 
-/** promoteCompanions plus its rows' lineage folded per code, as the build folds them. */
+/** promoteCompanions plus its lineage folded per code, as the build folds it. */
 function promote(...args: Parameters<typeof promoteCompanions>) {
   const result = promoteCompanions(...args);
-  const lines = result.rows.flatMap((r) => decisionRows(promotionDecision(r, () => 'spine:0')))
-    .map((row) => stageLineageLine(PROMOTION_CODES, row));
+  const lines = [
+    ...result.rows.flatMap((r) => decisionRows(promotionDecision(r, () => 'spine:0'))),
+    ...[...result.rewrites].flatMap(([star, rewrite]) => rewriteRows(star.originKey, rewrite, () => 'spine:0')),
+  ].map((row) => stageLineageLine(PROMOTION_CODES, row));
   return { ...result, codes: foldStageLines(PROMOTION_CODES, lines) };
 }
 
@@ -419,9 +421,9 @@ describe('anchor flux dimming', () => {
 
   it('re-splits a dmag-imputed blend jointly: both members honest, total light conserved', () => {
     const anchor = blendAnchor();
-    const { newStars, stats, codes } = promote(dimRows(2.0), [anchor], inputs());
+    const { newStars, codes } = promote(dimRows(2.0), [anchor], inputs());
     expect(newStars).toHaveLength(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(codes['promotion.brightness.anchor-re-split']).toBe(1);
     // M_A = M_bl + 2.5·log10(1 + 10^(−0.4·2)) ≈ 1.15973; M_B = M_A + 2.
     expect(anchor.absmag).toBeCloseTo(1.15973, 4);
@@ -433,8 +435,8 @@ describe('anchor flux dimming', () => {
 
   it('a Δmag=0 twin splits the blend equally (Capella shape, never a gutted anchor)', () => {
     const anchor = blendAnchor();
-    const { newStars, stats } = promote(dimRows(0.0), [anchor], inputs());
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    const { newStars, stats, codes } = promote(dimRows(0.0), [anchor], inputs());
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(stats.companionBlendDimSkipped).toBe(0);
     const half = 1.0 + 2.5 * Math.log10(2);
     expect(anchor.absmag).toBeCloseTo(half, 6);
@@ -448,7 +450,7 @@ describe('anchor flux dimming', () => {
     const { stats, codes } = promote(dimRows(null, 1.0), [anchor], inputs());
     expect(codes['promotion.brightness.anchor-re-split']).toBe(0);
     expect(stats.companionBlendDimSkipped).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(anchor.absmag).toBe(1.0);
   });
 
@@ -461,8 +463,8 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor();
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';
-    const { newStars, stats } = promote(rows, [anchor], inputs());
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    const { newStars, codes } = promote(rows, [anchor], inputs());
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(1.15973, 4);
     expect(newStars[0].absmag).toBeCloseTo(3.15973, 4);
   });
@@ -471,9 +473,9 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ vVia: 'gaia_riello' });
     const rows = dimRows(2.0);
     rows[1].gaiaSourceId = '999900001111';
-    const { stats } = promote(rows, [anchor], inputs());
+    const { stats, codes } = promote(rows, [anchor], inputs());
     expect(stats.companionBlendDimGaiaResolved).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(anchor.absmag).toBe(1.0);
   });
 
@@ -518,10 +520,10 @@ describe('anchor flux dimming', () => {
     });
     const rows = gaiaAnchorRows(8.06, 8.20, 22.466861);
     const untouched = anchor.absmag;
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, stats, codes } = promote(rows, [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(newStars[0].syntheticId).toBe('synth-02572-2458-B');
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(stats.companionBlendDimOutside).toBe(1);
     expect(anchor.absmag).toBe(untouched);
     expect(anchor.absmag).toBeCloseTo(6.2823, 4);
@@ -536,9 +538,9 @@ describe('anchor flux dimming', () => {
       absmag: blendMag(10.50, 10.50), x: 10, y: 0, z: 0,
     });
     const rows = gaiaAnchorRows(10.50, 10.50, 10);
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, stats, codes } = promote(rows, [anchor], inputs());
     expect(stats.companionBlendDimGaiaResolved).toBe(0);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(10.50, 3);
     expect(newStars[0].absmag).toBeCloseTo(10.50, 3);
   });
@@ -562,11 +564,11 @@ describe('anchor flux dimming', () => {
       hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
       x: 17.93, y: 0, z: 0,
     });
-    const gaiaStats = promote(
+    const gaiaAnchor = promote(
       rows(), [gaia], inputs(),
-    ).stats;
-    expect(gaiaStats.companionBlendDimGaiaResolved).toBe(1);
-    expect(gaiaStats.companionBlendDimmedAnchors).toBe(0);
+    );
+    expect(gaiaAnchor.stats.companionBlendDimGaiaResolved).toBe(1);
+    expect(gaiaAnchor.codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(gaia.absmag).toBe(absmag);
 
     // Under a printed V the same 5″ member is still a candidate: Hipparcos
@@ -575,11 +577,11 @@ describe('anchor flux dimming', () => {
       hip: 13772, gaiaSourceId: '5076269164798851712', absmag,
       x: 17.93, y: 0, z: 0, vVia: 'printed_hip',
     });
-    const printedStats = promote(
+    const printedAnchor = promote(
       rows(), [printed], inputs(),
-    ).stats;
-    expect(printedStats.companionBlendDimGaiaResolved).toBe(0);
-    expect(printedStats.companionBlendDimmedAnchors).toBe(1);
+    );
+    expect(printedAnchor.stats.companionBlendDimGaiaResolved).toBe(0);
+    expect(printedAnchor.codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(printed.absmag).toBeGreaterThan(absmag);
   });
 
@@ -596,21 +598,21 @@ describe('anchor flux dimming', () => {
       hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
       x: 10, y: 0, z: 0, vVia: 'printed_hip',
     });
-    const printedStats = promote(
+    const printedAnchor = promote(
       noWdsMags(), [printed], inputs(),
-    ).stats;
-    expect(printedStats.companionBlendDimmedAnchors).toBe(1);
+    );
+    expect(printedAnchor.codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(printed.absmag).toBeCloseTo(1.15973, 4);
 
     const gaia = makeStar({
       hip: 13772, gaiaSourceId: '5076269164798851712', absmag: 1.0,
       x: 10, y: 0, z: 0,
     });
-    const gaiaStats = promote(
+    const gaiaAnchor = promote(
       noWdsMags(), [gaia], inputs(),
-    ).stats;
-    expect(gaiaStats.companionBlendDimmedAnchors).toBe(0);
-    expect(gaiaStats.companionBlendDimUnfit).toBe(1);
+    );
+    expect(gaiaAnchor.codes['promotion.existing.anchor-dimmed']).toBe(0);
+    expect(gaiaAnchor.stats.companionBlendDimUnfit).toBe(1);
     expect(gaia.absmag).toBe(1.0);
   });
 
@@ -664,10 +666,10 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, codes } = promote(rows, [anchor], inputs());
     expect(newStars).toHaveLength(1);
     expect(newStars[0].syntheticId).not.toBeNull();
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     // Anchor re-splits to its own component light: M_blend + 2.5·log₁₀(1 + 10^(−0.8)) ≈ magPri.
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
     expect(newStars[0].absmag).toBeCloseTo(4.1, 3);
@@ -687,9 +689,9 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, stats, codes } = promote(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(stats.companionBlendDimOutside).toBe(1); // D left outside the winning subset
     // B's flux subtracts out; the anchor lands on its own component light.
     expect(anchor.absmag).toBeCloseTo(2.0, 3);
@@ -703,8 +705,8 @@ describe('anchor flux dimming', () => {
       absmag: 12.0, dmag: 10.0, magPri: 2.0, magSec: 12.0,
     });
     rows[0].absmag = blend;
-    const { stats } = promote(rows, [anchor], inputs());
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    const { stats, codes } = promote(rows, [anchor], inputs());
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(stats.companionBlendDimOutside).toBe(1);
     expect(anchor.absmag).toBe(blend);
   });
@@ -718,9 +720,9 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, codes } = promote(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.0, 3);
     const total = blendMag(anchor.absmag, newStars[0].absmag, newStars[1].absmag);
     expect(total).toBeCloseTo(blend, 6);
@@ -755,12 +757,12 @@ describe('anchor flux dimming', () => {
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
       'Aa',
     );
-    const { newStars, stats } = promote(rows, [anchor], inputs());
+    const { newStars, stats, codes } = promote(rows, [anchor], inputs());
     expect(newStars).toHaveLength(2);
     // Against 4.87 no hypothesis beats "anchor alone" by the decisive margin
     // and nothing dims at all; against 5.02 the {Ab} subset lands exactly on
     // the anchor's magnitude.
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(stats.companionBlendDimOutside).toBe(1);
     expect(anchor.absmag).toBeCloseTo(5.02, 3);
     // The Δ reference is that same deepest value: 7.42 − 5.02, never 7.42 − 4.87.
@@ -780,8 +782,8 @@ describe('anchor flux dimming', () => {
       { dmag: 2.40, magPri: 5.02, magSec: 7.42 },
       'A',
     );
-    const { stats } = promote(rows, [anchor], inputs());
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    const { stats, codes } = promote(rows, [anchor], inputs());
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(stats.companionBlendDimOutside).toBe(2);
     expect(anchor.absmag).toBe(blend);
   });
@@ -821,8 +823,8 @@ describe('anchor flux dimming', () => {
     );
     rows[0].absmag = blend;
     rows[2].absmag = blend;
-    const { stats } = promote(rows, [anchor], inputs());
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    const { codes } = promote(rows, [anchor], inputs());
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(5.64, 3);
   });
 
@@ -841,19 +843,19 @@ describe('anchor flux dimming', () => {
     // A row distance 10× the record's would put the observed frame 5 mag off,
     // where every subset fits worse than leaving the anchor alone.
     const stale = blendAnchor({ absmag: blend });
-    const staleStats = promote(
+    const staleRun = promote(
       rows(100), [stale], inputs(),
-    ).stats;
-    expect(staleStats.companionBlendDimmedAnchors).toBe(1);
+    );
+    expect(staleRun.codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(stale.absmag).toBeCloseTo(2.1, 3);
 
     // And a row with no distance at all no longer strands the fit as unfittable.
     const absent = blendAnchor({ absmag: blend });
-    const absentStats = promote(
+    const absentRun = promote(
       rows(null), [absent], inputs(),
-    ).stats;
-    expect(absentStats.companionBlendDimUnfit).toBe(0);
-    expect(absentStats.companionBlendDimmedAnchors).toBe(1);
+    );
+    expect(absentRun.stats.companionBlendDimUnfit).toBe(0);
+    expect(absentRun.codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(absent.absmag).toBeCloseTo(2.1, 3);
   });
 
@@ -868,34 +870,34 @@ describe('anchor flux dimming', () => {
   };
   const dimAt = (sepArcsec: number | null, anchorOver: Partial<Star> = {}) => {
     const anchor = blendAnchor({ absmag: blendMag(2.1, 4.1), ...anchorOver });
-    const stats = promote(
+    const { stats, codes } = promote(
       sepRows(sepArcsec), [anchor], inputs(),
-    ).stats;
-    return { anchor, stats };
+    );
+    return { anchor, stats, codes };
   };
 
   it('holds a member past the printed tier blending scale out of the blend', () => {
     const inside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC);
-    expect(inside.stats.companionBlendDimmedAnchors).toBe(1);
+    expect(inside.codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(inside.stats.companionBlendDimBeyondSeparation).toBe(0);
     expect(inside.anchor.absmag).toBeCloseTo(2.1, 3);
 
     // The same fit, one hundredth of an arcsecond wider: identical photometry,
     // opposite verdict, because the bound is the discriminator now.
     const outside = dimAt(PRINTED_BLEND_MAX_SEP_ARCSEC + 0.01);
-    expect(outside.stats.companionBlendDimmedAnchors).toBe(0);
+    expect(outside.codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(outside.stats.companionBlendDimBeyondSeparation).toBe(1);
     expect(outside.anchor.absmag).toBe(blendMag(2.1, 4.1));
   });
 
   it('applies the Gaia deblending bound instead when the anchor V came from Gaia', () => {
     // 5″ is inside a printed Hipparcos entry and far outside one DR3 source.
-    expect(dimAt(5.0).stats.companionBlendDimmedAnchors).toBe(1);
+    expect(dimAt(5.0).codes['promotion.existing.anchor-dimmed']).toBe(1);
     const gaia = dimAt(5.0, { vVia: 'gaia_riello' });
-    expect(gaia.stats.companionBlendDimmedAnchors).toBe(0);
+    expect(gaia.codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(gaia.stats.companionBlendDimBeyondSeparation).toBe(1);
     expect(dimAt(GAIA_BLEND_MAX_SEP_ARCSEC, { vVia: 'gaia_riello' })
-      .stats.companionBlendDimmedAnchors).toBe(1);
+      .codes['promotion.existing.anchor-dimmed']).toBe(1);
   });
 
   // AU Mic AB's shape. A minted member never reaches the gate with no
@@ -919,7 +921,7 @@ describe('anchor flux dimming', () => {
     );
     expect(familyTotal(codes, 'adopted')).toBe(1);
     expect(stats.companionBlendDimBeyondSeparation).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(anchor.absmag).toBe(blend);
   });
 
@@ -932,9 +934,9 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blendMag(2.1, 4.1);
     rows[0].sepArcsec = 400.0;
-    const { stats } = promote(rows, [anchor], inputs());
+    const { stats, codes } = promote(rows, [anchor], inputs());
     expect(stats.companionBlendDimBeyondSeparation).toBe(0);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
 
@@ -952,9 +954,9 @@ describe('anchor flux dimming', () => {
     });
     rows[0].absmag = blend;
     rows[0].sepArcsec = 400.0;
-    const { stats } = promote(rows, [anchor], inputs());
+    const { stats, codes } = promote(rows, [anchor], inputs());
     expect(stats.companionBlendDimBeyondSeparation).toBe(0);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
 
@@ -970,12 +972,12 @@ describe('anchor flux dimming', () => {
       gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
     });
     rows[0].absmag = blend;
-    const { newStars, stats, codes } = promote(
+    const { newStars, codes } = promote(
       rows, [anchor, member], inputs(),
     );
     expect(newStars).toHaveLength(0);
     expect(familyTotal(codes, 'adopted')).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     // Its own measurement is subtracted; the record itself is never rewritten.
     expect(member.absmag).toBe(4.1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
@@ -996,10 +998,10 @@ describe('anchor flux dimming', () => {
       gaiaSourceId: '4242424242', dmag: 2.0, magPri: 2.1, magSec: 4.1,
     });
     rows[0].absmag = blendApparent;
-    const { stats } = promote(
+    const { codes } = promote(
       rows, [anchor, member], inputs(),
     );
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     const memberApparent = 4.1 + 5 * Math.log10(20 / 10);
     // distPc=10 for the anchor, so its absmag and apparent magnitude coincide.
     expect(anchor.absmag).toBeCloseTo(
@@ -1020,18 +1022,18 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend - anchorOffset });
     const rows = solveRows({ dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { stats } = promote(rows, [anchor], inputs());
-    return stats;
+    const { stats, codes } = promote(rows, [anchor], inputs());
+    return { ...stats, dimmed: codes['promotion.existing.anchor-dimmed'] };
   };
 
   it('refuses the dim when the winning hypothesis matches nothing', () => {
     // distPc=10, so an absmag offset is an observed-frame offset one-for-one.
     const inside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG - 0.01);
-    expect(inside.companionBlendDimmedAnchors).toBe(1);
+    expect(inside.dimmed).toBe(1);
     expect(inside.companionBlendDimMisfit).toBe(0);
 
     const outside = misfitAt(ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG + 0.01);
-    expect(outside.companionBlendDimmedAnchors).toBe(0);
+    expect(outside.dimmed).toBe(0);
     expect(outside.companionBlendDimMisfit).toBe(1);
     expect(outside.companionBlendDimOutside).toBe(0);
   });
@@ -1043,9 +1045,9 @@ describe('anchor flux dimming', () => {
     const anchor = blendAnchor({ absmag: blend - 2.0 });
     const rows = solveRows({ hip: 7777, dmag: 2.0, magPri: 2.1, magSec: 4.1 });
     rows[0].absmag = blend;
-    const { stats } = promote(rows, [anchor], inputs());
+    const { stats, codes } = promote(rows, [anchor], inputs());
     expect(stats.companionBlendDimMisfit).toBe(0);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
   });
 
   it('subtracts an existing member once when two cursors pair it with the anchor', () => {
@@ -1060,11 +1062,11 @@ describe('anchor flux dimming', () => {
     rows[2].absmag = blend;
     // The AD cursor names the same record under comp D — one member, two rows.
     rows[3].comp = 'B';
-    const { stats, codes } = promote(
+    const { codes } = promote(
       rows, [anchor, member], inputs(),
     );
     expect(familyTotal(codes, 'adopted')).toBe(2);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.1, 3);
   });
 
@@ -1097,7 +1099,7 @@ describe('anchor flux dimming', () => {
     // 0.06 mag fit. On the record's own light nothing beats anchor-alone.
     const { anchor, stats, codes } = disagreeingMember(2.0, 2.2);
     expect(familyTotal(codes, 'adopted')).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(0);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(0);
     expect(stats.companionBlendDimOutside).toBe(1);
     expect(anchor.absmag).toBe(2.0);
   });
@@ -1107,9 +1109,9 @@ describe('anchor flux dimming', () => {
     // ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG (best 0.44) and the fit is refused as
     // matching nothing, while the member's own 2.2 fits to 0.10 and conserves
     // exactly. The gate now measures the light that will actually be subtracted.
-    const { anchor, member, stats } = disagreeingMember(1.5, 2.2);
+    const { anchor, member, stats, codes } = disagreeingMember(1.5, 2.2);
     expect(stats.companionBlendDimMisfit).toBe(0);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(anchor.absmag).toBeCloseTo(2.3078, 4);
     expect(blendMag(anchor.absmag, member.absmag)).toBeCloseTo(1.5, 9);
   });
@@ -2560,7 +2562,7 @@ describe('promoteCompanions', () => {
         sepArcsec: 88.4, paDeg: 204.0, dmag: 2.1,
       }),
     ];
-    const { newStars, stats, codes } = promote(rows, [acrux], inputs());
+    const { newStars, codes } = promote(rows, [acrux], inputs());
     const b = newStars.find(s => s.syntheticId === 'synth-12266-6306-B');
     expect(b).toBeDefined();
     if (!b) return;
@@ -2578,7 +2580,7 @@ describe('promoteCompanions', () => {
     // total system light is conserved.
     expect(b.absmag).toBeCloseTo(-3.45, 6);
     expect(codes['promotion.brightness.wds-mag']).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     const flux = (m: number) => Math.pow(10, -0.4 * m);
     expect(
       -2.5 * Math.log10(flux(acrux.absmag) + flux(b.absmag)),
@@ -3030,8 +3032,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
 
 describe('an existing member whose own 5p solution Gaia rejects', () => {
   const SIRIUS_B_SOURCE = '2947050466531873024';
-  const recuratedTotal = (stats: PromotionStats): number =>
-    Object.values(stats.companionExistingMemberRecurated).reduce((a, b) => a + b, 0);
+  const recuratedTotal = (codes: PromotionCounts): number => familyTotal(codes, 'existing.recurated');
 
   function siriusRows() {
     return [
@@ -3085,11 +3086,11 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const a = siriusA();
     a.distVia = 'hip2_parallax';
     const b = siriusB();
-    const { newStars, stats, rewrites } = promote(
+    const { newStars, rewrites, codes } = promote(
       siriusRows(), [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(newStars).toHaveLength(0);
-    expect(stats.companionExistingMemberRecurated.dmag_imputed).toBe(1);
+    expect(codes['promotion.existing.recurated.dmag-imputed']).toBe(1);
     const rewrite = rewrites.get(b)!;
     expect(rewrite.sizing.pass).toBe('recurated');
     expect(rewrite.sizing.radius.rSun).toBe(b.physicalRadius);
@@ -3119,10 +3120,10 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const rows = siriusRows();
     // No Δmag, and a dist_pc from the rejected fit rather than the anchor's.
     Object.assign(rows[1], { dmag: null, distPc: 2.9 });
-    const { stats } = promote(
+    const { codes } = promote(
       rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
-    expect(stats.companionExistingMemberRecurated.wds_mag).toBe(1);
+    expect(codes['promotion.existing.recurated.wds-mag']).toBe(1);
     const dNew = Math.hypot(b.x, b.y, b.z);
     expect(b.absmag).toBeCloseTo(8.44 - 5 * Math.log10(dNew / 10), 6);
   });
@@ -3138,10 +3139,10 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     Object.assign(b, { x: b.x * 1.1, y: b.y * 1.1, z: b.z * 1.1 });
     const dOld = Math.hypot(b.x, b.y, b.z);
     const apparentBefore = b.absmag + 5 * Math.log10(dOld / 10);
-    const { stats, rewrites } = promote(
+    const { rewrites, codes } = promote(
       rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
-    expect(stats.companionExistingMemberRecurated.held).toBe(1);
+    expect(codes['promotion.existing.recurated.held']).toBe(1);
     const dNew = Math.hypot(b.x, b.y, b.z);
     expect(rewrites.get(b)!.brightness).toEqual([{
       pass: 'recurated', source: 'held', absmag: b.absmag, fromPc: dOld, toPc: dNew, avFrom: 0, avTo: 0,
@@ -3166,11 +3167,11 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       });
     }
     Object.assign(rows[0], { absmag: 1.0 });
-    const { stats, rewrites } = promote(
+    const { rewrites, codes } = promote(
       rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
-    expect(stats.companionExistingMemberRecurated.dmag_imputed).toBe(1);
-    expect(stats.companionBlendDimmedAnchors).toBe(1);
+    expect(codes['promotion.existing.recurated.dmag-imputed']).toBe(1);
+    expect(codes['promotion.existing.anchor-dimmed']).toBe(1);
     expect(b.absmag - a.absmag).toBeCloseTo(0.5, 6);
     expect(a.absmag).toBeCloseTo(1.0 + split, 6);
     const anchor = rewrites.get(a)!;
@@ -3188,10 +3189,10 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const a = siriusA();
     const b = siriusB();
     const before = { x: b.x, absmag: b.absmag, vx: b.vx };
-    const { stats } = promote(
+    const { codes } = promote(
       siriusRows(), [a, b], inputs({ gaiaAstrometry: acceptedFit() }),
     );
-    expect(recuratedTotal(stats)).toBe(0);
+    expect(recuratedTotal(codes)).toBe(0);
     expect(b.x).toBe(before.x);
     expect(b.absmag).toBe(before.absmag);
     expect(b.vx).toBe(before.vx);
@@ -3204,18 +3205,18 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       absmag: 11.4666, spectDisplay: 'DA1.9',
       x: -0.494296, y: 2.476716, z: -0.75871,
     });
-    const { stats } = promote(
+    const { codes } = promote(
       siriusRows(), [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
-    expect(recuratedTotal(stats)).toBe(0);
+    expect(recuratedTotal(codes)).toBe(0);
     expect(b.absmag).toBe(11.4666);
   });
 
   it('leaves a member alone when no astrometry row answers for it', () => {
     const a = siriusA();
     const b = siriusB();
-    const { stats } = promote(siriusRows(), [a, b], inputs());
-    expect(recuratedTotal(stats)).toBe(0);
+    const { codes } = promote(siriusRows(), [a, b], inputs());
+    expect(recuratedTotal(codes)).toBe(0);
     expect(b.absmag).toBe(11.4666);
   });
 
@@ -3271,18 +3272,5 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(mint.sizing.pass).toBe('mint');
     expect(mint.sizing.radius.rSun).toBe(newStars[0].physicalRadius);
     expect(mint.brightness).toEqual([]);
-  });
-});
-
-describe('recuratedMembers', () => {
-  const row = multiplesRow();
-  const adopted = (idx: number, recurated: 'wds_mag' | 'held' | null) => ({
-    row, via: 'secondary' as const, anchor: null, systemAnchor: null, synthKey: 'synth-00000+0000-B',
-    outcome: { kind: 'adopted' as const, idx, via: 'own-id' as const, desigConFromAnchor: false, recurated },
-  });
-
-  it('counts each re-curated member once per brightness source, however many cursors reach it', () => {
-    expect(recuratedMembers([adopted(2, 'wds_mag'), adopted(2, 'wds_mag'), adopted(3, 'held'), adopted(4, null)]))
-      .toEqual({ dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 1 });
   });
 });

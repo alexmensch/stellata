@@ -6,7 +6,6 @@ import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity/identity-pure';
 import { stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
-import { formatPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
 import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../spectral/size-lineage-pure';
@@ -286,7 +285,7 @@ export function promotionSummary(counts: PromotionCounts, derived: PromotionDeri
   return `  scanned ${pairRows} pair rows; promoted ${familyTotal(counts, 'minted')} `
     + `(${c('minted.synthetic')} via synthetic ID); `
     + `already-in-catalog ${familyTotal(counts, 'adopted')} `
-    + `(re-curated ${formatPartition(derived.companionExistingMemberRecurated)}, `
+    + `(re-curated ${familyTotal(counts, 'existing.recurated')}, `
     + `${c('adopted.sameas-bridge')} via same-as bridge); `
     + `dropped (no-position=${c('dropped.no-position')}, beyond-tidal=${c('dropped.beyond-tidal-limit')}, `
     + `no-absmag=${c('dropped.no-absmag')}, compound-comp=${c('dropped.compound-comp')}, `
@@ -294,7 +293,7 @@ export function promotionSummary(counts: PromotionCounts, derived: PromotionDeri
     + `absmag spectral-derived=${c('brightness.spectral')}, spect ms-from-own-absmag=${c('spectral.ms-from-own-absmag')}, `
     + `wds-mag-derived=${c('brightness.wds-mag')}, inherited-twin-orbital=${c('brightness.inherited-twin')}, `
     + `blend-split=${c('brightness.blend-split')}, `
-    + `dimmed-anchors=${derived.companionBlendDimmedAnchors} (skipped ${derived.companionBlendDimSkipped}, `
+    + `dimmed-anchors=${c('existing.anchor-dimmed')} (skipped ${derived.companionBlendDimSkipped}, `
     + `unfit ${derived.companionBlendDimUnfit}, outside ${derived.companionBlendDimOutside}, `
     + `gaia-resolved ${derived.companionBlendDimGaiaResolved}, `
     + `beyond-separation ${derived.companionBlendDimBeyondSeparation}, misfit ${derived.companionBlendDimMisfit}), `

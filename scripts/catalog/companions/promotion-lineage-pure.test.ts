@@ -148,10 +148,10 @@ describe('promotion count block', () => {
 
   it('summarises the families as the build log has them', () => {
     const derived: PromotionDerivedCounts = {
-      companionRepositionedInnerToParent: 0, companionBlendDimmedAnchors: 3,
+      companionRepositionedInnerToParent: 0,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
-      companionExistingMemberRecurated: { dmag_imputed: 0, wds_mag: 1, spectral: 0, held: 0 }, physicalOverlaps: 0,
+      physicalOverlaps: 0,
     };
     const summary = promotionSummary(foldStageLines(PROMOTION_CODES, LINES), derived, 7);
     expect(summary).toContain('scanned 7 pair rows; promoted 2 (1 via synthetic ID); already-in-catalog 2 ');

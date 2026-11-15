@@ -42,7 +42,6 @@ import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binarie
 import { readArtifact } from '../../util/sources/source';
 import { promotionOriginKey } from './promotion-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
-import { fold } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt, polarToTangent } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
@@ -260,19 +259,14 @@ export interface PromotedRow {
   synthKey: string;
 }
 
-/** Field names are snapshot keys in promotion-derived. */
-export type PostPassStats = {
+/** What promoteCompanions tallies beyond its lineage; field names are snapshot keys in promotion-derived. */
+export type PromotionStats = {
   /** Sub-resolution inner-pair secondaries re-collocated onto their true
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
    *  onto B so the catalog placement matches the binaries.bin pair anchor
    *  (record-index/pair-resolution-pure.ts's parent re-home). */
   companionRepositionedInnerToParent: number;
-  /** Anchor records dimmed by the flux-conservation post-pass — the
-   *  per-anchor joint subset solve judged ≥1 member's light embedded in
-   *  the anchor's AT-HYG blend magnitude and re-split it. Counted once
-   *  per anchor. */
-  companionBlendDimmedAnchors: number;
   /** Dim members reaching the subtraction but not applied: the guard
    *  M_member > M_blend + 0.05 (a member as bright as its anchor's blend would
    *  zero or invert the residual flux), or no observed magnitude to subtract at
@@ -302,11 +296,6 @@ export type PostPassStats = {
   companionBlendDimMisfit: number;
 };
 
-/** What promoteCompanions tallies beyond its rows' lineage. */
-export type PromotionStats = PostPassStats & {
-  /** Per brightness source. See README.md#re-curation-of-an-already-in-catalog-member. */
-  companionExistingMemberRecurated: Record<RecuratedBrightness, number>;
-};
 
 /** Promotion's derived count block: its counts with no per-row decision. */
 export type PromotionDerivedCounts = PromotionStats & {
@@ -420,10 +409,9 @@ export function refusalStated(
     <= REFUSED_PARALLAX_MATCH_REL_TOL * row.distPc!)?.parked ?? null;
 }
 
-function emptyPostPassStats(): PostPassStats {
+function emptyPromotionStats(): PromotionStats {
   return {
     companionRepositionedInnerToParent: 0,
-    companionBlendDimmedAnchors: 0,
     companionBlendDimSkipped: 0,
     companionBlendDimUnfit: 0,
     companionBlendDimOutside: 0,
@@ -431,15 +419,6 @@ function emptyPostPassStats(): PostPassStats {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
   };
-}
-
-/** Members an adoption re-curated, per brightness source, once per member however many cursors reach it. */
-export function recuratedMembers(rows: readonly PromotedRow[]): Record<RecuratedBrightness, number> {
-  const members = new Map<string, RecuratedBrightness>();
-  for (const { outcome: o } of rows) {
-    if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) members.set(`${o.recurated} ${o.idx}`, o.recurated);
-  }
-  return fold(RECURATED_BRIGHTNESS, members.values(), (b) => b);
 }
 
 interface ExistingIndexes {
@@ -1099,7 +1078,7 @@ interface PromotionState {
    *  unresolved blend whose combined light the post-pass splits. */
   gaiaPhotometryByBackingSource: Map<string, BlendSplitCandidate[]>;
   /** Anchor-dimming candidates for the flux-conservation post-pass —
-   *  see `companionBlendDimmedAnchors`. */
+   *  see README.md#anchor-flux-conservation-post-pass. */
   anchorDimCandidates: AnchorDimCandidate[];
   /** `<anchorIdx> <memberIdx>` pairs already registered off an existing catalog
    *  record, so a member reached from two cursors subtracts its flux once. */
@@ -1658,7 +1637,7 @@ export function promoteCompanions(
     if (promoted.has(r.row)) throw new Error(`promotion decided ${r.row.systemId}/${r.row.comp} twice`);
     promoted.set(r.row, r);
   };
-  const post = emptyPostPassStats();
+  const post = emptyPromotionStats();
   const existing = buildExistingIndexes(existingStars);
   const groups = groupBySystem(multiplesRows);
   const wdsRootAnchors = buildWdsRootAnchors(groups, existing, existingStars);
@@ -2194,7 +2173,6 @@ export function promoteCompanions(
     recordRewrite(state, anchor, 'anchor-dimmed', anchorRadius, {
       pass: 'anchor-dimmed', absmag: anchor.absmag, members: relatives.length + appliedIndependents,
     });
-    post.companionBlendDimmedAnchors++;
   }
   const rows = multiplesRows.map((row) => {
     const r = promoted.get(row);
@@ -2202,7 +2180,7 @@ export function promoteCompanions(
     return r;
   });
   return {
-    newStars, stats: { ...post, companionExistingMemberRecurated: recuratedMembers(rows) }, groups, rows,
+    newStars, stats: post, groups, rows,
     rewrites: state.rewrites,
   };
 }
