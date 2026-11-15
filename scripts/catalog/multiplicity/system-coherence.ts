@@ -57,7 +57,7 @@ export type CoherenceAnchor = AnchorBasis & {
 export type MemberVerdict =
   | {
     readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number;
-    readonly fromAbsmag: number;
+    readonly toAbsmag: number; readonly radiusFactor: number;
   }
   | { readonly kind: 'at-anchor-distance'; readonly idx: number }
   | { readonly kind: 'significant-depth'; readonly idx: number; readonly gapPc: number; readonly sigmaPc: number }
@@ -173,19 +173,17 @@ function scaledPosition(p: Position, scale: number): Position {
 }
 
 /** See README.md#system-distance-coherence Brightness invariance. */
-export function snapPhotometry(absmag: number, fromPc: number, toPc: number): { absmag: number; radiusFactor: number } {
-  const snapped = absoluteMagnitude(apparentMagnitude(absmag, fromPc), toPc);
-  return { absmag: snapped, radiusFactor: Math.pow(10, (absmag - snapped) / 5) };
+export function snapPhotometry(absmag: number, fromPc: number, toPc: number): { toAbsmag: number; radiusFactor: number } {
+  const toAbsmag = absoluteMagnitude(apparentMagnitude(absmag, fromPc), toPc);
+  return { toAbsmag, radiusFactor: Math.pow(10, (absmag - toAbsmag) / 5) };
 }
 
-/** Move `star` radially to `distPc`, preserving its (mas-accurate)
- *  measured direction. */
-function repositionRadially(star: Star, distPc: number): void {
-  const dOld = starDist(star);
-  Object.assign(star, scaledPosition(star, distPc / dOld));
-  const { absmag, radiusFactor } = snapPhotometry(star.absmag, dOld, distPc);
-  star.physicalRadius *= radiusFactor;
-  star.absmag = absmag;
+/** Move the snapped member radially onto its anchor's distance, preserving
+ *  its (mas-accurate) measured direction. */
+function repositionRadially(star: Star, m: MemberVerdict & { kind: 'snapped' }): void {
+  Object.assign(star, scaledPosition(star, m.toPc / m.fromPc));
+  star.physicalRadius *= m.radiusFactor;
+  star.absmag = m.toAbsmag;
 }
 
 /** Group the pair rows of `multiplesRows` by WDS root and, per system,
@@ -363,7 +361,7 @@ export function systemCoherenceVerdicts(
         continue;
       }
       movedDist.set(idx, starDist(scaledPosition(member, scale)));
-      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist, fromAbsmag: member.absmag });
+      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist, ...snapPhotometry(member.absmag, dOld, anchorDist) });
     }
     processed.add(anchor.idx);
     verdicts.push({ kind: 'coherent', root, anchor, anchorPc: anchorDist, members: decided });
@@ -375,6 +373,6 @@ export function systemCoherenceVerdicts(
 export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVerdict[]): void {
   for (const v of verdicts) {
     if (v.kind !== 'coherent') continue;
-    for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m.toPc);
+    for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m);
   }
 }

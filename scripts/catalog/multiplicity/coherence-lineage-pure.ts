@@ -8,7 +8,7 @@ import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { ABSMAG_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
-import { snapPhotometry, type AnchorTier, type CoherenceAnchor, type MemberVerdict, type SystemVerdict } from './system-coherence';
+import { type AnchorTier, type CoherenceAnchor, type MemberVerdict, type SystemVerdict } from './system-coherence';
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
@@ -168,9 +168,8 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
     switch (m.kind) {
       case 'snapped': {
         push(m.idx, 'snapped', { ...member, from_pc: pc(m.fromPc), to_pc: pc(m.toPc) }, a);
-        const { absmag, radiusFactor } = snapPhotometry(m.fromAbsmag, m.fromPc, m.toPc);
-        push(m.idx, 'brightness.held', { root: member.root, absmag: absmag.toFixed(ABSMAG_PARAM_DECIMALS) }, null);
-        push(m.idx, 'size.rescaled', { root: member.root, factor: String(radiusFactor) }, null);
+        push(m.idx, 'brightness.held', { root: member.root, absmag: m.toAbsmag.toFixed(ABSMAG_PARAM_DECIMALS) }, null);
+        push(m.idx, 'size.rescaled', { root: member.root, factor: String(m.radiusFactor) }, null);
         return;
       }
       case 'at-anchor-distance':

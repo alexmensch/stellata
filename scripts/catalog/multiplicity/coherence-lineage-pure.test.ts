@@ -29,7 +29,7 @@ describe('coherenceLineageRows', () => {
       {
         kind: 'coherent', root: '00001+0001', anchor: anchor(0), anchorPc: 50,
         members: [
-          { kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, fromAbsmag: 4 },
+          { kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, toAbsmag: 3.9, radiusFactor: 1.04 },
           { kind: 'at-anchor-distance', idx: 2 },
           { kind: 'significant-depth', idx: 3, gapPc: 9, sigmaPc: 1 },
           { kind: 'wide-gap', idx: 4, gapPc: 30 },
@@ -61,7 +61,7 @@ describe('coherenceLineageRows', () => {
   it('names a snapped record\'s anchor, tier and both distances, and cites the anchor\'s row', () => {
     const [snapped] = coherenceLineageRows([{
       kind: 'coherent', root: '02318+8916', anchor: anchor(1, { memberWon: true }), anchorPc: 137.233,
-      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, fromAbsmag: 3 }],
+      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, toAbsmag: 3.1, radiusFactor: 0.97 }],
     }], stars.slice(0, 2));
     expect(snapped.key).toBe('spine:1');
     expect(paramsOf(snapped)).toEqual({
@@ -70,10 +70,10 @@ describe('coherenceLineageRows', () => {
     expect(snapped.evidence).toEqual([sourceRowRefText(gaia.ref)]);
   });
 
-  it('writes the absmag and radius factor the snap ships, uncited, after the snapped row', () => {
+  it('writes the absmag and radius factor the verdict ships, uncited, after the snapped row', () => {
     const [, held, rescaled] = coherenceLineageRows([{
       kind: 'coherent', root: '00001+0001', anchor: anchor(1), anchorPc: 100,
-      members: [{ kind: 'snapped', idx: 0, fromPc: 10, toPc: 100, fromAbsmag: 5 }],
+      members: [{ kind: 'snapped', idx: 0, fromPc: 10, toPc: 100, toAbsmag: 0, radiusFactor: 10 }],
     }], stars.slice(0, 2));
     expect([held.code, rescaled.code]).toEqual(['coherence.brightness.held', 'coherence.size.rescaled']);
     expect(paramsOf(held)).toEqual({ root: '00001+0001', absmag: '0.0000' });
@@ -119,7 +119,7 @@ describe('coherenceLineageRows', () => {
 describe('the coherence count block', () => {
   const verdicts: SystemVerdict[] = [{
     kind: 'coherent', root: '00001+0001', anchor: anchor(0, { memberWon: true }), anchorPc: 50,
-    members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, fromAbsmag: 4 }],
+    members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, toAbsmag: 3.9, radiusFactor: 1.04 }],
   }];
   const lines = coherenceLineageLines(verdicts, stars.slice(0, 3));
 

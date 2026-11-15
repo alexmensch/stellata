@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applySystemCoherence,
   COHERENCE_RADIAL_SIGMA,
+  snapPhotometry,
   systemCoherenceVerdicts,
   type CoherenceSources,
 } from './system-coherence';
@@ -435,7 +436,9 @@ describe('systemCoherenceVerdicts', () => {
     expect(systemCoherenceVerdicts(rows, [primary, member], src)).toEqual([{
       kind: 'coherent', root: '02318+8916', anchorPc: 137.233,
       anchor: { idx: 1, tier: 'gaia-clean', ref: gaia.ref, memberWon: true, precisionVetoed: false },
-      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, fromAbsmag: primary.absmag }],
+      members: [{
+        kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, ...snapPhotometry(primary.absmag, 132.626, 137.233),
+      }],
     }]);
     expect(primary.x).toBe(132.626);
   });

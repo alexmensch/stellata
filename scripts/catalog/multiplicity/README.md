@@ -363,9 +363,8 @@ Beside it, two uncited rows name what the move did to the record's walked
 brightness and size: `coherence.brightness.held` with the absmag it now carries
 (`params.absmag`, to the size stage's `ABSMAG_PARAM_DECIMALS`) and
 `coherence.size.rescaled` with the factor its radius scaled by
-(`params.factor`) — both from `snapPhotometry`, the one function the move
-itself applies, over the absmag the snapped verdict captured
-(`fromAbsmag`). A record promotion re-curates or dims afterwards carries
+(`params.factor`) — the `toAbsmag` and `radiusFactor` the snapped verdict
+carries, which `snapPhotometry` computed and the move applies. A record promotion re-curates or dims afterwards carries
 promotion's rows for those values too
 ([Promotion lineage](../companions/README.md#promotion-lineage)). The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
 astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
