@@ -3,7 +3,7 @@
 // projection all resolve their components along.
 
 import { angleBetweenRad, pyMod } from './angles';
-import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
+import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD, RAD_TO_DEG } from './astronomy-constants';
 
 export interface UnitVector {
   x: number;
@@ -35,7 +35,31 @@ function hasProperMotion(pm: ProperMotion): pm is { pmRaMasyr: number; pmDecMasy
   return pm.pmRaMasyr !== null && pm.pmDecMasyr !== null;
 }
 
-const RAD_TO_DEG = 180 / Math.PI;
+/** An east / north offset on the tangent plane, in arcsec. */
+export interface TangentOffset {
+  eastArcsec: number;
+  northArcsec: number;
+}
+
+export interface PolarOffset {
+  readonly sepArcsec: number;
+  readonly paDeg: number;
+}
+
+/** A separation and position angle (east of north) as a tangent-plane offset. */
+export function polarToTangent(sepArcsec: number, paDeg: number): TangentOffset {
+  const pa = paDeg * DEG_TO_RAD;
+  return { eastArcsec: sepArcsec * Math.sin(pa), northArcsec: sepArcsec * Math.cos(pa) };
+}
+
+/** The inverse of `polarToTangent`, the angle through `pyMod`: a tiny negative
+ *  reads 360, not 0. */
+export function tangentToPolar({ eastArcsec, northArcsec }: TangentOffset): PolarOffset {
+  return {
+    sepArcsec: Math.hypot(eastArcsec, northArcsec),
+    paDeg: pyMod(Math.atan2(eastArcsec, northArcsec) * RAD_TO_DEG, 360),
+  };
+}
 
 export function equatorialTangentBasisRad(raRad: number, decRad: number): TangentBasis {
   const sinRa = Math.sin(raRad);

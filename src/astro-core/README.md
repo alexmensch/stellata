@@ -88,7 +88,11 @@ Each has its own README.
   binding audit's tangent-plane offsets. `angularSeparationArcsec` is
   the separation between two unit vectors through `angleBetweenRad`, so it
   resolves micro-arcseconds where an `acos` of the dot product reads 0.
-  Shared by the catalog build's
+  `polarToTangent` / `tangentToPolar` convert a separation and position
+  angle (east of north) to a `TangentOffset` `{eastArcsec, northArcsec}`
+  and back, the angle wrapped through `pyMod` so a rounding unit west of
+  north reads 360 — the one converter the binaries stages and companion
+  promotion share. Shared by the catalog build's
   PM propagation (`scripts/catalog/distance/direction-cascade.ts`), every
   binaries-pipeline propagation (`scripts/binaries/`), space-motion velocity
   (`scripts/catalog/distance/velocity.ts`), the

@@ -133,13 +133,7 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  tangentOffset, polarToTangent (a WDS
-                                  ρ, θ as an east / north offset) and
-                                  its inverse tangentToPolar, the angle
-                                  through astro-core's pyMod — Stage 6's
-                                  anchor offsets and companion promotion's
-                                  re-based ones both read it,
-                                  distancePc (1000 /
+                                  tangentOffset, distancePc (1000 /
                                   parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
@@ -147,7 +141,11 @@ scripts/binaries/
                                   reference epochs. Proper motion
                                   propagates through astro-core's
                                   directionAtEpoch / skyPositionAtEpoch,
-                                  the formula the catalogue uses.
+                                  the formula the catalogue uses, and a
+                                  WDS ρ, θ converts to an east / north
+                                  offset through its polarToTangent /
+                                  tangentToPolar, which Stage 6 and
+                                  companion promotion share.
   python-float-pure.ts (+ test)   pySum, the compensated sum
                                   multiples.tsv rests on where JavaScript's
                                   left fold differs. Its sibling pyMod, `%`

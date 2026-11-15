@@ -1,7 +1,7 @@
 // Sky geometry the binaries stages share: tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
-import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR, RAD_TO_DEG } from '../../src/astro-core/astronomy-constants';
-import type { SkyPosition, UnitVector } from '../../src/astro-core/equatorial-basis';
+import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
+import type { SkyPosition, TangentOffset, UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
 import { pyMod } from '../../src/astro-core/angles';
 
@@ -15,31 +15,6 @@ export const ATHYG_REFERENCE_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 export const WDS_PRECISE_COORD_EPOCH = 2000.0;
 
 export const COS_DEC_FLOOR = 1e-3;
-
-export interface TangentOffset {
-  eastArcsec: number;
-  northArcsec: number;
-}
-
-/** A WDS (ρ, θ) as a tangent-plane offset: θ east of north, ρ in arcsec. */
-export function polarToTangent(rhoArcsec: number, thetaDeg: number): TangentOffset {
-  const theta = thetaDeg * DEG_TO_RAD;
-  return { eastArcsec: rhoArcsec * Math.sin(theta), northArcsec: rhoArcsec * Math.cos(theta) };
-}
-
-export interface PolarOffset {
-  readonly sepArcsec: number;
-  readonly paDeg: number;
-}
-
-/** The inverse of `polarToTangent`, the angle through `pyMod`: a tiny negative
- *  reads 360, not 0. */
-export function tangentToPolar({ eastArcsec, northArcsec }: TangentOffset): PolarOffset {
-  return {
-    sepArcsec: Math.hypot(eastArcsec, northArcsec),
-    paDeg: pyMod(Math.atan2(eastArcsec, northArcsec) * RAD_TO_DEG, 360),
-  };
-}
 
 /** Small-angle tangent-plane offset of `pos` from `ref`, RA wrapped to ±180°. */
 export function tangentOffset(pos: SkyPosition, ref: SkyPosition): TangentOffset {
