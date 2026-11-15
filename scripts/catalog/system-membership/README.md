@@ -24,7 +24,8 @@ scripts/catalog/system-membership/
     (+ test)                        gated and unioned into one tree per
                                     system (#the-union), the no-record
                                     companions, and the count block;
-                                    lentDistanceRecords (#geometric-pairs).
+                                    lentDistanceRecords and
+                                    anchorMovedRecords (#geometric-pairs).
                                     The test includes the shuffle test:
                                     permuting every source's input order
                                     changes no byte of the output.
@@ -66,8 +67,11 @@ Per WDS id, every component token of its pairs becomes a group and each
 record a leaf. A record reached under several tokens of one system sits at
 the most specific — a component before a compound, longer before shorter,
 then the canonical-anchor order — which is where the parent re-home put it
-(Castor B's record is `Ba`). Reached under unrelated tokens it is a data
-defect, placed the same way and counted (`systemWdsTokenConflicts`). A
+(Castor B's record is `Ba`). A pair whose two ends resolve to one record
+(an unresolved close pair one entry stands for) places it at the ends'
+nearest shared token — `Aa`,`Ab` → `A` — or at the root when they share
+none. Reached under unrelated tokens otherwise it is a data defect, placed
+the same way and counted (`systemWdsTokenConflicts`). A
 component's parent is its nearest ancestor token present (`Aa1` → `Aa` →
 `A`), else the smallest compound holding its letters (`B` → `BC`), else the
 root. Empty groups drop and one-child groups collapse, so a group with a

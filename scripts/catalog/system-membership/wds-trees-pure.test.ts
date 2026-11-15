@@ -77,6 +77,15 @@ describe('wdsTrees', () => {
     expect(inside.counts.systemWdsIdentityGated).toBe(1);
   });
 
+  it('places a record standing for both ends of a pair at their shared token, or the root, and counts no conflict', () => {
+    const id = '00568+3830';
+    const { trees, counts } = wdsTrees([
+      pair(id, 'Aa', 'Ab', 1, 1), pair(id, 'A', 'B', 1, 2), pair(id, 'Ba', 'Bb', 2, 2), pair(id, 'A', 'C', 3, 3), pair(id, 'A', 'D', 1, 4),
+    ], () => atWds(id));
+    expect(trees[0].root).toEqual(g(null, r(3), r(1), r(2), r(4)));
+    expect(counts.systemWdsTokenConflicts).toBe(0);
+  });
+
   it('counts a record one system reaches under unrelated tokens, placing it at the most canonical', () => {
     const { trees, counts } = wdsTrees([pair(CASTOR, 'A', 'B', 1, 2), pair(CASTOR, 'C', 'D', 1, 3)], () => atWds(CASTOR));
     expect(counts.systemWdsTokenConflicts).toBe(1);
