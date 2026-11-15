@@ -21,10 +21,11 @@ scripts/catalog/multiplicity/
                                   readers, whose HIP cell then throws.
   binary-flags-pure.ts (+ test)   Geometric binary inference
                                   (inferBinaries, over mutualPairs), the
-                                  FLAG_BINARY_PRIMARY claimants — geometric
-                                  (mutualPairClaims), the per-group walk
-                                  CCDM's claim runs (groupPrimaryClaims) with
-                                  the optical-double gate it consults
+                                  FLAG_BINARY_PRIMARY claimants' one
+                                  per-group rule (groupPrimaryClaims, which
+                                  the geometric, CCDM and renderable claims
+                                  run), the optical-double gate CCDM's
+                                  consults
                                   (isOpticalDoubleMember, per member),
                                   eclipsing (eclipsingClaims) — and
                                   binaryPrimaries, the one combine
@@ -105,7 +106,7 @@ relation is one-way. The renderer reads this as "the partner to keep
 in frame" (zoom-fit, disc-mask), which is well-defined even when
 asymmetric.
 
-The geometric claim on flag bit 4 (`0x10`, `mutualPairClaims`) is
+The geometric claim on flag bit 4 (`0x10`, `groupPrimaryClaims` over the mutual pairs) is
 stricter: only the **brighter member of a mutual pair** — A↔B where each
 is the other's directed nearest ([Binary-primary claims](#binary-primary-claims)).
 Mutual-only avoids over-flagging in dense clusters where a star's
@@ -260,7 +261,7 @@ took, it returns the records it claims and its counts. `binaryPrimaries`
 claims; `sortedPasses` (`../stages/sorted-stage.ts`) is its one caller,
 and the precedence is that call's argument order:
 
-1. **Geometric** — `mutualPairClaims`, the brighter of each mutual pair
+1. **Geometric** — `groupPrimaryClaims` over the mutual pairs, the brighter of each
    ([Geometric binary inference](#geometric-binary-inference)).
 2. **CCDM** — `ccdmClaims` ([CCDM double-star cross-match](#ccdm-double-star-cross-match)).
 3. **Eclipsing** — `eclipsingClaims`, every `VAR_TYPE_ECLIPSING` record

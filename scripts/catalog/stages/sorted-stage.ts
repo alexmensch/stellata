@@ -13,7 +13,7 @@ import {
   resolvedMemberIndices,
 } from '../companions/record-index/record-index';
 import {
-  binaryPrimaries, buildHipToIndex, eclipsingClaims, inferBinaries, mutualPairClaims,
+  binaryPrimaries, buildHipToIndex, eclipsingClaims, groupPrimaryClaims, inferBinaries,
 } from '../multiplicity/binary-flags-pure';
 import { HIP_CCDM } from '../multiplicity/hip-ccdm-source';
 import {
@@ -71,8 +71,8 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
 
   const rowIndexMap = buildCatalogRowIndexMap(records, inputs.synthGaiaBridges);
   const resolvedPairs = resolvePairs(pairsFromRows(inputs.multiplesRows), rowIndexMap);
-  const { primaries: binaryPrimaryIndices, counts: [geometric, ccdm, eclipsing, renderableWings] } = binaryPrimaries(
-    () => ({ claims: mutualPairClaims(records, binaries.mutual), counts: binaries.counts }),
+  const { primaries: binaryPrimaryIndices, counts: [, ccdm, eclipsing, renderableWings] } = binaryPrimaries(
+    (claimed) => groupPrimaryClaims(records, binaries.mutual, claimed),
     (claimed) => ccdmClaims(records, doubles, claimed),
     (claimed) => eclipsingClaims(records, claimed),
     (claimed) => renderableCompanionClaims(resolvedPairs, records, claimed),
@@ -99,7 +99,7 @@ export function sortedPasses(sorted: Sorted, inputs: SortedPassInputs) {
   });
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
-    ...geometric, ...ccdm, ...eclipsing, ...renderableWings,
+    ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
     ...componentCount, ...statuses.counts, ...systems.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);

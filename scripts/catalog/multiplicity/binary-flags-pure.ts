@@ -209,8 +209,8 @@ export function isOpticalDoubleMember(
 // `companionIdx`. It is the **directed** nearest (A's nearest may be B while
 // B's nearest is some third star C); the renderer reads it as "the partner
 // for SVG disc-mask cutouts and chart-mode wings," which is well-defined even
-// when the relationship is one-way. `mutual` is what the geometric claimant
-// (mutualPairClaims) claims from.
+// when the relationship is one-way. `mutual` is the groups the geometric
+// claimant claims from.
 export function inferBinaries(
   stars: Sorted<BinaryStar>,
 ): {
@@ -286,16 +286,6 @@ export function mutualPairs(nearest: ArrayLike<number>): (readonly [number, numb
     if (j > i && nearest[j] === i) out.push([i, j]);
   }
   return out;
-}
-
-/** The geometric claim: the brighter member of each **mutual** pair (A's nearest is B AND B's nearest is A).
- *  Mutual-only avoids over-flagging in dense clusters where one star's nearest is a third star paired with
- *  someone else. Mutual pairs are disjoint, so no two claims collide. */
-export function mutualPairClaims(
-  stars: readonly Pick<BinaryStar, 'absmag'>[],
-  mutual: readonly (readonly [number, number])[],
-): number[] {
-  return mutual.map((pair) => pickBrightest(stars, pair));
 }
 
 /** Every eclipsing record no earlier claimant took (../parse/gcvs/README.md): eclipsers surface as multi-star

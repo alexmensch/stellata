@@ -8,7 +8,6 @@ import {
   eclipsingClaims,
   groupPrimaryClaims,
   inferBinaries,
-  mutualPairClaims,
   mutualPairs,
   pickBrightest,
   resolveGroups,
@@ -27,7 +26,8 @@ describe('binary-flags-pure / inferBinaries', () => {
   function makeStar(opts: BinaryStar): BinaryStar {
     return opts;
   }
-  const geometricClaims = (stars: BinaryStar[]) => mutualPairClaims(stars, inferBinaries(enterPhase('sorted', stars)).mutual);
+  const geometricClaims = (stars: BinaryStar[]) =>
+    groupPrimaryClaims(stars, inferBinaries(enterPhase('sorted', stars)).mutual, new Set()).claims;
 
   it('flags a single close pair as a binary', () => {
     // Two stars at 0.001 pc apart — well under BINARY_MAX_SEP_PC (0.005 pc).
@@ -105,7 +105,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     expect(counts.binaryMutualPairs).toBe(1);
     // Primary = brighter of mutual pair B↔C → B (absmag=5 < C's 6). A is in no
     // mutual pair, so it is NOT claimed even though it is the brightest.
-    expect(mutualPairClaims(stars, mutual)).toEqual([1]);
+    expect(groupPrimaryClaims(stars, mutual, new Set()).claims).toEqual([1]);
   });
 
   it('does not claim stars in non-mutual chains', () => {
@@ -130,7 +130,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     expect(nearest[2]).toBe(1);
     expect(nearest[3]).toBe(2);
     expect(counts.binaryMutualPairs).toBe(1);
-    expect(mutualPairClaims(stars, mutual)).toEqual([1]);
+    expect(groupPrimaryClaims(stars, mutual, new Set()).claims).toEqual([1]);
   });
 
   it('claims one primary per mutual pair when there are several', () => {
