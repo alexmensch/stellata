@@ -23,7 +23,7 @@ import { encodeCatalog, type EncodedCatalog } from './record/encode-catalog-pure
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
-} from './companions/overlap-gate-pure';
+} from './overlap/overlap-gate-pure';
 import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json';
 import { CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
 import { DISTANCE_OUTLIERS } from './distance/refinement/build-distance-outliers-expected-json';
@@ -48,18 +48,13 @@ import {
   doublesEvidence,
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
+import { parkedRefusals } from './companions/identity/parked-refusals';
+import { promoteCompanions, type PromotionInputs } from './companions/companion-promotion';
+import { readMultiplesTsv, type MultiplesTsvRow } from './companions/multiples-row';
+import { recuratedRecords } from './companions/promotion-outcome';
 import {
-  promoteCompanions,
-  readMultiplesTsv,
-  recuratedRecords,
-  parkedRefusals,
-  type MultiplesTsvRow,
-  type PromotionDerivedCounts,
-  type PromotionInputs,
-} from './companions/companion-promotion';
-import {
-  PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
-} from './companions/promotion-lineage-pure';
+  PROMOTION_CODES, PROMOTION_INVARIANTS, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
+} from './companions/promotion-lineage/promotion-lineage-pure';
 import { identityText } from './lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
@@ -164,8 +159,9 @@ import { loadStoredEdges } from '../sid/stored-edges';
 import { CATALOG_PARTITION } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
   PROMOTION_LINEAGE, PLACEMENT_LINEAGE, COHERENCE_LINEAGE, ALLOCATION_LINEAGE, ALLOCATION_SIDS_STEM, MEMBERSHIP_LINEAGE,
-  NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, SIZE_LINEAGE, type StageLineageSpec,
+  NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, OVERLAP_LINEAGE, SIZE_LINEAGE, type StageLineageSpec,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import { OVERLAP_CODES, OVERLAP_INVARIANTS, OVERLAP_LINEAGE_BUDGET, overlapLineageLines } from './overlap/overlap-lineage-pure';
 
 type CatalogOutputKey = keyof (typeof CATALOG_OUTPUTS)['files'] & string;
 
@@ -416,15 +412,18 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
 
   const renderableWings = wingRenderablePrimaries(resolvedPairs, stars);
 
-  const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
-  const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
   console.log(promotionSummary(
-    promotionCounts, promotionDerived, secondaryRows,
+    promotionCounts, ps, secondaryRows,
   ));
+  const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
   for (const [a, b] of overlaps) {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
+  const overlapEmission = catalogCountedStageLineage({
+    spec: OVERLAP_LINEAGE, codes: OVERLAP_CODES, lines: () => overlapLineageLines(overlaps, stars),
+    budget: OVERLAP_LINEAGE_BUDGET, invariants: OVERLAP_INVARIANTS, inputs: inputHashesAtStart,
+  });
 
   const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(resolvedPairs);
   const statuses = multiplicityStatuses(
@@ -450,9 +449,9 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     conLookup: conAssignment.lookup,
     inputsCounts: inputs.counts,
     parkedLedger, simbadSourcedDistances,
-    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, placementRemovals,
+    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, overlapEmission, placementRemovals,
     placementDerived: stats.placementDerived,
-    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived: ps,
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
     systemMembership: serializeSystemMembership(systems.membership),
   };
@@ -502,7 +501,7 @@ export async function main() {
   const promotionEmission = catalogStageLineage({
     spec: PROMOTION_LINEAGE, codes: PROMOTION_CODES, lines: () => promotionLines,
     siblings: () => ({ 'promotion.identity': identityText(promotionIdentity) }),
-    budget: PROMOTION_LINEAGE_BUDGET, invariants: [], inputs: inputHashesAtStart,
+    budget: PROMOTION_LINEAGE_BUDGET, invariants: PROMOTION_INVARIANTS, inputs: inputHashesAtStart,
   });
   const allocationEmission = catalogCountedStageLineage({
     spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
@@ -543,6 +542,7 @@ export async function main() {
       size: built.sizeEmission,
       coherence: built.coherenceEmission,
       promotion: promotionEmission,
+      overlap: built.overlapEmission,
       allocation: allocationEmission,
       naming: namingEmission,
     },
@@ -559,6 +559,7 @@ export async function main() {
       { stage: 'coherence', block: { kind: 'counted', counts: built.coherenceEmission.counts } },
       { stage: 'promotion', block: { kind: 'counted', counts: built.promotionCounts satisfies PromotionCounts } },
       { stage: derivedStage('promotion'), block: { kind: 'counted', counts: built.promotionDerived } },
+      { stage: 'overlap', block: { kind: 'counted', counts: built.overlapEmission.counts } },
     ],
   }));
 }
@@ -592,6 +593,7 @@ interface CatalogEmissionInputs {
     readonly size: EmissionOf<typeof SIZE_LINEAGE>;
     readonly coherence: EmissionOf<typeof COHERENCE_LINEAGE>;
     readonly promotion: EmissionOf<typeof PROMOTION_LINEAGE>;
+    readonly overlap: EmissionOf<typeof OVERLAP_LINEAGE>;
     readonly allocation: EmissionOf<typeof ALLOCATION_LINEAGE>;
     readonly naming: EmissionOf<typeof NAMING_LINEAGE>;
   };
@@ -688,6 +690,7 @@ function catalogEmission({
       ...lineage.size.files,
       ...lineage.coherence.files,
       ...lineage.promotion.files,
+      ...lineage.overlap.files,
       ...lineage.allocation.files,
       ...lineage.naming.files,
     },

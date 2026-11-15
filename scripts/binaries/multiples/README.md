@@ -156,7 +156,7 @@ overflow marker (ultra-wide pairs whose ρ can't localise the secondary);
 only the ρ field overflows, so `sep_arcsec` empties while `pa_deg` keeps
 its real angle. Left unhandled the 999.9 ρ baked Alsephina F at
 999.9″ × 24.7 pc ≈ 24,695 AU. They feed
-companion-promotion's tangent-plane projection for the Tier-3
+companion promotion's tangent-plane projection (`companions/placement/`) for the Tier-3
 (no-orbit) path and the runtime binaries.bin sep+PA fields. `sep_pa_epoch_jd` records the
 WDS observation year (`date_last`) converted to JD via
 `wdsYearToJd`; the runtime `BinaryOrbitField` baselines orbital

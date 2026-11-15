@@ -8,7 +8,7 @@ import {
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
 } from './binary-flags-pure';
-import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { Star } from '../parse/stars-parse';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
 

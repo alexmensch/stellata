@@ -50,6 +50,8 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   ([Record order](../../src/catalog-format/record/README.md#record-order)): the row-index
   sidecar, the renderable-companion wings bit, and the component-letter
   designations the display-name composer builds on.
+- `overlap/` — the overlap gate: which records `catalog.bin` draws inside
+  one another, catalogue-wide.
 - `naming/` — the IAU WGSN authority ladder end to end: ingest, the
   designation normalisers, the record-side join, and the one pure composer
   the build and the runtime both render display names with.
@@ -110,9 +112,10 @@ scripts/catalog/
                                   allocation's and naming's lineage through
                                   emitArtifacts once its two snapshot
                                   checks, the seven lineage budgets,
-                                  placement's and naming's lineage
-                                  invariants (lineage/README.md#invariants)
-                                  pass. Runs under the CI heap cap
+                                  placement's, promotion's and naming's
+                                  lineage invariants
+                                  (lineage/README.md#invariants) pass.
+                                  Runs under the CI heap cap
                                   (../util/heap-budget/README.md).
                                   A failed allocation throws before
                                   anything is staged

@@ -243,7 +243,7 @@ export function resolveVMagnitude(
  *  why: README.md#which-tiers-give-a-system-blend--vtierissystemblend.
  *
  *  Subtracting a companion's flux from a record double-counts unless gated on
- *  this — ../companions/README.md#anchor-flux-conservation-post-pass. */
+ *  this — ../companions/post-passes/README.md#anchor-flux-conservation. */
 export function vTierIsSystemBlend(via: VVia | null): boolean {
   return isPrintedVVia(via);
 }

@@ -240,7 +240,7 @@ its own row: coherence's `coherence.size.rescaled` for a snapped member
 ([Coherence lineage](../multiplicity/README.md#coherence-lineage)), and
 promotion's `promotion.size.*` for every record it sizes, minted or held,
 in this stage's params through `radiusRouteParams`
-([Promotion lineage](../companions/README.md#promotion-lineage)).
+([Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage)).
 
 Measured 2026-11-11 on the full tree: 964,982 rows (152 MB plain), 24.2 MB
 gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,

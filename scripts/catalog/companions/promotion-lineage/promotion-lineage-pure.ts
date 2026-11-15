@@ -1,21 +1,24 @@
-// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, its count summary, and the identity rows of the records it mints and the rows it removes. See README.md#promotion-lineage.
+// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, its count summary, and the identity rows of the records it mints and the rows it removes. See README.md.
 
-import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
-import { starDesignations } from '../../sid/sid-pure';
-import { rowKeyText } from '../../util/sources/row-ref-pure';
-import type { IdentityRow } from '../lineage/identity/identity-pure';
-import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { formatPartition } from '../../util/counts/tally-pure';
-import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
-import type { Star } from '../parse/stars-parse';
-import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
-import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../spectral/size-lineage-pure';
-import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
+import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
+import { starDesignations } from '../../../sid/sid-pure';
+import { rowKeyText } from '../../../util/sources/row-ref-pure';
+import type { IdentityRow } from '../../lineage/identity/identity-pure';
+import {
+  lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, type LineageInvariant,
+} from '../../lineage/lineage-invariant-pure';
+import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../../lineage/lineage-row-pure';
+import { formatPartition } from '../../../util/counts/tally-pure';
+import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../../lineage/reason-codes/reason-codes-pure';
+import type { Star } from '../../parse/stars-parse';
+import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../../photometry/brightness-colour-lineage-pure';
+import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../../spectral/size-lineage-pure';
+import { companionAbsmagIsObserved, companionCiIsObservedVia } from '../companion-dust-pure';
+import type { MultiplesTsvRow } from '../multiples-row';
 import type {
-  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, MultiplesTsvRow,
-  PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
-} from './companion-promotion';
-import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionStats, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
+} from '../promotion-outcome';
+import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
 
@@ -126,6 +129,40 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
 
 type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
 type LiveBranch = Parameters<typeof PROMOTION_CODES.liveCode>[0];
+
+const MISKEYED_ANCHOR_ROWS = new Map([
+  ['multiples:01398-5612-AB/B', 'p Eri B, onto its anchor spine:8830'],
+  ['multiples:02020+0246-AB/B', 'α Psc B, onto its anchor spine:10740'],
+  ['multiples:07374-3458-AC/C', 'f Pup C, onto its anchor spine:90217'],
+]);
+
+const SAMEAS_BRIDGED_ROWS = new Map([
+  ['multiples:00047+3416-Da,Db/Db', 'bridged to gaia-dr3:2875176250406193920'],
+  ['multiples:01178+4901-Ca,Cb/Cb', 'bridged to gaia-dr3:403123332598347392'],
+  ['multiples:12357-1650-Ba,Bb/Bb', 'bridged to gaia-dr3:3523321789291000448'],
+  ['multiples:20450+1244-AB/B', 'bridged to gaia-dr3:1755189379660877312'],
+  ['multiples:21221+1948-Ba,Bb/Bb', 'bridged to gaia-dr3:1790202571530814464'],
+  ['multiples:21334+3058-Ba,Bb/Bb', 'bridged to gaia-dr3:1850540432473446528'],
+  ['multiples:22450+6808-Ca,Cb/Cb', 'bridged to gaia-dr3:2224986268437189888'],
+]);
+
+export const PROMOTION_INVARIANTS: readonly LineageInvariant[] = [
+  namedExceptionsInvariant(
+    PROMOTION_CODES, 'dropped.anchor-is-component',
+    'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (../identity/README.md#anchor-is-the-component-refusal)',
+    MISKEYED_ANCHOR_ROWS,
+  ),
+  namedExceptionsInvariant(
+    PROMOTION_CODES, 'adopted.sameas-bridge',
+    'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (../identity/README.md#same-as-bridge-to-an-already-admitted-source)',
+    SAMEAS_BRIDGED_ROWS,
+  ),
+  lineageInvariant(
+    PROMOTION_CODES, 'brightness.anchor-collocated',
+    'no minted record takes its anchor\'s magnitude for want of a brightness of its own (../README.md#companion-promotion-from-databinariesmultiplestsv)',
+    NO_EXCEPTIONS,
+  ),
+];
 
 const PROMOTION_EFFECTS = codeEffects([PROMOTION_CODES]);
 
@@ -289,7 +326,7 @@ function recuratedPartition(counts: PromotionCounts): Record<RecuratedBrightness
   };
 }
 
-export function promotionSummary(counts: PromotionCounts, derived: PromotionDerivedCounts, pairRows: number): string {
+export function promotionSummary(counts: PromotionCounts, derived: PromotionStats, pairRows: number): string {
   const c = (branch: LiveBranch): number => counts[PROMOTION_CODES.liveCode(branch)];
   return `  scanned ${pairRows} pair rows; promoted ${familyTotal(counts, 'minted')} `
     + `(${c('minted.synthetic')} via synthetic ID); `

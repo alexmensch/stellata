@@ -7,7 +7,7 @@ import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 import { FLAG_BINARY_PRIMARY } from '../../../../src/catalog-format/record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
 import type { Star } from '../../parse/stars-parse';
-import type { MultiplesTsvRow } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
 import { multiplesRow } from '../multiples-fixture';
 import {
   buildCatalogRowIndexMap,

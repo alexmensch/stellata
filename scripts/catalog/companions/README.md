@@ -21,41 +21,47 @@ counted metrics.
 
 ```
 scripts/catalog/companions/
-  companion-promotion.ts          promoteCompanions. Runs before the absmag
-    (+ test)                      sort so promoted records take the same
+  companion-promotion.ts          promoteCompanions: builds the SystemIndex
+    (+ test)                      (identity/), runs the cursor walk — each
+                                  row's identity, placement and mint or
+                                  adoption — then the post-passes/ in
+                                  order, turning their outcomes into
+                                  lineage rewrites and PromotionStats.
+                                  Runs before the absmag
+                                  sort so promoted records take the same
                                   final indexing as everything else.
-                                  readMultiplesTsv reads through the
+  promotion-outcome.ts            What promotion decides — RowOutcome,
+                                  PromotedRow, RecordRewrite — and
+                                  PromotionStats: the contract the walk,
+                                  identity/ and promotion-lineage/
+                                  share.
+  multiples-row.ts                MultiplesTsvRow, the row every reader of
+                                  multiples.tsv takes. readMultiplesTsv reads through the
                                   `MULTIPLES_TSV` codec (readArtifact,
                                   so a missing file fails the build)
                                   (../../binaries/multiples-tsv.ts) and
                                   hands promotion each row with its anchor
                                   offset already parsed, never the raw
                                   anchor cells.
-  anchor-offset-pure.ts (+ test)  parseStage6Offset (the anchor columns'
-                                  parse boundary) and rebasedAnchorOffset: a
-                                  row's Stage 6 offset re-based onto
-                                  promotion's WDS-root anchor, or null where
-                                  Stage 6 reached either from no measured
-                                  geometry, the two coincide, or the row is
-                                  the chaining letter itself. Offsets
-                                  convert through astro-core's
-                                  polarToTangent / tangentToPolar, the pair
-                                  Stage 6 writes them with.
-  promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
-    (+ test)                      codes and count block, the serialiser over
-                                  RowOutcome, rewriteRows (each sized
-                                  record's size row and a held record's
-                                  brightness rows), promotionSummary, and
-                                  the identity rows of the records it mints
-                                  and the rows it removes or merges
-                                  (#promotion-lineage).
+  subfolder-boundary.test.ts      No file under a subfolder imports
+                                  companion-promotion.ts: the wiring
+                                  imports them, never the reverse.
+  identity/                       Which record a pair row names: the
+                                  system index and the per-row identity
+                                  gates (identity/README.md).
+  placement/                      Where a component sits: own fit, else a
+                                  WDS projection off its anchor
+                                  (placement/README.md).
+  post-passes/                    Inner-pair re-home, systemic velocity,
+                                  blend split, anchor flux conservation
+                                  (post-passes/README.md).
+  promotion-lineage/              Promotion as a lineage stage: its reason
+                                  codes, rows and invariants
+                                  (promotion-lineage/README.md).
   companion-dust-pure.ts (+ test) Which of a companion's absmag and B−V are
                                   observed, so carry the A_V that
                                   de-extinction subtracts: read by the mint
                                   and by promotion's dust row.
-  overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
-                                  the sum of their radii, less those an orbit
-                                  chain separates. See Overlap gate below.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -89,7 +95,7 @@ the secondary of every physical pair whose identifier isn't already
 a record the membership manifest admitted: ~<!-- count:build-catalog/promotion.minted.keyed k2 -->3.5k<!-- /count --> companions
 via real Gaia/HIP keys and ~<!-- count:build-catalog/promotion.minted.synthetic k3 -->11.2k<!-- /count --> via synthetic identifiers
 in the current build (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …;
-see the identifier gate below).
+see [Promotion identity](identity/README.md)).
 
 Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
@@ -97,55 +103,24 @@ earlier mint this build), or minted;
 a pair's primary is `pair-anchor` when it anchors its pair and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
-([Promotion lineage](#promotion-lineage)).
+([Promotion lineage](promotion-lineage/README.md#promotion-lineage)).
 Each outcome is a lineage row, and each flag it carries a facet row of its
-own (the list is [Promotion lineage](#promotion-lineage)'s), so every per-row
-count is a fold of its lineage codes. The post-passes below act on records,
+own (the list is [Promotion lineage](promotion-lineage/README.md#promotion-lineage)'s), so every per-row
+count is a fold of its lineage codes. The [post-passes](post-passes/README.md) act on records,
 not rows; each writes rows keyed on the records it changes
-([Promotion lineage](#promotion-lineage)), and `PromotionStats`, promotion's
-derived count block with `physicalOverlaps`, counts what no row records.
+([Promotion lineage](promotion-lineage/README.md#promotion-lineage)), and `PromotionStats`, promotion's
+derived count block, counts what no row records.
 
 Per-row gates and resolution:
 
-- **WDS unresolved-compound guard.** Secondary rows whose `comp` letter
-  is an unresolved compound aggregate ("BC" / "AB" / "ABC") — every
-  character appears as a single-letter comp on a sibling cursor in the
-  same WDS root — drop early without promotion. 40 Eri's `A,BC` row
-  carries `comp="BC"`, and the WDS root also has resolved `BC` /
-  `AC` cursors with single-letter primaries B and C; the relational
-  test confirms "BC" is shorthand for the unresolved B+C aggregate and
-  not a single star. Promoting it would add a "Keid BC" record at
-  ~416 AU from Keid alongside the resolved Keid B and Keid C, double-
-  counting the BC pair's light + position.
-- **Identifier.** Real-ID resolution (gaia first, then hip)
-  attempts to match the row against an existing catalog star;
-  skip when it hits a row that ISN'T the system primary
-  (`promotion.adopted.*`) — and so does a row whose own Gaia source missed the
-  index but whose own HIP names a non-anchor record. Every already-in-catalog
-  route (these two and the same-as bridge below) goes through
+- **Identity** ([Promotion identity](identity/README.md)). A compound comp
+  ("BC") drops; the inheritance gates strip ids shared with the anchor; a
+  held record named by the row's own id, an earlier mint, or a same-as
+  bridge is adopted; a row re-serving a refused parallax, or one whose two
+  ends are one record, drops; anything else mints, on its surviving ids or
+  `synth-<wds_id>-<comp>`. Every held answer goes through
   `adoptExistingMember`: the anchor's designation constellation, the
-  re-curation below, and anchor-dim registration. When the row carries no own gaia AND no
-  own hip, mint `synth-<wds_id>-<comp>` and proceed —
-  `FLAG_BINARY_COMPANION_SYNTHETIC` flags the result. Same path
-  fires when the inherited-HIP or inherited-Gaia escapes strip
-  the row's ids to null, since the final record has nothing else
-  addressable. Algol Aa,Ab + Aa1,2 are the canonical surfacing
-  cases. The Gaia escape mirrors the HIP one: Gaia fits one
-  source to a blended sub-arcsec pair, so both component rows
-  carry the primary's source_id (2090 pairs) — the companion
-  strips it rather than colliding with the primary in every
-  gaia-keyed lookup, and build-runtime-binaries retries the
-  synth key when its id-first resolve degenerates.
-- <a id="same-as-bridge-to-an-already-admitted-source"></a>**Same-as bridge to an already-admitted source.** A row with no id of its
-  own mints `synth-<wds_id>-<comp>`, and the already-in-catalog test above
-  has nothing to match on — so when a deeper magnitude floor admits the same
-  physical star on its Gaia source, both ship and one object is drawn twice,
-  100 pc apart. The SID registry's same-as edges are the only witness of the
-  link (`syntheticGaiaBridges` over `data/sid/sameas-overrides.tsv` +
-  `bridges/`, [§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)): a bridged source already in the catalog
-  IS this component, so the mint is refused and that record takes the
-  re-curation and anchor-dim registration an already-in-catalog hit gets.
-  Counted `promotion.adopted.sameas-bridge`, a ratchet-DOWN metric.
+  re-curation below, and anchor-dim registration.
 - <a id="re-curation-of-an-already-in-catalog-member"></a>**Re-curation of an already-in-catalog member.** An existing member's
   position, brightness and velocity all descend from its own 5p solution.
   Where **Gaia rejects that solution** — `isCoherenceAnchorGrade`
@@ -180,41 +155,7 @@ Per-row gates and resolution:
   systemic blend below a proper motion that dragged **Sirius A** from
   1339.4 mas/yr to 1282.7. Counted `promotion.existing.recurated.<source>`
   (`held` for the fallback), one row per member however many cursors reach
-  it ([Promotion lineage](#promotion-lineage)).
-- **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
-  record has no second star to mint. `01398-5612`'s A row carries the B
-  record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's
-  ids strip as inherited — the Sirius-B shape by identifiers alone, except the
-  companion is already a record. Minting baked a twin 93 AU off its own
-  original and `binaries.bin` drew the pair's 468-yr orbit between the two
-  copies. The naming authority's component attribution is the independent
-  witness: where it already letters the ANCHOR as the row's own component, that
-  record IS the component. Counted `promotion.dropped.anchor-is-component` (<!-- count:build-catalog/promotion.dropped.anchor-is-component -->3<!-- /count -->: p Eri B,
-  `f Pup C`, `α Psc` B), a ratchet-down metric, since each is a mis-keyed
-  multiples.tsv row upstream. The letters themselves are contested — WDS, the
-  authority and Gliese disagree per system — so the gate refuses the duplicate
-  without adjudicating the letter. It **reaches only roots the authority
-  attributes a Bayer designation in**; one with no Bayer letter offers no
-  witness, which is why the `Gl 277A` duplicate needs a membership fix instead.
-  `applyStarNames` runs before promotion, which is what puts `bayerComponent`
-  on the record in time.
-- <a id="refused-parallax-refusal"></a>**Refused-parallax refusal.** A row never promotes when the distance it STATES
-  is a parallax a tier above refused — `refusalStated` matches the cell
-  against every refused value indexed under the row's ids, and returns the
-  parked record's origin key, which the row's lineage cites. Sharing the id is not
-  enough: Stage 2/3 bind one blended source to every component of a sub-arcsec
-  pair, so a parked primary's id reaches siblings stating the ANCHOR's distance
-  (α Her's B, Ba, Bb) as well as siblings re-serving the refusal (WDS
-  01425+5000 comp B). Runs **before** the inheritance gates, which would strip
-  the borrowed id and leave a synth record at whatever the row states. Counted
-  per astrometry route, `promotion.dropped.parked-record.other-route`
-  (<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->8<!-- /count -->) and `.gaia-5p`; `promotion.fit.owned` (<!-- count:build-catalog/promotion.fit.owned -->0<!-- /count -->) counts refused rows
-  carrying an owned id on a per-component route — what a non-zero means, the
-  tolerance and the wider-join caveat in [Companion promotion](../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in).
-- **Cursor-primary anchor.** findExistingPrimary walks gaia →
-  hip → proper name (position-guarded, for GJ-only AT-HYG rows
-  carrying neither id — ξ UMa A). An unresolvable primary would
-  otherwise run its whole cursor anchor-less.
+  it ([Promotion lineage](promotion-lineage/README.md#promotion-lineage)).
 - <a id="collocated-double-refusal"></a>**Collocated-double refusal.** A
   record named `<its name for the anchor> <letter>` sitting bit-identical on
   the anchor (AT-HYG's convention for both members of a resolved pair at one
@@ -226,75 +167,18 @@ Per-row gates and resolution:
   AT-HYG's own convention and nothing else — the index it hits holds the
   manifest's `proper` cells alone, so a base composed off a Bayer or catalogue
   designation could never match one and none is tried.
-- **Position.** Prefer the row's own xyz when its astrometry is a
-  real per-component fit AND its xyz differs from the primary row's
-  xyz. Else apply a sky-tangent projection from the EXISTING catalog
-  primary's xyz at the published WDS sep+PA — anchoring on the
-  catalog primary (not the multiples.tsv primary row) avoids a
-  pipeline-precision gap between AT-HYG's 3-4 sig figs and the
-  binaries pipeline's 6 sig figs (Sirius A and B were ~100 AU apart
-  for that reason before the fix). Sub-resolution / unmeasured
-  pairs (WDS ρ 0.000, or a null sep/pa where WDS reported no
-  measurement) have no static placement
-  to bake: with a renderable orbit the secondary collocates
-  BIT-IDENTICALLY on the anchor — a placement choice for the LOD
-  fallback, not a runtime signal. The runtime renders the relative
-  offset as R(t) from the orbital elements alone regardless of the
-  baked placement (`src/client/binaries/orbit-relation-cache.ts`
-  `baseDiffPc`) — and without a placement the row drops
-  (`promotion.dropped.no-position`): nothing would ever separate the records and
-  the collocated star double-counts the blend photometry.
-- **Projected-separation tidal gate.** A tangent-projected secondary
-  sits at the primary's distance, so its projected physical separation
-  `ρ·d` is a lower bound on the pair's true 3D separation. When that
-  exceeds `OPTICAL_DOUBLE_MIN_SEP_PC = 1.0` pc (the Galactic
-  tidal-disruption limit, the same constant the CCDM optical-double
-  suppression and the binaries pipeline's Stage-5 `SEPARATION_LIMIT_PC`
-  use) no pair can be bound, so the projection is refused
-  (`promotion.dropped.beyond-tidal-limit`) rather than fabricating a companion at a
-  bogus placement. This catches wide line-of-sight optical doubles whose
-  secondary has no parallax for Stage 5 to reject — e.g. SHY 476 BC
-  (05359+3530), a foreground star 999.5″ from a ~1470 pc primary. Only
-  the projection branch consults it; a secondary with its own resolved
-  astrometry is vetted upstream by Stage 5.
-- **Inner-pair re-homing (post-pass).** An inner pair's cursor primary
-  (Castor Ba) can carry the system's blended identifier — a shared Gaia
-  source, or a shared HIP Gaia later split — so it resolves onto a
-  sibling (Castor A) and the secondary bakes there instead of on its true
-  parent component (B). A post-pass re-runs the placement against the
-  parent's resolved slot (synth record first, then a per-system
-  component→index map for a parent that kept its own Gaia row), covering
-  both the ρ=0 collocation and a measured sep+PA re-projection. This makes
-  the baked placement match the runtime pair anchor
-  ([The parent re-home](record-index/README.md#the-parent-re-home));
-  counted by `companionRepositionedInnerToParent`. Rendering is unaffected either
-  way (elements-alone R(t)), but a consistent bake keeps the
-  baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
-- **Position for pair-row primaries.** When the cursor primary itself
-  needs promotion (40 Eri B — primary in BC/BD/BE, never a secondary
-  of A), no identifier is required: an id-less row (Rigel B, Acrux B —
-  the Stage-2 sibling-identity claims gate strips stolen HIPs) mints an
-  addressable `synth-<wds_id>-<comp>` key exactly like an
-  identifier-less secondary. The honesty gates are position and
-  brightness, not identity; a reappearing previously-retired component
-  is reconciled in the SID ledger by a `reinstate` event in `data/sid/events.tsv`
-  ([§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv)), never by dropping the star. Position resolves
-  in preference order: (1) the row's own
-  per-component astrometry when Stage 3 supplied a real independent fit
-  (own `gaia_5p` / `hip2_long_baseline` whose id differs from the
-  anchor's); (2) project the row's Stage-6 `anchor_sep_arcsec` /
-  `anchor_pa_deg` off the WDS-root anchor star, re-based from Stage 6's
-  `anchor_comp` onto that star (below) — the per-component
-  offset BFS-composed over kept, Stage-5-rejected, and
-  compound-photocentre pair geometry (40 Eri B lands at the A,BC
-  compound proxy; Acrux B at the rejected AB row's 3.5″/114°).
-  Neither available → **drop** (`promotion.dropped.collocated-primary`). Collocating
-  on the anchor would bake a false coincident star inside the anchor's
-  disc (δ Vel C): the escape only fires for cursor primaries that never
-  appear as a secondary of the anchor, so no anchor→self orbital pair
-  exists for `BinaryOrbitField` to animate it away from centre at
-  runtime.
-- **Blended-identifier escape.** The pair-row-primary escape fires not
+- **Position** ([Promotion placement](placement/README.md)). The row's own
+  per-component fit, else the WDS (ρ, θ) projection off its anchor record;
+  a projection past the 1 pc tidal limit, or a sub-resolution pair with no
+  renderable orbit, drops.
+- **Inner-pair re-homing (post-pass).** An inner pair's secondary baked on a
+  sibling through its cursor primary's blended identifier is re-placed off its
+  true parent component ([Inner-pair re-home](post-passes/README.md#inner-pair-re-home)).
+- **Pair-row primaries.** A cursor primary no record holds (40 Eri B) is
+  promoted as a companion of the WDS-root anchor, placed by its own fit or
+  its re-based Stage 6 offset, and dropped with neither
+  ([Position for pair-row primaries](placement/README.md#position-for-pair-row-primaries)).
+- <a id="blended-identifier-escape"></a>**Blended-identifier escape.** The pair-row-primary escape fires not
   only when the cursor primary resolves to nothing, but also when it
   resolves to the WDS-ROOT ANCHOR's record while its comp is a DISJOINT
   top-level letter — Acrux B carries A's shared HIP, omicron And B
@@ -325,8 +209,8 @@ Per-row gates and resolution:
   full-luminosity twins (Betelgeuse Ab). Those rows drop — unless the
   pair carries a renderable orbit binaries.bin must keep addressing,
   where the twin is kept and counted
-  (`promotion.brightness.inherited-twin`, a ratchet-down
-  metric: curate types to shrink it). For a **pair-row-primary
+  (`promotion.brightness.inherited-twin`, a genuine count:
+  [Promotion's invariants](promotion-lineage/README.md#promotions-invariants)). For a **pair-row-primary
   escape** the row's Δmag describes the sub-pair it heads, not the
   anchor→row separation (40 Eri B's Δmag is the B→C delta), so both
   `primary + Δmag` paths are suppressed; and when the escape row carries
@@ -339,118 +223,14 @@ Per-row gates and resolution:
   claimed HIP 61910's blended V 5.17, which its A branch was claiming too. Absent any
   honest brightness the record inherits the anchor's collocated
   brightness (`promotion.brightness.anchor-collocated`) rather than a
-  corrupted A+Δmag.
-- <a id="anchor-flux-conservation-post-pass"></a>**Anchor flux conservation (post-pass).** A member whose light is
-  embedded in an `athyg_own` anchor's record magnitude double-counts the flux
-  if minted without dimming the anchor. **Which members CAN be in there is set
-  by the catalogue the anchor's V came from, not by identifiers.** A printed
-  tier publishes one magnitude per catalogue entry, so every member sharing the
-  entry is inside it; a `gaia_riello` V resolves per source, so a member Gaia
-  handed its OWN source_id is separated by measurement and cannot be in the
-  anchor's G (`companionBlendDimGaiaResolved` — HD 153557's B at 5″, σ Ori's E at 42″,
-  both of which the fit alone would have dimmed). `vTierIsSystemBlend` owns
-  that split ([Which tiers give a system blend](../photometry/README.md#which-tiers-give-a-system-blend--vtierissystemblend)).
-  Every remaining own-brightness member (`dmag_imputed` / `own` / `wds_mag`) is
-  decided per anchor by a **joint subset solve** — derivation, margin rationale
-  and worked examples in [Blend light conservation](/docs/science-multiple-star-pipeline.md#blend-light-conservation).
-  The engineering invariants it rests on, each easy to get wrong:
-
-  - **Observed magnitude** comes from the anchor's own `absmag` at its own
-    `|xyz|`, never a multiples.tsv `dist_pc` — that can predate a distance
-    override the record took (HD 64315: 12.7 kpc vs 6.2) or a coherence
-    reposition (σ Ori 328.9 → 399.8 pc). Coherence moves a record at fixed
-    de-extincted apparent magnitude, so a snapped anchor's observed magnitude
-    here is off by its A_V difference between the two positions
-    (`stellata-hooj.47.1`).
-  - **"Anchor alone"** is the `mag_pri` of the anchor's DEEPEST row, and is also
-    the Δ reference for every `dmag_imputed` member. `componentDepth` ranks the
-    letter, NOT its length: a compound is an unresolved aggregate and scores 0,
-    BELOW a single letter, because η CrB's `AB,E` row prints the A+B aggregate
-    and reading it as deeper than `A` makes the blend the anchor's own light.
-    The test is two designators at ONE level (`AB`, `Aab`, `Aa12`), never "two
-    capitals". Ties break brightest.
-  - **Registration** reads the ANCHOR RECORD's `vVia`, never a multiples.tsv
-    `photometry_via` cell: those freeze at the build that wrote the TSV and went
-    stale under the driver swap (ξ UMa's AB row says `none` while the record
-    carries a printed `I/239` blend — the exact population needing the dim).
-  - **Members already in the catalog are candidates too**, not only minted ones,
-    or an anchor on a printed blend tier keeps the pair's combined light. They
-    enter as `own` — flux subtraction against the record's own measurement,
-    never the Δmag re-split, which would overwrite a first-class record's
-    brightness — deduped per `(anchor, member)`, since every cursor pairing the
-    two arrives at the same registration. A **re-curated** member is the
-    exception: its brightness is the curated one, so it enters under that
-    source exactly as a minted member would (and a class→M_V one not at all).
-  - **Conservation is observed-frame.** A member's flux leaves at the apparent
-    magnitude the observer sees and the residual converts back at the anchor's
-    own distance. Identical arithmetic for a minted member (tangent projection
-    puts it at the anchor's distance), not for an already-in-catalog one.
-  - **The fit and the subtraction share ONE member magnitude** (`obsMag`). An
-    independent-brightness member ships its own record, so the hypothesis is
-    built from the light that record contributes, not the pair's WDS `mag_sec` —
-    HD 75632 B's Gaia photometry is 0.47 mag off `mag_sec` 9.10, so judging
-    `{B}` on one and subtracting the other put the emitted absmag outside the
-    residual gate that had just certified it. Only `dmag_imputed` members use
-    the WDS frame, having no independent measurement to use instead.
-  - **Closest is not close.** The decisive margin ranks hypotheses against each
-    other and says nothing about whether any is right, so
-    `ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG` = 0.2 refuses a fit whose WINNER still
-    misses the anchor's observed magnitude by more than the input's own error
-    scale (`companionBlendDimMisfit`). Scoped to the fit's verdict, so members
-    that never entered the fit — a printed tier's structural ones — still apply.
-  - <a id="the-separation-gate"></a>**The separation gate.** Identity evidence answers "is this member inside
-    the entry" only where the catalogue published an identifier for it; past
-    that, photometry alone cannot tell a sub-arcsec photocentre from a companion
-    525″ off. `PRINTED_BLEND_MAX_SEP_ARCSEC` = 10″ and
-    `GAIA_BLEND_MAX_SEP_ARCSEC` = 1″, both calibrated. A pair WDS published no
-    separation for is EXCLUDED — no measurement is no evidence of blending
-    (AU Mic AB). Structural members skip the bound in BOTH tiers — ids inherited
-    from the anchor are evidence about THIS pair and outrank a population
-    threshold — which is not the same as bypassing the fit, and a large share of
-    the Gaia-tier candidates turn on the difference (`companionBlendDimGaiaResolved` and
-    `companionBlendDimBeyondSeparation` are the pinned counts; no snapshot isolates the
-    structural share, so don't quote one). **Inherited means inherited, not
-    inherited-then-stripped**: an id the row kept of its own says nothing
-    about what the anchor's catalogue entry contained, and reading it as
-    evidence let a printed-tier member escape the dim while shipping the
-    entry's whole light. **A member already in the catalog is never structural,
-    and that asymmetry is load-bearing, not an oversight**: the bypass is for a
-    member with no other evidence — ids inherited-then-stripped AND a separation
-    WDS never published (VV Crv B). An existing record has its own measured
-    magnitude and a published separation, so the fit and the 10″ bound can both
-    judge it and should. ζ UMa B shares the anchor's HIP and HD but sits at
-    14.4″ where the printed cell is A alone (V 2.23): letting the shared id
-    outrank that measurement subtracts light the entry never held and dims
-    Mizar Aa 0.274 mag off `../validate/known-stars.tsv`.
-
-  Apply, once per anchor with exact conservation: `own` / `wds_mag` members
-  subtract their actual flux, guarded against a member as bright as the blend
-  itself (`companionBlendDimSkipped`); `dmag_imputed` members re-split the residual by
-  Δmag. Counted `promotion.existing.anchor-dimmed`, one row per anchor; members the fit leaves outside
-  are `companionBlendDimOutside`, with no usable WDS magnitudes
-  `companionBlendDimUnfit`, past the tier's blending scale
-  `companionBlendDimBeyondSeparation`, resolved out by their own Gaia source
-  `companionBlendDimGaiaResolved`. The equal-split `gaia_photometry` blend pass above
-  stays for the N-way no-WDS-mag case. Standing caveat: WDS pair magnitudes are
-  taken at face value, and speckle-band (non-V) pairs overstate a member's V
-  share (Achernar's Δm 1.4 is H-band) — a data-curation tail, visible in the
-  known-stars notes.
-- **Blend split (post-pass).** A sub-arcsec pair Gaia fit as a single
-  5p source with neither component in AT-HYG (YY Gem = Castor Ca,Cb)
-  surfaces as ≥2 collocated `gaia_photometry` records — the outer-pair
-  row for the source and the inner pair's components — each carrying the
-  source's COMBINED `M_V`, so the system renders ~2× too bright. After
-  the cursor walk, records are grouped by their backing Gaia source
-  (`row.gaiaSourceId`, pre-inherited-id-strip, so an inherited-Gaia synth
-  secondary still groups with its blend partner); a source backing N≥2
-  gets each record dimmed by `2.5·log₁₀(N)` (0.753 mag for a pair) and
-  its radius re-derived. Equal split — a pair Gaia couldn't resolve is
-  near-equal by construction, exact for the M-dwarf eclipsing pairs that
-  dominate; total system light is preserved. `ci` stays the shared
-  colour. Each split record writes `promotion.brightness.blend-split`
-  ([Promotion lineage](#promotion-lineage)); runs before the record sort.
-  See [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
-  (Blend split).
+  corrupted A+Δmag; no row may take it
+  ([Promotion's invariants](promotion-lineage/README.md#promotions-invariants)).
+- **Anchor flux conservation and blend split (post-passes).** A member whose
+  light is inside its anchor's catalogued magnitude dims the anchor, decided
+  per anchor by a joint subset solve; records sharing one unresolved Gaia
+  source divide its light equally. The walk registers the candidates of both
+  ([Anchor flux conservation](post-passes/README.md#anchor-flux-conservation),
+  [Blend split](post-passes/README.md#blend-split)).
 - **B-V (ci).** When Stage 6 tags the row's photometry as inherited
   (`photometry_via = athyg_system_inherited`), recompute from the
   spectral info via `tempKelvin → ballesterosBvFromTeff`. Sirius B's
@@ -473,12 +253,6 @@ Per-row gates and resolution:
   no `spectDisplay` is claimed for the estimate. Counted
   `promotion.spectral.ms-from-own-absmag` (~<!-- count:build-catalog/promotion.spectral.ms-from-own-absmag k3 -->13.4k<!-- /count --> minted records). Rows
   with neither fall back to `SPECTRAL_UNKNOWN`.
-- **HIP inheritance gate.** When the row's HIP equals the primary
-  row's HIP, set `hip = null` on the promoted record. Hipparcos
-  resolved the system as one star and the HIP belongs to the
-  brighter component; inheriting it would collide with the
-  primary in every HIP-keyed lookup (url-state's `refFromIndex`
-  notably).
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the
 record lacks own gaia/hip and is addressed exclusively through a
@@ -492,40 +266,6 @@ nothing in this file reads back from it.
 The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
 record specifically (addressed by gaia_source_id, no HIP) as a
 stand-in for the broader category.
-
-#### Reading a record's class back
-
-The re-curation, blend-split and anchor-dim passes re-derive a radius from a
-record already held, and take its class from `recordSpectralInfo`: the
-display string re-parsed, else the class **as the record's two bytes keep
-it** — `decodeSpectralBytes(encodeSpectralBytes(star.spectral))`, which drops
-the subclass, the WD index and the Wolf-Rayet kind. That is deliberate and
-temporary: reading `star.spectral` itself is the right source, and it moves
-the radius of every member whose class the bytes coarsen (a main-sequence
-estimate's fractional subclass reads back as not stated), so it lands as its
-own behaviour change, `stellata-hooj.36`.
-
-#### Overlap gate
-
-After the record sort, build-catalog counts every pair of records whose
-centres sit closer than the sum of their physical radii — a star drawn inside
-another, whatever placement rule put it there — at the 32-bit positions
-`catalog.bin` ships, where two records the build keeps 1 AU apart at 1 kpc
-collapse onto one point. The check is catalogue-wide, not companion-only.
-
-A pair is exempt only when a chain of renderable orbits fixes their relative
-position — one record an ancestor of the other along (primary, secondary)
-relations — since the runtime then draws them apart from the elements, and a
-bit-identical bake there is the deliberate sub-resolution placement above. Two
-siblings of one primary are not exempt: each moves on its own orbit, and
-nothing keeps them apart. The relations come from the runtime's own pairing —
-`renderableOrbitRelations` in `record-index/`, the `rendered` ends of
-`resolvePairs` (the resolution the writer takes) filtered to renderable
-orbits — never from promotion's cursor walk, which records a pair
-before its parent is minted.
-
-Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->55<!-- /count -->), a ratchet-down metric; the
-build log names each pair.
 
 #### Promoted-companion field inheritance
 
@@ -547,16 +287,8 @@ A-branch cursor is Aa,Ab still takes its position and velocity from the A
 branch. [Component-letter search designations](record-index/README.md#component-letter-search-designations)
 carries the worked case and imports the same predicate for naming.
 
-Only cursor primaries `findExistingPrimary` resolves compete, while
-Stage 6 chains `anchor_sep_arcsec` / `anchor_pa_deg` from the top kept
-primary whatever its identifiers, and names that letter in `anchor_comp`.
-So every read of a Stage 6 offset goes through `rebasedAnchorOffset`
-(`anchor-offset-pure.ts`), which subtracts the promotion anchor's own offset
-from the row's — or refuses, leaving the row offset-less, when Stage 6
-reached the promotion anchor from no measured geometry. It also refuses the
-chaining letter's own row: that letter outranks every resolvable primary, so
-it reaches promotion only with no identifier bound, and the catalogue usually
-holds its star unlinked — placing it would mint a twin of that record.
+Every read of a Stage 6 offset is re-based onto that anchor
+([Re-basing a Stage 6 offset](placement/README.md#re-basing-a-stage-6-offset)).
 
 | Field(s) | Origin | Source |
 | --- | --- | --- |
@@ -564,8 +296,9 @@ holds its star unlinked — placing it would mint a twin of that record.
 | `proper` | post-pass | null at mint; the display-name pass writes the NAME tiers alone ([Two callers, one composer](/src/catalog-format/naming/README.md#two-callers-one-composer)). |
 | `desigCon` | inherited | anchor's designation constellation, sourced `anchor` — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity](../distance/README.md#space-motion-velocity), Pair coherence). Truly anchor-less escapes fall back to zero. |
+| `distVia` | inherited | the anchor's tier, since the record sits at the anchor's distance — the optical-double suppression must weigh both members the same way. Null with no anchor, never `none`: that is a membership event, and this record ships. |
 | `x/y/z` | system-derived | anchor ICRS position + WDS (ρ, θ) tangent projection at the anchor's distance. |
-| `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the inheritance gates above. |
+| `hip`, `gaiaSourceId` | per-component | the row's own id — stripped to `null` (→ `synth-<wds_id>-<comp>`) when it equals the anchor's shared id, per the [inheritance gates](identity/README.md#gaia-and-hip-inheritance-gates). |
 | `absmag` | per-component | Stage-5 decomposition / dmag / blend split. |
 | `ci` | per-component | own observed B–V, else [Ballesteros 2012](/data/papers/index.md#ballesteros2012) from the resolved spectral type. |
 | `spectral`, `spectDisplay` | per-component | SIMBAD/curated type, else a main-sequence estimate from the own M_V. |
@@ -594,87 +327,3 @@ The letter and the anchor a record composes against are
 duplicate labels that survive the ladder are data findings, enumerated in
 `../naming/naming-duplicates.tsv` and ratcheted by
 `/tests/integration/multi-star-regression.test.ts`.
-
-## Promotion lineage
-
-`build:catalog`'s companion promotion is the lineage stage after coherence
-(`promotion-lineage-pure.ts`). `promoteCompanions` returns one
-`PromotedRow` per `multiples.tsv` row, keyed on that row
-(`multiples:<system_id>/<comp>`), and `promotionDecision` serialises its
-`RowOutcome` ([above](#companion-promotion-from-databinariesmultiplestsv)) through an exhaustive `switch`: the
-outcome row (a mint is `promotion.minted.keyed` or `.synthetic`, a refused
-parked record `.gaia-5p` or `.other-route` by route), then a facet row, effect
-`none` and no evidence, per flag the outcome carries
-(`promotion.brightness.*`, `spectral.*`, `colour.*`, `dust.*`,
-`constellation.*`, `desig-con.*`, `fit.owned`), so every per-row count is a
-code's line count.
-
-A mint's facets are its brightness lineage, since the record walk's
-[brightness-colour stage](../photometry/README.md#brightness-colour-lineage)
-never sees it: the absmag source (`brightness.*`), a row for the post-pass,
-if any, that changed that absmag after the mint — at most one, since blend
-split takes only own-photometry mints and the re-split only Δmag ones
-(`brightness.blend-split`, `params.n` the records sharing the source;
-`brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
-already in the catalogue those passes change writes the rows below instead), the B−V's (`colour.own`,
-the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
-`companionCi`), and one dust row naming which of the two the A_V at the
-minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
-`.absmag-only`, `.ci-only`, `.not-applied`: a class→M_V absmag and a derived
-B−V are intrinsic), its `params.av` in brightness-colour's format
-(`dustParams`). Their evidence is the outcome
-row's: the photometry is the row's own, and the anchor a Δmag reads is cited
-there.
-
-Every record promotion sizes or re-sizes also gets rows keyed on its own
-origin key — a mint's is its row, a re-curated or dimmed record's its
-manifest key — from the `RecordRewrite` `promoteCompanions` returns per
-record (`rewriteRows`), uncited; `recuratedRecords` reads the same map for
-the records re-curated onto their anchor (system membership's lent-distance
-set). One `promotion.size.*` row names the LAST
-pass that set its radius (`mint`, `recurated`, `blend-split`,
-`anchor-dimmed`, `anchor-re-split`), its params the radius's route and inputs
-in the size stage's form (`radiusRouteParams`,
-[Size lineage](../spectral/README.md#size-lineage)), so its `absmag` is the
-one the record ships. A key's rows are a set, so the size row is what says
-which pass came last. A record the catalogue already held also gets one row
-per change to its brightness: `existing.recurated.<source>` (the
-re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
-`av_from`, `av_to` instead), `existing.anchor-dimmed` (citing by origin key the
-members whose light it lost, so trace reaches it from each) and `existing.anchor-re-split` (`params.record`,
-the dimmed anchor). A key's rows are a set, ordered as every stage file is
-([SourceRowRef](../lineage/README.md#sourcerowref)). A
-pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
-A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
-to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
-both park, since promotion ships no record for the star the row names, so a
-SID keyed on its identifiers stays in the ledger with that cause. Each row cites as evidence the record its pair
-resolved to and its WDS root's anchor; every merge-effect row names the
-record it merges into in `params.record`. Both are origin keys: every record
-carries its own from the manifest's `origin_key` column
-(`../membership/README.md#columns`), so these are joins on the origin key.
-
-A minted companion is founded on its row, so promotion writes its identity
-row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
-does every row whose code retires, parks or merges, keyed on the `hip` and
-`gaia_source_id` cells it arrived with and the synthetic key a mint from it
-would carry (`PromotedRow.synthKey`), less any designation a membership
-manifest record or one of promotion's own mints already carries, so an
-orphaned SID keyed on one of them joins to that row's cause and never to a
-row that merely cites another stage's star. A cloud's or Local Group
-object's is its sibling allocation stage's; every other record's is
-membership's.
-
-Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
-59,713 facet rows (two of them, colour and dust, per minted record), 16,611
-size rows (one per record promotion sized, by its last pass:
-<!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
-<!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
-<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> anchor-dimmed,
-<!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
-<!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 31,908
-identity rows (the minted companions and the 17,232 rows promotion retires,
-parks or merges), 1.57 MB gzipped in 0.43 s (header, diff, write and
-invariants; 67 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
-1.67 MB and 10 s. A CI run with a diff took
-6.9 s (2026-11-07), almost all of it the baseline phase.

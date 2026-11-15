@@ -8,7 +8,7 @@ import type { CatalogRowIndexMap } from '../catalog/companions/record-index/cata
 import { resolvePairs } from '../catalog/companions/record-index/pair-resolution-pure';
 import { ORBIT, pair } from './pair-fixture';
 import type { MultiplesPair } from './pairs-pure';
-import { multiplesHandshake, planRecords, sameRelationAlias } from './runtime-binaries-pure';
+import { multiplesHandshake, planRecords, sameRelationAlias, type PairFate } from './runtime-binaries-pure';
 
 function map(over: Partial<CatalogRowIndexMap> = {}): CatalogRowIndexMap {
   return { byGaia: { 1: 100, 2: 200, 3: 300, 4: 400 }, byHip: {}, bySynth: {}, ...over };
@@ -23,6 +23,10 @@ function planFlat(pairs: MultiplesPair[], m: CatalogRowIndexMap = map()) {
   return plan(pairs, pairs.map(() => NO_PARENT), m);
 }
 
+function kinds(planned: { fates: readonly PairFate[] }): string[] {
+  return planned.fates.map((f) => f.kind);
+}
+
 function record(records: readonly BinaryRecord[], i: number) {
   const r = records[i];
   return { primary: r.primaryIdx, secondary: r.secondaryIdx, flags: r.flags, parent: r.parentRelation };
@@ -30,27 +34,23 @@ function record(records: readonly BinaryRecord[], i: number) {
 
 describe('planRecords', () => {
   it('drops a pair whose primary or secondary resolves to no record', () => {
-    expect(planFlat([pair(undefined, { primaryGaia: '999' })]).counts)
-      .toMatchObject({ pairs_emitted: 0, pairs_dropped_primary_unresolved: 1, pairs_dropped_secondary_unresolved: 0 });
-    expect(planFlat([pair(undefined, { secondaryGaia: '999' })]).counts)
-      .toMatchObject({ pairs_emitted: 0, pairs_dropped_secondary_unresolved: 1 });
+    expect(kinds(planFlat([pair(undefined, { primaryGaia: '999' })]))).toEqual(['primary-unresolved']);
+    expect(kinds(planFlat([pair(undefined, { secondaryGaia: '999' })]))).toEqual(['secondary-unresolved']);
   });
 
   it('drops a pair whose two ends resolve to one record, by gaia or by a shared HIP', () => {
-    expect(planFlat([pair(undefined, { secondaryGaia: '1' })]).counts)
-      .toMatchObject({ pairs_emitted: 0, pairs_dropped_degenerate_idx: 1, pairs_dropped_primary_unresolved: 0 });
+    expect(kinds(planFlat([pair(undefined, { secondaryGaia: '1' })]))).toEqual(['degenerate-idx']);
     const sharedHip = { primaryGaia: null, primaryHip: 36850, secondaryGaia: null, secondaryHip: 36850 };
-    expect(planFlat([pair(undefined, sharedHip)], map({ byGaia: {}, byHip: { 36850: 100 } })).counts)
-      .toMatchObject({ pairs_emitted: 0, pairs_dropped_degenerate_idx: 1 });
+    expect(kinds(planFlat([pair(undefined, sharedHip)], map({ byGaia: {}, byHip: { 36850: 100 } }))))
+      .toEqual(['degenerate-idx']);
   });
 
   it('a secondary sharing the primary’s id retries its synth record before reading as degenerate', () => {
     const synth = { bySynth: { 'synth-00000+0000-B': 555 } };
-    expect(planFlat([pair(undefined, { secondaryGaia: '1' })], map(synth)).counts)
-      .toMatchObject({ pairs_emitted: 1, pairs_dropped_degenerate_idx: 0 });
+    expect(kinds(planFlat([pair(undefined, { secondaryGaia: '1' })], map(synth)))).toEqual(['emitted']);
     const sharedHip = { primaryGaia: null, primaryHip: 36850, secondaryGaia: null, secondaryHip: 36850 };
-    expect(planFlat([pair(undefined, sharedHip)], map({ byGaia: {}, byHip: { 36850: 100 }, ...synth })).counts)
-      .toMatchObject({ pairs_emitted: 1, pairs_dropped_degenerate_idx: 0 });
+    expect(kinds(planFlat([pair(undefined, sharedHip)], map({ byGaia: {}, byHip: { 36850: 100 }, ...synth }))))
+      .toEqual(['emitted']);
   });
 
   it('re-homes a pair-mate-inherited secondary onto its own synth record (04049-3527 BC)', () => {
@@ -78,23 +78,23 @@ describe('planRecords', () => {
     expect(record(records, 0).primary).toBe(179);
   });
 
-  it('counts a duplicate relation of disjoint letters as a collapse, of related ones as an alias', () => {
+  it('a duplicate relation of disjoint letters is a collapse, of related ones an alias, each naming the kept pair', () => {
     const m = map({ byGaia: { 1: 100, 2: 320 } });
-    expect(planFlat([pair('00000+0000-AC'), pair('00000+0000-BC')], m).counts).toMatchObject({
-      pairs_emitted: 1, pairs_dropped_duplicate_relation: 1, pairs_dropped_same_relation_alias: 0,
-    });
+    expect(planFlat([pair('00000+0000-AC'), pair('00000+0000-BC')], m).fates)
+      .toEqual([{ kind: 'emitted', primary: 100, secondary: 320 }, { kind: 'duplicate-relation', kept: 0 }]);
     // 18025+4414: AB and Aa,B name one link at two granularities.
-    expect(planFlat([pair('00000+0000-AB'), pair('00000+0000-Aa,B')], m).counts).toMatchObject({
-      pairs_emitted: 1, pairs_dropped_same_relation_alias: 1, pairs_dropped_duplicate_relation: 0,
-    });
+    expect(planFlat([pair('00000+0000-AB'), pair('00000+0000-Aa,B')], m).fates)
+      .toEqual([{ kind: 'emitted', primary: 100, secondary: 320 }, { kind: 'same-relation-alias', kept: 0 }]);
   });
 
   it('a duplicate relation keeps the orbit-bearing member over an earlier element-less one', () => {
-    const { records, counts } = planFlat(
+    const planned = planFlat(
       [pair('00000+0000-AC'), pair('00000+0000-BC', ORBIT)],
       map({ byGaia: { 1: 100, 2: 320 } }),
     );
-    expect(counts).toMatchObject({ pairs_emitted: 1, pairs_dropped_duplicate_relation: 1, pairs_with_orbit: 1 });
+    const { records, counts } = planned;
+    expect(planned.fates[0]).toEqual({ kind: 'duplicate-relation', kept: 1 });
+    expect(counts.pairs_with_orbit).toBe(1);
     expect(record(records, 0).flags & FLAG_HAS_ORBIT).toBe(FLAG_HAS_ORBIT);
   });
 
@@ -111,8 +111,9 @@ describe('planRecords', () => {
 
   it('a child whose parent was dropped is top-level, not inner', () => {
     const pairs = [pair(undefined, { secondaryGaia: '999' }), pair(undefined, { primaryGaia: '2', secondaryGaia: '3' })];
-    const { records, counts } = plan(pairs, [NO_PARENT, 0]);
-    expect(counts.pairs_emitted).toBe(1);
+    const planned = plan(pairs, [NO_PARENT, 0]);
+    const { records } = planned;
+    expect(kinds(planned)).toEqual(['secondary-unresolved', 'emitted']);
     expect(record(records, 0).parent).toBe(NO_PARENT);
     expect(record(records, 0).flags & FLAG_IS_INNER_OF_HIERARCHY).toBe(0);
   });
@@ -128,11 +129,11 @@ describe('planRecords', () => {
   });
 
   it('a WDS-truncated secondary resolves through its canonical synth key (Algol Aa1,2)', () => {
-    const { counts } = planFlat(
+    const planned = planFlat(
       [pair('03082+4057-Aa1,2', { primaryGaia: null, primaryHip: 14576, secondaryGaia: null })],
       { byGaia: {}, byHip: { 14576: 100 }, bySynth: { 'synth-03082+4057-Aa2': 200 } },
     );
-    expect(counts).toMatchObject({ pairs_emitted: 1, pairs_dropped_secondary_unresolved: 0 });
+    expect(kinds(planned)).toEqual(['emitted']);
   });
 
   it('an identifier-less secondary resolves through its synthetic id (Algol Aa,Ab)', () => {
@@ -143,6 +144,15 @@ describe('planRecords', () => {
     expect(record(records, 0)).toMatchObject({ primary: 100, secondary: 200 });
   });
 
+});
+
+describe('planRecords walk', () => {
+  it('refuses a walk that skips a pair or visits one twice', () => {
+    const pairs = [pair('00000+0000-AB'), pair('00000+0000-CD', { primaryGaia: '3', secondaryGaia: '4' })];
+    const ends = resolvePairs(pairs, map()).map((r) => r.rendered);
+    expect(() => planRecords(pairs, [NO_PARENT, NO_PARENT], [0, 0], ends)).toThrow(/each of 2 pairs once/);
+    expect(() => planRecords(pairs, [NO_PARENT, NO_PARENT], [0], ends)).toThrow(/each of 2 pairs once/);
+  });
 });
 
 describe('multiplesHandshake', () => {

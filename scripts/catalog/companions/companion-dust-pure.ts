@@ -1,6 +1,6 @@
-// Which of a promoted companion's absmag and B−V embed the Sol-to-star A_V, so de-extinction subtracts it. See README.md#promotion-lineage.
+// Which of a promoted companion's absmag and B−V embed the Sol-to-star A_V, so de-extinction subtracts it. See promotion-lineage/README.md.
 
-import type { CompanionAbsmagSource, CompanionCiVia } from './companion-promotion';
+import type { CompanionAbsmagSource, CompanionCiVia } from './promotion-outcome';
 
 /** False for a class→M_V absmag, which is intrinsic already. */
 export function companionAbsmagIsObserved(source: CompanionAbsmagSource): boolean {
