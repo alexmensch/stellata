@@ -9,11 +9,15 @@ This folder holds the build's own halves of it.
 scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
+  record-phase.ts                 The phase tag on the build's record list,
+                                  `Sorted` and `Finalised`, and `enterPhase`,
+                                  the tag's one constructor (#record-phases).
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
-                                  records on — and `assertSolFirst`, throwing
-                                  unless exactly one record carries
-                                  FLAG_IS_SOL and it sorted to
-                                  SOL_RECORD_INDEX (record 0, stated in
+                                  records on — `sortByApparentV`, the sort
+                                  that hands on `Sorted` records, and
+                                  `assertSolFirst`, throwing unless exactly
+                                  one record carries FLAG_IS_SOL and it sorted
+                                  to SOL_RECORD_INDEX (record 0, stated in
                                   catalog-pure.ts). Pure.
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
@@ -28,10 +32,10 @@ scripts/catalog/record/
                                   sorted records — and variabilityUnits,
                                   the quantised period and amplitude each
                                   record writes. Pure.
-  encode-catalog-pure.ts (+ test) encodeCatalog — the sorted records, their
-                                  SIDs, display names and multiplicity
-                                  statuses to the assembled catalog.bin
-                                  buffer: header, name table (the display
+  encode-catalog-pure.ts (+ test) encodeCatalog — the finalised records
+                                  (their SIDs and display names) and their
+                                  multiplicity statuses to the assembled
+                                  catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
                                   with its Apsis cells. Throws on a SID,
                                   display-name or status list that does not
@@ -39,6 +43,47 @@ scripts/catalog/record/
                                   and unless Sol is the one record without
                                   a constellation. Pure.
 ```
+
+## Record phases
+
+The build's record list carries the phase it has reached, as a compile-time
+tag (`Records<P>`, `record-phase.ts`), and each pass whose place in the order
+matters takes the phase it runs in, so a pass moved out of its place does
+not compile:
+
+| Phase | Entered by | Passes that take it |
+| --- | --- | --- |
+| `walked` | the manifest walk | `applyDesignationConstellations`, `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
+| `named` | the walked passes | `promoteCompanions` |
+| `promoted` | promotion | `sortByApparentV` |
+| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `applyDoublesFlag`, `buildCatalogRowIndexMap`, `wingRenderablePrimaries`, `physicalOverlaps`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames` |
+
+Each order it holds, and why:
+
+- **Naming, then promotion** — the anchor-is-the-component refusal reads the
+  `bayerComponent` naming writes ([Row identity](../companions/identity/README.md#anchor-is-the-component-refusal)).
+- **Coherence, then promotion** — minted members project off already-coherent
+  anchors ([System distance coherence](../multiplicity/README.md#system-distance-coherence)).
+- **The sort, then every index-keyed pass** — indices are final only after it
+  ([Record order](/src/catalog-format/record/README.md#record-order)).
+- **The row-index map, then the wings** — the wings take resolved pairs, which
+  only the map resolves, and the map takes `Sorted`.
+- **Designation constellations, then variability** — GCVS fills `desigCon`
+  only where IV/27A left it empty.
+- **SID allocation, then display names** — the curated overrides key on SIDs,
+  and the finalise stage takes the allocation's result.
+
+Passes in one phase are free to run in either order: naming and coherence,
+GCVS and CCDM. The `FLAG_BINARY_PRIMARY` writers' order — geometric, CCDM,
+eclipsing, renderable wings — is code order within the sorted phase.
+
+`Finalised` is the sorted records with each one's SID and display name, and is
+what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
+printed name (`printedName`), so no reader can take the one for the other.
+
+`enterPhase` is the tag's only constructor. Each phase is entered once, by
+the pass that completes it, and `../build-catalog.test.ts` pins those call
+sites; tests call it to build fixtures.
 
 ## Curated records
 

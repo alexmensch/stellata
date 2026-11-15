@@ -28,8 +28,9 @@ record encoder (`encode-catalog-pure.ts`), the search index's build
 
 ## Record order
 
-Records are sorted by **apparent V from Sol at J2016.0, brightest first**, in
-`/scripts/catalog/build-catalog.ts`; indices are final after it. The key is
+Records are sorted by **apparent V from Sol at J2016.0, brightest first**, by
+`sortByApparentV`, the one pass that hands on `Sorted` records
+([Record phases](/scripts/catalog/record/README.md#record-phases)); indices are final after it. The key is
 `apparentVFromSol` in `/scripts/catalog/record/record-order-pure.ts`: the stored `absmag` is intrinsic,
 so the Sol→star A_V the build subtracted is added back before the distance
 modulus, and a reddened star sorts as faint as it looks.
@@ -311,7 +312,7 @@ The chunk-plan / filename / assembly helpers (`planCatalogChunks`,
 `catalogChunkFilename` and the `CATALOG_CHUNK_FILENAME` pattern it matches,
 `assembleCatalogChunks`, `CatalogManifest`) live
 in `catalog-pure.ts` and are the single reassembly contract shared by
-all three consumers: the writer (`../../../scripts/catalog/build-catalog.ts`), the runtime loader
+all three consumers: the writer (`../../../scripts/catalog/stages/catalog-emission.ts`), the runtime loader
 (`src/client/loaders/catalog-loader.ts`, fetch), and the Node test/verify
 reader (`../../../scripts/catalog/columns/catalog-buffer.ts` `readCatalogBuffer`, fs). The chunks are a
 declared output family of `build:catalog` (`../../../scripts/util/emit-artifacts.ts`):

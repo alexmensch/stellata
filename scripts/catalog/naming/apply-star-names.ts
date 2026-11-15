@@ -17,6 +17,7 @@ import type { DesignationRow } from './wgsn-tables-pure';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
+import type { Records } from '../record/record-phase';
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
@@ -93,7 +94,7 @@ export function starNamingSummary(counts: StarNamingCounts): string {
 }
 
 export function applyStarNames(
-  stars: NamingTarget[],
+  stars: Records<'walked', NamingTarget>,
   inputs: StarNamingInputs,
   constellations: readonly { code: string }[],
 ): StarNamingCounts {

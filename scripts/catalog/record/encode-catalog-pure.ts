@@ -17,17 +17,13 @@ import {
   type ApsisRow,
 } from '../../../src/catalog-format/record/catalog-pure';
 import { encodeSpectralBytes } from '../../../src/catalog-format/spectral/spectral-record-bytes';
-import type { Star } from '../parse/stars-parse';
 import { variabilityUnits } from './records-stage-pure';
+import type { Finalised } from './record-phase';
 
 export interface CatalogEncodeInputs {
-  readonly stars: readonly Star[];
+  readonly catalog: Finalised;
   readonly apsisMap: ReadonlyMap<string, ApsisRow>;
-  /** Per record, in `stars` order. */
-  readonly sids: readonly number[];
-  /** Per record, in `stars` order: the name table's string, or null. */
-  readonly displayNames: readonly (string | null)[];
-  /** Per record, in `stars` order. */
+  /** Per record, in record order. */
   readonly multiplicityStatus: Uint8Array;
 }
 
@@ -38,9 +34,8 @@ export interface EncodedCatalog {
   readonly nameTableEntries: number;
 }
 
-export function encodeCatalog({
-  stars, apsisMap, sids, displayNames, multiplicityStatus,
-}: CatalogEncodeInputs): EncodedCatalog {
+export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
+  const { records: stars, sids, displayNames } = catalog;
   if (sids.length !== stars.length || displayNames.length !== stars.length || multiplicityStatus.length !== stars.length) {
     throw new Error(
       `encodeCatalog: ${stars.length} records but ${sids.length} SIDs, ${displayNames.length} display names `

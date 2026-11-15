@@ -11,6 +11,7 @@ import type { BailerJonesIndex } from '../distance/refinement/distance-overrides
 import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
+import type { Records } from '../record/record-phase';
 
 /** A member snaps to the anchor distance only when the radial gap is
  *  NOT significant at this many sigma of the combined parallax error —
@@ -210,7 +211,7 @@ function repositionRadially(star: Star, m: MemberVerdict & { kind: 'snapped' }):
  *  members project off already-coherent anchors. */
 export function systemCoherenceVerdicts(
   multiplesRows: readonly MultiplesTsvRow[],
-  stars: readonly Star[],
+  stars: Records<'walked'>,
   sources: CoherenceSources,
 ): SystemVerdict[] {
   const byGaia = new Map<string, number>();
@@ -381,7 +382,7 @@ export function systemCoherenceVerdicts(
 }
 
 /** Moves every snapped member of `verdicts` onto its anchor's distance. */
-export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVerdict[]): void {
+export function applySystemCoherence(stars: Records<'walked'>, verdicts: readonly SystemVerdict[]): void {
   for (const v of verdicts) {
     if (v.kind !== 'coherent') continue;
     for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m);

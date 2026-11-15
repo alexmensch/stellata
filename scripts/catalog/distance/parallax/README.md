@@ -27,7 +27,7 @@ scripts/catalog/distance/parallax/
     (+ test)                    SIMBAD-based validator joins on — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's
                                 validation independence, and the file's codec
                                 (SIMBAD_SOURCED_DISTANCES). Written by
-                                build-catalog.ts, read by
+                                ../../stages/walk-stage.ts, read by
                                 ../../validate/validate-simbad-sample.ts.
   parked-ledger-pure.ts         The /docs/catalog-driver.md#61-record-parity dropped list's closed
     (+ test)

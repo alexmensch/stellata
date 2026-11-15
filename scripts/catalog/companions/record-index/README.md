@@ -112,7 +112,7 @@ each other.
 
 ## Renderable-companion wings
 
-The three passes that set `FLAG_BINARY_PRIMARY` in `build-catalog.ts`
+The three passes that set `FLAG_BINARY_PRIMARY` before this one (`../../stages/sorted-stage.ts`)
 (geometric `inferBinaries`, the CCDM pass, the eclipsing sweep) are all
 keyed on evidence unaligned with the *presence of a rendered companion*.
 A physical pair wider than the `0.005 pc` geometric cell, not CCDM

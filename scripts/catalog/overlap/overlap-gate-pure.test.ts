@@ -6,6 +6,7 @@ import {
   physicalOverlaps,
   type OverlapRecord,
 } from './overlap-gate-pure';
+import { enterPhase } from '../record/record-phase';
 
 function star(x: number, physicalRadius = 1): OverlapRecord {
   return { x, y: 10, z: 0, physicalRadius };
@@ -15,57 +16,57 @@ const none = () => false;
 
 describe('physicalOverlaps', () => {
   it('flags two stars whose discs intersect', () => {
-    expect(physicalOverlaps([star(0), star(1.5 * R_SUN_PC)], none)).toEqual([[0, 1]]);
+    expect(physicalOverlaps(enterPhase('sorted', [star(0), star(1.5 * R_SUN_PC)]), none)).toEqual([[0, 1]]);
   });
 
   it('flags two unrelated records on one spot', () => {
-    expect(physicalOverlaps([star(5), star(5)], none)).toEqual([[0, 1]]);
+    expect(physicalOverlaps(enterPhase('sorted', [star(5), star(5)]), none)).toEqual([[0, 1]]);
   });
 
   it('passes stars just clear of each other', () => {
-    expect(physicalOverlaps([star(0), star(2.01 * R_SUN_PC)], none)).toEqual([]);
+    expect(physicalOverlaps(enterPhase('sorted', [star(0), star(2.01 * R_SUN_PC)]), none)).toEqual([]);
   });
 
   it('measures reach from the sum of both radii', () => {
-    expect(physicalOverlaps([star(0, 100), star(100.5 * R_SUN_PC, 1)], none))
+    expect(physicalOverlaps(enterPhase('sorted', [star(0, 100), star(100.5 * R_SUN_PC, 1)]), none))
       .toEqual([[0, 1]]);
   });
 
   it('judges the 32-bit positions catalog.bin ships, not the build\'s 64-bit ones', () => {
     const oneAuPc = 1 / 206264.806;
-    expect(physicalOverlaps([star(1000), star(1000 + oneAuPc)], none)).toEqual([[0, 1]]);
+    expect(physicalOverlaps(enterPhase('sorted', [star(1000), star(1000 + oneAuPc)]), none)).toEqual([[0, 1]]);
   });
 
   it('returns index pairs in record order whatever the sweep order', () => {
-    expect(physicalOverlaps([star(3 * R_SUN_PC), star(2.5 * R_SUN_PC)], none))
+    expect(physicalOverlaps(enterPhase('sorted', [star(3 * R_SUN_PC), star(2.5 * R_SUN_PC)]), none))
       .toEqual([[0, 1]]);
   });
 });
 
 describe('orbitChainExemption', () => {
   it('exempts a collocated pair a renderable orbit animates apart', () => {
-    expect(physicalOverlaps([star(5), star(5)], orbitChainExemption([[1, 0]])))
+    expect(physicalOverlaps(enterPhase('sorted', [star(5), star(5)]), orbitChainExemption([[1, 0]])))
       .toEqual([]);
   });
 
   it('exempts only the orbit pair, not a third star on the same spot', () => {
-    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1]])))
+    expect(physicalOverlaps(enterPhase('sorted', [star(5), star(5), star(5)]), orbitChainExemption([[0, 1]])))
       .toEqual([[0, 2], [1, 2]]);
   });
 
   it('exempts a chain of orbits, ancestor against descendant', () => {
-    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1], [1, 2]])))
+    expect(physicalOverlaps(enterPhase('sorted', [star(5), star(5), star(5)]), orbitChainExemption([[0, 1], [1, 2]])))
       .toEqual([]);
   });
 
   it('flags two siblings of one primary on one spot', () => {
-    expect(physicalOverlaps([star(5), star(5), star(5)], orbitChainExemption([[0, 1], [0, 2]])))
+    expect(physicalOverlaps(enterPhase('sorted', [star(5), star(5), star(5)]), orbitChainExemption([[0, 1], [0, 2]])))
       .toEqual([[1, 2]]);
   });
 
   it('flags members of two separate hierarchies on one spot', () => {
     const records = [star(5), star(5), star(5), star(5)];
-    expect(physicalOverlaps(records, orbitChainExemption([[0, 1], [2, 3]])))
+    expect(physicalOverlaps(enterPhase('sorted', records), orbitChainExemption([[0, 1], [2, 3]])))
       .toEqual([[0, 2], [0, 3], [1, 2], [1, 3]]);
   });
 });

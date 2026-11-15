@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { apsisCoverageSummary, recordsCounts, variabilityUnits } from './records-stage-pure';
+import { enterPhase } from './record-phase';
 
 const record = (gaiaSourceId: string | null, periodDays = 0, amplitudeMag = 0) => ({ gaiaSourceId, periodDays, amplitudeMag });
 
@@ -19,7 +20,7 @@ describe('recordsCounts', () => {
       ['2', { teffGspphot: null, teffGspspec: null }],
     ]);
     const counts = recordsCounts(
-      [record(null, 1, 1), record('1'), record('2', 10, 0.01), record('3')],
+      enterPhase('sorted', [record(null, 1, 1), record('1'), record('2', 10, 0.01), record('3')]),
       apsis, new Map([['1', 0]]), 2,
     );
     expect(counts).toEqual({
@@ -38,7 +39,7 @@ describe('recordsCounts', () => {
   });
 
   it('summarises an empty record set as n/a, never 0.0% or NaN%', () => {
-    expect(apsisCoverageSummary(recordsCounts([], new Map(), new Map(), 0))).toBe(
+    expect(apsisCoverageSummary(recordsCounts(enterPhase('sorted', []), new Map(), new Map(), 0))).toBe(
       'Gaia DR3 Apsis: 0 / 0 records matched (n/a), Teff (gspphot OR gspspec) on 0 (n/a)',
     );
   });

@@ -23,6 +23,7 @@ import {
   type DoublesStar,
   wingEclipsingBinaries,
 } from './binary-flags-pure';
+import { enterPhase } from '../record/record-phase';
 
 describe('binary-flags-pure / inferBinaries', () => {
   function makeStar(opts: Partial<BinaryStar> & { x: number; y: number; z: number; absmag: number }): BinaryStar {
@@ -35,7 +36,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: 0.001, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     expect(stats.binaryPairs).toBe(2); // both record the other as companion
     expect(stats.binaryMutualPairs).toBe(1);
     expect(stars[0].companionIdx).toBe(1);
@@ -47,7 +48,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 6 }),       // dimmer
       makeStar({ x: 0.001, y: 0, z: 0, absmag: 4 }),   // brighter
     ];
-    inferBinaries(stars);
+    inferBinaries(enterPhase('sorted', stars));
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeTruthy();
     expect(stars[0].flags & FLAG_BINARY_PRIMARY).toBeFalsy();
   });
@@ -57,7 +58,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: BINARY_MAX_SEP_PC * 2, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
     expect(stars[1].companionIdx).toBe(-1);
@@ -68,7 +69,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
       makeStar({ x: BINARY_MAX_SEP_PC, y: 0, z: 0, absmag: 6 }),
     ];
-    inferBinaries(stars);
+    inferBinaries(enterPhase('sorted', stars));
     expect(stars[0].companionIdx).toBe(-1);
   });
 
@@ -78,7 +79,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.0008, y: 0, z: 0, absmag: 6 }),
       makeStar({ x: 0.003,  y: 0, z: 0, absmag: 5 }),
     ];
-    inferBinaries(stars);
+    inferBinaries(enterPhase('sorted', stars));
     expect(stars[0].companionIdx).toBe(1); // nearest, not brightest
   });
 
@@ -86,7 +87,7 @@ describe('binary-flags-pure / inferBinaries', () => {
     const stars: BinaryStar[] = [
       makeStar({ x: 0, y: 0, z: 0, absmag: 4 }),
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     expect(stats.binaryPairs).toBe(0);
     expect(stars[0].companionIdx).toBe(-1);
   });
@@ -97,7 +98,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.001,  y: 0, z: 0, absmag: 5 }),    // B
       makeStar({ x: 0.0009, y: 0, z: 0, absmag: 6 }),    // C
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     // Distances: A-B=0.001, A-C=0.0009, B-C=0.0001.
     //   A's nearest is C (0.0009). C's nearest is B (0.0001). B's nearest is C.
     // Only B↔C is mutual; A→C is one-way (C points back to B).
@@ -129,7 +130,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0.0040, y: 0, z: 0, absmag: 5 }),
       makeStar({ x: 0.0070, y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     expect(stars[0].companionIdx).toBe(1);
     expect(stars[1].companionIdx).toBe(2);
     expect(stars[2].companionIdx).toBe(1);
@@ -150,7 +151,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 100,       y: 0, z: 0, absmag: 3 }),  // pair 2 (brightest in catalog)
       makeStar({ x: 100.001,   y: 0, z: 0, absmag: 6 }),
     ];
-    const stats = inferBinaries(stars).counts;
+    const stats = inferBinaries(enterPhase('sorted', stars)).counts;
     expect(stats.binaryMutualPairs).toBe(2);
     expect(stars[0].flags & FLAG_BINARY_PRIMARY).toBeTruthy(); // pair 1 brighter
     expect(stars[1].flags & FLAG_BINARY_PRIMARY).toBeFalsy();
@@ -159,7 +160,7 @@ describe('binary-flags-pure / inferBinaries', () => {
   });
 
   it('returns zero counts for an empty input', () => {
-    expect(inferBinaries([]).counts).toEqual({ binaryPairs: 0, binaryMutualPairs: 0 });
+    expect(inferBinaries(enterPhase('sorted', [])).counts).toEqual({ binaryPairs: 0, binaryMutualPairs: 0 });
   });
 
   it('uses 3D distance, not 2D', () => {
@@ -168,7 +169,7 @@ describe('binary-flags-pure / inferBinaries', () => {
       makeStar({ x: 0, y: 0, z: 0,     absmag: 4 }),
       makeStar({ x: 0, y: 0, z: 0.001, absmag: 6 }),
     ];
-    inferBinaries(stars);
+    inferBinaries(enterPhase('sorted', stars));
     expect(stars[0].companionIdx).toBe(1);
   });
 });
@@ -256,23 +257,23 @@ describe("binary-flags-pure / markPrimaryIfUnflagged", () => {
 
 describe('binary-flags-pure / buildHipToIndex', () => {
   it('maps positive HIPs to their record index and skips null / non-positive', () => {
-    const m = buildHipToIndex([
+    const m = buildHipToIndex(enterPhase('sorted', [
       { hip: 100 },
       { hip: null },
       { hip: 0 },
       { hip: 200 },
-    ]);
+    ]));
     expect(m.size).toBe(2);
     expect(m.get(100)).toBe(0);
     expect(m.get(200)).toBe(3);
   });
 
   it('keeps the FIRST occurrence on duplicate HIPs (brightest under absmag-sorted input)', () => {
-    const m = buildHipToIndex([
+    const m = buildHipToIndex(enterPhase('sorted', [
       { hip: 100 },
       { hip: 100 },
       { hip: 100 },
-    ]);
+    ]));
     expect(m.get(100)).toBe(0);
   });
 });
@@ -287,7 +288,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
     // Three stars; the group covers them all. Lowest absmag (=brightest)
     // should get FLAG_BINARY_PRIMARY; the others stay clean.
     const stars: DoublesStar[] = [s(4, 100), s(2, 200), s(6, 300)];
-    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200, 300]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200, 300]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(1);
     expect(stars[1].flags).toBe(FLAG_BINARY_PRIMARY);
@@ -297,7 +298,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
 
   it('silently drops groups whose HIPs are all missing from the catalog', () => {
     const stars: DoublesStar[] = [s(4, 100), s(5, 200)];
-    const r = flagGroupPrimaries(stars, resolveGroups([[999, 1000]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[999, 1000]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(0);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);
@@ -309,7 +310,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
     // pick the brighter one but must defer per markPrimaryIfUnflagged's
     // contract.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
-    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(1);
     expect(r.flagged).toBe(0);
     expect(stars[0].flags).toBe(0);                    // not re-flagged
@@ -321,7 +322,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
       s(2, 100), s(3, 101), // group A — 100 brightest
       s(5, 200), s(4, 201), // group B — 201 brightest
     ];
-    const r = flagGroupPrimaries(stars, resolveGroups([[100, 101], [200, 201]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100, 101], [200, 201]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     expect(stars[0].flags).toBe(FLAG_BINARY_PRIMARY); // 100 won group A
@@ -336,7 +337,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
     // sources behave identically once unioned.
     const stars: DoublesStar[] = [s(3, 100), s(2, 101)];
     // Pretend the CCDM pass produced one group, the override another.
-    const r = flagGroupPrimaries(stars, resolveGroups([[100], [101]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100], [101]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(2);
     expect(r.flagged).toBe(2);
     // Each single-member group flags its own brightest (and only)
@@ -347,7 +348,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
 
   it('skips HIP=0 / null records when building the lookup', () => {
     const stars: DoublesStar[] = [s(2, null), s(4, 0), s(3, 100)];
-    const r = flagGroupPrimaries(stars, resolveGroups([[100]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.systems).toBe(1);
     expect(stars[2].flags).toBe(FLAG_BINARY_PRIMARY);
     // The 0/null-HIP rows must never be hit by HIP→index lookup.
@@ -357,7 +358,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
 
   it('is idempotent under re-application', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const idx = buildHipToIndex(stars);
+    const idx = buildHipToIndex(enterPhase('sorted', stars));
     flagGroupPrimaries(stars, resolveGroups([[100, 200]], idx));
     const flagsBefore = stars.map((x) => x.flags);
     flagGroupPrimaries(stars, resolveGroups([[100, 200]], idx));
@@ -368,7 +369,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
 
   it('reports suppressed=0 when no suppress predicate is supplied', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
-    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(stars)));
+    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(enterPhase('sorted', stars))));
     expect(r.suppressed).toBe(0);
   });
 
@@ -378,7 +379,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
     const stars: DoublesStar[] = [s(2, 100), s(5, 200)];
     const r = flagGroupPrimaries(
       stars,
-      resolveGroups([[100, 200]], buildHipToIndex(stars)),
+      resolveGroups([[100, 200]], buildHipToIndex(enterPhase('sorted', stars))),
       (primaryIdx) => primaryIdx === 0,
     );
     expect(r.systems).toBe(1);
@@ -393,7 +394,7 @@ describe('binary-flags-pure / flagGroupPrimaries', () => {
     // no-op before the predicate would see the picked primary.
     const stars: DoublesStar[] = [s(2, 100), s(5, 200, FLAG_BINARY_PRIMARY)];
     let called = false;
-    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(stars)), () => {
+    const r = flagGroupPrimaries(stars, resolveGroups([[100, 200]], buildHipToIndex(enterPhase('sorted', stars))), () => {
       called = true;
       return true;
     });

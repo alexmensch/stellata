@@ -2,6 +2,7 @@
 
 import { encodeAmpUnits, encodePeriodUnits } from '../../../src/catalog-format/record/catalog-pure';
 import { percentOf } from '../../util/counts/tally-pure';
+import type { Sorted } from './record-phase';
 
 /** The records stage's count block. */
 export type RecordsCounts = {
@@ -51,7 +52,7 @@ export function variabilityUnits(r: Pick<RecordsStageRecord, 'periodDays' | 'amp
 }
 
 export function recordsCounts(
-  records: readonly RecordsStageRecord[],
+  records: Sorted<RecordsStageRecord>,
   apsis: ReadonlyMap<string, ApsisTeff>,
   gspc: ReadonlyMap<string, unknown>,
   recordsInFirstChunk: number,

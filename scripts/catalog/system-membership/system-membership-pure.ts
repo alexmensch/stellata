@@ -14,14 +14,14 @@ import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/b
 import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { group, normalized, wdsTrees, type WdsPairEnds, type WdsTree, type WdsTreeCounts } from './wds-trees-pure';
+import type { Sorted } from '../record/record-phase';
 
 export interface MembershipRecord extends OpticalDoubleStar {
   readonly flags: number;
 }
 
 export interface SystemMembershipInputs {
-  /** Record order. */
-  readonly records: readonly MembershipRecord[];
+  readonly records: Sorted<MembershipRecord>;
   readonly multiplicityStatus: Uint8Array;
   readonly wdsPairs: readonly WdsPairEnds[];
   readonly doubles: DoublesEvidence;
@@ -56,7 +56,7 @@ export function anchorMovedRecords<S>(stars: readonly S[], verdicts: readonly Sy
 
 /** A record whose distance came from another record: a minted companion, a lent sibling parallax, or a member moved onto its anchor. */
 export function lentDistanceRecords<S extends { readonly flags: number; readonly distVia: MembershipRecord['distVia'] }>(
-  records: readonly S[],
+  records: Sorted<S>,
   movedOntoAnchor: ReadonlySet<S>,
 ): Set<number> {
   const lent = new Set<number>();

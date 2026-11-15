@@ -13,9 +13,11 @@ byte-identical in CI so artifact and code always land together:
 - `pnpm run build:wgsn` — the keyed tables under `data/iau-wgsn/`.
 - `pnpm run build:naming-parity` — the parity ledger ([The parity ledger](#the-parity-ledger)).
 
-`build-catalog.ts` calls this folder twice: `applyStarNames` right after the
-classic-ID label merge, and `assignDisplayNames` post-sort just before the
-name table is written.
+`build:catalog` calls this folder in two phases
+([Record phases](../record/README.md#record-phases)): `applyStarNames` on the
+walked records (`../stages/naming-stage.ts`), and `assignDisplayNames` on the
+sorted ones once their SIDs are allocated (`../stages/finalise-stage.ts`). Its
+display names ride the finalised catalogue, never a record.
 
 ## Files in this area
 

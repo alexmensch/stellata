@@ -36,10 +36,11 @@ import { OWN } from '../../binaries/multiples-record-pure';
 import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
+import { enterPhase } from '../record/record-phase';
 
 /** promoteCompanions plus its lineage folded per code, as the build folds it. */
-function promote(...args: Parameters<typeof promoteCompanions>) {
-  const result = promoteCompanions(...args);
+function promote(rows: MultiplesTsvRow[], stars: readonly Star[], inputs: PromotionInputs) {
+  const result = promoteCompanions(rows, enterPhase('named', stars), inputs);
   const lines = [
     ...result.rows.flatMap((r) => decisionRows(promotionDecision(r, () => 'spine:0'))),
     ...[...result.rewrites].flatMap(([star, rewrite]) => rewriteRows(star.originKey, rewrite, () => 'spine:0')),
@@ -2050,7 +2051,7 @@ describe('promoteCompanions', () => {
     rows[0].name = 'Testar';
     rows[1].hip = null;
     rows[1].name = '';
-    expect(() => promoteCompanions(rows, [primaryStar, athygB], inputs()))
+    expect(() => promoteCompanions(rows, enterPhase('named', [primaryStar, athygB]), inputs()))
       .toThrow(/spine:2 \("Testar B"\) sits bit-identically on its anchor spine:1/);
   });
 

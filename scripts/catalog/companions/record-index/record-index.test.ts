@@ -22,9 +22,10 @@ import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../../util/paths';
 import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
 import { resolve } from 'node:path';
+import { enterPhase } from '../../record/record-phase';
 
 const resolved = (rows: MultiplesTsvRow[], stars: Star[]) =>
-  resolvePairs(pairsFromRows(rows), buildCatalogRowIndexMap(stars));
+  resolvePairs(pairsFromRows(rows), buildCatalogRowIndexMap(enterPhase('sorted', stars)));
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -36,7 +37,7 @@ describe('buildCatalogRowIndexMap', () => {
   it('addresses a bridged component under its synth key', () => {
     const stars = [makeStar({ gaiaSourceId: 'g9' })];
     const map = buildCatalogRowIndexMap(
-      stars, new Map([['synth-W1-B', 'g9']]),
+      enterPhase('sorted', stars), new Map([['synth-W1-B', 'g9']]),
     );
     expect(map.bySynth['synth-W1-B']).toBe(0);
     // Addressing only -- the record's own designations are untouched.
@@ -49,7 +50,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ syntheticId: 'synth-W1-B' }),
     ];
     const map = buildCatalogRowIndexMap(
-      stars, new Map([['synth-W1-B', 'g9']]),
+      enterPhase('sorted', stars), new Map([['synth-W1-B', 'g9']]),
     );
     expect(map.bySynth['synth-W1-B']).toBe(1);
   });
@@ -60,7 +61,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ gaiaSourceId: 'g2', hip: 100 }),  // hip collision
       makeStar({ gaiaSourceId: null, hip: 101 }),
     ];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(map.byGaia.g1).toBe(0);
     expect(map.byGaia.g2).toBe(1);
     expect(map.byHip['100']).toBe(0);  // first occurrence
@@ -69,7 +70,7 @@ describe('buildCatalogRowIndexMap', () => {
 
   it('omits records with no gaia and no hip', () => {
     const stars: Star[] = [makeStar(), makeStar({ gaiaSourceId: 'g1' })];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(Object.keys(map.byGaia)).toEqual(['g1']);
     expect(Object.keys(map.byHip)).toHaveLength(0);
     expect(Object.keys(map.bySynth)).toHaveLength(0);
@@ -81,7 +82,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ syntheticId: 'synth-03082+4057-Ab' }),
       makeStar({ syntheticId: 'synth-03082+4057-Aa2' }),
     ];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(map.bySynth['synth-03082+4057-Ab']).toBe(1);
     expect(map.bySynth['synth-03082+4057-Aa2']).toBe(2);
     // Synthetic-only records carry no gaia/hip key.
@@ -92,7 +93,7 @@ describe('buildCatalogRowIndexMap', () => {
 
 describe('wingRenderablePrimaries', () => {
   const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(resolved(rows, stars), stars).renderableCompanionWinged;
+    wingRenderablePrimaries(resolved(rows, stars), enterPhase('sorted', stars)).renderableCompanionWinged;
   const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {

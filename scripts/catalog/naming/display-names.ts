@@ -12,6 +12,7 @@ import {
   type DisplayName,
   type DisplayNameInput,
 } from '../../../src/catalog-format/naming/star-naming-pure';
+import type { Sorted } from '../record/record-phase';
 
 /** Structural subset of `Star` the display-name pass reads. */
 export interface DisplayNameSource {
@@ -116,7 +117,7 @@ export interface DisplayNameResult {
 }
 
 export function assignDisplayNames(
-  stars: DisplayNameSource[],
+  stars: Sorted<DisplayNameSource>,
   components: Map<number, ComponentDesignation>,
   constellations: readonly { code: string }[],
   overrides: Map<number, string>,

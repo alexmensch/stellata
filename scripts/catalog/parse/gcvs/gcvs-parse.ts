@@ -13,8 +13,8 @@ import {
   VAR_TYPE_UNKNOWN,
 } from '../../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../constellations/constellations';
-import type { Star } from '../stars-parse';
 import { ascending } from '../../../../src/astro-core/order-pure';
+import type { Sorted } from '../../record/record-phase';
 
 export function splitPipeDelimited(text: string): string[][] {
   const out: string[][] = [];
@@ -303,7 +303,7 @@ export function gcvsSummary(c: GcvsCounts): string {
 // the GCVS main table also gave that name a period — the two gates are
 // independent, so aperiodic variables stay findable by name.
 export function applyVariability(
-  stars: Star[],
+  stars: Sorted,
   gcvsData: Map<string, VarStarData>,
   xref: VarStarXref,
 ): GcvsCounts {

@@ -1,6 +1,7 @@
 /** Physical record overlaps: README.md#overlap-gate. */
 
 import { R_SUN_PC } from '../../../src/astro-core/astronomy-constants';
+import type { Sorted } from '../record/record-phase';
 
 export interface OverlapRecord {
   x: number;
@@ -38,7 +39,7 @@ export function orbitChainExemption(
 /** Index pairs `[i, j]`, `i < j`, of records drawn inside one another at the
  *  32-bit positions catalog.bin ships. */
 export function physicalOverlaps(
-  records: readonly OverlapRecord[],
+  records: Sorted<OverlapRecord>,
   exempt: OverlapExemption,
 ): Array<[number, number]> {
   let maxRadius = 0;

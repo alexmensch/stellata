@@ -2,7 +2,7 @@
 
 `build-boundaries-artifact.ts` sweeps the shipped star population for fade
 samples and renders `public/constellation-boundaries.json`. Called from
-`../build-catalog.ts`, which hands it the lookup ([Cost](#cost)) and writes
+`../stages/catalog-emission.ts`, which hands it the lookup ([Cost](#cost)) and writes
 the result with its other outputs. Its report carries `BoundariesCounts`, the
 snapshot's boundaries count block, and `boundaryArtifactSummary` is the build
 log's line over it (`+ test`). The wire shape, the quantisation and the
