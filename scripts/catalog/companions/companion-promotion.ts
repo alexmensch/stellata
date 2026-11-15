@@ -50,8 +50,9 @@ import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/desi
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
-  parseStage6Offset, rebasedAnchorOffset, tangentOffset, type Stage6Offset,
+  parseStage6Offset, rebasedAnchorOffset, type Stage6Offset,
 } from './anchor-offset-pure';
+import { polarToTangent } from '../../binaries/sky-geometry-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
@@ -145,9 +146,9 @@ export function projectFromSepPa(
   const at = equatorialTangentBasisAt(primaryX, primaryY, primaryZ);
   if (at === null) return null;
   const { basis: { east, north }, rPc: distPc } = at;
-  const offset = tangentOffset(sepArcsec, paDeg);
-  const offsetN = offset.north * ARCSEC_TO_RAD;
-  const offsetE = offset.east * ARCSEC_TO_RAD;
+  const offset = polarToTangent(sepArcsec, paDeg);
+  const offsetN = offset.northArcsec * ARCSEC_TO_RAD;
+  const offsetE = offset.eastArcsec * ARCSEC_TO_RAD;
   // Small-angle: linear in parsecs at the primary's distance.
   const cx = primaryX + (offsetN * north.x + offsetE * east.x) * distPc;
   const cy = primaryY + (offsetN * north.y + offsetE * east.y) * distPc;
@@ -246,7 +247,7 @@ export type PostPassStats = {
    *  parent component in the post-pass. Their cursor primary's blended
    *  identifier baked them on a sibling (Castor Bb on A); this moves them
    *  onto B so the catalog placement matches the binaries.bin pair anchor
-   *  (runtime-binaries-pure.ts's overrideInnerPrimaryIndices). */
+   *  (record-index/pair-resolution-pure.ts's parent re-home). */
   companionRepositionedInnerToParent: number;
   /** Anchor records dimmed by the flux-conservation post-pass — the
    *  per-anchor joint subset solve judged ≥1 member's light embedded in
@@ -1857,7 +1858,7 @@ export function promoteCompanions(
   // (Castor A) and resolvePosition anchored the secondary there. Now every
   // component is resolved; re-run the placement against the parent's slot
   // so the catalog matches the binaries.bin pair anchor
-  // (runtime-binaries-pure.ts's overrideInnerPrimaryIndices) — both the
+  // (record-index/pair-resolution-pure.ts's parent re-home) — both the
   // ρ=0 collocation case and a measured sep+PA re-projection. Position
   // only — dedup/naming already resolved, and A_V de-extinction across the
   // sub-arcsec sibling offset is below the dust grid's resolution. Parent
@@ -1907,7 +1908,7 @@ export function promoteCompanions(
   // inheritance above is the load-bearing guarantee: no promoted companion
   // freezes at v=0 while its primary drifts. FULL coherence for
   // binaries.bin's authoritative runtime pairing (which re-homes a handful
-  // of inner pairs via overrideInnerPrimaryIndices, and owns Tier-3
+  // of inner pairs via record-index's parent re-home, and owns Tier-3
   // static pairs the catalog build doesn't group) is deferred — and
   // harmless for v1 since Tier-1/2 offsets are elements-owned.
   for (const g of systemicGroups.values()) {

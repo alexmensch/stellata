@@ -2,6 +2,7 @@
 // boundary edge set at equinox B1875, its decomposition into named regions,
 // and positional lookup against them. See README.md.
 
+import { pyMod } from '../angles';
 import { DEG_TO_RAD, RA_HOURS_TO_DEG } from '../astronomy-constants';
 import {
   raDecFromUnitVector,
@@ -179,19 +180,15 @@ function groupBy<T>(items: readonly T[], key: (item: T) => number): Map<number, 
   return out;
 }
 
-function wrapDeg(raDeg: number): number {
-  return ((raDeg % 360) + 360) % 360;
-}
-
 /** Eastward extent of a parallel arc. A start equal to its end is the full
  *  circle, never a zero-length arc. */
 function parallelSpanDeg(edge: ParallelEdge): number {
-  const spanDeg = wrapDeg(edge.raEndDeg - edge.raStartDeg);
+  const spanDeg = pyMod(edge.raEndDeg - edge.raStartDeg, 360);
   return spanDeg === 0 ? 360 : spanDeg;
 }
 
 function coversRaColumn(edge: ParallelEdge, columnLoDeg: number, columnHiDeg: number): boolean {
-  const intoArcDeg = wrapDeg(columnLoDeg - edge.raStartDeg);
+  const intoArcDeg = pyMod(columnLoDeg - edge.raStartDeg, 360);
   return intoArcDeg + (columnHiDeg - columnLoDeg) <= parallelSpanDeg(edge) + COORD_EPSILON_DEG;
 }
 
@@ -330,7 +327,7 @@ export function constellationEdgeCodeAt(
   grid: ConstellationRegionGrid,
   b1875: SkyPosition,
 ): string {
-  const column = lastIndexAtOrBelow(grid.raBoundsDeg, wrapDeg(b1875.raDeg));
+  const column = lastIndexAtOrBelow(grid.raBoundsDeg, pyMod(b1875.raDeg, 360));
   const band = lastIndexAtOrBelow(grid.decBoundsDeg, b1875.decDeg) + 1;
   return grid.cellCon[
     band * grid.raBoundsDeg.length + (column < 0 ? grid.raBoundsDeg.length - 1 : column)
@@ -446,7 +443,7 @@ function distanceToMeridianDeg(edge: MeridianEdge, at: SkyPosition): number {
 
 function distanceToParallelDeg(edge: ParallelEdge, at: SkyPosition): number {
   const spanDeg = parallelSpanDeg(edge);
-  const intoArcDeg = wrapDeg(at.raDeg - edge.raStartDeg);
+  const intoArcDeg = pyMod(at.raDeg - edge.raStartDeg, 360);
   // Constant dec is a small circle and the shortest path to it runs along the
   // point's own meridian, so an in-span point is |Δdec| away.
   if (intoArcDeg <= spanDeg) return Math.abs(at.decDeg - edge.decDeg);
@@ -492,7 +489,7 @@ function meridianSampleAt(edge: MeridianEdge, t: number): SkyPosition {
 }
 
 function parallelSampleAt(edge: ParallelEdge, t: number): SkyPosition {
-  return { raDeg: wrapDeg(edge.raStartDeg + t * parallelSpanDeg(edge)), decDeg: edge.decDeg };
+  return { raDeg: pyMod(edge.raStartDeg + t * parallelSpanDeg(edge), 360), decDeg: edge.decDeg };
 }
 
 function sampleCount(arcLengthDeg: number): number {

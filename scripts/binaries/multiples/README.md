@@ -83,9 +83,9 @@ committed snapshot.
 The records encode to the committed `multiples.tsv` byte for byte, which
 `../build-binaries.test.ts` holds. Three places use arithmetic other than
 JavaScript's default: the photocentre's weighted sums are `pySum`, a
-compensated sum; the anchor position angle wraps through `pyMod`, the
-divisor's sign (both in `../python-float-pure.ts`); and the photocentre walk
-visits neighbours in token order.
+compensated sum (`../python-float-pure.ts`); the anchor position angle wraps
+through `pyMod`, the divisor's sign, inside `../sky-geometry-pure.ts`'s
+`tangentToPolar`; and the photocentre walk visits neighbours in token order.
 
 ## What each column carries
 

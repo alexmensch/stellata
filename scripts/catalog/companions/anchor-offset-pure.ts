@@ -1,32 +1,14 @@
 /** Stage 6 anchor offsets re-based onto promotion's WDS-root anchor:
  *  README.md#promoted-companion-field-inheritance. */
 
+import {
+  polarToTangent, tangentToPolar, type PolarOffset, type TangentOffset,
+} from '../../binaries/sky-geometry-pure';
+
 export interface AnchorOffsetRow {
   comp: string;
   anchorComp: string | null;
   anchorOffset: Stage6Offset;
-}
-
-export interface SepPa {
-  sepArcsec: number;
-  paDeg: number;
-}
-
-export interface TangentOffset {
-  east: number;
-  north: number;
-}
-
-export function tangentOffset(sepArcsec: number, paDeg: number): TangentOffset {
-  const pa = paDeg * (Math.PI / 180);
-  return { east: sepArcsec * Math.sin(pa), north: sepArcsec * Math.cos(pa) };
-}
-
-export function sepPaOf({ east, north }: TangentOffset): SepPa {
-  return {
-    sepArcsec: Math.hypot(east, north),
-    paDeg: ((Math.atan2(east, north) * 180) / Math.PI + 360) % 360,
-  };
 }
 
 export type Stage6Offset =
@@ -55,13 +37,13 @@ export function parseStage6Offset(
   if (sepArcsec === null || paDeg === null) {
     throw new Error(`multiples.tsv row ${comp} carries half an anchor offset`);
   }
-  return { kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) };
+  return { kind: 'offset', offset: polarToTangent(sepArcsec, paDeg) };
 }
 
 export function rebasedAnchorOffset(
   row: AnchorOffsetRow,
   anchorRow: AnchorOffsetRow,
-): SepPa | null {
+): PolarOffset | null {
   if (row.anchorComp !== anchorRow.anchorComp) {
     throw new Error(
       `anchor rows disagree on the Stage 6 anchor: ${row.comp} chains from `
@@ -71,9 +53,10 @@ export function rebasedAnchorOffset(
   const own = row.anchorOffset;
   const anchor = anchorRow.anchorOffset;
   if (own.kind !== 'offset' || anchor.kind === 'unreached') return null;
-  const base = anchor.kind === 'offset' ? anchor.offset : { east: 0, north: 0 };
-  const east = own.offset.east - base.east;
-  const north = own.offset.north - base.north;
-  const rebased = sepPaOf({ east, north });
+  const base = anchor.kind === 'offset' ? anchor.offset : { eastArcsec: 0, northArcsec: 0 };
+  const rebased = tangentToPolar({
+    eastArcsec: own.offset.eastArcsec - base.eastArcsec,
+    northArcsec: own.offset.northArcsec - base.northArcsec,
+  });
   return rebased.sepArcsec > 0 ? rebased : null;
 }

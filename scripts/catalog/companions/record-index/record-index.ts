@@ -1,28 +1,15 @@
-// Post-sort addressing of catalog records from multiples.tsv rows, and the
-// two passes that need only that. See README.md.
+// The row-index sidecar and the post-sort readers of resolvePairs. See README.md.
 
 import {
   FLAG_BINARY_PRIMARY,
 } from '../../../../src/catalog-format/record/catalog-pure';
 import type { Star } from '../../parse/stars-parse';
 import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
-import {
-  groupBySystem,
-  type MultiplesTsvRow,
-  type PairCursor,
-} from '../companion-promotion';
-import {
-  canonicalCompLetter, composeSyntheticId, isMoreCanonicalAnchor, parentComponentToken, wdsRootOf,
-} from '../../../binaries/component-tokens-pure';
+import { isMoreCanonicalAnchor } from '../../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
-import {
-  resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
-} from './catalog-row-index-map-pure';
+import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
+import { distinctEnds, type ResolvedPair } from './pair-resolution-pure';
 
-// Build the lookup sidecar after the final record sort. The runtime
-// binaries loader resolves multiples.tsv rows to catalog.bin records
-// through this map; the build script writes it next to catalog.bin /
-// search-index.json.
 export function buildCatalogRowIndexMap(
   stars: Star[],
   /** README.md#the-sidecar-and-how-a-component-resolves. */
@@ -50,222 +37,51 @@ export function buildCatalogRowIndexMap(
   return { byGaia, byHip, bySynth };
 }
 
-// ---- Wings for renderable-companion primaries --------------------------
-
-interface ResolvedComponent {
-  idx: number;
-  /** Canonical WDS component letter (`canonicalCompLetter` applied). */
-  comp: string;
-}
-
-interface ResolvedSystem {
-  systemId: string;
-  primaryIdx: number;
-  /** The primary (its own comp letter) followed by every secondary that
-   *  resolves to a record distinct from the primary. */
-  components: ResolvedComponent[];
-}
-
-/** Null when the primary itself doesn't resolve. */
-function resolvePairComponents(
-  cursor: PairCursor,
-  rowIndexMap: CatalogRowIndexMap,
-): ResolvedSystem | null {
-  const primary = cursor.primary;
-  if (primary === null) return null;
-  const primarySynth = composeSyntheticId(primary.systemId, primary.comp);
-  const priId = resolveMultiplesIdx(
-    primary.gaiaSourceId, primary.hip, primarySynth, rowIndexMap,
-  );
-  if (priId === null) return null;
-  const primaryIdx = synthSlotIdx(primarySynth, rowIndexMap, priId) ?? priId;
-  const components: ResolvedComponent[] = [{ idx: primaryIdx, comp: primary.comp }];
-  for (const sec of cursor.secondaries) {
-    if (sec.orbitRole !== 'secondary') continue;
-    const comp = canonicalCompLetter(primary.comp, sec.comp);
-    const secondarySynth = composeSyntheticId(sec.systemId, comp);
-    let secIdx = resolveMultiplesIdx(
-      sec.gaiaSourceId, sec.hip, secondarySynth, rowIndexMap,
-    );
-    if (secIdx !== null) {
-      secIdx = synthSlotIdx(secondarySynth, rowIndexMap, secIdx) ?? secIdx;
-    }
-    if (secIdx === null || secIdx === primaryIdx) continue;
-    components.push({ idx: secIdx, comp });
-  }
-  return { systemId: primary.systemId, primaryIdx, components };
-}
-
-function cursorSystemId(cursor: PairCursor): string {
-  return cursor.primary?.systemId ?? cursor.secondaries[0]?.systemId ?? '';
-}
-
-/** The cursor's rows with the comp letter each one is ADDRESSED by — a
- *  secondary's synth key is keyed on `canonicalCompLetter`, not on the raw
- *  cell, exactly as {@link resolvePairComponents} keys it. */
-function cursorRows(
-  cursor: PairCursor,
-): { row: MultiplesTsvRow; comp: string }[] {
-  const secondaries = cursor.secondaries
-    .filter((sec) => sec.orbitRole === 'secondary')
-    .map((sec) => ({
-      row: sec,
-      comp: canonicalCompLetter(cursor.primary?.comp ?? sec.comp, sec.comp),
-    }));
-  return cursor.primary === null
-    ? secondaries
-    : [{ row: cursor.primary, comp: cursor.primary.comp }, ...secondaries];
-}
-
-function resolveRowIdx(
-  row: MultiplesTsvRow,
-  comp: string,
-  rowIndexMap: CatalogRowIndexMap,
-): number | null {
-  const synth = composeSyntheticId(row.systemId, comp);
-  const id = resolveMultiplesIdx(row.gaiaSourceId, row.hip, synth, rowIndexMap);
-  if (id === null) return null;
-  return synthSlotIdx(synth, rowIndexMap, id) ?? id;
-}
-
-/** A component carrying no identifier of its own renders through the PARENT
- *  component's slot — the binaries.bin writer forces exactly this before
- *  emitting (/src/client/binaries/README.md#hierarchical-walk), so the winged set has to mirror it or a
- *  system renders a companion with no wings bit anywhere on it. Castor Ba is
- *  the shape it was written for; WDS 02536-6420 is the shape that needs it
- *  here, its Ba resolving to nothing while B (HD 18341) and synth Bb both
- *  ship. Walks up until a token resolves — `Aa1` falls back to `Aa`, then `A`. */
-function reHomeToParent(
-  comp: string,
-  byComp: ReadonlyMap<string, number>,
-): number | null {
-  for (let tok = parentComponentToken(comp); tok; tok = parentComponentToken(tok)) {
-    const idx = byComp.get(tok);
-    if (idx !== undefined) return idx;
-  }
-  return null;
-}
-
-interface RenderedCursor {
-  root: string;
-  primaryIdx: number;
-  /** Secondaries resolving to a record distinct from the primary. */
-  secondaries: { idx: number; row: MultiplesTsvRow }[];
-}
-
-function renderedCursors(
-  cursors: PairCursor[],
-  rowIndexMap: CatalogRowIndexMap,
-): RenderedCursor[] {
-  // Where each component token resolves on its own, per WDS root. Built over
-  // every row first, because the re-home below reads a SIBLING cursor's
-  // component and cursor order says nothing about nesting depth.
-  const perRootComp = new Map<string, Map<string, number>>();
-  for (const cursor of cursors) {
-    const root = wdsRootOf(cursorSystemId(cursor));
-    if (root === null) continue;
-    let byComp = perRootComp.get(root);
-    if (!byComp) { byComp = new Map(); perRootComp.set(root, byComp); }
-    for (const { row, comp } of cursorRows(cursor)) {
-      const idx = resolveRowIdx(row, comp, rowIndexMap);
-      if (idx !== null) byComp.set(comp, idx);
-    }
-  }
-
-  const out: RenderedCursor[] = [];
-  for (const cursor of cursors) {
-    const root = wdsRootOf(cursorSystemId(cursor));
-    if (root === null) continue;
-    // `rows[0]` is the pair's primary ONLY while this holds — cursorRows puts
-    // the primary first, and returns secondaries alone when there is none, so
-    // dropping this guard silently promotes a secondary into that role.
-    // resolvePairComponents refuses such a cursor for the same reason.
-    if (cursor.primary === null) continue;
-    const byComp = perRootComp.get(root) ?? new Map<string, number>();
-    const rows = cursorRows(cursor);
-    const sides = rows.map(({ row, comp }) => resolveRowIdx(row, comp, rowIndexMap)
-      ?? reHomeToParent(comp, byComp));
-    const primaryIdx = sides[0];
-    if (primaryIdx === null) continue;
-    const secondaries = rows.slice(1)
-      .map(({ row }, i) => ({ idx: sides[i + 1], row }))
-      .filter((s): s is { idx: number; row: MultiplesTsvRow } =>
-        s.idx !== null && s.idx !== primaryIdx);
-    if (secondaries.length === 0) continue;
-    out.push({ root, primaryIdx, secondaries });
-  }
-  return out;
-}
+// ---- Readers of resolvePairs ------------------------------------------
 
 /** Every rendered pair whose row carries a renderable orbit, as (primary,
  *  secondary) record indices: the pairs binaries.bin draws apart from the
  *  elements alone. */
-export function renderableOrbitRelations(
-  rows: MultiplesTsvRow[],
-  rowIndexMap: CatalogRowIndexMap,
-): Array<[number, number]> {
-  return renderedCursors([...groupBySystem(rows).values()], rowIndexMap)
-    .flatMap(({ primaryIdx, secondaries }) => secondaries
-      .filter(({ row }) => hasRenderableOrbit(row))
-      .map(({ idx }): [number, number] => [primaryIdx, idx]));
+export function renderableOrbitRelations(resolved: readonly ResolvedPair[]): Array<[number, number]> {
+  return resolved.flatMap(({ pair, rendered }): Array<[number, number]> =>
+    (distinctEnds(rendered) && hasRenderableOrbit(pair.elements) ? [[rendered.primary, rendered.secondary]] : []));
 }
 
-/** OR FLAG_BINARY_PRIMARY (chart-mode wings) onto the anchor of every
- *  physical system that renders a companion but which build-catalog's three
- *  wings passes (geometric, CCDM, eclipsing) all missed (Canopus, 16 Cyg A).
- *  A pair renders a companion when its sides resolve to DISTINCT catalog
- *  records under the same resolution + blended-sibling synth retries the
- *  binaries.bin writer runs, so the winged set
- *  tracks binaries.bin's primaries (both retries mirrored; the writer's
- *  post-resolution override / relation dedup can't change the distinct-pair
- *  boolean this pass keys on, only which index, which root-grouping and the
- *  brightest-participant pick below already absorb). Invariants: one glyph
- *  per WDS system, on the brightest participant (skips a system any earlier
- *  pass already flagged); additive only, so eclipsing / iconic doubles with
- *  no rendered companion keep their wings. Returns the count newly winged
- *  plus every resolved multiples.tsv member index — the record set the
- *  MULTIPLICITY_RESOLVED status covers (a blended primary whose members all
- *  collapse onto it counts: the row exists for it even with nothing
- *  rendered apart). See ./README.md#renderable-companion-wings. */
-export function wingRenderablePrimaries(
-  rows: MultiplesTsvRow[],
-  stars: Star[],
-  rowIndexMap: CatalogRowIndexMap,
-): Pick<MultiplicityCounts, 'renderableCompanionWinged'> & { memberIndices: Set<number> } {
-  const memberIndices = new Set<number>();
-  const cursors = [...groupBySystem(rows).values()];
-  for (const cursor of cursors) {
-    const resolved = resolvePairComponents(cursor, rowIndexMap);
-    if (resolved !== null) {
-      for (const c of resolved.components) memberIndices.add(c.idx);
-    }
+/** Every record a pair's own row resolves to, provided the pair's primary
+ *  does: the set MULTIPLICITY_RESOLVED covers. */
+export function resolvedMemberIndices(resolved: readonly ResolvedPair[]): Set<number> {
+  const members = new Set<number>();
+  for (const { own } of resolved) {
+    if (own.primary === null) continue;
+    members.add(own.primary);
+    if (own.secondary !== null) members.add(own.secondary);
   }
+  return members;
+}
 
-  // Catalog indices participating in a rendered pair, grouped by WDS root.
-  const perSystem = new Map<string, Set<number>>();
-  for (const { root, primaryIdx, secondaries } of renderedCursors(cursors, rowIndexMap)) {
-    let set = perSystem.get(root);
-    if (!set) { set = new Set(); perSystem.set(root, set); }
-    set.add(primaryIdx);
-    for (const { idx } of secondaries) set.add(idx);
+/** See ./README.md#renderable-companion-wings. */
+export function wingRenderablePrimaries(
+  resolved: readonly ResolvedPair[],
+  stars: Star[],
+): Pick<MultiplicityCounts, 'renderableCompanionWinged'> {
+  const drawnPerSystem = new Map<string, Set<number>>();
+  for (const { pair, rendered } of resolved) {
+    if (!distinctEnds(rendered)) continue;
+    let drawn = drawnPerSystem.get(pair.wdsId);
+    if (!drawn) { drawn = new Set(); drawnPerSystem.set(pair.wdsId, drawn); }
+    drawn.add(rendered.primary);
+    drawn.add(rendered.secondary);
   }
 
   let renderableCompanionWinged = 0;
-  for (const indices of perSystem.values()) {
-    let anchor = -1;
-    let alreadyWinged = false;
-    for (const idx of indices) {
-      if ((stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0) {
-        alreadyWinged = true;
-        break;
-      }
-      if (anchor < 0 || stars[idx].absmag < stars[anchor].absmag) anchor = idx;
-    }
-    if (alreadyWinged || anchor < 0) continue;
+  for (const indices of drawnPerSystem.values()) {
+    const drawn = [...indices];
+    if (drawn.some((idx) => (stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0)) continue;
+    const anchor = drawn.reduce((best, idx) => (stars[idx].absmag < stars[best].absmag ? idx : best));
     stars[anchor].flags |= FLAG_BINARY_PRIMARY;
     renderableCompanionWinged++;
   }
-  return { renderableCompanionWinged, memberIndices };
+  return { renderableCompanionWinged };
 }
 
 // ---- Component-letter search designations ------------------------------
@@ -292,35 +108,29 @@ export interface ComponentDesignation {
  *
  *  The anchor is included with its own comp letter so "α Cen A" focuses it,
  *  and a record shared across pairs takes first-write-wins. */
+type AnchoredPair = ResolvedPair & { readonly own: { readonly primary: number; readonly secondary: number | null } };
+
 export function buildComponentDesignations(
-  rows: MultiplesTsvRow[],
-  rowIndexMap: CatalogRowIndexMap,
+  resolved: readonly ResolvedPair[],
 ): Pick<MultiplicityCounts, 'componentDesignations'> & { designations: Map<number, ComponentDesignation> } {
-  const systems = groupBySystem(rows);
-  const resolved: { root: string; pair: ResolvedSystem }[] = [];
+  const anchored = resolved.filter((r): r is AnchoredPair => r.own.primary !== null);
   const anchors = new Map<string, { comp: string; idx: number }>();
-  for (const cursor of systems.values()) {
-    const pair = resolvePairComponents(cursor, rowIndexMap);
-    if (pair === null) continue;
-    const root = wdsRootOf(pair.systemId);
-    if (root === null) continue;
-    resolved.push({ root, pair });
-    const comp = pair.components[0].comp;
-    const incumbent = anchors.get(root);
-    if (!incumbent || isMoreCanonicalAnchor(comp, incumbent.comp)) {
-      anchors.set(root, { comp, idx: pair.primaryIdx });
+  for (const { pair, own: { primary } } of anchored) {
+    const incumbent = anchors.get(pair.wdsId);
+    if (!incumbent || isMoreCanonicalAnchor(pair.primaryComp, incumbent.comp)) {
+      anchors.set(pair.wdsId, { comp: pair.primaryComp, idx: primary });
     }
   }
 
   // Which roots hold each record as a component that is not their anchor.
   const heldBy = new Map<number, Set<string>>();
-  for (const { root, pair } of resolved) {
-    const anchorIdx = anchors.get(root)?.idx;
-    for (const c of pair.components) {
-      if (c.idx === anchorIdx) continue;
-      const roots = heldBy.get(c.idx);
-      if (roots) roots.add(root);
-      else heldBy.set(c.idx, new Set([root]));
+  for (const { pair, own: { primary, secondary } } of anchored) {
+    const anchorIdx = anchors.get(pair.wdsId)?.idx;
+    for (const idx of [primary, secondary]) {
+      if (idx === null || idx === anchorIdx) continue;
+      const roots = heldBy.get(idx);
+      if (roots) roots.add(pair.wdsId);
+      else heldBy.set(idx, new Set([pair.wdsId]));
     }
   }
   for (const [root, anchor] of [...anchors]) {
@@ -332,34 +142,21 @@ export function buildComponentDesignations(
   }
 
   const out = new Map<number, ComponentDesignation>();
-  for (const { root, pair } of resolved) {
-    const anchor = anchors.get(root);
+  const designate = (idx: number | null, comp: string, anchorIdx: number): void => {
+    if (idx === null || out.has(idx)) return;
+    out.set(idx, { comp, primaryIdx: anchorIdx });
+  };
+  for (const { pair, own: { primary, secondary } } of anchored) {
+    const anchor = anchors.get(pair.wdsId);
     if (anchor === undefined) continue;
-    for (const c of pair.components) {
-      if (out.has(c.idx)) continue;
-      out.set(c.idx, { comp: c.comp, primaryIdx: anchor.idx });
-    }
+    designate(primary, pair.primaryComp, anchor.idx);
+    if (secondary !== primary) designate(secondary, pair.secondaryComp, anchor.idx);
   }
-  // A letter is root-relative, so a component is addressable even when its
-  // own pair cursor is not: Rigel's Ba,Bb cursor has an unresolvable Ba, and
-  // requiring the cursor to resolve left Bb with no letter and no base to
-  // compose against. The wings pass genuinely needs both ends of a pair, so
-  // it keeps `resolvePairComponents`; naming needs the letter and the root.
-  for (const cursor of systems.values()) {
-    const primary = cursor.primary;
-    if (primary === null) continue;
-    const root = wdsRootOf(primary.systemId);
-    const anchor = root === null ? undefined : anchors.get(root);
-    if (anchor === undefined) continue;
-    for (const sec of cursor.secondaries) {
-      if (sec.orbitRole !== 'secondary') continue;
-      const comp = canonicalCompLetter(primary.comp, sec.comp);
-      const synth = composeSyntheticId(sec.systemId, comp);
-      let idx = resolveMultiplesIdx(sec.gaiaSourceId, sec.hip, synth, rowIndexMap);
-      if (idx !== null) idx = synthSlotIdx(synth, rowIndexMap, idx) ?? idx;
-      if (idx === null || idx === anchor.idx || out.has(idx)) continue;
-      out.set(idx, { comp, primaryIdx: anchor.idx });
-    }
+  // README.md#component-letter-search-designations: a letter is root-relative.
+  for (const { pair, own } of resolved) {
+    const anchor = anchors.get(pair.wdsId);
+    if (anchor === undefined || own.secondary === anchor.idx) continue;
+    designate(own.secondary, pair.secondaryComp, anchor.idx);
   }
   return { designations: out, componentDesignations: out.size };
 }
