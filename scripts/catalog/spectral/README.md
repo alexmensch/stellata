@@ -235,9 +235,12 @@ exhaustive `switch`:
 
 A parked row writes nothing here: it never reached a radius. The stage founds
 no record, writes no identity rows, and every code's effect is `none`. It
-describes the walk's radius only: coherence rescales a snapped member's,
-promotion re-derives some walked records' and sizes every minted companion
-(`stellata-hhaw.45.32.5.10`).
+describes the walk's radius only. A later pass that re-sizes a record writes
+its own row: coherence's `coherence.size.rescaled` for a snapped member
+([Coherence lineage](../multiplicity/README.md#coherence-lineage)), and
+promotion's `promotion.size.*` for every record it sizes, minted or held,
+in this stage's params through `radiusRouteParams`
+([Promotion lineage](../companions/README.md#promotion-lineage)).
 
 Measured 2026-11-11 on the full tree: 964,982 rows (152 MB plain), 24.2 MB
 gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,
