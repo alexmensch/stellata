@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { Stage6Offset } from './anchor-offset-pure';
-import { polarToTangent, tangentToPolar } from '../../binaries/sky-geometry-pure';
+import { polarToTangent, tangentToPolar } from '../../../src/astro-core/equatorial-basis';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
 import { decisionRows, familyTotal, PROMOTION_CODES, promotionDecision } from './promotion-lineage-pure';
 import {

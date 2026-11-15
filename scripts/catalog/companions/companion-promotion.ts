@@ -43,7 +43,7 @@ import { promotionOriginKey } from './promotion-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import { fold } from '../../util/counts/tally-pure';
 import { ARCSEC_TO_RAD } from '../../../src/astro-core/astronomy-constants';
-import { equatorialTangentBasisAt } from '../../../src/astro-core/equatorial-basis';
+import { equatorialTangentBasisAt, polarToTangent } from '../../../src/astro-core/equatorial-basis';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { Star } from '../parse/stars-parse';
 import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
@@ -52,7 +52,6 @@ import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import {
   parseStage6Offset, rebasedAnchorOffset, type Stage6Offset,
 } from './anchor-offset-pure';
-import { polarToTangent } from '../../binaries/sky-geometry-pure';
 
 // Stage 3 astrometry routes that re-anchor a secondary per-component
 // rather than reproducing the system anchor under a different float path.
