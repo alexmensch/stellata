@@ -10,7 +10,6 @@ import {
   NAMING_CODES, NAMING_INVARIANTS, NAMING_LINEAGE_BUDGET, namingLineageLines,
 } from '../naming/naming-lineage-pure';
 import { CONSTELLATIONS } from '../parse/constellations/constellations';
-import type { Star } from '../parse/stars-parse';
 import { finalise, type Sorted } from '../record/record-phase';
 import type { AllocatedCatalog } from './allocation-stage';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
@@ -34,7 +33,7 @@ export function finaliseStage(
 }
 
 // A function of its own so its lines are unreachable once it returns, as coherence's are.
-function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], stepInputs: FileHashes) {
+function namingLineage(records: readonly NamedRecord[], stars: Sorted, stepInputs: FileHashes) {
   return catalogCountedStageLineage({
     spec: NAMING_LINEAGE, codes: NAMING_CODES, lines: () => namingLineageLines(records, stars, CONSTELLATIONS),
     budget: NAMING_LINEAGE_BUDGET, invariants: NAMING_INVARIANTS, inputs: stepInputs,

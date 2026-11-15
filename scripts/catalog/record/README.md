@@ -10,7 +10,8 @@ scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
   record-phase.ts (+ test)        The phase tag on the build's record list,
-                                  `Sorted`, `AllocatedSids` and `Finalised`,
+                                  `Sorted`, `Unsorted`, `AllocatedSids` and
+                                  `Finalised`,
                                   and the tags' constructors (#record-phases).
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
                                   records on — `sortByApparentV`, the sort
@@ -56,7 +57,12 @@ not compile:
 | `walked` | the manifest walk | `applyDesignationConstellations`, `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
 | `named` | the walked passes | `promoteCompanions` |
 | `promoted` | promotion | `sortByApparentV` |
-| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `applyDoublesFlag`, `buildCatalogRowIndexMap`, `wingRenderablePrimaries`, `physicalOverlaps`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames` |
+| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `applyDoublesFlag`, `wingEclipsingBinaries`, `buildCatalogRowIndexMap`, `wingRenderablePrimaries`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
+
+A reader of positions taken before the sort — `coherenceLineageLines`,
+`promotionLineage`, `anchorMovedRecords` — takes `Unsorted`, any phase but
+`sorted`, so it cannot be handed the sorted list its indices no longer
+address.
 
 Each order it holds, and why:
 

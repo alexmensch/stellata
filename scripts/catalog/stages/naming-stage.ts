@@ -14,7 +14,6 @@ import { applySystemCoherence, systemCoherenceVerdicts, type SystemVerdict } fro
 import { applyStarNames, loadStarNamingInputs, starNamingSummary } from '../naming/apply-star-names';
 import { CONSTELLATIONS } from '../parse/constellations/constellations';
 import type { ReadStarsInputs } from '../parse/read-stars-inputs';
-import type { Star } from '../parse/stars-parse';
 import { enterPhase, type Records } from '../record/record-phase';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
 
@@ -45,7 +44,7 @@ export function namingStage(
 
 // A function of its own so its line per record is unreachable once it returns:
 // held by the caller, the lines outlive promotion and raise the build's peak heap.
-function coherenceLineage(verdicts: readonly SystemVerdict[], stars: readonly Star[], stepInputs: FileHashes) {
+function coherenceLineage(verdicts: readonly SystemVerdict[], stars: Records<'walked'>, stepInputs: FileHashes) {
   return catalogCountedStageLineage({
     spec: COHERENCE_LINEAGE, codes: COHERENCE_CODES, lines: () => coherenceLineageLines(verdicts, stars),
     budget: COHERENCE_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,

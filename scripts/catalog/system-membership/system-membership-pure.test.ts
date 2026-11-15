@@ -170,7 +170,7 @@ describe('anchorMovedRecords', () => {
   it('takes coherence-snapped members and the re-curated records, never an unmoved member or one already at the anchor distance', () => {
     const stars = ['anchor', 'snapped', 'kept', 'recurated', 'at-anchor'];
     const anchor = { idx: 0, memberWon: false, precisionVetoed: false } as never;
-    const moved = anchorMovedRecords(stars, [{
+    const moved = anchorMovedRecords(enterPhase('promoted', stars), [{
       kind: 'coherent', root: '00001+0001', anchor, anchorPc: 10,
       members: [
         { kind: 'snapped', idx: 1, fromPc: 11, toPc: 10, toAbsmag: 5, radiusFactor: 1 },

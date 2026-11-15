@@ -15,6 +15,9 @@ export type Records<P extends RecordPhase, S = Star> = readonly S[] & { readonly
 /** Records in apparent-V order: an index is a record's final address. */
 export type Sorted<S = Star> = Records<'sorted', S>;
 
+/** Records at any phase before the sort: an index holds only until it. */
+export type Unsorted<S = Star> = Records<Exclude<RecordPhase, 'sorted'>, S>;
+
 /** Each record's SID in record order, as SID allocation assigned it. */
 export type AllocatedSids = readonly number[] & { readonly [allocated]: true };
 

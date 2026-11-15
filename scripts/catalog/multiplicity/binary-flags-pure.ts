@@ -342,7 +342,7 @@ export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]):
  *  left unflagged (../parse/gcvs/README.md): eclipsers surface as multi-star
  *  systems, not intrinsic-variable rings. */
 export function wingEclipsingBinaries(
-  stars: readonly { flags: number; readonly varType: number }[],
+  stars: Sorted<{ flags: number; readonly varType: number }>,
 ): Pick<MultiplicityCounts, 'eclipsingWinged'> {
   let eclipsingWinged = 0;
   for (const s of stars) {

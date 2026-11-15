@@ -4,6 +4,7 @@ import { namedRow, namedRowsInvariant, type LineageInvariant } from '../lineage/
 import { compareUtf8, stageLineageLine, stageRow, type LineageLine } from '../lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { OVERLAP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { Sorted } from '../record/record-phase';
 
 export const OVERLAP_LINEAGE_BUDGET = { gzipBytes: 2_000, writeMs: 1_000 };
 
@@ -81,7 +82,7 @@ export const OVERLAP_INVARIANTS: readonly LineageInvariant[] = [
 
 /** One row per pair, keyed on the origin key first in byte order, so a pair keeps its row however the records sort. */
 export function overlapLineageLines(
-  pairs: readonly (readonly [number, number])[], records: readonly { readonly originKey: string }[],
+  pairs: readonly (readonly [number, number])[], records: Sorted<{ readonly originKey: string }>,
 ): LineageLine[] {
   return pairs.map(([a, b]) => {
     const [key, other] = [records[a].originKey, records[b].originKey].sort(compareUtf8);

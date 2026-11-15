@@ -16,6 +16,7 @@ import {
   type NameTier,
 } from '../../../src/catalog-format/naming/star-naming-pure';
 import { NAMING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import type { Sorted } from '../record/record-phase';
 
 export const NAMING_LINEAGE_BUDGET = { gzipBytes: 10_600_000, writeMs: 28_000 };
 
@@ -120,7 +121,7 @@ const hasSkyDesignation = (set: DesignationSet): boolean =>
 
 export function* namingLineageRows(
   records: readonly NamedRecord[],
-  stars: readonly NamingLineageRecord[],
+  stars: Sorted<NamingLineageRecord>,
   constellations: readonly { code: string }[],
 ): Generator<LineageRow> {
   for (let i = 0; i < records.length; i++) {
@@ -236,7 +237,7 @@ export function namingLabels(rows: Iterable<LineageRow>): Map<string, string | n
 /** Lines, never rows: the stage covers every record, so its rows are not held as objects. */
 export function namingLineageLines(
   records: readonly NamedRecord[],
-  stars: readonly NamingLineageRecord[],
+  stars: Sorted<NamingLineageRecord>,
   constellations: readonly { code: string }[],
 ): LineageLine[] {
   const lines: LineageLine[] = [];

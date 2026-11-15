@@ -23,7 +23,7 @@ import { enterPhase } from '../record/record-phase';
 
 function coherence(rows: MultiplesTsvRow[], stars: Star[], src: CoherenceSources) {
   const verdicts = systemCoherenceVerdicts(rows, enterPhase('walked', stars), src);
-  const counts = foldStageLines(COHERENCE_CODES, coherenceLineageLines(verdicts, stars));
+  const counts = foldStageLines(COHERENCE_CODES, coherenceLineageLines(verdicts, enterPhase('promoted', stars)));
   applySystemCoherence(enterPhase('walked', stars), verdicts);
   return coherenceFigures(counts);
 }

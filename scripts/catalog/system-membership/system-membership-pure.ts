@@ -15,6 +15,7 @@ import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { group, normalized, wdsTrees, type WdsPairEnds, type WdsTree, type WdsTreeCounts } from './wds-trees-pure';
 import type { Sorted } from '../record/record-phase';
+import type { Unsorted } from '../record/record-phase';
 
 export interface MembershipRecord extends OpticalDoubleStar {
   readonly flags: number;
@@ -47,8 +48,8 @@ export type SystemMembershipCounts = WdsTreeCounts & {
   companionCcdm: number;
 };
 
-/** The records coherence snapped or promotion re-curated (`recurated`) onto their anchor's distance; call before the record sort, which the set survives. */
-export function anchorMovedRecords<S>(stars: readonly S[], verdicts: readonly SystemVerdict[], recurated: Iterable<S>): Set<S> {
+/** The records coherence snapped or promotion re-curated (`recurated`) onto their anchor's distance; the set survives the sort. */
+export function anchorMovedRecords<S>(stars: Unsorted<S>, verdicts: readonly SystemVerdict[], recurated: Iterable<S>): Set<S> {
   const moved = new Set<S>(recurated);
   for (const v of verdicts) if (v.kind === 'coherent') for (const m of v.members) if (m.kind === 'snapped') moved.add(stars[m.idx]);
   return moved;

@@ -519,7 +519,7 @@ describe('binary-flags-pure / wingEclipsingBinaries', () => {
       { flags: FLAG_BINARY_PRIMARY, varType: VAR_TYPE_ECLIPSING },
       { flags: 0, varType: 0 },
     ];
-    expect(wingEclipsingBinaries(stars)).toEqual({ eclipsingWinged: 1 });
+    expect(wingEclipsingBinaries(enterPhase('sorted', stars))).toEqual({ eclipsingWinged: 1 });
     expect(stars.map((s) => s.flags)).toEqual([FLAG_BINARY_PRIMARY, FLAG_BINARY_PRIMARY, 0]);
   });
 });
