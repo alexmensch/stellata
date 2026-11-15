@@ -58,7 +58,9 @@ A geometric pair joins records only when both distances are the members' own
 measurements. `lentDistanceRecords` marks the others: a minted companion
 (`FLAG_BINARY_COMPANION_ONLY`, placed at its anchor's distance), a record on
 `pair_member_parallax` (a sibling's parallax), and a member coherence snapped
-or promotion re-curated onto its anchor's distance. Two records sharing one
+onto its anchor's distance (`snapped`, or `at-anchor-distance` when it
+already sat there) or promotion re-curated onto it (`isRecuratedAdoption`,
+returned by `build-catalog.ts`'s `promoteAndTrace`). Two records sharing one
 distance sit 0.005 pc apart only because of the sharing, so the pair is an
 artefact. Most such pairs are a WDS pair's minted companion, which WDS joins
 anyway; `systemGeometricLentDropped` counts the ones no other evidence puts

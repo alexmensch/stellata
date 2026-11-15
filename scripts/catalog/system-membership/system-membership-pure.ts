@@ -10,7 +10,6 @@ import {
   EVIDENCE_SOURCES, NO_RECORD_COMPANIONS, nodeRecords,
   type EvidenceSource, type MembershipSystem, type NoRecordCompanion, type SystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
-import { isRecuratedAdoption, type PromotedRow } from '../companions/companion-promotion';
 import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/binary-flags-pure';
 import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
@@ -48,15 +47,13 @@ export type SystemMembershipCounts = WdsTreeCounts & {
   companionCcdm: number;
 };
 
-/** The records coherence snapped or promotion re-curated onto their anchor's distance; call before the record sort, which the set survives. */
-export function anchorMovedRecords<S>(
-  stars: readonly S[],
-  verdicts: readonly SystemVerdict[],
-  promoted: readonly Pick<PromotedRow, 'outcome'>[],
-): Set<S> {
-  const moved = new Set<S>();
-  for (const v of verdicts) if (v.kind === 'coherent') for (const m of v.members) if (m.kind === 'snapped') moved.add(stars[m.idx]);
-  for (const { outcome: o } of promoted) if (isRecuratedAdoption(o)) moved.add(stars[o.idx]);
+/** The records coherence snapped or promotion re-curated (`recurated`) onto their anchor's distance; call before the record sort, which the set survives. */
+export function anchorMovedRecords<S>(stars: readonly S[], verdicts: readonly SystemVerdict[], recurated: Iterable<S>): Set<S> {
+  const moved = new Set<S>(recurated);
+  for (const v of verdicts) {
+    if (v.kind !== 'coherent') continue;
+    for (const m of v.members) if (m.kind === 'snapped' || m.kind === 'at-anchor-distance') moved.add(stars[m.idx]);
+  }
   return moved;
 }
 

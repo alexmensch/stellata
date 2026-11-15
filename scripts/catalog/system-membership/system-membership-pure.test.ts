@@ -7,6 +7,7 @@ import {
 import {
   serializeSystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
+import { isRecuratedAdoption } from '../companions/companion-promotion';
 import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../multiplicity/binary-flags-pure';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { wdsIdPosition } from '../../wds/wds-pure';
@@ -166,18 +167,29 @@ describe('lentDistanceRecords', () => {
 });
 
 describe('anchorMovedRecords', () => {
-  it('takes coherence-snapped members and re-curated adoptions, never an unmoved member or an earlier mint', () => {
-    const stars = ['anchor', 'snapped', 'kept', 'recurated', 'held', 'minted'];
+  it('takes coherence-snapped members, members already at the anchor distance and the re-curated records, never an unmoved member', () => {
+    const stars = ['anchor', 'snapped', 'kept', 'recurated', 'at-anchor'];
     const anchor = { idx: 0, memberWon: false, precisionVetoed: false } as never;
     const moved = anchorMovedRecords(stars, [{
       kind: 'coherent', root: '00001+0001', anchor, anchorPc: 10,
-      members: [{ kind: 'snapped', idx: 1, fromPc: 11, toPc: 10 }, { kind: 'significant-depth', idx: 2, gapPc: 3, sigmaPc: 0.1 }],
-    }], [
-      { outcome: { kind: 'adopted', idx: 3, via: 'own-id', desigConFromAnchor: false, recurated: 'dmag_imputed' } },
-      { outcome: { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: false, recurated: 'held' } },
-      { outcome: { kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false, recurated: null } },
-      { outcome: { kind: 'adopted', idx: 5, via: 'earlier-mint' } },
-    ]);
-    expect([...moved].sort()).toEqual(['held', 'recurated', 'snapped']);
+      members: [
+        { kind: 'snapped', idx: 1, fromPc: 11, toPc: 10, toAbsmag: 5, radiusFactor: 1 },
+        { kind: 'significant-depth', idx: 2, gapPc: 3, sigmaPc: 0.1 },
+        { kind: 'at-anchor-distance', idx: 4 },
+      ],
+    }], ['recurated']);
+    expect([...moved].sort()).toEqual(['at-anchor', 'recurated', 'snapped']);
+  });
+});
+
+describe('isRecuratedAdoption', () => {
+  it('holds for an adoption promotion re-curated, held included, never an unchanged member or an earlier mint', () => {
+    const verdicts = ([
+      { kind: 'adopted', idx: 3, via: 'own-id', desigConFromAnchor: false, recurated: 'dmag_imputed' },
+      { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: false, recurated: 'held' },
+      { kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false, recurated: null },
+      { kind: 'adopted', idx: 5, via: 'earlier-mint' },
+    ] as const).map((o) => isRecuratedAdoption(o));
+    expect(verdicts).toEqual([true, true, false, false]);
   });
 });

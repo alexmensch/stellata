@@ -340,7 +340,12 @@ Per WDS root with ≥2 resolved own-record members:
   and the member keeps its own distance.
 - **Brightness invariance.** A repositioned member's absmag shifts by
   `5·log₁₀(d_old/d_new)` and its Stefan-Boltzmann radius follows
-  (R ∝ √L at fixed Teff), so apparent brightness doesn't change.
+  (R ∝ √L at fixed Teff), so its de-extincted apparent magnitude doesn't
+  change (`snapPhotometry`, called with no A_V at either end). Its observed
+  magnitude moves by the A_V difference between the two positions
+  (`stellata-hooj.47.1`); re-curation's held move calls the same function
+  with both A_V values
+  ([Re-curation](../companions/README.md#re-curation-of-an-already-in-catalog-member)).
 
 Running before promotion means minted companions tangent-project off
 already-coherent anchors, and the baked pair geometry in catalog.bin
@@ -368,7 +373,14 @@ snapped member that anchors a later one) carries a row from each, and
 A member row names its anchor by origin key in `params.anchor`, which is how
 `trace` gets from a snapped record to the record it moved onto, and a snapped
 row carries the distance it replaced and the one it ships (`from_pc`, `to_pc`).
-The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
+Beside it, two uncited rows name what the move did to the record's walked
+brightness and size: `coherence.brightness.held` with the absmag it now carries
+(`params.absmag`, to the size stage's `ABSMAG_PARAM_DECIMALS`) and
+`coherence.size.rescaled` with the factor its radius scaled by
+(`params.factor`, to `RADIUS_FACTOR_PARAM_DECIMALS`) — the `toAbsmag` and `radiusFactor` the snapped verdict
+carries, which `snapPhotometry` computed and the move applies. A record promotion re-curates or dims afterwards carries
+promotion's rows for those values too
+([Promotion lineage](../companions/README.md#promotion-lineage)). The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
 astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
 Coherence founds no record, so it writes no identity rows, and every code's
 effect is `none`.
