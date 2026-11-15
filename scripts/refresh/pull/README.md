@@ -199,8 +199,10 @@ it does not know. Its FITS spells a name's parentheses as underscores
 (`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen), and
 `asuFitsName` matches that. It appends link columns of its own (`recno`,
 Hipparcos' `Sn`), which are cut. A FITS file with no table is no rows. An
-ASU mirror has no `/capabilities` and no hard row limit; a TSV naming an
-unreachable database is transient. Only a whole-table scope carries an ASU
+ASU mirror has no `/capabilities` and no hard row limit. A TSV's `#…Error`
+comment line is transient when it names an unreachable database (the
+messages measured: "not currently reachable", "Postgres connect error"),
+and refused as a query fault otherwise. Only a whole-table scope carries an ASU
 form, and a pull whose archive has an ASU mirror refuses, before any query,
 a phase without one; the form is part of its describe.
 

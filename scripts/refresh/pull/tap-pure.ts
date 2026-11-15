@@ -142,11 +142,16 @@ function readFits(reply: HttpReply, limit: number, label: string): FloatsTable |
   return { ...withinLimit({ columns: table.columns, rows: table.rows }, limit, label), floats: table.floats };
 }
 
-const ASU_UNAVAILABLE = /^#\s*(?:INFO\s+)?Error\b|not currently reachable|no connection/im;
+const ASU_ERROR = /^#\s*(?:INFO\s+)?Error\b/i;
+const ASU_UNAVAILABLE = /not currently reachable|no connection|postgres connect error/i;
 
 /** An `asu-tsv` reply: a header, a units line and a dashes line before the rows; a blank cell is null, every cell trimmed. */
 export function readAsuTsv(text: string, limit: number, label: string): TapResult {
-  if (ASU_UNAVAILABLE.test(text)) throw new TapTransient(`${label}: ${ASU_UNAVAILABLE.exec(text)?.[0]}`);
+  const error = text.split('\n').find((line) => ASU_ERROR.test(line));
+  if (error !== undefined) {
+    const report = `${label}: ${error.replace(/\s+/g, ' ').trim()}`;
+    throw ASU_UNAVAILABLE.test(error) ? new TapTransient(report) : new TapRefused(report);
+  }
   const lines = text.split('\n').filter((line) => line !== '' && !line.startsWith('#'));
   if (lines.length === 0) return { columns: [], rows: [] };
   const [header, , dashes, ...data] = lines;

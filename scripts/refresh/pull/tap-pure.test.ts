@@ -253,9 +253,16 @@ describe('tapClient', () => {
       expect((await client(ARCHIVE).query(QUERY, 5)).result).toEqual({ columns: ['hd', 'flamsteed', 'ra'], rows: [] });
     });
 
-    it('reads an unreachable database in the TSV as transient', () => {
+    it('reads an unreachable database in the TSV as transient, and any other error line as a query fault', () => {
       expect(() => readAsuTsv('#INFO\tError=The database is not currently reachable.\n', 5, 'CfA')).toThrow(TapTransient);
+      expect(() => readAsuTsv('#INFO\tError=Postgres connect error\n', 5, 'CfA')).toThrow(TapTransient);
+      expect(() => readAsuTsv('#INFO\tError=Unknown constraint column\n', 5, 'CfA')).toThrow(TapRefused);
       expect(readAsuTsv('#Column\te_plx\t(F5.2)\tError in parallax\n', 5, 'CfA')).toEqual({ columns: [], rows: [] });
+    });
+
+    it('reads a data cell naming an outage as data', () => {
+      const reply = 'name\n----\n----\nno connection\n';
+      expect(readAsuTsv(reply, 5, 'CfA')).toEqual({ columns: ['name'], rows: [['no connection']] });
     });
 
     it('refuses to send an ASU mirror a query with no ASU form', async () => {
