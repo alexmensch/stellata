@@ -53,11 +53,11 @@ holds, is [Record phases](../record/README.md#record-phases).
 Every stage that builds lineage lines builds them in a function of its own
 (`walkManifest`, `coherenceLineage`, `namingLineage`), so the lines are
 unreachable once it returns. The promotion stage releases its rows and
-rewrites the same way and keeps its lines, which the emission writes. And `preAllocationStages` in
-`../build-catalog.ts` holds the reference tables `loadReadStarsInputs` reads,
-returning only the few the emission needs, so they are released before SID
-allocation. Held longer, either runs the build out of heap
-(`../../util/heap-budget/README.md`).
+rewrites the same way and keeps its lines, which the emission writes. And
+`preAllocationStages` in `../build-catalog.ts` holds the reference tables
+`loadReadStarsInputs` reads, returning only the few the emission needs, so
+they are released before SID allocation. Held longer, either runs the build
+out of heap (`../../util/heap-budget/README.md`).
 
 ## The wiring ratchet
 
