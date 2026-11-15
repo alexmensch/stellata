@@ -146,8 +146,8 @@ export function wdsTrees(
     if (ids.size < 2) continue;
     const kept = [...ids].filter((id) => {
       const at = wdsIdPosition(id);
-      return at === null
-        || angularSeparationArcsec(direction(record), unitVectorFromRaDec(at.raDeg, at.decDeg)) <= WDS_IDENTITY_MAX_ARCMIN * 60;
+      if (at === null) throw new Error(`system membership: WDS id ${id} has no parsable coordinates`);
+      return angularSeparationArcsec(direction(record), unitVectorFromRaDec(at.raDeg, at.decDeg)) <= WDS_IDENTITY_MAX_ARCMIN * 60;
     });
     for (const id of ids) if (!kept.includes(id)) evict(id, record);
     if (kept.length === 1) counts.systemWdsIdentityGated++;

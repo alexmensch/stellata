@@ -77,6 +77,11 @@ describe('wdsTrees', () => {
     expect(inside.counts.systemWdsIdentityGated).toBe(1);
   });
 
+  it('throws on a claiming WDS id with no parsable coordinates', () => {
+    const pairs = [pair(CASTOR, 'A', 'B', 1, 9), pair('not-an-id', 'A', 'B', 2, 9)];
+    expect(() => wdsTrees(pairs, () => atWds(CASTOR))).toThrow(/not-an-id/);
+  });
+
   it('places a record standing for both ends of a pair at their shared token, or the root, and counts no conflict', () => {
     const id = '00568+3830';
     const { trees, counts } = wdsTrees([
