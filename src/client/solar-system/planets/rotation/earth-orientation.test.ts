@@ -23,7 +23,7 @@ import {
 } from '../../ephemerides/moon-ephemeris';
 import { jdUtToT, julianEpochYearToT } from '../../time/time';
 import { AU_PER_PC, LIGHT_TIME_PER_AU_S } from '../../../../astro-core/astronomy-constants';
-import { wrapDegrees } from '../../../../astro-core/angles';
+import { pyMod, wrapDegrees } from '../../../../astro-core/angles';
 import { eclipticToIcrs } from '../../../util/ecliptic-frame';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -111,7 +111,7 @@ describe('Earth orientation model', () => {
       + EARTH_ROTATION.wDegPerDay * ((t - julianEpochYearToT(2000)) / 86400)) % 360;
     expect(Math.abs(wrapDegrees(spinDegAt(EARTH_ROTATION, t) - linearW))).toBeGreaterThan(1);
     expect(spinDegAt(EARTH_ROTATION, t)).toBeCloseTo(
-      ((earthSpinDeg(t) % 360) + 360) % 360, 9,
+      pyMod(earthSpinDeg(t), 360), 9,
     );
   });
 
