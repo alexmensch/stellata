@@ -276,11 +276,9 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
 
-export async function main() {
-  const heap = watchHeap('build:catalog');
-  sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = stepInputHashes();
-
+// A function of its own so the reference tables are unreachable once it returns:
+// held through SID allocation, encoding and emission, the build runs out of heap.
+async function finalRecords(inputHashesAtStart: FileHashes) {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
@@ -427,6 +425,33 @@ export async function main() {
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
+  return {
+    stars,
+    sortedKey: order.map((i) => sortKey[i]),
+    apsisMap,
+    gspcMap: inputs.gspcMap,
+    conLookup: conAssignment.lookup,
+    inputsCounts: inputs.counts,
+    parkedLedger, simbadSourcedDistances,
+    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, placementRemovals,
+    placementDerived: stats.placementDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
+  };
+}
+
+export async function main() {
+  const heap = watchHeap('build:catalog');
+  sweepStaged(CATALOG_OUTPUTS);
+  const inputHashesAtStart = stepInputHashes();
+
+  const {
+    stars, sortedKey, apsisMap, gspcMap, conLookup, inputsCounts, parkedLedger, simbadSourcedDistances,
+    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, placementRemovals, placementDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
+  } = await finalRecords(inputHashesAtStart);
+
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);
   const allocation = allocate({
@@ -480,11 +505,11 @@ export async function main() {
 
   emitArtifacts(catalogEmission({
     stars,
-    sortedKey: order.map((i) => sortKey[i]),
+    sortedKey,
     encoded,
     apsisMap,
-    gspcMap: inputs.gspcMap,
-    conLookup: conAssignment.lookup,
+    gspcMap,
+    conLookup,
     inputHashes: inputHashesAtStart,
     figureLines,
     componentDesignations,
@@ -506,9 +531,9 @@ export async function main() {
       naming: namingEmission,
     },
     stageCounts: [
-      { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
+      { stage: 'inputs', block: { kind: 'counted', counts: inputsCounts } },
       { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
-      { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
+      { stage: derivedStage('placement'), block: { kind: 'counted', counts: placementDerived } },
       { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
       { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
       { stage: 'allocation', block: { kind: 'counted', counts: allocationEmission.counts } },
