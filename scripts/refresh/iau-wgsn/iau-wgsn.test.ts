@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT } from '../../util/paths';
-import { describeWgsn, wgsnChecks } from './iau-wgsn-pure';
+import { TapRefused, TapTransient } from '../pull/tap-pure';
+import { describeWgsn, fetchedText, wgsnChecks } from './iau-wgsn-pure';
 
 const committed = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
 const kinds = (key: 'nec' | 'faints', text: string) => wgsnChecks(key, text).map((c) => c.kind);
@@ -26,6 +27,14 @@ describe('the WGSN gates', () => {
     const [header, ...lines] = committed(DATA_FILES.wgsnFaints).split('\n');
     expect(kinds('faints', `${[header, ...lines.slice(0, 50)].join('\n')}\n`)).toEqual(['fail', 'fail', 'pass']);
     expect(kinds('faints', `${[header, ...lines.filter((l) => !l.startsWith('10001,'))].join('\n')}`)).toEqual(['pass', 'pass', 'fail']);
+  });
+
+  it('read a 200 as UTF-8 with its byte-order mark dropped, retry a 5xx, refuse any other status', () => {
+    const bytes = (text: string): ArrayBuffer => new TextEncoder().encode(text).buffer as ArrayBuffer;
+    expect(fetchedText('u', 200, bytes('﻿NEC,Name\nτ\n'))).toBe('NEC,Name\nτ\n');
+    expect(() => fetchedText('u', 503, bytes(''))).toThrow(TapTransient);
+    expect(() => fetchedText('u', 404, bytes(''))).toThrow(TapRefused);
+    expect(() => fetchedText('u', 301, bytes(''))).toThrow(TapRefused);
   });
 
   it('describe the two URLs as the query, the host as the service', () => {

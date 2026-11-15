@@ -4,14 +4,14 @@ import { setTimeout as sleep } from 'node:timers/promises';
 
 import { reportService } from '../../util/answered-by';
 import { emitArtifacts, type PullDescription } from '../../util/emit-artifacts';
-import { TapRefused, TapTransient, withRetry } from '../pull/tap-pure';
+import { TapTransient, withRetry } from '../pull/tap-pure';
 import { IAU_WGSN_OUTPUTS } from './iau-wgsn-outputs';
-import { WGSN_FILES, describeWgsn, wgsnChecks, wgsnService, type WgsnKey } from './iau-wgsn-pure';
+import { WGSN_FILES, describeWgsn, fetchedText, wgsnChecks, wgsnService, type WgsnKey } from './iau-wgsn-pure';
 
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000];
 const TIMEOUT_MS = 60_000;
 
-/** The body as UTF-8, a byte-order mark dropped; a 5xx or network failure retries, any other non-200 is refused. */
+/** A network failure retries, as a 5xx does. */
 async function fetchText(url: string): Promise<string> {
   return withRetry(async () => {
     let response: Response;
@@ -20,9 +20,7 @@ async function fetchText(url: string): Promise<string> {
     } catch (err) {
       throw new TapTransient(`${url}: ${err instanceof Error ? err.message : String(err)}`);
     }
-    if (response.status >= 500) throw new TapTransient(`${url}: HTTP ${response.status}`);
-    if (response.status !== 200) throw new TapRefused(`${url}: HTTP ${response.status}`);
-    return new TextDecoder('utf-8').decode(await response.arrayBuffer());
+    return fetchedText(url, response.status, await response.arrayBuffer());
   }, RETRY_DELAYS_MS, (ms) => sleep(ms));
 }
 

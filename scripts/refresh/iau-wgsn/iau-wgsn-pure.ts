@@ -5,6 +5,7 @@ import { parse } from 'csv-parse/sync';
 import { FAINTS_HEADER, NEC_HEADER, NULL_SPELLINGS } from '../../catalog/naming/wgsn-parse-pure';
 import type { Check, PullDescription } from '../../util/emit-artifacts';
 import { bandCheck, spotRowCheck, type RowBand, type SpotRow } from '../pull/gates-pure';
+import { TapRefused, TapTransient } from '../pull/tap-pure';
 
 export interface WgsnFile {
   readonly url: string;
@@ -49,6 +50,13 @@ export function describeWgsn(): PullDescription {
 }
 
 export const wgsnService = (key: WgsnKey): string => host(WGSN_FILES[key].url);
+
+/** A 200's body as UTF-8, a byte-order mark dropped; a 5xx is transient, any other status refused. */
+export function fetchedText(url: string, status: number, body: ArrayBuffer): string {
+  if (status >= 500) throw new TapTransient(`${url}: HTTP ${status}`);
+  if (status !== 200) throw new TapRefused(`${url}: HTTP ${status}`);
+  return new TextDecoder('utf-8').decode(body);
+}
 
 /** Every gate on one file's text, each cell read trimmed and an empty one as null. */
 export function wgsnChecks(key: WgsnKey, text: string): Check[] {

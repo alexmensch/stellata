@@ -8,13 +8,15 @@ hold and how the build reads them: [data/iau-wgsn/README.md](/data/iau-wgsn/READ
 ## Files
 
 - `iau-wgsn-pure.ts` — each file's URL, header, row band, named-row floor and
-  spot rows; the gates over a file's text; the pull's description.
-- `refresh-iau-wgsn.ts` — the entry: fetch each file (the TAP backend's
-  `withRetry`: a 5xx or network failure retries, any other non-200 refuses),
-  report its host, and emit both files at once once every gate passes.
+  spot rows; the gates over a file's text; the pull's description; what a
+  reply's status means (`fetchedText`: a 5xx retries, any other non-200
+  refuses).
+- `refresh-iau-wgsn.ts` — the entry: fetch each file through the TAP
+  backend's `withRetry` (a network failure retries too), report its host,
+  and emit both files at once once every gate passes.
   `iau-wgsn-outputs.ts`, its `declareOutputs`.
 - `iau-wgsn.test.ts` — the gates over the committed files and over each way
-  a release can fail them.
+  a release can fail them; each reply status's outcome.
 
 ## The record
 
