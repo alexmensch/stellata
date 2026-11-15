@@ -158,9 +158,9 @@ export function wdsTrees(
   }
 
   const trees: WdsTree[] = [];
-  for (const wdsId of [...bySystem.keys()].sort(compareCodeUnits)) {
+  for (const [wdsId, system] of [...bySystem].sort((x, y) => compareCodeUnits(x[0], y[0]))) {
     const gone = evicted.get(wdsId);
-    const tokens = new Map([...bySystem.get(wdsId) ?? []].map(([t, rs]) => [t, new Set([...rs].filter((r) => !gone?.has(r)))]));
+    const tokens = new Map([...system].map(([t, rs]) => [t, new Set([...rs].filter((r) => !gone?.has(r)))]));
     const root = systemTree(tokens, counts);
     if (root?.kind === 'group') trees.push({ wdsId, root });
   }
