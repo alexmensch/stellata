@@ -209,6 +209,8 @@ that can hold `n + 1`. When none can, the query is refused as one to batch.
 A `/capabilities` reply other than 200 is about the mirror, never the query,
 so it is transient on any status and the next mirror is tried.
 Measured 2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000.
+CfA's ASU states none and returned a 155,282-row Tycho-2 band whole
+(2026-11-15).
 
 **The archive's own error message is what classifies a failure.** A failed
 query's reply is a VOTable whatever FORMAT asked for, its `QUERY_STATUS` INFO
@@ -231,8 +233,12 @@ from a seeded checkpoint.
 
 **The `CDS` and `SIMBAD-CDS` mirrors are unverified, and the first PR a mirror
 answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
-from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
-a BOM, the empty cell), `/capabilities` limit and error body are unmeasured.
+from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so
+SIMBAD-CDS's CSV dialect (quoting, a BOM, the empty cell), each CDS mirror's
+`/capabilities` limit and error body, and whether CDS's TAP answers
+`FORMAT=fits` are unmeasured. The `CfA` mirror (VizieR's ASU at Harvard)
+passed its checks on 2026-11-15: a complete answer, nulls, the overflow at
+`limit + 1`, an unknown column refused.
 Each mirror's `verified` flag is the gate: `unverified-mirrors.test.ts` fails
 on any committed `data/stamps/` record whose `answeredBy` names an unverified
 mirror, a Python pull's included, so the PR that first reaches one cannot

@@ -57,7 +57,7 @@ export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
 export const VIZIER: TapArchive = {
   mirrors: [
     { name: 'CDS', protocol: 'tap', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' },
-    { name: 'CfA', protocol: 'asu', verified: false, url: 'https://vizier.cfa.harvard.edu/viz-bin/asu-binfits' },
+    { name: 'CfA', protocol: 'asu', verified: true, url: 'https://vizier.cfa.harvard.edu/viz-bin/asu-binfits' },
   ],
   format: 'fits',
   retryDelaysMs: [1_000, 2_000, 4_000],
