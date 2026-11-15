@@ -236,7 +236,7 @@ row-count / spot-row bands against an in-memory TAP backend. Run it with
 
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
 atomic-rename plumbing every refresh script imports — handles retry,
-batched pulls (`run_in_batches`), schema validation, row-count and
+schema validation, row-count and
 coverage gating (`assert_row_count`, `report_coverage`), spot-check
 pinning (`validate_spot_rows`), and
 partial-write protection so a mid-run failure never leaves a
@@ -321,19 +321,8 @@ DR3's value whatever error it states
 
 ### Resuming a long pull
 
-A TypeScript pull resumes through its query-keyed cache
-([The checkpoint](pull/README.md#the-checkpoint)); this section is the Python
-pulls'.
-
-`run_in_batches(..., checkpoint=rl.BatchCheckpoint(out.with_suffix(
-out.suffix + '.ckpt')))` makes a batched pull resumable: each batch is
-cached under `<output>.tsv.ckpt/` as it lands, and a re-run replays the
-cached batches and queries only what's missing. The directory is removed
-only once every batch has landed — **a surviving `.tsv.ckpt*/` directory
-means the previous run did not finish**. It's gitignored, and discarded automatically when the request set or
-batch size changes (the cache is fingerprinted on both, since batch N of
-a different request set covers different source_ids). Deleting it by
-hand is always safe — it only forces a full re-pull.
+A pull resumes through its query-keyed cache
+([The checkpoint](pull/README.md#the-checkpoint)).
 
 See [Catalogue refresh policy](/RELEASING.md#catalogue-refresh-policy) for the cadence
 (event-driven, not scheduled) and the version-bump policy for a

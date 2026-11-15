@@ -5,7 +5,6 @@ scripts. See scripts/refresh/README.md."""
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import os
 import random
@@ -254,184 +253,6 @@ def retry(
     raise RuntimeError("retry: unreachable — loop must return or raise")
 
 
-# ─── Batch checkpoint ─────────────────────────────────────────────────
-
-_CHECKPOINT_FINGERPRINT = "fingerprint"
-
-
-def _votable_encode(table: Any, path: Path) -> None:
-    import warnings
-    from astropy.io.votable import from_table, writeto
-    from astropy.io.votable.exceptions import VOWarning
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", VOWarning)
-        writeto(from_table(table), str(path))
-
-
-def _votable_decode(path: Path) -> Any:
-    from astropy.io.votable import parse
-    return parse(str(path)).get_first_table().to_table(use_names_over_ids=True)
-
-
-def _batch_fingerprint(items: Sequence[Any], batch_size: int) -> str:
-    h = hashlib.sha256()
-    h.update(f"{batch_size}\n{len(items)}\n".encode())
-    for item in items:
-        h.update(f"{item}\n".encode())
-    return h.hexdigest()
-
-
-class BatchCheckpoint:
-    """Per-batch resume cache for ``run_in_batches``.
-
-    A completed batch's result table is serialised under ``directory`` as
-    ``batch-NNNN`` + ``suffix``; a re-run replays the cached batches and
-    queries only the ones still missing, so a network drop on batch 65 of
-    70 costs one batch rather than the whole pull. ``run_in_batches``
-    deletes the directory once every batch has landed — a surviving
-    directory means the previous run did not finish.
-
-    The cache key is the fingerprint of ``(items, batch_size)``, recorded
-    on ``begin``. A mismatch discards every cached batch: batch N covers a
-    different slice of a changed request set, so replaying it would attribute
-    one source_id's row to another.
-
-    The default codec round-trips astropy tables through VOTable. Numeric
-    dtypes and their masks survive exactly. A masked STRING cell decodes as
-    an empty string instead — VOTable char fields carry no null marker —
-    which costs nothing here: ``write_tsv`` emits an empty cell either way,
-    and the Gaia archive already reports a null string column as "" rather
-    than masking it. ``encode`` / ``decode`` are injectable for callers (and
-    tests) whose result tables are not astropy tables.
-    """
-
-    def __init__(
-        self,
-        directory: Path,
-        *,
-        encode: Callable[[Any, Path], None] | None = None,
-        decode: Callable[[Path], Any] | None = None,
-        suffix: str = ".vot",
-        log: Callable[[str], None] = print,
-    ) -> None:
-        self.directory = directory
-        self.encode = encode or _votable_encode
-        self.decode = decode or _votable_decode
-        self.suffix = suffix
-        self.log = log
-
-    def _path(self, batch_idx: int) -> Path:
-        return self.directory / f"batch-{batch_idx:04d}{self.suffix}"
-
-    def begin(self, items: Sequence[Any], batch_size: int) -> None:
-        """Establish (or re-validate) the fingerprint for this request set,
-        discarding a cache left by a run over different items."""
-        want = _batch_fingerprint(items, batch_size)
-        marker = self.directory / _CHECKPOINT_FINGERPRINT
-        if marker.exists() and marker.read_text() != want:
-            self.log(
-                f"  checkpoint: request set changed since the cached run — "
-                f"discarding {self.directory.name}"
-            )
-            self.clear()
-        self.directory.mkdir(parents=True, exist_ok=True)
-        marker.write_text(want)
-
-    def load(self, batch_idx: int) -> Any | None:
-        path = self._path(batch_idx)
-        return self.decode(path) if path.exists() else None
-
-    def save(self, batch_idx: int, table: Any) -> None:
-        path = self._path(batch_idx)
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        try:
-            self.encode(table, tmp)
-        except BaseException:
-            tmp.unlink(missing_ok=True)
-            raise
-        os.replace(tmp, path)
-
-    def clear(self) -> None:
-        if not self.directory.exists():
-            return
-        for child in sorted(self.directory.iterdir()):
-            child.unlink()
-        self.directory.rmdir()
-
-
-# ─── Batched query ────────────────────────────────────────────────────
-
-def run_in_batches(
-    items: Sequence[Any],
-    batch_size: int,
-    query_fn: Callable[[Sequence[Any]], Any],
-    collect: Callable[[Any], None],
-    *,
-    schema: Mapping[str, type | tuple[type, ...]] | None = None,
-    schema_label: str = "batch",
-    checkpoint: BatchCheckpoint | None = None,
-    log: Callable[[str], None] = print,
-) -> None:
-    """Split `items` into `batch_size` chunks, query each, feed the result
-    table to `collect`, logging per-batch timing + cumulative progress.
-
-    `collect` owns accumulation — a dict keyed by source_id, a transformed
-    list, whatever the caller needs — so the shape of the result never
-    leaks into this helper. The first batch is schema-validated against
-    `schema` (labelled `schema_label`) when given; the batched pulls all
-    validate exactly once, on batch 1, since every batch shares one ADQL
-    projection. `collect=rows.extend` recovers a plain concatenating pull.
-
-    Pass `checkpoint` to make the pull resumable — see `BatchCheckpoint`.
-    Cached batches feed `collect` in their original position, so ordering
-    is identical whether a batch was queried or replayed, and batch 1's
-    schema check runs against the cached table too: a cache written by an
-    incompatible projection fails there rather than downstream.
-    """
-    if batch_size <= 0:
-        raise ValueError(f"batch_size must be positive, got {batch_size}")
-    total = len(items)
-    n_batches = (total + batch_size - 1) // batch_size
-    if checkpoint is not None and total:
-        checkpoint.begin(items, batch_size)
-    start = time.time()
-    seen = 0
-    for batch_idx, offset in enumerate(range(0, total, batch_size), start=1):
-        batch = items[offset : offset + batch_size]
-        t0 = time.time()
-        table = checkpoint.load(batch_idx) if checkpoint is not None else None
-        resumed = table is not None
-        if not resumed:
-            table = query_fn(batch)
-            if checkpoint is not None:
-                checkpoint.save(batch_idx, table)
-        if batch_idx == 1 and schema is not None:
-            validate_schema(table, schema, label=schema_label)
-        collect(table)
-        seen += len(table)
-        origin = "from checkpoint" if resumed else f"in {time.time() - t0:5.1f}s"
-        cum = time.time() - start
-        log(
-            f"  batch {batch_idx}/{n_batches}: {len(table):4d} rows "
-            f"{origin} (cum {cum/60:.1f}m, total rows {seen})"
-        )
-    if checkpoint is not None:
-        checkpoint.clear()
-
-
-# ─── ADQL projection ──────────────────────────────────────────────────
-
-def select_columns(columns: Iterable[str], table: str) -> str:
-    """``SELECT "a", "b" FROM "tbl"``, ready for a trailing WHERE/ORDER BY.
-
-    Every identifier is double-quoted: VizieR column names are
-    case-sensitive and several carry parentheses (``RA(ICRS)``), both of
-    which an unquoted ADQL projection mangles.
-    """
-    cols = ", ".join(f'"{c}"' for c in columns)
-    return f'SELECT {cols} FROM "{table}"'
-
-
 # ─── Row-count guard ──────────────────────────────────────────────────
 
 _ROW_COUNT_DEFAULT_HINT = (
@@ -563,8 +384,8 @@ class TapClient:
     `backends` is required — there is no default list. Which service can
     serve a query is a property of the table, not of TAP, so picking for
     the caller only ever picks wrong: Gaia-keyed pulls want
-    `gaia_sync_client()`, VizieR-only tables want `cds_client()`, and
-    SIMBAD's divergent dialect wants `simbad_client()`.
+    `gaia_sync_client()`, and SIMBAD's divergent dialect wants
+    `simbad_client()`.
     """
 
     def __init__(
@@ -601,7 +422,6 @@ class TapClient:
         raise last_transient
 
 
-CDS_TAP_URL = "https://tapvizier.u-strasbg.fr/TAPVizieR/tap"
 SIMBAD_CDS_TAP_URL = "https://simbad.cds.unistra.fr/simbad/sim-tap"
 SIMBAD_HARVARD_TAP_URL = "https://simbad.cfa.harvard.edu/simbad/sim-tap"
 
@@ -617,31 +437,10 @@ GAIA_DR3_RELEASE = "Gaia DR3"
 GAIA_SYNC_RETRY_KWARGS: Mapping[str, Any] = {"max_attempts": 5, "base_delay_s": 2.0}
 
 
-def _cds_run(query: str) -> Any:
-    import pyvo
-    service = pyvo.dal.TAPService(CDS_TAP_URL)
-    return service.search(query).to_table()
-
-
 def _simbad_run(base_url: str, query: str) -> Any:
     import pyvo
     service = pyvo.dal.TAPService(base_url)
     return service.search(query).to_table()
-
-
-def cds_backend() -> TapBackend:
-    """CDS / VizieR TAP backend. Required for VizieR-only tables (e.g.
-    Hipparcos-2 I/311/hip2) that ESA does not host. Check ESA's
-    `external.*` schema before assuming a catalogue is one of them — the
-    Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) distances are
-    there as `external.gaiaedr3_distance`, and only that copy can be bounded
-    by magnitude."""
-    return TapBackend(name="CDS", run=_cds_run)
-
-
-def cds_client() -> TapClient:
-    """TapClient over CDS VizieR alone: no mirror serves VizieR's table ids."""
-    return TapClient(backends=[cds_backend()])
 
 
 def simbad_backend(name: str, *, base_url: str) -> TapBackend:
@@ -791,10 +590,7 @@ def gaia_sync_client(
     retry_kwargs: Mapping[str, Any] | None = None,
 ) -> TapClient:
     """TapClient over the Gaia sync endpoints: ESA primary → ARI Heidelberg
-    fallback, both at `maxrec`. Every Gaia-keyed pull shares this pair. The
-    default ESA→CDS fallback list is wrong for `gaiadr3.*`: CDS VizieR does
-    not host those tables and would fail a fallback attempt with a
-    misleading "table not found"."""
+    fallback, both at `maxrec`. Every Gaia-keyed pull shares this pair."""
     return TapClient(
         backends=[
             gaia_sync_backend(

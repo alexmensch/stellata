@@ -125,7 +125,7 @@ resulting parallax keeps value and error bar from the same pair of columns.
 - **Citation**: [Gliese 1991](/data/papers/index.md#gliese1991), *Preliminary
   Version of the Third Catalogue of Nearby Stars*, CDS `V/70A`.
 - **VizieR**: `V/70A/catalog`, over the CDS TAP endpoint
-  `refresh_lib.CDS_TAP_URL` names.
+  `scripts/refresh/pull/tap-pure.ts`'s `VIZIER` names.
 - **Retrieved**: 2026-08-27; re-sliced 2026-09-06 with the astrometry and
   cross-name columns, same 3,803 rows.
 - **Licence**: CDS/VizieR standard academic use; cite

@@ -18,9 +18,9 @@ Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-e
 ARI Heidelberg fallback) in `scripts/refresh/pull/tap-pure.ts`, which refuses
 overflow by row count and a query fault by the archive's message
 ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
-`rl.cds_client()` for VizieR-only tables (CDS alone, no fallback),
-`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback): both retry and
-surface the archive's `QUERY_STATUS` message. An ad-hoc Python probe gets them by adding `scripts/refresh` to `sys.path` and
+VizieR goes through the same backend over `VIZIER`.
+`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback) retries and
+surfaces the archive's `QUERY_STATUS` message. An ad-hoc Python probe gets them by adding `scripts/refresh` to `sys.path` and
 importing `refresh_lib` — cheaper than re-deriving any of it, and a probe that
 works becomes a pull without a rewrite.
 
@@ -91,8 +91,8 @@ not — which is a policy constraint here, not just a schema one
 
 Double-quote every identifier: table ids contain `/`, and column names are
 case-sensitive and may carry parentheses. `SELECT TOP 2 HIP FROM
-I/239/hip_main` is a parse error on the slash. Prefer `rl.select_columns()`,
-which quotes for you; a TypeScript pull quotes through `VIZIER.quote`.
+I/239/hip_main` is a parse error on the slash. A pull quotes
+through `VIZIER.quote`.
 
 ## MAXREC, and the truncation that answers 200
 
@@ -106,12 +106,11 @@ So every query that cannot read the flag checks its own row count: ask for
 `limit + 1` rows and refuse more than `limit`. The TS backend does this on
 every query ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
 In `refresh_lib`, only `gaia_sync_client` reads the flag, raising
-`SyncOverflowError`, which is deliberately not transient; `cds_client` and
-`simbad_client` run through pyvo, which demotes it to a `DALOverflowWarning`
+`SyncOverflowError`, which is deliberately not transient; `simbad_client` runs
+through pyvo, which demotes it to a `DALOverflowWarning`
 and returns the truncated table. A raw POST, or pyvo's `search(maxrec=)`, asks
 with `MAXREC = limit + 1` — pyvo gives no warning for a result exactly at its
-`maxrec`. `cds_client` and `simbad_client` take no MAXREC and run at the server
-default, so ask with `TOP limit + 1` in the ADQL.
+`maxrec`. `simbad_client` takes no MAXREC and runs at the server default, so ask with `TOP limit + 1` in the ADQL.
 
 **A mirror also truncates at its own hard output limit**, whatever MAXREC asks:
 read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
