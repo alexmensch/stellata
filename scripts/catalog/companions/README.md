@@ -43,7 +43,9 @@ scripts/catalog/companions/
                                   Stage 6 writes them with.
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
     (+ test)                      codes and count block, the serialiser over
-                                  RowOutcome, promotionSummary, and
+                                  RowOutcome, rewriteRows (each sized
+                                  record's size row and a held record's
+                                  brightness rows), promotionSummary, and
                                   the identity rows of the records it mints
                                   and the rows it removes or merges
                                   (#promotion-lineage).
@@ -99,9 +101,9 @@ a pair's primary is `pair-anchor` when it anchors its pair and
 Each outcome is a lineage row, and each flag it carries a facet row of its
 own (the list is [Promotion lineage](#promotion-lineage)'s), so every per-row
 count is a fold of its lineage codes. The post-passes below act on records,
-not rows; blend split and the anchor re-split write a facet on each minted
-record they change, and `PromotionStats`, promotion's derived count block
-with `physicalOverlaps`, counts what no row records.
+not rows; each writes rows keyed on the records it changes
+([Promotion lineage](#promotion-lineage)), and `PromotionStats`, promotion's
+derived count block with `physicalOverlaps`, counts what no row records.
 
 Per-row gates and resolution:
 
@@ -176,9 +178,9 @@ Per-row gates and resolution:
   11.360 and B−V −0.224 against the DA1.9
   [Ballesteros 2012](/data/papers/index.md#ballesteros2012) −0.443, and fed the
   systemic blend below a proper motion that dragged **Sirius A** from
-  1339.4 mas/yr to 1282.7. Counted `companionExistingMemberRecurated`, per
-  brightness source (`held` for the fallback), once per member however many
-  cursors reach it.
+  1339.4 mas/yr to 1282.7. Counted `promotion.existing.recurated.<source>`
+  (`held` for the fallback), one row per member however many cursors reach
+  it ([Promotion lineage](#promotion-lineage)).
 - **Anchor-is-the-component refusal.** A pair whose two ends resolve to ONE
   record has no second star to mint. `01398-5612`'s A row carries the B
   record's HD, HIP and Gaia cells, so the cursor anchors on B and the B row's
@@ -356,8 +358,10 @@ Per-row gates and resolution:
   - **Observed magnitude** comes from the anchor's own `absmag` at its own
     `|xyz|`, never a multiples.tsv `dist_pc` — that can predate a distance
     override the record took (HD 64315: 12.7 kpc vs 6.2) or a coherence
-    reposition (σ Ori 328.9 → 399.8 pc), both safe here because coherence moves
-    records at fixed apparent brightness.
+    reposition (σ Ori 328.9 → 399.8 pc). Coherence moves a record at fixed
+    de-extincted apparent magnitude, so a snapped anchor's observed magnitude
+    here is off by its A_V difference between the two positions
+    (`stellata-hooj.47.1`).
   - **"Anchor alone"** is the `mag_pri` of the anchor's DEEPEST row, and is also
     the Δ reference for every `dmag_imputed` member. `componentDepth` ranks the
     letter, NOT its length: a compound is an unresolved aggregate and scores 0,
@@ -422,7 +426,7 @@ Per-row gates and resolution:
   Apply, once per anchor with exact conservation: `own` / `wds_mag` members
   subtract their actual flux, guarded against a member as bright as the blend
   itself (`companionBlendDimSkipped`); `dmag_imputed` members re-split the residual by
-  Δmag. Counted `companionBlendDimmedAnchors` per anchor; members the fit leaves outside
+  Δmag. Counted `promotion.existing.anchor-dimmed`, one row per anchor; members the fit leaves outside
   are `companionBlendDimOutside`, with no usable WDS magnitudes
   `companionBlendDimUnfit`, past the tier's blending scale
   `companionBlendDimBeyondSeparation`, resolved out by their own Gaia source
@@ -612,7 +616,7 @@ if any, that changed that absmag after the mint — at most one, since blend
 split takes only own-photometry mints and the re-split only Δmag ones
 (`brightness.blend-split`, `params.n` the records sharing the source;
 `brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
-already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
+already in the catalogue those passes change writes the rows below instead), the B−V's (`colour.own`,
 the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
 `companionCi`), and one dust row naming which of the two the A_V at the
 minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
@@ -620,7 +624,23 @@ minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
 B−V are intrinsic), its `params.av` in brightness-colour's format
 (`dustParams`). Their evidence is the outcome
 row's: the photometry is the row's own, and the anchor a Δmag reads is cited
-there. A key's rows are a set, ordered as every stage file is
+there.
+
+Every record promotion sizes or re-sizes also gets rows keyed on its own
+origin key — a mint's is its row, a re-curated or dimmed record's its
+manifest key — from the `RecordRewrite` `promoteCompanions` returns per
+record (`rewriteRows`), uncited. One `promotion.size.*` row names the LAST
+pass that set its radius (`mint`, `recurated`, `blend-split`,
+`anchor-dimmed`, `anchor-re-split`), its params the radius's route and inputs
+in the size stage's form (`radiusRouteParams`,
+[Size lineage](../spectral/README.md#size-lineage)), so its `absmag` is the
+one the record ships. A key's rows are a set, so the size row is what says
+which pass came last. A record the catalogue already held also gets one row
+per change to its brightness: `existing.recurated.<source>` (the
+re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
+`av_from`, `av_to` instead), `existing.anchor-dimmed` (citing by origin key the
+members whose light it lost, so trace reaches it from each) and `existing.anchor-re-split` (`params.record`,
+the dimmed anchor). A key's rows are a set, ordered as every stage file is
 ([SourceRowRef](../lineage/README.md#sourcerowref)). A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
@@ -643,10 +663,16 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-14: 106,734 rows — one outcome row per `multiples.tsv` row
-plus 59,713 facet rows, two of them (colour, dust) per minted record — and
-31,908 identity rows (the minted companions and the 17,232 rows promotion
-retires, parks or merges), 1.30 MB gzipped in 0.68 s (header, diff, write
-and invariants; 62 ms of it the baseline, 534 ms rendering);
-`PROMOTION_LINEAGE_BUDGET` pins 1.40 MB and 10 s. A CI run with a diff took
+Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
+59,713 facet rows (two of them, colour and dust, per minted record), 16,611
+size rows (one per record promotion sized, by its last pass:
+<!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
+<!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
+<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> anchor-dimmed,
+<!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
+<!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 31,908
+identity rows (the minted companions and the 17,232 rows promotion retires,
+parks or merges), 1.57 MB gzipped in 0.43 s (header, diff, write and
+invariants; 67 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+1.67 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
