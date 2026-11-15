@@ -612,7 +612,7 @@ if any, that changed that absmag after the mint — at most one, since blend
 split takes only own-photometry mints and the re-split only Δmag ones
 (`brightness.blend-split`, `params.n` the records sharing the source;
 `brightness.anchor-re-split`, `params.record` the dimmed anchor — a record
-already in the catalogue those passes change writes neither), the B−V's (`colour.own`,
+already in the catalogue those passes change writes the rows below instead), the B−V's (`colour.own`,
 the row's observed colour; `.spectral-derived`; `.none`, the solar fallback —
 `companionCi`), and one dust row naming which of the two the A_V at the
 minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
@@ -620,7 +620,23 @@ minted position corrected (`dust.edenhofer2024.absmag-and-ci`,
 B−V are intrinsic), its `params.av` in brightness-colour's format
 (`dustParams`). Their evidence is the outcome
 row's: the photometry is the row's own, and the anchor a Δmag reads is cited
-there. A key's rows are a set, ordered as every stage file is
+there.
+
+Every record promotion sizes or re-sizes also gets rows keyed on its own
+origin key — a mint's is its row, a re-curated or dimmed record's its
+manifest key — from the `RecordRewrite` `promoteCompanions` returns per
+record (`rewriteRows`), uncited. One `promotion.size.*` row names the LAST
+pass that set its radius (`mint`, `recurated`, `blend-split`,
+`anchor-dimmed`, `anchor-re-split`), its params the radius's route and inputs
+in the size stage's form (`radiusRouteParams`,
+[Size lineage](../spectral/README.md#size-lineage)), so its `absmag` is the
+one the record ships. A key's rows are a set, so the size row is what says
+which pass came last. A record the catalogue already held also gets one row
+per change to its brightness: `existing.recurated.<source>` (the
+re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
+`av_from`, `av_to` instead), `existing.anchor-dimmed` (`params.members`, the
+members whose light it lost) and `existing.anchor-re-split` (`params.record`,
+the dimmed anchor). A key's rows are a set, ordered as every stage file is
 ([SourceRowRef](../lineage/README.md#sourcerowref)). A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves

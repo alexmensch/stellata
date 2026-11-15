@@ -25,6 +25,7 @@ import {
   spectralClassCi,
   spectralClassColorIsDerivable,
   spectralFromAbsmag,
+  type RadiusResolution,
 } from '../../../src/catalog-format/spectral/physical-radius';
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
@@ -219,6 +220,25 @@ export interface MintedBrightness {
 export type MintedAdjustment =
   | { pass: 'blend-split'; n: number }
   | { pass: 'anchor-re-split'; anchorIdx: number };
+
+export const SIZING_PASSES = ['mint', 'recurated', 'blend-split', 'anchor-dimmed', 'anchor-re-split'] as const;
+export type SizingPass = (typeof SIZING_PASSES)[number];
+
+/** A change promotion made to the brightness of a record the catalogue already held. */
+export type HeldRecordBrightness =
+  | {
+    pass: 'recurated'; source: Exclude<RecuratedBrightness, 'held'>;
+    absmag: number; av: number; ci: CompanionCiVia;
+  }
+  | { pass: 'recurated'; source: 'held'; absmag: number; fromPc: number; toPc: number; avFrom: number; avTo: number }
+  | { pass: 'anchor-dimmed'; absmag: number; members: number }
+  | { pass: 'anchor-re-split'; anchorIdx: number; absmag: number };
+
+/** See README.md#promotion-lineage. */
+export interface RecordRewrite {
+  sizing: { pass: SizingPass; radius: RadiusResolution };
+  readonly brightness: HeldRecordBrightness[];
+}
 
 /** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
 export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
@@ -1090,6 +1110,19 @@ interface PromotionState {
    *  from, so a member reached from two cursors is repositioned once and
    *  every registration of it reads the same source. */
   recuratedMembers: Map<number, RecuratedBrightness>;
+  rewrites: Map<Star, RecordRewrite>;
+}
+
+function recordRewrite(
+  state: PromotionState, star: Star, pass: SizingPass, radius: RadiusResolution, brightness?: HeldRecordBrightness,
+): void {
+  const held = state.rewrites.get(star);
+  if (held === undefined) {
+    state.rewrites.set(star, { sizing: { pass, radius }, brightness: brightness === undefined ? [] : [brightness] });
+    return;
+  }
+  held.sizing = { pass, radius };
+  if (brightness !== undefined) held.brightness.push(brightness);
 }
 
 interface AnchorDimCandidate {
@@ -1255,20 +1288,29 @@ function recurateExistingMember(
   member.distVia = inheritAnchor?.distVia ?? null;
   const spectral = recordSpectralInfo(member);
   const imputed = imputeCompanionAbsmag(row, anchorPrimaryRow, spectral);
-  let brightness: RecuratedBrightness = 'held';
+  let change: HeldRecordBrightness;
   if (imputed !== null && isCuratedRecurationSource(imputed.source)) {
-    brightness = imputed.source;
+    const source = imputed.source;
     const wdsMag = rowOwnWdsMag(row);
-    const absmag = brightness === 'wds_mag' && wdsMag !== null
+    const absmag = source === 'wds_mag' && wdsMag !== null
       ? absoluteMagnitude(wdsMag, dNew) : imputed.absmag;
-    member.absmag = deExtinctCompanionAbsmag({ absmag, source: brightness }, avNew);
-    member.ci = companionCi(row, spectral, avNew).value;
-  } else if (dOld > 0 && dNew > 0) {
-    member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
+    member.absmag = deExtinctCompanionAbsmag({ absmag, source }, avNew);
+    const ci = companionCi(row, spectral, avNew);
+    member.ci = ci.value;
+    change = { pass: 'recurated', source, absmag: member.absmag, av: avNew, ci: ci.via };
+  } else {
+    if (dOld > 0 && dNew > 0) {
+      member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
+    }
+    change = {
+      pass: 'recurated', source: 'held', absmag: member.absmag, fromPc: dOld, toPc: dNew, avFrom: avOld, avTo: avNew,
+    };
   }
-  member.physicalRadius = physicalRadius(member.absmag, spectral).rSun;
-  state.recuratedMembers.set(memberIdx, brightness);
-  return brightness;
+  const radius = physicalRadius(member.absmag, spectral);
+  member.physicalRadius = radius.rSun;
+  recordRewrite(state, member, 'recurated', radius, change);
+  state.recuratedMembers.set(memberIdx, change.source);
+  return change.source;
 }
 
 /** Every route by which a pair row resolves to a record the catalogue
@@ -1489,12 +1531,13 @@ function promoteRow(
   const desigCon = inheritAnchor === undefined || inheritAnchor === null
     ? NO_DESIGNATION_CON : inheritedDesignationCon(inheritAnchor.desigCon);
 
+  const mintRadius = physicalRadius(absmag, spectral.info);
   state.newStars.push({
     x: position.x, y: position.y, z: position.z,
     vx: anchorVel.x, vy: anchorVel.y, vz: anchorVel.z,
     absmag, ci: ci.value,
     spectral: spectral.info,
-    physicalRadius: physicalRadius(absmag, spectral.info).rSun,
+    physicalRadius: mintRadius.rSun,
     conIndex,
     desigCon,
     flags,
@@ -1541,6 +1584,7 @@ function promoteRow(
     originKey: promotionOriginKey(row),
   });
   const newIdx = state.existingStarsLength + state.newStars.length - 1;
+  recordRewrite(state, state.newStars[state.newStars.length - 1], 'mint', mintRadius);
   // Flux conservation: a member whose light is embedded in whatever
   // catalogue tier gave the anchor its V must dim the anchor or the
   // system double-counts it. Blend membership is structural for
@@ -1605,7 +1649,10 @@ export function promoteCompanions(
   multiplesRows: MultiplesTsvRow[],
   existingStars: Star[],
   inputs: PromotionInputs,
-): { newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[] } {
+): {
+  newStars: Star[]; stats: PromotionStats; groups: Map<string, PairCursor>; rows: PromotedRow[];
+  rewrites: ReadonlyMap<Star, RecordRewrite>;
+} {
   const promoted = new Map<MultiplesTsvRow, PromotedRow>();
   const record = (r: PromotedRow): void => {
     if (promoted.has(r.row)) throw new Error(`promotion decided ${r.row.systemId}/${r.row.comp} twice`);
@@ -1637,6 +1684,7 @@ export function promoteCompanions(
     anchorDimCandidates: [],
     existingDimMembers: new Set(),
     recuratedMembers: new Map(),
+    rewrites: new Map(),
   };
   const getStarAt = (idx: number): Star =>
     idx < existingStars.length
@@ -1950,7 +1998,9 @@ export function promoteCompanions(
     for (const { star, spectral, brightness } of bucket) {
       star.absmag += splitMag;
       adjustMinted(brightness, { pass: 'blend-split', n: bucket.length });
-      star.physicalRadius = physicalRadius(star.absmag, spectral).rSun;
+      const radius = physicalRadius(star.absmag, spectral);
+      star.physicalRadius = radius.rSun;
+      recordRewrite(state, star, 'blend-split', radius);
     }
   }
 
@@ -2134,13 +2184,16 @@ export function promoteCompanions(
     for (const { cand, delta } of relatives) {
       cand.member.absmag = anchor.absmag + delta;
       if (cand.minted !== null) adjustMinted(cand.minted, { pass: 'anchor-re-split', anchorIdx: cand.anchorIdx });
-      cand.member.physicalRadius = physicalRadius(
-        cand.member.absmag, cand.memberSpectral,
-      ).rSun;
+      const radius = physicalRadius(cand.member.absmag, cand.memberSpectral);
+      cand.member.physicalRadius = radius.rSun;
+      recordRewrite(state, cand.member, 'anchor-re-split', radius, cand.minted === null
+        ? { pass: 'anchor-re-split', anchorIdx: cand.anchorIdx, absmag: cand.member.absmag } : undefined);
     }
-    anchor.physicalRadius = physicalRadius(
-      anchor.absmag, recordSpectralInfo(anchor),
-    ).rSun;
+    const anchorRadius = physicalRadius(anchor.absmag, recordSpectralInfo(anchor));
+    anchor.physicalRadius = anchorRadius.rSun;
+    recordRewrite(state, anchor, 'anchor-dimmed', anchorRadius, {
+      pass: 'anchor-dimmed', absmag: anchor.absmag, members: relatives.length + appliedIndependents,
+    });
     post.companionBlendDimmedAnchors++;
   }
   const rows = multiplesRows.map((row) => {
@@ -2148,7 +2201,10 @@ export function promoteCompanions(
     if (r === undefined) throw new Error(`promotion recorded no outcome for ${row.systemId}/${row.comp}`);
     return r;
   });
-  return { newStars, stats: { ...post, companionExistingMemberRecurated: recuratedMembers(rows) }, groups, rows };
+  return {
+    newStars, stats: { ...post, companionExistingMemberRecurated: recuratedMembers(rows) }, groups, rows,
+    rewrites: state.rewrites,
+  };
 }
 
 function lookupPromoted(

@@ -1627,10 +1627,16 @@ describe('promoteCompanions', () => {
         pDays: 0.814, tJd: 2451545, e: 0, aAU: 0.017, omegaRad: 3.14, q: 0.5,
       }),
     ];
-    const { newStars, codes } = promote(rows, [castorA], inputs());
+    const { newStars, codes, rewrites } = promote(rows, [castorA], inputs());
     expect(codes['promotion.brightness.blend-split']).toBe(2);
     const c = newStars.find((s) => s.syntheticId === null);
     const cb = newStars.find((s) => s.syntheticId !== null);
+    for (const split of [c!, cb!]) {
+      const rewrite = rewrites.get(split)!;
+      expect(rewrite.sizing.pass).toBe('blend-split');
+      expect(rewrite.sizing.radius.rSun).toBe(split.physicalRadius);
+      expect(rewrite.brightness).toEqual([]);
+    }
     const split = COMBINED + 2.5 * Math.log10(2);
     expect(c!.absmag).toBeCloseTo(split, 4);
     expect(cb!.absmag).toBeCloseTo(split, 4);
@@ -3079,11 +3085,18 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const a = siriusA();
     a.distVia = 'hip2_parallax';
     const b = siriusB();
-    const { newStars, stats } = promote(
+    const { newStars, stats, rewrites } = promote(
       siriusRows(), [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(newStars).toHaveLength(0);
     expect(stats.companionExistingMemberRecurated.dmag_imputed).toBe(1);
+    const rewrite = rewrites.get(b)!;
+    expect(rewrite.sizing.pass).toBe('recurated');
+    expect(rewrite.sizing.radius.rSun).toBe(b.physicalRadius);
+    expect(rewrite.brightness).toEqual([{
+      pass: 'recurated', source: 'dmag_imputed', absmag: b.absmag, av: 0, ci: 'own',
+    }]);
+    expect(rewrites.has(a)).toBe(false);
     // Placed at the anchor's distance, so it claims the anchor's tier — the
     // optical-double suppression reads distVia as the placement's provenance.
     expect(b.distVia).toBe('hip2_parallax');
@@ -3125,11 +3138,14 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     Object.assign(b, { x: b.x * 1.1, y: b.y * 1.1, z: b.z * 1.1 });
     const dOld = Math.hypot(b.x, b.y, b.z);
     const apparentBefore = b.absmag + 5 * Math.log10(dOld / 10);
-    const { stats } = promote(
+    const { stats, rewrites } = promote(
       rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(stats.companionExistingMemberRecurated.held).toBe(1);
     const dNew = Math.hypot(b.x, b.y, b.z);
+    expect(rewrites.get(b)!.brightness).toEqual([{
+      pass: 'recurated', source: 'held', absmag: b.absmag, fromPc: dOld, toPc: dNew, avFrom: 0, avTo: 0,
+    }]);
     expect(dNew).not.toBeCloseTo(dOld, 6);
     expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
   });
@@ -3150,13 +3166,22 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       });
     }
     Object.assign(rows[0], { absmag: 1.0 });
-    const { stats } = promote(
+    const { stats, rewrites } = promote(
       rows, [a, b], inputs({ gaiaAstrometry: rejectedFit() }),
     );
     expect(stats.companionExistingMemberRecurated.dmag_imputed).toBe(1);
     expect(stats.companionBlendDimmedAnchors).toBe(1);
     expect(b.absmag - a.absmag).toBeCloseTo(0.5, 6);
     expect(a.absmag).toBeCloseTo(1.0 + split, 6);
+    const anchor = rewrites.get(a)!;
+    expect(anchor.sizing.pass).toBe('anchor-dimmed');
+    expect(anchor.sizing.radius.rSun).toBe(a.physicalRadius);
+    expect(anchor.brightness).toEqual([{ pass: 'anchor-dimmed', absmag: a.absmag, members: 1 }]);
+    const member = rewrites.get(b)!;
+    expect(member.sizing.pass).toBe('anchor-re-split');
+    expect(member.sizing.radius.rSun).toBe(b.physicalRadius);
+    expect(member.brightness.map((c) => c.pass)).toEqual(['recurated', 'anchor-re-split']);
+    expect(member.brightness[1]).toEqual({ pass: 'anchor-re-split', anchorIdx: 0, absmag: b.absmag });
   });
 
   it('leaves a member alone when Gaia stands behind its own fit', () => {
@@ -3239,9 +3264,13 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
       hip: 102398, absmag: 3.271,
       x: 68.494089, y: -78.099838, z: 23.461268,
     });
-    const { newStars, codes } = promote(rows, [anchor], inputs());
+    const { newStars, codes, rewrites } = promote(rows, [anchor], inputs());
     expect(codes['promotion.adopted.sameas-bridge']).toBe(0);
     expect(newStars).toHaveLength(1);
+    const mint = rewrites.get(newStars[0])!;
+    expect(mint.sizing.pass).toBe('mint');
+    expect(mint.sizing.radius.rSun).toBe(newStars[0].physicalRadius);
+    expect(mint.brightness).toEqual([]);
   });
 });
 

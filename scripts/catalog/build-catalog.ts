@@ -332,12 +332,12 @@ export async function main() {
   console.log(coherenceSummary(coherenceEmission.counts));
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
-  const { newStars, stats: ps, rows: promotedRows } = promoteCompanions(multiplesRows, stars, {
+  const { newStars, stats: ps, rows: promotedRows, rewrites: promotionRewrites } = promoteCompanions(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   });
   for (const ns of newStars) stars.push(ns);
-  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded);
+  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded, promotionRewrites);
   const promotionLines = promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row));
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
   console.log(`  promotion decided ${promotedRows.length} rows in ${Date.now() - tProm}ms`);
