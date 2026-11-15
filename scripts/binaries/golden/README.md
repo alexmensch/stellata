@@ -15,8 +15,12 @@ data, so any restructuring of it can prove it writes the same
 - `fixture-row-index-map.json` — the real `build/catalog-row-index-map.json`
   cut down to the gaia / hip ids those rows carry and the `synth-<wds>-`
   keys of those systems. Row indices are the real ones, so the drops and
-  re-homes are the ones the full build makes. Its `multiplesSha1` is the
-  fixture `multiples.tsv`'s own, which the test holds it to.
+  re-homes are the ones the full build makes. The test derives the pair
+  ends the encoder reads from it — the pair resolution
+  (`../../catalog/companions/record-index/pair-resolution-pure.ts`), then
+  `catalog-pair-ends.json`'s codec — so the golden pins resolution and
+  encoding together. Its `multiplesSha1` is the fixture `multiples.tsv`'s
+  own, which the test holds it to.
 - `cut-fixture.ts` (+ `cut-fixture-pure.ts`, its cut and test) — writes both
   fixtures from the real `multiples.tsv` and a built row-index map.
   `FIXTURE_SYSTEMS` is the system list; the test holds the committed

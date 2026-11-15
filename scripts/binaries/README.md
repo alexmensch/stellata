@@ -167,17 +167,23 @@ scripts/binaries/
                                   (promotion's origin keys), so it never
                                   reaches the codec.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
-                                  the catalogue row-index map →
+                                  the catalogue's pair ends →
                                   public/binaries.bin through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
-  runtime-binaries-pure.ts        The writer itself: pairs joined from the
-    (+ test)                      rows (a system with a role missing or
+  pairs-pure.ts (+ test)          The pair model: pairs joined from the
+                                  rows (a system with a role missing or
                                   doubled, or no WDS id, throws), parents by
-                                  component-letter prefix,
-                                  outer-before-inner walk, and planRecords —
-                                  both ends resolved, unaddressable pairs
-                                  dropped and counted, flags set — whose
+                                  component-letter prefix, the
+                                  outer-before-inner walk. Read by the
+                                  writer and by the catalogue's pair
+                                  resolution (../catalog/companions/record-index/).
+  pair-fixture.ts                 Test-only: one MultiplesPair from its
+                                  system_id and the cells a test names.
+  runtime-binaries-pure.ts        The writer itself: planRecords — over
+    (+ test)                      each pair's resolved ends, unaddressable
+                                  pairs dropped and counted, duplicate
+                                  relations deduped, flags set — whose
                                   records the format's encodeBinaries
                                   writes.
   runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
@@ -203,7 +209,7 @@ curated `component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
-`build/catalog-row-index-map.json` as hand-offs:
+`build/catalog-pair-ends.json` as hand-offs:
 
 1. **Binary-system pipeline** (`build-binaries.ts`). Reads WDS + ORB6 +
    AT-HYG + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS
@@ -226,7 +232,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
-   `catalog-row-index-map.json`. `pnpm run build:catalog`.
+   `catalog-row-index-map.json` + `catalog-pair-ends.json`. `pnpm run build:catalog`.
 
    The seam that consumes this pipeline's output is companion promotion
    — it adds first-class catalog records for the secondary of every
@@ -236,22 +242,17 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
 3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.ts`). Reads
-   multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
-   sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
+   multiples.tsv + `build/catalog-pair-ends.json` —
+   each pair's two ends as catalogue records, already resolved by the
+   catalogue build ([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home),
+   [The sidecar and how a component resolves](../catalog/companions/record-index/README.md#the-sidecar-and-how-a-component-resolves))
+   — and emits `public/binaries.bin`: one
    fixed-size record per physical pair carrying Kepler elements + sep/PA
    + a hierarchical parent-relation index, in the layout
-   `/src/catalog-format/binaries/` owns. It refuses to emit when the map's
-   `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue built
-   from another copy). Each end resolves through
-   `catalog-row-index-map-pure.ts` (`../catalog/companions/record-index/`),
-   the functions the catalogue's wings pass calls too:
-   gaia → hip → synth; the synth key composes from the pair's expanded
-   `comp` tokens (`Aa1,2` resolves through the same `synth-…-Aa2` key the
-   catalog minted). Both pair ends then prefer a distinct synth slot over
-   their id-first resolve: promotion mints a synth record only after
-   judging a row's ids inherited and stripping them, so when one exists
-   it is always the truer target than the blended member row the
-   inherited id lands on. `pnpm run build:binaries-runtime`; loaded by
+   `/src/catalog-format/binaries/` owns. It resolves nothing itself, so a
+   pair the file does not carry throws, and it refuses to emit when the
+   file's `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue
+   built from another copy). `pnpm run build:binaries-runtime`; loaded by
    `src/client/binaries/binaries-loader.ts`.
 
 The Tier A validation harness
@@ -271,10 +272,11 @@ invariant the runtime walk + focal-frame ride depend on (see
 shares its identifier with the system primary (Castor A & B blend to one
 Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
 pair's own id-first resolve lands on the wrong sibling. Two coupled
-corrections in `runtime-binaries-pure.ts`: `assignParentRelations`
+corrections: `assignParentRelations` (`pairs-pure.ts`)
 picks the *bound* parent (has-orbit, then tightest sep) over a
-coincidental element-less wide pair, and `overrideInnerPrimaryIndices`
-re-homes each inner pair's primary onto that parent's member slot.
+coincidental element-less wide pair, and the pair resolution re-homes
+each inner pair's primary onto that parent's member slot
+([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home)).
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
 agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
