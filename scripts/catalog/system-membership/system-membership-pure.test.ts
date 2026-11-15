@@ -11,7 +11,7 @@ import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../multiplicity/binary-flags-pure';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { wdsIdPosition } from '../../wds/wds-pure';
 import {
-  buildSystemMembership, lentDistanceRecords, type MembershipRecord, type SystemMembershipInputs,
+  anchorMovedRecords, buildSystemMembership, lentDistanceRecords, type MembershipRecord, type SystemMembershipInputs,
 } from './system-membership-pure';
 import type { WdsPairEnds } from './wds-trees-pure';
 
@@ -162,5 +162,22 @@ describe('lentDistanceRecords', () => {
     const moved = { flags: 0, distVia: 'gaia_dr3_inversion' as DistVia };
     const records = [own, { flags: FLAG_BINARY_COMPANION_ONLY, distVia: 'bailer_jones' as DistVia }, { flags: 0, distVia: 'pair_member_parallax' as DistVia }, moved];
     expect([...lentDistanceRecords(records, new Set([moved]))]).toEqual([1, 2, 3]);
+  });
+});
+
+describe('anchorMovedRecords', () => {
+  it('takes coherence-snapped members and re-curated adoptions, never an unmoved member or an earlier mint', () => {
+    const stars = ['anchor', 'snapped', 'kept', 'recurated', 'held', 'minted'];
+    const anchor = { idx: 0, memberWon: false, precisionVetoed: false } as never;
+    const moved = anchorMovedRecords(stars, [{
+      kind: 'coherent', root: '00001+0001', anchor, anchorPc: 10,
+      members: [{ kind: 'snapped', idx: 1, fromPc: 11, toPc: 10 }, { kind: 'significant-depth', idx: 2, gapPc: 3, sigmaPc: 0.1 }],
+    }], [
+      { outcome: { kind: 'adopted', idx: 3, via: 'own-id', desigConFromAnchor: false, recurated: 'dmag_imputed' } },
+      { outcome: { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: false, recurated: 'held' } },
+      { outcome: { kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false, recurated: null } },
+      { outcome: { kind: 'adopted', idx: 5, via: 'earlier-mint' } },
+    ]);
+    expect([...moved].sort()).toEqual(['held', 'recurated', 'snapped']);
   });
 });

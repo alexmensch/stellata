@@ -9,7 +9,9 @@ import {
   EVIDENCE_SOURCES, NO_RECORD_COMPANIONS, nodeRecords,
   type EvidenceSource, type GroupNode, type MembershipSystem, type NoRecordCompanion, type SystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
+import type { PromotedRow } from '../companions/companion-promotion';
 import { isOpticalDoubleMember, type OpticalDoubleStar } from '../multiplicity/binary-flags-pure';
+import type { SystemVerdict } from '../multiplicity/system-coherence';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { group, normalized, wdsTrees, type WdsPairEnds, type WdsTree, type WdsTreeCounts } from './wds-trees-pure';
 
@@ -45,6 +47,18 @@ export type SystemMembershipCounts = WdsTreeCounts & {
   companionSimbadMultiple: number;
   companionCcdm: number;
 };
+
+/** The records coherence snapped or promotion re-curated onto their anchor's distance; call before the record sort, which the set survives. */
+export function anchorMovedRecords<S>(
+  stars: readonly S[],
+  verdicts: readonly SystemVerdict[],
+  promoted: readonly Pick<PromotedRow, 'outcome'>[],
+): Set<S> {
+  const moved = new Set<S>();
+  for (const v of verdicts) if (v.kind === 'coherent') for (const m of v.members) if (m.kind === 'snapped') moved.add(stars[m.idx]);
+  for (const { outcome: o } of promoted) if (o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null) moved.add(stars[o.idx]);
+  return moved;
+}
 
 /** A record whose distance came from another record: a minted companion, a lent sibling parallax, or a member moved onto its anchor. */
 export function lentDistanceRecords<S extends { readonly flags: number; readonly distVia: MembershipRecord['distVia'] }>(
@@ -190,4 +204,12 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
       companionCcdm: kindCount('ccdm-companion'),
     },
   };
+}
+
+export function systemMembershipSummary(c: SystemMembershipCounts): string {
+  return `system membership: ${c.systems} systems over ${c.systemRecords} records (WDS ${c.systemsWithWds}, CCDM ${c.systemsWithCcdm}, `
+    + `geometric ${c.systemsWithGeometric}); WDS shared records ${c.systemWdsIdentityGated} identity-gated, ${c.systemWdsAmbiguous} ambiguous, `
+    + `${c.systemWdsTokenConflicts} token conflicts; ${c.systemCcdmOpticalMembers} optical CCDM members, `
+    + `${c.systemGeometricLentPairs} geometric pairs on a lent distance; no-record companions: ${c.companionEclipsingPartner} eclipsing, `
+    + `${c.companionSimbadMultiple} SIMBAD multiple, ${c.companionCcdm} CCDM`;
 }

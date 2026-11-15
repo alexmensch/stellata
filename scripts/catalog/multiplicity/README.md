@@ -21,18 +21,24 @@ scripts/catalog/multiplicity/
                                   readers, whose HIP cell then throws.
   binary-flags-pure.ts (+ test)   The FLAG_BINARY_PRIMARY writers: the
                                   geometric mutual-pair pass
-                                  (inferBinaries), the per-group CCDM walk
-                                  and the optical-double gate it consults,
-                                  and the eclipsing sweep
+                                  (inferBinaries, over mutualPairs), the
+                                  per-group CCDM walk and the optical-double
+                                  gate it consults (isOpticalDoubleMember,
+                                  per member), and the eclipsing sweep
                                   (wingEclipsingBinaries). Pure.
   multiplicity-stage-pure.ts      MultiplicityCounts, the snapshot's
     (+ test)                      multiplicity count block, which each pass
                                   returns its share of under its snapshot
-                                  key; its log line; and
+                                  key (system membership's included,
+                                  ../system-membership/README.md#counts);
+                                  its log line; and
                                   multiplicityStatuses (#multiplicity-status).
   visual-doubles.ts (+ test)      The CCDM cross-match: parseHipCcdm,
-                                  KNOWN_VISUAL_DOUBLES and the tiered
-                                  optical-double suppression cascade.
+                                  KNOWN_VISUAL_DOUBLES, doublesEvidence (the
+                                  two unioned with the gate's context, read
+                                  by the wings pass and system membership)
+                                  and the tiered optical-double suppression
+                                  cascade.
   system-coherence.ts (+ test)    Post-pass forcing one distance per
                                   physical system, so a pair never
                                   straddles two distance layers: the
@@ -188,7 +194,9 @@ Flagging their brightest member paints wings on a star with no
 bound companion. `isOpticalDoubleMember` (`binary-flags-pure.ts`)
 vetoes that flag, but only on **positive** evidence the asserted
 pair is optical, never on mere absence of physical evidence — so a
-noisy parallax can never strip real wings:
+noisy parallax can never strip real wings. System membership applies the
+same predicate to every member of a group
+(`../system-membership/README.md#evidence-sources`):
 
 - **Physical-evidence keep.** The picked primary keeps its wings
   when it is a component of a kept physical pair in

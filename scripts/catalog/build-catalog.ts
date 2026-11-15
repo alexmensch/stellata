@@ -12,7 +12,7 @@ import {
   type CatalogManifest,
   SOL_RECORD_INDEX,
 } from '../../src/catalog-format/record/catalog-pure';
-import { buildHipToIndex, inferBinaries, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
+import { buildHipToIndex, inferBinaries, mutualPairs, wingEclipsingBinaries } from './multiplicity/binary-flags-pure';
 import {
   multiplicityStatuses, multiplicitySummary, type MultiplicityCounts,
 } from './multiplicity/multiplicity-stage-pure';
@@ -82,6 +82,12 @@ import {
 } from './companions/record-index/record-index';
 import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
 import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pure';
+import {
+  anchorMovedRecords, buildSystemMembership, lentDistanceRecords, systemMembershipSummary,
+} from './system-membership/system-membership-pure';
+import {
+  serializeSystemMembership, type SystemMembership,
+} from '../../src/catalog-format/system-membership/system-membership-format';
 import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -341,6 +347,7 @@ export async function main() {
   const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded);
   const promotionLines = promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row));
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
+  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, promotedRows);
   console.log(`  promotion decided ${promotedRows.length} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
@@ -422,9 +429,14 @@ export async function main() {
     stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
+  const systems = buildSystemMembership({
+    records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles, hipToIndex,
+    geometricPairs: mutualPairs(stars), lentDistance: lentDistanceRecords(stars, anchorMoved),
+  });
+  console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
     ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
-    ...componentCount, ...statuses.counts,
+    ...componentCount, ...statuses.counts, ...systems.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
@@ -491,6 +503,7 @@ export async function main() {
     componentDesignations,
     rowIndexMap,
     resolvedPairs,
+    systemMembership: systems.membership,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
       parkedLedger,
@@ -540,6 +553,7 @@ interface CatalogEmissionInputs {
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
   readonly resolvedPairs: readonly ResolvedPair[];
+  readonly systemMembership: SystemMembership;
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -562,7 +576,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, systemMembership, sidEvents, ledgers, lineage,
   stageCounts, heap,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -642,6 +656,7 @@ function catalogEmission({
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
       pairEnds: pairEndsJson,
+      systemMembership: serializeSystemMembership(systemMembership),
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,
