@@ -62,7 +62,7 @@ A `build` step on the runner
 ([The runner](../pipeline/README.md#the-runner--runts)): `pnpm run build:local-group`
 skips it while its stamp holds `public/local-group.json` and every input
 `stepInputPaths` derives — the import closure of the entry
-(`../util/import-closure.ts`), its sibling files, and every declaration that
+(`../util/import-closure.ts`) and every declaration that
 closure reads — so a moved parser or a new import is never missed. No live fetches at build time; refresh
 of the LVDB snapshot is a manual `curl` of
 `raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`

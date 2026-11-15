@@ -146,10 +146,9 @@ same thing — single-use helpers stay with their consumer.
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `runnerTargets` the
   targets of a script that is one `run.ts` call (`RUNNER`), else `null`;
-  `closureWithSiblings(closure, files)` adds every file beside a
-  closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
-  snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
-  stamp passes as `files`.
+  `closureWithSiblings(closure, files)` is every file in `files` beside a
+  closure module except code (`CODE_FILE`) and `.md`; only
+  `deletedSiblingsSince` (`input-hashes-at.ts`) calls it.
 - `release-version.ts` (+ test) — the release version and its tag
   (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
   `releaseAt(ref)`, the newest release tag reachable from `ref`: the
@@ -211,8 +210,9 @@ same thing — single-use helpers stay with their consumer.
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
   (`../refresh/simbad-sample/`). A changed algorithm redraws both.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
-  step reads: the closure of its entry files, the closure's siblings, and
-  every declaration the closure reads (`sources/`); the runner derives each
+  step reads: the closure of its entry files and every declaration the
+  closure reads (`sources/`), and nothing else, so a file merely sitting
+  beside a module is no step's input; the runner derives each
   TypeScript step's inputs with it ([The step table](../pipeline/step-table/README.md#the-step-table--stepsts)).
   `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
@@ -221,7 +221,10 @@ same thing — single-use helpers stay with their consumer.
   own code imports this module: a step's input hashes come from
   `step-input-hashes.ts`.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
-  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
+  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`);
+  `step-inputs.test.ts` holds every TypeScript step to the rule: no input
+  outside its closure and its declared reads, each declared snapshot keyed
+  by exactly the step it names, and no undeclared snapshot keyed at all.
 - `step-input-hashes.ts` — the runner's pre-run input hashes, handed to a
   TypeScript step: `../pipeline/processes.ts`'s `runTs` writes them
   (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in

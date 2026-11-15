@@ -83,8 +83,7 @@ layout, its codec, the chunk plan and the search-index wire entry — is
   row; the trace command, the run-to-run diff, and the committed ledgers as
   views of it.
 - `columns/` — the readers a bake that measures the built catalogue
-  imports, and the column projection it records. Holds code
-  only, so no snapshot here becomes such a bake's input.
+  imports, and the column projection it records.
 - `validate/` — the Tier-A/B validation harness, `verify-catalog`, the
   SIMBAD-sample cross-check, and the frozen regression corpora.
 
@@ -117,9 +116,9 @@ scripts/catalog/
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
                                   (../util/step-inputs.ts) — every file the
                                   build reads, which its content-hash stamp
-                                  keys: the import closure plus sibling
-                                  snapshots (the rule CI's cache key shares)
-                                  and every declared source and artifact that
+                                  keys: the import closure (the rule CI's
+                                  cache key shares) and every declared
+                                  source, artifact and snapshot that
                                   closure reads, less the build's own
                                   outputs.
   catalog-outputs.ts (+ test)     CATALOG_OUTPUTS — every file the build

@@ -46,7 +46,7 @@ Sources under `data/molecular-clouds/`:
 A `build` step on the runner
 ([The runner](../pipeline/README.md#the-runner--runts)): `pnpm run build:clouds`
 skips it while its stamp holds every input `stepInputPaths` derives (the
-entry's import closure, its sibling files and the declarations it reads,
+entry's import closure and the declarations it reads,
 `src/astro-core/baker-constants.json` among them) and both artifacts.
 
 ## Outputs
