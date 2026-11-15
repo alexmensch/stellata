@@ -1,13 +1,12 @@
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { heapCappedEnv } from './heap-budget-pure';
-import { REPO_ROOT } from '../paths';
+import { TSX } from '../../pipeline/processes';
 
-const TSX = resolve(REPO_ROOT, 'node_modules/.bin/tsx');
 const CAP_MIB = 64;
 const dir = mkdtempSync(join(tmpdir(), 'heap-cap-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
