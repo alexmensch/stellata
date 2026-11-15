@@ -340,7 +340,7 @@ the constellation a Bayer / Flamsteed designation is NAMED for.
 ## Refresh
 
 `pnpm run refresh:classic-ids` re-pulls all four tables;
-`--only <stem>` limits it to one, `--force` overrides the mtime skip.
+`--force` overrides the mtime skip.
 Then `pnpm run build:classic-ids` regenerates the overlay and
 `pnpm run build:membership` regenerates `label_flips.tsv` — CI runs both and
 fails on any diff, so artifact and code always land in the same commit. The
