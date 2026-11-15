@@ -15,8 +15,7 @@ out on every machine.
   a known live heap: one above a small cap fails, one below passes.
 
 The runner (`../../pipeline/runner.ts`) applies it to every build step whose
-table entry carries `heap: 'ci-budget'` — `build:catalog`, `build:membership`,
-`build:classic-ids` and `build:astrometry-request` today
+entry in `steps.ts` carries `heap: 'ci-budget'`
 ([Step table](../../pipeline/step-table/README.md#the-step-table--stepsts)).
 The cap is a V8 start-up flag, so it is set where the step's process starts,
 never inside the step.
