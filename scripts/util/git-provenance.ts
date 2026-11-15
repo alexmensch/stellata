@@ -55,29 +55,36 @@ export type FileAt =
   | { readonly kind: 'present'; readonly bytes: Buffer }
   | { readonly kind: 'absent' };
 
-const BATCH_BLOB = /^[0-9a-f]+ blob (\d+)$/;
+const BATCH_OBJECT = /^[0-9a-f]+ (\w+) (\d+)$/;
 
-/** `absent` is a real answer — `commit` has no such path — never a failed git. */
+/** `absent` is a real answer — `commit` has no such path — never a failed git; a commit git cannot find throws. */
 export function blobsAt(commit: string, paths: readonly string[], root: string = REPO_ROOT): Map<string, FileAt> {
   const files = new Map<string, FileAt>();
   if (paths.length === 0) return files;
   const out = execFileSync('git', ['cat-file', '--batch'], {
-    cwd: root, input: paths.map((path) => `${commit}:${path}\n`).join(''), maxBuffer: Number.MAX_SAFE_INTEGER,
+    cwd: root,
+    input: [`${commit}^{commit}`, ...paths.map((path) => `${commit}:${path}`)].map((line) => `${line}\n`).join(''),
+    maxBuffer: Number.MAX_SAFE_INTEGER,
   });
   let at = 0;
-  for (const path of paths) {
+  const next = (): { readonly type: string; readonly bytes: Buffer } | null => {
     const eol = out.indexOf(0x0a, at);
     const header = out.toString('utf8', at, eol);
     at = eol + 1;
-    if (header.endsWith(' missing')) {
-      files.set(path, { kind: 'absent' });
-      continue;
-    }
-    const blob = BATCH_BLOB.exec(header);
-    if (blob === null) throw new Error(`git cat-file: ${commit}:${path} is not a file (${header})`);
-    const size = Number(blob[1]);
-    files.set(path, { kind: 'present', bytes: out.subarray(at, at + size) });
+    if (header.endsWith(' missing')) return null;
+    const object = BATCH_OBJECT.exec(header);
+    if (object === null) throw new Error(`git cat-file: unexpected answer ${header}`);
+    const size = Number(object[2]);
+    const bytes = out.subarray(at, at + size);
     at += size + 1;
+    return { type: object[1], bytes };
+  };
+  if (next()?.type !== 'commit') throw new Error(`git cat-file: no commit ${commit} in ${root}`);
+  for (const path of paths) {
+    const object = next();
+    if (object === null) files.set(path, { kind: 'absent' });
+    else if (object.type !== 'blob') throw new Error(`git cat-file: ${commit}:${path} is not a file`);
+    else files.set(path, { kind: 'present', bytes: object.bytes });
   }
   return files;
 }
