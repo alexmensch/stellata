@@ -164,6 +164,9 @@ describe('source declarations', () => {
 
   it('reads a declaration call with type arguments, never a factory\'s own definition', () => {
     expect(DECLARATION_CALL.test('defineSnapshot<{ n: number }>({')).toBe(true);
+    expect(DECLARATION_CALL.test('defineSnapshot<ReturnType<typeof f>>({')).toBe(true);
+    expect(DECLARATION_CALL.test('defineSnapshot<(x: number) => void>({')).toBe(true);
+    expect(DECLARATION_CALL.test("import { defineSnapshot } from './snapshot-pure.ts';")).toBe(false);
     expect(DECLARATION_CALL.test('defineArtifact({')).toBe(true);
     expect(DECLARATION_CALL.test('export function defineFolder<T, A extends unknown[] = []>(spec')).toBe(false);
   });

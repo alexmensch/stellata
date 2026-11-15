@@ -11,7 +11,7 @@ import { REPO_ROOT } from '../paths';
 import { listingFiles, type Source } from './source';
 
 /** A call to a declaration factory, type arguments allowed. */
-export const DECLARATION_CALL = /(?<!function )\b(defineSource|defineFolder|defineArtifact|defineJsonArtifact|defineSnapshot)\s*(<[^()]*>)?\(/;
+export const DECLARATION_CALL = /(?<!function )\b(defineSource|defineFolder|defineArtifact|defineJsonArtifact|defineSnapshot)\s*[<(]/;
 
 /** The only module names a `DECLARATION_CALL` may live in: the closure walk imports no other to find declarations. */
 export const DECLARING_MODULE = /-(source|tsv|json)\.ts$/;
