@@ -59,11 +59,13 @@ measurements. `lentDistanceRecords` marks the others: a minted companion
 (`FLAG_BINARY_COMPANION_ONLY`, placed at its anchor's distance), a record on
 `pair_member_parallax` (a sibling's parallax), and a member coherence snapped
 onto its anchor's distance (`snapped`) or promotion re-curated onto it
-(`isRecuratedAdoption`, returned by `build-catalog.ts`'s `promoteAndTrace`).
-A member coherence found already at the anchor's distance
-(`at-anchor-distance`) is not moved, so this rule does not mark it. Two
-records sharing one
-distance sit 0.005 pc apart only because of the sharing, so the pair is an
+(`recuratedRecords` over promotion's rewrites, returned by `build-catalog.ts`'s
+`promoteAndTrace`). A member coherence found already at the anchor's distance
+(`at-anchor-distance`) is not moved, so this rule does not mark it: the
+Bailer-Jones table publishes distances to 0.001 pc, so two independent
+measurements of a close pair can coincide exactly (61 Cyg A and B both
+3.496 pc, from different Gaia sources). Two
+records sharing one distance sit 0.005 pc apart only because of the sharing, so the pair is an
 artefact. Most such pairs are a WDS pair's minted companion, which WDS joins
 anyway; `systemGeometricLentDropped` counts the ones no other evidence puts
 in one system — the pairs the gate actually separates. Measured 2026-11-15
