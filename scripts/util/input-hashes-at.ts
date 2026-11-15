@@ -6,7 +6,7 @@ import { basename, join, resolve } from 'node:path';
 
 import { ignoredPaths, inputHashes, type FileHashes } from './build-stamp';
 import { codeIdentities } from './code-identity';
-import { filesAt, gitIn } from './git-provenance';
+import { blobsAt, gitIn } from './git-provenance';
 import { CODE_FILE } from './import-closure-pure';
 import { isLfsPointer, REPO_ROOT } from './paths';
 import { hashBytes, hashFile } from './stamp-hash';
@@ -70,7 +70,7 @@ export function inputHashesAt(
   if (changed.length === 0) return { kind: 'hashed', hashes };
   const lfs = new Set(listed('check-attr', 'filter', '--', ...changed)
     .filter((line) => line.endsWith(LFS_ATTR)).map((line) => line.slice(0, -LFS_ATTR.length)));
-  const files = filesAt(commit, changed, root);
+  const files = blobsAt(commit, changed, root);
   for (const path of changed) {
     const stored = files.get(path)!;
     if (stored.kind === 'absent') {

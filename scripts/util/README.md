@@ -167,7 +167,7 @@ same thing — single-use helpers stay with their consumer.
   shallow clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
-  its git call, in a given folder; `filesAt(commit, paths)`, each file's bytes
+  its git call, in a given folder; `blobsAt(commit, paths)`, each file's bytes
   as a commit stores it, read through one `git cat-file --batch` (a spawn per
   file costs ~50 ms, which a branch's lineage baseline pays per changed input
   inside its write budget), is what `input-hashes-at.ts` hashes, and its

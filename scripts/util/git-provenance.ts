@@ -58,7 +58,7 @@ export type FileAt =
 const BATCH_BLOB = /^[0-9a-f]+ blob (\d+)$/;
 
 /** `absent` is a real answer — `commit` has no such path — never a failed git. */
-export function filesAt(commit: string, paths: readonly string[], root: string = REPO_ROOT): Map<string, FileAt> {
+export function blobsAt(commit: string, paths: readonly string[], root: string = REPO_ROOT): Map<string, FileAt> {
   const files = new Map<string, FileAt>();
   if (paths.length === 0) return files;
   const out = execFileSync('git', ['cat-file', '--batch'], {
@@ -83,7 +83,7 @@ export function filesAt(commit: string, paths: readonly string[], root: string =
 }
 
 export function fileAt(commit: string, path: string, root: string = REPO_ROOT): FileAt {
-  return filesAt(commit, [path], root).get(path)!;
+  return blobsAt(commit, [path], root).get(path)!;
 }
 
 export type MergeBaseFile =
