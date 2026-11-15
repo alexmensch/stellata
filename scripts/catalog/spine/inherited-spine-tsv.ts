@@ -12,7 +12,7 @@ export const INHERITED_SPINE = defineArtifact({
   columns: SPINE_COLUMNS,
   hint: 'It is frozen; restore it from git rather than regenerating it.',
   order: 'as-given',
-  rowKey: { id: 'spine', text: (line: number) => String(line) },
+  rowKey: { id: 'spine', cardinality: 'one', text: (line: number) => String(line) },
   decode: (row): SpineRow => {
     row.sourceId('gaia_source_id');
     return row.cells();

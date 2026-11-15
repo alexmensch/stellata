@@ -2,7 +2,7 @@
 
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
-  sourceRowRef, type RowKeyed, type SourceRowRef,
+  sourceRowRef, type RowKeyed, type OneRowRef,
 } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 
@@ -16,7 +16,7 @@ export interface Hip2AstrometryRow {
   plxErrorMas: number | null;
   pmRaMasyr: number | null;
   pmDeMasyr: number | null;
-  ref: SourceRowRef<number>;
+  ref: OneRowRef<number>;
 }
 
 const HIP2_COLUMNS = ['hip', 'ra_icrs', 'de_icrs', 'plx', 'e_plx', 'pm_ra', 'pm_de'] as const;
@@ -57,6 +57,6 @@ export function parseHip2Tsv(text: string, from: Declared & RowKeyed<number>): H
 export const HIP2 = defineSource({
   file: 'data/hipparcos/hip2_van_leeuwen.tsv',
   hint: 'Re-run `pnpm run refresh:hip2`.',
-  rowKey: { id: 'i311', text: (hip: number) => String(hip) },
+  rowKey: { id: 'i311', cardinality: 'one', text: (hip: number) => String(hip) },
   parse: (input): Hip2Table => parseHip2Tsv(input.text(), HIP2),
 });

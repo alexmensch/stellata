@@ -8,14 +8,14 @@ import { wdsRootOf } from '../../../binaries/component-tokens-pure';
 import { isCoherenceAnchorGrade } from '../../multiplicity/anchor-grade-pure';
 import { belowParallaxSnFloor } from './parallax-cascade';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
-import type { SourceRowRef } from '../../../util/sources/row-ref-pure';
+import type { OneRowRef } from '../../../util/sources/row-ref-pure';
 import { listedRows } from '../../lineage/lineage-invariant-pure';
 import { compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 /** One sibling's parallax, with the DR3 source it was measured on. */
 export interface SiblingParallax extends MeasuredParallax {
   sourceId: string;
-  ref: SourceRowRef<string>;
+  ref: OneRowRef<string>;
 }
 
 /** Why a pair-row source the pull holds a row for is not a candidate. These

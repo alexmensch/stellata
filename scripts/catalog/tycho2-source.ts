@@ -10,7 +10,7 @@ export const TYCHO2 = defineSource({
   file: 'data/tycho2/tycho2_main.tsv',
   hint: HINT,
   members: [SUPPL1],
-  rowKey: { id: 'i259', text: (tyc: string) => tyc },
+  rowKey: { id: 'i259', cardinality: 'one', text: (tyc: string) => tyc },
   parse: (input): Map<string, Tycho2Row> => {
     const [suppl1] = input.members;
     return parseTycho2Tsvs(

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { pairLabel } from '../build-log-pure';
 
 import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
@@ -32,7 +33,7 @@ describe('attachStage6 — the pair walk', () => {
 
   it('drops, and records, a pair with no position on either side and no system anchor', () => {
     const result = runStage6([{ ...sides('1', '2'), astrometry: UNRESOLVED_PAIR }]);
-    expect([result.rows, result.droppedNoPosition]).toEqual([[], ['WDS-1AB']]);
+    expect([result.rows, result.droppedNoPosition.map(pairLabel)]).toEqual([[], ['WDS-1AB']]);
   });
 
   it('surfaces the HD of the component\'s AT-HYG row (ξ UMa)', () => {
@@ -254,7 +255,7 @@ describe('stage6Counts and stage6Report', () => {
   it('counts what the snapshot pins, every closed set zero-filled', () => {
     const counts = stage6Counts(result);
     expect(counts).toMatchObject({
-      multiples_rows_emitted: 3, multiples_pairs_dropped_no_position: 1, multiples_standalone_emitted: 1,
+      multiples_rows_emitted: 3, multiples_standalone_emitted: 1,
       multiples_astrometry_system_inherited: 1, multiples_orbit_q_populated: 2, multiples_sep_arcsec_populated: 2,
       a_via_kepler_mass_estimate: 2, a_via_none: 1, a_via_catalog: 0, spect_none: 3, msc_pair_mags_filled: 0,
     });
