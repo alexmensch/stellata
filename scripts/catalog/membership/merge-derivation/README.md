@@ -97,7 +97,11 @@ stands. The shipped HD is an output of the label merge, which runs on the
 moved rows, so `settlePairRule` runs the pair rule, the binding settlement
 and the merge, takes the refused HIPs out of the move set
 (`simbadRefusedMoves`), and runs them again until no move is refused; each
-pass only adds HIPs, so it ends. The check reads only IV/25's entries
+pass only adds HIPs, so it ends. Measured 2026-11-15: two passes, the first
+refusing all six and the second none, at about 4.7 s each, since every pass
+re-derives the spine's bindings. Each of the six is refused again with the
+other five already refused, and none of them refuses another, so the refused
+set does not depend on the order passes find them in. The check reads only IV/25's entries
 (`iv25TycHds`), which the pull requests whatever the manifest holds, and
 fails the build on an owner entry outside IV/25
 ([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
