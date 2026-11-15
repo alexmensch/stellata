@@ -4,6 +4,7 @@ import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constant
 import { plausibleTruncatedJd, yearElseTruncatedJd } from '../epochs-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Declared } from '../../util/sources/source';
+import { withGroupOrigins, type GroupRowRef, type LinedRow, type RowKeyed } from '../../util/sources/row-ref-pure';
 import {
   childComponentTokens, componentKey, isComponentToken, tokenLetters, type ComponentKey,
 } from '../component-tokens-pure';
@@ -24,6 +25,8 @@ export interface MscSystemRow {
  *  Julian, ../orbits/README.md#year-form-epochs) for visual
  *  orbits, JD − 2,400,000 for spectroscopic ones (`mscT0Jd` tells them apart). */
 export interface MscOrbitRow {
+  /** Every row of the file sharing this row's wds_id and syst. */
+  readonly origin: GroupRowRef<MscOrbitKey>;
   readonly wdsId: string;
   /** The pair label, `"Aa,Ab"`. */
   readonly syst: string;
@@ -37,6 +40,8 @@ export interface MscOrbitRow {
   readonly inclDeg: number | null;
   readonly note: string;
 }
+
+export type MscOrbitKey = Pick<MscOrbitRow, 'wdsId' | 'syst'>;
 
 /** One per-component row; its top-level labels already follow WDS. */
 export interface MscComponentRow {
@@ -108,8 +113,8 @@ export function parseMscSystems(text: string, from: Declared): MscSystemRow[] {
   return out;
 }
 
-export function parseMscOrbits(text: string, from: Declared): MscOrbitRow[] {
-  const out: MscOrbitRow[] = [];
+export function parseMscOrbits(text: string, from: Declared & RowKeyed<MscOrbitKey, 'group'>): MscOrbitRow[] {
+  const out: LinedRow<Omit<MscOrbitRow, 'origin'>>[] = [];
   const columns = [
     'wds_id', 'syst', 'per', 'per_unit', 't0', 'e', 'a_arcsec', 'node_deg', 'longp_deg', 'incl_deg', 'note',
   ] as const;
@@ -117,7 +122,7 @@ export function parseMscOrbits(text: string, from: Declared): MscOrbitRow[] {
     const wdsId = row.text('wds_id');
     const syst = row.text('syst');
     if (wdsId === null || syst === null) continue;
-    out.push({
+    out.push({ line: row.line, row: {
       wdsId, syst,
       per: row.float('per'),
       perUnit: orEmpty(row.text('per_unit')),
@@ -128,9 +133,9 @@ export function parseMscOrbits(text: string, from: Declared): MscOrbitRow[] {
       longpDeg: row.float('longp_deg'),
       inclDeg: row.float('incl_deg'),
       note: orEmpty(row.text('note')),
-    });
+    } });
   }
-  return out;
+  return withGroupOrigins(from, out);
 }
 
 export function parseMscComponents(text: string, from: Declared): MscComponentRow[] {

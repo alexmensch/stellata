@@ -19,11 +19,14 @@ scripts/wds/
                          or null), which every (ρ, θ) consumer reads.
   wds-source.ts          WDS_SUMM, ORB6: the two files, declared, each
                          keyed by wdsPairRowKey (wds_id/discoverer/
-                         components; ORB6's with curated letters stamped).
-                         Every WdsPair carries its `origin`, the row that
-                         founded it: its own summary row, or the ORB6, MSC
-                         or Gaia NSS row a binaries-synthesized pair stands
-                         for.
+                         components as printed), a group key: each file
+                         prints some pairs on several rows
+                         (../util/sources/README.md#sourcerowref).
+                         Every WdsPair and Orb6Entry carries its `origin`,
+                         stamped at parse: its key's group of rows. A
+                         binaries-synthesized pair's is the ORB6, MSC or
+                         Gaia NSS group it stands for; curated ORB6 letters
+                         never change an entry's origin.
   wds-fixture.ts         Test-only WdsPair and Orb6Entry builders.
 ```
 

@@ -3,15 +3,16 @@
 import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 import { floorVerdict, formatFraction, formatShare, share } from '../util/counts/tally-pure';
-import { sourceRowRef, type AnySourceRowRef, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
+import { withGroupOrigins, type AnySourceRowRef, type GroupRowRef, type LinedRow, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
 import type { Declared } from '../util/sources/source';
 import { floatCell, intCell } from '../util/tsv/table-pure';
 
 /** A pair as WDS and ORB6 both name it. */
 export type WdsPairRowKey = Pick<WdsPair, 'wdsId' | 'discoverer' | 'components'>;
 
-export function wdsPairRowKey(id: string): RowKey<WdsPairRowKey> {
-  return { id, text: ({ wdsId, discoverer, components }) => `${wdsId}/${discoverer}/${components}` };
+/** A group key: WDS and ORB6 each print some pairs on several rows. */
+export function wdsPairRowKey(id: string): RowKey<WdsPairRowKey, 'group'> {
+  return { id, cardinality: 'group', text: ({ wdsId, discoverer, components }) => `${wdsId}/${discoverer}/${components}` };
 }
 
 export interface WdsPair {
@@ -51,6 +52,8 @@ export function measuredOffset(pair: WdsPair): MeasuredOffset | null {
 
 /** A Sixth Orbit Catalog row; unit codes kept verbatim for Stage 4 to normalise. */
 export interface Orb6Entry {
+  /** Keyed on the components as printed, whatever curated letters later replace them. */
+  readonly origin: GroupRowRef<WdsPairRowKey>;
   readonly wdsId: string;
   readonly discoverer: string;
   readonly components: string;
@@ -109,7 +112,7 @@ type CellParse = (raw: string) => number | null;
 class FixedWidthLine {
   constructor(
     private readonly from: Declared,
-    private readonly lineNo: number,
+    readonly lineNo: number,
     readonly text: string,
   ) {}
 
@@ -190,16 +193,15 @@ function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, pr
   }
 }
 
-export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowKey>): WdsPair[] {
+export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowKey, 'group'>): WdsPair[] {
   const keep = (line: string): boolean => line.length >= 22 && !WDS_HEADER.test(line) && PY_INT.test(line.slice(0, 5));
-  const pairs: WdsPair[] = [];
+  const rows: LinedRow<Omit<WdsPair, 'origin'>>[] = [];
   for (const l of fixedWidthLines(text, from, WDS_LINE_WIDTH, keep)) {
     const wdsId = l.slice(0, 10).trim();
     const discoverer = l.slice(10, 17).trim();
     if (!wdsId || !discoverer) continue;
     const components = l.slice(17, 22).trim();
-    pairs.push({
-      origin: sourceRowRef(from, { wdsId, discoverer, components }),
+    rows.push({ line: l.lineNo, row: {
       wdsId,
       discoverer,
       components,
@@ -215,18 +217,19 @@ export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowK
       dateFirst: l.int('date_first', 23, 27),
       thetaFirst: l.sepPa('theta_first', 38, 41),
       rhoFirst: l.sepPa('rho_first', 46, 51),
-    });
+    } });
   }
+  const pairs = withGroupOrigins(from, rows);
   assertCoverage(pairs, from, 'precise', (p) => p.precise !== null, WDS_SUMM_PRECISE_COORD_FLOOR);
   return pairs;
 }
 
-export function parseOrb6(text: string, from: Declared): Orb6Parse {
+export function parseOrb6(text: string, from: Declared & RowKeyed<WdsPairRowKey, 'group'>): Orb6Parse {
   const keep = (line: string): boolean => {
     if (line.length < 30) return false;
     return /^\d/.test(line.slice(0, 9).trim());
   };
-  const entries: Orb6Entry[] = [];
+  const rows: LinedRow<Omit<Orb6Entry, 'origin'>>[] = [];
   const grades: Orb6GradeOutcome[] = [];
   for (const l of fixedWidthLines(text, from, ORB6_LINE_WIDTH, keep)) {
     const wdsId = l.slice(19, 29).trim();
@@ -234,7 +237,7 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
     const gradeCell = l.slice(233, 234).trim();
     const graded = /^\d$/.test(gradeCell);
     grades.push(graded ? 'graded' : 'fallback');
-    entries.push({
+    rows.push({ line: l.lineNo, row: {
       wdsId,
       discoverer: l.slice(30, 37).trim(),
       components: l.slice(37, 44).trim(),
@@ -255,8 +258,9 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
       t0Unit: l.slice(174, 175).trim(),
       grade: graded ? Number(gradeCell) : ORB6_FALLBACK_GRADE,
       ref: l.slice(237, 245).trim(),
-    });
+    } });
   }
+  const entries = withGroupOrigins(from, rows);
   assertCoverage(entries, from, 'P', (e) => e.pVal !== null, ORB6_PERIOD_COVERAGE_FLOOR);
   return { entries, grades };
 }

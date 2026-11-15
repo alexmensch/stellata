@@ -2,11 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
 import { foldStageLines, sortLineageLines, stageLineageText } from '../catalog/lineage/lineage-row-pure';
-import { GAIA_NSS } from '../catalog/sources/gaia-nss-source';
-import { sourceRowRef } from '../util/sources/row-ref-pure';
 import { blankPair, orb6Entry, wdsPair } from '../wds/wds-fixture';
-import { ORB6 } from '../wds/wds-source';
-import { MSC_ORBITS } from './load/msc-source';
+import { mscOrbit } from './load/load-fixture';
+import { nssRow } from './orbits/nss-fixture';
 import { subResolutionPair } from './load/subdivide-pure';
 import { OPTICAL_VIA } from './optical/optical-tiers-pure';
 import { PAIRS_CODES, pairsLineageLines, pairsLineageRows, type PairDecisions } from './pairs-lineage-pure';
@@ -20,11 +18,11 @@ const kept = decomposed(wdsPair({ wdsId: '00001+0001', discoverer: 'STF   1', co
 const rescued = { ...blankPair('00002+0002', 'BU    2'), components: 'AB' };
 const placeless = decomposed(rescued, { primary: { gaiaSourceId: null }, secondary: { gaiaSourceId: null } });
 const orphanEntry = orb6Entry({ wdsId: '00003+0003', discoverer: 'HO    3', components: 'Aa,Ab' });
-const orphan = subResolutionPair(sourceRowRef(ORB6, orphanEntry), '00003+0003', 'HO    3', 'Aa,Ab', null);
+const orphan = subResolutionPair(orphanEntry.origin, '00003+0003', 'HO    3', 'Aa,Ab', null);
 const msc = decomposed(subResolutionPair(
-  sourceRowRef(MSC_ORBITS, { wdsId: '00004+0004', syst: 'Aab,Ac' }), '00004+0004', 'MSC', 'Aa,Ab', null,
+  mscOrbit({ wdsId: '00004+0004', syst: 'Aab,Ac' }).origin, '00004+0004', 'MSC', 'Aa,Ab', null,
 ));
-const nss = decomposed(subResolutionPair(sourceRowRef(GAIA_NSS, GAIA), '00005+0005', 'GNSS', 'Aa,Ab', null));
+const nss = decomposed(subResolutionPair(nssRow({ sourceId: GAIA }).origin, '00005+0005', 'GNSS', 'Aa,Ab', null));
 const duplicate = wdsPair({ wdsId: '17247-3412', discoverer: 'WSI  62', components: 'CD' });
 const donor = blankPair('00003+0003', 'HO    3');
 

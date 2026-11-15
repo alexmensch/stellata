@@ -29,7 +29,8 @@ scripts/util/sources/
                        entry only exports main and runs through the one
                        launcher, so importing it runs nothing
                        (../README.md, emit-artifacts.ts entry).
-  row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
+  row-ref-pure.ts      SourceRowRef, RowKey and its cardinality — a
+    (+ test)           cited source row, or a key's group of rows
                        (#sourcerowref).
   json-artifact-pure.ts  defineJsonArtifact (#a-json-artifact).
     (+ test)
@@ -143,10 +144,21 @@ to a module of its own, or the closure of every caller reaches the file.
 `{ source, row }`: a row of a declared source or artifact, by that source's
 typed row key — never a path string
 ([SourceRowRef](../../catalog/lineage/README.md#sourcerowref)). A declaration
-carries a `rowKey` (`{id, text}`) only once something cites its rows; its
-type then holds a required `rowKey` (`RowKeyOf<K>`), and a keyless one holds
+carries a `rowKey` (`{id, cardinality, text}`) only once something cites its rows; its
+type then holds a required `rowKey` (`RowKeyOf<K, C>`), and a keyless one holds
 `undefined`, so `sourceRowRef` is a compile error on a keyless declaration
-or a wrongly typed row. Every declaration also carries a type-only brand
+or a wrongly typed row.
+
+**Cardinality.** A key is `'one'` when it names one row of the file, `'group'`
+when the file prints several rows under it. Only a `'one'` key is cited with
+`sourceRowRef(source, row)`. A `'group'` key is cited with
+`groupRowRef(source, key, lines)`, `lines` the group's file lines, never
+empty; parsers build these with `groupRowRefs` (one per key) or
+`withGroupOrigins` (each row stamped with its key's group as `origin`), so a
+citation always carries the whole group. Each call is a compile error on a
+key of the other cardinality, so a group can't be cited as a row it happens
+to hold. The text form is `<id>:<key>` either way. Group keys: WDS, ORB6, the
+MSC orbits and Gaia NSS. Every declaration also carries a type-only brand
 (`Declaration`) that no object literal can, so a hand-written
 `{file, rowKey}` stand-in does not compile either
 (`row-ref-pure.test.ts`). Keyed today: the spine (`spine:<line>`),

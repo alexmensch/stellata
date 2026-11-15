@@ -80,9 +80,10 @@ one before:
 5. Synthesize the MSC inner pairs, which see the rescued AB rows.
 
 `pairs` is the WDS rows, then the orphans, then the MSC inner pairs — the
-list Stage 2 walks. Each carries its founding row as `origin`
-([the WDS readers](../../wds/README.md#files-in-this-area)): an
-orphan's ORB6 row, an MSC pair's first orbit row.
+list Stage 2 walks. Each carries its founding rows as `origin`
+([the WDS readers](../../wds/README.md#files-in-this-area)), a key's whole
+group: an orphan's ORB6 key as printed, an MSC pair's first orbit row's
+`wds_id/syst`.
 
 ## How the readers read
 
@@ -127,6 +128,8 @@ lone solution of an unnamed type is read, and Stage 4 converts it to
 nothing ([Conventions](../orbits/README.md#conventions-the-outputs-rest-on)).
 `../build-binaries.test.ts` reverses every source's rows and holds
 `multiples.tsv` byte for byte.
+The picked row's `origin` still cites every solution the file holds for the
+source, since its `gaia-dr3-nss:` key names them all.
 
 ## Checks and counts
 

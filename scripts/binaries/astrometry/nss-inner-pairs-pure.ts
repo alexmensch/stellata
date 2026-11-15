@@ -7,8 +7,6 @@ import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
 import { componentsOf, inheritAs, type DecomposedPair, type GaiaBinding, type ResolvedComponent } from '../resolve/components-pure';
 import { inheritedFrom } from '../multiples-record-pure';
-import { GAIA_NSS } from '../../catalog/sources/gaia-nss-source';
-import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
@@ -94,7 +92,8 @@ export function synthesizeNssInnerPairs(
     const { component: c, astrometry: ast } = carrier;
     const measured = ast.astrometryVia === 'unresolved' ? null : ast;
     const existing = tokensBySystem.get(c.wdsId)!;
-    const verdict = nssVerdict(carrier, existing, indices.srcToNss.get(carrier.gaia.value)!);
+    const nss = indices.srcToNss.get(carrier.gaia.value)!;
+    const verdict = nssVerdict(carrier, existing, nss);
     outcomes.push(verdict.outcome);
     if (verdict.outcome !== 'synthesized') continue;
 
@@ -109,7 +108,7 @@ export function synthesizeNssInnerPairs(
     }
     foundingSystem.set(sourceId, c.wdsId);
     const pair = subResolutionPair(
-      sourceRowRef(GAIA_NSS, sourceId), c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
+      nss.origin, c.wdsId, SYNTH_NSS_DISCOVERER, `${a},${b}`, measured === null ? null : { raDeg: measured.raDeg, decDeg: measured.decDeg },
     );
     const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({

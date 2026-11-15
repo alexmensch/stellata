@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
 import { wdsPair } from './wds-fixture';
-import { WDS_SUMM } from './wds-source';
+import { ORB6, WDS_SUMM } from './wds-source';
 
 const FIXTURE = { file: 'fixture/wds.txt', hint: 'h' } as const;
 const SUMM_FIXTURE = { ...WDS_SUMM, ...FIXTURE };
+const ORB6_FIXTURE = { ...ORB6, ...FIXTURE };
 import { dedupWdsPairRows, measuredOffset, parseOrb6, parsePreciseCoord, parseWdsSumm, splitComponents } from './wds-pure';
 
 describe('measuredOffset', () => {
@@ -43,6 +44,14 @@ describe('parseWdsSumm', () => {
     expect(pr.dateLast).toBe(1982);
     expect(pr.precise?.decDeg).toBeCloseTo(75.4833, 2);
     expect(sourceRowRefText(pr.origin)).toBe(`wds:00000+7530/A  1248/${pr.components}`);
+  });
+
+  it('founds every row of one key on one group carrying each of its lines', () => {
+    const other = withCells(WDS_LINE, 17, 'AC   ');
+    const [first, second, third] = parseWdsSumm(`${WDS_HEADER_BLOCK}${WDS_LINE}\n${other}\n${WDS_LINE}\n`, SUMM_FIXTURE);
+    expect(first.origin).toBe(third.origin);
+    expect(first.origin).toMatchObject({ kind: 'group', lines: [4, 6] });
+    expect(second.origin).toMatchObject({ kind: 'group', lines: [5] });
   });
 
   it('reads both ρ / θ sentinels as no measurement', () => {
@@ -107,19 +116,26 @@ describe('dedupWdsPairRows', () => {
 
 describe('parseOrb6', () => {
   it('reads a row with a component designator', () => {
-    const { entries } = parseOrb6(`Sixth Catalog\n0000000000111\n0123456789012\n${ORB6_HDS}\n`, FIXTURE);
+    const { entries } = parseOrb6(`Sixth Catalog\n0000000000111\n0123456789012\n${ORB6_HDS}\n`, ORB6_FIXTURE);
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ wdsId: '00026+1841', components: 'Aa,Ab', grade: 3, hip: 201, pUnit: 'y' });
   });
 
+  it('keys each entry on its printed components, every row of the key in one group', () => {
+    const { entries } = parseOrb6(`banner\n${ORB6_STF1110}\n${ORB6_HDS}\n${ORB6_STF1110}\n`, ORB6_FIXTURE);
+    expect(sourceRowRefText(entries[0].origin)).toBe('orb6:07346+3153/STF1110/AB');
+    expect(entries[0].origin).toBe(entries[2].origin);
+    expect(entries[0].origin.lines).toEqual([2, 4]);
+  });
+
   it('reads a row with no components as blank', () => {
     const line = '000019.10-441726.0 00003-4417 I  1477        .     224750     25   6.80   7.56    115.4     y   2.9        0.435  a  0.014    65.6      2.6    147.5       1.5     2011.58    y   0.86     0.717    0.020    297.3      2.2    2000 2022 3   Tok2023a wds00003-4417d.png';
-    const { entries } = parseOrb6(`banner line\n${line}\n`, FIXTURE);
+    const { entries } = parseOrb6(`banner line\n${line}\n`, ORB6_FIXTURE);
     expect(entries[0]).toMatchObject({ wdsId: '00003-4417', components: '', grade: 3, hip: 25 });
   });
 
   it('splits a discoverer packed against its component letters (Castor STF1110 AB)', () => {
-    const { entries } = parseOrb6(`banner\n${ORB6_STF1110}\n`, FIXTURE);
+    const { entries } = parseOrb6(`banner\n${ORB6_STF1110}\n`, ORB6_FIXTURE);
     expect(entries[0]).toMatchObject({ wdsId: '07346+3153', discoverer: 'STF1110', components: 'AB', hip: 36850, hd: 60178, grade: 3 });
     expect(entries[0].precise?.raDeg).toBeCloseTo(113.649417, 5);
     expect(entries[0].precise?.decDeg).toBeCloseTo(31.888278, 5);
@@ -128,24 +144,24 @@ describe('parseOrb6', () => {
   it('reads P and ω whole when they overflow one column left of the nominal edge', () => {
     const p = '005458.02+233742.4 00550+2338 STF  73AB        755   5286   4288   6.12   6.54  61183.      d  69.         0.9837 a  0.0011   44.57     0.11   173.66      0.13   35543.      m  21.       0.30603  0.00078  358.62     0.21   2000 2008 2 n Mut2010b wds00550+2338b.png';
     const w = '175619.04-154844.5 17563-1549 WAI   1Aa1,2   10891 163336  87813   6.45k  7.50k    13.4191  d   0.0003     2.0    m  0.1     151.      17.     306.3       5.8    57900.0     d   0.2      0.36     0.02    252.3       4.7              3 n WAI2023  wds17563-1549b.png';
-    expect(parseOrb6(`banner\n${p}\n`, FIXTURE).entries[0]).toMatchObject({ pVal: 61183, pUnit: 'd' });
-    expect(parseOrb6(`banner\n${w}\n`, FIXTURE).entries[0].periastronDeg).toBe(252.3);
+    expect(parseOrb6(`banner\n${p}\n`, ORB6_FIXTURE).entries[0]).toMatchObject({ pVal: 61183, pUnit: 'd' });
+    expect(parseOrb6(`banner\n${w}\n`, ORB6_FIXTURE).entries[0].periastronDeg).toBe(252.3);
   });
 
   it('passes with periods present and throws past the coverage floor', () => {
     const blanked = ORB6_HDS.slice(0, 81) + ' '.repeat(11) + ORB6_HDS.slice(92);
-    expect(parseOrb6(`banner\n${Array(20).fill(ORB6_HDS).join('\n')}\n`, FIXTURE).entries).toHaveLength(20);
+    expect(parseOrb6(`banner\n${Array(20).fill(ORB6_HDS).join('\n')}\n`, ORB6_FIXTURE).entries).toHaveLength(20);
     const drifted = [...Array(19).fill(blanked), ORB6_HDS].join('\n');
-    expect(() => parseOrb6(`banner\n${drifted}\n`, FIXTURE)).toThrow(/'P' non-null rate 5\.0% .*column-offset drift/);
+    expect(() => parseOrb6(`banner\n${drifted}\n`, ORB6_FIXTURE)).toThrow(/'P' non-null rate 5\.0% .*column-offset drift/);
   });
 
   it('throws on a catalogue with no rows, its rate n/a', () => {
-    expect(() => parseOrb6('banner\n', FIXTURE)).toThrow(/'P' non-null rate n\/a \(0\/0\) below 90% floor — no rows parsed/);
+    expect(() => parseOrb6('banner\n', ORB6_FIXTURE)).toThrow(/'P' non-null rate n\/a \(0\/0\) below 90% floor — no rows parsed/);
   });
 
   it('reads a non-digit grade as 5 and counts it', () => {
     const ungraded = ORB6_HDS.slice(0, 233) + 'x' + ORB6_HDS.slice(234);
-    const { entries, grades } = parseOrb6(`banner\n${ungraded}\n`, FIXTURE);
+    const { entries, grades } = parseOrb6(`banner\n${ungraded}\n`, ORB6_FIXTURE);
     expect(entries[0].grade).toBe(5);
     expect(grades).toEqual(['fallback']);
   });

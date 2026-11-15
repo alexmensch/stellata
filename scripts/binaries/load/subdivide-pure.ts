@@ -6,10 +6,8 @@ import {
   type DiscovererKey, type PairRowKey,
 } from '../component-tokens-pure';
 import { mscRenderable, type MscLookup, type MscPairOrbits } from './msc-pure';
-import { MSC_ORBITS } from './msc-source';
-import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
-import { ORB6 } from '../../wds/wds-source';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export const SYNTH_MSC_DISCOVERER = 'MSC';
@@ -104,9 +102,9 @@ export function synthesizeOrb6OrphanPairs(wdsPairs: readonly WdsPair[], orb6: re
     const donor = blankByWdsDisc.get(discovererKey(e.wdsId, e.discoverer));
     const precise = donor?.precise ?? e.precise ?? systemPrecise.get(e.wdsId) ?? null;
     out.push(donor === undefined
-      ? subResolutionPair(sourceRowRef(ORB6, e), e.wdsId, e.discoverer, e.components, precise)
+      ? subResolutionPair(e.origin, e.wdsId, e.discoverer, e.components, precise)
       : {
-        ...subResolutionPair(sourceRowRef(ORB6, e), e.wdsId, e.discoverer, e.components, precise),
+        ...subResolutionPair(e.origin, e.wdsId, e.discoverer, e.components, precise),
         dateLast: donor.dateLast,
         rhoLast: donor.rhoLast,
         thetaLast: donor.thetaLast,
@@ -175,7 +173,7 @@ export function synthesizeMscInnerPairs(
     outcomes.push(outcome);
     if (outcome !== 'synthesized') continue;
     pairs.push(subResolutionPair(
-      sourceRowRef(MSC_ORBITS, o.rows[0]), o.wdsId, SYNTH_MSC_DISCOVERER, `${o.primary},${o.secondary}`, systemPrecise.get(o.wdsId) ?? null,
+      o.rows[0].origin, o.wdsId, SYNTH_MSC_DISCOVERER, `${o.primary},${o.secondary}`, systemPrecise.get(o.wdsId) ?? null,
     ));
     setOf(pairTokensByWds, o.wdsId).add(unorderedPairKey(o.primary, o.secondary));
     setOf(tokensByWds, o.wdsId).add(o.primary).add(o.secondary);

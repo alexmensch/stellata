@@ -309,12 +309,14 @@ Ba/Bb sub-letter blend the inner-pair hierarchy owns).
 lineage stage, after `component-binding` in `LINEAGE_STAGES`
 ([Record lineage](/scripts/catalog/lineage/README.md#the-pairs-stage)), from
 `pairs-lineage-pure.ts`. A pair founds no record, so its rows are keyed on
-the row that founded it, the pair's `origin`
-([the WDS readers](../wds/README.md#files-in-this-area)): its WDS summary
-row (`wds:<wds_id>/<discoverer>/<components>`, a blank row keeping its blank
-components when rescued), an ORB6 orphan's ORB6 row (`orb6:`, the same
-form), an MSC inner pair's first orbit row (`msc-orbits:<wds_id>/<syst>`)
-or a Gaia NSS inner pair's carrier source (`gaia-dr3-nss:<source_id>`).
+the rows that founded it, the pair's `origin`
+([the WDS readers](../wds/README.md#files-in-this-area)), each a group key
+([SourceRowRef](../util/sources/README.md#sourcerowref)): its WDS summary
+key (`wds:<wds_id>/<discoverer>/<components>`, a blank row keeping its blank
+components when rescued), an ORB6 orphan's ORB6 key (`orb6:`, the same
+form, components as printed), an MSC inner pair's first orbit row's key
+(`msc-orbits:<wds_id>/<syst>`) or a Gaia NSS inner pair's carrier source
+(`gaia-dr3-nss:<source_id>`).
 
 | Code | Written for |
 | --- | --- |

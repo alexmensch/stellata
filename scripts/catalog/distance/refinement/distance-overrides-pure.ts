@@ -2,7 +2,7 @@
 
 import type { DistVia } from '../../../../src/catalog-format/record/catalog-pure';
 import { parallaxSignalToNoise, type MeasuredParallax } from '../../cited-parallax';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../../util/sources/row-ref-pure';
 
 /** Bailer-Jones posteriors by Gaia DR3 source_id, with the declaration their rows cite. */
 export interface BailerJonesIndex {
@@ -39,7 +39,7 @@ export function isBailerJonesEligible(
 export function applyBailerJonesOverride(
   gaiaSourceId: string | null,
   bailerJones: BailerJonesIndex,
-): { distPc: number; ref: SourceRowRef<string> } | null {
+): { distPc: number; ref: OneRowRef<string> } | null {
   if (!gaiaSourceId) return null;
   const distPc = bailerJones.distPc.get(gaiaSourceId);
   return distPc === undefined ? null : { distPc, ref: sourceRowRef(bailerJones.source, gaiaSourceId) };

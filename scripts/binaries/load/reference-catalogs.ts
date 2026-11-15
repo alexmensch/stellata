@@ -165,7 +165,7 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
     hip2: HIP2.read().astrometry,
     hipToGaia: GAIA_HIP_XMATCH.read(),
     tycToGaia: await GAIA_TYC_XMATCH.read(),
-    nss: parseNssOrbits(GAIA_NSS.read()),
+    nss: parseNssOrbits(GAIA_NSS.read(), GAIA_NSS),
     astrometry: GAIA_ASTROMETRY.read(),
     astrometryExclusions: ASTROMETRY_EXCLUSIONS.read(),
     simbadWdsXids: simbadXids,

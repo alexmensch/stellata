@@ -126,12 +126,14 @@ Every stage writes the same envelope:
 `{ source, row }`: `source` is the source's declaration constant (a
 `defineSource` or `defineArtifact` constant,
 `../../util/sources/README.md#sourcerowref`) and `row` is that source's typed
-row key — never a path string. A source's licence is credited once, on the
+row key — never a path string. A source whose key names a group of rows
+(WDS, ORB6, the MSC orbits, Gaia NSS) is cited as `{ source, key, lines }`
+instead, every line of the group carried. A source's licence is credited once, on the
 site's credits surface; whether a public lineage surface must also filter its
 citations by licence is the release design's question, and the filter would
 be a join on `source`.
 
-Its text form is `<source>:<row>`. Every lineage file sorts by the byte
+Its text form is `<source>:<row>` (`<source>:<key>` for a group). Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, `evidence`. A stage
 hands its rows over as lines (`LineageLine`, made only by `stageLineageLine`
 or read from a stage file), and a tab sorts below every character a cell may
