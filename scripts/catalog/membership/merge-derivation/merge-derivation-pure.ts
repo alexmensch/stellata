@@ -3,7 +3,7 @@
 import {
   linkTablesFrom, partitionRow, type KeyCell, type LinkTables,
 } from '../../spine/association-audit-pure';
-import type { SpineRow } from '../../spine/inherited-spine-pure';
+import { rowIndexByTyc, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow } from '../../gliese-parse-pure';
@@ -182,8 +182,7 @@ function applyMoves(
   refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
 ): PairRuleResult {
   const rows = [...kept];
-  const byTyc = new Map<string, number>();
-  kept.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const byTyc = rowIndexByTyc(kept);
   const decided = new Map<number, PairDecision>();
   const received = new Set<number>();
   const owners = new Set<string>();
@@ -272,8 +271,7 @@ export function simbadRefusedMoves(
   shippedHd: (row: number) => number | null,
   tycHds: (tyc: string) => readonly number[],
 ): Set<number> {
-  const byTyc = new Map<string, number>();
-  rows.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const byTyc = rowIndexByTyc(rows);
   const out = new Set<number>();
   for (const d of decided.values()) {
     if (d.kind !== 'pair-moves') continue;

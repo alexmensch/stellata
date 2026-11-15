@@ -1,7 +1,7 @@
 // The parity gate's spine ↔ manifest matcher. See README.md#the-parity-gate.
 
 import { compareDesignations, sameAsClasses, type SameasEdge } from '../../sid/sid-pure';
-import type { SpineRow } from '../spine/inherited-spine-pure';
+import { rowIndexByTyc, type SpineRow } from '../spine/inherited-spine-pure';
 import type { MergeDivergenceRow } from './ledger-rows-pure';
 import { manifestDesignations, type ManifestRecord } from './membership-manifest-tsv';
 
@@ -56,8 +56,7 @@ export function matchSpineToManifest(
 export function withRecordMoves(
   rows: readonly SpineRow[], moves: readonly Pick<MergeDivergenceRow, 'tyc' | 'derived'>[],
 ): SpineRow[] {
-  const byTyc = new Map<string, number>();
-  rows.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const byTyc = rowIndexByTyc(rows);
   const out = [...rows];
   for (const move of moves) {
     const from = move.tyc === null ? undefined : byTyc.get(move.tyc);
