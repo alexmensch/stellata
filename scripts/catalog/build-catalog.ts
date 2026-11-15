@@ -47,10 +47,10 @@ import {
   collectPhysicalPairKeys,
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
+import { parkedRefusals } from './companions/identity/parked-refusals';
 import {
   promoteCompanions,
   readMultiplesTsv,
-  parkedRefusals,
   type MultiplesTsvRow,
   type PromotionDerivedCounts,
   type PromotionInputs,
