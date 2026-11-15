@@ -15,6 +15,10 @@ const tsManual = (kind: ManualKind, name: string, entry: string, module: string,
   name, ...kind, language: 'ts', entry, outputs: { module, name: constant },
 });
 
+const vizierPull = (name: string, entry: string, constant: string): ManualStep => tsManual(
+  { kind: 'pull' }, name, `scripts/refresh/vizier/${entry}`, 'scripts/refresh/vizier/vizier-outputs.ts', constant,
+);
+
 const bake = (
   name: string, entry: string, outputs: readonly string[],
   { describes = false, families = [] }: { describes?: boolean; families?: readonly OutputFamily[] } = {},
@@ -59,13 +63,17 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:bailer-jones', 'scripts/refresh/magnitude/refresh-bailer-jones.ts',
     'scripts/refresh/magnitude/magnitude-outputs.ts', 'BAILER_JONES_OUTPUTS',
   ),
-  pull('refresh:hip2', 'refresh-hipparcos2.py', ['data/hipparcos/hip2_van_leeuwen.tsv']),
-  pull('refresh:hip-vmag', 'refresh-hipparcos-vmag.py', ['data/hipparcos/hip_main_vmag.tsv']),
-  pull('refresh:classic-ids', 'refresh-classic-ids.py', ['tyc2_hd', 'cross_index', 'bsc5', 'cns5'].map((s) => `data/classic-ids/${s}.tsv`)),
-  pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', ['data/iau-wgsn/NEC.csv', 'data/iau-wgsn/wgsnFaints.csv']),
-  pull('refresh:tycho2', 'refresh-tycho2.py', ['data/tycho2/tycho2_main.tsv', 'data/tycho2/tycho2_suppl1.tsv']),
-  pull('refresh:gliese', 'refresh-gliese.py', ['data/gliese/gliese_v70a.tsv']),
-  pull('refresh:msc', 'refresh-msc.py', ['systems', 'orbits', 'components'].map((s) => `data/msc/msc_${s}.tsv`)),
+  vizierPull('refresh:hip2', 'refresh-hipparcos2.ts', 'HIP2_OUTPUTS'),
+  vizierPull('refresh:hip-vmag', 'refresh-hipparcos-vmag.ts', 'HIP_VMAG_OUTPUTS'),
+  vizierPull('refresh:classic-ids', 'refresh-classic-ids.ts', 'CLASSIC_IDS_OUTPUTS'),
+  tsManual(
+    { kind: 'pull' }, 'refresh:iau-wgsn', 'scripts/refresh/iau-wgsn/refresh-iau-wgsn.ts', 'scripts/refresh/iau-wgsn/iau-wgsn-outputs.ts', 'IAU_WGSN_OUTPUTS',
+  ),
+  tsManual(
+    { kind: 'pull' }, 'refresh:tycho2', 'scripts/refresh/tycho2/refresh-tycho2.ts', 'scripts/refresh/tycho2/tycho2-outputs.ts', 'TYCHO2_OUTPUTS',
+  ),
+  vizierPull('refresh:gliese', 'refresh-gliese.ts', 'GLIESE_OUTPUTS'),
+  vizierPull('refresh:msc', 'refresh-msc.ts', 'MSC_OUTPUTS'),
   tsManual(
     { kind: 'pull' }, 'refresh:simbad', 'scripts/refresh/simbad-sample/refresh-simbad-sample.ts',
     'scripts/refresh/simbad-sample/simbad-sample-outputs.ts', 'SIMBAD_SAMPLE_OUTPUTS',

@@ -1,5 +1,6 @@
 // IV/27A with its curated corrections applied, declared. See README.md#one-designation-two-hd-numbers.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
   applyCrossIndexCorrections,
@@ -13,7 +14,7 @@ const CORRECTIONS: Declared = {
 };
 
 export const CROSS_INDEX = defineSource({
-  file: 'data/classic-ids/cross_index.tsv',
+  file: DATA_FILES.crossIndex,
   hint: 'Refresh the CDS inputs with `pnpm run refresh:classic-ids`.',
   members: [CORRECTIONS],
   rowKey: { id: 'iv27a', cardinality: 'one', text: (hd: number) => String(hd) },

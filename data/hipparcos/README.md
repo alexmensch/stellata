@@ -45,10 +45,10 @@ in v6 bit 4) and `scripts/binaries/build-binaries.ts` Stage 2
 
 - **Source**: VizieR `I/239/hip_main`, four-column slice (`HIP`, `Vmag`,
   `B-V`, `HD`), 118,218 rows — one with a null `Vmag`, 1,281 with a null
-  `B-V` (98.9% fill), 98,880 with an `HD`. Rounded to 3 dp on write so the
-  committed file is byte-stable across numpy versions.
+  `B-V` (98.9% fill), 98,880 with an `HD`. Rounded to 3 dp on write, so the
+  committed text does not depend on how the archive prints a float.
 - **The `_vmag` in the filename is historical** and so are the names built
-  on it — `pnpm run refresh:hip-vmag`, `refresh-hipparcos-vmag.py`, the
+  on it — `pnpm run refresh:hip-vmag`, `refresh-hipparcos-vmag.ts`, the
   `hipVMagEntries` count key. The slice carries both printed columns; the
   parser reading it is `hip-photometry-parse.ts`. Renaming the file would
   rewrite an LFS object and a pinned count key to no consumer's benefit,
@@ -100,6 +100,6 @@ in v6 bit 4) and `scripts/binaries/build-binaries.ts` Stage 2
 ## Refresh
 
 `pnpm run refresh:hip2` →
-[`scripts/refresh/refresh-hipparcos2.py`](../../scripts/refresh/README.md);
-`pnpm run refresh:hip-vmag` → `refresh-hipparcos-vmag.py`. The CCDM slice
+[`scripts/refresh/vizier/refresh-hipparcos2.ts`](../../scripts/refresh/vizier/README.md);
+`pnpm run refresh:hip-vmag` → `vizier/refresh-hipparcos-vmag.ts`. The CCDM slice
 has no script — refetch from VizieR by hand when needed.

@@ -54,9 +54,8 @@ def read_tyc_request(
 
     IV/25 alone is what the bead scoped, and it is not enough: 19,288 manifest
     TYCs are absent from it, and a record whose own TYC the table cannot
-    answer for is exactly the row a consumer needs adjudicated. Shared with
-    `refresh-tycho2.py` rather than restated, so the two pulls cover the same
-    entries by construction.
+    answer for is exactly the row a consumer needs adjudicated. refresh:tycho2
+    asks the same set, derived the same way in TypeScript (`tycho2Request`).
     """
     return sorted(rl.format_tyc(t) for t in rl.read_mentioned_tycs(manifest, iv25))
 

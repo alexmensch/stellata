@@ -202,8 +202,7 @@ record yet has no graph edge from; skips a step whose record is fresh unless `--
 describes it; runs it (a Python step under `build_stamp.record_run`, a
 TypeScript one through `tsx`, its inputs derived and hashed before the run, as a TypeScript build's
 are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
-arguments pass through to the step (`--only <stem>`, `--dry-run`,
-`--synthetic`), which then always runs but writes no record: a partial or
+arguments pass through to the step (`--dry-run`, `--synthetic`), which then always runs but writes no record: a partial or
 non-standard run cannot vouch for the whole step, so whatever it moved
 reads stale until a plain run.
 

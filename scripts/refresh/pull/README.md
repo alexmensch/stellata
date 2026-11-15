@@ -8,7 +8,8 @@ SIMBAD. A pull is a `pull` step on the step table
 ## Files
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, `tapClient`, `SIMBAD_BATCH_SIZE`, the ids
+  the reply's classification, `tapClient`, `withRetry` (which the WGSN
+  pull's plain fetch shares), `SIMBAD_BATCH_SIZE`, the ids
   one SIMBAD `IN (…)` batch may carry, and `GAIA_SLICE_ROWS`, the rows one
   sliced Gaia query holds.
 - `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by

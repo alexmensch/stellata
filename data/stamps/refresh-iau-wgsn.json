@@ -5,6 +5,8 @@
     "data/iau-wgsn/wgsnFaints.csv": "3902973e6d87368d86591c8140f30bf2b928a2ca"
   },
   "query": "9b8083482eead6964e946a7974c02c3ed9c14681",
-  "answeredBy": [],
+  "answeredBy": [
+    "exopla.net"
+  ],
   "requestFrom": []
 }

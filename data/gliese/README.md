@@ -65,8 +65,8 @@ indexes under itself — no record's `gl` cell reaches it.
 
 Where the catalogue resolved a system into components and a record's cell
 names none of them, the bare number answers with the **alphabetically first**
-component, which the pull's `order_by=("Name", "Comp")` makes stable across
-re-pulls rather than a function of row order. 403 numbers are in that shape;
+component, which the pull's sort (name, then component, by code unit) makes
+stable across re-pulls rather than a function of row order. 403 numbers are in that shape;
 no spine cell reaches one today (measured over all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count --> `gl` cells, 2,566 of
 them bare), so this decides nothing yet and would need revisiting if the
 magnitude pull widens the cohort.
@@ -125,7 +125,7 @@ resulting parallax keeps value and error bar from the same pair of columns.
 - **Citation**: [Gliese 1991](/data/papers/index.md#gliese1991), *Preliminary
   Version of the Third Catalogue of Nearby Stars*, CDS `V/70A`.
 - **VizieR**: `V/70A/catalog`, over the CDS TAP endpoint
-  `refresh_lib.CDS_TAP_URL` names.
+  `scripts/refresh/pull/tap-pure.ts`'s `VIZIER` names.
 - **Retrieved**: 2026-08-27; re-sliced 2026-09-06 with the astrometry and
   cross-name columns, same 3,803 rows.
 - **Licence**: CDS/VizieR standard academic use; cite
@@ -151,5 +151,6 @@ the newer catalogue does not retire this one.
 
 ## Refresh
 
-`pnpm run refresh:gliese` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
-`--force` overrides the mtime skip.
+`pnpm run refresh:gliese` (`scripts/refresh/vizier/refresh-gliese.ts`).
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).

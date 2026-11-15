@@ -59,7 +59,7 @@ classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
 ## Provenance
 
 Every table is a whole-table column slice pulled over CDS/VizieR TAP by
-`scripts/refresh/refresh-classic-ids.py` (`pnpm run refresh:classic-ids`),
+`scripts/refresh/vizier/refresh-classic-ids.ts` (`pnpm run refresh:classic-ids`),
 verified against VizieR 2026-07-28. Licence: public domain via CDS for
 all four; cite the paper per table.
 
@@ -340,7 +340,8 @@ the constellation a Bayer / Flamsteed designation is NAMED for.
 ## Refresh
 
 `pnpm run refresh:classic-ids` re-pulls all four tables;
-`--only <stem>` limits it to one, `--force` overrides the mtime skip.
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).
 Then `pnpm run build:classic-ids` regenerates the overlay and
 `pnpm run build:membership` regenerates `label_flips.tsv` — CI runs both and
 fails on any diff, so artifact and code always land in the same commit. The

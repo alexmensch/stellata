@@ -41,7 +41,7 @@ labels.
 - **Citation**: [Tokovinin 2018](/data/papers/index.md#tokovinin2018) (updated MSC).
   Maintained by the author; VizieR copy tracks updates.
 - **VizieR**: `J/ApJS/235/6` (`systems`, `orbits`, `catalog` tables),
-  over the CDS TAP endpoint `refresh_lib.CDS_TAP_URL` names.
+  over the CDS TAP endpoint `scripts/refresh/pull/tap-pure.ts`'s `VIZIER` names.
 - **Retrieved**: 2026-07-11.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Tokovinin 2018](/data/papers/index.md#tokovinin2018).
@@ -55,5 +55,5 @@ labels.
 
 ## Refresh
 
-`pnpm run refresh:msc` → `scripts/refresh/refresh-msc.py` (venv per
-[One-time setup](/scripts/refresh/README.md#one-time-setup)).
+`pnpm run refresh:msc` → `scripts/refresh/vizier/refresh-msc.ts`
+([Whole-table VizieR pulls](/scripts/refresh/vizier/README.md)).
