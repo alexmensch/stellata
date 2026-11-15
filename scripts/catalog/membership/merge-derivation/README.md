@@ -94,7 +94,7 @@ names the owner entry by HDs that leave out the record's shipped HD, Gaia's
 cross-match is contradicted, and the HIP is queued (`simbad_refused`). SIMBAD
 naming no HD for the entry is silence, not agreement or dissent, and the move
 stands. The shipped HD is an output of the label merge, which runs on the
-moved rows, so `buildMembership` runs the pair rule, the binding settlement
+moved rows, so `settlePairRule` runs the pair rule, the binding settlement
 and the merge, takes the refused HIPs out of the move set
 (`simbadRefusedMoves`), and runs them again until no move is refused; each
 pass only adds HIPs, so it ends. The check reads only IV/25's entries
@@ -128,7 +128,9 @@ record already there — and no gate weighs it again (`merge.pair.disposed`,
 `merge.pair.disposed-record`, the second ledgered as a `pair_moves` row so
 gate (i) matches it). The build fails on a disposition whose `entries` no
 longer match the pair, so a Tycho-2 or Gaia change reopens the review; on a
-`keep_entry` off the pair; and on a HIP the rule does not queue. Settling the
+`keep_entry` off the pair; and on a HIP the rule does not queue once the
+SIMBAD passes settle, since a `simbad_refused` HIP is an ordinary move until a
+later pass queues it. Settling the
 queue is `stellata-hooj.17.11.5`.
 
 ## The divergence ledger

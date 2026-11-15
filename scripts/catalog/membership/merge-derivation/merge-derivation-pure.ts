@@ -162,7 +162,16 @@ type PairRuleResult = {
   decided: ReadonlyMap<number, PairDecision>;
   /** Rows a HIP moved onto from another spine record. */
   received: ReadonlySet<number>;
+  /** HIPs a disposition settled. */
+  disposed: ReadonlySet<number>;
 };
+
+/** see README.md#disposing-a-queued-pair */
+function requireDispositionsUsed(dispositions: ReadonlyMap<number, PairDisposition>, disposed: ReadonlySet<number>): void {
+  for (const hip of dispositions.keys()) {
+    if (!disposed.has(hip)) throw new Error(`pair-review disposition names HIP ${hip}, which the pair rule does not queue`);
+  }
+}
 
 /** `strict` refuses a disposition on a move nothing refused. see README.md#disposing-a-queued-pair */
 function applyMoves(
@@ -224,13 +233,11 @@ function applyMoves(
     const onto = place(i, verdict.owner, receiverOf(row, hip, verdict.owner));
     decided.set(i, onto === 'entry' ? verdict : { ...verdict, onto });
   });
-  for (const hip of dispositions.keys()) {
-    if (!disposed.has(hip)) throw new Error(`pair-review disposition names HIP ${hip}, which the pair rule does not queue`);
-  }
-  return { rows, decided, received };
+  return { rows, decided, received, disposed };
 }
 
-/** see README.md#applying-the-pair-rule */
+/** One pass of the pair rule; a disposition it leaves unused is `settlePairRule`'s to refuse.
+ *  see README.md#applying-the-pair-rule */
 export function applyPairRule(
   kept: readonly SpineRow[],
   m: PairLinks,
@@ -292,7 +299,10 @@ export function settlePairRule<T>(
     const pair = applyPairRule(kept, m, binds, refused, dispositions);
     const { value, shippedHd } = downstream(pair.rows);
     const newlyRefused = simbadRefusedMoves(pair.rows, pair.decided, shippedHd, tycHds);
-    if (newlyRefused.size === 0) return { ...pair, value };
+    if (newlyRefused.size === 0) {
+      requireDispositionsUsed(dispositions, pair.disposed);
+      return { ...pair, value };
+    }
     for (const hip of newlyRefused) refused.add(hip);
   }
 }
@@ -301,7 +311,9 @@ export function settlePairRule<T>(
 export function applyEveryPairMove(
   kept: readonly SpineRow[], m: PairLinks, dispositions: ReadonlyMap<number, PairDisposition>,
 ): SpineRow[] {
-  return applyMoves(kept, m, dispositions, false, () => null).rows;
+  const { rows, disposed } = applyMoves(kept, m, dispositions, false, () => null);
+  requireDispositionsUsed(dispositions, disposed);
+  return rows;
 }
 
 /** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */

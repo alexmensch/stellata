@@ -4,7 +4,8 @@ import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
 import {
-  applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, simbadRefusedMoves, type MergeLinks,
+  applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, settlePairRule, simbadRefusedMoves,
+  type MergeLinks,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
 
@@ -128,6 +129,7 @@ describe('applyPairRule', () => {
       rows: kept,
       decided: new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'simbad_refused' }]]),
       received: new Set(),
+      disposed: new Set(),
     });
     expect(applyPairRule(kept, mergeLinks(l), () => null, refused, new Map()).decided.get(0))
       .toEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
@@ -170,14 +172,8 @@ describe('applyPairRule with dispositions', () => {
     expect(received).toEqual(new Set([1]));
   });
 
-  it('refuses a disposition on a HIP the rule does not queue, or over a pair it no longer restates', () => {
+  it('refuses a disposition over a pair it no longer restates', () => {
     const kept = [row({ tyc: A, hip: '10' })];
-    const l = links({ [B]: 'S1' });
-    expect(() => applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), dispose(B)))
-      .toThrow(/names HIP 10, which the pair rule does not queue/);
-    const confirmed = links({ [A]: 'S1' });
-    expect(() => applyPairRule(kept, mergeLinks(confirmed), bindsOwn(confirmed), new Set(), dispose(A)))
-      .toThrow(/names HIP 10, which the pair rule does not queue/);
     expect(() => applyPairRule(kept, mergeLinks(queued), () => null, new Set(), dispose(B, [A, '1-1-9'])))
       .toThrow('restates 1-1-1|1-1-9, but the pair is 1-1-1|1-1-2');
   });
@@ -185,6 +181,40 @@ describe('applyPairRule with dispositions', () => {
   it('applies a disposition over every arrangement the request covers', () => {
     const kept = [row({ tyc: A, hip: '10' })];
     expect(applyEveryPairMove(kept, mergeLinks(links({ [B]: 'S1' })), dispose(A))).toEqual(kept);
+    expect(() => applyEveryPairMove(kept, mergeLinks(links({ [A]: 'S1' })), dispose(A)))
+      .toThrow(/names HIP 10, which the pair rule does not queue/);
+  });
+});
+
+describe('settlePairRule', () => {
+  const dispose = (keepEntry: string): ReadonlyMap<number, PairDisposition> => new Map([
+    [10, { hip: 10, entries: [A, B], keepEntry, basis: 'tycho2_position' as const, evidence: 'sep 0.2"' }],
+  ]);
+  const shipsOwnHd = (rows: readonly SpineRow[]) => ({ value: rows, shippedHd: (i: number) => Number(rows[i].hd) });
+  const named = (hds: Record<string, number[]>) => (tyc: string): readonly number[] => hds[tyc] ?? [];
+  const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+
+  it('queues a move SIMBAD refuses on a later pass, and stops when no move is refused', () => {
+    const l = links({ [B]: 'S1' });
+    const settled = settlePairRule(kept, mergeLinks(l), bindsOwn(l), new Map(), named({ [B]: [101] }), shipsOwnHd);
+    expect(settled.value).toEqual(kept);
+    expect(settled.decided.get(0)).toEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'simbad_refused' });
+  });
+
+  it('applies a disposition of a SIMBAD-refused HIP, which only the later pass queues', () => {
+    const l = links({ [B]: 'S1' });
+    const settled = settlePairRule(kept, mergeLinks(l), bindsOwn(l), dispose(A), named({ [B]: [101] }), shipsOwnHd);
+    expect(settled.rows).toEqual(kept);
+    expect(settled.decided.get(0)).toEqual({ kind: 'pair-disposed', hip: 10, keep: A, basis: 'tycho2_position', onto: 'stays' });
+  });
+
+  it('refuses a disposition on a HIP the settled rule does not queue', () => {
+    const moved = links({ [B]: 'S1' });
+    expect(() => settlePairRule(kept, mergeLinks(moved), bindsOwn(moved), dispose(B), named({}), shipsOwnHd))
+      .toThrow(/names HIP 10, which the pair rule does not queue/);
+    const confirmed = links({ [A]: 'S1' });
+    expect(() => settlePairRule(kept, mergeLinks(confirmed), bindsOwn(confirmed), dispose(A), named({}), shipsOwnHd))
+      .toThrow(/names HIP 10, which the pair rule does not queue/);
   });
 });
 
