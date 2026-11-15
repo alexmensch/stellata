@@ -19,29 +19,23 @@ export class MintedIds {
     if (ids.hip !== null) this.byHip.set(ids.hip, idx);
   }
 
-  onSynth(key: string): number | undefined {
-    return this.bySynth.get(key);
+  onSynth(key: string): number | null {
+    return this.bySynth.get(key) ?? null;
   }
 
   /** A row's earlier mint by its Gaia source, else its HIP. */
   lookup(row: MultiplesTsvRow): number | null {
-    if (row.gaiaSourceId) {
-      const hit = this.byGaia.get(row.gaiaSourceId);
-      if (hit !== undefined) return hit;
-    }
-    if (row.hip !== null && row.hip > 0) {
-      const hit = this.byHip.get(row.hip);
-      if (hit !== undefined) return hit;
-    }
-    return null;
+    const onGaia = row.gaiaSourceId ? this.onGaia(row.gaiaSourceId) : null;
+    if (onGaia !== null) return onGaia;
+    return row.hip !== null && row.hip > 0 ? this.onHip(row.hip) : null;
   }
 
-  onGaia(sourceId: string): number | undefined {
-    return this.byGaia.get(sourceId);
+  onGaia(sourceId: string): number | null {
+    return this.byGaia.get(sourceId) ?? null;
   }
 
-  onHip(hip: number): number | undefined {
-    return this.byHip.get(hip);
+  onHip(hip: number): number | null {
+    return this.byHip.get(hip) ?? null;
   }
 }
 
@@ -110,12 +104,12 @@ export function resolveRowIdentity(
       if (hipHit !== undefined && hipHit !== anchor.catalogIdx) return { kind: 'held', idx: hipHit, via: 'own-hip' };
     }
   }
-  const mintedOnGaia = gaia ? minted.onGaia(gaia) : undefined;
-  if (mintedOnGaia !== undefined) {
+  const mintedOnGaia = gaia ? minted.onGaia(gaia) : null;
+  if (mintedOnGaia !== null) {
     return { kind: 'decided', outcome: { kind: 'adopted', idx: mintedOnGaia, via: 'earlier-mint' } };
   }
-  const mintedOnHip = rowHasOwnHip && gaia === null ? minted.onHip(row.hip as number) : undefined;
-  if (mintedOnHip !== undefined) {
+  const mintedOnHip = rowHasOwnHip && gaia === null ? minted.onHip(row.hip as number) : null;
+  if (mintedOnHip !== null) {
     return { kind: 'decided', outcome: { kind: 'adopted', idx: mintedOnHip, via: 'earlier-mint' } };
   }
   // Before the inheritance gates strip the ids it recognises a sibling by — README.md#refused-parallax-refusal.
@@ -136,7 +130,7 @@ export function resolveRowIdentity(
   const synthetic = gaia === null && hip === null;
   if (synthetic) {
     const mintedOnSynth = minted.onSynth(synthKey);
-    if (mintedOnSynth !== undefined) {
+    if (mintedOnSynth !== null) {
       return { kind: 'decided', outcome: { kind: 'adopted', idx: mintedOnSynth, via: 'earlier-mint' } };
     }
     const bridged = sources.synthGaiaBridges.get(synthKey);

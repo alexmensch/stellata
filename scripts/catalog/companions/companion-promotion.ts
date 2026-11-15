@@ -541,7 +541,7 @@ function promoteRow(
   if (usesSynth) flags |= FLAG_BINARY_COMPANION_SYNTHETIC;
 
   const conIndex = state.conAssignment.indexAt(position.x, position.y, position.z);
-  const desigCon = inheritAnchor === undefined || inheritAnchor === null
+  const desigCon = inheritAnchor === null
     ? NO_DESIGNATION_CON : inheritedDesignationCon(inheritAnchor.desigCon);
 
   const mintRadius = physicalRadius(absmag, spectral.info);
@@ -753,7 +753,7 @@ function walkCursors(
       // README.md#blended-identifier-escape.
       const escapedIdx =
         state.minted.onSynth(primarySynthKey) ?? escapeCursorPrimary(cursor);
-      if (escapedIdx !== null && escapedIdx !== undefined) {
+      if (escapedIdx !== null) {
         primaryCatalogIdx = escapedIdx;
       }
     }
