@@ -6,6 +6,10 @@ export const CI_HEAP_HEADROOM = 0.85;
 
 export const HEAP_BUDGET_MIB = Math.floor(CI_HEAP_LIMIT_MIB * CI_HEAP_HEADROOM);
 
+const README = '/scripts/util/heap-budget/README.md';
+
+export const HEAP_CAP_NOTE = ` with its heap capped at the CI budget, ${HEAP_BUDGET_MIB} MiB (${README})`;
+
 /** `env` with V8's old-space limit set to `budgetMib`; it reaches every Node process the step starts, tsx's own included. */
 export function heapCappedEnv(env: NodeJS.ProcessEnv, budgetMib: number): NodeJS.ProcessEnv {
   const cap = `--max-old-space-size=${budgetMib}`;
@@ -26,7 +30,7 @@ export function heapRuntimeVerdict(node: NodeRuntime): RuntimeVerdict {
   return node.running === node.pinned ? { kind: 'pinned' } : {
     kind: 'other',
     reason: `it runs under Node ${node.running}, but CI runs Node ${node.pinned} (.nvmrc), whose heap differs: `
-      + 'run it under the pinned Node. See /scripts/util/heap-budget/README.md.',
+      + `run it under the pinned Node. See ${README}.`,
   };
 }
 

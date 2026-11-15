@@ -6,8 +6,9 @@ out on every machine.
 
 - `heap-budget-pure.ts` (+ test) — `CI_HEAP_LIMIT_MIB`, `CI_HEAP_HEADROOM`,
   `HEAP_BUDGET_MIB` (their product, floored), `heapCappedEnv` (the cap as
-  `NODE_OPTIONS`), `heapRuntimeVerdict` (the Node major against `.nvmrc`'s)
-  and `nodeMajor`.
+  `NODE_OPTIONS`), `heapRuntimeVerdict` (the Node major against `.nvmrc`'s),
+  `HEAP_CAP_NOTE` (what the runner appends to a capped step's failure) and
+  `nodeMajor`.
 - `heap-budget.ts` (+ test) — `nodeRuntime()`, this process's Node major and
   the pinned one. The test runs real `tsx` processes holding a known live
   heap: one above a small cap fails, one below passes.
