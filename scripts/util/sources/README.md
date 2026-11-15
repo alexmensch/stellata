@@ -13,7 +13,8 @@ closure reaches is that step's data input set — derived, never listed
 
 ```
 scripts/util/sources/
-  source.ts            defineSource, readArtifact / streamArtifact, and
+  source.ts            defineSource, readArtifact / streamArtifact,
+                       readSnapshot / committedSnapshot, and
                        openDeclared — the one presence check and the one
                        place a declared file is opened. Vite's native
                        config loader reaches it (vite.env.ts →
@@ -105,13 +106,15 @@ file nothing cites needs no declaration.
 `defineSnapshot<T>({file, script})` (`snapshot-pure.ts`) declares a committed
 `*-expected.json` a step checks its output against: `file` is the snapshot,
 `script` the step whose `--update-snapshots` run rewrites it. The step passes
-it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), the one
-place a snapshot is opened, so it is an input of exactly the steps whose
-closure names it. Each lives in a `*-expected-json.ts` leaf beside its file
-(`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts` holds every
-`defineSnapshot` call to it),
-imported only by its step's check (`build:clouds` and `build:local-group`
-hand theirs to `siblingLineage`). Its `use` is `read` wherever the closure's
+it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), so it
+is an input of exactly the steps whose closure names it. `readSnapshot` (null
+when absent) and `committedSnapshot` (throws when absent), in `source.ts`, are
+the one place a snapshot is opened. Each lives in a `*-expected-json.ts` leaf
+beside its file (`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts`
+holds every `defineSnapshot` call to it), imported only by code that reads it:
+its step's check (`build:clouds` and `build:local-group` hand theirs to
+`siblingLineage`), and for build:catalog's, `committedBuildCounts` and
+`../../site/site-metrics.ts`. Its `use` is `read` wherever the closure's
 other modules name the constant: the leaf exports nothing else, so naming it
 is the only reason to import it. A snapshot only a test reads
 (`inherited-spine-expected.json`, `manifest-naming-expected.json`) is no

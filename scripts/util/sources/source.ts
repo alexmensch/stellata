@@ -1,12 +1,13 @@
 // Declared data inputs and their reads. See README.md.
 
-import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import type { Artifact } from '../tsv/artifact-pure.ts';
 import { lfsContentReadable, REPO_ROOT } from '../paths.ts';
 import type { Declaration, RowKey, RowKeyOf } from './row-ref-pure.ts';
+import type { Snapshot } from './snapshot-pure.ts';
 
 export interface Declared {
   /** Repo-relative. */
@@ -166,4 +167,17 @@ export async function streamArtifact<C extends string, R, K>(
   const reader = artifact.lineReader(onRecord);
   await openDeclared(artifact).lines(reader);
   reader.finish();
+}
+
+/** The committed snapshot, or null when none is on disk. */
+export function readSnapshot<T>(snapshot: Snapshot<T>): T | null {
+  const path = resolve(REPO_ROOT, snapshot.file);
+  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) as T : null;
+}
+
+/** The committed snapshot; throws when none is on disk. */
+export function committedSnapshot<T>(snapshot: Snapshot<T>): T {
+  const held = readSnapshot(snapshot);
+  if (held === null) throw new Error(`${snapshot.file} is missing; ${snapshot.script} with --update-snapshots writes it`);
+  return held;
 }

@@ -1,11 +1,11 @@
 // Snapshot checks for emitArtifacts. See scripts/util/README.md (snapshot-check.ts entry).
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { compareCountSnapshot } from './counts/compare-counts-pure';
 import type { Check } from './emit-artifacts';
 import { REPO_ROOT } from './paths';
 import type { Snapshot } from './sources/snapshot-pure';
+import { readSnapshot } from './sources/source';
 import { rerunCommand } from './step-command-pure';
 
 /** Set to '1' to rewrite every snapshot instead of asserting against it; the
@@ -39,9 +39,7 @@ export function countSnapshotCheck<T extends object>(
 /** A missing snapshot fails: only the env var writes one. */
 export function snapshotCheck<T>(snapshot: Snapshot<T>, opts: SnapshotCheckSpec<T>): Check {
   const path = resolve(REPO_ROOT, snapshot.file);
-  const expected = existsSync(path)
-    ? (JSON.parse(readFileSync(path, 'utf8')) as T)
-    : null;
+  const expected = readSnapshot(snapshot);
 
   if (process.env[UPDATE_SNAPSHOTS_ENV] === '1') {
     const toWrite = expected !== null && opts.refreshTransform
