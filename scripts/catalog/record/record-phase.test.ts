@@ -13,7 +13,7 @@ import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
-import { enterPhase } from './record-phase';
+import { allocatedSids, enterPhase } from './record-phase';
 
 declare const rows: MultiplesTsvRow[];
 declare const promotionInputs: PromotionInputs;
@@ -28,32 +28,72 @@ describe('record phases', () => {
     const named = enterPhase('named', [makeStar()]);
     const promoted = enterPhase('promoted', [makeStar()]);
     const sorted = enterPhase('sorted', [makeStar()]);
-    const reorderings = [
-      // @ts-expect-error promotion reads bayerComponent, so it takes named records
-      () => promoteCompanions(rows, walked, promotionInputs),
-      // @ts-expect-error naming runs before promotion
-      () => applyStarNames(promoted, namingInputs, []),
-      // @ts-expect-error coherence runs before promotion
-      () => applySystemCoherence(named, verdicts),
-      // @ts-expect-error the sort takes promoted records
-      () => sortByApparentV(named, () => 0),
-      // @ts-expect-error HIP → index is keyed on the sorted order
-      () => buildHipToIndex(promoted),
-      // @ts-expect-error geometric pairs are record indices
-      () => inferBinaries(promoted),
-      // @ts-expect-error the row-index map follows the sort
-      () => buildCatalogRowIndexMap(promoted),
-      // @ts-expect-error the wings follow the sort and the row-index map
-      () => wingRenderablePrimaries(pairs, promoted),
-      // @ts-expect-error designation constellations precede variability
-      () => applyDesignationConstellations(sorted, conIndex),
-      // @ts-expect-error variability fills desigCon only where IV/27A left it empty
-      () => applyVariability(walked, new Map(), { byHip: new Map(), byHd: new Map(), byGaia: new Map() }),
-      // @ts-expect-error display names take the sorted records
-      () => assignDisplayNames(promoted, new Map(), [], new Map(), []),
-      // @ts-expect-error display names key on the SIDs allocation assigned
-      () => assignDisplayNames(sorted, new Map(), [], new Map(), [1]),
+    const sids = allocatedSids([1]);
+    const xref = { byHip: new Map(), byHd: new Map(), byGaia: new Map() };
+    // Each refused call beside the same call in its own phase, which must
+    // compile, so a refusal can only come from the tag.
+    const refusedBesideInPlace = [
+      [
+        // @ts-expect-error promotion reads bayerComponent, so it takes named records
+        () => promoteCompanions(rows, walked, promotionInputs),
+        () => promoteCompanions(rows, named, promotionInputs),
+      ],
+      [
+        // @ts-expect-error naming runs before promotion
+        () => applyStarNames(promoted, namingInputs, []),
+        () => applyStarNames(walked, namingInputs, []),
+      ],
+      [
+        // @ts-expect-error coherence runs before promotion
+        () => applySystemCoherence(named, verdicts),
+        () => applySystemCoherence(walked, verdicts),
+      ],
+      [
+        // @ts-expect-error the sort takes promoted records
+        () => sortByApparentV(named, () => 0),
+        () => sortByApparentV(promoted, () => 0),
+      ],
+      [
+        // @ts-expect-error HIP → index is keyed on the sorted order
+        () => buildHipToIndex(promoted),
+        () => buildHipToIndex(sorted),
+      ],
+      [
+        // @ts-expect-error geometric pairs are record indices
+        () => inferBinaries(promoted),
+        () => inferBinaries(sorted),
+      ],
+      [
+        // @ts-expect-error the row-index map follows the sort
+        () => buildCatalogRowIndexMap(promoted),
+        () => buildCatalogRowIndexMap(sorted),
+      ],
+      [
+        // @ts-expect-error the wings follow the sort and the row-index map
+        () => wingRenderablePrimaries(pairs, promoted),
+        () => wingRenderablePrimaries(pairs, sorted),
+      ],
+      [
+        // @ts-expect-error designation constellations precede variability
+        () => applyDesignationConstellations(sorted, conIndex),
+        () => applyDesignationConstellations(walked, conIndex),
+      ],
+      [
+        // @ts-expect-error variability fills desigCon only where IV/27A left it empty
+        () => applyVariability(walked, new Map(), xref),
+        () => applyVariability(sorted, new Map(), xref),
+      ],
+      [
+        // @ts-expect-error display names take the sorted records
+        () => assignDisplayNames(promoted, new Map(), [], new Map(), sids),
+        () => assignDisplayNames(sorted, new Map(), [], new Map(), sids),
+      ],
+      [
+        // @ts-expect-error display names key on the SIDs allocation assigned
+        () => assignDisplayNames(sorted, new Map(), [], new Map(), [1]),
+        () => assignDisplayNames(sorted, new Map(), [], new Map(), sids),
+      ],
     ];
-    expect(reorderings).toHaveLength(12);
+    expect(refusedBesideInPlace).toHaveLength(12);
   });
 });
