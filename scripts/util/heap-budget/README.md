@@ -51,10 +51,19 @@ the runner's heap (`--max-old-space-size`) is the owner's call, and moves
 `build:catalog` completes at `--max-old-space-size=2925` and runs out of
 heap at 2,900 (Node 26.7, 2026-11-15, the step run with `--any-baseline` so
 all three record-walk lineage diffs ran, each against a baseline from the same
-inputs). That is 16% under the 3,481 MiB budget. The peak is placement
-lineage's sort and diff inside `walkManifest`, while the reference tables are
-still held; `preAllocationStages` releases them before SID allocation,
+inputs). That is 16% under the 3,481 MiB budget (0.85 × 4,096). The peak
+is placement lineage's sort and diff inside `walkManifest`, while the
+reference tables are still held; `preAllocationStages` releases them before SID allocation,
 whose working set otherwise pushed the step past the budget. A diff against
 a baseline that differs by many keys holds its changed lines briefly on top
 ([Run-to-run diff](../../catalog/lineage/README.md#run-to-run-diff)), which
 this figure does not include.
+
+The runner refuses `--any-baseline`, so the step runs under `node` directly,
+handed the input map a prior `pnpm run build:catalog` stamped; bisect `<N>`:
+
+```bash
+node -e "process.stdout.write(JSON.stringify(require('./build/stamps/build-catalog.json').inputs))" > build/catalog-inputs.json
+PIPELINE_STEP_INPUTS=build/catalog-inputs.json PIPELINE_STEP=build:catalog \
+  node --max-old-space-size=<N> --import tsx scripts/util/launch.ts scripts/catalog/build-catalog.ts --any-baseline
+```
