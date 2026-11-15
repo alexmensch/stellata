@@ -31,7 +31,7 @@ const SOL = makeStar();
 const STAR = makeStar({
   x: 1.5, y: -2.25, z: 3.75, vx: 0.125, vy: -0.25, vz: 0.375, absmag: 4.5, ci: 0.625, physicalRadius: 2.5,
   spectral: { kind: 'mk', letter: 4, subclass: 2, lumClass: 3 },
-  conIndex: 7, flags: FLAG_HAS_NAME | FLAG_HAS_BAYER, varType: VAR_TYPE_MIRA,
+  conIndex: 7, flags: FLAG_HAS_BAYER, varType: VAR_TYPE_MIRA,
   hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
   periodDays: 10, amplitudeMag: 0.5,
 });
@@ -87,11 +87,11 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
   });
 
-  it('sets FLAG_BINARY_PRIMARY on exactly the claimed records, beside the flags each record carries', () => {
+  it('sets FLAG_HAS_NAME on each record with a display name and FLAG_BINARY_PRIMARY on each claimed one, beside its own flags', () => {
     const { buffer, recordsOffset: offset } = encode(undefined, new Set([1, 2]));
     const view = new DataView(buffer);
     expect([0, 1, 2].map((i) => readRecordField(view, offset + i * RECORD_SIZE, 'flags')))
-      .toEqual([0, FLAG_BINARY_PRIMARY, FLAG_HAS_NAME | FLAG_HAS_BAYER | FLAG_BINARY_PRIMARY]);
+      .toEqual([FLAG_HAS_NAME, FLAG_BINARY_PRIMARY, FLAG_HAS_NAME | FLAG_HAS_BAYER | FLAG_BINARY_PRIMARY]);
   });
 
   it('throws on a multiplicity status list that does not pair with the records, and on NO_SID', () => {

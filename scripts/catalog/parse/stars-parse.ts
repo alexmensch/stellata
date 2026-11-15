@@ -3,7 +3,6 @@
 // Star records every downstream builder step reads. See scripts/catalog/README.md.
 
 import {
-  FLAG_HAS_NAME,
   FLAG_IS_SOL,
   FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
@@ -561,7 +560,6 @@ export function rowResolver({
     const { bayer } = row;
 
     let flags = 0;
-    if (proper) flags |= FLAG_HAS_NAME;
     if (row.isSol) flags |= FLAG_IS_SOL;
     if (bayer) flags |= FLAG_HAS_BAYER;
 

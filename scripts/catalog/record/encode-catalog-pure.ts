@@ -3,6 +3,7 @@
 import {
   APSIS_FIELDS,
   FLAG_BINARY_PRIMARY,
+  FLAG_HAS_NAME,
   HEADER_SIZE,
   NO_APSIS,
   NO_COMPANION,
@@ -71,7 +72,9 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPri
       nameOffset: displayNames[i] ? nameTable.offsets[i] : 0,
       ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
-      flags: s.flags | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
+      flags: s.flags
+        | (displayNames[i] !== null ? FLAG_HAS_NAME : 0)
+        | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
       ...variabilityUnits(s),
       varType: s.varType ?? 0,
       hip: s.hip ?? 0,

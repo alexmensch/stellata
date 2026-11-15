@@ -36,12 +36,15 @@ scripts/catalog/record/
   encode-catalog-pure.ts (+ test) encodeCatalog — the finalised records
                                   (their SIDs and display names), their
                                   multiplicity statuses and the
-                                  binary-primary claims' union (each
-                                  claimed record's FLAG_BINARY_PRIMARY) to
-                                  the assembled
+                                  binary-primary claims' union to the
+                                  assembled
                                   catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
-                                  with its Apsis cells. Throws on a status
+                                  with its Apsis cells. The flags byte is
+                                  the record's own flags plus FLAG_HAS_NAME
+                                  wherever it has a display name and
+                                  FLAG_BINARY_PRIMARY wherever it was
+                                  claimed. Throws on a status
                                   list that does not pair one-for-one with
                                   the records, on NO_SID,
                                   and unless Sol is the one record without

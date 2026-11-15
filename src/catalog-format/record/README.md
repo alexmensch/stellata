@@ -127,7 +127,8 @@ for its coverage and the runtime colour-LUT re-key it enables.
   - 35    `uint8`        flags (bit 0=has_name, 1=is_sol, 2=has_bayer,
                           4=is_binary_primary). `has_name` means an authority
                           NAMED this star — the name table carries the naming
-                          ladder's authority tiers alone (`../../../scripts/catalog/naming/README.md`).
+                          ladder's authority tiers alone (`../../../scripts/catalog/naming/README.md`);
+                          `encodeCatalog` sets it from the display name.
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
                           1=pulsating, 2=eclipsing, 3=other; 4+ refine
