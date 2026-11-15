@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { assertTablesFit, batchQueries, describePull, type Pull } from '../pull/pull';
-import { recordedTableCases, type RecordedFits } from '../pull/recorded-reply';
+import { recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
 import { VIZIER } from '../pull/tap-pure';
 import { REPO_ROOT } from '../../util/paths';
 import { CLASSIC_IDS_PULL, GLIESE_PULL, HIP2_PULL, HIP_VMAG_PULL, MSC_PULL } from './vizier';
@@ -26,9 +26,9 @@ const TABLES = [
 ] as const;
 
 /** Recorded from the CfA mirror, a few rows each (README.md#replies). */
-const recorded = (name: string, table: VizierTable): RecordedFits => {
+const recorded = (name: string, table: VizierTable): RecordedAsu => {
   if (table.scope.kind !== 'whole-table' || table.scope.asu === undefined) throw new Error(`${name} has no ASU form`);
-  return { fits: join(REPO_ROOT, `scripts/refresh/vizier/${name}.cfa.fits`), asu: table.scope.asu };
+  return { stem: join(REPO_ROOT, `scripts/refresh/vizier/${name}.cfa`), asu: table.scope.asu };
 };
 
 describe.each(TABLES)('$name', ({ name, file, table }) => {

@@ -57,7 +57,7 @@ export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
 export const VIZIER: TapArchive = {
   mirrors: [
     { name: 'CDS', protocol: 'tap', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' },
-    { name: 'CfA', protocol: 'asu', verified: true, url: 'https://vizier.cfa.harvard.edu/viz-bin/asu-binfits' },
+    { name: 'CfA', protocol: 'asu', verified: true, url: 'https://vizier.cfa.harvard.edu/viz-bin' },
   ],
   format: 'fits',
   retryDelaysMs: [1_000, 2_000, 4_000],
@@ -132,25 +132,62 @@ export function csvText(columns: readonly string[], rows: readonly (readonly (st
   return [columns, ...rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n';
 }
 
-/** A FITS reply's table, `limit` rows or fewer; a reply cut short is transient. */
-function readFits(reply: HttpReply, limit: number, label: string): TapResult | null {
+type FloatsTable = TapResult & { readonly floats: readonly boolean[] };
+
+/** A FITS reply's table, `limit` rows or fewer, `null` for a file with none; a reply cut short is transient. */
+function readFits(reply: HttpReply, limit: number, label: string): FloatsTable | null {
   const table = readFitsTable(reply.body);
   if (table.kind === 'incomplete') throw new TapTransient(`${label}: FITS reply cut short (${table.reason})`);
-  return table.kind === 'no-table' ? null : withinLimit({ columns: table.columns, rows: table.rows }, limit, label);
+  if (table.kind === 'no-table') return null;
+  return { ...withinLimit({ columns: table.columns, rows: table.rows }, limit, label), floats: table.floats };
+}
+
+const ASU_UNAVAILABLE = /^#\s*(?:INFO\s+)?Error\b|not currently reachable|no connection/im;
+
+/** An `asu-tsv` reply: a header, a units line and a dashes line before the rows; a blank cell is null, every cell trimmed. */
+export function readAsuTsv(text: string, limit: number, label: string): TapResult {
+  if (ASU_UNAVAILABLE.test(text)) throw new TapTransient(`${label}: ${ASU_UNAVAILABLE.exec(text)?.[0]}`);
+  const lines = text.split('\n').filter((line) => line !== '' && !line.startsWith('#'));
+  if (lines.length === 0) return { columns: [], rows: [] };
+  const [header, , dashes, ...data] = lines;
+  if (dashes === undefined || !/^[-\t]+$/.test(dashes)) throw new TapRefused(`${label}: an asu-tsv reply without its dashes line`);
+  const cells = (line: string): (string | null)[] => line.split('\t').map((cell) => cell.trim() || null);
+  return withinLimit({ columns: header.split('\t').map((c) => c.trim()), rows: data.map(cells) }, limit, label);
 }
 
 /** How ASU's FITS writer spells a VizieR column name in TTYPE: `RA(ICRS)` answers as `RA_ICRS_`, while `B-V` keeps its hyphen. */
 export const asuFitsName = (archive: string): string => archive.replace(/[()]/g, '_');
 
-/** An ASU reply's leading columns must be the asked ones, in order, renamed to the names they answer as; ASU appends link columns of its own. */
-function asuResult(query: AsuQuery, result: TapResult | null, label: string): TapResult {
-  const names = query.columns.map((c) => c.name);
-  if (result === null) return { columns: names, rows: [] };
-  const asked = query.columns.map((c) => asuFitsName(c.archive));
-  if (asked.some((name, i) => result.columns[i] !== name)) {
+/** A reply's leading columns must be the asked ones, in order: ASU silently drops a column it does not know, and appends link columns of its own. */
+function askedColumns(result: TapResult, asked: readonly string[], label: string): TapResult {
+  if (result.rows.length > 0 && asked.some((name, i) => result.columns[i] !== name)) {
     throw new TapRefused(`${label}: ASU answered columns [${result.columns.join(', ')}] for the asked [${asked.join(', ')}]`);
   }
-  return { columns: names, rows: result.rows.map((row) => row.slice(0, asked.length)) };
+  return { columns: asked, rows: result.rows.map((row) => row.slice(0, asked.length)) };
+}
+
+/**
+ * The CfA mirror's two replies to one query as one: floats from its FITS, at their declared precision, every other
+ * cell from its TSV, whose blanks are the catalogue's nulls where its binary writers put a 0 or a type minimum. A cell
+ * both report with a value must agree, or the two replies are not of the same rows.
+ */
+export function joinAsu(query: AsuQuery, tsv: TapResult, fits: FloatsTable | null, label: string): TapResult {
+  const names = query.columns.map((c) => c.name);
+  const text = askedColumns(tsv, query.columns.map((c) => c.archive), label);
+  const binary = fits === null ? { columns: [], rows: [] } : askedColumns(fits, query.columns.map((c) => asuFitsName(c.archive)), label);
+  if (text.rows.length !== binary.rows.length) {
+    throw new TapTransient(`${label}: ASU answered ${text.rows.length} TSV rows and ${binary.rows.length} FITS rows to one query`);
+  }
+  const floats = fits?.floats ?? [];
+  const rows = text.rows.map((row, r) => row.map((cell, i) => {
+    const exact = binary.rows[r][i];
+    if (floats[i]) return exact;
+    if (cell !== null && exact !== null && cell !== exact) {
+      throw new TapRefused(`${label}: row ${r + 1} ${names[i]} is "${cell}" in ASU's TSV and "${exact}" in its FITS`);
+    }
+    return cell;
+  }));
+  return { columns: names, rows };
 }
 
 const QUERY_STATUS = /<INFO\b[^>]*\bname="QUERY_STATUS"[^>]*\bvalue="([^"]*)"[^>]*?(?:\/>|>([\s\S]*?)<\/INFO>)/;
@@ -185,17 +222,19 @@ export function syncForm(adql: string, limit: number, format: TapArchive['format
   return new URLSearchParams({ REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: format, MAXREC: String(limit + 1), QUERY: adql });
 }
 
-/** The ASU URL for `query`, asking `-out.max` = limit + 1 so a truncated reply shows as one row too many. */
-export function asuUrl(mirror: TapMirror, query: AsuQuery, limit: number): string {
+/** The ASU URL for `query` in one of its two outputs, asking `-out.max` = limit + 1 so a truncated reply shows as one row too many. */
+export function asuUrl(mirror: TapMirror, output: 'asu-tsv' | 'asu-binfits', query: AsuQuery, limit: number): string {
   const params = new URLSearchParams({
     '-source': query.source, '-out': query.columns.map((c) => c.archive).join(','), ...query.constraints, '-out.max': String(limit + 1),
   });
-  return `${mirror.url}?${params}`;
+  return `${mirror.url}/${output}?${params}`;
 }
 
-const CONTENT_TYPE: Readonly<Record<TapArchive['format'], RegExp>> = { csv: /^text\/csv\b/i, fits: /^application\/fits\b/i };
+const CONTENT_TYPE: Readonly<Record<TapArchive['format'] | 'text', RegExp>> = {
+  csv: /^text\/csv\b/i, fits: /^application\/fits\b/i, text: /^text\/tab-separated-values\b/i,
+};
 
-const answers = (reply: HttpReply, format: TapArchive['format']): boolean =>
+const answers = (reply: HttpReply, format: keyof typeof CONTENT_TYPE): boolean =>
   reply.status >= 200 && reply.status < 300 && CONTENT_TYPE[format].test(reply.contentType);
 
 export interface TapAnswer {
@@ -264,13 +303,16 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     }
     const result = readFits(reply, limit, mirror.name);
     if (result === null) throw new TapTransient(`${mirror.name}: a TAP FITS reply with no table`);
-    return answered(mirror, result);
+    return answered(mirror, { columns: result.columns, rows: result.rows });
   };
 
   const askAsu = async (mirror: TapMirror, query: AsuQuery, limit: number): Promise<TapAnswer> => {
-    const reply = await deps.transport(asuUrl(mirror, query, limit));
-    if (!answers(reply, 'fits')) throw replyError(reply, mirror.name);
-    return answered(mirror, asuResult(query, readFits(reply, limit, mirror.name), mirror.name));
+    const tsv = await deps.transport(asuUrl(mirror, 'asu-tsv', query, limit));
+    if (!answers(tsv, 'text')) throw replyError(tsv, mirror.name);
+    const fits = await deps.transport(asuUrl(mirror, 'asu-binfits', query, limit));
+    if (!answers(fits, 'fits')) throw replyError(fits, mirror.name);
+    const text = readAsuTsv(replyText(tsv), limit, mirror.name);
+    return answered(mirror, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
   };
 
   const ask = (mirror: TapMirror, query: ArchiveQuery, limit: number): Promise<TapAnswer> => {

@@ -1,0 +1,54 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:52 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:52	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=I%2F259%2Ftyc2&-out=TYC1%2CTYC2%2CTYC3%2Cpflag%2CRAmdeg%2CDEmdeg%2CEpRAm%2CEpDEm%2CpmRA%2CpmDE%2Ce_pmRA%2Ce_pmDE%2CRA%28ICRS%29%2CDE%28ICRS%29%2CBTmag%2Ce_BTmag%2CVTmag%2Ce_VTmag%2Cprox%2CHIP&TYC1=3694&TYC2=2544&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_1259
+#Name: I/259
+#Title: The Tycho-2 Catalogue (Hog+ 2000)
+#INFO	ivoid=ivo://cds.vizier/i/259	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/i/259	    IVOID of underlying data collection
+#INFO	creator=Hog E.	    First author or institution
+#INFO	cites=bibcode:2000A&A...355L..27H	    Article or Data origin sources
+#INFO	journal=A&A	    Journal name
+#INFO	original_date=2000	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/I/259	    Dataset landing page
+#INFO	publication_date=2000-02-07	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	I_259_tyc2:
+#Name: I/259/tyc2
+#Title: *The Tycho-2 main catalogue
+#Column	TYC1	(I4)	[1,9537]+= TYC1 from TYC or GSC (1)	[ucd=meta.id.part;meta.main]
+#Column	TYC2	(I5)	[1,12121] TYC2 from TYC or GSC (1)	[ucd=meta.id.part;meta.main]
+#Column	TYC3	(I1)	[1,3] TYC3 from TYC (1)	[ucd=meta.id.part;meta.main]
+#Column	pflag	(A1)	[ PX] mean position flag (2)	[ucd=meta.code]
+#Column	RAmdeg	(F12.8)	[]? Mean Right Asc, ICRS, epoch=J2000 (3)	[ucd=pos.eq.ra]
+#Column	DEmdeg	(F12.8)	[]? Mean Decl, ICRS, at epoch=J2000 (3)	[ucd=pos.eq.dec]
+#Column	EpRAm	(F7.2)	[1915.95,1992.53]? mean epoch of RA (4)	[ucd=time.epoch]
+#Column	EpDEm	(F7.2)	[1911.94,1992.01]? mean epoch of Dec (4)	[ucd=time.epoch]
+#Column	pmRA	(F7.1)	[-4418.0,6544.2]? prop. mot. in RA*cos(dec)	[ucd=pos.pm;pos.eq.ra]
+#Column	pmDE	(F7.1)	[-5774.3,10277.3]? prop. mot. in Dec	[ucd=pos.pm;pos.eq.dec]
+#Column	e_pmRA	(F4.1)	[0.2,11.5]? s.e. prop mot in RA*cos(dec)(5)	[ucd=stat.error]
+#Column	e_pmDE	(F4.1)	[0.2,10.3]? s.e. of proper motion in Dec(5)	[ucd=stat.error]
+#Column	RA(ICRS)	(F12.8)	Observed Tycho-2 Right Ascension, ICRS	[ucd=pos.eq.ra;meta.main]
+#Column	DE(ICRS)	(F12.8)	Observed Tycho-2 Declination, ICRS	[ucd=pos.eq.dec;meta.main]
+#Column	BTmag	(F6.3)	[2.183,16.581]? Tycho-2 BT magnitude (7)	[ucd=phot.mag;em.opt.B]
+#Column	e_BTmag	(F6.3)	[0.014,1.977]? s.e. of BT (7)	[ucd=stat.error]
+#Column	VTmag	(F6.3)	[1.905,15.193]? Tycho-2 VT magnitude (7)	[ucd=phot.mag;em.opt.V]
+#Column	e_VTmag	(F6.3)	[0.009,1.468]? s.e. of VT (7)	[ucd=stat.error]
+#Column	prox	(I3)	[3,999] proximity indicator (8)	[ucd=meta.code]
+#Column	HIP	(I6)	[1,120404]? Hipparcos number	[ucd=meta.id]
+TYC1	TYC2	TYC3	pflag	RAmdeg	DEmdeg	EpRAm	EpDEm	pmRA	pmDE	e_pmRA	e_pmDE	RA(ICRS)	DE(ICRS)	BTmag	e_BTmag	VTmag	e_VTmag	prox	HIP
+ 	 	 	 	deg	deg	yr	yr	mas/yr	mas/yr	mas/yr	mas/yr	deg	deg	mag	mag	mag	mag	 	
+----	-----	-	-	------------	------------	-------	-------	-------	-------	----	----	------------	------------	------	------	------	------	---	------
+3694	 2544	1	 	 34.60250679	 56.55991447	1991.07	1991.00	  341.5	 -223.6	 1.3	 1.3	 34.60108028	 56.56043583	 9.438	 0.019	 8.354	 0.012	999	
+

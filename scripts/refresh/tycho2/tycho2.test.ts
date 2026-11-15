@@ -7,7 +7,7 @@ import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT } from '../../util/paths';
 import type { Row } from '../pull/columns-pure';
 import { describePhasedPull, phaseQueries, type Ask, type Phase } from '../pull/pull';
-import { recordedTableCases, type RecordedFits } from '../pull/recorded-reply';
+import { recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
 import { VIZIER } from '../pull/tap-pure';
 import {
   MAIN, SUPPL1, TYC1_MAX, TYC1_MIN, bandPhase, keptBand, membershipCover, pairCarriedAsOneStar, parseTyc, requestLines,
@@ -18,9 +18,9 @@ const OUTPUTS = declareOutputs({ main: 'tycho2_main.tsv', suppl1: 'tycho2_suppl1
 const WRITTEN = tycho2Pull(OUTPUTS, { request: tycho2Request([], []), requestFrom: [] }).tables;
 
 /** Recorded from the CfA mirror, the spot row's entry each (README.md#replies). */
-function recorded(name: string, phase: Phase): RecordedFits {
+function recorded(name: string, phase: Phase): RecordedAsu {
   if (phase.scope.kind !== 'whole-table' || phase.scope.asu === undefined) throw new Error(`${name} has no ASU form`);
-  return { fits: join(REPO_ROOT, `scripts/refresh/tycho2/${name}.cfa.fits`), asu: phase.scope.asu };
+  return { stem: join(REPO_ROOT, `scripts/refresh/tycho2/${name}.cfa`), asu: phase.scope.asu };
 }
 
 describe('main', () => recordedTableCases('main', DATA_FILES.tycho2Main, WRITTEN.main, recorded('main', bandPhase(MAIN, [3601, 4000]))));

@@ -27,7 +27,7 @@ all; there is no per-table run.
   `declareOutputs`.
 - `refresh-{classic-ids,hipparcos-vmag,hipparcos2,gliese,msc}.ts` — one entry
   per step.
-- `<table>.cfa.fits` — each table's [reply](#replies) recorded from CfA.
+- `<table>.cfa.{tsv,fits}` — each table's [replies](#replies) recorded from CfA.
 - `vizier.test.ts` — each table's replies replayed into lines of its
   committed table, its spot rows and its sort order ([Replies](#replies)),
   and every query one quoted whole-table query to CDS with the same table's
@@ -37,10 +37,11 @@ all; there is no per-table run.
 
 `VIZIER` asks CDS's TAP first and falls back to the CfA (Harvard) mirror,
 which serves VizieR's ASU interface and no TAP
-([The TAP backend](../pull/README.md#the-tap-backend)). Both are asked for
-FITS, so a double is written as stored, and a table sorts totally
-([Order](#order)), so a pull either mirror answers writes the same bytes.
-`vizierQuery` states each query once as both forms.
+([The TAP backend](../pull/README.md#the-tap-backend)). A float reaches the
+TSV at its catalogue's declared precision from either mirror's FITS, CfA's
+other cells come from its text reply, whose blanks are the catalogue's nulls,
+and a table sorts totally ([Order](#order)), so a pull either mirror answers
+writes the same bytes. `vizierQuery` states each query once as both forms.
 
 ## Columns and formats
 
@@ -48,11 +49,12 @@ VizieR's column names are case-sensitive and its table ids carry `/`, so
 every identifier is quoted (`VIZIER.quote`); a column whose TSV name differs
 is projected `"<VizieR name>" AS <tsv name>`. A VOTable `float` is written
 `FLOAT` (`{repr: true, float32: true}`) and a `double` `DOUBLE`
-(`{repr: true}`): the shortest digits that read back to the stored value.
-Which columns are which was read from each table's VOTable `FIELD`s on the
-CfA mirror (2026-11-15); `V/70A`'s B1950 position is a computed `double`,
-sexagesimal only in ASU's text output, which no pull reads. Hipparcos'
-printed V and B−V are `{fixed: 3, float32: true}`.
+(`{repr: true}`): the value at its declared precision, as Python's repr of
+it. Which columns are which was read from each table's VOTable `FIELD`s on
+the CfA mirror (2026-11-15). `V/70A`'s B1950 position is a computed `double`
+VizieR declares `F8.3`, so it is written to 0.001°, finer than the
+catalogue's own ~6–10″ ([data/gliese](/data/gliese/README.md#the-astrometry-and-cross-name-columns)).
+Hipparcos' printed V and B−V are `{fixed: 3, float32: true}`.
 
 ## Order
 
@@ -75,12 +77,14 @@ every column stay tied, and their order cannot show (three in
 
 ## Replies
 
-Each table's reply is a FITS file recorded from the CfA mirror,
-`<table>.cfa.fits` beside the suite (2026-11-15): a few rows, its spot rows
-among them, asked by `recno` or a key list in place of the whole table. The
-suite reads it through `tapClient` as a live ASU answer, so the header
-match, ASU's own link columns, the formats and the sort are all held against
-the committed tables, which a CfA run wrote. CDS's replies are not recorded:
+Each table's replies are CfA's TSV and FITS answers to one query,
+`<table>.cfa.{tsv,fits}` beside the suite (2026-11-15): a few rows, its spot
+rows among them, and for `crossIndex` and `bsc5` a row with a blank integer
+(HD 493's Flamsteed, HR 95's HD), asked by `recno` or a key list in place of
+the whole table. The suite reads them through `tapClient` as a live ASU
+answer, so the join, the header match, ASU's own link columns, the formats
+and the sort are all held against the committed tables, which a CfA run
+wrote. CDS's replies are not recorded:
 CDS has not answered since 2026-11-14, and whether its TAP serves the same
 cells as FITS is what its live checks settle once it does
 ([The TAP backend](../pull/README.md#the-tap-backend)).

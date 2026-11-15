@@ -26,8 +26,8 @@ SIMBAD, over TAP and, for VizieR's CfA mirror, ASU. A pull is a `pull` step on t
   for tests, writes one from typed cells.
 - `checkpoint.ts` — the resume cache.
 - `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
-  archive, CSV lines or an ASU FITS file read through `tapClient`
-  (`RecordedFits`), replayed into a committed table's lines, the committed
+  archive, CSV lines or an ASU mirror's TSV and FITS pair read through
+  `tapClient` (`RecordedAsu`), replayed into a committed table's lines, the committed
   table's rows, and its slices measured against `sliceRows`.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
@@ -181,19 +181,26 @@ identifier (VizieR double-quotes every one: table ids carry `/`, columns carry
 case and parentheses).
 
 **An ASU mirror is VizieR's own interface, for a mirror that serves no TAP.**
-A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked `GET
-<mirror>?-source=<table>&-out=<columns>&<constraints>&-out.max=<limit + 1>`
-for FITS, from the query's ASU form (`AsuQuery`: each archive column under
-the name it answers as, and `column=value` constraints). The reply's leading
-columns must be the asked ones in order, else it is refused: ASU silently
-drops a column it does not know. Its FITS spells a name's parentheses as
-underscores (`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen,
-measured 2026-11-15), and `asuFitsName` matches that. It appends link columns of its own
-(`recno`, Hipparcos' `Sn`), which are cut. A file with no table is no rows.
-An ASU mirror has no `/capabilities` and no hard row limit. Only a
-whole-table scope carries an ASU form, and a pull whose archive has an ASU
-mirror refuses, before any query, a phase without one; the form is part of
-its describe.
+A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked each query
+twice, `GET <mirror>/asu-tsv?…` and `GET <mirror>/asu-binfits?…`, with
+`-source=<table>&-out=<columns>&<constraints>&-out.max=<limit + 1>` from the
+query's ASU form (`AsuQuery`: each archive column under the name it answers
+as, and `column=value` constraints). `joinAsu` takes the float columns from
+the FITS, at their declared precision ([FITS replies](#fits-replies)), and
+every other cell from the TSV (`readAsuTsv`), whose blank is the catalogue's
+null where both binary writers put a 0 (IV/27A's blank `Fl`, measured
+2026-11-15; the catalogue standard makes a null a blank field). A cell both
+report with a value must agree, else the pair is refused as not of the same
+rows; differing row counts are transient. Each reply's leading columns must
+be the asked ones in order, else it is refused: ASU silently drops a column
+it does not know. Its FITS spells a name's parentheses as underscores
+(`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen), and
+`asuFitsName` matches that. It appends link columns of its own (`recno`,
+Hipparcos' `Sn`), which are cut. A FITS file with no table is no rows. An
+ASU mirror has no `/capabilities` and no hard row limit; a TSV naming an
+unreachable database is transient. Only a whole-table scope carries an ASU
+form, and a pull whose archive has an ASU mirror refuses, before any query,
+a phase without one; the form is part of its describe.
 
 **Overflow is refused by row count, never by a status flag.** A CSV reply
 carries no `QUERY_STATUS`: truncated at MAXREC it is HTTP 200 with exactly

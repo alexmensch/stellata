@@ -1,4 +1,4 @@
-// A pull's tests replay a reply recorded from the archive, CSV lines or an ASU FITS file, against its committed table. See README.md#files.
+// A pull's tests replay a reply recorded from the archive, CSV lines or an ASU mirror's TSV and FITS pair, against its committed table. See README.md#files.
 
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -30,26 +30,27 @@ export function replyRows(label: string, columns: readonly Column[], reply: read
   return checkedRows(columns, readCsv(csv, reply.length, label), label);
 }
 
-/** A reply an ASU mirror sent, kept as its FITS file beside the test, and the query form that asked it. */
-export interface RecordedFits {
-  readonly fits: string;
+/** An ASU mirror's two replies to one query, kept beside the test as `<stem>.tsv` and `<stem>.fits`, and the query form that asked them. */
+export interface RecordedAsu {
+  readonly stem: string;
   readonly asu: AsuQuery;
 }
 
 const RECORDED_ROWS = 1_000;
 
-/** The checked rows of a recorded ASU reply, read through `tapClient` as a live one is. */
-export async function fitsReplyRows(label: string, columns: readonly Column[], { fits, asu }: RecordedFits): Promise<readonly Row[]> {
-  const body = new Uint8Array(readFileSync(fits));
+/** The checked rows of a recorded ASU answer, read through `tapClient` as a live one is. */
+export async function asuReplyRows(label: string, columns: readonly Column[], { stem, asu }: RecordedAsu): Promise<readonly Row[]> {
+  const tsv = { status: 200, contentType: 'text/tab-separated-values', body: new Uint8Array(readFileSync(`${stem}.tsv`)) };
+  const fits = { status: 200, contentType: 'application/fits', body: new Uint8Array(readFileSync(`${stem}.fits`)) };
   const archive: TapArchive = { mirrors: [{ name: 'recorded', protocol: 'asu', verified: true, url: 'recorded' }], format: 'fits', retryDelaysMs: [], quote: (id) => id };
   const client = tapClient(archive, {
-    transport: async () => ({ status: 200, contentType: 'application/fits', body }), sleep: async () => {}, report: () => {}, log: () => {},
+    transport: async (url) => (url.includes('/asu-tsv?') ? tsv : fits), sleep: async () => {}, report: () => {}, log: () => {},
   });
   return checkedRows(columns, (await client.query({ adql: label, asu }, RECORDED_ROWS)).result, label);
 }
 
-const rowsOf = (label: string, columns: readonly Column[], reply: readonly string[] | RecordedFits): Promise<readonly Row[]> =>
-  ('fits' in reply ? fitsReplyRows(label, columns, reply) : Promise.resolve(replyRows(label, columns, reply)));
+const rowsOf = (label: string, columns: readonly Column[], reply: readonly string[] | RecordedAsu): Promise<readonly Row[]> =>
+  ('stem' in reply ? asuReplyRows(label, columns, reply) : Promise.resolve(replyRows(label, columns, reply)));
 
 /** Each line `rows` would write that the committed `file` lacks, its header first when that differs. */
 export function linesNotCommitted(file: string, columns: readonly Column[], rows: readonly Row[]): string[] {
@@ -73,7 +74,7 @@ export function oversizedSlices<T extends SliceKey>(
 }
 
 /** A written table's recorded reply against its committed `file`, as cases of the enclosing `describe`: its lines, its spot rows, its order. */
-export function recordedTableCases(name: string, file: string, table: WrittenTable, reply: readonly string[] | RecordedFits): void {
+export function recordedTableCases(name: string, file: string, table: WrittenTable, reply: readonly string[] | RecordedAsu): void {
   const readable = lfsContentReadable(join(REPO_ROOT, file));
 
   it.skipIf(!readable)('writes a recorded reply\'s rows as lines of the committed table', async () => {

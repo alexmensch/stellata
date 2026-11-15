@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { fitsBytes } from './fits-fixture';
 import {
-  GAIA, GAIA_ESA, SIMBAD, TapOverflow, TapRefused, VIZIER, csvText, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
+  GAIA, GAIA_ESA, SIMBAD, TapOverflow, TapRefused, TapTransient, VIZIER, csvText, readAsuTsv, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
   type AsuQuery, type HttpReply, type TapArchive, type Transport,
 } from './tap-pure';
 
@@ -163,75 +163,93 @@ describe('tapClient', () => {
     const ARCHIVE: TapArchive = {
       mirrors: [
         { name: 'TAP', protocol: 'tap', verified: true, url: 'https://tap.example/tap' },
-        { name: 'ASU', protocol: 'asu', verified: true, url: 'https://asu.example/viz-bin/asu-binfits' },
+        { name: 'ASU', protocol: 'asu', verified: true, url: 'https://asu.example/viz-bin' },
       ],
       format: 'fits',
       retryDelaysMs: [0],
       quote: (id) => `"${id}"`,
     };
     const ASU: AsuQuery = {
-      source: 'I/311/hip2',
-      columns: [{ archive: 'HIP', name: 'hip' }, { archive: 'RArad', name: 'ra_icrs' }],
-      constraints: { HIP: '1..2' },
+      source: 'IV/27A/catalog',
+      columns: [{ archive: 'HD', name: 'hd' }, { archive: 'Fl', name: 'flamsteed' }, { archive: 'RA(ICRS)', name: 'ra' }],
+      constraints: { HD: '1..800' },
     };
-    const QUERY = { adql: 'SELECT "HIP" AS hip, "RArad" AS ra_icrs FROM "I/311/hip2" WHERE "HIP" BETWEEN 1 AND 2', asu: ASU };
-    const asuReply = (rows: readonly (readonly [number, number])[]) => fits(fitsBytes(
-      [{ name: 'HIP', form: 'J' }, { name: 'RArad', form: 'D' }, { name: 'recno', form: 'J' }],
-      rows.map(([hip, ra], i) => [hip, ra, i + 1]),
+    const QUERY = { adql: 'SELECT "HD" AS hd, "Fl" AS flamsteed, "RA(ICRS)" AS ra FROM "IV/27A/catalog"', asu: ASU };
+    type Row = readonly [number, number | null, number];
+    const binfits = (rows: readonly Row[]) => fits(fitsBytes(
+      [{ name: 'HD', form: 'J', tnull: -2147483648 }, { name: 'Fl', form: 'I', tnull: -32768 }, { name: 'RA_ICRS_', form: 'D', tdisp: 'F12.8' }, { name: 'recno', form: 'J' }],
+      rows.map(([hd, fl, ra], i) => [hd, fl ?? 0, ra, i + 1]),
     ));
-    const tapDown = (asu: () => HttpReply) => ({ url }: Call) => (url.startsWith('https://tap.example') ? new Error('connect ETIMEDOUT') : asu());
+    const tsv = (rows: readonly Row[], header = 'HD\tFl\tRA(ICRS)') => textReply(200, 'text/tab-separated-values', [
+      '#', '#INFO\tservice_protocol=ASU', '#Column\te_plx\t(F5.2)\tError in parallax', '', header, ' \t \tdeg', '------\t---\t------------',
+      ...rows.map(([hd, fl, ra]) => `${String(hd).padStart(6)}\t${fl === null ? '   ' : String(fl).padStart(3)}\t${ra.toFixed(8).padStart(12)}`), '',
+    ].join('\n'));
+    const asu = (rows: readonly Row[], replies: { tsv?: () => HttpReply; fits?: () => HttpReply } = {}) => ({ url }: Call) => {
+      if (url.startsWith('https://tap.example')) return new Error('connect ETIMEDOUT');
+      return url.includes('/asu-tsv?') ? (replies.tsv ?? (() => tsv(rows)))() : (replies.fits ?? (() => binfits(rows)))();
+    };
+    const ROWS: readonly Row[] = [[493, null, 1.5], [3, 33, 104.550895415]];
 
-    it('asks TAP for FITS and keeps each stored double whole', async () => {
+    it('asks TAP for FITS and writes each float at its declared precision', async () => {
       const { client, syncCalls } = fake(({ url }) => (url.endsWith('/capabilities') ? capabilities(null)
-        : fits(fitsBytes([{ name: 'hip', form: 'J' }, { name: 'ra_icrs', form: 'D' }], [[1, 0.0022211629]]))));
+        : fits(fitsBytes([{ name: 'hd', form: 'J' }, { name: 'ra', form: 'D', tdisp: 'F12.8' }], [[3, 104.550895415]]))));
       const answer = await client(ARCHIVE).query(QUERY, 5);
       expect(syncCalls()[0].form?.get('FORMAT')).toBe('fits');
-      expect(answer.result).toEqual({ columns: ['hip', 'ra_icrs'], rows: [['1', '0.0022211629']] });
+      expect(answer.result).toEqual({ columns: ['hd', 'ra'], rows: [['3', '104.55089542']] });
       expect(readCsv(answer.body, 5, 't')).toEqual(answer.result);
     });
 
-    it('falls back to ASU: archive columns asked, answered under their names, ASU\'s own link columns dropped', async () => {
-      const { client, calls, reported } = fake(tapDown(() => asuReply([[1, 0.0022211629], [2, 0.0054342798]])));
+    it('falls back to ASU: floats from its FITS, every other cell from its TSV, whose blank is the null its FITS writes as 0', async () => {
+      const { client, calls, reported } = fake(asu(ROWS));
       const answer = await client(ARCHIVE).query(QUERY, 5);
-      const asked = new URL(calls.at(-1)!.url);
-      expect([...asked.searchParams]).toEqual([['-source', 'I/311/hip2'], ['-out', 'HIP,RArad'], ['HIP', '1..2'], ['-out.max', '6']]);
-      expect(answer.result).toEqual({ columns: ['hip', 'ra_icrs'], rows: [['1', '0.0022211629'], ['2', '0.0054342798']] });
+      const asked = calls.filter((c) => c.url.startsWith('https://asu.example')).map((c) => new URL(c.url));
+      expect(asked.map((u) => u.pathname)).toEqual(['/viz-bin/asu-tsv', '/viz-bin/asu-binfits']);
+      expect([...asked[1].searchParams]).toEqual([['-source', 'IV/27A/catalog'], ['-out', 'HD,Fl,RA(ICRS)'], ['HD', '1..800'], ['-out.max', '6']]);
+      expect(answer.result).toEqual({ columns: ['hd', 'flamsteed', 'ra'], rows: [['493', null, '1.50000000'], ['3', '33', '104.55089542']] });
       expect(reported).toEqual(['ASU']);
     });
 
     it('refuses an ASU reply one row past the limit', async () => {
-      const { client } = fake(tapDown(() => asuReply([[1, 0], [2, 0], [3, 0]])));
+      const { client } = fake(asu([...ROWS, [4, 1, 0]]));
       await expect(client(ARCHIVE).query(QUERY, 2)).rejects.toThrow(TapOverflow);
     });
 
-    it('refuses an ASU reply that dropped an asked column, as ASU does an unknown one', async () => {
-      const { client } = fake(tapDown(() => fits(fitsBytes([{ name: 'HIP', form: 'J' }, { name: 'Sn', form: 'I' }], [[1, 5]]))));
-      await expect(client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/ASU answered columns \[HIP, Sn\] for the asked \[HIP, RArad\]/);
+    it('refuses ASU replies that dropped an asked column, as ASU does an unknown one', async () => {
+      const { client } = fake(asu(ROWS, { tsv: () => tsv(ROWS, 'HD\tSn\tRA(ICRS)') }));
+      await expect(client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/ASU answered columns \[HD, Sn, RA\(ICRS\)\] for the asked \[HD, Fl, RA\(ICRS\)\]/);
     });
 
-    it('matches a column ASU\'s FITS spells with its parentheses as underscores', async () => {
-      const query = { adql: 'Q', asu: { source: 'I/259/tyc2', columns: [{ archive: 'RA(ICRS)', name: 'ra_icrs' }], constraints: {} } };
-      const { client } = fake(tapDown(() => fits(fitsBytes([{ name: 'RA_ICRS_', form: 'D' }], [[1.5]]))));
-      expect((await client(ARCHIVE).query(query, 5)).result).toEqual({ columns: ['ra_icrs'], rows: [['1.5']] });
+    it('refuses the two replies where a cell both report disagrees: they are not of the same rows', async () => {
+      const { client } = fake(asu(ROWS, { fits: () => binfits([ROWS[0], [3, 34, 104.550895415]]) }));
+      await expect(client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/row 2 flamsteed is "33" in ASU's TSV and "34" in its FITS/);
     });
 
-    it('reads an ASU file with no table as no rows', async () => {
-      const { client } = fake(tapDown(() => fits(fitsBytes(null))));
-      expect((await client(ARCHIVE).query(QUERY, 5)).result).toEqual({ columns: ['hip', 'ra_icrs'], rows: [] });
-    });
-
-    it('retries a FITS reply cut short', async () => {
+    it('retries when the two replies hold different row counts, or the FITS is cut short', async () => {
       let replies = 0;
-      const { client } = fake(tapDown(() => {
-        const whole = asuReply([[1, 0.5]]);
-        return replies++ === 0 ? { ...whole, body: whole.body.subarray(0, 1120) } : whole;
+      const { client } = fake(asu(ROWS, {
+        fits: () => {
+          replies++;
+          if (replies === 1) return binfits([ROWS[0]]);
+          const whole = binfits(ROWS);
+          return replies === 2 ? { ...whole, body: whole.body.subarray(0, 1120) } : whole;
+        },
       }));
-      expect((await client(ARCHIVE).query(QUERY, 5)).result.rows).toEqual([['1', '0.5']]);
-      expect(replies).toBe(2);
+      expect((await client({ ...ARCHIVE, retryDelaysMs: [0, 0] }).query(QUERY, 5)).result.rows).toHaveLength(2);
+      expect(replies).toBe(3);
+    });
+
+    it('reads no rows from a TSV with none and a FITS file with no table', async () => {
+      const { client } = fake(asu([], { fits: () => fits(fitsBytes(null)) }));
+      expect((await client(ARCHIVE).query(QUERY, 5)).result).toEqual({ columns: ['hd', 'flamsteed', 'ra'], rows: [] });
+    });
+
+    it('reads an unreachable database in the TSV as transient', () => {
+      expect(() => readAsuTsv('#INFO\tError=The database is not currently reachable.\n', 5, 'CfA')).toThrow(TapTransient);
+      expect(readAsuTsv('#Column\te_plx\t(F5.2)\tError in parallax\n', 5, 'CfA')).toEqual({ columns: [], rows: [] });
     });
 
     it('refuses to send an ASU mirror a query with no ASU form', async () => {
-      const { client } = fake(tapDown(() => asuReply([])));
+      const { client } = fake(asu(ROWS));
       await expect(client(ARCHIVE).query({ adql: QUERY.adql }, 5)).rejects.toThrow(/answers ASU only/);
     });
   });
