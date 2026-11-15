@@ -69,7 +69,7 @@ describe('record phases', () => {
         () => buildCatalogRowIndexMap(sorted),
       ],
       [
-        // @ts-expect-error the wings follow the sort and the row-index map
+        // @ts-expect-error the wings follow the sort; the map precedes them only through the resolved pairs they take
         () => wingRenderablePrimaries(pairs, promoted),
         () => wingRenderablePrimaries(pairs, sorted),
       ],
