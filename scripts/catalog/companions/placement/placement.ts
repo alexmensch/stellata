@@ -12,6 +12,12 @@ const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([
   'hip2_long_baseline',
 ]);
 
+// Math.sqrt, not held-record's Math.hypot: the two can differ in the last bit,
+// and placements bake into catalog.bin.
+function distFromSol(x: number, y: number, z: number): number {
+  return Math.sqrt(x * x + y * y + z * z);
+}
+
 export interface CompanionPlacement {
   x: number;
   y: number;
@@ -49,7 +55,7 @@ export function projectFromSepPa(
     x: cx,
     y: cy,
     z: cz,
-    distPc: Math.sqrt(cx * cx + cy * cy + cz * cz),
+    distPc: distFromSol(cx, cy, cz),
   };
 }
 
@@ -60,10 +66,7 @@ export function projectionBeyondTidalLimit(
   anchorZ: number,
   sepArcsec: number,
 ): boolean {
-  const distPc = Math.sqrt(
-    anchorX * anchorX + anchorY * anchorY + anchorZ * anchorZ,
-  );
-  return sepArcsec * ARCSEC_TO_RAD * distPc > OPTICAL_DOUBLE_MIN_SEP_PC;
+  return sepArcsec * ARCSEC_TO_RAD * distFromSol(anchorX, anchorY, anchorZ) > OPTICAL_DOUBLE_MIN_SEP_PC;
 }
 
 /** README.md#position. */
@@ -123,7 +126,7 @@ export function resolvePosition(
     if (!hasRenderableOrbit(row)) return null;
     return {
       x: anchorX, y: anchorY, z: anchorZ,
-      distPc: Math.sqrt(anchorX * anchorX + anchorY * anchorY + anchorZ * anchorZ),
+      distPc: distFromSol(anchorX, anchorY, anchorZ),
     };
   }
   if (paDeg === null) return null;
