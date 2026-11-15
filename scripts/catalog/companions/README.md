@@ -672,7 +672,7 @@ size rows (one per record promotion sized, by its last pass:
 <!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
 <!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 31,908
 identity rows (the minted companions and the 17,232 rows promotion retires,
-parks or merges), 1.55 MB gzipped in 0.24 s (header, diff, write and
-invariants; 109 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+parks or merges), 1.57 MB gzipped in 0.43 s (header, diff, write and
+invariants; 67 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
 1.67 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
