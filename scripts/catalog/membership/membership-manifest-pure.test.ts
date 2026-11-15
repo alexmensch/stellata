@@ -1231,3 +1231,49 @@ describe('membership lineage', () => {
     expect(diffLineage(sorted(result.lineage), sorted(buildMembership(input).lineage))).toEqual([]);
   });
 });
+
+/** HIP 90 on TYC 5-5-1 (HD 500), which Tycho-2 also gives to 5-5-2, the entry
+ *  whose Gaia neighbour is the HIP's own source 5050. */
+describe('buildMembership — the pair rule', () => {
+  const pairTables: PrimaryTables = {
+    ...tables,
+    iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }, { tyc: '5-5-2', hd: 501, nHd: 1, nTyc: 1 }],
+    hipI239: new Set([...tables.hipI239, 90]),
+    tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(8.5, 90)], ['5-5-2', tycho2(8.6, 90)]]),
+    tycToSource: new Map([...tables.tycToSource, ['5-5-2', '5050']]),
+    hipToSource: new Map([...tables.hipToSource, [90, '5050']]),
+  };
+  const pairInput = {
+    ...input,
+    spine: [...spine, spineRow({ tyc: '5-5-1', hip: '90', hd: '500' })],
+    tables: pairTables,
+    evidence: gateEvidence(pairTables, new Map([['777', 14.0], ['5050', 8.6]]), new Map(), new Set(['888', '6060', '777', '5050'])),
+  };
+  const simbadNames = (hd: string) => new Map([['5-5-2', { hdIdents: [hd], simbadOid: 1, mainId: null }]]);
+  const hip90 = (r: MembershipResult) => r.rows.find((row) => row.hip === 90);
+
+  it('moves the record onto the entry Gaia names', () => {
+    const moved = buildMembership(pairInput);
+    expect(hip90(moved)?.tyc).toBe('5-5-2');
+    expect(codes(moved)['merge.pair.moves']).toBe(1);
+  });
+
+  it('queues the move SIMBAD names the new entry by another HD for, on a later pass', () => {
+    const queued = buildMembership({ ...pairInput, simbadTycHd: simbadNames('502') });
+    expect(hip90(queued)?.tyc).toBe('5-5-1');
+    expect(queued.pairReview.map((r) => [r.hip, r.reason])).toEqual([[90, 'simbad_refused']]);
+  });
+
+  it('settles a SIMBAD-refused pair by its disposition', () => {
+    const disposed = buildMembership({
+      ...pairInput,
+      simbadTycHd: simbadNames('502'),
+      pairDispositions: new Map([[90, {
+        hip: 90, entries: ['5-5-1', '5-5-2'], keepEntry: '5-5-2', basis: 'tycho2_position' as const, evidence: 'sep 0.2"',
+      }]]),
+    });
+    expect(hip90(disposed)?.tyc).toBe('5-5-2');
+    expect(disposed.pairReview).toEqual([]);
+    expect(codes(disposed)['merge.pair.disposed']).toBe(1);
+  });
+});
