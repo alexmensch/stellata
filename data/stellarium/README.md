@@ -44,7 +44,7 @@ Both by `scripts/catalog/parse/constellations/constellations.ts`, which owns the
 
 - `buildFigureLines(hipToIndex)` → `public/constellations.json` (absent
   for constellations with no asterism lines), from
-  `scripts/catalog/build-catalog.ts`. See
+  `scripts/catalog/stages/sorted-stage.ts`. See
   `scripts/catalog/parse/README.md`
   [Stick figures from Stellarium](/scripts/catalog/parse/constellations/README.md#stick-figures-from-stellarium).
 - `iauEdgeRecords(STELLARIUM.read())` → the boundary segments, parsed and decomposed

@@ -386,7 +386,7 @@ constellation out of the designation string and loses only its expanded alias
 
 `classic-id-overlay-expected.json` pins the counts through the same
 `compareCountSnapshot` / `UPDATE_SNAPSHOTS` machinery
-`build-catalog.ts` uses (`snapshotCheck` in
+`build:catalog` uses (`../stages/catalog-emission.ts`; `snapshotCheck` in
 `../../util/snapshot-check.ts`), staged
 ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)).
 Stage `classic-ids` is the stage's lines folded per live code

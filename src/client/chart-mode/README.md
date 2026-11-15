@@ -262,7 +262,7 @@ variable case:
 
 Wings are driven by `flags` bit 4. Three build-time passes set that bit:
 
-- **Geometric inference** in `build-catalog.ts` — finds AT-HYG rows
+- **Geometric inference** in the catalogue build (`scripts/catalog/stages/sorted-stage.ts`) — finds AT-HYG rows
   where both components of a pair survive the classic_ids cut
   (~14 systems; α Cen-style cases).
 - **CCDM + MultFlag HIP-keyed cross-match** — every Hipparcos star
@@ -273,7 +273,7 @@ Wings are driven by `flags` bit 4. Three build-time passes set that bit:
   build gates it with Hipparcos's own `MultFlag` — keep only
   `{C, G, O}` (component / resolved-in-field / orbit-known); drop
   blank, `V`, and `X`. A small curated `KNOWN_VISUAL_DOUBLES` map
-  in `build-catalog.ts` recovers canonical pairs Hipparcos
+  in `scripts/catalog/multiplicity/visual-doubles.ts` recovers canonical pairs Hipparcos
   modelled as single stars (Polaris, ε¹ Lyr, 61 Cyg A/B). Surfaces
   Sirius, Mizar, Castor, α Cen, Albireo, γ And, ε Lyr, 70 Oph,
   Procyon, Algol, etc. without the optical-pair tail.

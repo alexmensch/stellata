@@ -118,7 +118,7 @@ the write-time complement.
 
 ## Layer 1 — Bailer-Jones (DR3) override
 
-`scripts/catalog/build-catalog.ts` swaps the cascade's naive `1 / π`
+The record walk (`readStars`, `scripts/catalog/parse/stars-parse.ts`) swaps the cascade's naive `1 / π`
 inversion for the Bayesian posteriors published by
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) (CDS I/352).
 The pipeline:

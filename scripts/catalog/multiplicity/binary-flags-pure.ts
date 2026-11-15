@@ -123,8 +123,8 @@ export function markPrimaryIfUnflagged(
 export interface DoublesStar { absmag: number; flags: number; hip: number | null; }
 
 // When the same HIP appears on multiple rows (rare; binary companions sharing
-// an identifier) the FIRST occurrence wins, so against the absmag-sorted star
-// array build-catalog.ts produces the value is the brightest row. Shared
+// an identifier) the FIRST occurrence wins, so against the apparent-V-sorted
+// records the value is the apparently brightest row. Shared
 // between the stick-figure resolver and the CCDM doubles pass so the two never
 // disagree on a duplicate.
 export function buildHipToIndex(
