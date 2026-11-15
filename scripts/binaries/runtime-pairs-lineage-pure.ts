@@ -2,7 +2,7 @@
 
 import { namedExceptionsInvariant, type LineageInvariant } from '../catalog/lineage/lineage-invariant-pure';
 import { stageLineageLine, stageRow, type LineageLine } from '../catalog/lineage/lineage-row-pure';
-import { outcomeCode, stageCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { outcomeCode, stageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import type { MultiplesPair } from './pairs-pure';
 import type { PairFate } from './runtime-binaries-pure';
 import { RUNTIME_PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -17,8 +17,6 @@ export const RUNTIME_PAIRS_CODES = stageCodes(RUNTIME_PAIRS_LINEAGE.stage, {
   'dropped.same-relation-alias': outcomeCode('A pair naming the same physical link as the kept pair of its (primary, secondary) records, at another granularity.'),
   'dropped.duplicate-relation': outcomeCode('A pair whose distinct star collapsed onto the records of another pair, the one kept: a missing minted slot.'),
 });
-
-export type RuntimePairsCounts = StageCounts<typeof RUNTIME_PAIRS_CODES>;
 
 const COLLAPSED_ROWS = new Map([
   ['multiples:05353-0523-Bb,Bc/Bc', 'θ¹ Ori Bc, onto Ba,Bc\'s records'],
