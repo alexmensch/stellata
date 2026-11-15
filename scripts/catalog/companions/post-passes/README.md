@@ -4,13 +4,15 @@ The four passes companion promotion runs over records after its cursor walk
 (`../README.md#companion-promotion-from-databinariesmultiplestsv`), in this
 order: inner-pair re-home, systemic velocity, blend split, anchor flux
 conservation. Each acts on records, not rows: it reads what the walk
-gathered, changes records in place, and returns what it changed.
+gathered and changes records in place. Re-home, blend split and anchor-dim
+return what they changed; systemic velocity writes velocities, which no
+count or lineage row names, and returns nothing.
 `promoteCompanions` (`../companion-promotion.ts`) is the wiring — it turns
 each pass's outcomes into lineage rewrites and folds `PromotionStats`, the
 derived count block, from them. All four run before the record sort.
 
-Nothing here imports `companion-promotion.ts` for a value; the walk hands
-each pass its inputs.
+Nothing here imports `companion-promotion.ts`
+(`../subfolder-boundary.test.ts`); the walk hands each pass its inputs.
 
 ## Files in this area
 
