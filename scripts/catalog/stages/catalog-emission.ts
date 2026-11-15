@@ -26,6 +26,7 @@ import { BUILD_CATALOG_COUNTS } from '../build-catalog-expected-json';
 import { CATALOG_COUNT_STAGES, type CatalogCountStage } from '../build-counts';
 import { CATALOG_CHUNK_DIR, CATALOG_OUTPUTS } from '../catalog-outputs';
 import { serializeCatalogPairEnds } from '../companions/record-index/pair-ends-pure';
+import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { ResolvedPair } from '../companions/record-index/pair-resolution-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -48,7 +49,7 @@ import {
 import type { ReadStarsInputs } from '../parse/read-stars-inputs';
 import type { Star } from '../parse/stars-parse';
 import { encodeCatalog, type EncodedCatalog } from '../record/encode-catalog-pure';
-import type { Finalised } from '../record/record-phase';
+import type { Finalised, Sorted } from '../record/record-phase';
 import { apsisCoverageSummary, recordsCounts } from '../record/records-stage-pure';
 import { buildSearchIndex, searchIndexSummary } from '../record/search-index-pure';
 import { SIMBAD_SAMPLE } from '../validate/simbad-sample-source';
@@ -68,11 +69,14 @@ export function startCatalogBuild(): FileHashes {
   return stepInputHashes();
 }
 
-/** What the pre-allocation stages hand on, the reference tables left behind. */
+/** What the pre-allocation stages hand on: the sorted records and no handle
+ *  to an earlier phase, the reference tables left behind. */
 export interface PreAllocation {
-  readonly walk: WalkStage;
-  readonly naming: NamingStage;
-  readonly promotion: PromotionStage;
+  readonly walk: Omit<WalkStage, 'walked'>;
+  readonly naming: Omit<NamingStage, 'named'>;
+  readonly promotion: Omit<PromotionStage, 'promoted'>;
+  readonly sorted: Sorted;
+  readonly multiplesRows: MultiplesTsvRow[];
   /** Each record's apparent-V sort key, in record order. */
   readonly sortedKey: readonly number[];
   readonly passes: SortedPasses;
