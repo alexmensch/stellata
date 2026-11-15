@@ -4,7 +4,7 @@ import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import type { WdsPair } from '../../wds/wds-pure';
 import { AU_PER_PC, KM_S_PER_AU_YR } from '../../../src/astro-core/astronomy-constants';
 import type { ComponentAstrometry, PairAstrometry } from '../astrometry/routes-pure';
-import { polarToTangent } from '../sky-geometry-pure';
+import { polarToTangent } from '../../../src/astro-core/equatorial-basis';
 import type { Parallax, PmAnchor } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';

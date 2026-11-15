@@ -45,7 +45,8 @@ Each has its own README.
   as Python computes it, so a tiny negative `x` rounds up to `m` rather
   than wrapping to 0 — the edge `multiples.tsv`'s bytes rest on. Write no
   `((x % m) + m) % m`: it rounds before the remainder and wraps that edge
-  the other way. Also `angleBetweenRad`, the unsigned angle between two
+  the other way ([Floor modulos](/tests/README.md#floor-modulos) fails the
+  suite on it). Also `angleBetweenRad`, the unsigned angle between two
   unnormalised vectors as `atan2(|a×b|, a·b)` — **the small-angle-safe
   form, and the reason it is not `phaseAngleFromLegs`**: the cosine is
   flat near zero, so at 1e-6 rad the normalised dot rounds to 1 and
@@ -75,10 +76,13 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. `directionAtEpoch` is the one proper-motion propagation:
-  linear along the tangent basis and renormalised, exact in cos δ and
-  stable through the poles, taking a `ProperMotion` whose μ_α* is already
-  cos δ-applied; either component missing returns the position unmoved.
+  sides speak. `offsetDirection(pos, eastRad, northRad)` moves a
+  direction by an east / north offset: linear along the tangent
+  basis and renormalised (the gnomonic projection's inverse, so an offset
+  `t` lands at angle `atan t`), exact in cos δ and stable through the
+  poles. `directionAtEpoch` is the one proper-motion propagation, that
+  move by μ·Δt, taking a `ProperMotion` whose μ_α* is already cos
+  δ-applied; either component missing returns the position unmoved.
   <a id="proper-motion-accuracy"></a>Its accuracy budget: no radial
   velocity, so perspective acceleration (≤0.15″ worst case) is omitted, and
   under 0.002″ error at Barnard's-scale proper motion over the 24.75-yr
@@ -87,7 +91,11 @@ Each has its own README.
   binding audit's tangent-plane offsets. `angularSeparationArcsec` is
   the separation between two unit vectors through `angleBetweenRad`, so it
   resolves micro-arcseconds where an `acos` of the dot product reads 0.
-  Shared by the catalog build's
+  `polarToTangent` / `tangentToPolar` convert a separation and position
+  angle (east of north) to a `TangentOffset` `{eastArcsec, northArcsec}`
+  and back, the angle wrapped through `pyMod` so a rounding unit west of
+  north reads 360 — the one converter the binaries stages and companion
+  promotion share. Shared by the catalog build's
   PM propagation (`scripts/catalog/distance/direction-cascade.ts`), every
   binaries-pipeline propagation (`scripts/binaries/`), space-motion velocity
   (`scripts/catalog/distance/velocity.ts`), the

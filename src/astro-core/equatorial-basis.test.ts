@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest';
 
+import { ARCSEC_TO_RAD } from './astronomy-constants';
 import {
   angularSeparationArcsec,
   directionAtEpoch,
   equatorialTangentBasis,
   equatorialTangentBasisAt,
   equatorialTangentBasisRad,
+  offsetDirection,
+  polarToTangent,
   raDecFromUnitVector,
   skyPositionAtEpoch,
+  tangentToPolar,
   unitVectorFromRaDec,
   type UnitVector,
 } from './equatorial-basis';
@@ -206,6 +210,39 @@ describe('skyPositionAtEpoch', () => {
     const pole = { raDeg: 10, decDeg: 90 };
     const moved = skyPositionAtEpoch(pole, { pmRaMasyr: 3600, pmDecMasyr: 0 }, 2000, 2001);
     expect(90 - moved.decDeg).toBeCloseTo(3.6 / 3600, 9);
+  });
+});
+
+describe('offsetDirection', () => {
+  it('puts a tangent-plane offset t at angle atan(t) from the origin, at the pole too', () => {
+    const t = 300 * ARCSEC_TO_RAD;
+    for (const decDeg of [0, 88, 90]) {
+      const moved = offsetDirection({ raDeg: 40, decDeg }, t * Math.SQRT1_2, t * Math.SQRT1_2);
+      expect(angularSeparationArcsec(moved, unitVectorFromRaDec(40, decDeg)))
+        .toBeCloseTo(Math.atan(t) / ARCSEC_TO_RAD, 9);
+    }
+  });
+});
+
+describe('polarToTangent', () => {
+  it('puts θ = 0 due north and θ = 90° due east', () => {
+    expect(polarToTangent(5, 0)).toEqual({ eastArcsec: 0, northArcsec: 5 });
+    const east = polarToTangent(5, 90);
+    expect(east.eastArcsec).toBe(5);
+    expect(east.northArcsec).toBeCloseTo(0, 12);
+  });
+});
+
+describe('tangentToPolar', () => {
+  it('inverts polarToTangent', () => {
+    const back = tangentToPolar(polarToTangent(42.1, 269));
+    expect(back.sepArcsec).toBeCloseTo(42.1, 12);
+    expect(back.paDeg).toBeCloseTo(269, 12);
+  });
+
+  it('reads a position angle a rounding unit west of north as 360, not 0', () => {
+    expect(tangentToPolar({ eastArcsec: -1e-300, northArcsec: 1 }).paDeg).toBe(360);
+    expect(tangentToPolar({ eastArcsec: 0, northArcsec: 1 }).paDeg).toBe(0);
   });
 });
 

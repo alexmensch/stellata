@@ -3,7 +3,7 @@
 // projection all resolve their components along.
 
 import { angleBetweenRad, pyMod } from './angles';
-import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
+import { ARCSEC_TO_RAD, DEG_TO_RAD, MAS_TO_RAD, RAD_TO_DEG } from './astronomy-constants';
 
 export interface UnitVector {
   x: number;
@@ -35,7 +35,31 @@ function hasProperMotion(pm: ProperMotion): pm is { pmRaMasyr: number; pmDecMasy
   return pm.pmRaMasyr !== null && pm.pmDecMasyr !== null;
 }
 
-const RAD_TO_DEG = 180 / Math.PI;
+/** An east / north offset on the tangent plane, in arcsec. */
+export interface TangentOffset {
+  eastArcsec: number;
+  northArcsec: number;
+}
+
+export interface PolarOffset {
+  readonly sepArcsec: number;
+  readonly paDeg: number;
+}
+
+/** A separation and position angle (east of north) as a tangent-plane offset. */
+export function polarToTangent(sepArcsec: number, paDeg: number): TangentOffset {
+  const pa = paDeg * DEG_TO_RAD;
+  return { eastArcsec: sepArcsec * Math.sin(pa), northArcsec: sepArcsec * Math.cos(pa) };
+}
+
+/** The inverse of `polarToTangent`, the angle through `pyMod`: a tiny negative
+ *  reads 360, not 0. */
+export function tangentToPolar({ eastArcsec, northArcsec }: TangentOffset): PolarOffset {
+  return {
+    sepArcsec: Math.hypot(eastArcsec, northArcsec),
+    paDeg: pyMod(Math.atan2(eastArcsec, northArcsec) * RAD_TO_DEG, 360),
+  };
+}
 
 export function equatorialTangentBasisRad(raRad: number, decRad: number): TangentBasis {
   const sinRa = Math.sin(raRad);
@@ -80,22 +104,27 @@ export function angularSeparationArcsec(a: UnitVector, b: UnitVector): number {
   return angleBetweenRad(a.x, a.y, a.z, b.x, b.y, b.z) / ARCSEC_TO_RAD;
 }
 
-/** Sky direction at `toEpoch` of a source measured at `fromEpoch`: linear
- *  along the tangent basis, renormalised, with no radial velocity term. Do
- *  NOT divide μ_α* by cos δ before calling. Either PM component missing →
- *  the measured direction, unmoved. */
+export function offsetDirection(pos: SkyPosition, eastRad: number, northRad: number): UnitVector {
+  const { u, east, north } = equatorialTangentBasis(pos.raDeg, pos.decDeg);
+  const x = u.x + eastRad * east.x + northRad * north.x;
+  const y = u.y + eastRad * east.y + northRad * north.y;
+  const z = u.z + eastRad * east.z + northRad * north.z;
+  const norm = Math.hypot(x, y, z);
+  return { x: x / norm, y: y / norm, z: z / norm };
+}
+
+/** Sky direction at `toEpoch` of a source measured at `fromEpoch`, with no
+ *  radial velocity term. Do NOT divide μ_α* by cos δ before calling. Either
+ *  PM component missing → the measured direction, unmoved. */
 export function directionAtEpoch(
   pos: SkyPosition, pm: ProperMotion, fromEpoch: number, toEpoch: number,
 ): UnitVector {
-  const { u, east, north } = equatorialTangentBasis(pos.raDeg, pos.decDeg);
-  if (!hasProperMotion(pm)) return u;
-  const dEast = pm.pmRaMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
-  const dNorth = pm.pmDecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch);
-  const x = u.x + dEast * east.x + dNorth * north.x;
-  const y = u.y + dEast * east.y + dNorth * north.y;
-  const z = u.z + dEast * east.z + dNorth * north.z;
-  const norm = Math.hypot(x, y, z);
-  return { x: x / norm, y: y / norm, z: z / norm };
+  if (!hasProperMotion(pm)) return unitVectorFromRaDec(pos.raDeg, pos.decDeg);
+  return offsetDirection(
+    pos,
+    pm.pmRaMasyr * MAS_TO_RAD * (toEpoch - fromEpoch),
+    pm.pmDecMasyr * MAS_TO_RAD * (toEpoch - fromEpoch),
+  );
 }
 
 /** `directionAtEpoch` as (ra, dec); a position with no motion comes back

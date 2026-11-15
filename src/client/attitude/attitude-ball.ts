@@ -2,6 +2,7 @@
 // wrapped on a sphere, and rendered by a small standalone WebGL renderer.
 
 import * as THREE from 'three';
+import { pyMod } from '../../astro-core/angles';
 import { BALL_VIEW_DIST, BALL_VIEW_FOV_DEG } from './attitude-layout';
 import { ballBasisInto, type ReferenceFrame } from './attitude-pure';
 
@@ -212,7 +213,7 @@ function paintNumerals(ctx: CanvasRenderingContext2D, north: boolean) {
   const trackLats = north ? [15, 45] : [-15, -45];
   for (let lon = -180; lon < 180; lon += SOLID_STEP_DEG) {
     if (lon === 0) continue;
-    const tens = String(Math.round((((lon % 360) + 360) % 360) / 10));
+    const tens = String(Math.round(pyMod(lon, 360) / 10));
     for (const lat of trackLats) numeral(ctx, tens, lon, lat, bg, ink);
   }
 

@@ -17,6 +17,7 @@ import { MOON_ELEMENTS, moonOffsetEcliptic } from '../../ephemerides/moon-epheme
 import { ECLIPTIC_NORTH_POLE_ICRS } from '../../ephemerides/orbit-rings-layer';
 import { SOL_MOONS } from '../../planet-system';
 import { jdUtToT, T_CLAMP_MAX_S, T_CLAMP_MIN_S } from '../../time/time';
+import { pyMod } from '../../../../astro-core/angles';
 import { J2000_JD, J2000_OBLIQUITY_RAD } from '../../../../astro-core/astronomy-constants';
 
 const T_J2000 = jdUtToT(J2000_JD);
@@ -96,7 +97,7 @@ describe('spinDegAt', () => {
     const t0 = Date.UTC(2026, 0, 1) / 1000;
     const w0 = spinDegAt(MERCURY_ROTATION, t0);
     const w1 = spinDegAt(MERCURY_ROTATION, t0 + 86400);
-    const delta = ((w1 - w0) % 360 + 360) % 360;
+    const delta = pyMod(w1 - w0, 360);
     expect(delta).toBeCloseTo(MERCURY_ROTATION.wDegPerDay, 6);
   });
 });
@@ -123,7 +124,7 @@ describe('subObserverLongitudeEastDeg — Earth sub-solar point', () => {
     const lonA = subObserverLongitudeEastDeg(EARTH_ROTATION, NOON, sunDirIcrsFrom('earth', NOON));
     const tB = NOON + 3600;
     const lonB = subObserverLongitudeEastDeg(EARTH_ROTATION, tB, sunDirIcrsFrom('earth', tB));
-    const drift = ((lonA - lonB) % 360 + 360) % 360;
+    const drift = pyMod(lonA - lonB, 360);
     expect(drift).toBeGreaterThan(14.9);
     expect(drift).toBeLessThan(15.1);
   });
@@ -137,7 +138,7 @@ describe('subObserverLongitudeEastDeg — Earth sub-solar point', () => {
     const lonA = subObserverLongitudeEastDeg(VENUS_ROTATION, NOON, sunDirIcrsFrom('venus', NOON));
     const tB = NOON + dayS;
     const lonB = subObserverLongitudeEastDeg(VENUS_ROTATION, tB, sunDirIcrsFrom('venus', tB));
-    const drift = ((lonB - lonA) % 360 + 360) % 360;
+    const drift = pyMod(lonB - lonA, 360);
     expect(drift).toBeGreaterThan(2.9);
     expect(drift).toBeLessThan(3.3);
   });

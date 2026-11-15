@@ -11,7 +11,9 @@ import { getPlanetPositions, resetPositionCache, type Vec3 } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
 import { ECLIPTIC_NORTH_POLE_ICRS } from './orbit-rings-layer';
 import { jdUtToT } from '../time/time';
+import { wrapDegrees } from '../../../astro-core/angles';
 import { KM_PC } from '../../../astro-core/astronomy-constants';
+import { raDecFromUnitVector, type SkyPosition } from '../../../astro-core/equatorial-basis';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const TRUTH_TSV = resolve(__dirname, '../../../../data/horizons/moon-radec-truth.tsv');
@@ -52,15 +54,12 @@ const PARENT_KEY: Record<string, 'jupiter' | 'saturn' | 'uranus' | 'neptune'> = 
 function skyOffsetDeg(
   raA: number, decA: number, raB: number, decB: number,
 ): { east: number; north: number } {
-  let dRa = raB - raA;
-  if (dRa > 180) dRa -= 360;
-  if (dRa < -180) dRa += 360;
+  const dRa = wrapDegrees(raB - raA);
   return { east: dRa * Math.cos(decA * DEG), north: decB - decA };
 }
 
-function icrsToRaDec(v: THREE.Vector3): { raDeg: number; decDeg: number } {
-  const raDeg = (Math.atan2(v.y, v.x) / DEG + 360) % 360;
-  return { raDeg, decDeg: Math.asin(v.z / v.length()) / DEG };
+function icrsToRaDec(v: THREE.Vector3): SkyPosition {
+  return raDecFromUnitVector(v.clone().normalize());
 }
 
 /** Model geocentric ICRS direction of a Sol body at `t`: heliocentric

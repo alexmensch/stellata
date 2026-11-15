@@ -3,6 +3,7 @@
 // See /src/client/galactic/README.md#coordinate-spheres.
 
 import * as THREE from 'three';
+import { pyMod } from '../../../astro-core/angles';
 import { equatorialTangentBasisRad } from '../../../astro-core/equatorial-basis';
 import type {
   CoordSphereFrame,
@@ -10,6 +11,7 @@ import type {
   DrawnCoordSphereFrame,
 } from './coord-sphere';
 import { galacticDirToIcrs } from '../../../astro-core/galactic-coords';
+import { fmtLonDeg } from '../../format/angle-format';
 
 /**
  * Radians in. The identity frame: catalog.bin's Cartesian basis already has x toward
@@ -50,11 +52,6 @@ export function eclipticDirToIcrs(
   );
 }
 
-/** Whole degrees, wrapped to [0, 360). */
-export function fmtLonDeg(deg: number): string {
-  return `${((Math.round(deg) % 360) + 360) % 360}°`;
-}
-
 /** Whole degrees, signed. */
 export function fmtLatDeg(deg: number): string {
   return `${Math.round(deg)}°`;
@@ -63,7 +60,7 @@ export function fmtLatDeg(deg: number): string {
 /** Right ascension in whole hours. The 15°-spaced meridians below are exactly
  *  the hour circles, so this never rounds away a fraction. */
 export function fmtRaHours(deg: number): string {
-  return `${(((Math.round(deg / 15) % 24) + 24) % 24)}h`;
+  return `${pyMod(Math.round(deg / 15), 24)}h`;
 }
 
 /** Declination in signed whole degrees, `+` written explicitly so a dec label
