@@ -152,6 +152,8 @@
       "coherence.anchor.unplaced.anchor-won": 0,
       "coherence.anchor.unplaced.precision-vetoed": 0,
       "coherence.snapped": 2053,
+      "coherence.brightness.held": 2053,
+      "coherence.size.rescaled": 2053,
       "coherence.unmoved.at-anchor-distance": 7,
       "coherence.kept.significant-depth": 367,
       "coherence.kept.wide-gap": 2,
@@ -196,23 +198,27 @@
       "promotion.spectral.ms-from-own-absmag": 13436,
       "promotion.constellation.split-from-anchor": 7,
       "promotion.desig-con.from-anchor": 226,
-      "promotion.fit.owned": 0
+      "promotion.fit.owned": 0,
+      "promotion.size.mint": 12660,
+      "promotion.size.recurated": 51,
+      "promotion.size.blend-split": 62,
+      "promotion.size.anchor-dimmed": 1883,
+      "promotion.size.anchor-re-split": 1955,
+      "promotion.existing.recurated.dmag-imputed": 38,
+      "promotion.existing.recurated.wds-mag": 4,
+      "promotion.existing.recurated.spectral": 0,
+      "promotion.existing.recurated.held": 19,
+      "promotion.existing.anchor-dimmed": 1883,
+      "promotion.existing.anchor-re-split": 1
     },
     "promotion-derived": {
       "companionRepositionedInnerToParent": 299,
-      "companionBlendDimmedAnchors": 1883,
       "companionBlendDimSkipped": 0,
       "companionBlendDimUnfit": 35,
       "companionBlendDimOutside": 1428,
       "companionBlendDimGaiaResolved": 4317,
       "companionBlendDimBeyondSeparation": 3931,
       "companionBlendDimMisfit": 847,
-      "companionExistingMemberRecurated": {
-        "dmag_imputed": 38,
-        "wds_mag": 4,
-        "spectral": 0,
-        "held": 19
-      },
       "physicalOverlaps": 55
     },
     "multiplicity": {
