@@ -9,9 +9,12 @@ import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow } from '../../gliese-parse-pure';
 import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import { cns5Gl } from '../additions/addition-items-pure';
+import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
 
 /** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
-export const PAIR_REVIEW_REASONS = ['no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused'] as const;
+export const PAIR_REVIEW_REASONS = [
+  'no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused', 'simbad_refused',
+] as const;
 export type PairReviewReason = (typeof PAIR_REVIEW_REASONS)[number];
 
 /** The cells a spine row can leave empty that a primary's link fills. */
@@ -184,11 +187,47 @@ function applyMoves(
   return { rows, decided };
 }
 
-/** `binds` is the source the binding derivation ships for a row. see README.md#applying-the-pair-rule */
+/** see README.md#applying-the-pair-rule */
 export function applyPairRule(
-  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null,
+  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null, refused: ReadonlySet<number>,
 ): PairRuleResult {
-  return applyMoves(kept, m, (move, receiver) => (binds(receiver) === move.sourceId ? null : 'gate_refused'));
+  return applyMoves(kept, m, (move, receiver) => {
+    if (binds(receiver) !== move.sourceId) return 'gate_refused';
+    return refused.has(move.hip) ? 'simbad_refused' : null;
+  });
+}
+
+/** see README.md#applying-the-pair-rule */
+export function iv25TycHds(
+  pull: ReadonlyMap<string, SimbadTycHdRow>, iv25: readonly { tyc: string }[],
+): (tyc: string) => readonly number[] {
+  const requested = new Set(iv25.map((r) => r.tyc));
+  return (tyc) => {
+    if (!requested.has(tyc)) {
+      throw new Error(`pair rule: owner entry ${tyc} is no IV/25 entry, so SIMBAD's TYC→HD pull need not have asked for it`);
+    }
+    const row = pull.get(tyc);
+    return row === undefined ? [] : hdNumbers(row);
+  };
+}
+
+/** see README.md#applying-the-pair-rule */
+export function simbadRefusedMoves(
+  rows: readonly SpineRow[],
+  decided: ReadonlyMap<number, PairDecision>,
+  shippedHd: (row: number) => number | null,
+  tycHds: (tyc: string) => readonly number[],
+): Set<number> {
+  const byTyc = new Map<string, number>();
+  rows.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  const out = new Set<number>();
+  for (const d of decided.values()) {
+    if (d.kind !== 'pair-moves') continue;
+    const hd = shippedHd(byTyc.get(d.owner)!);
+    const named = tycHds(d.owner);
+    if (hd !== null && named.length > 0 && !named.includes(hd)) out.add(d.hip);
+  }
+  return out;
 }
 
 /** see README.md#applying-the-pair-rule */

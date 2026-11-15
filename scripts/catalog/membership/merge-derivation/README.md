@@ -19,9 +19,10 @@ scripts/catalog/membership/merge-derivation/
     (+ test)                 built over ../../spine/association-audit-pure.ts's
                              tables), pairOwner, applyPairRule (the kept rows
                              with every move applied that no gate refuses),
-                             applyEveryPairMove (every move, none refused)
-                             and mergeDivergences, one row's divergences.
-                             Pure.
+                             applyEveryPairMove (every move, none refused),
+                             simbadRefusedMoves and iv25TycHds (SIMBAD's
+                             TYC→HD check on the applied moves) and
+                             mergeDivergences, one row's divergences. Pure.
 ```
 
 `../membership-manifest-pure.ts` applies the pair rule to the kept spine rows
@@ -82,6 +83,22 @@ a magnitude below the record's printed V, or SIMBAD giving the source to
 another component — Gaia contradicts itself, so the HIP is queued
 (`gate_refused`) rather than moved. On those pairs Gaia's HIP cross-match
 most likely names the fainter star.
+
+**A move stands only where SIMBAD names the new entry by the HD the record
+ships.** After the label merge, a moved record's TYC and its HD must not name
+different components: where SIMBAD's TYC→HD pull
+([What the TYC → HD pull adjudicates](../../simbad/README.md#what-the-tyc--hd-pull-adjudicates))
+names the owner entry by HDs that leave out the record's shipped HD, Gaia's
+cross-match is contradicted, and the HIP is queued (`simbad_refused`). SIMBAD
+naming no HD for the entry is silence, not agreement or dissent, and the move
+stands. The shipped HD is an output of the label merge, which runs on the
+moved rows, so `buildMembership` runs the pair rule, the binding settlement
+and the merge, takes the refused HIPs out of the move set
+(`simbadRefusedMoves`), and runs them again until no move is refused; each
+pass only adds HIPs, so it ends. The check reads only IV/25's entries
+(`iv25TycHds`), which the pull requests whatever the manifest holds, and
+fails the build on an owner entry outside IV/25
+([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
 
 A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot

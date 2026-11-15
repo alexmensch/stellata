@@ -256,6 +256,7 @@ const PAIR_REVIEW_DESCRIPTIONS = {
   no_entry_matches: 'no entry\'s Gaia TYC cross-match names the HIP\'s source',
   several_match: 'more than one entry\'s Gaia TYC cross-match names the HIP\'s source',
   gate_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and the binding gates refuse that source for the moved record',
+  simbad_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and SIMBAD\'s TYC-to-HD cross-identification names that entry by HDs the moved record does not ship',
 } as const satisfies Record<PairReviewReason, string>;
 
 const HELD_DESCRIPTIONS = {
@@ -268,6 +269,7 @@ const PAIR_REVIEW_BRANCHES = {
   no_entry_matches: 'merge.pair.review.no-entry-matches',
   several_match: 'merge.pair.review.several-match',
   gate_refused: 'merge.pair.review.gate-refused',
+  simbad_refused: 'merge.pair.review.simbad-refused',
 } as const satisfies Record<PairReviewReason, string>;
 type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
 type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;

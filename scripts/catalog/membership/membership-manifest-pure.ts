@@ -14,7 +14,10 @@ import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
-import { applyPairRule, mergeDivergences, pairLinksFrom } from './merge-derivation/merge-derivation-pure';
+import {
+  applyPairRule, iv25TycHds, mergeDivergences, pairLinksFrom, simbadRefusedMoves,
+} from './merge-derivation/merge-derivation-pure';
+import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
@@ -59,6 +62,8 @@ export interface MembershipInput {
   /** The committed corrections to AT-HYG's merge decisions
    *  (spine-corrections/README.md). */
   corrections: readonly SpineCorrectionRow[];
+  /** SIMBAD's TYC→HD pull, which can refuse a pair move (merge-derivation/README.md#applying-the-pair-rule). */
+  simbadTycHd: ReadonlyMap<string, SimbadTycHdRow>;
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
   /** Whether the pulled astrometry gives this source a parallax — what decides
@@ -81,16 +86,28 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const { corrected, keptSpineIndex, folds } = correctedSpine;
   const pairLinks = pairLinksFrom(tables);
   const derive = rowDeriver(tables, idx, evidence);
-  const { rows: kept, decided } = applyPairRule(correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId);
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
+  const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
 
-  const settlement = settleSpineBindings({
-    kept, keyOf, derive, dispositions: input.dispositions, evidence, tables,
-  });
-  const spine = spineSide({
-    kept, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
-    siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
-  });
+  const pairPass = (refused: ReadonlySet<number>) => {
+    const pair = applyPairRule(correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, refused);
+    const settlement = settleSpineBindings({
+      kept: pair.rows, keyOf, derive, dispositions: input.dispositions, evidence, tables,
+    });
+    const spine = spineSide({
+      kept: pair.rows, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
+      siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
+    });
+    const newlyRefused = simbadRefusedMoves(pair.rows, pair.decided, (i) => spine.rows[i].hd, tycHds);
+    return { ...pair, settlement, spine, newlyRefused };
+  };
+  const refused = new Set<number>();
+  let pass = pairPass(refused);
+  while (pass.newlyRefused.size > 0) {
+    for (const hip of pass.newlyRefused) refused.add(hip);
+    pass = pairPass(refused);
+  }
+  const { rows: kept, decided, settlement, spine } = pass;
   const keptKeys = spineKeys(kept);
   const mergeLinks = { ...pairLinks, held: keptKeys };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i)).map(

@@ -57,6 +57,7 @@ import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
+import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -227,6 +228,7 @@ const input = {
   evidence: gateEvidence(tables),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
+  simbadTycHd: new Map<string, SimbadTycHdRow>(),
   magnitudeTerm: null,
   publishesGaiaParallax: (_sourceId: string) => true,
   keys: ORIGIN_KEYS,

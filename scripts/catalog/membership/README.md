@@ -63,8 +63,10 @@ scripts/catalog/membership/
                                   the build lacks.
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, then runs each phase in order
-                                  — the pair rule, binding/spine-settle,
-                                  spine side, the merge derivation, the
+                                  — the pair rule, binding/spine-settle and
+                                  the spine side (repeated until SIMBAD's
+                                  check refuses no move), the merge
+                                  derivation, the
                                   fold check,
                                   additions/admission, the magnitude rows —
                                   and joins their rows,
@@ -91,8 +93,8 @@ scripts/catalog/membership/
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
-                                  multiples.tsv and the review dispositions,
-                                  and emits data/membership/ plus the label
+                                  multiples.tsv, the review dispositions and
+                                  SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
                                   merge's queue
                                   (data/classic-ids/label_flips.tsv) and its
                                   lineage, baseline rotation and change
@@ -221,10 +223,10 @@ a code with a winner names the highest-precedence source proposing it
 
 | Code | Rows | What it is |
 |---|---|---|
-| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,293<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->764<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
+| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,287<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
 | `refused` | <!-- count:membership-manifest/membership.binding.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
-| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->226<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
+| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->228<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
 

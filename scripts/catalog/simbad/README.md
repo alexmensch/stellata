@@ -21,8 +21,9 @@ scripts/catalog/simbad/
     (+ test)                      every namespace the pull keyed on. Bottom
                                   tier of the rv, direction/PM and distance
                                   cascades alike.
-  simbad-tyc-hd-source.ts         SIMBAD_TYC_HD, declared. No build step
-                                  reads it; the adjudication test does.
+  simbad-tyc-hd-source.ts         SIMBAD_TYC_HD, declared. build:membership
+                                  reads it for the pair rule's check; the
+                                  adjudication test reads it too.
   simbad-tyc-hd-parse.ts          data/simbad/simbad_tyc_hd.tsv on the full
     (+ test)                      TYC, plus `hdNumbers` — the component letter
                                   dropped, for the integer comparison against
@@ -87,8 +88,12 @@ A consumer therefore has three verdicts to handle, not two — agrees, dissents,
 and silent, the last being the rows the pull answers for at all ([Which
 witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd), Silence is silence).
 
-**No consumer reads it on the build path**, and the rule it settles — the next
-section — reaches the build through curation rather than a join: eight of the
+**One build step reads it**: `build:membership`'s pair rule queues a move
+onto the other entry of a Tycho-2 pair wherever SIMBAD names that entry by
+HDs the moved record does not ship
+([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
+The rule the next section settles reaches the build through curation rather
+than a join: eight of the
 nine records it licenses are asserted as rows of
 `data/classic-ids/classic_id_overrides.tsv` (`stellata-hooj.14`), each carrying
 the component the witnesses named. α Psc is the ninth, held back on

@@ -51,6 +51,7 @@ import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
+import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
 import { stageFile, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 
@@ -72,6 +73,7 @@ export async function main(): Promise<void> {
     evidence,
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
+    simbadTycHd: SIMBAD_TYC_HD.read(),
     magnitudeTerm,
     publishesGaiaParallax: (sourceId) => {
       const row = gaiaAstrometry.get(sourceId);

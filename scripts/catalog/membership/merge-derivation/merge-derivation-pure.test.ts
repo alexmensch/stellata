@@ -3,7 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
-import { applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
+import {
+  applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, simbadRefusedMoves, type MergeLinks,
+} from './merge-derivation-pure';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -68,7 +70,7 @@ describe('applyPairRule', () => {
   it('moves a record onto the entry the HIP\'s Gaia source sits on, keeping its other cells', () => {
     const kept = [row({ tyc: A, hip: '10', hd: '100', hr: '7' })];
     const l = links({ [B]: 'S1' });
-    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l));
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set());
     expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100', hr: '7' })]);
     expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' }]]));
     expect(kept[0].tyc).toBe(A);
@@ -77,7 +79,7 @@ describe('applyPairRule', () => {
   it('moves the HIP alone onto another spine record sitting on the owner entry', () => {
     const kept = [row({ tyc: A, hip: '10', hd: '100' }), row({ tyc: B, hd: '200' })];
     const l = links({ [B]: 'S1' });
-    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l));
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set());
     expect(rows).toEqual([row({ tyc: A, hd: '100' }), row({ tyc: B, hip: '10', hd: '200' })]);
     expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'record' }]]));
   });
@@ -85,25 +87,77 @@ describe('applyPairRule', () => {
   it('refuses a move onto a spine record that already carries a HIP', () => {
     const kept = [row({ tyc: A, hip: '10' }), row({ tyc: B, hip: '11' })];
     const l = links({ [B]: 'S1' });
-    expect(() => applyPairRule(kept, mergeLinks(l), bindsOwn(l)))
+    expect(() => applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set()))
       .toThrow(/HIP 10 moves onto 1-1-2, whose spine record carries HIP 11/);
   });
 
   it('leaves confirmed and queued pairs where the spine put them', () => {
     const kept = [row({ tyc: A, hip: '10' })];
     const confirmed = links({ [A]: 'S1' });
-    expect(applyPairRule(kept, mergeLinks(confirmed), bindsOwn(confirmed)).rows).toEqual(kept);
+    expect(applyPairRule(kept, mergeLinks(confirmed), bindsOwn(confirmed), new Set()).rows).toEqual(kept);
     const queued = links({}, null);
-    expect(applyPairRule(kept, mergeLinks(queued), bindsOwn(queued)).decided.size).toBe(0);
+    expect(applyPairRule(kept, mergeLinks(queued), bindsOwn(queued), new Set()).decided.size).toBe(0);
   });
 
   it('queues a move whose moved record the binding gates refuse the HIP\'s source, leaving the row as it was', () => {
     const kept = [row({ tyc: A, hip: '10', hd: '100' })];
-    const { rows, decided } = applyPairRule(kept, mergeLinks(links({ [B]: 'S1' })), () => null);
+    const { rows, decided } = applyPairRule(kept, mergeLinks(links({ [B]: 'S1' })), () => null, new Set());
     expect(rows).toEqual(kept);
     expect(decided).toEqual(new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' }]]));
     expect(mergeDivergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
       .toContainEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
+  });
+
+  it('queues a move SIMBAD refused, leaving the row as it was; the gates are weighed first', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+    const l = links({ [B]: 'S1' });
+    const refused = new Set([10]);
+    expect(applyPairRule(kept, mergeLinks(l), bindsOwn(l), refused)).toEqual({
+      rows: kept,
+      decided: new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'simbad_refused' }]]),
+    });
+    expect(applyPairRule(kept, mergeLinks(l), () => null, refused).decided.get(0))
+      .toEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
+  });
+});
+
+describe('simbadRefusedMoves', () => {
+  const tycHds = (named: Record<string, number[]>) => (tyc: string): readonly number[] => named[tyc] ?? [];
+
+  it('refuses a move whose record ships an HD SIMBAD does not name its new entry by', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+    const l = links({ [B]: 'S1' });
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set());
+    const refusedWhen = (hd: number | null, named: Record<string, number[]>) => (
+      simbadRefusedMoves(rows, decided, () => hd, tycHds(named))
+    );
+    expect(refusedWhen(100, { [B]: [101] })).toEqual(new Set([10]));
+    expect(refusedWhen(100, { [B]: [100, 101] })).toEqual(new Set());
+    expect(refusedWhen(100, {})).toEqual(new Set());
+    expect(refusedWhen(null, { [B]: [101] })).toEqual(new Set());
+  });
+
+  it('reads the HD of the record the HIP moved onto', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' }), row({ tyc: B, hd: '200' })];
+    const l = links({ [B]: 'S1' });
+    const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set());
+    const shipped = (i: number) => Number(rows[i].hd);
+    expect(simbadRefusedMoves(rows, decided, shipped, tycHds({ [B]: [200] }))).toEqual(new Set());
+    expect(simbadRefusedMoves(rows, decided, shipped, tycHds({ [B]: [100] }))).toEqual(new Set([10]));
+  });
+});
+
+describe('iv25TycHds', () => {
+  const pull = new Map([[A, { hdIdents: ['100', '100A', '101B'], simbadOid: 1, mainId: null }]]);
+  const read = iv25TycHds(pull, [{ tyc: A }, { tyc: B }]);
+
+  it('names an IV/25 entry\'s HDs, and none where SIMBAD names none', () => {
+    expect(read(A)).toEqual([100, 101]);
+    expect(read(B)).toEqual([]);
+  });
+
+  it('refuses an entry outside IV/25, which the pull need not have asked for', () => {
+    expect(() => read('9-9-9')).toThrow(/9-9-9 is no IV\/25 entry/);
   });
 });
 

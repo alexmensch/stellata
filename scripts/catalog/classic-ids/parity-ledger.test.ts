@@ -94,22 +94,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // Pinned, not merely allowed: every one of these is a designation two
     // records could answer to, so the set growing is a collision-guard
     // question, not routine drift.
-    //
-    // 21 → 25 with the manifest-scoped SIMBAD value cohort: hd:42126,
-    // hd:99103, hd:126128 and hd:155885 are `admitted:` additions that used
-    // to park for want of a parallax, so no ledger row carried their key and
-    // `canonical.has` filtered them out. They reach one now and mint. The
-    // collision-guard half is the assertion below and the `orphaned` set
-    // above, and neither moves.
-    //
-    // 25 → 26 with the curated HD corrections: hd:138917 leaves δ Ser A's
-    // record — its own Gaia source is SIMBAD's δ Ser A, which is HD 138918 —
-    // and the primaries admit 138917 as δ Ser B's own row on its own source.
-    // That is the paragraph above happening again, deliberately.
-    //
-    // 26 → 25 with the pair rule: HIP 3885 now sits on HD 4757's own Tycho-2
-    // entry, so the merge no longer removes hd:4757 from it.
-    expect(reOwned.length).toBe(25);
+    expect(reOwned.length).toBe(26);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });

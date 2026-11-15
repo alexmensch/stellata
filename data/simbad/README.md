@@ -377,6 +377,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
   `build:membership` and `build:astrometry-request`, whose binding
   derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
+- `simbad_tyc_hd.tsv` → `build:membership`, the pair rule's check on a move
+  onto the other entry of a Tycho-2 pair
+  ([Applying the pair rule](/scripts/catalog/membership/merge-derivation/README.md#applying-the-pair-rule)),
+  and `scripts/catalog/simbad/simbad-tyc-hd-parse.test.ts`'s adjudication.
 - `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.ts` Stage 6
   (per-component sp_type, beats AT-HYG's system-inherited string).
 - `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,

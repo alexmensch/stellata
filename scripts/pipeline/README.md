@@ -225,8 +225,8 @@ reads once the step exits 0 and then removes. `release` is the description's.
 
 ## Loops through committed files
 
-Ten places where a file feeds, directly or through other files, the step
-that writes it. Measured 2026-10-27.
+Eleven places where a file feeds, directly or through other files, the step
+that writes it. Measured 2026-10-27; the SIMBAD TYC → HD row 2026-11-15.
 
 | Loop | Disposition |
 |---|---|
@@ -234,6 +234,7 @@ that writes it. Measured 2026-10-27.
 | manifest → astrometry request → astrometry pull → `build:membership` | Broken. The request reads `binding-review-dispositions.tsv`'s `keep_source_id`s in place of the manifest, the only ids the manifest held beyond the candidate legs. Coverage holds by measurement, so the membership gate test asserts every manifest `gaia_source_id` is in the request (a test may read the manifest; a step may not). |
 | … → astrometry pull → `build:classic-ids` → overlay → `build:membership` | Broken by the row above. |
 | manifest → `refresh:tycho2` → Tycho-2 → `build:membership` | Kept until broken: both pulls still key on the manifest. The break: every manifest TYC is a spine-after-corrections or IV/25 TYC, and the spine adds none beyond the manifest and IV/25; the request keys on those, written as a committed TYC request file by a TypeScript `build` step (the corrected spine is computed only in TypeScript, `applySpineCorrections`) and read by both `refresh:tycho2` and `refresh:simbad-tyc-hd`. Request byte-identical. The pull's own check that every manifest TYC was pulled moves to the membership gate test, so the pull opens no manifest. |
+| manifest → `refresh:simbad-tyc-hd` → `simbad_tyc_hd.tsv` → `build:membership` | Broken in what the build reads. The pull's request is the manifest's TYCs union IV/25's, but the pair rule's SIMBAD check reads only IV/25 entries (`iv25TycHds`), which are requested whatever the manifest holds, and fails the build on any other entry ([Applying the pair rule](../catalog/membership/merge-derivation/README.md#applying-the-pair-rule)). The file's bytes still move with the manifest, so the stale-pull stop still fires. |
 | `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken. Binaries reads only the WDS-keyed spectral types, which are their own pull and file (`refresh:simbad-wds-sptype`, `simbad_wds_sptype.tsv`) keyed on `simbad_wds_xids.tsv`, which the manifest never moves. |
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
 | `build:astrometry-request` ↔ the astrometry pull | Kept, same check. The request's binaries share is Stages 1–2 run in-process, whose magnitude gate reads the pull ([The binaries' share](../catalog/astrometry-request/README.md#the-binaries-share-closes-a-loop-through-the-pull)). The share keeps rejected candidates, so the request grows rather than oscillates. |
