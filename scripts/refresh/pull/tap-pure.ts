@@ -143,7 +143,7 @@ export interface TapClient {
   query(adql: string, limit: number): Promise<TapAnswer>;
 }
 
-async function withRetry<T>(run: () => Promise<T>, delaysMs: readonly number[], sleep: (ms: number) => Promise<void>): Promise<T> {
+export async function withRetry<T>(run: () => Promise<T>, delaysMs: readonly number[], sleep: (ms: number) => Promise<void>): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await run();

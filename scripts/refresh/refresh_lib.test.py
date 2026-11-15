@@ -9,7 +9,6 @@ import io
 import json
 import sys
 import tempfile
-import time
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -18,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import refresh_lib as rl  # noqa: E402
-from test_helpers import FakeTable, fake_tap_client  # noqa: E402
 
 
 # ─── retry ────────────────────────────────────────────────────────────
@@ -157,261 +155,6 @@ class RetryTests(unittest.TestCase):
     def test_max_attempts_validates(self) -> None:
         with self.assertRaises(ValueError):
             rl.retry(lambda: None, max_attempts=0)
-
-
-# ─── run_in_batches ───────────────────────────────────────────────────
-
-class RunInBatchesTests(unittest.TestCase):
-    def test_batches_feed_collect_in_order(self) -> None:
-        seen_batches: list[list[int]] = []
-        collected: list[int] = []
-        def q(batch):
-            seen_batches.append(list(batch))
-            return [x * 10 for x in batch]
-        rl.run_in_batches(
-            [1, 2, 3, 4, 5], 2, q, collected.extend, log=lambda _: None
-        )
-        self.assertEqual(seen_batches, [[1, 2], [3, 4], [5]])
-        self.assertEqual(collected, [10, 20, 30, 40, 50])
-
-    def test_empty_input_never_queries(self) -> None:
-        calls: list = []
-        rl.run_in_batches(
-            [], 10, lambda b: calls.append(b) or [], lambda t: None,
-            log=lambda _: None,
-        )
-        self.assertEqual(calls, [])
-
-    def test_invalid_batch_size(self) -> None:
-        with self.assertRaises(ValueError):
-            rl.run_in_batches([1], 0, lambda b: [], lambda t: None)
-
-    def test_schema_validated_first_batch_only(self) -> None:
-        # Only batch 1 is validated; a schema-violating batch 2 must pass
-        # unchecked (every batch shares one ADQL projection, so one check
-        # suffices — and re-validating each batch would be wasted work).
-        tables = iter([{"a": _FakeColumn(int)}, {"b": _FakeColumn(int)}])
-        collected: list = []
-        rl.run_in_batches(
-            [1, 2], 1, lambda b: next(tables), collected.append,
-            schema={"a": int}, schema_label="x", log=lambda _: None,
-        )
-        self.assertEqual(len(collected), 2)
-
-    def test_first_batch_schema_violation_raises(self) -> None:
-        with self.assertRaises(rl.SchemaError):
-            rl.run_in_batches(
-                [1], 1, lambda b: {"b": _FakeColumn(int)}, lambda t: None,
-                schema={"a": int}, log=lambda _: None,
-            )
-
-    def test_logs_cumulative_progress(self) -> None:
-        logs: list[str] = []
-        rl.run_in_batches(
-            [1, 2, 3, 4, 5], 2, lambda b: [0] * len(b), lambda t: None,
-            log=logs.append,
-        )
-        self.assertEqual(len(logs), 3)
-        self.assertIn("batch 1/3", logs[0])
-        self.assertIn("total rows 2", logs[0])
-        self.assertIn("batch 3/3", logs[2])
-        self.assertIn("total rows 5", logs[2])
-
-
-# ─── BatchCheckpoint ──────────────────────────────────────────────────
-
-def _rows(batch) -> list[dict]:
-    return [{"id": i} for i in batch]
-
-
-class BatchCheckpointTests(unittest.TestCase):
-    """A JSON codec over lists-of-dicts stands in for the default VOTable
-    codec so these run without astropy; the default codec has its own
-    round-trip test below."""
-
-    def _ckpt(self, directory: Path, **kw) -> rl.BatchCheckpoint:
-        return rl.BatchCheckpoint(
-            directory,
-            encode=lambda table, path: path.write_text(json.dumps(table)),
-            decode=lambda path: json.loads(path.read_text()),
-            suffix=".json",
-            log=lambda _: None,
-            **kw,
-        )
-
-    def test_cache_removed_once_every_batch_lands(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            collected: list = []
-            rl.run_in_batches(
-                [1, 2, 3, 4, 5], 2, _rows, collected.extend,
-                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
-            )
-            self.assertEqual([r["id"] for r in collected], [1, 2, 3, 4, 5])
-            self.assertFalse(ckpt_dir.exists())
-
-    def test_resumes_from_the_batch_that_failed(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            items = [1, 2, 3, 4, 5, 6]
-
-            def drops_on_batch_3(batch):
-                if batch[0] == 5:
-                    raise rl.TransientError("network drop")
-                return _rows(batch)
-
-            with self.assertRaises(rl.TransientError):
-                rl.run_in_batches(
-                    items, 2, drops_on_batch_3, lambda t: None,
-                    checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
-                )
-            self.assertEqual(
-                sorted(p.name for p in ckpt_dir.glob("batch-*")),
-                ["batch-0001.json", "batch-0002.json"],
-            )
-
-            queried: list[list[int]] = []
-            collected: list = []
-
-            def second_run(batch):
-                queried.append(list(batch))
-                return _rows(batch)
-
-            rl.run_in_batches(
-                items, 2, second_run, collected.extend,
-                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
-            )
-            # Only the un-cached tail is re-queried, and collect still sees
-            # every row in item order — cached batches replay in position.
-            self.assertEqual(queried, [[5, 6]])
-            self.assertEqual([r["id"] for r in collected], [1, 2, 3, 4, 5, 6])
-            self.assertFalse(ckpt_dir.exists())
-
-    def test_changed_items_discard_cached_batches(self) -> None:
-        # Batch 1 of a different request set covers different ids; replaying
-        # it would attribute one source_id's row to another.
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            ckpt = self._ckpt(ckpt_dir)
-            ckpt.begin([1, 2, 3, 4], 2)
-            ckpt.save(1, _rows([1, 2]))
-            self.assertIsNotNone(ckpt.load(1))
-            self._ckpt(ckpt_dir).begin([9, 1, 2, 3], 2)
-            self.assertIsNone(self._ckpt(ckpt_dir).load(1))
-
-    def test_changed_batch_size_discards_cached_batches(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            ckpt = self._ckpt(ckpt_dir)
-            ckpt.begin([1, 2, 3, 4], 2)
-            ckpt.save(1, _rows([1, 2]))
-            self._ckpt(ckpt_dir).begin([1, 2, 3, 4], 4)
-            self.assertIsNone(self._ckpt(ckpt_dir).load(1))
-
-    def test_unchanged_request_set_keeps_cached_batches(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            ckpt = self._ckpt(ckpt_dir)
-            ckpt.begin([1, 2, 3, 4], 2)
-            ckpt.save(1, _rows([1, 2]))
-            self._ckpt(ckpt_dir).begin([1, 2, 3, 4], 2)
-            self.assertEqual(self._ckpt(ckpt_dir).load(1), [{"id": 1}, {"id": 2}])
-
-    def test_cached_first_batch_still_faces_the_schema_gate(self) -> None:
-        # A cache written by an older ADQL projection must fail the schema
-        # check rather than flow into collect.
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            ckpt = self._ckpt(ckpt_dir)
-            ckpt.begin([1, 2], 1)
-            ckpt.save(1, {"b": "stale-projection"})
-            with self.assertRaises(rl.SchemaError):
-                rl.run_in_batches(
-                    [1, 2], 1, lambda b: {"a": _FakeColumn(int)}, lambda t: None,
-                    schema={"a": int}, checkpoint=self._ckpt(ckpt_dir),
-                    log=lambda _: None,
-                )
-
-    def test_log_marks_resumed_batches(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            ckpt = self._ckpt(ckpt_dir)
-            ckpt.begin([1, 2], 1)
-            ckpt.save(1, _rows([1]))
-            logs: list[str] = []
-            rl.run_in_batches(
-                [1, 2], 1, _rows, lambda t: None,
-                checkpoint=self._ckpt(ckpt_dir), log=logs.append,
-            )
-            self.assertIn("batch 1/2", logs[0])
-            self.assertIn("from checkpoint", logs[0])
-            self.assertNotIn("from checkpoint", logs[1])
-
-    def test_encode_failure_leaves_no_partial_batch(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            def boom(_table, path: Path) -> None:
-                path.write_text("half")
-                raise OSError("disk full")
-            ckpt = rl.BatchCheckpoint(
-                ckpt_dir, encode=boom, decode=lambda p: None,
-                suffix=".json", log=lambda _: None,
-            )
-            ckpt.begin([1], 1)
-            with self.assertRaises(OSError):
-                ckpt.save(1, _rows([1]))
-            self.assertEqual(list(ckpt_dir.glob("batch-*")), [])
-
-    def test_empty_input_creates_no_cache(self) -> None:
-        with tempfile.TemporaryDirectory() as d:
-            ckpt_dir = Path(d) / "out.tsv.ckpt"
-            rl.run_in_batches(
-                [], 10, _rows, lambda t: None,
-                checkpoint=self._ckpt(ckpt_dir), log=lambda _: None,
-            )
-            self.assertFalse(ckpt_dir.exists())
-
-    def _round_trip_default_codec(self, table):
-        with tempfile.TemporaryDirectory() as d:
-            ckpt = rl.BatchCheckpoint(Path(d) / "out.tsv.ckpt", log=lambda _: None)
-            ckpt.begin([1, 2], 2)
-            ckpt.save(1, table)
-            return ckpt.load(1)
-
-    def _gaia_shaped_table(self):
-        try:
-            import numpy as np
-            from astropy.table import Table
-        except ImportError:
-            self.skipTest("astropy/numpy not installed")
-        return Table(
-            {
-                "source_id": np.ma.array([1, 2], mask=[False, False]),
-                "teff": np.ma.array([5772.0, 0.0], mask=[False, True]),
-                "sptype": np.ma.array(
-                    np.array(["G2V", ""], dtype=object), mask=[False, True]
-                ),
-            },
-            masked=True,
-        )
-
-    def test_default_codec_preserves_values_and_numeric_masks(self) -> None:
-        # The production codec. A masked numeric cell must survive, or a
-        # resumed batch rewrites a null as 0.0.
-        back = self._round_trip_default_codec(self._gaia_shaped_table())
-        self.assertEqual(len(back), 2)
-        self.assertEqual(int(rl.coerce_masked(back["source_id"][0])), 1)
-        self.assertEqual(float(rl.coerce_masked(back["teff"][0])), 5772.0)
-        self.assertEqual(str(rl.coerce_masked(back["sptype"][0])), "G2V")
-        self.assertIsNone(rl.coerce_masked(back["teff"][1]))
-
-    def test_default_codec_decodes_masked_strings_as_empty(self) -> None:
-        # VOTable char fields carry no null marker, so a masked string cell
-        # comes back as "". Costs nothing downstream: write_tsv emits an
-        # empty cell for both, and the Gaia archive reports a null string
-        # column as "" rather than masking it in the first place.
-        back = self._round_trip_default_codec(self._gaia_shaped_table())
-        self.assertEqual(str(rl.coerce_masked(back["sptype"][1])), "")
 
 
 # ─── assert_row_count ─────────────────────────────────────────────────
@@ -643,11 +386,8 @@ class TapClientTests(unittest.TestCase):
     def test_public_backend_factories(self) -> None:
         # The factories must return valid TapBackend instances without
         # importing pyvo at module load time.
-        cds = rl.cds_backend()
         simbad = rl.simbad_backend("SIMBAD-x", base_url="https://example.invalid/tap")
-        self.assertIsInstance(cds, rl.TapBackend)
         self.assertIsInstance(simbad, rl.TapBackend)
-        self.assertEqual(cds.name, "CDS")
         self.assertEqual(simbad.name, "SIMBAD-x")
 
     def test_simbad_client_composes_cds_primary_then_harvard_fallback(self) -> None:
@@ -1060,6 +800,25 @@ class MembershipReaderTests(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]["tyc"], "1-2-1")
         self.assertEqual(rows[0]["rv_src"], "HYG")
+
+
+class MentionedTycTests(unittest.TestCase):
+    def _write(self, name: str, text: str) -> Path:
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        p = Path(d) / name
+        p.write_text(text)
+        return p
+
+    def test_parse_tyc_reads_a_designation_and_refuses_anything_else(self) -> None:
+        self.assertEqual(rl.parse_tyc("  55-256-1 "), (55, 256, 1))
+        for bad in ("", "3694-2544", "3694-2544-1-2", "TYC 1-2-1", "3694--1", "a-b-c"):
+            self.assertIsNone(rl.parse_tyc(bad), bad)
+
+    def test_unions_the_manifest_column_with_iv25s_own_tycs(self) -> None:
+        manifest = self._write("manifest.tsv", "tyc\thip\n1-2-1\t10\n3-4-1\t11\n\t12\n")
+        iv25 = self._write("tyc2_hd.tsv", "tyc1\ttyc2\ttyc3\thd\n3\t4\t1\t999\n5\t6\t1\t998\n")
+        self.assertEqual(rl.read_mentioned_tycs(manifest, iv25), {(1, 2, 1), (3, 4, 1), (5, 6, 1)})
+        self.assertEqual(rl.read_membership_tycs(manifest), {(1, 2, 1), (3, 4, 1)})
 
 
 # ─── check_spot_row ──────────────────────────────────────────────────

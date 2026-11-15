@@ -8,7 +8,8 @@ SIMBAD. A pull is a `pull` step on the step table
 ## Files
 
 - `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, `tapClient`, `SIMBAD_BATCH_SIZE`, the ids
+  the reply's classification, `tapClient`, `withRetry` (which the WGSN
+  pull's plain fetch shares), `SIMBAD_BATCH_SIZE`, the ids
   one SIMBAD `IN (…)` batch may carry, and `GAIA_SLICE_ROWS`, the rows one
   sliced Gaia query holds.
 - `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by
@@ -115,11 +116,9 @@ smallest `--max-old-space-size` the replay completes in, bisected to about
 | magnitude | 19 | 23.7 M / 11.8 M | 1,313 MiB | 635 MiB | 60 B | ~0 |
 | tyc-xmatch | 5 | 12.6 M / 6.3 M | 762 MiB | 406 MiB | 59 B | ~50 MiB |
 
-At 60 bytes per cell the 3,482 MiB budget (0.85 of the runner's 4,096 MiB)
-holds about 60.8 M cells, tyc's line about 60.7 M, so the cap is **60 M**.
-`watchHeap` is not the instrument here: its samples at full collections miss
-the peak between them, reading 815–894 MiB for the magnitude run that needs
-1,313 (stellata-hhaw.45.87).
+At 60 bytes per cell the 3,481 MiB budget (0.85 of the runner's 4,096 MiB,
+[CI heap budget](../../util/heap-budget/README.md)) holds about 60.8 M cells,
+tyc's line about 60.7 M, so the cap is **60 M**.
 Bounds today: magnitude 25.1 M ((1,273,000 + 48,000) × 19), tyc-xmatch
 12.9 M ((2,530,000 + 48,000) × 5). A table with wider text cells costs more
 per cell, so a pull near the cap is re-measured, not assumed.

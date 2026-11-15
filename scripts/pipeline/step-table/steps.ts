@@ -37,6 +37,7 @@ export const STEPS: StepTable = {
       language: 'ts',
       entry: 'scripts/catalog/classic-ids/build-classic-id-overlay.ts',
       outputs: { module: 'scripts/catalog/classic-ids/classic-id-overlay-outputs.ts', name: 'CLASSIC_ID_OUTPUTS' },
+      heap: 'ci-budget',
     },
     {
       name: 'build:wgsn',
@@ -51,6 +52,7 @@ export const STEPS: StepTable = {
       language: 'ts',
       entry: 'scripts/catalog/astrometry-request/export-astrometry-request.ts',
       outputs: { module: 'scripts/catalog/astrometry-request/astrometry-request-outputs.ts', name: 'ASTROMETRY_REQUEST_OUTPUTS' },
+      heap: 'ci-budget',
     },
     {
       name: 'build:membership',
@@ -58,6 +60,7 @@ export const STEPS: StepTable = {
       language: 'ts',
       entry: 'scripts/catalog/membership/build-membership-manifest.ts',
       outputs: { module: 'scripts/catalog/membership/membership-manifest-outputs.ts', name: 'MEMBERSHIP_OUTPUTS' },
+      heap: 'ci-budget',
     },
     {
       name: 'build:catalog',
@@ -65,6 +68,7 @@ export const STEPS: StepTable = {
       language: 'ts',
       entry: 'scripts/catalog/build-catalog.ts',
       outputs: { module: 'scripts/catalog/catalog-outputs.ts', name: 'CATALOG_OUTPUTS' },
+      heap: 'ci-budget',
     },
     {
       name: 'build:binaries-runtime',

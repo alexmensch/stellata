@@ -440,7 +440,7 @@ primaries disagree with it there: IV/25 gives the HD to the other entry on 451
 (a one-off measurement over the uncorrected spine, 2026-11-14, not
 regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
-entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->274<!-- /count -->, on the other for <!-- count:membership-manifest/membership.merge.pair.moves -->176<!-- /count --> and on no single entry for
+entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->273<!-- /count -->, on the other for <!-- count:membership-manifest/membership.merge.pair.moves -->176<!-- /count --> and on no single entry for
 the rest. The rule
 (the owner's, 2026-11-14): **Gaia decides, else review** — the entry the HIP's
 own Gaia source sits on takes the HIP and its HD; with no such entry the row

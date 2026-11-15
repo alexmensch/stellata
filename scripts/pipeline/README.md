@@ -202,8 +202,7 @@ record yet has no graph edge from; skips a step whose record is fresh unless `--
 describes it; runs it (a Python step under `build_stamp.record_run`, a
 TypeScript one through `tsx`, its inputs derived and hashed before the run, as a TypeScript build's
 are); then writes `data/stamps/<step>.json` with `writeManualRecord`. Extra
-arguments pass through to the step (`--only <stem>`, `--dry-run`,
-`--synthetic`), which then always runs but writes no record: a partial or
+arguments pass through to the step (`--dry-run`, `--synthetic`), which then always runs but writes no record: a partial or
 non-standard run cannot vouch for the whole step, so whatever it moved
 reads stale until a plain run.
 
@@ -298,7 +297,10 @@ The table's own files are in [step-table/](step-table/README.md#files).
   `readManualRecord`'s encoder, the one writer of `data/stamps/`.
 - `runner.ts` (+ test) — `runSteps`: the walk of [The runner](#the-runner--runts)
   over a loaded table, the `Verdict` union (`fresh`, `built`, `stale`,
-  `failed`, `skipped`) matched exhaustively, and the exit status. The runner
+  `failed`, `skipped`) matched exhaustively, and the exit status. A step
+  marked `heap: 'ci-budget'` starts with its heap capped at the CI budget,
+  and fails unrun under a Node major other than `.nvmrc`'s
+  ([CI heap budget](../util/heap-budget/README.md)). The runner
   writes every build stamp itself once a step exits 0 and its declared
   outputs exist: inputs hashed before the run, those it also wrote (and,
   under `--update-snapshots`, all of them) re-hashed after
@@ -334,6 +336,9 @@ The table's own files are in [step-table/](step-table/README.md#files).
   TypeScript step under `tsx`, handed the input hashes taken before it
   started (`util/step-input-hashes.ts`), or `runRecorded`, a Python pull or
   bake under the recorder, whose `RunRecord` is read only when it exits 0.
+  `tsxCommand` starts `tsx`'s CLI under the runner's own Node
+  (`process.execPath`), never a `PATH` lookup, so a step and its describe
+  run on the Node major the runner checked.
 
 ## Design pass
 

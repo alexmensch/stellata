@@ -420,10 +420,9 @@ fall outside that window. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and
 stage yet (2026-11-08). Its first diffed run adds a diff phase CI has not
 measured; placement's, over a file of similar size, takes 12.5 s in CI
 ([Placement lineage](../distance/README.md#placement-lineage)), which puts it near 38 s. Held in memory beside placement's, these
-lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
+lines took `build:catalog` past its 3,481 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
-to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
-3,325 MiB on 2026-11-07, against 3,312 MiB with this stage's lines not kept.
+to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)).
 
 ## Citation
 
