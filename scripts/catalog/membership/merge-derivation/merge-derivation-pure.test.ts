@@ -84,6 +84,17 @@ describe('applyPairRule', () => {
     expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'record' }]]));
   });
 
+  it('reports a moved HIP once, on the row it left, and no verdict on the record it moved onto', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' }), row({ tyc: B, hd: '200' })];
+    const l = links({ [B]: 'S1' });
+    const { rows, received } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set());
+    expect(received).toEqual(new Set([1]));
+    const pairKinds = (i: number) => mergeDivergences(rows[i], mergeLinks(l, rows), undefined, received.has(i))
+      .filter((d) => d.kind.startsWith('pair-'));
+    expect(pairKinds(1)).toEqual([]);
+    expect(mergeDivergences(rows[1], mergeLinks(l, rows)).map((d) => d.kind)).toContain('pair-confirmed');
+  });
+
   it('refuses a move onto a spine record that already carries a HIP', () => {
     const kept = [row({ tyc: A, hip: '10' }), row({ tyc: B, hip: '11' })];
     const l = links({ [B]: 'S1' });
@@ -115,6 +126,7 @@ describe('applyPairRule', () => {
     expect(applyPairRule(kept, mergeLinks(l), bindsOwn(l), refused)).toEqual({
       rows: kept,
       decided: new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'simbad_refused' }]]),
+      received: new Set(),
     });
     expect(applyPairRule(kept, mergeLinks(l), () => null, refused).decided.get(0))
       .toEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });

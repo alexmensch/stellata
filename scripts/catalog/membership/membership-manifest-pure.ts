@@ -107,10 +107,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     for (const hip of pass.newlyRefused) refused.add(hip);
     pass = pairPass(refused);
   }
-  const { rows: kept, decided, settlement, spine } = pass;
+  const { rows: kept, decided, received, settlement, spine } = pass;
   const keptKeys = spineKeys(kept);
   const mergeLinks = { ...pairLinks, held: keptKeys };
-  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i)).map(
+  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i), received.has(i)).map(
     (divergence) => ({ key: keyOf(i), outcome: { kind: 'merge', divergence } }),
   ));
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);

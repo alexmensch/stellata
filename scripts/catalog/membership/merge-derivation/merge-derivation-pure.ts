@@ -145,7 +145,12 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
 }
 
 type PairMove = Extract<MergeDivergence, { kind: 'pair-moves' }>;
-type PairRuleResult = { rows: SpineRow[]; decided: ReadonlyMap<number, PairDecision> };
+type PairRuleResult = {
+  rows: SpineRow[];
+  decided: ReadonlyMap<number, PairDecision>;
+  /** Rows a HIP moved onto from another spine record. */
+  received: ReadonlySet<number>;
+};
 
 /** Every move the Gaia test makes, each applied unless `refusal` names why it is queued instead. */
 function applyMoves(
@@ -155,6 +160,7 @@ function applyMoves(
   const byTyc = new Map<string, number>();
   kept.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
   const decided = new Map<number, PairDecision>();
+  const received = new Set<number>();
   const owners = new Set<string>();
   kept.forEach((row, i) => {
     const move = pairVerdict(row, intOf(row.hip), m).divergence;
@@ -178,9 +184,10 @@ function applyMoves(
     }
     rows[i] = { ...rows[i], hip: '' };
     rows[j] = receiver;
+    received.add(j);
     decided.set(i, { ...move, onto: 'record' });
   });
-  return { rows, decided };
+  return { rows, decided, received };
 }
 
 /** see README.md#applying-the-pair-rule */
@@ -291,8 +298,11 @@ function differsCells(row: SpineRow, inPair: boolean, m: MergeLinks): MergeDiver
   return out;
 }
 
-/** `decided` is `applyPairRule`'s verdict on this row, which `row` already carries. */
-export function mergeDivergences(row: SpineRow, m: MergeLinks, decided?: PairDecision): MergeDivergence[] {
+/** `decided` is `applyPairRule`'s verdict on this row, which `row` already carries;
+ *  `received`, whether a HIP moved onto it, whose verdict is on the row it left. */
+export function mergeDivergences(
+  row: SpineRow, m: MergeLinks, decided?: PairDecision, received = false,
+): MergeDivergence[] {
   const partition = partitionRow(row, m.links);
   const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
     ? [{
@@ -303,14 +313,14 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks, decided?: PairDec
     }]
     : [];
   const pair = pairVerdict(row, intOf(row.hip), m);
-  if (decided === undefined && pair.divergence?.kind === 'pair-moves') {
+  if (!received && decided === undefined && pair.divergence?.kind === 'pair-moves') {
     throw new Error(`pair rule not applied: HIP ${pair.divergence.hip} still on Tycho-2 entry ${row.tyc}`);
   }
-  const verdict = decided ?? pair.divergence;
+  const verdict = received ? null : decided ?? pair.divergence;
   return [
     ...unlinked,
     ...(verdict === null ? [] : [verdict]),
     ...derivedOnlyCells(row, pair.hip, m),
-    ...differsCells(row, verdict !== null, m),
+    ...differsCells(row, received || verdict !== null, m),
   ];
 }
