@@ -1,4 +1,4 @@
-// Sky geometry the binaries stages share: tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
+// Sky geometry the binaries stages share: the tangent-plane offset, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition, TangentOffset, UnitVector } from '../../src/astro-core/equatorial-basis';
