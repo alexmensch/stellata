@@ -1,6 +1,6 @@
 // A committed snapshot a step checks its output against: its file and the step whose run rewrites it. See README.md#a-snapshot.
 
-import type { Declaration } from './row-ref-pure';
+import type { Declaration } from './row-ref-pure.ts';
 
 declare const payload: unique symbol;
 

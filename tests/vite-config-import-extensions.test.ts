@@ -60,7 +60,7 @@ describe('vite config import extensions', () => {
 
   it('the walk reaches past the config into the pipeline modules it imports', () => {
     const { modules } = walkImportGraph(CONFIG);
-    expect(modules).toContain('scripts/catalog/build-counts.ts');
+    expect(modules).toContain('scripts/catalog/build-catalog-expected-json.ts');
     expect(modules).toContain('scripts/util/sources/source.ts');
   });
 });
