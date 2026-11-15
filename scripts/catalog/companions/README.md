@@ -43,7 +43,9 @@ scripts/catalog/companions/
                                   Stage 6 writes them with.
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
     (+ test)                      codes and count block, the serialiser over
-                                  RowOutcome, promotionSummary, and
+                                  RowOutcome, rewriteRows (each sized
+                                  record's size row and a held record's
+                                  brightness rows), promotionSummary, and
                                   the identity rows of the records it mints
                                   and the rows it removes or merges
                                   (#promotion-lineage).
