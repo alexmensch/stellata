@@ -59,9 +59,11 @@ export interface IdentitySources {
   synthGaiaBridges: ReadonlyMap<string, string>;
 }
 
+type DecidedOutcome = Extract<RowOutcome, { reason: 'anchor-is-component' | 'parked-record' } | { via: 'earlier-mint' }>;
+
 export type RowIdentity =
   /** Decided here: a refusal, or an earlier mint. */
-  | { kind: 'decided'; outcome: RowOutcome }
+  | { kind: 'decided'; outcome: DecidedOutcome }
   /** A record the catalogue already holds IS this component. */
   | { kind: 'held'; idx: number; via: HeldVia }
   /** A new record, carrying the ids that survive the inheritance gates. */
