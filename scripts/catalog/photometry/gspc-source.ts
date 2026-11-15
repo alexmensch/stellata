@@ -7,6 +7,6 @@ import { parseGspcTsv, type GspcColour } from './gspc-parse';
 export const GAIA_GSPC = defineSource({
   file: DATA_FILES.gaiaGspc,
   hint: 'Re-run `pnpm run refresh:gaia-gspc`.',
-  rowKey: { id: 'gaia-dr3-gspc', text: (sourceId: string) => sourceId },
+  rowKey: { id: 'gaia-dr3-gspc', cardinality: 'one', text: (sourceId: string) => sourceId },
   parse: (input): Map<string, GspcColour> => parseGspcTsv(input.text(), GAIA_GSPC),
 });

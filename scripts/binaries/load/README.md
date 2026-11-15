@@ -80,7 +80,10 @@ one before:
 5. Synthesize the MSC inner pairs, which see the rescued AB rows.
 
 `pairs` is the WDS rows, then the orphans, then the MSC inner pairs — the
-list Stage 2 walks.
+list Stage 2 walks. Each carries its founding rows as `origin`
+([the WDS readers](../../wds/README.md#files-in-this-area)), a key's whole
+group: an orphan's ORB6 key as printed, an MSC pair's first orbit row's
+`wds_id/syst`.
 
 ## How the readers read
 
@@ -125,6 +128,8 @@ lone solution of an unnamed type is read, and Stage 4 converts it to
 nothing ([Conventions](../orbits/README.md#conventions-the-outputs-rest-on)).
 `../build-binaries.test.ts` reverses every source's rows and holds
 `multiples.tsv` byte for byte.
+The picked row's `origin` still cites every solution the file holds for the
+source, since its `gaia-dr3-nss:` key names them all.
 
 ## Checks and counts
 
@@ -137,7 +142,10 @@ Each pass returns one outcome per row it weighed — duplicate collapse, ORB6
 grades, curated ORB6 letters, astrometry exclusions, the rescue, MSC synthesis
 — and every count, in `stage1Counts` and in the build log, folds from those
 through the one tally helper ([The tally](../../util/counts/README.md#the-tally));
-no pass returns a bare number.
+no pass returns a bare number. The duplicate collapse and the rescue return
+each outcome as a decision carrying its row (a donor also names the orphans it
+donated to), which the `pairs` lineage stage writes
+([Pairs lineage](../README.md#pairs-lineage)).
 `stage1Counts` names the count-snapshot keys this stage's code produces. The
 snapshot's `wds_pairs_total` is not one of them: Stage 3 appends its NSS
 inner pairs to the same list, so its `stage3Counts` returns the total
@@ -228,5 +236,5 @@ identified by `wds_id` alone (`dedupWdsPairRows` keys on discoverer
 and runs upstream, so it can't collapse two of them), at most one `AB`
 row is promoted per system — a system any discoverer already enumerates
 as `AB`, or that the pass already rescued, is skipped so nothing
-double-emits. Counted `blank_components_rescued` /
-`blank_components_deferred` in the Stage-7 snapshot.
+double-emits. Counted `blank_components_rescued` in the Stage-7 snapshot;
+each deferred row is a `pairs.blank-deferred` lineage row ([Pairs lineage](../README.md#pairs-lineage)).

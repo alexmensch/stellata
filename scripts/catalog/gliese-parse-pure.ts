@@ -3,7 +3,7 @@
 // /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import type { Declared } from '../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './simbad/simbad-namespace-ladder-pure';
 import type { MeasuredParallax } from './cited-parallax';
@@ -35,7 +35,7 @@ export interface GlieseRow {
   parallax: GlieseParallax | null;
   /** V/70A's own `HD` column — the GJ↔HD link the association audit joins on. */
   hd: number | null;
-  ref: SourceRowRef<string>;
+  ref: OneRowRef<string>;
 }
 
 export interface GlieseIndex {

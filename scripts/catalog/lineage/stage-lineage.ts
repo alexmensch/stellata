@@ -17,7 +17,8 @@ import {
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { phaseClock } from './phase-clock-pure';
-import { foldStageLines, sortLineageLines, type LineageLine } from './lineage-row-pure';
+import { LINEAGE_LAYOUT } from './lineage-layout-pure';
+import { foldStageLines, sortLineageLines, stageLineageText, type LineageLine } from './lineage-row-pure';
 import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
@@ -145,6 +146,38 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
       () => Object.keys(run.inputs),
     ),
     inputsAt: inputsAtFrom(run.inputs, (commit) => run.upstream?.filesAt(commit) ?? { kind: 'known', hashes: {} }),
+  };
+}
+
+/** A stage whose lines file is named for it, diffed on that file, plus any sibling file its spec declares. */
+export type NamedStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
+  readonly spec: StageLineageSpec<F, S>;
+  readonly codes: C;
+  readonly lines: () => readonly LineageLine[];
+  readonly budget: LineageBudget;
+  readonly invariants: readonly LineageInvariant[];
+  readonly inputs: FileHashes;
+  readonly upstream?: UpstreamLineage;
+} & ([Exclude<F, S>] extends [never]
+  ? { readonly siblings?: never }
+  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+
+export function namedStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
+  stage: NamedStage<F, S, C>,
+): StageLineageRun<F, S> {
+  const { spec, codes, siblings, upstream } = stage;
+  return {
+    layout: LINEAGE_LAYOUT,
+    spec,
+    inputs: stage.inputs,
+    diffed: spec.stage,
+    lines: stage.lines,
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
+    joins: () => [],
+    budget: stage.budget,
+    invariants: stage.invariants,
+    argv: process.argv.slice(2),
+    ...(upstream === undefined ? {} : { upstream }),
   };
 }
 

@@ -7,6 +7,6 @@ import { parseSimbadSptypeTsv, type SimbadSptype } from './spectral-resolve';
 export const SIMBAD_SPTYPE = defineSource({
   file: DATA_FILES.simbadSptype,
   hint: 'Re-run `pnpm run refresh:simbad-sptype`.',
-  rowKey: { id: 'simbad-sptype', text: (oid: number) => String(oid) },
+  rowKey: { id: 'simbad-sptype', cardinality: 'one', text: (oid: number) => String(oid) },
   parse: (input): SimbadSptype => parseSimbadSptypeTsv(input.text(), SIMBAD_SPTYPE),
 });

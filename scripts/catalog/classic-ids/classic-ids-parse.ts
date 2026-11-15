@@ -1,7 +1,7 @@
 // Parsers for the frozen CDS classic-designation tables under
 // data/classic-ids/. See /data/classic-ids/README.md#provenance.
 import type { Declared } from '../../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
@@ -181,7 +181,7 @@ export interface Cns5Astrometry {
    *  row states no motion, or states it uncited — the position stands either
    *  way. */
   pm: CitedProperMotion | null;
-  ref: SourceRowRef<number>;
+  ref: OneRowRef<number>;
 }
 
 /** One CNS5 row. `gaiaSourceId` is an EDR3 id, which shares DR3's

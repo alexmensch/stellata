@@ -34,6 +34,6 @@ export function parseBailerJonesTsv(text: string, from: Declared & RowKeyed<stri
 export const BAILER_JONES = defineSource({
   file: DATA_FILES.bailerJones,
   hint: 'Re-run `pnpm run refresh:bailer-jones`.',
-  rowKey: { id: 'i352', text: (sourceId: string) => sourceId },
+  rowKey: { id: 'i352', cardinality: 'one', text: (sourceId: string) => sourceId },
   parse: (input): BailerJonesIndex => parseBailerJonesTsv(input.text(), BAILER_JONES),
 });

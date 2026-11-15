@@ -3,7 +3,7 @@
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
-  sourceRowRef, type RowKeyed, type SourceRowRef,
+  sourceRowRef, type RowKeyed, type OneRowRef,
 } from '../../util/sources/row-ref-pure';
 import { readTable, tableLineReader, type TableRow } from '../../util/tsv/table-pure';
 
@@ -33,7 +33,7 @@ export interface GaiaAstrometryRow {
   radialVelocityErrorKmS: number | null;
   /** The row of whichever Gaia file supplied it: the catalogue table, or the
    *  magnitude pull for a source only that term admitted. */
-  ref: SourceRowRef<string>;
+  ref: OneRowRef<string>;
 }
 
 const ASTROMETRY_COLUMNS = [
@@ -116,7 +116,7 @@ export function parseGaiaAstrometryTsv(
 export const GAIA_ASTROMETRY = defineSource({
   file: DATA_FILES.gaiaAstrometry,
   hint: 'Re-run `pnpm run refresh:gaia-astrometry`.',
-  rowKey: { id: 'gaia-dr3-astrometry', text: (sourceId: string) => sourceId },
+  rowKey: { id: 'gaia-dr3-astrometry', cardinality: 'one', text: (sourceId: string) => sourceId },
   parse: (input): Map<string, GaiaAstrometryRow> =>
     parseGaiaAstrometryTsv(input.text(), GAIA_ASTROMETRY),
 });

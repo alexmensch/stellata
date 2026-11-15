@@ -2,6 +2,8 @@
 
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import type { NssOrbitRow } from '../load/gaia-pure';
+import { GAIA_NSS } from '../../catalog/sources/gaia-nss-source';
+import { groupRowRef } from '../../util/sources/row-ref-pure';
 
 /** Halbwachs 2023 (/data/papers/index.md#halbwachs2023) Eq. A.1: the forward
  *  transform `thieleInnesToCampbell` inverts. */
@@ -19,13 +21,15 @@ export function tiFromCampbell(aMas: number, iRad: number, nodeRad: number, peri
   ];
 }
 
+/** Founded on its source's group unless `over.origin` names another. */
 export function nssRow(over: Partial<NssOrbitRow> = {}): NssOrbitRow {
-  return {
+  const fields = {
     sourceId: '1', solutionType: 'SB1', period: null, tPeriastron: null, eccentricity: null,
     aThieleInnes: null, bThieleInnes: null, fThieleInnes: null, gThieleInnes: null,
     inclination: null, argPeriastron: null, massRatio: null,
     ...over,
   };
+  return { ...fields, origin: over.origin ?? groupRowRef(GAIA_NSS, fields.sourceId, [1]) };
 }
 
 /** An `Orbital` solution whose Thiele-Innes constants encode the given Campbell elements. */

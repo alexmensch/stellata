@@ -2,7 +2,7 @@
 // bibcoded bottom tier of the value cascades in /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers.
 
 import type { Declared } from '../../util/sources/source';
-import { sourceRowRef, type RowKeyed, type SourceRowRef } from '../../util/sources/row-ref-pure';
+import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../util/sources/row-ref-pure';
 import { readTable, type TableRow } from '../../util/tsv/table-pure';
 import {
   emptySimbadNamespaceIndex,
@@ -28,7 +28,7 @@ type ValuesRow = TableRow<(typeof SIMBAD_VALUES_COLUMNS)[number]>;
 export interface SimbadRadialVelocity {
   kmS: number;
   bibcode: string;
-  ref: SourceRowRef<number>;
+  ref: OneRowRef<number>;
 }
 
 /** One SIMBAD row's position and proper motion, each with the bibcode that is
@@ -40,7 +40,7 @@ export interface SimbadAstrometry {
   decDeg: number;
   cooBibcode: string;
   pm: CitedProperMotion | null;
-  ref: SourceRowRef<number>;
+  ref: OneRowRef<number>;
 }
 
 export interface SimbadValueRow {
@@ -71,7 +71,7 @@ export function emptySimbadValueIndex(): SimbadValueIndex {
  *  reads 243,879 km/s. An unbibcoded value cannot arrive (the pull drops the
  *  whole quantity at write time), so the bibcode check here guards a
  *  re-pulled file rather than this one. */
-function parseRv(row: ValuesRow, ref: SourceRowRef<number>): SimbadRadialVelocity | null {
+function parseRv(row: ValuesRow, ref: OneRowRef<number>): SimbadRadialVelocity | null {
   if (row.text('rvz_type') !== 'v') return null;
   const kmS = row.float('rvz_radvel');
   const bibcode = row.text('rvz_bibcode');
@@ -89,7 +89,7 @@ function parseRv(row: ValuesRow, ref: SourceRowRef<number>): SimbadRadialVelocit
  *  position but no motion is a real shape (the tier keeps the position and
  *  takes a zero tangential term). A PM missing its own bibcode is dropped the
  *  same way, leaving the position standing. */
-function parseAstrometry(row: ValuesRow, ref: SourceRowRef<number>): SimbadAstrometry | null {
+function parseAstrometry(row: ValuesRow, ref: OneRowRef<number>): SimbadAstrometry | null {
   const raDeg = row.float('ra');
   const decDeg = row.float('dec');
   const cooBibcode = row.text('coo_bibcode');

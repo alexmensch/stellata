@@ -7,6 +7,6 @@ import { parseSimbadValuesTsv, type SimbadValueIndex } from './simbad-values-par
 export const SIMBAD_VALUES = defineSource({
   file: DATA_FILES.simbadValues,
   hint: 'Re-run `pnpm run refresh:simbad-values`.',
-  rowKey: { id: 'simbad', text: (oid: number) => String(oid) },
+  rowKey: { id: 'simbad', cardinality: 'one', text: (oid: number) => String(oid) },
   parse: (input): SimbadValueIndex => parseSimbadValuesTsv(input.text(), SIMBAD_VALUES),
 });

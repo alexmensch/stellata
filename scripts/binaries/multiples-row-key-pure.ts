@@ -4,5 +4,6 @@ import type { RowKey } from '../util/sources/row-ref-pure';
 
 export const MULTIPLES_ROW_KEY: RowKey<{ readonly systemId: string; readonly comp: string }> = {
   id: 'multiples',
+  cardinality: 'one',
   text: ({ systemId, comp }) => `${systemId}/${comp}`,
 };

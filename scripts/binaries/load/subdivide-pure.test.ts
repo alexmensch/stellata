@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { discovererKey } from '../component-tokens-pure';
+import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import { mscOrbit } from './load-fixture';
 import { mscPairKey, type MscLookup, type MscOrbitRow } from './msc-pure';
@@ -22,6 +23,7 @@ describe('applyOrb6ComponentOverrides', () => {
     expect(outcomes).toEqual(['applied', 'unchanged']);
     expect(entries.map((e) => e.components)).toEqual(['Ca,Cb', 'AB']);
     expect(target.components).toBe('');
+    expect(sourceRowRefText(entries[0].origin)).toBe('orb6:07346+3153/YY Gem/');
   });
 });
 
@@ -30,6 +32,7 @@ describe('synthesizeOrb6OrphanPairs', () => {
     const [p, ...rest] = synthesizeOrb6OrphanPairs([wdsPair({ wdsId: '00490+1656', components: 'AB' })], [orphan()]);
     expect(rest).toEqual([]);
     expect(p).toMatchObject({ wdsId: '00490+1656', components: 'Aa,Ab', rhoLast: 0, magPri: null, precise: { raDeg: 12.25 } });
+    expect(sourceRowRefText(p.origin)).toBe('orb6:00490+1656/64 Psc/Aa,Ab');
   });
 
   it('skips a pair WDS has and ORB6 misalignment garbage', () => {
@@ -65,6 +68,7 @@ describe('synthesizeMscInnerPairs', () => {
     expect(pairs[0]).toMatchObject({
       wdsId: '10000+0000', components: 'Aa,Ab', discoverer: SYNTH_MSC_DISCOVERER, rhoLast: 0, precise: { raDeg: 100 },
     });
+    expect(sourceRowRefText(pairs[0].origin)).toBe('msc-orbits:10000+0000/Aa,Ab');
   });
 
   it.each([
