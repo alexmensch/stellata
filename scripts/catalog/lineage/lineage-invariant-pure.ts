@@ -2,14 +2,14 @@
 
 import type { Check } from '../../util/emit-artifacts';
 import {
-  decodeLineageLine, lineageLineCode, lineageLineParams, parseParams, type LineageLine, type LineageParams,
+  decodeLineageLine, lineageLineCode, lineageLineKey, lineageLineParams, parseParams, type LineageLine, type LineageParams,
   type LineageRow,
 } from './lineage-row-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 
 export type InvariantExceptions =
   | { readonly kind: 'rule'; readonly allows: (params: LineageParams) => boolean }
-  | { readonly kind: 'named'; readonly param: string; readonly named: ReadonlyMap<string, string> };
+  | { readonly kind: 'named'; readonly named: ReadonlyMap<string, string> };
 
 export interface LineageInvariant {
   /** What holds, as one line; every violation report leads with it. */
@@ -29,9 +29,9 @@ export function lineageInvariant<B extends string>(
 }
 
 export function namedExceptionsInvariant<B extends string>(
-  codes: StageCodes<B>, branch: B, holds: string, param: string, named: ReadonlyMap<string, string>,
+  codes: StageCodes<B>, branch: B, holds: string, named: ReadonlyMap<string, string>,
 ): LineageInvariant {
-  return { holds, code: codes.code(branch), exceptions: { kind: 'named', param, named } };
+  return { holds, code: codes.code(branch), exceptions: { kind: 'named', named } };
 }
 
 export interface InvariantViolations {
@@ -62,14 +62,14 @@ function watchRule(invariant: LineageInvariant, allows: (params: LineageParams) 
   };
 }
 
-function watchNamed(invariant: LineageInvariant, param: string, named: ReadonlyMap<string, string>): Watch {
+function watchNamed(invariant: LineageInvariant, named: ReadonlyMap<string, string>): Watch {
   const matched = new Set<string>();
   const rows: LineageRow[] = [];
   return {
     code: invariant.code,
     see: (line) => {
-      const value = parseParams(lineageLineParams(line))[param];
-      if (value !== undefined && named.has(value)) matched.add(value);
+      const key = lineageLineKey(line);
+      if (named.has(key)) matched.add(key);
       else rows.push(decodeLineageLine(line));
     },
     result: () => ({
@@ -83,7 +83,7 @@ function watch(invariant: LineageInvariant): Watch {
   const { exceptions } = invariant;
   return exceptions.kind === 'rule'
     ? watchRule(invariant, exceptions.allows)
-    : watchNamed(invariant, exceptions.param, exceptions.named);
+    : watchNamed(invariant, exceptions.named);
 }
 
 export function invariantViolations(

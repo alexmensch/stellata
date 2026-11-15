@@ -131,31 +131,31 @@ type Branch = Parameters<typeof PROMOTION_CODES.code>[0];
 type LiveBranch = Parameters<typeof PROMOTION_CODES.liveCode>[0];
 
 const MISKEYED_ANCHOR_ROWS = new Map([
-  ['spine:8830', 'p Eri B, WDS 01398-5612 B'],
-  ['spine:10740', 'α Psc B, WDS 02020+0246 B'],
-  ['spine:90217', 'f Pup C, WDS 07374-3458 C'],
+  ['multiples:01398-5612-AB/B', 'p Eri B, onto its anchor spine:8830'],
+  ['multiples:02020+0246-AB/B', 'α Psc B, onto its anchor spine:10740'],
+  ['multiples:07374-3458-AC/C', 'f Pup C, onto its anchor spine:90217'],
 ]);
 
 const SAMEAS_BRIDGED_ROWS = new Map([
-  ['gaia-dr3:2875176250406193920', 'WDS 00047+3416 Db'],
-  ['gaia-dr3:403123332598347392', 'WDS 01178+4901 Cb'],
-  ['gaia-dr3:3523321789291000448', 'WDS 12357-1650 Bb'],
-  ['gaia-dr3:1755189379660877312', 'WDS 20450+1244 B'],
-  ['gaia-dr3:1790202571530814464', 'WDS 21221+1948 Bb'],
-  ['gaia-dr3:1850540432473446528', 'WDS 21334+3058 Bb'],
-  ['gaia-dr3:2224986268437189888', 'WDS 22450+6808 Cb'],
+  ['multiples:00047+3416-Da,Db/Db', 'bridged to gaia-dr3:2875176250406193920'],
+  ['multiples:01178+4901-Ca,Cb/Cb', 'bridged to gaia-dr3:403123332598347392'],
+  ['multiples:12357-1650-Ba,Bb/Bb', 'bridged to gaia-dr3:3523321789291000448'],
+  ['multiples:20450+1244-AB/B', 'bridged to gaia-dr3:1755189379660877312'],
+  ['multiples:21221+1948-Ba,Bb/Bb', 'bridged to gaia-dr3:1790202571530814464'],
+  ['multiples:21334+3058-Ba,Bb/Bb', 'bridged to gaia-dr3:1850540432473446528'],
+  ['multiples:22450+6808-Ca,Cb/Cb', 'bridged to gaia-dr3:2224986268437189888'],
 ]);
 
 export const PROMOTION_INVARIANTS: readonly LineageInvariant[] = [
   namedExceptionsInvariant(
     PROMOTION_CODES, 'dropped.anchor-is-component',
     'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (README.md#companion-promotion-from-databinariesmultiplestsv)',
-    'record', MISKEYED_ANCHOR_ROWS,
+    MISKEYED_ANCHOR_ROWS,
   ),
   namedExceptionsInvariant(
     PROMOTION_CODES, 'adopted.sameas-bridge',
     'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (README.md#same-as-bridge-to-an-already-admitted-source)',
-    'record', SAMEAS_BRIDGED_ROWS,
+    SAMEAS_BRIDGED_ROWS,
   ),
   lineageInvariant(
     PROMOTION_CODES, 'brightness.anchor-collocated',

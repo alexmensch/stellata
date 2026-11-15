@@ -157,9 +157,10 @@ count says a number moved, a query names the rows that moved it. Each
 `LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
 appear, what holds while it does not, and its allowed exceptions: a rule, a
 predicate over the row's `params` (`lineageInvariant`; `NO_EXCEPTIONS` for a
-zero-pin), or a list of named records, the values one `params` field may take,
-each with what it is (`namedExceptionsInvariant`). A named exception no row
-carries any more fails the check too, naming it, so the list only shrinks: a
+zero-pin), or a list of named rows, by each row's own key, with what it is
+(`namedExceptionsInvariant`); any other row fails, whatever its params share
+with a listed one. A named row no line carries any more fails the check too,
+naming it, so the list only shrinks: a
 known defect fixed upstream is deleted from it in the same change. A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
@@ -169,7 +170,7 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
-and named records alone for two codes
+and named rows alone for two codes
 ([Promotion's invariants](../companions/README.md#promotions-invariants)).
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no

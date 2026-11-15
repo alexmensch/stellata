@@ -57,44 +57,41 @@ describe('invariantViolations', () => {
 });
 
 describe('named exceptions', () => {
-  const named = new Map([['r:1', 'the first reviewed record'], ['r:2', 'the second reviewed record']]);
-  const inv = namedExceptionsInvariant(CODES, 'gap', 'no gap but a reviewed record', 'record', named);
+  const named = new Map([['a:1', 'the first reviewed row'], ['a:2', 'the second reviewed row']]);
+  const inv = namedExceptionsInvariant(CODES, 'gap', 'no gap but a reviewed row', named);
 
-  it('passes when every named record is carried and no other row is', () => {
-    const [v] = invariantViolations([inv], [
-      line('a:1', 'gap', { record: 'r:1' }), line('a:2', 'gap', { record: 'r:2' }), line('a:3', 'gap', { record: 'r:2' }),
-    ]);
+  it('passes when the code\'s rows are exactly the named rows', () => {
+    const [v] = invariantViolations([inv], [line('a:1', 'gap'), line('a:2', 'gap'), line('a:3', 'ok')]);
     expect(v.rows).toEqual([]);
     expect(v.stale).toEqual([]);
-    expect(invariantCheck(v)).toEqual({ kind: 'pass', report: 'invariant holds: no gap but a reviewed record' });
+    expect(invariantCheck(v)).toEqual({ kind: 'pass', report: 'invariant holds: no gap but a reviewed row' });
   });
 
-  it('names a row whose record is not on the list, or that carries no record', () => {
+  it('names every unlisted row, whatever its params share with a listed one', () => {
     const [v] = invariantViolations([inv], [
-      line('a:1', 'gap', { record: 'r:1' }), line('a:2', 'gap', { record: 'r:2' }),
-      line('a:3', 'gap', { record: 'r:9' }), line('a:4', 'gap'),
+      line('a:1', 'gap', { record: 'r:1' }), line('a:2', 'gap'), line('a:3', 'gap', { record: 'r:1' }), line('a:4', 'gap'),
     ]);
     expect(v.rows.map((r) => r.key)).toEqual(['a:3', 'a:4']);
   });
 
-  it('fails naming each listed record no row carries any more', () => {
-    const [v] = invariantViolations([inv], [line('a:1', 'gap', { record: 'r:1' })]);
+  it('fails naming each listed row no line carries any more', () => {
+    const [v] = invariantViolations([inv], [line('a:1', 'gap')]);
     expect(v.rows).toEqual([]);
-    expect(v.stale).toEqual(['r:2\tthe second reviewed record']);
+    expect(v.stale).toEqual(['a:2\tthe second reviewed row']);
     const check = invariantCheck(v);
     if (check.kind !== 'fail') throw new Error('expected a failed check');
     expect(check.message).toBe(
-      '1 declared demo.gap exceptions no row carries any more; delete them: no gap but a reviewed record\n'
-      + '  r:2\tthe second reviewed record',
+      '1 declared demo.gap exceptions no row carries any more; delete them: no gap but a reviewed row\n'
+      + '  a:2\tthe second reviewed row',
     );
   });
 
   it('reports broken rows and lapsed exceptions together', () => {
-    const [v] = invariantViolations([inv], [line('a:1', 'gap', { record: 'r:1' }), line('a:9', 'gap', { record: 'r:9' })]);
+    const [v] = invariantViolations([inv], [line('a:1', 'gap'), line('b:9', 'gap')]);
     const check = invariantCheck(v);
     if (check.kind !== 'fail') throw new Error('expected a failed check');
     expect(check.message.split('\n').map((l) => l.split(':')[0])).toEqual([
-      'invariant broken by 1 demo.gap rows', '  a', '1 declared demo.gap exceptions no row carries any more; delete them', '  r',
+      'invariant broken by 1 demo.gap rows', '  b', '1 declared demo.gap exceptions no row carries any more; delete them', '  a',
     ]);
   });
 

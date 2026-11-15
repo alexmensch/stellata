@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
 import {
   foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine,
@@ -288,29 +289,33 @@ describe('rewriteRows', () => {
 describe('PROMOTION_INVARIANTS', () => {
   const violations = (lines: LineageLine[]) => invariantViolations(PROMOTION_INVARIANTS, lines);
   const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.split('\t')[0]));
-  const linesOf = (records: readonly string[], outcome: (idx: number) => RowOutcome) => records.flatMap((_, idx) =>
-    decisionRows(promotionDecision(promoted(outcome(idx)), (i) => records[i])).map((r) => stageLineageLine(PROMOTION_CODES, r)));
-  const anchorIsComponent = (idx: number): RowOutcome => ({ kind: 'dropped', reason: 'anchor-is-component', idx });
-  const sameasBridge = (idx: number): RowOutcome => ({ kind: 'adopted', idx, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null });
+  const rowAt = (key: string) => {
+    const [systemId, comp] = key.slice(`${MULTIPLES_ROW_KEY.id}:`.length).split('/');
+    return multiplesRow({ systemId, comp });
+  };
+  const linesOf = (keys: readonly string[], outcome: RowOutcome) => keys.flatMap((key) =>
+    decisionRows(promotionDecision({ ...promoted(outcome), row: rowAt(key) }, recordKey)).map((r) => stageLineageLine(PROMOTION_CODES, r)));
+  const anchorIsComponent: RowOutcome = { kind: 'dropped', reason: 'anchor-is-component', idx: 7 };
+  const sameasBridge: RowOutcome = { kind: 'adopted', idx: 3, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null };
 
-  it('excepts the 3 mis-keyed anchor rows and the 7 same-as bridged rows by record, and no anchor-collocated mint', () => {
+  it('excepts the 3 mis-keyed anchor rows and the 7 same-as bridged rows by row key, and no anchor-collocated mint', () => {
     expect([miskeyed.length, bridged.length]).toEqual([3, 7]);
     expect(PROMOTION_INVARIANTS.map((v) => v.exceptions.kind)).toEqual(['named', 'named', 'rule']);
   });
 
-  it('holds over rows carrying exactly the named records', () => {
+  it('holds over exactly the named rows', () => {
     const lines = [...linesOf(miskeyed, anchorIsComponent), ...linesOf(bridged, sameasBridge)];
     expect(violations(lines).map(invariantCheck).map((c) => c.kind)).toEqual(['pass', 'pass', 'pass']);
   });
 
-  it('names a row of an unlisted record and every anchor-collocated mint', () => {
+  it('names an unlisted row onto a listed row\'s record, and every anchor-collocated mint', () => {
     const anchorCollocated: MintedBrightness = { ...own, source: 'anchor_collocated' };
     const lines = [
-      ...linesOf([...miskeyed, 'spine:1'], anchorIsComponent), ...linesOf(bridged, sameasBridge),
-      ...linesOf(['spine:2'], (idx) => ({ kind: 'minted', idx, synthetic: true, brightness: anchorCollocated, constellationSplit: false })),
+      ...linesOf([...miskeyed, 'multiples:00001+0001-AB/B'], anchorIsComponent), ...linesOf(bridged, sameasBridge),
+      ...linesOf(['multiples:00002+0002-AB/B'], { kind: 'minted', idx: 5, synthetic: true, brightness: anchorCollocated, constellationSplit: false }),
     ];
-    expect(violations(lines).map((v) => v.rows.map((r) => r.code))).toEqual([
-      ['promotion.dropped.anchor-is-component'], [], ['promotion.brightness.anchor-collocated'],
+    expect(violations(lines).map((v) => v.rows.map((r) => r.key))).toEqual([
+      ['multiples:00001+0001-AB/B'], [], ['multiples:00002+0002-AB/B'],
     ]);
   });
 });

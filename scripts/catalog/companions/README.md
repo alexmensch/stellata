@@ -689,9 +689,10 @@ the rows of each code a known defect produces, so a new one fails the build by
 name:
 
 - `dropped.anchor-is-component` and `adopted.sameas-bridge`: none but the
-  records named, by `params.record` — the three mis-keyed rows and the seven
-  bridged ones. A fix upstream that clears one fails the check until the
-  record is struck off its list.
+  `multiples.tsv` rows named, by row key — the three mis-keyed rows and the
+  seven bridged ones. Another row onto the same record still fails. A fix
+  upstream that clears one fails the check until the row is struck off its
+  list.
 - `brightness.anchor-collocated`: none.
 
 `brightness.inherited-twin` (<!-- count:build-catalog/promotion.brightness.inherited-twin -->534<!-- /count -->)
