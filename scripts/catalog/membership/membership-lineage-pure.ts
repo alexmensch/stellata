@@ -330,6 +330,11 @@ const MERGE_BRANCHES: readonly {
   })),
 ];
 
+/** The merge codes whose rows `merge-divergence.tsv` records as `kind`. */
+export function mergeBranchesLedgeredAs(kind: MergeDivergenceKind): MergeBranch[] {
+  return MERGE_BRANCHES.filter((d) => d.ledger === kind).map((d) => d.branch);
+}
+
 const MERGE_CODES = Object.fromEntries(
   MERGE_BRANCHES.map((d) => [d.branch, outcomeCode(d.description)]),
 ) as Record<MergeBranch, CodeDeclaration<typeof LIVE>>;

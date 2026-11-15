@@ -46,7 +46,7 @@ import { committedSnapshot } from '../../util/sources/source';
 import { matchSpineToManifest, withRecordMoves, type SpineMatch } from './spine-match-pure';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import {
-  MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
+  MEMBERSHIP_CODES, membershipTotals, mergeBranchesLedgeredAs, type MembershipCounts, type MembershipDerivedCounts,
 } from './membership-lineage-pure';
 import { flattenStages } from '../../util/counts/count-stages-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
@@ -162,7 +162,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const targets = match.manifestIndex.filter((i): i is number => i !== null);
     expect(targets.length - new Set(targets).size).toBe(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
     expect(folds).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('fold')]);
-    expect(recordMoves).toHaveLength(snapshot[MEMBERSHIP_CODES.liveCode('merge.pair.moves-record')]);
+    expect(recordMoves).toHaveLength(mergeBranchesLedgeredAs('pair_moves')
+      .reduce((n, b) => n + snapshot[MEMBERSHIP_CODES.liveCode(b)], 0));
     for (const { foldedRow, survivorRow } of folds) {
       expect(match.manifestIndex[foldedRow], bindingReviewKey(spine[foldedRow]))
         .toBe(match.manifestIndex[survivorRow]);
