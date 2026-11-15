@@ -9,9 +9,10 @@ out on every machine.
   `NODE_OPTIONS`), `heapRuntimeVerdict` (the Node major against `.nvmrc`'s),
   `HEAP_CAP_NOTE` (what the runner appends to a capped step's failure) and
   `nodeMajor`.
-- `heap-budget.ts` (+ test) — `nodeRuntime()`, this process's Node major and
-  the pinned one. The test runs real `tsx` processes holding a known live
-  heap: one above a small cap fails, one below passes.
+- `heap-budget.ts` — `nodeRuntime()`, this process's Node major and the
+  pinned one.
+- `heap-budget.test.ts` — `heapCappedEnv` under real `tsx` processes holding
+  a known live heap: one above a small cap fails, one below passes.
 
 The runner (`../../pipeline/runner.ts`) applies it to every build step whose
 table entry carries `heap: 'ci-budget'` — `build:catalog`, `build:membership`,
