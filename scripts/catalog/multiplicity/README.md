@@ -330,8 +330,12 @@ Per WDS root with ≥2 resolved own-record members:
   and the member keeps its own distance.
 - **Brightness invariance.** A repositioned member's absmag shifts by
   `5·log₁₀(d_old/d_new)` and its Stefan-Boltzmann radius follows
-  (R ∝ √L at fixed Teff), so apparent brightness doesn't change
-  (`snapPhotometry`).
+  (R ∝ √L at fixed Teff), so its de-extincted apparent magnitude doesn't
+  change (`snapPhotometry`, called with no A_V at either end). Its observed
+  magnitude moves by the A_V difference between the two positions
+  (`stellata-hooj.47.1`); re-curation's held move calls the same function
+  with both A_V values
+  ([Re-curation](../companions/README.md#re-curation-of-an-already-in-catalog-member)).
 
 Running before promotion means minted companions tangent-project off
 already-coherent anchors, and the baked pair geometry in catalog.bin

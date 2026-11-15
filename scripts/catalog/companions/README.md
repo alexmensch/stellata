@@ -356,8 +356,10 @@ Per-row gates and resolution:
   - **Observed magnitude** comes from the anchor's own `absmag` at its own
     `|xyz|`, never a multiples.tsv `dist_pc` — that can predate a distance
     override the record took (HD 64315: 12.7 kpc vs 6.2) or a coherence
-    reposition (σ Ori 328.9 → 399.8 pc), both safe here because coherence moves
-    records at fixed apparent brightness.
+    reposition (σ Ori 328.9 → 399.8 pc). Coherence moves a record at fixed
+    de-extincted apparent magnitude, so a snapped anchor's observed magnitude
+    here is off by its A_V difference between the two positions
+    (`stellata-hooj.47.1`).
   - **"Anchor alone"** is the `mag_pri` of the anchor's DEEPEST row, and is also
     the Δ reference for every `dmag_imputed` member. `componentDepth` ranks the
     letter, NOT its length: a compound is an unresolved aggregate and scores 0,

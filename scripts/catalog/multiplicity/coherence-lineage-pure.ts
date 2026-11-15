@@ -36,7 +36,7 @@ export const COHERENCE_CODES = stageCodes(COHERENCE_LINEAGE.stage, {
   'anchor.unplaced.anchor-won': outcomeCode(`${UNPLACED}${ANCHOR_WON}`),
   'anchor.unplaced.precision-vetoed': outcomeCode(`${UNPLACED}${PRECISION_VETOED}`),
   snapped: outcomeCode('The record moves radially onto its system anchor\'s distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor\'s.'),
-  'brightness.held': outcomeCode('The snapped record keeps its apparent brightness across the move, so its absmag shifts by 5·log₁₀(from/to) to params.absmag, the absmag it ships unless promotion changes it later.'),
+  'brightness.held': outcomeCode('The snapped record keeps its de-extincted apparent magnitude across the move, so its absmag shifts by 5·log₁₀(from/to) to params.absmag, the absmag it ships unless promotion changes it later.'),
   'size.rescaled': outcomeCode('The snapped record\'s radius scales with its absmag shift at fixed Teff (R ∝ √L), by params.factor, the radius it ships unless promotion re-derives it later.'),
   'unmoved.at-anchor-distance': outcomeCode('The record already sits at its system anchor\'s distance.'),
   'kept.significant-depth': outcomeCode('The record\'s parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.'),

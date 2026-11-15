@@ -49,6 +49,7 @@ import type { Star } from '../parse/stars-parse';
 import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
+import { snapPhotometry } from '../multiplicity/system-coherence';
 import {
   parseStage6Offset, rebasedAnchorOffset, type Stage6Offset,
 } from './anchor-offset-pure';
@@ -1279,7 +1280,7 @@ function recurateExistingMember(
     change = { pass: 'recurated', source, absmag: member.absmag, av: avNew, ci: ci.via };
   } else {
     if (dOld > 0 && dNew > 0) {
-      member.absmag = absoluteMagnitude(apparentMagnitude(member.absmag, dOld) + avOld - avNew, dNew);
+      member.absmag = snapPhotometry(member.absmag, { pc: dOld, av: avOld }, { pc: dNew, av: avNew }).toAbsmag;
     }
     change = {
       pass: 'recurated', source: 'held', absmag: member.absmag, fromPc: dOld, toPc: dNew, avFrom: avOld, avTo: avNew,

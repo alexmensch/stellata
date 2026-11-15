@@ -420,6 +420,15 @@ describe('member-anchor precision veto', () => {
   });
 });
 
+describe('snapPhotometry', () => {
+  it('holds the observed magnitude, m + A_V, across the move, and scales the radius as √L', () => {
+    const observed = (absmag: number, pc: number, av: number) => absmag + 5 * Math.log10(pc / 10) + av;
+    const { toAbsmag, radiusFactor } = snapPhotometry(4, { pc: 50, av: 0.3 }, { pc: 60, av: 0.5 });
+    expect(observed(toAbsmag, 60, 0.5)).toBeCloseTo(observed(4, 50, 0.3), 12);
+    expect(radiusFactor).toBeCloseTo(10 ** ((4 - toAbsmag) / 5), 12);
+  });
+});
+
 describe('systemCoherenceVerdicts', () => {
   it('names the anchor, its tier and row, and each member\'s move (Polaris)', () => {
     const primary = star({ hip: 11767, x: 132.626 });
@@ -437,7 +446,7 @@ describe('systemCoherenceVerdicts', () => {
       kind: 'coherent', root: '02318+8916', anchorPc: 137.233,
       anchor: { idx: 1, tier: 'gaia-clean', ref: gaia.ref, memberWon: true, precisionVetoed: false },
       members: [{
-        kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, ...snapPhotometry(primary.absmag, 132.626, 137.233),
+        kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, ...snapPhotometry(primary.absmag, { pc: 132.626, av: 0 }, { pc: 137.233, av: 0 }),
       }],
     }]);
     expect(primary.x).toBe(132.626);
