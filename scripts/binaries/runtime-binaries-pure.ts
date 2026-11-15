@@ -2,32 +2,15 @@
 
 import {
   FLAG_HAS_INCLINATION, FLAG_HAS_ORBIT, FLAG_IS_INNER_OF_HIERARCHY, NO_PARENT, encodeBinaries,
-  hasRenderableOrbit, pickBinaryElements, type BinaryElementKey, type BinaryElements, type BinaryRecord,
+  hasRenderableOrbit, type BinaryRecord,
 } from '../../src/catalog-format/binaries/binaries-format';
+import type { PairEnds } from '../catalog/companions/record-index/pair-ends-pure';
+import { distinctEnds } from '../catalog/companions/record-index/pair-resolution-pure';
+import { compoundContains, relatedHier } from './component-tokens-pure';
 import {
-  resolveMultiplesIdx, synthSlotIdx, type CatalogRowIndexMap,
-} from '../catalog/companions/record-index/catalog-row-index-map-pure';
-import {
-  canonicalCompLetter, composeSyntheticId, compoundContains, parentComponentToken, relatedHier,
-  wdsRootOf,
-} from './component-tokens-pure';
-import type { MultiplesRecord } from './multiples-record-pure';
+  assignParentRelations, pairsFromRows, topologicalWalkOrder, type MultiplesPair, type PairRow,
+} from './pairs-pure';
 import type { Check } from '../util/emit-artifacts';
-
-/** One physical pair: a system's primary and secondary rows joined. */
-export interface MultiplesPair {
-  readonly systemId: string;
-  readonly wdsId: string;
-  readonly primaryComp: string;
-  /** Canonical (`canonicalCompLetter`), so `Aa1,2`'s secondary is `Aa2`. */
-  readonly secondaryComp: string;
-  readonly primaryGaia: string | null;
-  readonly primaryHip: number | null;
-  readonly secondaryGaia: string | null;
-  readonly secondaryHip: number | null;
-  /** The primary row's. */
-  readonly elements: BinaryElements;
-}
 
 /** The snapshot `build-runtime-binaries-expected.json` pins, as its `encode` stage. */
 export type RuntimeBinariesCounts = {
@@ -42,132 +25,6 @@ export type RuntimeBinariesCounts = {
   pairs_with_inclination: number;
   pairs_inner_of_hierarchy: number;
 };
-
-/** The cells of a multiples.tsv row a pair is built from. */
-export type PairRow = Pick<MultiplesRecord,
-  'systemId' | 'comp' | 'orbitRole' | 'gaiaSourceId' | 'hip' | BinaryElementKey>;
-
-/** Joins each system's primary and secondary rows; standalone rows are no
- *  pair's. A system with a role missing or doubled, or whose system_id names
- *  no WDS id, throws. */
-export function pairsFromRows(rows: readonly PairRow[]): MultiplesPair[] {
-  const primaries = new Map<string, PairRow>();
-  const secondaries = new Map<string, PairRow>();
-  for (const row of rows) {
-    if (row.orbitRole === 'standalone') continue;
-    const byRole = row.orbitRole === 'primary' ? primaries : secondaries;
-    if (byRole.has(row.systemId)) {
-      throw new Error(`multiples.tsv: system ${row.systemId} has two ${row.orbitRole} rows`);
-    }
-    byRole.set(row.systemId, row);
-  }
-  const pairs: MultiplesPair[] = [];
-  for (const systemId of secondaries.keys()) {
-    if (!primaries.has(systemId)) throw new Error(`multiples.tsv: system ${systemId} has no primary row`);
-  }
-  for (const [systemId, p] of primaries) {
-    const s = secondaries.get(systemId);
-    if (s === undefined) throw new Error(`multiples.tsv: system ${systemId} has no secondary row`);
-    const wdsId = wdsRootOf(systemId);
-    if (wdsId === null) throw new Error(`multiples.tsv: system ${systemId} names no WDS id`);
-    const primaryComp = p.comp.trim();
-    pairs.push({
-      systemId,
-      wdsId,
-      primaryComp,
-      secondaryComp: canonicalCompLetter(primaryComp, s.comp),
-      primaryGaia: p.gaiaSourceId,
-      primaryHip: p.hip,
-      secondaryGaia: s.gaiaSourceId,
-      secondaryHip: s.hip,
-      elements: pickBinaryElements(p),
-    });
-  }
-  return pairs;
-}
-
-function parentRank(pair: MultiplesPair): readonly [number, number] {
-  return [hasRenderableOrbit(pair.elements) ? 0 : 1, pair.elements.sepArcsec ?? Infinity];
-}
-
-function ranksBefore(a: readonly [number, number], b: readonly [number, number]): boolean {
-  return a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
-}
-
-/** Each pair's parent: the best-ranked other pair of its WDS system that
- *  lists its primary token's parent (Algol Aa1,Aa2 → the pair naming Aa),
- *  else NO_PARENT. */
-export function assignParentRelations(pairs: readonly MultiplesPair[]): number[] {
-  const bySystem = new Map<string, Map<string, number[]>>();
-  pairs.forEach((pair, i) => {
-    let bucket = bySystem.get(pair.wdsId);
-    if (!bucket) bySystem.set(pair.wdsId, (bucket = new Map()));
-    for (const tok of [pair.primaryComp, pair.secondaryComp]) {
-      const list = bucket.get(tok);
-      if (list) list.push(i);
-      else bucket.set(tok, [i]);
-    }
-  });
-
-  return pairs.map((pair, i) => {
-    const parentTok = parentComponentToken(pair.primaryComp);
-    if (parentTok === null) return NO_PARENT;
-    const candidates = (bySystem.get(pair.wdsId)?.get(parentTok) ?? []).filter((j) => j !== i);
-    if (candidates.length === 0) return NO_PARENT;
-    return candidates.reduce((best, j) =>
-      (ranksBefore(parentRank(pairs[j]), parentRank(pairs[best])) ? j : best));
-  });
-}
-
-/** Outer-before-inner: each root in input order, then its subtree depth
- *  first; pairs whose parent link points nowhere come last. */
-export function topologicalWalkOrder(parents: readonly number[]): number[] {
-  const children = new Map<number, number[]>();
-  parents.forEach((p, i) => {
-    if (p === NO_PARENT) return;
-    const list = children.get(p);
-    if (list) list.push(i);
-    else children.set(p, [i]);
-  });
-  const order: number[] = [];
-  const visited = new Array<boolean>(parents.length).fill(false);
-  const visit = (i: number): void => {
-    if (visited[i]) return;
-    visited[i] = true;
-    order.push(i);
-    for (const c of children.get(i) ?? []) visit(c);
-  };
-  parents.forEach((p, i) => { if (p === NO_PARENT) visit(i); });
-  parents.forEach((_, i) => visit(i));
-  return order;
-}
-
-/** Re-homes each inner pair's primary onto its parent component's slot — the
- *  shared-slot invariant the runtime walk rides
- *  (/src/client/binaries/README.md#hierarchical-walk). Castor Ba carries A's
- *  blended source, so its own resolve lands on A's record; AB already
- *  resolved B. Walked outer-first so a deeper nest inherits its parent's
- *  corrected slot. Mutates `resolvedPrimary`. */
-export function overrideInnerPrimaryIndices(
-  pairs: readonly MultiplesPair[],
-  parents: readonly number[],
-  walkOrder: readonly number[],
-  resolvedPrimary: (number | null)[],
-  resolvedSecondary: readonly (number | null)[],
-): void {
-  for (const i of walkOrder) {
-    const parentI = parents[i];
-    if (parentI === NO_PARENT) continue;
-    const parentTok = parentComponentToken(pairs[i].primaryComp);
-    if (parentTok === null) continue;
-    const pp = pairs[parentI];
-    let slot: number | null;
-    if (pp.primaryComp === parentTok) slot = resolvedPrimary[parentI];
-    else if (pp.secondaryComp === parentTok) slot = resolvedSecondary[parentI];
-    else continue;
-    if (slot !== null) resolvedPrimary[i] = slot;
-  }
-}
 
 /** Two pairs colliding on one relation name the same physical link when, on
  *  each side, their tokens are equal, hierarchy-related or compound-contained
@@ -193,23 +50,6 @@ function emptyCounts(total: number): RuntimeBinariesCounts {
   };
 }
 
-/** Both ends of a pair as records: gaia → hip → synth, then each end's own
- *  synth record when that is a different one. */
-function resolvePairEnds(
-  p: MultiplesPair,
-  map: CatalogRowIndexMap,
-): { primary: number | null; secondary: number | null } {
-  const end = (gaia: string | null, hip: number | null, comp: string): number | null => {
-    const synth = composeSyntheticId(p.systemId, comp);
-    const id = resolveMultiplesIdx(gaia, hip, synth, map);
-    return id === null ? null : synthSlotIdx(synth, map, id) ?? id;
-  };
-  return {
-    primary: end(p.primaryGaia, p.primaryHip, p.primaryComp),
-    secondary: end(p.secondaryGaia, p.secondaryHip, p.secondaryComp),
-  };
-}
-
 /** The records binaries.bin carries, in walk order, and the counts of what
  *  was dropped and flagged. `parentRelation` is the parent's emitted
  *  position, not its input index. */
@@ -217,22 +57,12 @@ export function planRecords(
   pairs: readonly MultiplesPair[],
   parents: readonly number[],
   walkOrder: readonly number[],
-  map: CatalogRowIndexMap,
+  ends: readonly PairEnds[],
 ): { records: BinaryRecord[]; counts: RuntimeBinariesCounts } {
-  const resolvedPrimary: (number | null)[] = [];
-  const resolvedSecondary: (number | null)[] = [];
-  for (const p of pairs) {
-    const { primary, secondary } = resolvePairEnds(p, map);
-    resolvedPrimary.push(primary);
-    resolvedSecondary.push(secondary);
-  }
-  overrideInnerPrimaryIndices(pairs, parents, walkOrder, resolvedPrimary, resolvedSecondary);
-
-  const relationKey = (i: number): string => `${resolvedPrimary[i]},${resolvedSecondary[i]}`;
+  const relationKey = (i: number): string => `${ends[i].primary},${ends[i].secondary}`;
   const relationWinner = new Map<string, number>();
   for (const i of walkOrder) {
-    if (resolvedPrimary[i] === null || resolvedSecondary[i] === null) continue;
-    if (resolvedPrimary[i] === resolvedSecondary[i]) continue;
+    if (!distinctEnds(ends[i])) continue;
     const incumbent = relationWinner.get(relationKey(i));
     if (incumbent === undefined
       || (hasRenderableOrbit(pairs[i].elements) && !hasRenderableOrbit(pairs[incumbent].elements))) {
@@ -244,8 +74,7 @@ export function planRecords(
   const records: BinaryRecord[] = [];
   const inputToOutput = new Map<number, number>();
   for (const i of walkOrder) {
-    const primaryIdx = resolvedPrimary[i];
-    const secondaryIdx = resolvedSecondary[i];
+    const { primary: primaryIdx, secondary: secondaryIdx } = ends[i];
     if (primaryIdx === null) { counts.pairs_dropped_primary_unresolved++; continue; }
     if (secondaryIdx === null) { counts.pairs_dropped_secondary_unresolved++; continue; }
     if (primaryIdx === secondaryIdx) { counts.pairs_dropped_degenerate_idx++; continue; }
@@ -270,14 +99,14 @@ export function planRecords(
   return { records, counts };
 }
 
-/** Fails unless the row-index map was built from the multiples.tsv this run
+/** Fails unless the pair ends were built from the multiples.tsv this run
  *  reads: against another copy, record indices resolve to the wrong stars. */
 export function multiplesHandshake(builtFrom: string, reading: string): Check {
   return builtFrom === reading
     ? { kind: 'pass' }
     : {
         kind: 'fail',
-        message: `the catalogue row-index map was built from multiples.tsv ${builtFrom}, `
+        message: `the catalogue pair ends were built from multiples.tsv ${builtFrom}, `
           + `but this run reads ${reading}. Re-run \`pnpm run build:catalog\`.`,
       };
 }
@@ -289,12 +118,18 @@ export interface RuntimeBinaries {
   readonly nested: number;
 }
 
+/** See README.md#runtime-side-artifact. */
 export function encodeRuntimeBinaries(
   rows: readonly PairRow[],
-  map: CatalogRowIndexMap,
+  pairEnds: ReadonlyMap<string, PairEnds>,
 ): RuntimeBinaries {
   const pairs = pairsFromRows(rows);
   const parents = assignParentRelations(pairs);
-  const { records, counts } = planRecords(pairs, parents, topologicalWalkOrder(parents), map);
+  const ends = pairs.map((p) => {
+    const e = pairEnds.get(p.systemId);
+    if (e === undefined) throw new Error(`catalog pair ends: no resolved ends for pair ${p.systemId}`);
+    return e;
+  });
+  const { records, counts } = planRecords(pairs, parents, topologicalWalkOrder(parents), ends);
   return { bytes: encodeBinaries(records), counts, nested: parents.filter((p) => p !== NO_PARENT).length };
 }

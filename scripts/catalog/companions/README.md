@@ -38,8 +38,7 @@ scripts/catalog/companions/
                                   Stage 6 reached either from no measured
                                   geometry, the two coincide, or the row is
                                   the chaining letter itself. Offsets
-                                  convert through
-                                  ../../binaries/sky-geometry-pure.ts's
+                                  convert through astro-core's
                                   polarToTangent / tangentToPolar, the pair
                                   Stage 6 writes them with.
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason
@@ -265,7 +264,7 @@ Per-row gates and resolution:
   component→index map for a parent that kept its own Gaia row), covering
   both the ρ=0 collocation and a measured sep+PA re-projection. This makes
   the baked placement match the runtime pair anchor
-  (`/scripts/binaries/runtime-binaries-pure.ts`'s `overrideInnerPrimaryIndices`);
+  ([The parent re-home](record-index/README.md#the-parent-re-home));
   counted by `companionRepositionedInnerToParent`. Rendering is unaffected either
   way (elements-alone R(t)), but a consistent bake keeps the
   baked-vs-elements ratchet in `/tests/integration/multi-star-regression.test.ts` honest.
@@ -516,12 +515,12 @@ relations — since the runtime then draws them apart from the elements, and a
 bit-identical bake there is the deliberate sub-resolution placement above. Two
 siblings of one primary are not exempt: each moves on its own orbit, and
 nothing keeps them apart. The relations come from the runtime's own pairing —
-`renderableOrbitRelations` in `record-index/`, the wings pass's resolution
-(the writer's gaia → hip → synth resolution, both synth retries, the parent re-home) filtered to
-renderable orbits — never from promotion's cursor walk, which records a pair
+`renderableOrbitRelations` in `record-index/`, the `rendered` ends of
+`resolvePairs` (the resolution the writer takes) filtered to renderable
+orbits — never from promotion's cursor walk, which records a pair
 before its parent is minted.
 
-Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->93<!-- /count -->), a ratchet-down metric; the
+Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->55<!-- /count -->), a ratchet-down metric; the
 build log names each pair.
 
 #### Promoted-companion field inheritance

@@ -614,8 +614,7 @@ is kept as a pin: it fails once the flattening is gone and a pipe is back.
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
 pipefail, plus every library such a script sources with `.` or `source`
 (matched by file name, followed through libraries that source others), since
-a sourced file runs under its caller's options. There is no allowlist.
-A reader is recognised behind `NAME=value` prefixes and `command`, and as
+a sourced file runs under its caller's options. A reader is recognised behind `NAME=value` prefixes and `command`, and as
 `egrep` / `fgrep`. Full-line comments are skipped, and quoted strings never
 count as a grep flag. The matcher has its own flag and pass cases, and a case that the scan
 finds the hooks at all, so a detector that stops seeing pipes fails instead
@@ -659,9 +658,4 @@ the same. Each goes through
 `pyMod` in `/src/astro-core/angles.ts`, the one file exempt
 ([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
 `(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
-since it is the add-once spelling of the same wrap.
-
-`HAND_ROLLED_ALLOWED` pins each pre-existing file to its exact hit count,
-so a new site in a listed file fails as surely as one elsewhere, and a
-site fixed without shrinking its entry fails too. The list is meant to
-empty, never to grow. Tests are not scanned.
+since it is the add-once spelling of the same wrap. Tests are not scanned.

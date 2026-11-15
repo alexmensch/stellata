@@ -6,7 +6,7 @@ Apsis + SIMBAD sp_type +
 Stellarium → `public/catalog.bin.<i>` transport chunks +
 `public/catalog-manifest.json` + `public/constellations.json` +
 `public/search-index.json` + `public/constellation-boundaries.json`, plus the
-build-only `build/catalog-row-index-map.json` ([What ships](../README.md#what-ships)).
+build-only `build/catalog-row-index-map.json` and `build/catalog-pair-ends.json` ([What ships](../README.md#what-ships)).
 Run via `pnpm run build:catalog`.
 
 Membership is `data/membership/membership-manifest.tsv` less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks,

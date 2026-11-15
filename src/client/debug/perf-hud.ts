@@ -14,6 +14,7 @@ import {
 import {
   GPU_COMPUTE_SCOPE, GPU_WHOLE_FRAME_SCOPE, onGpuComputeSample, onGpuFrameSample,
 } from './gpu-timing/gpu-frame-samples';
+import { pyMod } from '../../astro-core/angles';
 
 const RING_SIZE = 60;
 const DOM_UPDATE_MS = 200;
@@ -381,7 +382,7 @@ function renderPanel(): void {
   // budget so spikes don't squash the rest of the trace beyond legibility.
   if (total && total.count > 0) {
     const N = total.count;
-    const start = (total.idx - N + RING_SIZE) % RING_SIZE;
+    const start = pyMod(total.idx - N, RING_SIZE);
     const cap = MS_PER_FRAME_60 * HISTO_HEIGHT_CAP_MULT;
     const amberMs = MS_PER_FRAME_60 * HISTO_AMBER_RATIO;
     if (captionEl && lastCaptionN !== N) {

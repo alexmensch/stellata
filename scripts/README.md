@@ -7,7 +7,7 @@ cross-script policy and pointers.
 
 - `catalog/` — single-star catalog build → `public/catalog.bin.<i>`
   transport chunks + `public/catalog-manifest.json` (+
-  `build/catalog-row-index-map.json`; companions promoted from
+  `build/catalog-row-index-map.json` and `build/catalog-pair-ends.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
@@ -85,7 +85,7 @@ cross-script policy and pointers.
 Vite copies every file in `public/` into `dist/`, and the deploy uploads
 all of `dist/`. So `public/` holds only what the client fetches.
 A hand-off between build stages that no client code reads —
-`catalog-row-index-map.json`, `binding-integrity-verdicts.tsv` — goes in
+`catalog-row-index-map.json`, `catalog-pair-ends.json`, `binding-integrity-verdicts.tsv` — goes in
 the gitignored `build/` instead, where it costs no deploy bytes and
 counts against no asset limit.
 

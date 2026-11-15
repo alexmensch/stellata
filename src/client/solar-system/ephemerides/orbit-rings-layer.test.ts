@@ -19,6 +19,7 @@ import {
 } from './orbit-rings-layer';
 import { LINE_ANCHOR_MAX_DRIFT_PC, ORBIT_LINE_SEGMENTS } from '../../util/orbit-line';
 import { AU_KM, AU_PC, KM_PC } from '../../../astro-core/astronomy-constants';
+import { raDecFromUnitVector } from '../../../astro-core/equatorial-basis';
 import { GALACTIC_NORTH_POLE_ICRS } from '../../../astro-core/galactic-coords';
 import { getPlanetPositions, PLANET_ORDER } from './ephemeris';
 import { MOON_ELEMENTS, moonOffsetEcliptic } from './moon-ephemeris';
@@ -95,10 +96,7 @@ describe('ECLIPTIC_NORTH_POLE_ICRS', () => {
   });
 
   it('round-trips to RA 18h / Dec +66.5607° from Cartesian', () => {
-    const raDeg =
-      ((Math.atan2(ECLIPTIC_NORTH_POLE_ICRS.y, ECLIPTIC_NORTH_POLE_ICRS.x)
-        * 180) / Math.PI + 360) % 360;
-    const decDeg = (Math.asin(ECLIPTIC_NORTH_POLE_ICRS.z) * 180) / Math.PI;
+    const { raDeg, decDeg } = raDecFromUnitVector(ECLIPTIC_NORTH_POLE_ICRS);
     expect(raDeg).toBeCloseTo(270, 4);
     expect(decDeg).toBeCloseTo(66.5607089, 4);
   });
@@ -113,9 +111,7 @@ describe('ECLIPTIC_NORTH_POLE_ICRS', () => {
       ECLIPTIC_NORTH_POLE_ICRS.clone(),
     );
     const solsticeSun = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
-    const decDeg = (Math.asin(solsticeSun.z) * 180) / Math.PI;
-    const raDeg =
-      ((Math.atan2(solsticeSun.y, solsticeSun.x) * 180) / Math.PI + 360) % 360;
+    const { raDeg, decDeg } = raDecFromUnitVector(solsticeSun);
     expect(decDeg).toBeCloseTo(23.4392911, 6);
     expect(raDeg).toBeCloseTo(90, 6);
   });

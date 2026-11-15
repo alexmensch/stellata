@@ -76,8 +76,12 @@ import {
   buildComponentDesignations,
   type ComponentDesignation,
   renderableOrbitRelations,
+  resolvedMemberIndices,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
+import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
+import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pure';
+import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
 } from './companions/record-index/catalog-row-index-map-pure';
@@ -410,16 +414,12 @@ export async function main() {
 
   const eclipsing = wingEclipsingBinaries(stars);
 
-  // Built here (not at the sidecar write below) so the wings pass resolves
-  // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
+  const resolvedPairs = resolvePairs(pairsFromRows(multiplesRows), rowIndexMap);
 
-  const { memberIndices, ...renderableWings } = wingRenderablePrimaries(multiplesRows, stars, rowIndexMap);
+  const renderableWings = wingRenderablePrimaries(resolvedPairs, stars);
 
-  const overlaps = physicalOverlaps(
-    stars,
-    orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
-  );
+  const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
   console.log(promotionSummary(
     promotionCounts, promotionDerived, promotedRows.filter((r) => r.via === 'secondary').length,
@@ -429,9 +429,9 @@ export async function main() {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
 
-  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(multiplesRows, rowIndexMap);
+  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(resolvedPairs);
   const statuses = multiplicityStatuses(
-    stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
+    stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
   const multiplicity: MultiplicityCounts = {
@@ -502,6 +502,7 @@ export async function main() {
     figureLines,
     componentDesignations,
     rowIndexMap,
+    resolvedPairs,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
       parkedLedger,
@@ -550,6 +551,7 @@ interface CatalogEmissionInputs {
   readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
+  readonly resolvedPairs: readonly ResolvedPair[];
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -572,7 +574,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, sidEvents, ledgers, lineage,
   stageCounts, heap,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -616,11 +618,16 @@ function catalogEmission({
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap);
+  const multiplesSha1 = handedFileHash(inputHashes, MULTIPLES_TSV.file);
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(multiplesSha1, rowIndexMap);
+  const pairEndsJson = serializeCatalogPairEnds(
+    multiplesSha1, new Map(resolvedPairs.map((r) => [r.pair.systemId, r.rendered])),
+  );
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
-      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
+      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries); ` +
+      `pair ends ${CATALOG_OUTPUTS.files.pairEnds} (${resolvedPairs.length} pairs)`,
   );
 
   const figures = figuresCounts(figureLines);
@@ -646,6 +653,7 @@ function catalogEmission({
       boundaries: boundaries.json,
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
+      pairEnds: pairEndsJson,
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,
