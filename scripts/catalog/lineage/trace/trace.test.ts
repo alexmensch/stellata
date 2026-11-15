@@ -209,7 +209,7 @@ const COHERENCE = [
   'stage\tkey\trole\tcode\tparams\tevidence',
   'coherence\tspine:3\toutcome\tcoherence.anchor.anchor-won\t{"root":"S","tier":"gaia-clean","anchor_pc":"50"}\tgaia-dr3-astrometry:222',
   'coherence\tspine:9\toutcome\tcoherence.brightness.held\t{"root":"S","absmag":"4.1000"}\t',
-  'coherence\tspine:9\toutcome\tcoherence.size.rescaled\t{"root":"S","factor":"1.0414"}\t',
+  'coherence\tspine:9\toutcome\tcoherence.size.rescaled\t{"root":"S","factor":"1.041400"}\t',
   'coherence\tspine:9\toutcome\tcoherence.snapped\t{"root":"S","anchor":"spine:3","anchor_tier":"gaia-clean","from_pc":"52","to_pc":"50"}\tgaia-dr3-astrometry:222',
 ].join('\n') + '\n';
 
@@ -394,7 +394,7 @@ describe('pnpm run trace', () => {
     expect(out).toMatch(/spine:3\n[\s\S]*size\.apsis-teff[\s\S]*promotion\.existing\.anchor-dimmed +\{"absmag":"1\.4000"\} +evidence multiples:S-AB\/B/);
     expect(out).toMatch(/promotion\.size\.anchor-dimmed +\{"route":"class-teff","absmag":"1\.4000","class_index":"stated"\}/);
     expect(out).toMatch(/spine:9\n[\s\S]*coherence\.brightness\.held +\{"root":"S","absmag":"4\.1000"\}/);
-    expect(out).toMatch(/coherence\.size\.rescaled +\{"root":"S","factor":"1\.0414"\}/);
+    expect(out).toMatch(/coherence\.size\.rescaled +\{"root":"S","factor":"1\.041400"\}/);
     expect(out).toMatch(/multiples:S-AB\/B\n[\s\S]*promotion\.size\.mint +\{"route":"class-teff","absmag":"4\.5600","class_index":"stated"\}/);
   });
 

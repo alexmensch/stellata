@@ -367,7 +367,7 @@ Beside it, two uncited rows name what the move did to the record's walked
 brightness and size: `coherence.brightness.held` with the absmag it now carries
 (`params.absmag`, to the size stage's `ABSMAG_PARAM_DECIMALS`) and
 `coherence.size.rescaled` with the factor its radius scaled by
-(`params.factor`) — the `toAbsmag` and `radiusFactor` the snapped verdict
+(`params.factor`, to `RADIUS_FACTOR_PARAM_DECIMALS`) — the `toAbsmag` and `radiusFactor` the snapped verdict
 carries, which `snapPhotometry` computed and the move applies. A record promotion re-curates or dims afterwards carries
 promotion's rows for those values too
 ([Promotion lineage](../companions/README.md#promotion-lineage)). The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2

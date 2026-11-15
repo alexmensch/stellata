@@ -5,6 +5,7 @@ import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
 import { gaiaAstrometryRow } from '../sources/gaia-astrometry-fixture';
 import { makeStar } from '../parse/star-fixture';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
+import { RADIUS_FACTOR_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
 import { COHERENCE_CODES, coherenceFigures, coherenceLineageLines, coherenceLineageRows } from './coherence-lineage-pure';
 import type { AnchorBasis, CoherenceAnchor, SystemVerdict } from './system-coherence';
 
@@ -77,7 +78,7 @@ describe('coherenceLineageRows', () => {
     }], stars.slice(0, 2));
     expect([held.code, rescaled.code]).toEqual(['coherence.brightness.held', 'coherence.size.rescaled']);
     expect(paramsOf(held)).toEqual({ root: '00001+0001', absmag: '0.0000' });
-    expect(paramsOf(rescaled)).toEqual({ root: '00001+0001', factor: '10' });
+    expect(paramsOf(rescaled)).toEqual({ root: '00001+0001', factor: (10).toFixed(RADIUS_FACTOR_PARAM_DECIMALS) });
     expect([held.evidence, rescaled.evidence]).toEqual([[], []]);
   });
 

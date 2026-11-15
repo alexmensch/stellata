@@ -16,6 +16,9 @@ export const SIZE_LINEAGE_BUDGET = { gzipBytes: 26_700_000, writeMs: 30_000 };
 /** Decimal places of `params.absmag`: 0.1 mmag, below every V tier's own error. */
 export const ABSMAG_PARAM_DECIMALS = 4;
 
+/** Decimal places of a radius scale factor: 1e-6, finer than the 0.1 mmag absmag step it follows from. */
+export const RADIUS_FACTOR_PARAM_DECIMALS = 6;
+
 export const SIZE_CODES = stageCodes(SIZE_LINEAGE.stage, {
   'white-dwarf': outcomeCode('A white dwarf: the fixed typical white-dwarf radius, since absmag does not translate into one.'),
   'apsis-teff': outcomeCode('Stefan-Boltzmann from the record\'s de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.'),

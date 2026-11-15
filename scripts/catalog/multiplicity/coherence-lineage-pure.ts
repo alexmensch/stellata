@@ -7,7 +7,7 @@ import { outcomeCode, stageCodes, retired, type StageCounts } from '../lineage/r
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
-import { ABSMAG_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
+import { ABSMAG_PARAM_DECIMALS, RADIUS_FACTOR_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
 import { type AnchorTier, type CoherenceAnchor, type MemberVerdict, type SystemVerdict } from './system-coherence';
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -169,7 +169,7 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
       case 'snapped': {
         push(m.idx, 'snapped', { ...member, from_pc: pc(m.fromPc), to_pc: pc(m.toPc) }, a);
         push(m.idx, 'brightness.held', { root: member.root, absmag: m.toAbsmag.toFixed(ABSMAG_PARAM_DECIMALS) }, null);
-        push(m.idx, 'size.rescaled', { root: member.root, factor: String(m.radiusFactor) }, null);
+        push(m.idx, 'size.rescaled', { root: member.root, factor: m.radiusFactor.toFixed(RADIUS_FACTOR_PARAM_DECIMALS) }, null);
         return;
       }
       case 'at-anchor-distance':
