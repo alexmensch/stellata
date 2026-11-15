@@ -38,7 +38,7 @@ import { snapPhotometry } from '../multiplicity/system-coherence';
 import { rebasedAnchorOffset } from './placement/anchor-offset-pure';
 import type { MultiplesTsvRow } from './multiples-row';
 import {
-  adjustMinted, type CompanionAbsmagSource, type CompanionCiVia, type HeldRecordBrightness, type MintedBrightness,
+  adjustMinted, type CompanionAbsmagSource, type HeldVia, type CompanionCiVia, type HeldRecordBrightness, type MintedBrightness,
   type PromotedRow, type PromotionStats, type RecordRewrite, type RecuratedBrightness, type RowOutcome, type SizingPass,
 } from './promotion-outcome';
 import {
@@ -453,7 +453,7 @@ function adoptExistingMember(
   ctx: PromoteRowContext,
   state: PromotionState,
   memberIdx: number,
-  via: 'own-id' | 'own-hip' | 'sameas-bridge',
+  via: HeldVia,
 ): RowOutcome {
   const desigConFromAnchor = inheritAnchorDesignationCon(
     state.existingStars[memberIdx], ctx.anchorStar ?? ctx.systemAnchorStar,

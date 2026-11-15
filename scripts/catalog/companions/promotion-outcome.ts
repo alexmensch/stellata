@@ -3,6 +3,9 @@
 import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
 import type { MultiplesTsvRow } from './multiples-row';
 
+/** How a pair row reached a record the catalogue already held — identity/README.md#row-identity. */
+export type HeldVia = 'own-id' | 'own-hip' | 'sameas-bridge';
+
 /** One pair row's promotion decision, serialised by promotion-lineage-pure.ts. */
 export type RowOutcome =
   | {
@@ -16,7 +19,7 @@ export type RowOutcome =
   | {
     kind: 'adopted';
     idx: number;
-    via: 'own-id' | 'own-hip' | 'sameas-bridge';
+    via: HeldVia;
     desigConFromAnchor: boolean;
     recurated: RecuratedBrightness | null;
   }

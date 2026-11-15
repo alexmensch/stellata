@@ -2,7 +2,7 @@
 
 import type { Star } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../multiples-row';
-import type { RowOutcome } from '../promotion-outcome';
+import type { HeldVia, RowOutcome } from '../promotion-outcome';
 import { hasIndependentFitRoute } from '../placement/placement';
 import { refusalStated, type ParkedRefusals } from './parked-refusals';
 import type { SystemIndex } from './system-index';
@@ -63,7 +63,7 @@ export type RowIdentity =
   /** Decided here: a refusal, or an earlier mint. */
   | { kind: 'decided'; outcome: RowOutcome }
   /** A record the catalogue already holds IS this component. */
-  | { kind: 'held'; idx: number; via: 'own-id' | 'own-hip' | 'sameas-bridge' }
+  | { kind: 'held'; idx: number; via: HeldVia }
   /** A new record, carrying the ids that survive the inheritance gates. */
   | {
     kind: 'new';
