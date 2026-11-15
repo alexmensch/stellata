@@ -21,8 +21,7 @@ export function apparentVFromSol(star: ApparentOrderStar, avSolToStar: number): 
   return apparentMagnitude(star.absmag, Math.hypot(star.x, star.y, star.z)) + avSolToStar;
 }
 
-/** The promoted records in apparent-V order, with each one's key; throws on a
- *  non-finite key before sorting and unless Sol sorts first. */
+/** A NaN key scrambles the whole sort, so each key is checked finite before it. */
 export function sortByApparentV<S extends ApparentOrderStar & { readonly flags: number }>(
   records: Records<'promoted', S>,
   avSolToStar: (record: S) => number,
