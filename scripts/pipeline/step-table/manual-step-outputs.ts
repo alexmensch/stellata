@@ -1,5 +1,6 @@
 // Every pull and bake in the step table, each with the files it writes. See README.md#the-step-table--stepsts.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import {
   DUST_CHUNK, DUST_MANIFEST, PUBLIC_FILES, TEXTURE_MEMBERS,
 } from '../../../src/catalog-format/public-artifacts/public-artifacts';
@@ -59,13 +60,13 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:bailer-jones', 'scripts/refresh/magnitude/refresh-bailer-jones.ts',
     'scripts/refresh/magnitude/magnitude-outputs.ts', 'BAILER_JONES_OUTPUTS',
   ),
-  pull('refresh:hip2', 'refresh-hipparcos2.py', ['data/hipparcos/hip2_van_leeuwen.tsv']),
-  pull('refresh:hip-vmag', 'refresh-hipparcos-vmag.py', ['data/hipparcos/hip_main_vmag.tsv']),
-  pull('refresh:classic-ids', 'refresh-classic-ids.py', ['tyc2_hd', 'cross_index', 'bsc5', 'cns5'].map((s) => `data/classic-ids/${s}.tsv`)),
-  pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', ['data/iau-wgsn/NEC.csv', 'data/iau-wgsn/wgsnFaints.csv']),
-  pull('refresh:tycho2', 'refresh-tycho2.py', ['data/tycho2/tycho2_main.tsv', 'data/tycho2/tycho2_suppl1.tsv']),
-  pull('refresh:gliese', 'refresh-gliese.py', ['data/gliese/gliese_v70a.tsv']),
-  pull('refresh:msc', 'refresh-msc.py', ['systems', 'orbits', 'components'].map((s) => `data/msc/msc_${s}.tsv`)),
+  pull('refresh:hip2', 'refresh-hipparcos2.py', [DATA_FILES.hip2]),
+  pull('refresh:hip-vmag', 'refresh-hipparcos-vmag.py', [DATA_FILES.hipMainVmag]),
+  pull('refresh:classic-ids', 'refresh-classic-ids.py', [DATA_FILES.tyc2Hd, DATA_FILES.crossIndex, DATA_FILES.bsc5, DATA_FILES.cns5]),
+  pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', [DATA_FILES.wgsnNec, DATA_FILES.wgsnFaints]),
+  pull('refresh:tycho2', 'refresh-tycho2.py', [DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1]),
+  pull('refresh:gliese', 'refresh-gliese.py', [DATA_FILES.gliese]),
+  pull('refresh:msc', 'refresh-msc.py', [DATA_FILES.mscSystems, DATA_FILES.mscOrbits, DATA_FILES.mscComponents]),
   tsManual(
     { kind: 'pull' }, 'refresh:simbad', 'scripts/refresh/simbad-sample/refresh-simbad-sample.ts',
     'scripts/refresh/simbad-sample/simbad-sample-outputs.ts', 'SIMBAD_SAMPLE_OUTPUTS',

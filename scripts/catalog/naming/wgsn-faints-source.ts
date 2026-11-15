@@ -1,6 +1,7 @@
 // The IAU WGSN faint-star names (wgsnFaints.csv) with their curated cell corrections applied, declared.
 // See README.md#files-in-this-area.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import { parseFaintsCorrections, parseWgsnFaintsCsv } from './wgsn-parse-pure';
 
@@ -10,7 +11,7 @@ const CORRECTIONS: Declared = {
 };
 
 export const WGSN_FAINTS = defineSource({
-  file: 'data/iau-wgsn/wgsnFaints.csv',
+  file: DATA_FILES.wgsnFaints,
   hint: 'Re-run scripts/refresh/refresh-iau-wgsn.py.',
   members: [CORRECTIONS],
   parse: (input) => {

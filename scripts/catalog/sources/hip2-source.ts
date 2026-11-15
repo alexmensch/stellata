@@ -1,5 +1,6 @@
 // HIP2 astrometry: the row schema, its parse, and the declared table.
 
+import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { defineSource, type Declared } from '../../util/sources/source';
 import {
   sourceRowRef, type RowKeyed, type OneRowRef,
@@ -55,7 +56,7 @@ export function parseHip2Tsv(text: string, from: Declared & RowKeyed<number>): H
 }
 
 export const HIP2 = defineSource({
-  file: 'data/hipparcos/hip2_van_leeuwen.tsv',
+  file: DATA_FILES.hip2,
   hint: 'Re-run `pnpm run refresh:hip2`.',
   rowKey: { id: 'i311', cardinality: 'one', text: (hip: number) => String(hip) },
   parse: (input): Hip2Table => parseHip2Tsv(input.text(), HIP2),
