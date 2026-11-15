@@ -173,12 +173,15 @@ function requireDispositionsUsed(dispositions: ReadonlyMap<number, PairDispositi
   }
 }
 
-/** `strict` refuses a disposition on a move nothing refused. see README.md#disposing-a-queued-pair */
+/** Which rows a disposition settles: only those the pair rule queues, or every row it names (the astrometry request's arrangement).
+ *  see README.md#disposing-a-queued-pair */
+type DispositionScope = 'queued' | 'every';
+
 function applyMoves(
   kept: readonly SpineRow[],
   m: PairLinks,
   dispositions: ReadonlyMap<number, PairDisposition>,
-  strict: boolean,
+  scope: DispositionScope,
   refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
 ): PairRuleResult {
   const rows = [...kept];
@@ -215,7 +218,7 @@ function applyMoves(
       ? verdict.reason
       : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
     const d = dispositions.get(hip);
-    if (d !== undefined && (reason !== null || !strict)) {
+    if (d !== undefined && (reason !== null || scope === 'every')) {
       if ([...d.entries].sort().join('|') !== entries.join('|')) {
         throw new Error(`pair-review disposition for HIP ${hip} restates ${d.entries.join('|')}, but the pair is ${entries.join('|')}: review it again`);
       }
@@ -244,7 +247,7 @@ export function applyPairRule(
   refused: ReadonlySet<number>,
   dispositions: ReadonlyMap<number, PairDisposition>,
 ): PairRuleResult {
-  return applyMoves(kept, m, dispositions, true, (move, receiver) => {
+  return applyMoves(kept, m, dispositions, 'queued', (move, receiver) => {
     if (binds(receiver) !== move.sourceId) return 'gate_refused';
     return refused.has(move.hip) ? 'simbad_refused' : null;
   });
@@ -309,7 +312,7 @@ export function settlePairRule<T>(
 export function applyEveryPairMove(
   kept: readonly SpineRow[], m: PairLinks, dispositions: ReadonlyMap<number, PairDisposition>,
 ): SpineRow[] {
-  const { rows, disposed } = applyMoves(kept, m, dispositions, false, () => null);
+  const { rows, disposed } = applyMoves(kept, m, dispositions, 'every', () => null);
   requireDispositionsUsed(dispositions, disposed);
   return rows;
 }
