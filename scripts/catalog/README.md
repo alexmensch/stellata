@@ -116,8 +116,7 @@ scripts/catalog/
   catalog-inputs.test.ts          Pins stepInputPaths('build:catalog')
                                   (../util/step-inputs.ts) — every file the
                                   build reads, which its content-hash stamp
-                                  keys: the import closure (the rule CI's
-                                  cache key shares) and every declared
+                                  keys: the import closure and every declared
                                   source, artifact and snapshot that
                                   closure reads, less the build's own
                                   outputs.
