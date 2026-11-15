@@ -3,7 +3,7 @@
 import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 import { floorVerdict, formatFraction, formatShare, share } from '../util/counts/tally-pure';
-import { withGroupOrigins, type AnySourceRowRef, type GroupRowRef, type LinedRow, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
+import { sourceRowRefText, withGroupOrigins, type AnySourceRowRef, type GroupRowRef, type LinedRow, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
 import type { Declared } from '../util/sources/source';
 import { floatCell, intCell } from '../util/tsv/table-pure';
 
@@ -284,7 +284,7 @@ export interface WdsDedupDecision {
 export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; decisions: readonly WdsDedupDecision[] } {
   const best = new Map<string, number>();
   pairs.forEach((p, i) => {
-    const key = `${p.wdsId}\u0000${p.discoverer}\u0000${p.components}`;
+    const key = sourceRowRefText(p.origin);
     const j = best.get(key);
     if (j === undefined || (p.nObs ?? 0) > (pairs[j].nObs ?? 0)) best.set(key, i);
   });
