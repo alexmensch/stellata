@@ -189,9 +189,11 @@ as, and `column=value` constraints). `joinAsu` takes the float columns from
 the FITS, at their declared precision ([FITS replies](#fits-replies)), and
 every other cell from the TSV (`readAsuTsv`), whose blank is the catalogue's
 null where both binary writers put a 0 (IV/27A's blank `Fl`, measured
-2026-11-15; the catalogue standard makes a null a blank field). A cell both
-report with a value must agree, else the pair is refused as not of the same
-rows; differing row counts are transient. Each reply's leading columns must
+2026-11-15; the catalogue standard makes a null a blank field). A non-float
+cell both report with a value must agree, and a float must be null in both
+or in neither (the TSV prints it shorter, so its text cannot be compared),
+else the pair is refused as not of the same rows; differing row counts are
+transient. Each reply's leading columns must
 be the asked ones in order, else it is refused: ASU silently drops a column
 it does not know. Its FITS spells a name's parentheses as underscores
 (`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen), and

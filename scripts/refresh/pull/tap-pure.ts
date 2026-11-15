@@ -181,11 +181,9 @@ export function joinAsu(query: AsuQuery, tsv: TapResult, fits: FloatsTable | nul
   const floats = fits?.floats ?? [];
   const rows = text.rows.map((row, r) => row.map((cell, i) => {
     const exact = binary.rows[r][i];
-    if (floats[i]) return exact;
-    if (cell !== null && exact !== null && cell !== exact) {
-      throw new TapRefused(`${label}: row ${r + 1} ${names[i]} is "${cell}" in ASU's TSV and "${exact}" in its FITS`);
-    }
-    return cell;
+    const disagree = floats[i] ? (cell === null) !== (exact === null) : cell !== null && exact !== null && cell !== exact;
+    if (disagree) throw new TapRefused(`${label}: row ${r + 1} ${names[i]} is "${cell ?? ''}" in ASU's TSV and "${exact ?? ''}" in its FITS`);
+    return floats[i] ? exact : cell;
   }));
   return { columns: names, rows };
 }

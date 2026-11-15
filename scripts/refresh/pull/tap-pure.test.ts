@@ -180,10 +180,11 @@ describe('tapClient', () => {
       [{ name: 'HD', form: 'J', tnull: -2147483648 }, { name: 'Fl', form: 'I', tnull: -32768 }, { name: 'RA_ICRS_', form: 'D', tdisp: 'F12.8' }, { name: 'recno', form: 'J' }],
       rows.map(([hd, fl, ra], i) => [hd, fl ?? 0, ra, i + 1]),
     ));
-    const tsv = (rows: readonly Row[], header = 'HD\tFl\tRA(ICRS)') => textReply(200, 'text/tab-separated-values', [
+    const tsvText = (rows: readonly Row[], header = 'HD\tFl\tRA(ICRS)') => [
       '#', '#INFO\tservice_protocol=ASU', '#Column\te_plx\t(F5.2)\tError in parallax', '', header, ' \t \tdeg', '------\t---\t------------',
       ...rows.map(([hd, fl, ra]) => `${String(hd).padStart(6)}\t${fl === null ? '   ' : String(fl).padStart(3)}\t${ra.toFixed(8).padStart(12)}`), '',
-    ].join('\n'));
+    ].join('\n');
+    const tsv = (rows: readonly Row[], header?: string) => textReply(200, 'text/tab-separated-values', tsvText(rows, header));
     const asu = (rows: readonly Row[], replies: { tsv?: () => HttpReply; fits?: () => HttpReply } = {}) => ({ url }: Call) => {
       if (url.startsWith('https://tap.example')) return new Error('connect ETIMEDOUT');
       return url.includes('/asu-tsv?') ? (replies.tsv ?? (() => tsv(rows)))() : (replies.fits ?? (() => binfits(rows)))();
@@ -222,6 +223,14 @@ describe('tapClient', () => {
     it('refuses the two replies where a cell both report disagrees: they are not of the same rows', async () => {
       const { client } = fake(asu(ROWS, { fits: () => binfits([ROWS[0], [3, 34, 104.550895415]]) }));
       await expect(client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/row 2 flamsteed is "33" in ASU's TSV and "34" in its FITS/);
+    });
+
+    it('refuses a float one reply prints and the other leaves null', async () => {
+      const nanInFits = fake(asu(ROWS, { fits: () => binfits([ROWS[0], [3, 33, Number.NaN]]) }));
+      await expect(nanInFits.client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/row 2 ra is "104.5508954\d" in ASU's TSV and "" in its FITS/);
+      const blankInTsv = textReply(200, 'text/tab-separated-values', tsvText(ROWS).replace('  1.50000000', ' '.repeat(12)));
+      const zeroInFits = fake(asu(ROWS, { tsv: () => blankInTsv, fits: () => binfits([[493, null, 0], ROWS[1]]) }));
+      await expect(zeroInFits.client(ARCHIVE).query(QUERY, 5)).rejects.toThrow(/row 1 ra is "" in ASU's TSV and "0.00000000" in its FITS/);
     });
 
     it('retries when the two replies hold different row counts, or the FITS is cut short', async () => {
