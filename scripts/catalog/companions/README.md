@@ -391,7 +391,9 @@ there.
 Every record promotion sizes or re-sizes also gets rows keyed on its own
 origin key — a mint's is its row, a re-curated or dimmed record's its
 manifest key — from the `RecordRewrite` `promoteCompanions` returns per
-record (`rewriteRows`), uncited. One `promotion.size.*` row names the LAST
+record (`rewriteRows`), uncited; `recuratedRecords` reads the same map for
+the records re-curated onto their anchor (system membership's lent-distance
+set). One `promotion.size.*` row names the LAST
 pass that set its radius (`mint`, `recurated`, `blend-split`,
 `anchor-dimmed`, `anchor-re-split`), its params the radius's route and inputs
 in the size stage's form (`radiusRouteParams`,

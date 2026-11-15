@@ -51,7 +51,7 @@ import {
 import { parkedRefusals } from './companions/identity/parked-refusals';
 import { promoteCompanions, type PromotionInputs } from './companions/companion-promotion';
 import { readMultiplesTsv, type MultiplesTsvRow } from './companions/multiples-row';
-import { isRecuratedAdoption, type PromotionDerivedCounts } from './companions/promotion-outcome';
+import { recuratedRecords, type PromotionDerivedCounts } from './companions/promotion-outcome';
 import {
   PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
 } from './companions/promotion-lineage-pure';
@@ -250,7 +250,7 @@ function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], 
 }
 
 // A function of its own so promotion's rows and rewrites are unreachable once
-// it returns, leaving only its lines, as coherence's and naming's are.
+// it returns, as coherence's and naming's are.
 function promoteAndTrace(
   multiplesRows: MultiplesTsvRow[], stars: Star[], inputs: PromotionInputs, founded: ReadonlySet<string>,
 ) {
@@ -260,7 +260,7 @@ function promoteAndTrace(
   return {
     stats, identity, lines: lineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     decidedRows: rows.length, secondaryRows: rows.filter((r) => r.via === 'secondary').length,
-    recuratedRecords: rows.flatMap(({ outcome: o }) => (isRecuratedAdoption(o) ? [stars[o.idx]] : [])),
+    recurated: recuratedRecords(rewrites),
   };
 }
 
@@ -339,13 +339,13 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
   const {
-    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows, recuratedRecords,
+    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows, recurated,
   } = promoteAndTrace(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   }, manifestFounded);
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
-  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, recuratedRecords);
+  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, recurated);
   console.log(`  promotion decided ${decidedRows} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
@@ -427,14 +427,10 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
-  // Serialized here so the tree objects are not held through emission (the CI heap budget).
-  const systems = (() => {
-    const result = buildSystemMembership({
-      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
-      geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
-    });
-    return { json: serializeSystemMembership(result.membership), counts: result.counts };
-  })();
+  const systems = buildSystemMembership({
+    records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
+    geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
+  });
   console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
     ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
@@ -454,7 +450,7 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     placementDerived: stats.placementDerived,
     starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
-    systemMembership: systems.json,
+    systemMembership: serializeSystemMembership(systems.membership),
   };
 }
 

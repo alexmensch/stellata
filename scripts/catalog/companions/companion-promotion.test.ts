@@ -9,7 +9,7 @@ import {
   imputeCompanionAbsmag, companionCi, isDisjointSingleLetter, promoteCompanions, type PromotionInputs,
 } from './companion-promotion';
 import { parseMultiplesTsv, type MultiplesTsvRow } from './multiples-row';
-import { adjustMinted, type MintedBrightness } from './promotion-outcome';
+import { adjustMinted, recuratedRecords, type MintedBrightness } from './promotion-outcome';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG, componentDepth, GAIA_BLEND_MAX_SEP_ARCSEC, PRINTED_BLEND_MAX_SEP_ARCSEC,
 } from './post-passes/anchor-dim';
@@ -3139,6 +3139,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(rewrites.get(b)!.brightness).toEqual([{
       pass: 'recurated', source: 'held', absmag: b.absmag, fromPc: dOld, toPc: dNew, avFrom: 0, avTo: 0,
     }]);
+    expect(recuratedRecords(rewrites)).toEqual([b]);
     expect(dNew).not.toBeCloseTo(dOld, 6);
     expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
   });

@@ -7,7 +7,6 @@ import {
 import {
   serializeSystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
-import { isRecuratedAdoption } from '../companions/promotion-outcome';
 import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../multiplicity/binary-flags-pure';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { wdsIdPosition } from '../../wds/wds-pure';
@@ -179,17 +178,5 @@ describe('anchorMovedRecords', () => {
       ],
     }], ['recurated']);
     expect([...moved].sort()).toEqual(['recurated', 'snapped']);
-  });
-});
-
-describe('isRecuratedAdoption', () => {
-  it('holds for an adoption promotion re-curated, held included, never an unchanged member or an earlier mint', () => {
-    const verdicts = ([
-      { kind: 'adopted', idx: 3, via: 'own-id', desigConFromAnchor: false, recurated: 'dmag_imputed' },
-      { kind: 'adopted', idx: 4, via: 'own-hip', desigConFromAnchor: false, recurated: 'held' },
-      { kind: 'adopted', idx: 2, via: 'own-id', desigConFromAnchor: false, recurated: null },
-      { kind: 'adopted', idx: 5, via: 'earlier-mint' },
-    ] as const).map((o) => isRecuratedAdoption(o));
-    expect(verdicts).toEqual([true, true, false, false]);
   });
 });
