@@ -50,10 +50,7 @@ export type SystemMembershipCounts = WdsTreeCounts & {
 /** The records coherence snapped or promotion re-curated (`recurated`) onto their anchor's distance; call before the record sort, which the set survives. */
 export function anchorMovedRecords<S>(stars: readonly S[], verdicts: readonly SystemVerdict[], recurated: Iterable<S>): Set<S> {
   const moved = new Set<S>(recurated);
-  for (const v of verdicts) {
-    if (v.kind !== 'coherent') continue;
-    for (const m of v.members) if (m.kind === 'snapped' || m.kind === 'at-anchor-distance') moved.add(stars[m.idx]);
-  }
+  for (const v of verdicts) if (v.kind === 'coherent') for (const m of v.members) if (m.kind === 'snapped') moved.add(stars[m.idx]);
   return moved;
 }
 

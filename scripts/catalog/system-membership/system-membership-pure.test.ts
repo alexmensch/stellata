@@ -167,7 +167,7 @@ describe('lentDistanceRecords', () => {
 });
 
 describe('anchorMovedRecords', () => {
-  it('takes coherence-snapped members, members already at the anchor distance and the re-curated records, never an unmoved member', () => {
+  it('takes coherence-snapped members and the re-curated records, never an unmoved member or one already at the anchor distance', () => {
     const stars = ['anchor', 'snapped', 'kept', 'recurated', 'at-anchor'];
     const anchor = { idx: 0, memberWon: false, precisionVetoed: false } as never;
     const moved = anchorMovedRecords(stars, [{
@@ -178,7 +178,7 @@ describe('anchorMovedRecords', () => {
         { kind: 'at-anchor-distance', idx: 4 },
       ],
     }], ['recurated']);
-    expect([...moved].sort()).toEqual(['at-anchor', 'recurated', 'snapped']);
+    expect([...moved].sort()).toEqual(['recurated', 'snapped']);
   });
 });
 
