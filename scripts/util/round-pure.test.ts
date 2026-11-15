@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatExponent, formatFixed, formatRepr, roundEach, roundHalfEven } from './round-pure';
+import { formatDeclared, formatExponent, formatFixed, formatRepr, roundEach, roundHalfEven } from './round-pure';
 
 describe('roundHalfEven', () => {
   it('rounds an exact binary tie to even, as Python round() does', () => {
@@ -77,6 +77,24 @@ describe('formatRepr', () => {
   it('reads the archives\' Java-style text back to the same repr', () => {
     expect(['9.045827E-5', '1.0E7', '0.0', '-4.6393E-4'].map((t) => formatRepr(Number(t))))
       .toEqual(['9.045827e-05', '10000000.0', '0.0', '-0.00046393']);
+  });
+});
+
+describe('formatDeclared', () => {
+  it('rounds the shortest digits half away from zero, not the exact binary value', () => {
+    expect(formatDeclared(104.550895415, 8, 'double')).toBe('104.55089542');
+    expect(formatDeclared(-16.665973235, 8, 'double')).toBe('-16.66597324');
+    expect(formatDeclared(1.08901331816226, 8, 'double')).toBe('1.08901332');
+  });
+
+  it('drops conversion noise below the declared places and pads to them', () => {
+    expect(formatDeclared(0.015000000000000001, 3, 'double')).toBe('0.015');
+    expect(formatDeclared(2016, 4, 'double')).toBe('2016.0000');
+    expect(formatDeclared(1e-7, 2, 'double')).toBe('0.00');
+  });
+
+  it('reads a float32 by its own shortest digits', () => {
+    expect(formatDeclared(Math.fround(14.9), 2, 'float32')).toBe('14.90');
   });
 });
 

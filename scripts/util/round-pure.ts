@@ -108,6 +108,21 @@ export function formatRepr(x: number, width: FloatWidth = 'double'): string {
   return `${sign}${digits.slice(0, e + 1).padEnd(e + 1, '0')}.${digits.slice(e + 1) || '0'}`;
 }
 
+/** A catalogue value at its declared `Fw.d`: `x`'s shortest digits at `width`, rounded half away from zero at `digits` places, as CDS prints it. */
+export function formatDeclared(x: number, digits: number, width: FloatWidth): string {
+  if (!Number.isFinite(x)) throw new Error(`formatDeclared: ${x} is not finite`);
+  const value = width === 'float32' ? Math.fround(x) : x;
+  const [mantissa, exponent] = shortest(Math.abs(value), width).split('e');
+  const significand = mantissa.replace('.', '');
+  const scale = Number(exponent) - (significand.length - 1);
+  const drop = -(scale + digits);
+  const n = BigInt(significand);
+  const unit = 10n ** BigInt(Math.max(drop, 0));
+  const kept = drop <= 0 ? n * 10n ** BigInt(-drop) : n / unit + (2n * (n % unit) >= unit ? 1n : 0n);
+  const text = kept.toString().padStart(digits + 1, '0');
+  return `${signOf(value)}${digits === 0 ? text : `${text.slice(0, -digits)}.${text.slice(-digits)}`}`;
+}
+
 /** Each element through roundHalfEven, keeping a tuple's length in its type. */
 export function roundEach<T extends readonly number[]>(v: T, digits: number): { -readonly [I in keyof T]: number } {
   return v.map((x) => roundHalfEven(x, digits)) as { -readonly [I in keyof T]: number };
