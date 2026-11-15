@@ -1,4 +1,4 @@
-// What companion promotion decides per row and per record, and the counts it keeps beyond its lineage. See README.md#promotion-lineage.
+// What companion promotion decides per row and per record, and the counts it keeps beyond its lineage. See promotion-lineage/README.md.
 
 import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
 import type { Star } from '../parse/stars-parse';
@@ -7,7 +7,7 @@ import type { MultiplesTsvRow } from './multiples-row';
 /** How a pair row reached a record the catalogue already held — identity/README.md#row-identity. */
 export type HeldVia = 'own-id' | 'own-hip' | 'sameas-bridge';
 
-/** One pair row's promotion decision, serialised by promotion-lineage-pure.ts. */
+/** One pair row's promotion decision, serialised by promotion-lineage/promotion-lineage-pure.ts. */
 export type RowOutcome =
   | {
     kind: 'dropped';
@@ -61,7 +61,7 @@ export type HeldRecordBrightness =
   | { pass: 'anchor-dimmed'; absmag: number; members: readonly string[] }
   | { pass: 'anchor-re-split'; anchorIdx: number; absmag: number };
 
-/** See README.md#promotion-lineage. */
+/** See promotion-lineage/README.md. */
 export interface RecordRewrite {
   sizing: { pass: SizingPass; radius: RadiusResolution };
   brightness: HeldRecordBrightness[];
@@ -81,7 +81,7 @@ export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
 }
 
 
-/** See README.md#promotion-lineage. */
+/** See promotion-lineage/README.md. */
 export interface PromotedRow {
   row: MultiplesTsvRow;
   via: 'secondary' | 'escape' | 'primary' | 'unpaired';

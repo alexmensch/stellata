@@ -380,7 +380,7 @@ brightness and size: `coherence.brightness.held` with the absmag it now carries
 (`params.factor`, to `RADIUS_FACTOR_PARAM_DECIMALS`) — the `toAbsmag` and `radiusFactor` the snapped verdict
 carries, which `snapPhotometry` computed and the move applies. A record promotion re-curates or dims afterwards carries
 promotion's rows for those values too
-([Promotion lineage](../companions/README.md#promotion-lineage)). The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
+([Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage)). The evidence is the row the anchor's tier rests on: its Gaia DR3 or Hipparcos-2
 astrometry row, or its Bailer-Jones posterior. The inherited tier cites none.
 Coherence founds no record, so it writes no identity rows, and every code's
 effect is `none`.

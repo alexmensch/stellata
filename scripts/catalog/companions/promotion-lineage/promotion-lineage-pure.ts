@@ -1,24 +1,24 @@
-// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, its count summary, and the identity rows of the records it mints and the rows it removes. See README.md#promotion-lineage.
+// Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, its count summary, and the identity rows of the records it mints and the rows it removes. See README.md.
 
-import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
-import { starDesignations } from '../../sid/sid-pure';
-import { rowKeyText } from '../../util/sources/row-ref-pure';
-import type { IdentityRow } from '../lineage/identity/identity-pure';
+import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
+import { starDesignations } from '../../../sid/sid-pure';
+import { rowKeyText } from '../../../util/sources/row-ref-pure';
+import type { IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, type LineageInvariant,
-} from '../lineage/lineage-invariant-pure';
-import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
-import { formatPartition } from '../../util/counts/tally-pure';
-import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
-import type { Star } from '../parse/stars-parse';
-import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
-import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../spectral/size-lineage-pure';
-import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
-import type { MultiplesTsvRow } from './multiples-row';
+} from '../../lineage/lineage-invariant-pure';
+import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../../lineage/lineage-row-pure';
+import { formatPartition } from '../../../util/counts/tally-pure';
+import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../../lineage/reason-codes/reason-codes-pure';
+import type { Star } from '../../parse/stars-parse';
+import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../../photometry/brightness-colour-lineage-pure';
+import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../../spectral/size-lineage-pure';
+import { companionAbsmagIsObserved, companionCiIsObservedVia } from '../companion-dust-pure';
+import type { MultiplesTsvRow } from '../multiples-row';
 import type {
   CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
-} from './promotion-outcome';
-import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+} from '../promotion-outcome';
+import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
 
@@ -149,17 +149,17 @@ const SAMEAS_BRIDGED_ROWS = new Map([
 export const PROMOTION_INVARIANTS: readonly LineageInvariant[] = [
   namedExceptionsInvariant(
     PROMOTION_CODES, 'dropped.anchor-is-component',
-    'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (identity/README.md#anchor-is-the-component-refusal)',
+    'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (../identity/README.md#anchor-is-the-component-refusal)',
     MISKEYED_ANCHOR_ROWS,
   ),
   namedExceptionsInvariant(
     PROMOTION_CODES, 'adopted.sameas-bridge',
-    'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (identity/README.md#same-as-bridge-to-an-already-admitted-source)',
+    'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (../identity/README.md#same-as-bridge-to-an-already-admitted-source)',
     SAMEAS_BRIDGED_ROWS,
   ),
   lineageInvariant(
     PROMOTION_CODES, 'brightness.anchor-collocated',
-    'no minted record takes its anchor\'s magnitude for want of a brightness of its own (README.md#companion-promotion-from-databinariesmultiplestsv)',
+    'no minted record takes its anchor\'s magnitude for want of a brightness of its own (../README.md#companion-promotion-from-databinariesmultiplestsv)',
     NO_EXCEPTIONS,
   ),
 ];

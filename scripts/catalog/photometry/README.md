@@ -398,7 +398,7 @@ exhaustive `switch`:
 The stage founds no record, writes no identity rows, and every code's
 effect is `none`. It covers the walk's values: a minted companion's
 absmag, colour and A_V come from its `multiples.tsv` row, and promotion writes
-their rows ([Promotion lineage](../companions/README.md#promotion-lineage)).
+their rows ([Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage)).
 A walked record whose absmag a later pass changes carries that pass's row
 too: coherence's `coherence.brightness.held`
 ([Coherence lineage](../multiplicity/README.md#coherence-lineage)) and

@@ -1,17 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
-import { invariantCheck, invariantViolations } from '../lineage/lineage-invariant-pure';
+import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
+import { invariantCheck, invariantViolations } from '../../lineage/lineage-invariant-pure';
 import {
   foldStageLines, paramsOf, sortLineageLines, stageLineageLine, stageLineageText, type LineageLine,
-} from '../lineage/lineage-row-pure';
-import { SEEDED_BRANCH, seededCodeCheck } from '../lineage/count-block-fixture';
-import { makeStar } from '../parse/star-fixture';
-import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
+} from '../../lineage/lineage-row-pure';
+import { SEEDED_BRANCH, seededCodeCheck } from '../../lineage/count-block-fixture';
+import { makeStar } from '../../parse/star-fixture';
+import type { RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type {
   MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
-} from './promotion-outcome';
-import { multiplesRow } from './multiples-fixture';
+} from '../promotion-outcome';
+import { multiplesRow } from '../multiples-fixture';
 import {
   decisionRows, PROMOTION_CODES, PROMOTION_INVARIANTS, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
 } from './promotion-lineage-pure';

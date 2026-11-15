@@ -88,7 +88,7 @@ re-derived. Equal split — a pair Gaia couldn't resolve is near-equal by
 construction, exact for the M-dwarf eclipsing pairs that dominate; total
 system light is preserved. `ci` stays the shared colour. Each split record
 writes `promotion.brightness.blend-split`
-([Promotion lineage](../README.md#promotion-lineage)). See
+([Promotion lineage](../promotion-lineage/README.md#promotion-lineage)). See
 [Multiple-star pipeline](/docs/science-multiple-star-pipeline.md#multiple-star-pipeline)
 (Blend split).
 

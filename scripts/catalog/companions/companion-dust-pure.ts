@@ -1,4 +1,4 @@
-// Which of a promoted companion's absmag and B−V embed the Sol-to-star A_V, so de-extinction subtracts it. See README.md#promotion-lineage.
+// Which of a promoted companion's absmag and B−V embed the Sol-to-star A_V, so de-extinction subtracts it. See promotion-lineage/README.md.
 
 import type { CompanionAbsmagSource, CompanionCiVia } from './promotion-outcome';
 

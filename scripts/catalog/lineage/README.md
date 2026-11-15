@@ -171,7 +171,7 @@ Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
 Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
 and named rows alone for two codes
-([Promotion's invariants](../companions/README.md#promotions-invariants)).
+([Promotion's invariants](../companions/promotion-lineage/README.md#promotions-invariants)).
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
@@ -246,7 +246,7 @@ measured budget sits beside its contract: [component-binding's](/scripts/binarie
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
-[promotion's](../companions/README.md#promotion-lineage),
+[promotion's](../companions/promotion-lineage/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
 [size's](../spectral/README.md#size-lineage),
@@ -415,4 +415,4 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 ## The promotion stage
 
 `build:catalog`'s companion promotion is the stage after coherence; its
-contract lives beside its module, in [Promotion lineage](../companions/README.md#promotion-lineage).
+contract lives beside its module, in [Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage).

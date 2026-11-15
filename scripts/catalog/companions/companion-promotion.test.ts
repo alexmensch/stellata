@@ -4,7 +4,7 @@ import { polarToTangent, tangentToPolar } from '../../../src/astro-core/equatori
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
 import {
   decisionRows, familyTotal, PROMOTION_CODES, promotionDecision, rewriteRows, type PromotionCounts,
-} from './promotion-lineage-pure';
+} from './promotion-lineage/promotion-lineage-pure';
 import {
   imputeCompanionAbsmag, companionCi, isDisjointSingleLetter, promoteCompanions, type PromotionInputs,
 } from './companion-promotion';
