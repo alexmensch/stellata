@@ -12,7 +12,8 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
+  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, SIZE_LINEAGE,
+  stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
@@ -184,9 +185,10 @@ describe('traceRecords over the fixture lineage', () => {
 
 const MINTED = '6000000000000000001';
 
-/** A system anchored on HD 5's record: its AB pair's rows, and a CD sub-pair
- *  whose primary is a record of its own (spine:9) under the same system
- *  anchor. Another system's row cites spine:99 only. */
+/** A system anchored on HD 5's record, which anchor dimming re-sized: its AB
+ *  pair's rows, the minted B's size, and a CD sub-pair whose primary is a
+ *  record of its own (spine:9) under the same system anchor. Another system's
+ *  row cites spine:99 only. */
 const PROMOTION = [
   'stage\tkey\trole\tcode\tparams\tevidence',
   'promotion\tmultiples:S-AB/A\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:3',
@@ -194,9 +196,21 @@ const PROMOTION = [
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.colour.spectral-derived\t\t',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.dust.edenhofer2024.absmag-only\t{"av":"0.0123"}\t',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted.keyed\t{"via":"secondary"}\tspine:3',
+  'promotion\tmultiples:S-AB/B\toutcome\tpromotion.size.mint\t{"route":"class-teff","absmag":"4.5600","class_index":"stated"}\t',
   'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:9|spine:3',
   'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
   'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted.synthetic\t{"via":"secondary"}\tspine:99',
+  'promotion\tspine:3\toutcome\tpromotion.existing.anchor-dimmed\t{"absmag":"1.4000","members":"1"}\t',
+  'promotion\tspine:3\toutcome\tpromotion.size.anchor-dimmed\t{"route":"class-teff","absmag":"1.4000","class_index":"stated"}\t',
+].join('\n') + '\n';
+
+/** The system's distance coherence: spine:9 snapped onto its anchor spine:3. */
+const COHERENCE = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'coherence\tspine:3\toutcome\tcoherence.anchor.anchor-won\t{"root":"S","tier":"gaia-clean","anchor_pc":"50"}\tgaia-dr3-astrometry:222',
+  'coherence\tspine:9\toutcome\tcoherence.brightness.held\t{"root":"S","absmag":"4.1000"}\t',
+  'coherence\tspine:9\toutcome\tcoherence.size.rescaled\t{"root":"S","factor":"1.0414"}\t',
+  'coherence\tspine:9\toutcome\tcoherence.snapped\t{"root":"S","anchor":"spine:3","anchor_tier":"gaia-clean","from_pc":"52","to_pc":"50"}\tgaia-dr3-astrometry:222',
 ].join('\n') + '\n';
 
 const PROMOTION_IDENTITY = [
@@ -263,7 +277,7 @@ describe('traceRecords over a promoted system', () => {
     expect(minted.rows.map((r) => r.code)).toEqual([
       'component-binding.gaia.own', 'component-binding.hip.unbound',
       'promotion.brightness.dmag-imputed', 'promotion.colour.spectral-derived',
-      'promotion.dust.edenhofer2024.absmag-only', 'promotion.minted.keyed',
+      'promotion.dust.edenhofer2024.absmag-only', 'promotion.minted.keyed', 'promotion.size.mint',
     ]);
   });
 });
@@ -314,6 +328,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
   writeFileSync(stageFile(dir, BRIGHTNESS_COLOUR_LINEAGE.stage), gzipText(BRIGHTNESS_COLOUR));
   writeFileSync(stageFile(dir, SIZE_LINEAGE.stage), gzipText(SIZE));
+  writeFileSync(stageFile(dir, COHERENCE_LINEAGE.stage), gzipText(COHERENCE));
   writeFileSync(stageFile(dir, 'promotion'), gzipText(PROMOTION));
   writeFileSync(stageFile(dir, 'promotion.identity'), gzipText(PROMOTION_IDENTITY));
   afterAll(() => rmSync(dir, { recursive: true, force: true }));
@@ -372,6 +387,15 @@ describe('pnpm run trace', () => {
     expect(out).toMatch(/promotion\.brightness\.dmag-imputed/);
     expect(out).toMatch(/promotion\.colour\.spectral-derived/);
     expect(out).toMatch(/promotion\.dust\.edenhofer2024\.absmag-only +\{"av":"0\.0123"\}/);
+  });
+
+  it('names the pass that set each component\'s shipped radius and absmag, with its inputs', () => {
+    const out = run('hd:5');
+    expect(out).toMatch(/spine:3\n[\s\S]*size\.apsis-teff[\s\S]*promotion\.existing\.anchor-dimmed +\{"absmag":"1\.4000","members":"1"\}/);
+    expect(out).toMatch(/promotion\.size\.anchor-dimmed +\{"route":"class-teff","absmag":"1\.4000","class_index":"stated"\}/);
+    expect(out).toMatch(/spine:9\n[\s\S]*coherence\.brightness\.held +\{"root":"S","absmag":"4\.1000"\}/);
+    expect(out).toMatch(/coherence\.size\.rescaled +\{"root":"S","factor":"1\.0414"\}/);
+    expect(out).toMatch(/multiples:S-AB\/B\n[\s\S]*promotion\.size\.mint +\{"route":"class-teff","absmag":"4\.5600","class_index":"stated"\}/);
   });
 
   it('finds a cloud by its slug and prints its allocation row', () => {
