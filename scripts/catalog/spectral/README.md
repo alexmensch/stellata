@@ -248,5 +248,6 @@ gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,
 row's Gaia id and carries its own absmag, which is what the gzip cannot
 shrink. `SIZE_LINEAGE_BUDGET` pins 26.7 MB and 30 s; CI has not timed it yet.
 Its lines spill to a `LineSpill` during the walk like brightness-colour's
-([Storage and cost](../lineage/README.md#storage-and-cost)), against `build:catalog`'s
-3,481 MiB budget ([CI heap budget](../../util/heap-budget/README.md)).
+([Storage and cost](../lineage/README.md#storage-and-cost)), which keeps
+`build:catalog` within its 3,481 MiB budget
+([CI heap budget](../../util/heap-budget/README.md)).
