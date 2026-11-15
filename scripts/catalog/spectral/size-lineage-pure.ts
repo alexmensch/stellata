@@ -34,6 +34,35 @@ interface StefanBoltzmannParams {
   clamp?: RadiusClamp;
 }
 
+const absmagText = (value: number): string => value.toFixed(ABSMAG_PARAM_DECIMALS);
+
+/** A radius's route and the inputs it rests on, as params: what size and
+ *  promotion both write for a Stefan-Boltzmann, white-dwarf or stand-in radius. */
+export type RadiusRouteParams =
+  | { route: 'white-dwarf' }
+  | { route: 'apsis-teff'; absmag: string; solution: ApsisSolution; class_index: ClassIndex; clamp?: RadiusClamp }
+  | { route: 'class-teff'; absmag: string; class_index: ClassIndex; clamp?: RadiusClamp }
+  | { route: 'non-finite-luminosity'; absmag: string };
+
+export function radiusRouteParams(radius: RadiusResolution): RadiusRouteParams {
+  const clamp = (c: RadiusClamp | null) => (c === null ? {} : { clamp: c });
+  switch (radius.route) {
+    case 'white-dwarf': return { route: radius.route };
+    case 'apsis-teff':
+      return {
+        route: radius.route, absmag: absmagText(radius.absmag), solution: radius.teff.solution,
+        class_index: radius.classIndex, ...clamp(radius.clamp),
+      };
+    case 'class-teff':
+      return { route: radius.route, absmag: absmagText(radius.absmag), class_index: radius.classIndex, ...clamp(radius.clamp) };
+    case 'non-finite-luminosity': return { route: radius.route, absmag: absmagText(radius.absmag) };
+    default: {
+      const unmapped: never = radius;
+      throw new Error(`radius route with no params: ${JSON.stringify(unmapped)}`);
+    }
+  }
+}
+
 type ParamsOf<B extends Branch> =
   B extends 'apsis-teff' ? StefanBoltzmannParams & { solution: ApsisSolution }
   : B extends 'class-teff' ? StefanBoltzmannParams
@@ -56,12 +85,11 @@ export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): Li
   const push = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
     out.push(stageRow(SIZE_CODES, key, branch, params as LineageParams, refs.map(sourceRowRefText)));
   };
-  const absmag = (value: number): string => value.toFixed(ABSMAG_PARAM_DECIMALS);
   const apsisRefs = apsis === null ? [] : [apsis.ref];
   for (const solution of apsis?.outOfWindow ?? []) {
     push('refused.apsis-teff-out-of-window', { solution }, apsisRefs);
   }
-  const clamp = (c: RadiusClamp | null) => (c === null ? {} : { clamp: c });
+  const { route: _, ...params } = radiusRouteParams(radius);
 
   switch (radius.route) {
     case 'white-dwarf':
@@ -71,20 +99,16 @@ export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): Li
       push('white-dwarf', {}, classEvidence);
       return out;
     case 'apsis-teff':
-      push('apsis-teff', {
-        absmag: absmag(radius.absmag), solution: radius.teff.solution, class_index: radius.classIndex, ...clamp(radius.clamp),
-      }, [...apsisRefs, ...classEvidence]);
+      push('apsis-teff', params as ParamsOf<'apsis-teff'>, [...apsisRefs, ...classEvidence]);
       return out;
     case 'class-teff':
       if (radius.refusedTeff !== null) {
         push('refused.apsis-teff-wolf-rayet', { solution: radius.refusedTeff.solution }, apsisRefs);
       }
-      push('class-teff', {
-        absmag: absmag(radius.absmag), class_index: radius.classIndex, ...clamp(radius.clamp),
-      }, classEvidence);
+      push('class-teff', params as ParamsOf<'class-teff'>, classEvidence);
       return out;
     case 'non-finite-luminosity':
-      push('non-finite-luminosity', { absmag: absmag(radius.absmag) }, classEvidence);
+      push('non-finite-luminosity', params as ParamsOf<'non-finite-luminosity'>, classEvidence);
       return out;
     default: {
       const unmapped: never = radius;
