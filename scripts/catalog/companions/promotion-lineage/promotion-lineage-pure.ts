@@ -10,7 +10,7 @@ import {
 import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../../lineage/lineage-row-pure';
 import { formatPartition } from '../../../util/counts/tally-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../../lineage/reason-codes/reason-codes-pure';
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../../photometry/brightness-colour-lineage-pure';
 import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../../spectral/size-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from '../companion-dust-pure';
@@ -357,7 +357,7 @@ export interface PromotionLineage {
 /** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
   rows: readonly PromotedRow[], stars: Unsorted, founded: ReadonlySet<string>,
-  rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>,
+  rewrites: ReadonlyMap<NamedStar, Readonly<RecordRewrite>>,
 ): PromotionLineage {
   const recordKey = (idx: number): string => stars[idx].originKey;
   const decided = rows.map((r) => promotionDecision(r, recordKey));

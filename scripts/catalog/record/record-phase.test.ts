@@ -1,11 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyDesignationConstellations } from '../classic-ids/apply-designation-constellation';
-import type { DesignationConIndex } from '../classic-ids/designation-constellation-pure';
 import { promoteCompanions, type PromotionInputs } from '../companions/companion-promotion';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { ResolvedPair } from '../companions/record-index/pair-resolution-pure';
-import { buildCatalogRowIndexMap, wingRenderablePrimaries } from '../companions/record-index/record-index';
+import { buildCatalogRowIndexMap, renderableCompanionClaims } from '../companions/record-index/record-index';
 import { buildHipToIndex, inferBinaries } from '../multiplicity/binary-flags-pure';
 import { applySystemCoherence, type SystemVerdict } from '../multiplicity/system-coherence';
 import { applyStarNames, type StarNamingInputs } from '../naming/apply-star-names';
@@ -13,13 +11,13 @@ import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
-import { allocatedSids, enterPhase, finalise } from './record-phase';
+import { allocatedSids, enterPhase, finalise, type Records, type Sorted } from './record-phase';
+import type { Star } from '../parse/stars-parse';
 
 declare const rows: MultiplesTsvRow[];
 declare const promotionInputs: PromotionInputs;
 declare const verdicts: readonly SystemVerdict[];
 declare const pairs: readonly ResolvedPair[];
-declare const conIndex: DesignationConIndex;
 declare const namingInputs: StarNamingInputs;
 
 describe('record phases', () => {
@@ -70,13 +68,8 @@ describe('record phases', () => {
       ],
       [
         // @ts-expect-error the wings follow the sort; the map precedes them only through the resolved pairs they take
-        () => wingRenderablePrimaries(pairs, promoted),
-        () => wingRenderablePrimaries(pairs, sorted),
-      ],
-      [
-        // @ts-expect-error designation constellations precede variability
-        () => applyDesignationConstellations(sorted, conIndex),
-        () => applyDesignationConstellations(walked, conIndex),
+        () => renderableCompanionClaims(pairs, promoted, new Set()),
+        () => renderableCompanionClaims(pairs, sorted, new Set()),
       ],
       [
         // @ts-expect-error variability fills desigCon only where IV/27A left it empty
@@ -94,7 +87,28 @@ describe('record phases', () => {
         () => assignDisplayNames(sorted, new Map(), [], new Map(), sids),
       ],
     ];
-    expect(refusedBesideInPlace).toHaveLength(12);
+    expect(refusedBesideInPlace).toHaveLength(11);
+  });
+
+  it('refuses a field group read on a record whose phase precedes the step that attaches it, at compile time', () => {
+    const readBeforeBeside = [
+      [
+        // @ts-expect-error the naming step attaches the naming fields
+        (r: Records<'walked'>) => r[0].bayer,
+        (r: Records<'named'>) => r[0].bayer,
+      ],
+      [
+        // @ts-expect-error the GCVS step attaches the variable-star fields, after the sort
+        (r: Sorted) => r[0].varType,
+        (r: Sorted<Star>) => r[0].varType,
+      ],
+      [
+        // @ts-expect-error the sorted stage attaches the companion pointer from geometric inference
+        (r: Sorted) => r[0].companionIdx,
+        (r: Sorted<Star>) => r[0].companionIdx,
+      ],
+    ];
+    expect(readBeforeBeside).toHaveLength(3);
   });
 
   it('finalises only when the SIDs and display names pair one-for-one with the records', () => {

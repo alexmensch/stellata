@@ -1,7 +1,7 @@
 // The system index promotion walks: pair cursors per system, and the records the catalogue already holds. See README.md#the-system-index.
 
 import { isMoreCanonicalAnchor, wdsRootOf } from '../../../binaries/component-tokens-pure';
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 import type { MultiplesTsvRow } from '../multiples-row';
 
 export interface PairCursor {
@@ -11,7 +11,7 @@ export interface PairCursor {
 
 /** The WDS root's canonical primary, among those a record already holds. */
 export interface SystemAnchor {
-  star: Star;
+  star: NamedStar;
   primaryRow: MultiplesTsvRow;
   catalogIdx: number;
 }
@@ -27,7 +27,7 @@ export class SystemIndex {
   private readonly rootAnchors = new Map<string, SystemAnchor>();
   private readonly singleLettersByRoot = new Map<string, Set<string>>();
 
-  constructor(rows: readonly MultiplesTsvRow[], private readonly stars: readonly Star[]) {
+  constructor(rows: readonly MultiplesTsvRow[], private readonly stars: readonly NamedStar[]) {
     for (let i = 0; i < stars.length; i++) {
       const s = stars[i];
       if (s.gaiaSourceId && !this.byGaia.has(s.gaiaSourceId)) this.byGaia.set(s.gaiaSourceId, i);

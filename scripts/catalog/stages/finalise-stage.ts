@@ -11,13 +11,14 @@ import {
 } from '../naming/naming-lineage-pure';
 import { CONSTELLATIONS } from '../parse/constellations/constellations';
 import { finalise, type Sorted } from '../record/record-phase';
+import type { Star } from '../parse/stars-parse';
 import type { AllocatedCatalog } from './allocation-stage';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
 
 export type FinaliseStage = ReturnType<typeof finaliseStage>;
 
 export function finaliseStage(
-  sorted: Sorted,
+  sorted: Sorted<Star>,
   allocated: AllocatedCatalog,
   componentDesignations: Map<number, ComponentDesignation>,
   stepInputs: FileHashes,

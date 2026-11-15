@@ -2,6 +2,9 @@
 
 import {
   APSIS_FIELDS,
+  FLAG_BINARY_PRIMARY,
+  FLAG_HAS_BAYER,
+  FLAG_HAS_NAME,
   HEADER_SIZE,
   NO_APSIS,
   NO_COMPANION,
@@ -25,6 +28,8 @@ export interface CatalogEncodeInputs {
   readonly apsisMap: ReadonlyMap<string, ApsisRow>;
   /** Per record, in record order. */
   readonly multiplicityStatus: Uint8Array;
+  /** The records carrying FLAG_BINARY_PRIMARY: binaryPrimaries' combined claims. */
+  readonly binaryPrimaries: ReadonlySet<number>;
 }
 
 export interface EncodedCatalog {
@@ -34,10 +39,14 @@ export interface EncodedCatalog {
   readonly nameTableEntries: number;
 }
 
-export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: CatalogEncodeInputs): EncodedCatalog {
+export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPrimaries }: CatalogEncodeInputs): EncodedCatalog {
   const { records: stars, sids, displayNames } = catalog;
   if (multiplicityStatus.length !== stars.length) {
     throw new Error(`encodeCatalog: ${stars.length} records but ${multiplicityStatus.length} multiplicity statuses`);
+  }
+  const strayClaim = [...binaryPrimaries].find((i) => !(Number.isInteger(i) && i >= 0 && i < stars.length));
+  if (strayClaim !== undefined) {
+    throw new Error(`encodeCatalog: binary-primary claim ${strayClaim} addresses no record of ${stars.length}`);
   }
   const unallocated = sids.indexOf(NO_SID);
   if (unallocated !== -1) throw new Error(`encodeCatalog: record ${unallocated} carries NO_SID`);
@@ -68,9 +77,12 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus }: Catalog
       nameOffset: displayNames[i] ? nameTable.offsets[i] : 0,
       ...encodeSpectralBytes(s.spectral),
       conIndex: s.conIndex,
-      flags: s.flags,
+      flags: s.flags
+        | (displayNames[i] !== null ? FLAG_HAS_NAME : 0)
+        | (s.bayer ? FLAG_HAS_BAYER : 0)
+        | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
       ...variabilityUnits(s),
-      varType: s.varType ?? 0,
+      varType: s.varType,
       hip: s.hip ?? 0,
       // Gaia DR3 source_ids exceed Number.MAX_SAFE_INTEGER: BigInt off the string, never through a number.
       gaiaSourceId: s.gaiaSourceId !== null ? BigInt(s.gaiaSourceId) : NO_GAIA_SOURCE_ID,

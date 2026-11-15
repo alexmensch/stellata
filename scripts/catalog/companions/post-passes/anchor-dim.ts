@@ -4,7 +4,7 @@ import { absoluteMagnitude, apparentMagnitude } from '../../../../src/astro-core
 import { physicalRadius, type RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type { SpectralInfo } from '../../../../src/catalog-format/spectral/spectral-classify';
 import { parentComponentToken } from '../../../binaries/component-tokens-pure';
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 import { RIELLO_G_MINUS_V_SIGMA, vTierIsSystemBlend } from '../../photometry/v-magnitude-pure';
 import { recordSpectralInfo, starDistPc } from './held-record';
 
@@ -26,7 +26,7 @@ export const PRINTED_BLEND_MAX_SEP_ARCSEC = 10.0;
 export const GAIA_BLEND_MAX_SEP_ARCSEC = 1.0;
 
 /** README.md#registration. */
-export function anchorMagIsCatalogued(anchor: Star): boolean {
+export function anchorMagIsCatalogued(anchor: NamedStar): boolean {
   return anchor.vVia !== null && anchor.vVia !== 'none';
 }
 
@@ -51,7 +51,7 @@ export function componentDepth(comp: string): number {
 
 export interface AnchorDimCandidate {
   anchorIdx: number;
-  member: Star;
+  member: NamedStar;
   memberSpectral: SpectralInfo;
   /** `dmag_imputed` brightness is blend-relative (re-split by Δmag); `wds_mag`
    *  and `own` are independent member brightness (flux subtraction). */
@@ -93,7 +93,7 @@ export type AnchorDimVerdict = typeof ANCHOR_DIM_VERDICTS[number];
 
 /** Values as written: a later anchor can rewrite a record this one changed. */
 export interface AnchorDim<C extends AnchorDimCandidate> {
-  anchor: Star;
+  anchor: NamedStar;
   anchorAbsmag: number;
   anchorRadius: RadiusResolution;
   /** Re-split members, in the order their absmag was rewritten. */
@@ -111,7 +111,7 @@ export interface AnchorDimResult<C extends AnchorDimCandidate> {
 /** In place, one anchor at a time in first-registered order — README.md#anchor-flux-conservation. */
 export function dimAnchors<C extends AnchorDimCandidate>(
   candidates: readonly C[],
-  starAt: (idx: number) => Star,
+  starAt: (idx: number) => NamedStar,
 ): AnchorDimResult<C> {
   const byAnchor = new Map<number, C[]>();
   for (const cand of candidates) {
@@ -124,7 +124,7 @@ export function dimAnchors<C extends AnchorDimCandidate>(
   return result;
 }
 
-function dimAnchor<C extends AnchorDimCandidate>(anchor: Star, cands: readonly C[], result: AnchorDimResult<C>): void {
+function dimAnchor<C extends AnchorDimCandidate>(anchor: NamedStar, cands: readonly C[], result: AnchorDimResult<C>): void {
   const judge = (cand: C, verdict: AnchorDimVerdict): void => {
     result.verdicts.push({ cand, verdict });
   };
@@ -132,7 +132,7 @@ function dimAnchor<C extends AnchorDimCandidate>(anchor: Star, cands: readonly C
   // README.md#observed-magnitude: one A_V for the group, the anchor's own distance.
   const av = cands[0].av;
   const distPc = starDistPc(anchor);
-  const recordObsMag = (s: Star): number | null => {
+  const recordObsMag = (s: NamedStar): number | null => {
     const d = starDistPc(s);
     return d > 0 ? apparentMagnitude(s.absmag, d) + av : null;
   };

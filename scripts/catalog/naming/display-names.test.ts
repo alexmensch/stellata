@@ -1,9 +1,9 @@
-// The build's half of the composer: which tier reaches the name table, what
-// FLAG_HAS_NAME means, and the curated override's join.
+// The build's half of the composer: which tier reaches the name table, and
+// the curated override's join.
 
 import { describe, expect, it } from 'vitest';
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { assignDisplayNames, type DisplayNameResult, type DisplayNameSource } from './display-names';
@@ -30,7 +30,6 @@ function star(over: Partial<DisplayNameSource> = {}): DisplayNameSource {
     gl: null,
     conIndex: NO_CONSTELLATION_INDEX,
     desigCon: NO_DESIGNATION_CON,
-    flags: 0,
     ...over,
   };
 }
@@ -43,19 +42,18 @@ function labelOf(out: DisplayNameResult, i: number): string | undefined {
 }
 
 describe('assignDisplayNames', () => {
-  it('hands only the NAME tiers to the name table, and FLAG_HAS_NAME with them', () => {
+  it('hands only the NAME tiers to the name table', () => {
     // catalog.bin's name table carries the authority tiers alone so first
     // paint has names; a record displaying a DESIGNATION carries none and
     // the runtime composes it off the search index.
     const stars = [
       star({ iauName: 'Sirius', hip: 32349 }),
-      star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI }, flags: FLAG_HAS_NAME }),
+      star({ bayer: 'θ', bayerSup: 1, desigCon: { via: 'iv27a', index: ORI } }),
       star({ hip: 11767 }),
     ];
     const out = assignDisplayNames(enterPhase('sorted', stars), noComponents, CONSTELLATIONS, new Map(), allocatedSids([1, 2, 3]));
 
     expect(out.displayNames).toEqual(['Sirius', null, null]);
-    expect(stars.map((s) => (s.flags & FLAG_HAS_NAME) !== 0)).toEqual([true, false, false]);
     expect(out.records.map(({ name }) => (name.kind === 'unlabelled' ? null : name.tier))).toEqual(['iau', 'bayer', 'catalogue']);
     expect(labelOf(out, 1)).toBe('θ¹ Ori');
   });
@@ -78,10 +76,9 @@ describe('assignDisplayNames', () => {
   });
 
   it('leaves a record with nothing to display unlabelled', () => {
-    const stars = [star({ flags: FLAG_HAS_NAME })];
+    const stars = [star()];
     const out = assignDisplayNames(enterPhase('sorted', stars), noComponents, CONSTELLATIONS, new Map(), allocatedSids([1]));
     expect(out.displayNames).toEqual([null]);
-    expect(stars[0].flags & FLAG_HAS_NAME).toBe(0);
     expect(out.records[0].name).toEqual({ kind: 'unlabelled' });
   });
 
@@ -131,7 +128,6 @@ describe('assignDisplayNames', () => {
     // an approved name reaches the name table too — which is why the table
     // holds more records than the authority names outright.
     expect(out.displayNames).toEqual(['Sirius', 'Sirius B']);
-    expect(stars.map((s) => (s.flags & FLAG_HAS_NAME) !== 0)).toEqual([true, true]);
   });
 
   it('keeps a borrowed DESIGNATION base out of the name table', () => {

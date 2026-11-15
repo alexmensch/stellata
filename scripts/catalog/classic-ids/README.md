@@ -14,8 +14,9 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 - `build:membership` runs `mergeClassicIdLabels` as it assembles each manifest
   row, keyed on the binding it derived, and writes
   `data/classic-ids/label_flips.tsv` (`label-merge/README.md`). The record
-  build reads the merged cells off the manifest and applies only
-  `applyDesignationConstellations` ([The designation constellation](#the-designation-constellation)).
+  build reads the merged cells off the manifest and takes only
+  `designationConstellation` ([The designation constellation](#the-designation-constellation)),
+  where the naming ladder starts each record's `desigCon`.
 
 ## Subfolders
 
@@ -111,7 +112,7 @@ scripts/catalog/classic-ids/
                                   cross_index_corrections.tsv applied
                                   (README.md#one-designation-two-hd-numbers). Four
                                   call sites take it — this build, the
-                                  designation-constellation pass, ../naming/'s
+                                  naming ladder's IV/27A tier, ../naming/'s
                                   Bayer union and ../spine/primaries-tables.ts
                                   — so no reader can miss a correction.
   designation-constellation-pure.ts
@@ -119,17 +120,14 @@ scripts/catalog/classic-ids/
                                   constellation a Bayer / Flamsteed
                                   designation is NAMED for — and
                                   `DesignationCon`, a record's value with
-                                  the cascade tier that wrote it. A `cst`
+                                  the cascade tier that wrote it, and
+                                  `designationConstellation`, a record's
+                                  IV/27A value: the tier the naming ladder
+                                  starts from, the record build's one
+                                  classic-ID step. A `cst`
                                   naming no IAU-88 constellation fails the
                                   build: the table's abbreviations are the
                                   IAU set. Pure.
-  apply-designation-constellation.ts
-    (+ test)                      The record build's one remaining classic-ID
-                                  pass: loads IV/27A's cross-index and applies
-                                  designation-constellation-pure to the Star
-                                  array. The label merge does NOT run here —
-                                  the manifest's cells are already final
-                                  (label-merge/README.md).
   designation-constellation.test.ts
                                   Pins the cascade's output on the WIRE
                                   (ρ Aql, 15 LMi, Fomalhaut C) against the
@@ -306,7 +304,7 @@ component letter exists to tell the two apart and both records compose the
 identical label. `data/classic-ids/cross_index_corrections.tsv` is where
 review says so, keyed on the HD whose row leaves the table and naming the HD
 the designation belongs to; `CROSS_INDEX` applies it, so the join, the
-designation-constellation pass, the naming ladder's Bayer union and the
+naming ladder's IV/27A tier (`designationConstellation`), its Bayer union and the
 primaries audit all read the corrected table. Two rows today (23 Ori and
 104 Aqr), each backed by V/50 membership, SIMBAD's own identification and the
 two stars' distances, and each removing one row of

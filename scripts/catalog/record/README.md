@@ -34,13 +34,21 @@ scripts/catalog/record/
                                   the quantised period and amplitude each
                                   record writes. Pure.
   encode-catalog-pure.ts (+ test) encodeCatalog — the finalised records
-                                  (their SIDs and display names) and their
-                                  multiplicity statuses to the assembled
+                                  (their SIDs and display names), their
+                                  multiplicity statuses and the
+                                  binary-primary claims' union to the
+                                  assembled
                                   catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
-                                  with its Apsis cells. Throws on a status
+                                  with its Apsis cells. The flags byte is
+                                  the bits the record carries from its
+                                  creation (IS_SOL, the companion bits)
+                                  plus the three derived ones
+                                  (/src/catalog-format/record/README.md,
+                                  byte 35). Throws on a status
                                   list that does not pair one-for-one with
-                                  the records, on NO_SID,
+                                  the records, on a binary-primary claim
+                                  addressing no record, on NO_SID,
                                   and unless Sol is the one record without
                                   a constellation. Pure.
 ```
@@ -54,10 +62,10 @@ not compile:
 
 | Phase | Entered by | Passes that take it |
 | --- | --- | --- |
-| `walked` | the manifest walk | `applyDesignationConstellations`, `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
+| `walked` | the manifest walk | `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
 | `named` | the walked passes | `promoteCompanions` |
 | `promoted` | promotion | `sortByApparentV` |
-| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `applyDoublesFlag`, `wingEclipsingBinaries`, `buildCatalogRowIndexMap`, `wingRenderablePrimaries`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
+| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `ccdmClaims`, `eclipsingClaims`, `buildCatalogRowIndexMap`, `renderableCompanionClaims`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
 
 A reader of positions taken before the sort — `coherenceLineageLines`,
 `promotionLineage`, `anchorMovedRecords` — takes `Unsorted`, any phase but
@@ -74,20 +82,46 @@ Each order it holds, and why:
   ([Record order](/src/catalog-format/record/README.md#record-order)).
 - **The row-index map, then the wings** — the wings take resolved pairs, which
   only the map resolves, and the map takes `Sorted`.
-- **Designation constellations, then variability** — GCVS fills `desigCon`
-  only where IV/27A left it empty.
+- **Naming, then variability** — GCVS fills `desigCon` only where IV/27A
+  left it empty, and `desigCon` exists only once naming attaches it
+  ([Field groups](#field-groups)).
 - **SID allocation, then display names** — the curated overrides key on SIDs,
   and `assignDisplayNames` takes `AllocatedSids`, which only the allocation
   stage tags (`allocatedSids`).
 
-Passes in one phase are free to run in either order: naming and coherence,
-GCVS and CCDM. The `FLAG_BINARY_PRIMARY` writers' order — geometric, CCDM,
-eclipsing, renderable wings — is code order within the sorted phase.
+Passes in one phase are free to run in either order: naming and coherence.
+The `FLAG_BINARY_PRIMARY` claimants' precedence — geometric, CCDM,
+eclipsing, renderable wings — is the argument order of the one
+`binaryPrimaries` call ([Binary-primary claims](../multiplicity/README.md#binary-primary-claims)),
+and `encodeCatalog` sets the bit from its union.
 
 `Finalised` is the sorted records with each one's SID and display name, built
 only by `finalise`, which throws unless the three pair one-for-one, and is
 what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
 printed name (`printedName`), so no reader can take the one for the other.
+
+## Field groups
+
+A field filled after the walk does not exist on a record before the step that
+fills it: the walk builds `WalkedStar` (`../parse/stars-parse.ts`), and each
+step attaches its group with `attach` (`record-phase.ts`), which writes the
+fields onto the same records and hands them back typed with them. A read of a
+group member on an earlier handle does not compile.
+
+| Group | Fields | Attached by |
+| --- | --- | --- |
+| `NamingFields` | `desigCon`, `iauName`, `eponym`, `bayer`, `bayerSup`, `bayerComponent`, `gould`, `gouldHalf`, `aliases` | `applyStarNames`, from IV/27A's `desigCon` (`designationConstellation`) |
+| `MultiplicityFields` | `companionIdx` | `sortedPasses`, from `inferBinaries`' nearest neighbours |
+| `VariableFields` | `periodDays`, `amplitudeMag`, `varType`, `gcvsName` | `applyVariability`, in `sortedPasses` |
+
+Each phase's record type is the default of `Records<P>`: `walked` records are
+`WalkedStar`, `named`, `promoted` and `sorted` ones `NamedStar`. The groups
+attached inside the sorted phase ride the handle `sortedPasses` returns, which
+every later stage takes as `Sorted<Star>`. The walk's own copy of the
+manifest's Bayer cell is `printedBayer`, read only for the ladder's added /
+dropped counts. A record promotion mints is a `NamedStar` literal, so it
+states every naming field and no later group; leaving one to a default does
+not compile.
 
 `enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
 is entered once, by the pass that completes it, the SIDs are tagged once, by

@@ -3,9 +3,7 @@
 // Star records every downstream builder step reads. See scripts/catalog/README.md.
 
 import {
-  FLAG_HAS_NAME,
   FLAG_IS_SOL,
-  FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
   type ApsisRow,
@@ -88,7 +86,7 @@ import { printedByHip, type PrintedHipValue } from '../photometry/hip-photometry
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import type { CuratedRecords } from '../record/curated-records';
 import { type ConstellationAssignment } from './constellations/constellations';
-import { NO_DESIGNATION_CON, type DesignationCon } from '../classic-ids/designation-constellation-pure';
+import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,
@@ -103,7 +101,8 @@ import { walkStatsFold, type WalkStats } from './walk-stats-pure';
 // LMC_DISTANCE_PC < MAX_DIST_PC.
 export const MAX_DIST_PC = 50_000;
 
-export interface Star {
+/** A record as the walk builds it; the naming step attaches `NamingFields` (../record/README.md#field-groups). */
+export interface WalkedStar {
   x: number; y: number; z: number;
   /** Space-motion velocity, equatorial Cartesian pc/yr (Sol at origin).
    *  Written to catalog.bin v8; the runtime epoch-advance pass reads it
@@ -120,38 +119,12 @@ export interface Star {
    *  position — catalog byte 34. Only Sol carries
    *  `NO_CONSTELLATION_INDEX`: it sits at the origin and has no direction. */
   conIndex: number;
-  /** The constellation this star's designation is named for — editorial, not
-   *  positional, so it diverges from `conIndex` where a boundary has since
-   *  moved past the star. `NO_CONSTELLATION_INDEX` when unknown, in which case
-   *  designations fall back to `conIndex`. Filled downstream of this walk:
-   *  the IAU WGSN designation the naming ladder resolves states it, else
-   *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
-   *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
-  desigCon: DesignationCon;
-  flags: number;
+  /** The bits fixed at creation; `encodeCatalog` adds the derived ones (../record/README.md). */
+  readonly flags: number;
   /** The manifest's printed `proper` cell, never the display name. */
   readonly printedName: string | null;
-  /** IAU WGSN approved name — the ladder's authority tier. */
-  iauName: string | null;
-  /** A published designation no structured source states, carried as a
-   *  string (`Ross 128`, `Cygnus X-1`) — /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them. */
-  eponym: string | null;
-  /** Bayer letter as the Unicode glyph — Greek (`α`) or the bare Latin
-   *  overflow series (`p`). The manifest's ASCII cell (`Alp`) until the naming
-   *  ladder replaces it; no consumer parses it either way. */
-  bayer: string | null;
-  bayerSup: number | null;
-  /** `κ Her` names component A, so NEC's row for the B component states it —
-   *  and the letter then renders unconditionally, where a WDS letter renders
-   *  only to break a tie (/docs/star-naming.md#3-the-ladder). */
-  bayerComponent: string | null;
-  gould: number | null;
-  /** Serpens' Gould halves are numbered separately (`4 G. Ser Cau`). */
-  gouldHalf: string | null;
-  /** Published spellings that resolve a search and never display — a name
-   *  the ladder displaced, or an approved alternate. Only strings no
-   *  structure implies (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can). */
-  aliases: string[];
+  /** The manifest's printed Bayer cell (`Alp`), read only to count what the naming ladder adds and drops. */
+  readonly printedBayer: string | null;
   hip: number | null;
   hd: number | null;
   hr: number | null;
@@ -171,11 +144,6 @@ export interface Star {
   tyc: string | null;
   gaiaSourceId: string | null; // Gaia DR3 source_id as decimal string; >2^53, never coerce to number
   spectDisplay: string | null; // cleaned-up spectral string for tooltip display
-  companionIdx: number;     // assigned later in inferBinaries; -1 = none
-  periodDays: number;       // 0 = not a variable known to GCVS
-  amplitudeMag: number;     // 0 if not variable
-  varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
-  gcvsName: string | null;  // GCVS designation attached by applyVariability (R CrB, VY CMa, V0645 Cen); null when not cross-matched
   /** Build-time-only diagnostics: the parallax cascade's own inversion, before
    *  any override layer fires, and the tier that supplied it. The post-build
    *  distance-regression check measures override drift against them; neither
@@ -204,6 +172,55 @@ export interface Star {
   originKey: string;
 }
 
+/** What the naming step attaches: the ladder's tiers, aliases and designation constellation. */
+export interface NamingFields {
+  /** The constellation this star's designation is named for — editorial, not
+   *  positional, so it diverges from `conIndex` where a boundary has since
+   *  moved past the star. `NO_CONSTELLATION_INDEX` when unknown, in which case
+   *  designations fall back to `conIndex`. The IAU WGSN designation the
+   *  naming ladder resolves states it, else IV/27A keyed on HD/HIP, else (filled
+   *  by the GCVS pass, after the sort) a GCVS designation's own trailing
+   *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
+  desigCon: DesignationCon;
+  /** IAU WGSN approved name — the ladder's authority tier. */
+  iauName: string | null;
+  /** A published designation no structured source states, carried as a
+   *  string (`Ross 128`, `Cygnus X-1`) — /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them. */
+  eponym: string | null;
+  /** Bayer letter as the Unicode glyph — Greek (`α`) or the bare Latin
+   *  overflow series (`p`). */
+  bayer: string | null;
+  bayerSup: number | null;
+  /** `κ Her` names component A, so NEC's row for the B component states it —
+   *  and the letter then renders unconditionally, where a WDS letter renders
+   *  only to break a tie (/docs/star-naming.md#3-the-ladder). */
+  bayerComponent: string | null;
+  gould: number | null;
+  /** Serpens' Gould halves are numbered separately (`4 G. Ser Cau`). */
+  gouldHalf: string | null;
+  /** Published spellings that resolve a search and never display — a name
+   *  the ladder displaced, or an approved alternate. Only strings no
+   *  structure implies (/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can). */
+  aliases: string[];
+}
+
+export type NamedStar = WalkedStar & NamingFields;
+
+/** What the GCVS step attaches, after the sort. */
+export interface VariableFields {
+  periodDays: number;       // 0 = not a variable known to GCVS
+  amplitudeMag: number;     // 0 if not variable
+  varType: number;          // VAR_TYPE_* enum from classifyGcvsVarType
+  gcvsName: string | null;  // GCVS designation (R CrB, VY CMa, V0645 Cen); null when not cross-matched
+}
+
+/** What the sorted stage attaches from geometric binary inference. */
+export interface MultiplicityFields {
+  companionIdx: number;     // the directed nearest record within BINARY_MAX_SEP_PC; -1 = none
+}
+
+export type Star = NamedStar & VariableFields & MultiplicityFields;
+
 /** What a shipped row's build-log samples quote that no lineage type records. */
 export interface ShippedFacts {
   /** The distance the override stack settled on. */
@@ -225,7 +242,7 @@ export type RowOutcome =
     readonly placement: PlacedPlacement;
     readonly brightness: ShippedBrightness;
     readonly size: Size;
-    readonly star: Star;
+    readonly star: WalkedStar;
     readonly facts: ShippedFacts;
   };
 
@@ -275,9 +292,9 @@ export function readStars(
   manifest: Iterable<ManifestRecord>,
   options: ReadStarsOptions,
   onRow: (outcome: RowOutcome) => void,
-): { stars: Star[]; stats: WalkStats } {
+): { stars: WalkedStar[]; stats: WalkStats } {
   const resolveRow = rowResolver(options);
-  const stars: Star[] = [];
+  const stars: WalkedStar[] = [];
   const stats = walkStatsFold();
   for (const row of manifest) {
     const outcome = resolveRow(row);
@@ -558,46 +575,26 @@ export function rowResolver({
       ? NO_CONSTELLATION_INDEX
       : conAssignment.indexAt(x, y, z);
 
-    const { bayer } = row;
-
-    let flags = 0;
-    if (proper) flags |= FLAG_HAS_NAME;
-    if (row.isSol) flags |= FLAG_IS_SOL;
-    if (bayer) flags |= FLAG_HAS_BAYER;
-
-    const star: Star = {
+    const star: WalkedStar = {
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
       absmag, ci,
       spectral: spectInfo,
       physicalRadius: radius.rSun,
       conIndex,
-      // Left unset here: three later passes fill it, and everything else
-      // reads `conIndex`.
-      desigCon: NO_DESIGNATION_CON,
-      flags,
-      printedName: proper, bayer, hip,
+      flags: row.isSol ? FLAG_IS_SOL : 0,
+      printedName: proper,
+      printedBayer: row.bayer,
+      hip,
       hd: row.hd,
       hr: row.hr,
       flam: row.flam,
-      iauName: null,
-      eponym: null,
-      bayerSup: null,
-      bayerComponent: null,
-      gould: null,
-      gouldHalf: null,
-      aliases: [],
       hdAlt: row.hdAlt,
       hrAlt: row.hrAlt,
       gl: simbadKeys.gl,
       tyc: simbadKeys.tyc,
       gaiaSourceId,
       spectDisplay: spectral.via === 'none' ? null : spectral.value.spectDisplay,
-      companionIdx: -1,
-      periodDays: 0,
-      amplitudeMag: 0,
-      varType: 0,
-      gcvsName: null,
       plxDistPc,
       plxVia: plxRes.via,
       distVia,

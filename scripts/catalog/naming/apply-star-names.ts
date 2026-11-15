@@ -6,7 +6,10 @@ import { readArtifact } from '../../util/sources/source';
 import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
-import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
+import {
+  buildDesignationConIndex, designationConstellation, type DesignationConIndex,
+} from '../classic-ids/designation-constellation-pure';
+import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -17,12 +20,15 @@ import type { DesignationRow } from './wgsn-tables-pure';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
-import type { Records } from '../record/record-phase';
+import type { NamingFields, WalkedStar } from '../parse/stars-parse';
+import { attach, type Records } from '../record/record-phase';
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
   designations: DesignationRow[];
   dispositions: Map<string, ProperDisposition>;
+  /** IV/27A's designation constellations, the tier below the authority's. */
+  designationCons: DesignationConIndex;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
@@ -30,27 +36,12 @@ export function loadStarNamingInputs(): StarNamingInputs {
     names: readArtifact(WGSN_NAMES),
     designations: readArtifact(WGSN_DESIGNATIONS),
     dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
+    designationCons: buildDesignationConIndex(CROSS_INDEX.read()),
   };
 }
 
-/** Structural subset of `Star` the ladder reads and writes. */
-export interface NamingTarget {
-  flags: number;
-  readonly printedName: string | null;
-  iauName: string | null;
-  eponym: string | null;
-  bayer: string | null;
-  bayerSup: number | null;
-  bayerComponent: string | null;
-  gould: number | null;
-  gouldHalf: string | null;
-  aliases: string[];
-  hip: number | null;
-  hd: number | null;
-  hr: number | null;
-  desigCon: DesignationCon;
-  flam: number | null;
-}
+/** The walked fields the ladder reads. */
+export type NamingSource = Pick<WalkedStar, 'flags' | 'printedName' | 'printedBayer' | 'hip' | 'hd' | 'hr' | 'flam'>;
 
 /** The authority pass's share of naming's count block. */
 export interface StarNamingCounts {
@@ -93,11 +84,12 @@ export function starNamingSummary(counts: StarNamingCounts): string {
     + `${counts.namingAliases} aliases on ${counts.namingAliasRecords} records`;
 }
 
-export function applyStarNames(
-  stars: Records<'walked', NamingTarget>,
+/** Attaches each walked record's `NamingFields`, its `desigCon` starting from IV/27A's tier. */
+export function applyStarNames<S extends NamingSource>(
+  stars: Records<'walked', S>,
   inputs: StarNamingInputs,
   constellations: readonly { code: string }[],
-): StarNamingCounts {
+): { named: Records<'walked', S & NamingFields>; counts: StarNamingCounts } {
   const index = buildWgsnIndex(inputs.names, inputs.designations);
   const counts: StarNamingCounts = {
     namingIauNamed: 0,
@@ -112,93 +104,102 @@ export function applyStarNames(
     namingAliases: 0,
     namingAliasRecords: 0,
   };
-  const named = new Set<WgsnNameRow>();
+  const reached = new Set<WgsnNameRow>();
 
-  for (const star of stars) {
+  const named = attach(stars, (star): NamingFields => {
+    const fields: NamingFields = {
+      desigCon: designationConstellation(inputs.designationCons, star),
+      iauName: null,
+      eponym: null,
+      bayer: null,
+      bayerSup: null,
+      bayerComponent: null,
+      gould: null,
+      gouldHalf: null,
+      aliases: [],
+    };
     const keys = {
       hip: star.hip, hd: star.hd, hr: star.hr, proper: star.printedName,
     };
-    const spineBayer = star.bayer;
-    star.bayer = null;
-    star.bayerSup = null;
-    star.bayerComponent = null;
 
     const name = index.nameOf(keys);
     if (name !== null) {
-      star.iauName = name.row.name;
-      named.add(name.row);
+      fields.iauName = name.row.name;
+      reached.add(name.row);
       counts.namingIauNamed++;
       if (name.viaProper) counts.namingIauNamedByProper++;
       // Published alternates the authority split out of a multi-name cell,
       // plus the spine's own spelling where the IAU superseded it.
-      for (const alias of name.row.aliases) star.aliases.push(alias);
+      for (const alias of name.row.aliases) fields.aliases.push(alias);
       if (star.printedName !== null
           && foldNameKey(star.printedName) !== foldNameKey(name.row.name)) {
-        star.aliases.push(star.printedName);
+        fields.aliases.push(star.printedName);
       }
     } else if ((star.flags & FLAG_IS_SOL) !== 0) {
       // The one hand-emitted record: no catalogue names it, and it is exempt
       // from the naming-authority disposition gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) rather than absent from it.
-      star.eponym = star.printedName;
+      fields.eponym = star.printedName;
     } else if (star.printedName !== null) {
       const routed = routeDisposedProper(
         star.printedName, inputs.dispositions.get(star.printedName),
       );
-      star.eponym = routed.eponym;
-      if (routed.alias !== null) star.aliases.push(routed.alias);
+      fields.eponym = routed.eponym;
+      if (routed.alias !== null) fields.aliases.push(routed.alias);
     }
-    if (star.eponym !== null) counts.namingEponym++;
+    if (fields.eponym !== null) counts.namingEponym++;
 
     const bayer = index.bayerOf(keys);
     if (bayer !== null && bayer.letter !== null) {
-      star.bayer = bayer.letter;
-      star.bayerSup = bayer.sup;
-      star.bayerComponent = bayer.component;
+      fields.bayer = bayer.letter;
+      fields.bayerSup = bayer.sup;
+      fields.bayerComponent = bayer.component;
       if (bayer.component !== null) counts.namingBayerComponent++;
       counts.namingBayer++;
-      if (spineBayer === null) counts.namingBayerAdded++;
-      applyDesignationConstellation(star, bayer.dc, 'wgsn-bayer', constellations);
-    } else if (spineBayer !== null) {
+      if (star.printedBayer === null) counts.namingBayerAdded++;
+      authorityDesignationConstellation(fields, star.flam, bayer.dc, 'wgsn-bayer', constellations);
+    } else if (star.printedBayer !== null) {
       counts.namingBayerDropped++;
     }
 
     const gould = index.gouldOf(keys);
     if (gould !== null && gould.num !== null) {
-      star.gould = gould.num;
-      star.gouldHalf = gould.half;
+      fields.gould = gould.num;
+      fields.gouldHalf = gould.half;
       counts.namingGould++;
-      if (star.bayer === null) {
-        applyDesignationConstellation(star, gould.dc, 'wgsn-gould', constellations);
+      if (fields.bayer === null) {
+        authorityDesignationConstellation(fields, star.flam, gould.dc, 'wgsn-gould', constellations);
       }
     }
 
-    if (star.aliases.length > 0) {
-      counts.namingAliases += star.aliases.length;
+    if (fields.aliases.length > 0) {
+      counts.namingAliases += fields.aliases.length;
       counts.namingAliasRecords++;
     }
-  }
+    return fields;
+  });
 
-  counts.namingIauUnreached = inputs.names.filter((r) => !named.has(r)).length;
-  return counts;
+  counts.namingIauUnreached = inputs.names.filter((r) => !reached.has(r)).length;
+  return { named, counts };
 }
 
 /** The top tier of the cascade the label merge started
  *  (`../classic-ids/README.md#the-designation-constellation`). */
-function applyDesignationConstellation(
-  star: NamingTarget,
+function authorityDesignationConstellation(
+  fields: NamingFields,
+  flam: number | null,
   dc: string,
   via: 'wgsn-bayer' | 'wgsn-gould',
   constellations: readonly { code: string }[],
 ): void {
   const idx = CON_INDEX.get(dc.toLowerCase());
   if (idx === undefined) return;
-  const prior = star.desigCon;
+  const prior = fields.desigCon;
   const displaced = prior.via !== 'none' && prior.index !== idx ? prior.index : null;
   if (displaced !== null) {
     const code = constellations[displaced]?.code;
-    if (star.flam !== null && code !== undefined) {
-      star.aliases.push(`${star.flam} ${code}`);
+    if (flam !== null && code !== undefined) {
+      fields.aliases.push(`${flam} ${code}`);
     }
   }
-  star.desigCon = { via, index: idx, displaced };
+  fields.desigCon = { via, index: idx, displaced };
 }

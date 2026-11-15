@@ -30,7 +30,7 @@ import { fold } from '../../util/counts/tally-pure';
 import { promotionOriginKey } from './promotion-lineage/promotion-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
-import type { Star } from '../parse/stars-parse';
+import type { NamedStar } from '../parse/stars-parse';
 import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
@@ -215,7 +215,7 @@ function resolveCompanionSpectral(row: MultiplesTsvRow): {
  *  Bayer or catalogue designation could never match one. */
 function athygDoubleProbeNames(
   ctx: PromoteRowContext,
-  anchorStar: Star | null,
+  anchorStar: NamedStar | null,
 ): string[] {
   const { row, anchorPrimaryRow, systemAnchorStar, canonicalComp } = ctx;
   if (!canonicalComp) return [];
@@ -249,13 +249,13 @@ interface PromoteRowContext {
    *  asks {@link hasIndependentFitRoute} what an id shared with it means, and a
    *  different row there makes the count answer about a different pairing. */
   anchorPrimaryRow: MultiplesTsvRow;
-  /** Catalog Star of the local anchor primary; null when it never made it
+  /** Catalog NamedStar of the local anchor primary; null when it never made it
    *  into the catalog. */
-  anchorStar: Star | null;
-  /** Catalog Star of the WDS-root system primary — the inheritance source
+  anchorStar: NamedStar | null;
+  /** Catalog NamedStar of the WDS-root system primary — the inheritance source
    *  when the local anchor is unresolved (δ Vel CD's local primary C never
    *  promotes). */
-  systemAnchorStar: Star | null;
+  systemAnchorStar: NamedStar | null;
   /** Catalog index of the anchor primary — used by the inherited-HIP
    *  collision escape so the row's HIP-match-against-anchor doesn't
    *  classify as promotion.adopted.*. */
@@ -286,9 +286,9 @@ type SplitCandidate = BlendSplitCandidate & { brightness: MintedBrightness };
 interface PromotionState {
   index: SystemIndex;
   parked: ParkedRefusals;
-  existingStars: readonly Star[];
+  existingStars: readonly NamedStar[];
   existingStarsLength: number;
-  newStars: Star[];
+  newStars: NamedStar[];
   readonly conAssignment: ConstellationAssignment;
   readonly dustGrid: DustGrid;
   minted: MintedIds;
@@ -308,11 +308,11 @@ interface PromotionState {
    *  from, so a member reached from two cursors is repositioned once and
    *  every registration of it reads the same source. */
   recuratedMembers: Map<number, RecuratedBrightness>;
-  rewrites: Map<Star, RecordRewrite>;
+  rewrites: Map<NamedStar, RecordRewrite>;
 }
 
 function recordRewrite(
-  state: PromotionState, star: Star, pass: SizingPass, radius: RadiusResolution, brightness?: HeldRecordBrightness,
+  state: PromotionState, star: NamedStar, pass: SizingPass, radius: RadiusResolution, brightness?: HeldRecordBrightness,
 ): void {
   const held = state.rewrites.get(star);
   if (held === undefined) {
@@ -366,7 +366,7 @@ const DIST_VIA_OWN_GAIA_FIT: ReadonlySet<string> = new Set([
 
 /** See README.md#re-curation-of-an-already-in-catalog-member. */
 function ownFitFailsAnchorGrade(
-  star: Star, gaiaAstrometry: Map<string, GaiaAstrometryRow>,
+  star: NamedStar, gaiaAstrometry: Map<string, GaiaAstrometryRow>,
 ): boolean {
   if (star.gaiaSourceId === null) return false;
   if (star.distVia === null || !DIST_VIA_OWN_GAIA_FIT.has(star.distVia)) {
@@ -472,8 +472,8 @@ function adoptExistingMember(
  *  and is α PsA C. Only fills an empty value, so a record IV/27A or the naming
  *  ladder already answered for keeps its own. */
 function inheritAnchorDesignationCon(
-  member: Star,
-  anchor: Star | null,
+  member: NamedStar,
+  anchor: NamedStar | null,
 ): boolean {
   if (anchor === null || member.desigCon.via !== 'none') return false;
   member.desigCon = inheritedDesignationCon(anchor.desigCon);
@@ -556,6 +556,7 @@ function promoteRow(
     desigCon,
     flags,
     printedName: null,
+    printedBayer: null,
     iauName: null,
     eponym: null,
     bayer: null,
@@ -574,11 +575,6 @@ function promoteRow(
     tyc: null,
     gaiaSourceId: companionGaia,
     spectDisplay: spectral.display,
-    companionIdx: -1,
-    periodDays: 0,
-    amplitudeMag: 0,
-    varType: 0,
-    gcvsName: null,
     plxDistPc: null,
     plxVia: null,
     distVia: inheritAnchor?.distVia ?? null,
@@ -639,8 +635,8 @@ export function promoteCompanions(
   existingStars: Records<'named'>,
   inputs: PromotionInputs,
 ): {
-  newStars: Star[]; stats: PromotionStats; rows: PromotedRow[];
-  rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>;
+  newStars: NamedStar[]; stats: PromotionStats; rows: PromotedRow[];
+  rewrites: ReadonlyMap<NamedStar, Readonly<RecordRewrite>>;
 } {
   const index = new SystemIndex(multiplesRows, existingStars);
   const state: PromotionState = {
@@ -656,7 +652,7 @@ export function promoteCompanions(
     recuratedMembers: new Map(),
     rewrites: new Map(),
   };
-  const starAt = (idx: number): Star =>
+  const starAt = (idx: number): NamedStar =>
     idx < existingStars.length ? existingStars[idx] : state.newStars[idx - existingStars.length];
 
   const { promoted, slots, systemic } = walkCursors(index, state, starAt);
@@ -687,7 +683,7 @@ export function promoteCompanions(
   };
 }
 
-function promotionStats(reHomed: readonly Star[], dimVerdicts: readonly { verdict: AnchorDimVerdict }[]): PromotionStats {
+function promotionStats(reHomed: readonly NamedStar[], dimVerdicts: readonly { verdict: AnchorDimVerdict }[]): PromotionStats {
   const dim = fold(ANCHOR_DIM_VERDICTS, dimVerdicts, (v) => v.verdict);
   return {
     companionRepositionedInnerToParent: reHomed.length,
@@ -704,7 +700,7 @@ function promotionStats(reHomed: readonly Star[], dimVerdicts: readonly { verdic
 function walkCursors(
   index: SystemIndex,
   state: PromotionState,
-  starAt: (idx: number) => Star,
+  starAt: (idx: number) => NamedStar,
 ): { promoted: Map<MultiplesTsvRow, PromotedRow>; slots: ComponentSlots; systemic: SystemicGroups } {
   const promoted = new Map<MultiplesTsvRow, PromotedRow>();
   const record = (r: PromotedRow): void => {

@@ -75,7 +75,7 @@ export interface PreAllocation {
   readonly walk: Omit<WalkStage, 'walked'>;
   readonly naming: Omit<NamingStage, 'named'>;
   readonly promotion: Omit<PromotionStage, 'promoted'>;
-  readonly sorted: Sorted;
+  readonly sorted: Sorted<Star>;
   readonly multiplesRows: MultiplesTsvRow[];
   /** Each record's apparent-V sort key, in record order. */
   readonly sortedKey: readonly number[];
@@ -98,6 +98,7 @@ export function catalogEmission(
   });
   const encoded = encodeCatalog({
     catalog: final.finalised, apsisMap: built.apsisMap, multiplicityStatus: passes.multiplicityStatus,
+    binaryPrimaries: passes.binaryPrimaries,
   });
   const namingDerived: NamingDerivedCounts = { ...final.displayCounts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(final.namingEmission.counts, namingDerived));

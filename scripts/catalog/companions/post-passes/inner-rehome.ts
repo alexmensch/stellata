@@ -3,7 +3,7 @@
 import {
   canonicalCompLetter, composeSyntheticId, parentComponentToken, wdsRootOf,
 } from '../../../binaries/component-tokens-pure';
-import type { Star } from '../../parse/stars-parse';
+import type { NamedStar } from '../../parse/stars-parse';
 import { resolvePosition } from '../placement/placement';
 import type { MintedIds } from '../identity/row-identity';
 import type { PairCursor } from '../identity/system-index';
@@ -39,9 +39,9 @@ export function reHomeInnerPairs(
   groups: Iterable<PairCursor>,
   slots: ComponentSlots,
   minted: MintedIds,
-  starAt: (idx: number) => Star,
-): Star[] {
-  const moved: Star[] = [];
+  starAt: (idx: number) => NamedStar,
+): NamedStar[] {
+  const moved: NamedStar[] = [];
   for (const cursor of groups) {
     if (cursor.primary === null) continue;
     const parentTok = parentComponentToken(cursor.primary.comp);

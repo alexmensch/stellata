@@ -128,6 +128,10 @@ for its coverage and the runtime colour-LUT re-key it enables.
                           4=is_binary_primary). `has_name` means an authority
                           NAMED this star — the name table carries the naming
                           ladder's authority tiers alone (`../../../scripts/catalog/naming/README.md`).
+                          `encodeCatalog` derives three bits: `has_name` from
+                          the display name, `has_bayer` from the naming
+                          ladder's Bayer letter, `is_binary_primary` from the
+                          [binary-primary claims](../../../scripts/catalog/multiplicity/README.md#binary-primary-claims).
   - 36    `uint8`        **variability amplitude** in 0.05 mag units (0 = not variable)
   - 37    `uint8`        **variability type** (`VAR_TYPE_*`: 0=unknown,
                           1=pulsating, 2=eclipsing, 3=other; 4+ refine

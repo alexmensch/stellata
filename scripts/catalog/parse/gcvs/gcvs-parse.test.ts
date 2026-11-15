@@ -159,7 +159,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[99, 'S Aql']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatched).toBe(1);
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(0);
@@ -178,7 +178,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(0);
     expect(r.gcvsMatchedByHd).toBe(0);
@@ -194,7 +194,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'R And']]),
       byGaia: new Map(),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(r.gcvsMatchedByHd).toBe(0);
@@ -208,7 +208,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map(),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(0);
     expect(r.gcvsMatchedByHd).toBe(1);
@@ -224,7 +224,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map([['7777', 'S Aql']]),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(star.periodDays).toBe(409.2);
@@ -237,7 +237,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map(),
     };
-    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatched).toBe(0);
     expect(star.periodDays).toBe(0);
     expect(star.amplitudeMag).toBe(0);
@@ -266,7 +266,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map(),
     };
-    const r = applyVariability(enterPhase('sorted', [aperiodic]), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [aperiodic]), GCVS, xref).counts;
     expect(aperiodic.gcvsName).toBe('V0645 Cen');
     expect(aperiodic.periodDays).toBe(0);
     expect(aperiodic.varType).toBe(0);
@@ -286,7 +286,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[60, 'T Vul']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability(enterPhase('sorted', stars), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', stars), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(r.gcvsMatchedByHd).toBe(1);
@@ -543,7 +543,7 @@ describe('applyVariability count block', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map(),
     };
-    const r = applyVariability(enterPhase('sorted', []), GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', []), GCVS, xref).counts;
     expect([r.gcvsEntries, r.gcvsHipXrefs, r.gcvsHdXrefs, r.gcvsGaiaXrefs]).toEqual([GCVS.size, 2, 1, 0]);
     expect(gcvsSummary(r)).toBe(
       `${GCVS.size} GCVS entries, 2 Hip + 1 HD + 0 Gaia xrefs, 0 named for search (0 with a renderable period: gaia=0, hip=0, hd=0)`,

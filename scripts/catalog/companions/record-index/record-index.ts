@@ -1,8 +1,6 @@
 // The row-index sidecar and the post-sort readers of resolvePairs. See README.md.
 
-import {
-  FLAG_BINARY_PRIMARY,
-} from '../../../../src/catalog-format/record/catalog-pure';
+import { groupPrimaryClaims, type PrimaryClaims } from '../../multiplicity/binary-flags-pure';
 import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
 import { isMoreCanonicalAnchor } from '../../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
@@ -60,10 +58,11 @@ export function resolvedMemberIndices(resolved: readonly ResolvedPair[]): Set<nu
 }
 
 /** See ./README.md#renderable-companion-wings. */
-export function wingRenderablePrimaries(
+export function renderableCompanionClaims(
   resolved: readonly ResolvedPair[],
   stars: Sorted,
-): Pick<MultiplicityCounts, 'renderableCompanionWinged'> {
+  claimed: ReadonlySet<number>,
+): PrimaryClaims<Pick<MultiplicityCounts, 'renderableCompanionWinged'>> {
   const drawnPerSystem = new Map<string, Set<number>>();
   for (const { pair, rendered } of resolved) {
     if (!distinctEnds(rendered)) continue;
@@ -73,15 +72,8 @@ export function wingRenderablePrimaries(
     drawn.add(rendered.secondary);
   }
 
-  let renderableCompanionWinged = 0;
-  for (const indices of drawnPerSystem.values()) {
-    const drawn = [...indices];
-    if (drawn.some((idx) => (stars[idx].flags & FLAG_BINARY_PRIMARY) !== 0)) continue;
-    const anchor = drawn.reduce((best, idx) => (stars[idx].absmag < stars[best].absmag ? idx : best));
-    stars[anchor].flags |= FLAG_BINARY_PRIMARY;
-    renderableCompanionWinged++;
-  }
-  return { renderableCompanionWinged };
+  const { claims, counts } = groupPrimaryClaims(stars, [...drawnPerSystem.values()].map((drawn) => [...drawn]), claimed);
+  return { claims, counts: { renderableCompanionWinged: counts.flagged } };
 }
 
 // ---- Component-letter search designations ------------------------------

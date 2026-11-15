@@ -2,7 +2,7 @@
 // to its display name, and the NAME tiers as the name table's strings.
 // See /src/catalog-format/naming/README.md#two-callers-one-composer.
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
@@ -31,7 +31,6 @@ export interface DisplayNameSource {
   gl: string | null;
   conIndex: number;
   desigCon: DesignationCon;
-  flags: number;
 }
 
 /** Which constellation the record's constellation-relative designations
@@ -160,7 +159,6 @@ export function assignDisplayNames(
     dc: dcs[i],
   }));
   const displayNames = records.map(({ name }) => approvedName(name));
-  for (let i = 0; i < stars.length; i++) flagName(stars[i], displayNames[i]);
   const duplicates = duplicateLabels(records);
   const counts: DisplayNameCounts = {
     namingDuplicateLabels: duplicates.size,
@@ -175,11 +173,6 @@ export function assignDisplayNames(
  *  runtime composes designations off the search index. */
 function approvedName(name: NameOutcome): string | null {
   return name.kind !== 'unlabelled' && isApprovedName(name.tier) ? name.label : null;
-}
-
-function flagName(star: DisplayNameSource, displayName: string | null): void {
-  if (displayName !== null) star.flags |= FLAG_HAS_NAME;
-  else star.flags &= ~FLAG_HAS_NAME;
 }
 
 function duplicateLabels(records: readonly NamedRecord[]): Map<string, number[]> {

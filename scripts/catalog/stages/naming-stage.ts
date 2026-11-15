@@ -3,9 +3,6 @@
 
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 import type { FileHashes } from '../../util/build-stamp';
-import {
-  applyDesignationConstellations, loadDesignationConstellationIndex,
-} from '../classic-ids/apply-designation-constellation';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import {
   COHERENCE_CODES, COHERENCE_LINEAGE_BUDGET, coherenceLineageLines, coherenceSummary,
@@ -25,21 +22,19 @@ export function namingStage(
   inputs: ReadStarsInputs,
   stepInputs: FileHashes,
 ) {
-  console.log('Resolving designation constellations from IV/27A...');
-  applyDesignationConstellations(walked, loadDesignationConstellationIndex());
-  console.log('Applying the IAU WGSN naming ladder...');
-  const starNamingCounts = applyStarNames(walked, loadStarNamingInputs(), CONSTELLATIONS);
+  console.log('Applying the IAU WGSN naming ladder over IV/27A\'s designation constellations...');
+  const { named, counts: starNamingCounts } = applyStarNames(walked, loadStarNamingInputs(), CONSTELLATIONS);
   console.log(starNamingSummary(starNamingCounts));
 
-  const coherenceVerdicts = systemCoherenceVerdicts(multiplesRows, walked, {
+  const coherenceVerdicts = systemCoherenceVerdicts(multiplesRows, named, {
     gaiaAstrometry: inputs.directions.gaiaAstrometry,
     hip2: inputs.directions.hip2,
     bailerJones: inputs.bailerJones,
   });
-  const coherenceEmission = coherenceLineage(coherenceVerdicts, walked, stepInputs);
-  applySystemCoherence(walked, coherenceVerdicts);
+  const coherenceEmission = coherenceLineage(coherenceVerdicts, named, stepInputs);
+  applySystemCoherence(named, coherenceVerdicts);
   console.log(coherenceSummary(coherenceEmission.counts));
-  return { named: enterPhase('named', walked), starNamingCounts, coherenceVerdicts, coherenceEmission };
+  return { named: enterPhase('named', named), starNamingCounts, coherenceVerdicts, coherenceEmission };
 }
 
 // A function of its own so its line per record is unreachable once it returns:

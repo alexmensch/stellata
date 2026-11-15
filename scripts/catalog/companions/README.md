@@ -293,7 +293,7 @@ Every read of a Stage 6 offset is re-based onto that anchor
 | Field(s) | Origin | Source |
 | --- | --- | --- |
 | `conIndex` | per-component | the IAU boundary region the minted position falls in ([Positional constellation membership](../parse/constellations/README.md#positional-constellation-membership)) — so a pair wide enough to straddle a boundary lands its members on the correct sides, and an anchor-less row still resolves. Counted `promotion.constellation.split-from-anchor` where it differs from the anchor's. |
-| `printedName` | unset | no manifest cell backs a minted record; its display name is composed post-sort ([Where the display name comes from](#where-the-display-name-comes-from)). |
+| `printedName`, `printedBayer` | unset | no manifest cell backs a minted record; its display name is composed post-sort ([Where the display name comes from](#where-the-display-name-comes-from)). |
 | `desigCon` | inherited | anchor's designation constellation, sourced `anchor` — a composed name ("Xi Boo B") is named for whatever the primary's designation is. Sourced from IV/27A keyed on the anchor's HD/HIP, so a boundary-straddling companion composes against the primary's designation (Fomalhaut C is "α PsA C" though it sits in Aquarius) rather than its own positional index ([The designation constellation](../classic-ids/README.md#the-designation-constellation)). |
 | `vx/vy/vz` | inherited | anchor's systemic velocity — a static companion shears off the primary under the epoch-advance otherwise ([Space-motion velocity](../distance/README.md#space-motion-velocity), Pair coherence). Truly anchor-less escapes fall back to zero. |
 | `distVia` | inherited | the anchor's tier, since the record sits at the anchor's distance — the optical-double suppression must weigh both members the same way. Null with no anchor, never `none`: that is a membership event, and this record ships. |
@@ -307,7 +307,7 @@ Every read of a Stage 6 offset is re-based onto that anchor
 | `syntheticId` | per-component | `synth-<wds_id>-<comp>` when no own id survives the gates. |
 | `originKey` | per-component | the row's own `multiples.tsv` key, `multiples:<system_id>/<comp>` ([Identity](../lineage/identity/README.md)). Build-time only. |
 | `companionIdx` | post-pass | set by geometric binary inference ([Geometric binary inference](../multiplicity/README.md#geometric-binary-inference)). |
-| `period`, `amplitude`, `varType`, `gcvsName` | unset | companion variability isn't tracked at promotion. |
+| `periodDays`, `amplitudeMag`, `varType`, `gcvsName` | post-pass | the GCVS cross-match attaches them after the sort, as on every record ([Field groups](../record/README.md#field-groups)). |
 | `hd`, `hr`, `flam`, `bayer`, `gl`, `tyc` | unset | not carried on multiples.tsv rows. `hdAlt`/`hrAlt` are empty for a different reason — deliberately not inherited: an anchor's alternative HD is often the pair's OTHER component number, which makes handing it to this record tempting and wrong. The overlay asserts both numbers against one Gaia source and names no component, so attributing one here would invent evidence (`../classic-ids/label-merge/README.md`). |
 
 ### Where the display name comes from
