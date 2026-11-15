@@ -137,13 +137,7 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  tangentOffset, polarToTangent (a WDS
-                                  ρ, θ as an east / north offset) and
-                                  its inverse tangentToPolar, the angle
-                                  through astro-core's pyMod — Stage 6's
-                                  anchor offsets and companion promotion's
-                                  re-based ones both read it,
-                                  distancePc (1000 /
+                                  tangentOffset, distancePc (1000 /
                                   parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
