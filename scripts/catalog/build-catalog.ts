@@ -278,7 +278,7 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
 
 // A function of its own so the reference tables are unreachable once it returns:
 // held through SID allocation, encoding and emission, the build runs out of heap.
-async function finalRecords(inputHashesAtStart: FileHashes) {
+async function preAllocationStages(inputHashesAtStart: FileHashes) {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
@@ -445,7 +445,7 @@ export async function main() {
   sweepStaged(CATALOG_OUTPUTS);
   const inputHashesAtStart = stepInputHashes();
 
-  const built = await finalRecords(inputHashesAtStart);
+  const built = await preAllocationStages(inputHashesAtStart);
   const { stars, promotionLines, promotionIdentity } = built;
 
   const registry = loadRegistry();
