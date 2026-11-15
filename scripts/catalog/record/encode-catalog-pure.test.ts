@@ -31,7 +31,7 @@ const SOL = makeStar();
 const STAR = makeStar({
   x: 1.5, y: -2.25, z: 3.75, vx: 0.125, vy: -0.25, vz: 0.375, absmag: 4.5, ci: 0.625, physicalRadius: 2.5,
   spectral: { kind: 'mk', letter: 4, subclass: 2, lumClass: 3 },
-  conIndex: 7, flags: FLAG_HAS_BAYER, varType: VAR_TYPE_MIRA,
+  conIndex: 7, bayer: 'α', varType: VAR_TYPE_MIRA,
   hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
   periodDays: 10, amplitudeMag: 0.5,
 });
@@ -87,7 +87,7 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
   });
 
-  it('sets FLAG_HAS_NAME on each record with a display name and FLAG_BINARY_PRIMARY on each claimed one, beside its own flags', () => {
+  it('sets FLAG_HAS_NAME from the display name, FLAG_HAS_BAYER from the Bayer letter and FLAG_BINARY_PRIMARY from the claims, beside the record\'s own flags', () => {
     const { buffer, recordsOffset: offset } = encode(undefined, new Set([1, 2]));
     const view = new DataView(buffer);
     expect([0, 1, 2].map((i) => readRecordField(view, offset + i * RECORD_SIZE, 'flags')))

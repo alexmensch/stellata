@@ -4,7 +4,6 @@
 
 import {
   FLAG_IS_SOL,
-  FLAG_HAS_BAYER,
   NO_CONSTELLATION_INDEX,
   SOLAR_BV_FALLBACK,
   type ApsisRow,
@@ -127,7 +126,8 @@ export interface Star {
    *  IV/27A keyed on HD/HIP, else a GCVS designation's own trailing
    *  abbreviation. See ./constellations/README.md#positional-constellation-membership. */
   desigCon: DesignationCon;
-  flags: number;
+  /** The bits fixed at creation; `encodeCatalog` adds the derived ones (../record/README.md). */
+  readonly flags: number;
   /** The manifest's printed `proper` cell, never the display name. */
   readonly printedName: string | null;
   /** IAU WGSN approved name — the ladder's authority tier. */
@@ -559,10 +559,6 @@ export function rowResolver({
 
     const { bayer } = row;
 
-    let flags = 0;
-    if (row.isSol) flags |= FLAG_IS_SOL;
-    if (bayer) flags |= FLAG_HAS_BAYER;
-
     const star: Star = {
       x, y, z,
       vx: vel.x, vy: vel.y, vz: vel.z,
@@ -573,7 +569,7 @@ export function rowResolver({
       // Left unset here: three later passes fill it, and everything else
       // reads `conIndex`.
       desigCon: NO_DESIGNATION_CON,
-      flags,
+      flags: row.isSol ? FLAG_IS_SOL : 0,
       printedName: proper, bayer, hip,
       hd: row.hd,
       hr: row.hr,

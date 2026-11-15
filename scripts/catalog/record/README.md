@@ -41,10 +41,11 @@ scripts/catalog/record/
                                   catalog.bin buffer: header, name table (the display
                                   names, NAME tiers only), then each record
                                   with its Apsis cells. The flags byte is
-                                  the record's own flags plus FLAG_HAS_NAME
-                                  wherever it has a display name and
-                                  FLAG_BINARY_PRIMARY wherever it was
-                                  claimed. Throws on a status
+                                  the bits the record carries from its
+                                  creation (IS_SOL, the companion bits)
+                                  plus the three derived ones
+                                  (/src/catalog-format/record/README.md,
+                                  byte 35). Throws on a status
                                   list that does not pair one-for-one with
                                   the records, on NO_SID,
                                   and unless Sol is the one record without

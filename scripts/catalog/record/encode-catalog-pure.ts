@@ -3,6 +3,7 @@
 import {
   APSIS_FIELDS,
   FLAG_BINARY_PRIMARY,
+  FLAG_HAS_BAYER,
   FLAG_HAS_NAME,
   HEADER_SIZE,
   NO_APSIS,
@@ -74,6 +75,7 @@ export function encodeCatalog({ catalog, apsisMap, multiplicityStatus, binaryPri
       conIndex: s.conIndex,
       flags: s.flags
         | (displayNames[i] !== null ? FLAG_HAS_NAME : 0)
+        | (s.bayer ? FLAG_HAS_BAYER : 0)
         | (binaryPrimaries.has(i) ? FLAG_BINARY_PRIMARY : 0),
       ...variabilityUnits(s),
       varType: s.varType ?? 0,

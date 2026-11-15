@@ -35,7 +35,7 @@ export function loadStarNamingInputs(): StarNamingInputs {
 
 /** Structural subset of `Star` the ladder reads and writes. */
 export interface NamingTarget {
-  flags: number;
+  readonly flags: number;
   readonly printedName: string | null;
   iauName: string | null;
   eponym: string | null;
