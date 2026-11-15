@@ -1,4 +1,4 @@
-// What companion promotion decides per row and per record, and the counts it keeps beyond its lineage. See promotion-lineage/README.md.
+// What companion promotion decides per row and per record, and the counts it keeps beyond its lineage. See README.md#companion-promotion-from-databinariesmultiplestsv.
 
 import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
 import type { Star } from '../parse/stars-parse';
