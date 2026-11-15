@@ -7,7 +7,8 @@ import { outcomeCode, stageCodes, retired, type StageCounts } from '../lineage/r
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
 import type { Star } from '../parse/stars-parse';
 import { sourceRowRefText } from '../../util/sources/row-ref-pure';
-import type { AnchorTier, CoherenceAnchor, MemberVerdict, SystemVerdict } from './system-coherence';
+import { ABSMAG_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
+import { snapPhotometry, type AnchorTier, type CoherenceAnchor, type MemberVerdict, type SystemVerdict } from './system-coherence';
 import { COHERENCE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const COHERENCE_LINEAGE_BUDGET = { gzipBytes: 8_200_000, writeMs: 18_000 };
@@ -35,6 +36,8 @@ export const COHERENCE_CODES = stageCodes(COHERENCE_LINEAGE.stage, {
   'anchor.unplaced.anchor-won': outcomeCode(`${UNPLACED}${ANCHOR_WON}`),
   'anchor.unplaced.precision-vetoed': outcomeCode(`${UNPLACED}${PRECISION_VETOED}`),
   snapped: outcomeCode('The record moves radially onto its system anchor\'s distance: its parallax gap from the anchor is at most 3 sigma of the combined error, or that error is zero; with no parallax, its distance is within 20% or 1 pc of the anchor\'s.'),
+  'brightness.held': outcomeCode('The snapped record keeps its apparent brightness across the move, so its absmag shifts by 5·log₁₀(from/to) to params.absmag, the absmag it ships unless promotion changes it later.'),
+  'size.rescaled': outcomeCode('The snapped record\'s radius scales with its absmag shift at fixed Teff (R ∝ √L), by params.factor, the radius it ships unless promotion re-derives it later.'),
   'unmoved.at-anchor-distance': outcomeCode('The record already sits at its system anchor\'s distance.'),
   'kept.significant-depth': outcomeCode('The record\'s parallax gap from its system anchor is more than 3 sigma of a nonzero combined error, a measured depth, so it keeps its own distance.'),
   'kept.wide-gap': outcomeCode('The record has no parallax error model and sits more than 20% and 1 pc from its system anchor, so it keeps its own distance.'),
@@ -65,6 +68,8 @@ const FIGURES_OF = {
   'coherence.anchor.unplaced.anchor-won': ['systems'],
   'coherence.anchor.unplaced.precision-vetoed': ['systems', 'precisionVetoed'],
   'coherence.snapped': ['repositioned'],
+  'coherence.brightness.held': [],
+  'coherence.size.rescaled': [],
   'coherence.unmoved.at-anchor-distance': [],
   'coherence.kept.significant-depth': ['depthKept'],
   'coherence.kept.wide-gap': ['depthKept'],
@@ -99,6 +104,8 @@ type ParamsOf<B extends Branch> =
   : B extends `anchor.${AnchorPick}` ? AnchorParams & { anchor_pc: string }
   : B extends `anchor.unplaced.${AnchorPick}` ? AnchorParams
   : B extends 'snapped' ? MemberParams & { from_pc: string; to_pc: string }
+  : B extends 'brightness.held' ? { root: string; absmag: string }
+  : B extends 'size.rescaled' ? { root: string; factor: string }
   : B extends 'kept.significant-depth' ? MemberParams & { gap_pc: string; sigma_pc: string }
   : B extends 'kept.wide-gap' ? MemberParams & { gap_pc: string }
   : B extends 'not-applicable' ? Record<string, never>
@@ -124,7 +131,7 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
     );
   };
   const byIdx = new Map<number, LineageRow[]>();
-  const push = <B extends Branch>(idx: number, branch: B, params: ParamsOf<B>, anchor: CoherenceAnchor): void => {
+  const push = <B extends Branch>(idx: number, branch: B, params: ParamsOf<B>, anchor: CoherenceAnchor | null): void => {
     const decided = byIdx.get(idx);
     if (decided === undefined) byIdx.set(idx, [row(idx, branch, params, anchor)]);
     else decided.push(row(idx, branch, params, anchor));
@@ -159,9 +166,13 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
 
   function memberRow(m: MemberVerdict, member: MemberParams, a: CoherenceAnchor): void {
     switch (m.kind) {
-      case 'snapped':
+      case 'snapped': {
         push(m.idx, 'snapped', { ...member, from_pc: pc(m.fromPc), to_pc: pc(m.toPc) }, a);
+        const { absmag, radiusFactor } = snapPhotometry(m.fromAbsmag, m.fromPc, m.toPc);
+        push(m.idx, 'brightness.held', { root: member.root, absmag: absmag.toFixed(ABSMAG_PARAM_DECIMALS) }, null);
+        push(m.idx, 'size.rescaled', { root: member.root, factor: String(radiusFactor) }, null);
         return;
+      }
       case 'at-anchor-distance':
         push(m.idx, 'unmoved.at-anchor-distance', member, a);
         return;

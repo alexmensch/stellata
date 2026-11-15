@@ -55,7 +55,10 @@ export type CoherenceAnchor = AnchorBasis & {
 };
 
 export type MemberVerdict =
-  | { readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number }
+  | {
+    readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number;
+    readonly fromAbsmag: number;
+  }
   | { readonly kind: 'at-anchor-distance'; readonly idx: number }
   | { readonly kind: 'significant-depth'; readonly idx: number; readonly gapPc: number; readonly sigmaPc: number }
   | { readonly kind: 'wide-gap'; readonly idx: number; readonly gapPc: number }
@@ -169,15 +172,19 @@ function scaledPosition(p: Position, scale: number): Position {
   return { x: p.x * scale, y: p.y * scale, z: p.z * scale };
 }
 
+/** See README.md#system-distance-coherence Brightness invariance. */
+export function snapPhotometry(absmag: number, fromPc: number, toPc: number): { absmag: number; radiusFactor: number } {
+  const snapped = absoluteMagnitude(apparentMagnitude(absmag, fromPc), toPc);
+  return { absmag: snapped, radiusFactor: Math.pow(10, (absmag - snapped) / 5) };
+}
+
 /** Move `star` radially to `distPc`, preserving its (mas-accurate)
- *  measured direction. Apparent brightness is invariant: absmag is
- *  re-derived at the new distance and the Stefan-Boltzmann radius follows
- *  (R ∝ √L at fixed Teff). */
+ *  measured direction. */
 function repositionRadially(star: Star, distPc: number): void {
   const dOld = starDist(star);
   Object.assign(star, scaledPosition(star, distPc / dOld));
-  const absmag = absoluteMagnitude(apparentMagnitude(star.absmag, dOld), distPc);
-  star.physicalRadius *= Math.pow(10, (star.absmag - absmag) / 5);
+  const { absmag, radiusFactor } = snapPhotometry(star.absmag, dOld, distPc);
+  star.physicalRadius *= radiusFactor;
   star.absmag = absmag;
 }
 
@@ -356,7 +363,7 @@ export function systemCoherenceVerdicts(
         continue;
       }
       movedDist.set(idx, starDist(scaledPosition(member, scale)));
-      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist });
+      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist, fromAbsmag: member.absmag });
     }
     processed.add(anchor.idx);
     verdicts.push({ kind: 'coherent', root, anchor, anchorPc: anchorDist, members: decided });

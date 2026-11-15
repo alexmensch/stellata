@@ -435,7 +435,7 @@ describe('systemCoherenceVerdicts', () => {
     expect(systemCoherenceVerdicts(rows, [primary, member], src)).toEqual([{
       kind: 'coherent', root: '02318+8916', anchorPc: 137.233,
       anchor: { idx: 1, tier: 'gaia-clean', ref: gaia.ref, memberWon: true, precisionVetoed: false },
-      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233 }],
+      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, fromAbsmag: primary.absmag }],
     }]);
     expect(primary.x).toBe(132.626);
   });

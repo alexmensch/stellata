@@ -29,7 +29,7 @@ describe('coherenceLineageRows', () => {
       {
         kind: 'coherent', root: '00001+0001', anchor: anchor(0), anchorPc: 50,
         members: [
-          { kind: 'snapped', idx: 1, fromPc: 52, toPc: 50 },
+          { kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, fromAbsmag: 4 },
           { kind: 'at-anchor-distance', idx: 2 },
           { kind: 'significant-depth', idx: 3, gapPc: 9, sigmaPc: 1 },
           { kind: 'wide-gap', idx: 4, gapPc: 30 },
@@ -43,6 +43,8 @@ describe('coherenceLineageRows', () => {
     expect(rows.map((r) => [r.key, r.code])).toEqual([
       ['spine:1', 'coherence.anchor.anchor-won'],
       ['spine:2', 'coherence.snapped'],
+      ['spine:2', 'coherence.brightness.held'],
+      ['spine:2', 'coherence.size.rescaled'],
       ['spine:2', 'coherence.anchor.inconsistent.anchor-won'],
       ['spine:3', 'coherence.unmoved.at-anchor-distance'],
       ['spine:3', 'coherence.kept.anchor-inconsistent'],
@@ -59,13 +61,24 @@ describe('coherenceLineageRows', () => {
   it('names a snapped record\'s anchor, tier and both distances, and cites the anchor\'s row', () => {
     const [snapped] = coherenceLineageRows([{
       kind: 'coherent', root: '02318+8916', anchor: anchor(1, { memberWon: true }), anchorPc: 137.233,
-      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233 }],
+      members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, fromAbsmag: 3 }],
     }], stars.slice(0, 2));
     expect(snapped.key).toBe('spine:1');
     expect(paramsOf(snapped)).toEqual({
       root: '02318+8916', anchor: 'spine:2', anchor_tier: 'gaia-clean', from_pc: '132.626', to_pc: '137.233',
     });
     expect(snapped.evidence).toEqual([sourceRowRefText(gaia.ref)]);
+  });
+
+  it('writes the absmag and radius factor the snap ships, uncited, after the snapped row', () => {
+    const [, held, rescaled] = coherenceLineageRows([{
+      kind: 'coherent', root: '00001+0001', anchor: anchor(1), anchorPc: 100,
+      members: [{ kind: 'snapped', idx: 0, fromPc: 10, toPc: 100, fromAbsmag: 5 }],
+    }], stars.slice(0, 2));
+    expect([held.code, rescaled.code]).toEqual(['coherence.brightness.held', 'coherence.size.rescaled']);
+    expect(paramsOf(held)).toEqual({ root: '00001+0001', absmag: '0.0000' });
+    expect(paramsOf(rescaled)).toEqual({ root: '00001+0001', factor: '10' });
+    expect([held.evidence, rescaled.evidence]).toEqual([[], []]);
   });
 
   it('codes the anchor row by how the anchor was picked, a veto over the member that lost it', () => {
@@ -106,7 +119,7 @@ describe('coherenceLineageRows', () => {
 describe('the coherence count block', () => {
   const verdicts: SystemVerdict[] = [{
     kind: 'coherent', root: '00001+0001', anchor: anchor(0, { memberWon: true }), anchorPc: 50,
-    members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50 }],
+    members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, fromAbsmag: 4 }],
   }];
   const lines = coherenceLineageLines(verdicts, stars.slice(0, 3));
 
@@ -114,7 +127,7 @@ describe('the coherence count block', () => {
     const counts = foldStageLines(COHERENCE_CODES, lines);
     expect(Object.keys(counts)).toEqual(COHERENCE_CODES.live);
     expect(counts).toMatchObject({
-      'coherence.anchor.member-won': 1, 'coherence.snapped': 1, 'coherence.not-applicable': 1, 'coherence.kept.wide-gap': 0,
+      'coherence.anchor.member-won': 1, 'coherence.snapped': 1, 'coherence.brightness.held': 1, 'coherence.size.rescaled': 1, 'coherence.not-applicable': 1, 'coherence.kept.wide-gap': 0,
     });
     expect(Object.keys(counts)).not.toContain('coherence.anchor');
     expect(coherenceFigures(counts)).toEqual({
