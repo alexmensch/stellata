@@ -7,7 +7,7 @@ import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import {
   buildSystemLetterPositions, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
 } from './cascade-pure';
-import { componentsOf } from './components-pure';
+import { componentsOf, resolveViaOf } from './components-pure';
 import { alone, athygAt, decomposed, indices, lone, pairAt, ids, resolved, xid } from './resolve-fixture';
 import { OWN } from '../multiples-record-pure';
 
@@ -21,14 +21,14 @@ describe('resolveComponent', () => {
   it('binds the primary through ORB6\'s HIP and the Gaia cross-walk', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB' });
     const r = resolveA(pair, [orb6('06451-1643', 'AB', 32349)], indices({ hipToGaia: new Map([[32349, '2947050466531873024']]) }));
-    expect(r.resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(r)).toBe('orb6_hip');
     expect(r.gaia?.value).toBe('2947050466531873024');
   });
 
   it('never fires orb6_hip for a secondary', () => {
     const pair = wdsPair({ components: 'AB' });
     const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 100)], indices({ hipToGaia: new Map([[100, '999']]) }), false, 'B');
-    expect(r.resolveVia).toBe('unresolved');
+    expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
   });
 
@@ -36,13 +36,13 @@ describe('resolveComponent', () => {
     const pair = wdsPair({ components: 'AB' });
     const idx = indices({ athyg: [athygRow({ hip: 42, gaia: '12345', raDeg: 100, decDeg: 0 })] });
     const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 42)], idx);
-    expect(r.resolveVia).toBe('athyg_gaia_native');
+    expect(resolveViaOf(r)).toBe('athyg_gaia_native');
     expect(r.gaia?.value).toBe('12345');
   });
 
   it('is unresolved with no HIP signal', () => {
     const r = resolveA(wdsPair({ components: 'AB' }), [], indices({ hipToGaia: new Map([[1, '1']]) }));
-    expect(r.resolveVia).toBe('unresolved');
+    expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
   });
 
@@ -53,7 +53,7 @@ describe('resolveComponent', () => {
       athyg: [athygRow({ hip: 103579, gaia: '2018523585846555648', raDeg: 315.4, decDeg: 44.1 })],
     });
     const r = resolveA(pair, [orb6(pair.wdsId, 'Aa,Ab', 103579)], idx, true, 'Aa');
-    expect(r.resolveVia).toBe('unresolved');
+    expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
     expect(r.hip).toBeNull();
   });
@@ -66,19 +66,19 @@ describe('resolveComponent', () => {
   it('trusts an ORB6 HIP sitting on the pair coord', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB', precise: { raDeg: 101.3, decDeg: -16.7 } });
     const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], sirius);
-    expect(r.resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(r)).toBe('orb6_hip');
     expect(r.gaia?.value).toBe('2947050466531873024');
   });
 
   it('trusts an ORB6 HIP when the pair has no precise coord', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB', precise: null });
-    expect(resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], sirius).resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], sirius))).toBe('orb6_hip');
   });
 
   it('trusts an ORB6 HIP whose position is unknown', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB', precise: { raDeg: 101.3, decDeg: -16.7 } });
     const idx = indices({ hipToGaia: new Map([[32349, '2947050466531873024']]) });
-    expect(resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], idx).resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], idx))).toBe('orb6_hip');
   });
 
   it('prefers the cross-walk to a disagreeing AT-HYG gaia', () => {
@@ -88,14 +88,14 @@ describe('resolveComponent', () => {
       athyg: [athygRow({ hip: 10, gaia: '999', raDeg: 100, decDeg: 0 })],
     });
     const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 10)], idx);
-    expect(r.resolveVia).toBe('orb6_hip');
+    expect(resolveViaOf(r)).toBe('orb6_hip');
     expect(r.gaia?.value).toBe('100');
   });
 
   it('keeps an unresolved primary\'s ORB6 HIP for Stage 3', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB' });
     const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 32349)], indices());
-    expect(r.resolveVia).toBe('unresolved');
+    expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
     expect(r.hip?.value).toBe(32349);
   });

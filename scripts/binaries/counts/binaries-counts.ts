@@ -1,20 +1,25 @@
 // Stage 7: every stage's counts, filed under the stage of the snapshot that pins them. See README.md.
 
-import { nestByStage, type StagedCounts } from '../../util/counts/count-stages-pure';
+import { nestByStage, type StageBlock, type StagedCounts } from '../../util/counts/count-stages-pure';
 import { stage3Counts } from '../astrometry/attach-astrometry';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
-import { stage5Counts } from '../optical/attach-optical';
 import { stage4Counts } from '../orbits/attach-orbits';
 import { stage2Counts } from '../resolve/resolve-pairs';
+import type { PairsCounts } from '../pairs-lineage-pure';
+import type { BindingCounts } from '../resolve/binding-lineage-pure';
+import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
-  & ReturnType<typeof stage4Counts> & ReturnType<typeof stage5Counts> & ReturnType<typeof stage6Counts>
+  & ReturnType<typeof stage4Counts> & ReturnType<typeof stage6Counts>
 );
-const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'optical', 'multiples'] as const;
+const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'multiples'] as const;
 type BinariesStage = (typeof BINARIES_STAGES)[number];
+const SNAPSHOT_STAGES = [...BINARIES_STAGES, BINDING_LINEAGE.stage, PAIRS_LINEAGE.stage] as const;
+type SnapshotStage = (typeof SNAPSHOT_STAGES)[number];
+type SnapshotBlock = StageBlock<SnapshotStage>;
 
 type Filed<T> = { [S in keyof T]: keyof T[S] }[keyof T];
 type FiledTwice<T> = { [S in keyof T]: keyof T[S] & Filed<Omit<T, S>> }[keyof T];
@@ -26,23 +31,26 @@ type Unfiled<T> =
 function filed<T extends Readonly<Record<BinariesStage, Readonly<Record<string, number>>>>>(
   stages: T,
   _everyKeyOnce: [Unfiled<T>] extends [never] ? true : Unfiled<T>,
-): StagedCounts<number> {
-  const blocks = BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted' as const, counts: stages[stage] } }));
-  return nestByStage<BinariesStage, number>(BINARIES_STAGES, blocks);
+): SnapshotBlock[] {
+  return BINARIES_STAGES.map((stage) => ({ stage, block: { kind: 'counted', counts: stages[stage] } }));
 }
 
 function withPrefix<K extends string, P extends string>(counts: Readonly<Record<K, number>>, prefix: P): Record<Extract<K, `${P}${string}`>, number> {
   return Object.fromEntries(Object.entries<number>(counts).filter(([key]) => key.startsWith(prefix))) as Record<Extract<K, `${P}${string}`>, number>;
 }
 
-export function binariesCounts(r: StageResults): StagedCounts<number> {
+export interface LineageCounts {
+  readonly binding: BindingCounts;
+  readonly pairs: PairsCounts;
+}
+
+export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
   const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = stage2Counts(r.resolved);
   const s3 = stage3Counts(r.reference, r.resolved, r.astrometry);
-  return filed({
+  const stages = filed({
     ingest: {
       wds_pairs_total: s3.wds_pairs_total,
-      wds_duplicate_pair_rows_dropped: s1.wds_duplicate_pair_rows_dropped,
       msc_orbits_unmapped: s1.msc_orbits_unmapped,
       xwalk_hip_mag_rejected: s1.xwalk_hip_mag_rejected,
       athyg_gaia_mag_rejected: s1.athyg_gaia_mag_rejected,
@@ -54,7 +62,6 @@ export function binariesCounts(r: StageResults): StagedCounts<number> {
     },
     resolve: {
       blank_components_rescued: s1.blank_components_rescued,
-      blank_components_deferred: s1.blank_components_deferred,
       ccdm_sibling_owned_rejected,
       athyg_match_sibling_claimed_rejected: s3.athyg_match_sibling_claimed_rejected,
       decomposing_pairs: s3.decomposing_pairs,
@@ -64,7 +71,11 @@ export function binariesCounts(r: StageResults): StagedCounts<number> {
     },
     astrometry: withPrefix(s3, 'astrometry_'),
     orbits: stage4Counts(r.orbits),
-    optical: stage5Counts(r.optical),
     multiples: stage6Counts(r.multiples),
   }, true);
+  return nestByStage<SnapshotStage, number>(SNAPSHOT_STAGES, [
+    ...stages,
+    { stage: BINDING_LINEAGE.stage, block: { kind: 'counted', counts: lineage.binding } },
+    { stage: PAIRS_LINEAGE.stage, block: { kind: 'counted', counts: lineage.pairs } },
+  ]);
 }

@@ -3,17 +3,17 @@
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
 import type { LabelMergeRecord } from '../../classic-ids/label-merge/label-merge-pure';
-import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
   type HdAddition,
   type HipAddition,
   type PrimaryIndex,
   type PrimaryTables,
+  type SpineKeys,
 } from '../../spine/primaries-audit-pure';
 import { UnionFind, compareDesignations } from '../../../sid/sid-pure';
 import { nullableCell } from '../../../util/tsv/artifact-pure';
-import { identityRow, type IdentityCells, type IdentityRow } from '../../lineage/identity-pure';
+import { identityRow, type IdentityCells, type IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   BINDING_SOURCES,
   type BindingSource,
@@ -51,6 +51,7 @@ import {
   type AdditionCohortItem,
   type AdditionCohorts,
 } from './addition-items-pure';
+import { ascending, compareCodeUnits } from '../../../../src/astro-core/order-pure';
 
 function pushKeyed<K, V>(by: Map<K, V[]>, key: K, value: V): void {
   const list = by.get(key);
@@ -279,13 +280,12 @@ function additionGroupOrder(
 }
 
 function compareAdditionGroupCells(a: AdditionGroup, b: AdditionGroup): number {
-  if (a.tyc !== b.tyc) return a.tyc < b.tyc ? -1 : 1;
+  const byTyc = compareCodeUnits(a.tyc, b.tyc);
+  if (byTyc !== 0) return byTyc;
   const hipA = a.hip?.hip ?? 0;
   const hipB = b.hip?.hip ?? 0;
   if (hipA !== hipB) return hipA - hipB;
-  const glA = a.rawGl ?? '';
-  const glB = b.rawGl ?? '';
-  return glA < glB ? -1 : glA > glB ? 1 : 0;
+  return compareCodeUnits(a.rawGl ?? '', b.rawGl ?? '');
 }
 
 interface Admission {
@@ -308,7 +308,7 @@ function admitGroup(
   const { hd: hdItem, hip: hipItem, rawGl, tyc, source } = group;
   const blocked: string[] = [];
 
-  const hds = [...(hdItem?.hds ?? [])].sort((a, b) => a - b).filter((hd) => {
+  const hds = [...(hdItem?.hds ?? [])].sort(ascending).filter((hd) => {
     if (!claims.hd.has(hd)) return true;
     blocked.push(`hd:${hd}`);
     return false;
@@ -325,7 +325,7 @@ function admitGroup(
       else if (!hrs.includes(hr)) hrs.push(hr);
     }
   }
-  hrs.sort((a, b) => a - b);
+  hrs.sort(ascending);
   let gl = rawGl;
   const glKey = normaliseGjKey(gl);
   if (glKey !== null) {
@@ -390,8 +390,8 @@ export interface AdditionsPhase {
 export function admitAdditions(input: {
   tables: PrimaryTables;
   idx: PrimaryIndex;
-  /** The spine as the corrections leave it, which the cohorts are measured against. */
-  kept: readonly SpineRow[];
+  /** The keys of the spine as the corrections leave it, which the cohorts are measured against. */
+  spineKeys: SpineKeys;
   /** The spine side's label-merged records: the claims admission starts from. */
   spineRecords: readonly LabelMergeRecord[];
   derive: RowDeriver;
@@ -400,7 +400,7 @@ export function admitAdditions(input: {
 }): AdditionsPhase {
   const { tables, idx, derive, keys } = input;
   const claims = spineClaims(input.spineRecords);
-  const items: AdditionItem[] = additionCohortItems(tables, input.kept, idx).map((i) => ({
+  const items: AdditionItem[] = additionCohortItems(tables, input.spineKeys, idx).map((i) => ({
     ...i, derived: derive(additionCells([i])).derived,
   }));
   const index = indexAdditions(tables);

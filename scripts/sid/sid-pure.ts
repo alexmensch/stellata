@@ -9,6 +9,7 @@ import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure
 import {
   decodeLedgerRow, LEDGER_COLUMNS, SID_KINDS, type LedgerRow, type SidKind,
 } from './ledger-pure';
+import { ascending, compareCodeUnits } from '../../src/astro-core/order-pure';
 
 // ---- Designation grammar (/docs/sid.md#3-designation-namespaces) -------------------------------
 
@@ -89,11 +90,15 @@ export interface StarDesignationFields {
   syntheticId: string | null;
 }
 
+export function hipDesignation(hip: number): string {
+  return `hip:${hip}`;
+}
+
 /** External designations for one catalog star: the one extractor (README.md#designation-extraction--where-each-namespace-comes-from). */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
   if (f.isSol) d.push('sol:sun');
-  if (f.hip !== null && f.hip > 0) d.push(`hip:${f.hip}`);
+  if (f.hip !== null && f.hip > 0) d.push(hipDesignation(f.hip));
   if (f.hd !== null) d.push(`hd:${f.hd}`);
   for (const hd of f.hdAlt) d.push(`hd:${hd}`);
   if (f.hr !== null) d.push(`hr:${f.hr}`);
@@ -147,14 +152,12 @@ export function compareDesignations(a: string, b: string): number {
     const ta = trailingInt(da.ns);
     const tb = trailingInt(db.ns);
     if (ta !== null && tb !== null && ta !== tb) return ta - tb;
-    return da.ns < db.ns ? -1 : 1;
+    return compareCodeUnits(da.ns, db.ns);
   }
   if (DIGITS_RE.test(da.key) && DIGITS_RE.test(db.key)) {
-    const ka = BigInt(da.key);
-    const kb = BigInt(db.key);
-    return ka < kb ? -1 : ka > kb ? 1 : 0;
+    return ascending(BigInt(da.key), BigInt(db.key));
   }
-  return da.key < db.key ? -1 : da.key > db.key ? 1 : 0;
+  return compareCodeUnits(da.key, db.key);
 }
 
 export function canonicalKeyOf(designations: Iterable<string>): string {

@@ -2,6 +2,7 @@
 
 import { stepFileName } from '../../util/stamp-path-pure';
 import { isFamilyMember, isMemberName, type DeclaredOutputs, type OutputFamily } from '../../util/emit-artifacts';
+import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** A `declareOutputs` constant, named by module and export so the module can be
  *  checked side-effect-free before it is imported. */
@@ -213,7 +214,7 @@ export function deriveGraph(steps: readonly ResolvedStep[], registryFiles: reado
 
   const keptLoops: Edge[] = [];
   const manualEdges = remaining.filter(fromManual)
-    .sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+    .sort((a, b) => compareCodeUnits(a.from, b.from) || compareCodeUnits(a.to, b.to));
   for (const e of manualEdges) {
     if (reaches(edges, e.to, e.from)) keptLoops.push(e);
     else edges.push(e);

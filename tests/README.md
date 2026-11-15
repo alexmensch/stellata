@@ -85,6 +85,9 @@ doc-pointer-resolution.test.ts
                          or anchor that exists — the codebase's wiki
                          links, checked. Grammar, scope and resolution:
                          README.md#doc-pointer-resolution.
+floor-modulo-rules.test.ts
+                         No floor modulo hand-rolled outside pyMod
+                         (#floor-modulos).
 folder-readme-coverage.test.ts
                          The "every folder under src/, scripts/, data/,
                          docs/ has a README.md" invariant (/AGENTS.md#folder-readmes--read-before-you-touch-the-folder-update-at-commit).
@@ -195,6 +198,13 @@ pr-body-guard.test.ts    Behavioural pins for scripts/hooks/pr-body-guard.sh
                          script the hook runs;
                          /scripts/hooks/README.md#how-pr-body-guard-works.
 prime-guard.test.ts      Behavioural pins for the bd-prime session hook.
+rate-denominators.test.ts
+                         No production module under scripts/ divides by
+                         `Math.max(1, …)` or guards a ratio with
+                         `> 0 ? … / … : 0`, either of which reads an empty
+                         whole as a rate of 0; rates go through tally-pure's `share`
+                         (/scripts/util/counts/README.md). Flag and pass
+                         cases on synthetic lines.
 readme-size.test.ts      450-line cap per folder README — length is a tax
                          on every future session, so the answer over the
                          cap is a folder split, not a rewording pass.
@@ -227,8 +237,12 @@ source-declarations.test.ts
                          data-files.ts pinned as the only production one),
                          and a DATA_FILES path in none of them, outputs
                          and declaring modules included;
-                         defineSource / defineArtifact only
-                         in a *-source.ts / *-tsv.ts module; every
+                         a declaration call (DECLARATION_CALL) only
+                         in a *-source.ts / *-tsv.ts / *-json.ts module,
+                         a defineSnapshot only in a *-expected-json.ts;
+                         a non-code scripts/ path literal in a step's
+                         closure only in a declaring or outputs module
+                         (a step opening one by path reads no input); every
                          package.json tsx command goes through the
                          launcher; every launched entry's top level is
                          declarations only (TypeScript's parser; no bare
@@ -264,6 +278,9 @@ site-dev-routing.test.ts The dev server's routing table held against the
                          gets the homepage, everything else 404s. Pairs
                          with src/worker.test.ts, which pins the same
                          table on the production side.
+sort-comparator-rules.test.ts
+                         No sort writes its own ascending order
+                         (#sort-comparators).
 step-coverage.test.ts    Every declareOutputs constant under scripts/,
                          imported from the *-outputs.ts module it must live
                          in and be exported from, is a steps.ts entry's or a
@@ -347,6 +364,12 @@ import-specifiers.ts     Not a test — `importSpecifiers` (every specifier,
                          `*-fixture.ts`), shared by node-import-boundary,
                          pipeline-viewer-boundary, record-codec-imports
                          and vite-config-import-extensions.
+line-scan.ts             Not a test — `scanTree` (repo-relative paths under
+                         named folders, minus exclusions) and `lineHits` /
+                         `firstRule` (each line's first matching rule, as
+                         `path:line [rule] text`), for the pattern scanners
+                         with an owner file and an exemption list:
+                         sort-comparator-rules and floor-modulo-rules.
 walk-files.ts            Not a test — file enumeration the scanners above
                          share. `walkFiles` is a recursive walk taking
                          `include` / `skipDir` predicates, and follows
@@ -354,9 +377,9 @@ walk-files.ts            Not a test — file enumeration the scanners above
                          A scan whose scope is the repo rather than a
                          folder list takes git's list instead,
                          /scripts/util/README.md#git-files.
-                         Also `isProductionTs`, the include predicate the
-                         TSL scanners share: a .ts that is neither a test
-                         nor an ambient declaration.
+                         Also `isProductionTs`, the include predicate for
+                         scans of production TypeScript: a .ts that is
+                         neither a test nor an ambient declaration.
                          webgpu-import-boundary.test.ts keeps
                          its own broader `isClientSource` — a declaration
                          file can carry an import, so that corpus wants
@@ -544,7 +567,7 @@ direction:
 
 | tree | root | may import |
 | --- | --- | --- |
-| shared physics | `src/astro-core/` | itself |
+| shared physics and primitives | `src/astro-core/` | itself |
 | format | `src/catalog-format/` | itself, astro-core |
 | viewer | `src/client/` | itself, format, astro-core, the rest of `src/` |
 | pipeline | `scripts/` | itself, format, astro-core, the rest of `src/` |
@@ -561,7 +584,7 @@ tooling roots drive or check the built viewer — the perf runner its frame-cost
 instrument, the release check its share-URL grammar — so they read it by
 design; the suite fails if either stops, so an unused exemption cannot
 linger. A new fact both sides need goes into the format tree (a wire shape,
-a file name, a rule over record fields) or astro-core (physics), never into
+a file name, a rule over record fields) or astro-core (physics and shared primitives, such as the sort order), never into
 the side that happens to compute it first.
 
 ## Record codec imports
@@ -594,8 +617,7 @@ is kept as a pin: it fails once the flattening is gone and a pipe is back.
 `pipefail-early-reader.test.ts` scans every `scripts/**/*.sh` that sets
 pipefail, plus every library such a script sources with `.` or `source`
 (matched by file name, followed through libraries that source others), since
-a sourced file runs under its caller's options. There is no allowlist.
-A reader is recognised behind `NAME=value` prefixes and `command`, and as
+a sourced file runs under its caller's options. A reader is recognised behind `NAME=value` prefixes and `command`, and as
 `egrep` / `fgrep`. Full-line comments are skipped, and quoted strings never
 count as a grep flag. The matcher has its own flag and pass cases, and a case that the scan
 finds the hooks at all, so a detector that stops seeing pipes fails instead
@@ -614,3 +636,29 @@ the catalogue manifest or a `catalog.bin.<i>` chunk outside
 a loader's error message interpolates the constant too, so a rename reaches
 it. Tests are not scanned; one that addresses a real artifact imports the
 constant.
+
+## Sort comparators
+
+`sort-comparator-rules.test.ts` scans every TypeScript file under `src/`,
+`scripts/` and `tests/`, tests included, and fails on ascending order spelled
+inline: a three-way `? -1 : … ? 1 : 0`, a two-way `x < y ? -1 : 1`, a
+`(a, b) => a - b` comparator, or `localeCompare`. Each goes through
+`ascending` / `compareCodeUnits` in `/src/astro-core/order-pure.ts`, the one
+file exempt. A subtraction answers NaN on a NaN key, and a two-way form
+answers 1 both ways on a tie, so the engine picks the order; `localeCompare`
+orders by the machine's locale. A sort meant for people to read in their
+locale is exempt by name (`LOCALE_ORDER_ALLOWED`, each with its reason), and
+an exemption that no longer sorts by locale fails. A projection subtraction
+inside a chain (`a.n - b.n || …`) is not matched.
+
+## Floor modulos
+
+`floor-modulo-rules.test.ts` scans every non-test, non-declaration
+TypeScript file under `src/` and `scripts/` and fails on a floor modulo
+spelled by hand: `((x % m) + m) % m`, `(x + m) % m`,
+`x < 0 ? x + m : x`, or `if (x < 0) x += m`, where every repeated token is
+the same. Each goes through
+`pyMod` in `/src/astro-core/angles.ts`, the one file exempt
+([angles.ts](/src/astro-core/README.md#files) says why the edge differs).
+`(i + 1) % n`, a step around a ring, is not matched; `(i - 1 + n) % n` is,
+since it is the add-once spelling of the same wrap. Tests are not scanned.

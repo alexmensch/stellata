@@ -1,16 +1,15 @@
 // Each component's WDS offset from its system's anchor letter, composed over the system's pair geometry. See README.md#what-each-column-carries.
 
-import { RAD_TO_DEG } from '../../../src/astro-core/astronomy-constants';
 import {
   canonicalCompLetter, componentKey, isComponentToken, isMoreCanonicalAnchor, parentComponentToken, tokenLetters,
   type ComponentKey,
 } from '../component-tokens-pure';
 import type { MscLookup } from '../load/msc-pure';
 import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from '../optical/optical-tiers-pure';
-import { pyMod, pySum } from '../python-float-pure';
+import { pySum } from '../python-float-pure';
 import { addEdge, addNewestEdge, pairVector, walk, type Edge } from '../resolve/binding-audit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
-import type { TangentOffset } from '../sky-geometry-pure';
+import { tangentToPolar, type PolarOffset, type TangentOffset } from '../../../src/astro-core/equatorial-basis';
 import type { WdsPair } from '../../wds/wds-pure';
 import { pairMagnitudes, wdsDmag } from './pair-photometry-pure';
 
@@ -92,16 +91,11 @@ function siblingEdge(pair: WdsPair, pTok: string, sTok: string, msc: MscLookup):
   return { ...v, dmag: wdsDmag(mags.magPri, mags.magSec), epoch: pair.dateLast };
 }
 
-export interface AnchorOffset {
-  readonly sepArcsec: number;
-  readonly paDeg: number;
-}
-
 export interface AnchorOffsets {
   /** The letter each system's offsets chain from: its most canonical kept primary. */
   readonly anchorBySystem: ReadonlyMap<string, string>;
   /** Every reached component's offset from its system's anchor. */
-  readonly offsets: ReadonlyMap<ComponentKey, AnchorOffset>;
+  readonly offsets: ReadonlyMap<ComponentKey, PolarOffset>;
 }
 
 function getOrSet<K, V>(map: Map<K, V>, key: K, make: () => V): V {
@@ -143,7 +137,7 @@ export function computeAnchorOffsets(
   }
 
   const anchorBySystem = new Map<string, string>();
-  const out = new Map<ComponentKey, AnchorOffset>();
+  const out = new Map<ComponentKey, PolarOffset>();
   for (const [wdsId, primaryTokens] of keptPrimaryTokens) {
     const anchor = mostCanonical(primaryTokens);
     anchorBySystem.set(wdsId, anchor);
@@ -172,8 +166,8 @@ export function computeAnchorOffsets(
     for (const graph of [g0, g1]) accumulate(graph.get(anchor) ?? []);
     for (const graph of [g0, g1, g2]) accumulate(walk(graph, anchor, ORIGIN, addOffset));
     for (const t of reachedAtZero) if (!offsets.has(t)) offsets.set(t, { eastArcsec: 0, northArcsec: 0 });
-    for (const [t, { eastArcsec: e, northArcsec: n }] of offsets) {
-      out.set(componentKey(wdsId, t), { sepArcsec: Math.hypot(e, n), paDeg: pyMod(Math.atan2(e, n) * RAD_TO_DEG, 360) });
+    for (const [t, o] of offsets) {
+      out.set(componentKey(wdsId, t), tangentToPolar(o));
     }
   }
   return { anchorBySystem, offsets: out };

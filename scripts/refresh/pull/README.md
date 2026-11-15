@@ -259,4 +259,6 @@ emission before a byte is written, every output of the pull included.
 - **Coverage** (`coverageCheck`), request-scoped tables only: the share of
   the request each group and their union reach, counted in distinct values of
   the scope's `idColumn` (an id may answer several rows, as DR2 neighbours
-  do), always reported, failing under `floor` when one is set.
+  do), always reported, failing under `floor` when one is set. An empty
+  request reports `n/a` and fails any floor
+  ([`floorVerdict`](../../util/counts/README.md)).

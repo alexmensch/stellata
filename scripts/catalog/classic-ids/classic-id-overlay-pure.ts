@@ -17,6 +17,7 @@ import {
   type PrintedVLookups,
   type PrintedVVia,
 } from '../photometry/v-magnitude-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** No cell is single-valued by construction: a designation naming a
  *  catalogue granularity rather than one object attaches to every matching
@@ -264,9 +265,9 @@ function overlayOf(reaches: readonly DesignationReach[]): ClassicIdOverlay {
     }
   }
   for (const entry of overlay.values()) {
-    entry.hd.sort((a, b) => a - b);
-    entry.hr.sort((a, b) => a - b);
-    entry.hip.sort((a, b) => a - b);
+    entry.hd.sort(ascending);
+    entry.hr.sort(ascending);
+    entry.hip.sort(ascending);
     entry.gj.sort();
     entry.bayer.sort();
     entry.flamsteed.sort();

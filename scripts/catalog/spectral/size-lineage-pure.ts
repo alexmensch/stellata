@@ -1,7 +1,7 @@
 // Size as a lineage stage: its reason codes and the one serialiser over each walked record's radius route. See README.md#size-lineage.
 
 import {
-  evidenceTexts, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
+  stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -54,7 +54,7 @@ export interface Size {
 export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): LineageRow[] {
   const out: LineageRow[] = [];
   const push = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
-    out.push(stageRow(SIZE_CODES, key, branch, params as LineageParams, evidenceTexts(key, refs.map(sourceRowRefText))));
+    out.push(stageRow(SIZE_CODES, key, branch, params as LineageParams, refs.map(sourceRowRefText)));
   };
   const absmag = (value: number): string => value.toFixed(ABSMAG_PARAM_DECIMALS);
   const apsisRefs = apsis === null ? [] : [apsis.ref];

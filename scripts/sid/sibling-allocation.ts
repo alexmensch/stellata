@@ -1,14 +1,12 @@
 // One sibling artifact's namespace allocated over the committed registry: each record's SID, its partition's registry files, and its allocation stage's lineage. See README.md#sibling-artifact-stamping.
 
-import { resolve } from 'node:path';
-
 import type { FileHashes } from '../util/build-stamp';
 import { nestByStage, type StagedCounts } from '../util/counts/count-stages-pure';
-import { REPO_ROOT } from '../util/paths';
 import { countSnapshotCheck } from '../util/snapshot-check';
+import type { Snapshot } from '../util/sources/snapshot-pure';
 import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../util/emit-artifacts';
 import { stepInputHashes } from '../util/step-input-hashes';
-import { identityText, type IdentityRow } from '../catalog/lineage/identity-pure';
+import { identityText, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
@@ -76,6 +74,7 @@ type SiblingStem<S extends string> = S | `${S}.identity`;
 export function siblingLineage<S extends string>(
   spec: SiblingArtifactSpec<S>,
   allocation: Pick<SiblingAllocation<SiblingPartition>, 'lines' | 'identity'>,
+  snapshot: Snapshot<StagedCounts>,
   layout: LineageLayout = LINEAGE_LAYOUT,
   inputs: FileHashes = stepInputHashes(),
 ): StageLineageEmission<SiblingStem<S>, S> & { readonly counts: StageCounts<ObjectOutcomeCodes> } {
@@ -95,11 +94,9 @@ export function siblingLineage<S extends string>(
     invariants: [],
     argv: process.argv.slice(2),
   }, spec.codes);
-  const countsCheck = countSnapshotCheck<StagedCounts>({
-    snapshotPath: resolve(REPO_ROOT, spec.countsSnapshot),
+  const countsCheck = countSnapshotCheck(snapshot, {
     actual: nestByStage([stage], [{ stage, block: { kind: 'counted', counts } }]),
     failureLabel: `${spec.step} count`,
-    script: spec.step,
   });
   return { ...emission, counts, checks: [...emission.checks, countsCheck] };
 }

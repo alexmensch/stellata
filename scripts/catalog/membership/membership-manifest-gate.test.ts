@@ -29,7 +29,7 @@ import { loadCatalog } from '../catalog-lookup';
 import {
   FLAG_BINARY_COMPANION_ONLY, type SearchEntry, CATALOG_MANIFEST_FILENAME,
 } from '../../../src/catalog-format/record/catalog-pure';
-import { recordKey } from '../lineage/identity-pure';
+import { recordKey } from '../lineage/identity/identity-pure';
 import { PARKED_LEDGER, parseParkedRecordsTsv } from '../distance/parallax/parked-ledger-tsv';
 import {
   spineDesignations,
@@ -41,7 +41,8 @@ import { readSourceIdRequest, unrequestedBindings } from '../astrometry-request/
 import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
-import { MEMBERSHIP_EXPECTED_FILE } from './membership-manifest-pure';
+import { MEMBERSHIP_COUNTS } from './membership-manifest-expected-json';
+import { committedSnapshot } from '../../util/sources/source';
 import { matchSpineToManifest, type SpineMatch } from './spine-match-pure';
 import {
   MEMBERSHIP_CODES, membershipTotals, type MembershipCounts, type MembershipDerivedCounts,
@@ -75,9 +76,7 @@ const built = [
   resolve(REPO_ROOT, BUILD_FILES.catalogRowIndexMap),
 ].every(existsSync);
 
-const snapshot = flattenStages(JSON.parse(
-  readFileSync(resolve(REPO_ROOT, MEMBERSHIP_EXPECTED_FILE), 'utf-8'),
-)) as MembershipCounts & MembershipDerivedCounts;
+const snapshot = flattenStages(committedSnapshot(MEMBERSHIP_COUNTS)) as MembershipCounts & MembershipDerivedCounts;
 const expected = membershipTotals(snapshot);
 
 const NAMING_EXPECTED_FILE = 'scripts/catalog/naming/manifest-naming-expected.json';

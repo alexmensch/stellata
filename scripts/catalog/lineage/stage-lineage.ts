@@ -9,7 +9,7 @@ import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { headCommit, inHeadHistory, mergeBaseWithMain, onMainBranch } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
 import { diffLineage, stageDiffText, tallyKeyChanges, type DiffJoin, type KeyChangeTally } from './lineage-diff-pure';
-import { deletedSiblingsSince, inputHashesAt, onDiskHashes, type HashesAt } from '../../util/input-hashes-at';
+import { inputHashesAt, onDiskHashes, type HashesAt } from '../../util/input-hashes-at';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, baseAt, planBaseline, type BaselineContext, type BaselineSource,
   type InputsAt,
@@ -17,7 +17,8 @@ import {
 import { readStageHeader, stageEmission, stageProvenance, streamLineage } from './lineage-io';
 import { invariantCheck, invariantViolations, type LineageInvariant } from './lineage-invariant-pure';
 import { phaseClock } from './phase-clock-pure';
-import { foldStageLines, sortLineageLines, type LineageLine } from './lineage-row-pure';
+import { LINEAGE_LAYOUT } from './lineage-layout-pure';
+import { foldStageLines, sortLineageLines, stageLineageText, type LineageLine } from './lineage-row-pure';
 import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 import {
   stageFile, stageFileName, type LineageLayout, type StageLineageSpec, type StageOutputKey,
@@ -97,12 +98,6 @@ export function inputsAtFrom(handed: FileHashes, known: (commit: string) => Know
   };
 }
 
-/** Listed on first ask, once. */
-function branchPaths(mergeBase: string, inputs: readonly string[]): () => readonly string[] {
-  let listed: readonly string[] | undefined;
-  return () => (listed ??= [...inputs, ...deletedSiblingsSince(mergeBase, inputs)]);
-}
-
 export interface UpstreamLineage {
   /** Each upstream stage's files as `commit` holds them, by repo-relative path; hashed once per commit. */
   readonly filesAt: (commit: string) => Known;
@@ -128,7 +123,7 @@ function upstreamFiles(layout: LineageLayout, specs: readonly StageLineageSpec<s
       const current = headers[1];
       const read = current.kind === 'read' ? Object.keys(current.header.inputs) : [];
       const files = acceptedFiles(headers, {
-        base: { kind: 'fixed', commit, paths: branchPaths(commit, read) },
+        base: { kind: 'fixed', commit, paths: () => read },
         inputsAt: inputsAtFrom({}, () => ({ kind: 'known', hashes: {} })),
       });
       if (files === null) continue;
@@ -148,9 +143,41 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
   return {
     base: baseAt(
       { onMainBranch: onMainBranch(), commit: headCommit() }, mergeBase, inHeadHistory,
-      branchPaths(mergeBase, Object.keys(run.inputs)),
+      () => Object.keys(run.inputs),
     ),
     inputsAt: inputsAtFrom(run.inputs, (commit) => run.upstream?.filesAt(commit) ?? { kind: 'known', hashes: {} }),
+  };
+}
+
+/** A stage whose lines file is named for it, diffed on that file, plus any sibling file its spec declares. */
+export type NamedStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
+  readonly spec: StageLineageSpec<F, S>;
+  readonly codes: C;
+  readonly lines: () => readonly LineageLine[];
+  readonly budget: LineageBudget;
+  readonly invariants: readonly LineageInvariant[];
+  readonly inputs: FileHashes;
+  readonly upstream?: UpstreamLineage;
+} & ([Exclude<F, S>] extends [never]
+  ? { readonly siblings?: never }
+  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+
+export function namedStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
+  stage: NamedStage<F, S, C>,
+): StageLineageRun<F, S> {
+  const { spec, codes, siblings, upstream } = stage;
+  return {
+    layout: LINEAGE_LAYOUT,
+    spec,
+    inputs: stage.inputs,
+    diffed: spec.stage,
+    lines: stage.lines,
+    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
+    joins: () => [],
+    budget: stage.budget,
+    invariants: stage.invariants,
+    argv: process.argv.slice(2),
+    ...(upstream === undefined ? {} : { upstream }),
   };
 }
 

@@ -1,5 +1,6 @@
 // The SIMBAD WDS cross-ID pull: each WDS component's object, with its main_id, Gaia DR3 source_id and HIP. See README.md.
 
+import { percentOf } from '../../util/counts/tally-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
 import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
@@ -11,6 +12,7 @@ import {
   cascadeCandidates, cascadeRecoveries, catalogueAlias, resolveHip, type CatalogueAlias,
 } from './wds-xids-cascade-pure';
 import { assertOverridesOnComponents, type WdsXidOverride } from './wds-xids-overrides-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The least share of the WDS components that must reach an object (README.md#the-request-and-the-gates). */
 export const MIN_COMPONENT_REACH = 0.36;
@@ -51,8 +53,6 @@ export interface XidsInputs {
   readonly overridesFile: string;
   readonly requestFrom: readonly string[];
 }
-
-const share = (n: number, of: number): string => `${n}/${of} (${of === 0 ? '0.0' : ((100 * n) / of).toFixed(1)}%)`;
 
 interface IdentResolution {
   /** By `componentId`. */
@@ -117,7 +117,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
     async run(ask, log) {
       const ledger = parseLedger();
       const { oids, folded } = await resolveByIdent(ask, components, ledger);
-      log(`WDS idents: ${share(oids.size, components.length)} components matched`);
+      log(`WDS idents: ${oids.size}/${components.length} (${percentOf(oids.size, components.length)}) components matched`);
       for (const answer of folded) log(`  WDS ident answered only case-folded, bound to none: ${answer}`);
 
       const siblings = new Map<string, number[]>();
@@ -127,7 +127,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
       }
       const unresolved = components.filter((c) => !oids.has(componentId(c)) && siblings.has(c.wdsId));
       if (unresolved.length > 0) {
-        const primaries = [...new Set(unresolved.flatMap((c) => siblings.get(c.wdsId) ?? []))].sort((a, b) => a - b);
+        const primaries = [...new Set(unresolved.flatMap((c) => siblings.get(c.wdsId) ?? []))].sort(ascending);
         const numbers = firstNumbers(await ask(XIDS_PHASES.aliases, primaries.map(String)), ledger);
         log(`aliases: ${numbers.hd.size} HD and ${numbers.hip.size} HIP over ${primaries.length} resolved siblings of ${unresolved.length} unresolved components`);
         const candidates = cascadeCandidates(unresolved, siblings, numbers.hd, numbers.hip);
@@ -146,7 +146,7 @@ export function xidsPull(outputs: DeclaredOutputs<'xids'>, inputs: XidsInputs): 
         const oid = oids.get(componentId(c));
         if (oid !== undefined) letters.set(oid, (letters.get(oid) ?? new Set()).add(c.component));
       }
-      const unique = [...letters.keys()].sort((a, b) => a - b);
+      const unique = [...letters.keys()].sort(ascending);
       const basic = await fetchBasic(ask, CORE, unique);
       const hipAliases = new Map<number, CatalogueAlias[]>();
       const gaia = new Map<number, string>();

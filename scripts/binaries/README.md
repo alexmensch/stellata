@@ -60,7 +60,10 @@ rows and is a correctness change, never a refactor.
 scripts/binaries/
   build-binaries.ts (+ test)      build:binaries: runStages calls Stages
                                   1-6 in order, then main hands
-                                  multiples.tsv and the binding verdicts
+                                  multiples.tsv, the binding verdicts and
+                                  the component-binding
+                                  (resolve/README.md#binding-lineage) and
+                                  pairs (#pairs-lineage) lineage stages
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
@@ -71,6 +74,9 @@ scripts/binaries/
                                   (pnpm run test:spotcheck,
                                   resolve/README.md#the-spot-check).
   binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
+  pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
+                                  pair row the stages decide, as the pairs
+                                  lineage stage (#pairs-lineage).
   load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
   orbits/ optical/ multiples/
   counts/
@@ -131,9 +137,7 @@ scripts/binaries/
                                   (wds_id, discoverer), pairRowKey
                                   (wds_id, components field).
   sky-geometry-pure.ts (+ test)   The geometry the stages share:
-                                  tangentOffset, polarToTangent (a WDS
-                                  ρ, θ as an east / north offset),
-                                  distancePc (1000 /
+                                  tangentOffset, distancePc (1000 /
                                   parallax), unitChordSq / directionsWithin
                                   (a tolerance test without trig),
                                   predictSecondaryPosition (a WDS ρ, θ
@@ -142,17 +146,19 @@ scripts/binaries/
                                   propagates through astro-core's
                                   directionAtEpoch / skyPositionAtEpoch,
                                   the formula the catalogue uses.
-  python-float-pure.ts (+ test)   Float arithmetic multiples.tsv rests on
-                                  where JavaScript's default differs: pyMod,
-                                  `%` with the divisor's sign; pySum, a
-                                  compensated sum.
+  python-float-pure.ts (+ test)   pySum, the compensated sum
+                                  multiples.tsv rests on where JavaScript's
+                                  left fold differs. Its sibling pyMod, `%`
+                                  with the divisor's sign, is astro-core's
+                                  (src/astro-core/angles.ts).
   epochs-pure.ts (+ test)         How ORB6 and the MSC's periastron
                                   epochs read as a JD: the truncated-JD
                                   and MJD offsets, the plausible window
                                   (isPlausibleT0Jd), yearElseTruncatedJd.
   build-log-pure.ts               count and countsListed: how a build-log
                                   line prints a number and a tally, for
-                                  every stage's report; and
+                                  every stage's report; pairLabel
+                                  (<wds_id><components>); and
                                   droppedPairSample, the capped sample of
                                   a gate's dropped pairs.
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
@@ -160,17 +166,23 @@ scripts/binaries/
                                   (promotion's origin keys), so it never
                                   reaches the codec.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
-                                  the catalogue row-index map →
+                                  the catalogue's pair ends →
                                   public/binaries.bin through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
-  runtime-binaries-pure.ts        The writer itself: pairs joined from the
-    (+ test)                      rows (a system with a role missing or
+  pairs-pure.ts (+ test)          The pair model: pairs joined from the
+                                  rows (a system with a role missing or
                                   doubled, or no WDS id, throws), parents by
-                                  component-letter prefix,
-                                  outer-before-inner walk, and planRecords —
-                                  both ends resolved, unaddressable pairs
-                                  dropped and counted, flags set — whose
+                                  component-letter prefix, the
+                                  outer-before-inner walk. Read by the
+                                  writer and by the catalogue's pair
+                                  resolution (../catalog/companions/record-index/).
+  pair-fixture.ts                 Test-only: one MultiplesPair from its
+                                  system_id and the cells a test names.
+  runtime-binaries-pure.ts        The writer itself: planRecords — over
+    (+ test)                      each pair's resolved ends, unaddressable
+                                  pairs dropped and counted, duplicate
+                                  relations deduped, flags set — whose
                                   records the format's encodeBinaries
                                   writes.
   runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
@@ -185,6 +197,8 @@ scripts/binaries/
                                   (per-strategy / per-tier counts),
                                   build-runtime-binaries (pair-emission
                                   counts).
+  *-expected-json.ts              Each snapshot's declaration
+                                  (../util/sources/README.md#a-snapshot).
 ```
 
 Inputs and outputs live in their own folders, each with its own README
@@ -196,7 +210,7 @@ curated `component_sptype_overrides.tsv` and `orb6_component_overrides.tsv`).
 ## Pipeline at a glance
 
 Three build steps in order, with `data/binaries/multiples.tsv` and
-`build/catalog-row-index-map.json` as hand-offs:
+`build/catalog-pair-ends.json` as hand-offs:
 
 1. **Binary-system pipeline** (`build-binaries.ts`). Reads WDS + ORB6 +
    AT-HYG + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS
@@ -204,10 +218,14 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't
    reach — with the binding-integrity verdicts
-   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface).
+   (`build/binding-integrity-verdicts.tsv`, a gitignored review surface),
+   each component's Gaia and HIP binding provenance as the
+   `component-binding` lineage stage
+   (`build/lineage/component-binding.tsv.gz`), and every pair row's fate as
+   the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
-   (`../catalog/astrometry-request/`). Both land through `emitArtifacts`
+   (`../catalog/astrometry-request/`). Every output lands through `emitArtifacts`
    only once the input row bands and the count snapshot check pass, so a
    drifted count writes nothing. `pnpm run build:binaries`.
 2. **Single-star catalogue build** (`scripts/catalog/build-catalog.ts`).
@@ -216,7 +234,7 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    HIP-xmatch side-files + Stellarium + GCVS + CCDM.
    Emits the chunked v9 `public/catalog.bin.<i>` + manifest,
    `constellations.json`, `search-index.json`, and
-   `catalog-row-index-map.json`. `pnpm run build:catalog`.
+   `catalog-row-index-map.json` + `catalog-pair-ends.json`. `pnpm run build:catalog`.
 
    The seam that consumes this pipeline's output is companion promotion
    — it adds first-class catalog records for the secondary of every
@@ -226,22 +244,17 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    field-inheritance contract:
    [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion).
 3. <a id="runtime-side-artifact"></a>**Runtime side artifact** (`build-runtime-binaries.ts`). Reads
-   multiples.tsv + `catalog-row-index-map.json` (whose `bySynth` section
-   sits alongside `byGaia` / `byHip`), emits `public/binaries.bin` — one
+   multiples.tsv + `build/catalog-pair-ends.json` —
+   each pair's two ends as catalogue records, already resolved by the
+   catalogue build ([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home),
+   [The sidecar and how a component resolves](../catalog/companions/record-index/README.md#the-sidecar-and-how-a-component-resolves))
+   — and emits `public/binaries.bin`: one
    fixed-size record per physical pair carrying Kepler elements + sep/PA
    + a hierarchical parent-relation index, in the layout
-   `/src/catalog-format/binaries/` owns. It refuses to emit when the map's
-   `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue built
-   from another copy). Each end resolves through
-   `catalog-row-index-map-pure.ts` (`../catalog/companions/record-index/`),
-   the functions the catalogue's wings pass calls too:
-   gaia → hip → synth; the synth key composes from the pair's expanded
-   `comp` tokens (`Aa1,2` resolves through the same `synth-…-Aa2` key the
-   catalog minted). Both pair ends then prefer a distinct synth slot over
-   their id-first resolve: promotion mints a synth record only after
-   judging a row's ids inherited and stripping them, so when one exists
-   it is always the truer target than the blended member row the
-   inherited id lands on. `pnpm run build:binaries-runtime`; loaded by
+   `/src/catalog-format/binaries/` owns. It resolves nothing itself, so a
+   pair the file does not carry throws, and it refuses to emit when the
+   file's `multiplesSha1` is not the `multiples.tsv` it reads (a catalogue
+   built from another copy). `pnpm run build:binaries-runtime`; loaded by
    `src/client/binaries/binaries-loader.ts`.
 
 The Tier A validation harness
@@ -261,10 +274,11 @@ invariant the runtime walk + focal-frame ride depend on (see
 shares its identifier with the system primary (Castor A & B blend to one
 Gaia source; A & B of 02398-4254 share a HIP Gaia later split), the inner
 pair's own id-first resolve lands on the wrong sibling. Two coupled
-corrections in `runtime-binaries-pure.ts`: `assignParentRelations`
+corrections: `assignParentRelations` (`pairs-pure.ts`)
 picks the *bound* parent (has-orbit, then tightest sep) over a
-coincidental element-less wide pair, and `overrideInnerPrimaryIndices`
-re-homes each inner pair's primary onto that parent's member slot.
+coincidental element-less wide pair, and the pair resolution re-homes
+each inner pair's primary onto that parent's member slot
+([The parent re-home](../catalog/companions/record-index/README.md#the-parent-re-home)).
 `companion-promotion.ts`'s post-pass makes the baked catalog placement
 agree (see [Companion promotion](/scripts/catalog/companions/README.md#companion-promotion)).
 
@@ -284,3 +298,35 @@ two DISTINCT stars collapsed onto one record; those are counted
 `pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
 missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
 Ba/Bb sub-letter blend the inner-pair hierarchy owns).
+
+## Pairs lineage
+
+`build:binaries` writes every pair row the stages decide as the `pairs`
+lineage stage, after `component-binding` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-pairs-stage)), from
+`pairs-lineage-pure.ts`. A pair founds no record, so its rows are keyed on
+the rows that founded it, the pair's `origin`
+([the WDS readers](../wds/README.md#files-in-this-area)), each a group key
+([SourceRowRef](../util/sources/README.md#sourcerowref)): its WDS summary
+key (`wds:<wds_id>/<discoverer>/<components>`, a blank row keeping its blank
+components when rescued), an ORB6 orphan's ORB6 key (`orb6:`, the same
+form, components as printed), an MSC inner pair's first orbit row's key
+(`msc-orbits:<wds_id>/<syst>`) or a Gaia NSS inner pair's carrier source
+(`gaia-dr3-nss:<source_id>`).
+
+| Code | Written for |
+| --- | --- |
+| `pairs.duplicate-row` | a WDS row the duplicate collapse dropped; the kept row shares its key |
+| `pairs.blank-deferred` / `-donor` / `-enumerated` | a blank-components row the rescue did not rescue ([Blank-components rescue](load/README.md#blank-components-rescue)); a donor cites the ORB6 orphans it donated to as evidence |
+| `pairs.optical.<tag>` | every pair Stage 5 classified, one code per `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.no-position` | a pair Stage 5 kept that Stage 6 could not place, beside its optical row |
+
+A decomposed pair's `params` carry each side's letter and, where bound, its
+Gaia source bare and its HIP as `hip:` — the forms trace matches a query on.
+Every code is an outcome with no removal effect, and the stage writes no
+identity rows. Its counts fold into the snapshot's `pairs` stage
+([Composition, not counting](counts/README.md#composition-not-counting)).
+
+`PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
+bytes gzipped in 379–384 ms across two runs, neither diffing against a
+baseline (2026-11-14).

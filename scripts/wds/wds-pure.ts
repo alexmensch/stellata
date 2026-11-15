@@ -2,10 +2,22 @@
 
 import { RA_HOURS_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
+import { floorVerdict, formatFraction, formatShare, share } from '../util/counts/tally-pure';
+import { sourceRowRefText, withGroupOrigins, type AnySourceRowRef, type GroupRowRef, type LinedRow, type RowKey, type RowKeyed } from '../util/sources/row-ref-pure';
 import type { Declared } from '../util/sources/source';
 import { floatCell, intCell } from '../util/tsv/table-pure';
 
+/** A pair as WDS and ORB6 both name it. */
+export type WdsPairRowKey = Pick<WdsPair, 'wdsId' | 'discoverer' | 'components'>;
+
+/** A group key: WDS and ORB6 each print some pairs on several rows. */
+export function wdsPairRowKey(id: string): RowKey<WdsPairRowKey, 'group'> {
+  return { id, cardinality: 'group', text: ({ wdsId, discoverer, components }) => `${wdsId}/${discoverer}/${components}` };
+}
+
 export interface WdsPair {
+  /** The row that founded the pair: its WDS summary row, or the row a synthesized pair stands for. */
+  readonly origin: AnySourceRowRef;
   /** `HHMMm±DDMM`. */
   readonly wdsId: string;
   readonly discoverer: string;
@@ -40,6 +52,8 @@ export function measuredOffset(pair: WdsPair): MeasuredOffset | null {
 
 /** A Sixth Orbit Catalog row; unit codes kept verbatim for Stage 4 to normalise. */
 export interface Orb6Entry {
+  /** Keyed on the components as printed, whatever curated letters later replace them. */
+  readonly origin: GroupRowRef<WdsPairRowKey>;
   readonly wdsId: string;
   readonly discoverer: string;
   readonly components: string;
@@ -98,7 +112,7 @@ type CellParse = (raw: string) => number | null;
 class FixedWidthLine {
   constructor(
     private readonly from: Declared,
-    private readonly lineNo: number,
+    readonly lineNo: number,
     readonly text: string,
   ) {}
 
@@ -166,28 +180,31 @@ export function parsePreciseCoord(field: string): SkyPosition | null {
 }
 
 function assertCoverage<T>(rows: readonly T[], from: Declared, field: string, present: (r: T) => boolean, floor: number): void {
-  if (rows.length === 0) return;
   const ok = rows.filter(present).length;
-  const rate = ok / rows.length;
-  if (rate < floor) {
-    throw new Error(
-      `${from.file}: '${field}' non-null rate ${(rate * 100).toFixed(1)}% (${ok}/${rows.length}) below `
-        + `${floor * 100}% floor — likely a column-offset drift; re-verify the fixed-width layout. ${from.hint}`,
-    );
+  const rate = share(ok, rows.length);
+  const fail = (why: string): Error => new Error(
+    `${from.file}: '${field}' non-null rate ${formatShare(rate)} (${ok}/${rows.length}) below `
+      + `${formatFraction(floor, 0)} floor — ${why}. ${from.hint}`,
+  );
+  switch (floorVerdict(rate, floor)) {
+    case 'meets': return;
+    case 'under': throw fail('likely a column-offset drift; re-verify the fixed-width layout');
+    case 'no-denominator': throw fail('no rows parsed');
   }
 }
 
-export function parseWdsSumm(text: string, from: Declared): WdsPair[] {
+export function parseWdsSumm(text: string, from: Declared & RowKeyed<WdsPairRowKey, 'group'>): WdsPair[] {
   const keep = (line: string): boolean => line.length >= 22 && !WDS_HEADER.test(line) && PY_INT.test(line.slice(0, 5));
-  const pairs: WdsPair[] = [];
+  const rows: LinedRow<Omit<WdsPair, 'origin'>, WdsPairRowKey>[] = [];
   for (const l of fixedWidthLines(text, from, WDS_LINE_WIDTH, keep)) {
     const wdsId = l.slice(0, 10).trim();
     const discoverer = l.slice(10, 17).trim();
     if (!wdsId || !discoverer) continue;
-    pairs.push({
+    const components = l.slice(17, 22).trim();
+    rows.push({ line: l.lineNo, key: { wdsId, discoverer, components }, row: {
       wdsId,
       discoverer,
-      components: l.slice(17, 22).trim(),
+      components,
       dateLast: l.int('date_last', 28, 32),
       thetaLast: l.sepPa('theta_last', 42, 45),
       rhoLast: l.sepPa('rho_last', 52, 57),
@@ -200,18 +217,19 @@ export function parseWdsSumm(text: string, from: Declared): WdsPair[] {
       dateFirst: l.int('date_first', 23, 27),
       thetaFirst: l.sepPa('theta_first', 38, 41),
       rhoFirst: l.sepPa('rho_first', 46, 51),
-    });
+    } });
   }
+  const pairs = withGroupOrigins(from, rows);
   assertCoverage(pairs, from, 'precise', (p) => p.precise !== null, WDS_SUMM_PRECISE_COORD_FLOOR);
   return pairs;
 }
 
-export function parseOrb6(text: string, from: Declared): Orb6Parse {
+export function parseOrb6(text: string, from: Declared & RowKeyed<WdsPairRowKey, 'group'>): Orb6Parse {
   const keep = (line: string): boolean => {
     if (line.length < 30) return false;
     return /^\d/.test(line.slice(0, 9).trim());
   };
-  const entries: Orb6Entry[] = [];
+  const rows: LinedRow<Omit<Orb6Entry, 'origin'>, WdsPairRowKey>[] = [];
   const grades: Orb6GradeOutcome[] = [];
   for (const l of fixedWidthLines(text, from, ORB6_LINE_WIDTH, keep)) {
     const wdsId = l.slice(19, 29).trim();
@@ -219,10 +237,12 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
     const gradeCell = l.slice(233, 234).trim();
     const graded = /^\d$/.test(gradeCell);
     grades.push(graded ? 'graded' : 'fallback');
-    entries.push({
+    const discoverer = l.slice(30, 37).trim();
+    const components = l.slice(37, 44).trim();
+    rows.push({ line: l.lineNo, key: { wdsId, discoverer, components }, row: {
       wdsId,
-      discoverer: l.slice(30, 37).trim(),
-      components: l.slice(37, 44).trim(),
+      discoverer,
+      components,
       precise: parsePreciseCoord(l.slice(0, 18)),
       hd: l.int('hd', 51, 57),
       hip: l.int('hip', 58, 64),
@@ -240,8 +260,9 @@ export function parseOrb6(text: string, from: Declared): Orb6Parse {
       t0Unit: l.slice(174, 175).trim(),
       grade: graded ? Number(gradeCell) : ORB6_FALLBACK_GRADE,
       ref: l.slice(237, 245).trim(),
-    });
+    } });
   }
+  const entries = withGroupOrigins(from, rows);
   assertCoverage(entries, from, 'P', (e) => e.pVal !== null, ORB6_PERIOD_COVERAGE_FLOOR);
   return { entries, grades };
 }
@@ -257,17 +278,21 @@ export function splitComponents(components: string): readonly [string, string] |
   return s.length === 2 ? [s[0], s[1]] : null;
 }
 
-/** `outcomes` is one per input row. */
-export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; outcomes: readonly WdsDedupOutcome[] } {
+export interface WdsDedupDecision {
+  readonly row: WdsPair;
+  readonly outcome: WdsDedupOutcome;
+}
+
+export function dedupWdsPairRows(pairs: readonly WdsPair[]): { pairs: readonly WdsPair[]; decisions: readonly WdsDedupDecision[] } {
   const best = new Map<string, number>();
   pairs.forEach((p, i) => {
-    const key = `${p.wdsId}\u0000${p.discoverer}\u0000${p.components}`;
+    const key = sourceRowRefText(p.origin);
     const j = best.get(key);
     if (j === undefined || (p.nObs ?? 0) > (pairs[j].nObs ?? 0)) best.set(key, i);
   });
   const keep = new Set(best.values());
   return {
     pairs: pairs.filter((_, i) => keep.has(i)),
-    outcomes: pairs.map((_, i) => (keep.has(i) ? 'kept' : 'dropped')),
+    decisions: pairs.map((row, i) => ({ row, outcome: keep.has(i) ? 'kept' : 'dropped' })),
   };
 }

@@ -21,6 +21,16 @@ export interface StageLineageSpec<F extends string, S extends string = string> {
   readonly identity?: F;
 }
 
+export const BINDING_LINEAGE: StageLineageSpec<'component-binding', 'component-binding'> = {
+  stage: 'component-binding',
+  files: ['component-binding'],
+};
+
+export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
+  stage: 'pairs',
+  files: ['pairs'],
+};
+
 export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'> = {
   stage: 'classic-ids',
   files: ['classic-ids'],

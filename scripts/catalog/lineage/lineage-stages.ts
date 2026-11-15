@@ -1,5 +1,7 @@
 // Every stage that writes lineage, in pipeline order, with its codes and its files: what the code list is generated from and trace reads, in that order. See reason-codes/README.md.
 
+import { PAIRS_CODES } from '../../binaries/pairs-lineage-pure';
+import { BINDING_CODES } from '../../binaries/resolve/binding-lineage-pure';
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
 import { CLASSIC_ID_CODES } from '../classic-ids/classic-id-lineage-pure';
@@ -12,8 +14,8 @@ import { BRIGHTNESS_COLOUR_CODES } from '../photometry/brightness-colour-lineage
 import { SIZE_CODES } from '../spectral/size-lineage-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
-  ALLOCATION_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
-  NAMING_LINEAGE, SIZE_LINEAGE,
+  ALLOCATION_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
+  NAMING_LINEAGE, PAIRS_LINEAGE, SIZE_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -23,6 +25,8 @@ export interface LineageStage {
 }
 
 export const LINEAGE_STAGES: readonly LineageStage[] = [
+  { codes: BINDING_CODES, spec: BINDING_LINEAGE },
+  { codes: PAIRS_CODES, spec: PAIRS_LINEAGE },
   { codes: CLASSIC_ID_CODES, spec: CLASSIC_IDS_LINEAGE },
   { codes: MEMBERSHIP_CODES, spec: MEMBERSHIP_LINEAGE },
   { codes: PLACEMENT_CODES, spec: PLACEMENT_LINEAGE },

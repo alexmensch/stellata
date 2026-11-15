@@ -19,9 +19,11 @@ import {
   simbadSourcedKeys,
   type SimbadSourcedKeys,
 } from '../distance/parallax/simbad-sourced-ledger-tsv';
+import { percentOf } from '../../util/counts/tally-pure';
 import { REPO_ROOT } from '../../util/paths';
 import { artifactRows } from '../../util/sources/source';
 import { SIMBAD_SAMPLE } from './simbad-sample-source';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 const DEFAULT_REPORT_PATH = resolve(REPO_ROOT, 'docs/validation-residuals.md');
 
@@ -95,7 +97,7 @@ export interface PercentileStats {
  *  empty so callers can branch cleanly. */
 export function quantile(values: readonly number[], q: number): number {
   if (values.length === 0) return NaN;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = [...values].sort(ascending);
   const idx = (sorted.length - 1) * q;
   const lo = Math.floor(idx);
   const hi = Math.ceil(idx);
@@ -245,10 +247,6 @@ export function buildReport(
 
 export function formatReport(report: ResidualReport): string {
   const m = report.matchStats;
-  const matchedPct = m.sampleRows > 0
-    ? ((m.matchedByGaia + m.matchedByHip) / m.sampleRows) * 100
-    : 0;
-  const outlierPct = m.usable > 0 ? (report.outlierCount / m.usable) * 100 : 0;
   const lines: string[] = [];
   lines.push('# SIMBAD validation residuals');
   lines.push('');
@@ -262,7 +260,7 @@ export function formatReport(report: ResidualReport): string {
   lines.push('## Match coverage');
   lines.push('');
   lines.push(`- Sample rows: ${m.sampleRows}`);
-  lines.push(`- Matched: ${m.matchedByGaia + m.matchedByHip} (${matchedPct.toFixed(2)} %)`);
+  lines.push(`- Matched: ${m.matchedByGaia + m.matchedByHip} (${percentOf(m.matchedByGaia + m.matchedByHip, m.sampleRows, 2)})`);
   lines.push(`  - via Gaia source_id: ${m.matchedByGaia}`);
   lines.push(`  - via HIP fallback: ${m.matchedByHip}`);
   lines.push(
@@ -283,7 +281,7 @@ export function formatReport(report: ResidualReport): string {
   lines.push(`## Top-${OUTLIER_TOP_N} outliers (by |Δabsmag|)`);
   lines.push('');
   lines.push(`Outlier criteria: |Δabsmag| > ${PER_STAR_OUTLIER.absmagAbs} OR |plx residual / plx_err| > ${PER_STAR_OUTLIER.plxSigmaAbs}.`);
-  lines.push(`Total outliers: ${report.outlierCount} of ${m.usable} (${outlierPct.toFixed(2)} %).`);
+  lines.push(`Total outliers: ${report.outlierCount} of ${m.usable} (${percentOf(report.outlierCount, m.usable, 2)}).`);
   lines.push('');
   lines.push('| simbad_main_id | matched | catalog absmag | simbad absmag | Δabsmag | catalog dist (pc) | simbad dist (pc) | plx σ |');
   lines.push('| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |');

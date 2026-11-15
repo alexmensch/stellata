@@ -1,4 +1,4 @@
-// The catalogue row-index map and how a multiples.tsv component resolves through it. See README.md.
+// The catalogue row-index map, how a multiples.tsv component resolves through it, and the file's codec. See README.md.
 
 export interface CatalogRowIndexMap {
   /** Gaia DR3 source_id (decimal string) → catalog.bin record index. */
@@ -10,8 +10,7 @@ export interface CatalogRowIndexMap {
   bySynth: Record<string, number>;
 }
 
-/** The map as build:catalog writes it: the sections plus the sha1 of the
- *  multiples.tsv the build consumed, which a reader holds its own copy to. */
+/** README.md#the-sidecar-and-how-a-component-resolves. */
 export interface CatalogRowIndexSidecar extends CatalogRowIndexMap {
   readonly multiplesSha1: string;
 }
@@ -20,20 +19,28 @@ export function serializeCatalogRowIndexSidecar(multiplesSha1: string, map: Cata
   return JSON.stringify({ multiplesSha1, byGaia: map.byGaia, byHip: map.byHip, bySynth: map.bySynth }) + '\n';
 }
 
+export const isRecordIndex = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 0;
+
+/** Throws unless a build/ hand-off's `multiplesSha1` is a sha1. */
+export function readMultiplesSha1(raw: Record<string, unknown>, file: string): string {
+  const { multiplesSha1 } = raw;
+  if (typeof multiplesSha1 !== 'string' || !/^[0-9a-f]{40}$/.test(multiplesSha1)) {
+    throw new Error(`${file}: multiplesSha1 is ${JSON.stringify(multiplesSha1)}, not a sha1`);
+  }
+  return multiplesSha1;
+}
+
 /** Throws on a missing section or sha1, or an entry that is not a record index. */
 export function parseCatalogRowIndexMap(text: string): CatalogRowIndexSidecar {
   const raw = JSON.parse(text) as Record<string, unknown>;
-  const { multiplesSha1 } = raw;
-  if (typeof multiplesSha1 !== 'string' || !/^[0-9a-f]{40}$/.test(multiplesSha1)) {
-    throw new Error(`catalog row-index map: multiplesSha1 is ${JSON.stringify(multiplesSha1)}, not a sha1`);
-  }
+  const multiplesSha1 = readMultiplesSha1(raw, 'catalog row-index map');
   const section = (name: keyof CatalogRowIndexMap): Record<string, number> => {
     const value = raw[name];
     if (typeof value !== 'object' || value === null || Array.isArray(value)) {
       throw new Error(`catalog row-index map: section ${name} is missing`);
     }
     for (const [key, idx] of Object.entries(value)) {
-      if (!Number.isInteger(idx) || (idx as number) < 0) {
+      if (!isRecordIndex(idx)) {
         throw new Error(`catalog row-index map: ${name}[${key}] is ${JSON.stringify(idx)}, not a record index`);
       }
     }

@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs' and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -44,16 +44,8 @@ scripts/catalog/lineage/
   baseline/                      StageHeader, planBaseline and judgeBaseline:
                                  which baseline a build diffs against. Own
                                  README.
-  identity-pure.ts               The identity row, identityRow its one
-                                 constructor, and its file; refuses two
-                                 records on one key. RECORD_KEY_COLUMNS,
-                                 the five-cell tuple every ledger keyed on
-                                 a record (parked, additions, label drops)
-                                 spells its columns from, and its typed
-                                 form RecordIdentifiers with the cell
-                                 codec those ledgers share and recordKey,
-                                 the joined tuple a ledger row and a
-                                 manifest row match on.
+  identity/                      The origin key and the identity row.
+                                 Own README.
   lineage-stages.ts              LINEAGE_STAGES, every stage's codes and
                                  files in pipeline order: the one list the
                                  code generator and trace/ read, and the
@@ -64,7 +56,10 @@ scripts/catalog/lineage/
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
                                  call; countedStageLineage, the same plus
-                                 its count block.
+                                 its count block; namedStageRun, the run of
+                                 a stage whose lines file is named for it,
+                                 which build:catalog and build:binaries
+                                 build their stages with.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -86,68 +81,13 @@ scripts/catalog/lineage/
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
                                  stage's files are never touched.
-  spine-origin-key.test.ts       The spine origin key is the physical line
-                                 and unique; the spine guard keeps it stable.
 ```
 
 ## Identity — the origin source row
 
-Every row is keyed on the record's **origin**: a `SourceRowRef` naming the
-source row that founded the record. `classic-ids` runs before any record
-exists, so its rows are keyed on the catalogue row stating each designation
-([Classic-ID lineage](../classic-ids/README.md#classic-id-lineage)).
-
-| Record founded by | Origin key |
-|---|---|
-| a spine row | its line number in the frozen `data/athyg/inherited-spine.tsv` |
-| an addition group | the group anchor's source row — its IV/25 star, else its I/239 HIP, else its CNS5 row; the other members are evidence |
-| a magnitude-term row | its Gaia DR3 `source_id` |
-| a promoted companion | its `multiples.tsv` `(system_id, comp)` |
-| a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
-| (no record) a same-class SID merge whose key only a stored same-as edge carries | that edge: `sameas:` followed by its two designations ([SID events](/scripts/sid/README.md#sid-events)) |
-
-The spine's line number is stable because the file is frozen and
-byte-guarded, and it covers Sol, whose identifier cells are empty; its
-identifier cells are not the key, since a curated correction can rewrite
-`tyc`. `spine-origin-key.test.ts` pins the key to the physical line and unique;
-it is identical across builds because the spine guard pins the file's bytes.
-
-Retiring the spine re-founds each spine record on a first-order catalogue
-row, so its origin key changes while the star does not. That PR writes a
-one-time map from spine line to new origin key — every line maps to
-exactly one new key or a ledgered drop, checked by a test — and the diff
-applies it across that transition, so those records diff as a changed
-source rather than a deletion and an addition, and no SID event follows.
-
-Record index and SID are attributes, never keys. One **identity row** per
-record (`build/lineage/identity.tsv.gz`, `identity-pure.ts`) carries the
-origin key, the manifest's current five-cell tuple
-(`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`, with the bound Gaia id) and the
-full designation set, all written by membership. Each column lands with the
-stage that computes it, never as a placeholder: the record index (after the
-apparent-V sort) arrives when the sort stage gains lineage, the SID with
-allocation's. A later stage writes its columns to a file of its
-own (`allocation.sids.tsv.gz`: key → SID), rotated with that stage and
-never by rewriting membership's; the identity row is the join of those files
-on the origin key. A record membership does not admit — a folded spine row, a
-component group — still gets one, keyed on the cells it arrived with, so
-trace finds it. The ledger views and trace take their key columns from
-this row, never re-deriving them — except where the deciding stage's input
-cells ARE the ledger's key: `binding-review.tsv` keys on the spine cells
-the derivation weighed, which its curated dispositions join on, so those
-ride the binding row's `params`. A parked or dropped record never gets an
-index or a SID: it has no `allocation.sids` row, and a SID it once held
-is carried by allocation's parked, retired or merged row under the deciding
-origin, with that decision's code as `cause`.
-
-The manifest's five-cell tuple (`tyc`/`hip`/`hd`/`gl`/`gaia_source_id`) is
-not the key: it changes exactly when a binding or label decision changes, so
-a re-bind would diff as one record deleted and another added. The SID is not
-the key either: mints and merges are what the diff exists to show.
-
-A new Gaia data release changes magnitude-term origin keys. That is a real
-identity change and travels as SID merge and retire events ([SID events](#sid-events)), not as
-re-keyed lineage.
+Every row is keyed on the record's origin, the source row that founded it,
+and one identity row per record carries its identifiers beside that key:
+[identity/](identity/README.md).
 
 ## Row contract
 
@@ -160,7 +100,7 @@ Every stage writes the same envelope:
 | `role` | `outcome`, or `refused` for an alternative the stage weighed and rejected; declared once per code and filled from it by `stageRow`, never stated by a stage |
 | `code` | a reason code from the generated list |
 | `params` | per-instance detail (source id, component letter, sibling) |
-| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`) |
+| `evidence` | `SourceRowRef`s cited, each once and never the origin row (`evidenceTexts`, which `stageRow` applies) |
 
 - Each stage declares its own payload columns next to its reason codes and
   serialises its outcome union through one function, so a variant with no
@@ -186,12 +126,14 @@ Every stage writes the same envelope:
 `{ source, row }`: `source` is the source's declaration constant (a
 `defineSource` or `defineArtifact` constant,
 `../../util/sources/README.md#sourcerowref`) and `row` is that source's typed
-row key — never a path string. A source's licence is credited once, on the
+row key — never a path string. A source whose key names a group of rows
+(WDS, ORB6, the MSC orbits, Gaia NSS) is cited as `{ source, key, lines }`
+instead, every line of the group carried. A source's licence is credited once, on the
 site's credits surface; whether a public lineage surface must also filter its
 citations by licence is the release design's question, and the filter would
 be a join on `source`.
 
-Its text form is `<source>:<row>`. Every lineage file sorts by the byte
+Its text form is `<source>:<row>` (`<source>:<key>` for a group). Every lineage file sorts by the byte
 order of that text form, then `role`, `code`, `params`, `evidence`. A stage
 hands its rows over as lines (`LineageLine`, made only by `stageLineageLine`
 or read from a stage file), and a tab sorts below every character a cell may
@@ -275,8 +217,8 @@ adds to the build — the baseline headers' file re-hash, the base's input
 re-hash each verdict asks for, producing the lines (`lines`, a function the
 window calls: a spill reads back there), the diff, rendering,
 gzip and invariants: about 8.2 s with a diff
-against a full baseline. The merge-base input re-hash measured 128 ms for
-membership on a branch where 9 of its 163 inputs differ (2026-11-04,
+against a full baseline. The merge-base input re-hash measured 116 ms for
+membership on a branch where 34 of its 167 inputs differ (2026-11-15,
 `inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
 changed 204 MB LFS input adds its own hash of the local object. The header's input map is not in it: a stage hands
 `stageLineage` the input hashes the runner took for its step's stamp before
@@ -292,7 +234,9 @@ contested or collision verdict and a disposition — since the candidates and
 refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
-measured budget sits beside its contract: [classic-ids'](../classic-ids/README.md#classic-id-lineage),
+measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
+[pairs'](/scripts/binaries/README.md#pairs-lineage),
+[classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/README.md#promotion-lineage),
 [placement's](../distance/README.md#placement-lineage),
@@ -361,12 +305,19 @@ and count against the [CI heap budget](../../util/heap-budget/README.md):
 
 ## Cross-stage joins
 
-Every join is on the origin key, never a re-derivation. The binaries
-`Binding` provenance type must carry a component's `(system_id, comp)` and
-its HIP, which is what the membership change report joins a re-bound row
-onto; until that type lands, the join reads `multiples.tsv`'s existing
-columns, through the record's HIP on the identity row — the current build's, or
-the baseline's for a key the build removed.
+One stage's rows join another's on the origin key, never on a
+re-derivation. A `pairs` row is keyed on its pair's founding row, which no
+other stage keys on; trace reaches it through the Gaia sources and `hip:`
+designations its `params` carry. A `multiples.tsv` component founds no record, so its
+component-binding rows are keyed on its row (`multiples:<system_id>/<comp>`,
+a promoted companion's own key) and reached, as classic-ids' rows are, by the
+designations their `params` carry
+([Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage)).
+The membership change report's `multiples` column is a match by value: the
+record's HIP on the identity row — the current build's, or the baseline's for
+a key the build removed — against the committed `multiples.tsv`'s `hip`
+column, which carries the same identifiers and origins the component-binding
+rows do.
 
 ## Committed ledgers become views
 
@@ -390,9 +341,24 @@ one row type. Every one is a view now: the first four of membership's
 classic-ID queues of `classic-ids`' ([Classic-ID lineage](../classic-ids/README.md#classic-id-lineage)),
 and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.md#placement-lineage)).
 
+## The component-binding stage
+
+`build:binaries` is the first stage, run before classic-ids: each
+`multiples.tsv` component's Gaia and HIP binding, its own or copied from a
+named token of its system. Its contract lives beside its module, in
+[Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
+
+## The pairs stage
+
+`build:binaries` writes it too, after component-binding: every WDS pair row
+the binaries stages decide — a duplicate, a blank row left out, each Stage 5
+verdict, a position-less drop — keyed on the row that founded the pair. Its
+contract lives beside its module, in
+[Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
+
 ## The classic-ids stage
 
-`build:classic-ids` is the first stage, run before membership; its contract
+`build:classic-ids` is the stage after pairs, run before membership; its contract
 lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage

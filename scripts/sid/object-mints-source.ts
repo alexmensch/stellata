@@ -8,12 +8,12 @@ export const SOL_OBJECTS = defineSource({
   file: 'data/sid/sol-objects.tsv',
   hint: HINT,
   parse: (input) => parseSolObjectsTsv(input.text(), input),
-  rowKey: { id: 'sol-objects', text: (row: Pick<SolObjectRow, 'key'>) => row.key },
+  rowKey: { id: 'sol-objects', cardinality: 'one', text: (row: Pick<SolObjectRow, 'key'>) => row.key },
 });
 
 export const SHELL_OBJECTS = defineSource({
   file: 'data/sid/shell-objects.tsv',
   hint: HINT,
   parse: (input) => parseShellObjectsTsv(input.text(), input),
-  rowKey: { id: 'shell-objects', text: (row: Pick<SolObjectRow, 'key'>) => row.key },
+  rowKey: { id: 'shell-objects', cardinality: 'one', text: (row: Pick<SolObjectRow, 'key'>) => row.key },
 });

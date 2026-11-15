@@ -28,8 +28,8 @@ What each step **declares** and what the runner **derives**:
 | Fact | TypeScript step | Python step (a pull or bake) |
 |---|---|---|
 | outputs | its `declareOutputs` constant, exported from a side-effect-free module (see Load-time rules) | declared in the table entry, checked against the run's recorded writes |
-| code inputs | the esbuild import closure plus siblings (`util/import-closure.ts`), computed before the run | every `scripts/` module the process loaded, recorded during the run (`build_stamp.py`) |
-| data inputs | the `defineSource` / `defineArtifact` constants reachable in that closure (the input-boundary design: typed readers, then source declarations) | every repo file the process opened for reading, recorded through Python's audit hook |
+| code inputs | the esbuild import closure (`util/import-closure.ts`), computed before the run | every `scripts/` module the process loaded, recorded during the run (`build_stamp.py`) |
+| data inputs | the `defineSource` / `defineArtifact` / `defineSnapshot` constants reachable in that closure (the input-boundary design: typed readers, then source declarations) | every repo file the process opened for reading, recorded through Python's audit hook |
 | order | derived: B runs after A when B reads a file A declares | derived the same way, from the files its committed record names |
 
 A `defineArtifact` is both the writer's output and the readers' source, so

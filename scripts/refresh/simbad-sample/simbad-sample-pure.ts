@@ -1,5 +1,6 @@
 // The V-stratified SIMBAD sample: its bins, the seeded draw, the derived distance and absolute magnitude, and the pull. See README.md.
 
+import { share } from '../../util/counts/tally-pure';
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
 import { mulberry32 } from '../../util/seeded-random-pure';
 import type { Row } from '../pull/columns-pure';
@@ -7,8 +8,9 @@ import type { SpotRow } from '../pull/gates-pure';
 import type { PhasedPull, Phase, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchIdents, oidOf, parseLedger, simbadPhases } from '../simbad/simbad-fetch-pure';
-import { countFilled, floorCheck, share } from '../simbad/simbad-rows-pure';
+import { countFilled, floorCheck } from '../simbad/simbad-rows-pure';
 import { GAIA_DR3, HIP, OID } from '../simbad/simbad-specs-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The draw's seed, `YYYYMMDD` of the day the corpus was first cut; a new one redraws every row. */
 export const SEED = 20260515;
@@ -151,7 +153,7 @@ export function samplePull(outputs: DeclaredOutputs<'sample'>): PhasedPull<'samp
         log(`  ${binName(i)}: ${candidates.length} candidates → drew ${bin.target}`);
       }
       const ledger = parseLedger();
-      const idents = await fetchIdents(ask, SAMPLE_PHASES, [HIP, GAIA_DR3], drawn.map((r) => oidOf(cell(r, 'oid'))).sort((a, b) => a - b), ledger);
+      const idents = await fetchIdents(ask, SAMPLE_PHASES, [HIP, GAIA_DR3], drawn.map((r) => oidOf(cell(r, 'oid'))).sort(ascending), ledger);
       const rows = drawn.map((r): Row => {
         const oid = oidOf(cell(r, 'oid'));
         const v = cell(r, 'v_mag');

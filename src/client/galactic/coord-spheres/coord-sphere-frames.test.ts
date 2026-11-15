@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
+import { pyMod } from '../../../astro-core/angles';
 import { unitVectorFromRaDec } from '../../../astro-core/equatorial-basis';
 import { GALACTIC_NORTH_POLE_ICRS, galacticDirToIcrs } from '../../../astro-core/galactic-coords';
 import type { CoordSphereFrame, CoordSphereSpec, DrawnCoordSphereFrame } from './coord-sphere';
@@ -16,7 +17,6 @@ import {
   equatorialDirToIcrs,
   fmtDecDeg,
   fmtLatDeg,
-  fmtLonDeg,
   fmtRaHours,
   nextCoordSphereFrame,
 } from './coord-sphere-frames';
@@ -93,7 +93,7 @@ function frameCoordsOf(spec: CoordSphereSpec, dir: THREE.Vector3) {
   const pole = spec.dirToIcrs(0, Math.PI / 2, new THREE.Vector3());
   const lonRad = Math.atan2(dir.dot(quadrant), dir.dot(lonAxis));
   return {
-    lonDeg: ((lonRad / DEG) % 360 + 360) % 360,
+    lonDeg: pyMod(lonRad / DEG, 360),
     latDeg: Math.asin(Math.min(1, Math.max(-1, dir.dot(pole)))) / DEG,
   };
 }
@@ -270,13 +270,6 @@ describe('eclipticDirToIcrs', () => {
 });
 
 describe('label formatters', () => {
-  it('wraps galactic longitude into [0, 360)', () => {
-    expect(fmtLonDeg(0)).toBe('0°');
-    expect(fmtLonDeg(350)).toBe('350°');
-    expect(fmtLonDeg(360)).toBe('0°');
-    expect(fmtLonDeg(-10)).toBe('350°');
-  });
-
   it('keeps galactic latitude signed and whole-degree', () => {
     expect(fmtLatDeg(-80)).toBe('-80°');
     expect(fmtLatDeg(80)).toBe('80°');
@@ -290,6 +283,7 @@ describe('label formatters', () => {
     expect(fmtRaHours(345)).toBe('23h');
     expect(fmtRaHours(360)).toBe('0h');
     expect(fmtRaHours(-15)).toBe('23h');
+    expect(fmtRaHours(-7)).toBe('0h');
   });
 
   it('signs declination explicitly so it never reads as a longitude', () => {

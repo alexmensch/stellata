@@ -3,14 +3,16 @@
 
 import type { MultiplesTsvRow } from './companion-promotion';
 import { parseStage6Offset } from './anchor-offset-pure';
-import { OWN, gaiaFields, hipFields, type IdOrigin } from '../../binaries/multiples-record-pure';
+import { OWN, gaiaFields, hipFields, type GaiaVia, type IdOrigin } from '../../binaries/multiples-record-pure';
 
-type IdentifierKeys = 'gaiaSourceId' | 'gaiaOrigin' | 'hip' | 'hipOrigin';
+type IdentifierKeys = 'gaiaSourceId' | 'gaiaOrigin' | 'resolveVia' | 'hip' | 'hipOrigin';
 
-/** A row's fields, its identifiers given bare; each binds under its `*Origin`, else as the row's own. */
+/** A row's fields, its identifiers given bare; each binds under its `*Origin`, else as the row's own,
+ *  a Gaia source under `resolveVia`, else `simbad_xid`. */
 export type MultiplesRowOverrides = Partial<Omit<MultiplesTsvRow, IdentifierKeys>> & {
   gaiaSourceId?: string | null;
   gaiaOrigin?: IdOrigin | null;
+  resolveVia?: GaiaVia;
   hip?: number | null;
   hipOrigin?: IdOrigin | null;
 };
@@ -18,7 +20,7 @@ export type MultiplesRowOverrides = Partial<Omit<MultiplesTsvRow, IdentifierKeys
 /** `anchorOffset` defaults to what the parse boundary gives the row's own
  *  `comp` / `anchorComp` with blank offset cells. */
 export function multiplesRow(overrides: MultiplesRowOverrides = {}): MultiplesTsvRow {
-  const { gaiaSourceId, gaiaOrigin, hip, hipOrigin, ...rest } = overrides;
+  const { gaiaSourceId, gaiaOrigin, resolveVia, hip, hipOrigin, ...rest } = overrides;
   const comp = overrides.comp ?? 'B';
   const anchorComp = overrides.anchorComp ?? null;
   return {
@@ -30,7 +32,6 @@ export function multiplesRow(overrides: MultiplesRowOverrides = {}): MultiplesTs
     name: '',
     source: 'wds',
     regime: 0,
-    resolveVia: 'unresolved',
     astrometryVia: 'gaia_5p',
     orbitVia: 'none',
     spectVia: 'none',
@@ -55,7 +56,7 @@ export function multiplesRow(overrides: MultiplesRowOverrides = {}): MultiplesTs
     magPri: null,
     magSec: null,
     ...rest,
-    ...gaiaFields(gaiaSourceId == null ? null : { value: gaiaSourceId, origin: gaiaOrigin ?? OWN }),
+    ...gaiaFields(gaiaSourceId == null ? null : { value: gaiaSourceId, origin: gaiaOrigin ?? OWN, via: resolveVia ?? 'simbad_xid' }),
     ...hipFields(hip == null ? null : { value: hip, origin: hipOrigin ?? OWN }),
   };
 }

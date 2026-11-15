@@ -41,7 +41,7 @@ name.
    found this way: by the designation in their params (`hd:128621`) or by a
    Gaia id they reached or refused. Identity rows come from every
    stage that writes them (`StageLineageSpec.identity`,
-   [Identity](../README.md#identity--the-origin-source-row)). No index is
+   [Identity](../identity/README.md)). No index is
    kept: trace streams the stage files twice, once to find the keys and once
    to collect their rows, and never holds a stage's rows whole — every
    stage's rows decoded at once overrun the 4 GB heap.
@@ -57,4 +57,6 @@ HD 128621 and HR 5460 on the background source beside it), a
 record the catalogue parks, prints a record's placement,
 brightness-colour and size rows with their refused tiers, finds the record that
 refused a source no identity row carries, every component row of a promoted system from its anchor's
-designation, a minted companion's absmag-source, colour and A_V rows, and a cloud from its `cloud:` slug.
+designation, each component's binding provenance (its own, or copied from a
+named token), the components holding a Gaia source no identity row carries, a
+WDS pair the binaries pipeline rejected from a Gaia source one side carries, a minted companion's absmag-source, colour and A_V rows, and a cloud from its `cloud:` slug.

@@ -2,7 +2,6 @@
   "stages": {
     "ingest": {
       "wds_pairs_total": 158360,
-      "wds_duplicate_pair_rows_dropped": 1,
       "msc_orbits_unmapped": 326,
       "xwalk_hip_mag_rejected": 162,
       "athyg_gaia_mag_rejected": 241
@@ -14,18 +13,17 @@
     },
     "resolve": {
       "blank_components_rescued": 2111,
-      "blank_components_deferred": 112810,
       "ccdm_sibling_owned_rejected": 456,
       "athyg_match_sibling_claimed_rejected": 252,
       "decomposing_pairs": 45538,
       "components_total": 91076,
-      "resolution_orb6_hip": 1329,
-      "resolution_athyg_gaia_native": 7312,
-      "resolution_simbad_xid": 32839,
+      "resolution_orb6_hip": 1328,
+      "resolution_athyg_gaia_native": 7311,
+      "resolution_simbad_xid": 32842,
       "resolution_ccdm_hip": 3632,
       "resolution_position_pm": 0,
       "resolution_position_nopm": 0,
-      "resolution_unresolved": 45964,
+      "resolution_unresolved": 45963,
       "binding_conflicts_source_letters": 2129,
       "binding_conflicts_letter_sources": 5,
       "arbitrated_geometric": 320,
@@ -48,24 +46,9 @@
       "orbit_msc": 393,
       "orbit_none": 41145
     },
-    "optical": {
-      "optical_wds_notes_kept": 5871,
-      "optical_wds_notes_rejected": 5677,
-      "optical_orbit_kept": 4240,
-      "optical_sep_limit_rejected": 4915,
-      "optical_gaia_kept": 3447,
-      "optical_gaia_rejected": 617,
-      "optical_asymm_kept": 42,
-      "optical_asymm_rejected": 0,
-      "optical_cpm_baseline_kept": 101,
-      "optical_cpm_baseline_rejected": 417,
-      "optical_mag_heuristic_kept": 14459,
-      "optical_mag_heuristic_rejected": 5752
-    },
     "multiples": {
       "msc_pair_mags_filled": 497,
       "multiples_rows_emitted": 47021,
-      "multiples_pairs_dropped_no_position": 9490,
       "multiples_astrometry_system_inherited": 11243,
       "multiples_standalone_emitted": 9681,
       "multiples_hd_populated": 15994,
@@ -82,6 +65,39 @@
       "spect_msc": 3811,
       "spect_athyg": 9399,
       "spect_none": 22646
+    },
+    "component-binding": {
+      "component-binding.gaia.own": 31540,
+      "component-binding.gaia.inherited.blend": 757,
+      "component-binding.gaia.inherited.letter": 68,
+      "component-binding.gaia.inherited.parent": 1101,
+      "component-binding.gaia.inherited.partner": 101,
+      "component-binding.gaia.unbound": 13454,
+      "component-binding.hip.own": 14017,
+      "component-binding.hip.inherited.blend": 819,
+      "component-binding.hip.inherited.letter": 127,
+      "component-binding.hip.inherited.parent": 385,
+      "component-binding.hip.inherited.partner": 43,
+      "component-binding.hip.unbound": 31630
+    },
+    "pairs": {
+      "pairs.duplicate-row": 1,
+      "pairs.blank-deferred": 112810,
+      "pairs.blank-donor": 11,
+      "pairs.blank-enumerated": 1,
+      "pairs.optical.wds-notes-kept": 5871,
+      "pairs.optical.wds-notes-rejected": 5677,
+      "pairs.optical.orbit-kept": 4240,
+      "pairs.optical.sep-limit-rejected": 4915,
+      "pairs.optical.gaia-kept": 3447,
+      "pairs.optical.gaia-rejected": 617,
+      "pairs.optical.asymm-kept": 42,
+      "pairs.optical.asymm-rejected": 0,
+      "pairs.optical.cpm-baseline-kept": 101,
+      "pairs.optical.cpm-baseline-rejected": 417,
+      "pairs.optical.mag-heuristic-kept": 14459,
+      "pairs.optical.mag-heuristic-rejected": 5752,
+      "pairs.no-position": 9490
     }
   }
 }

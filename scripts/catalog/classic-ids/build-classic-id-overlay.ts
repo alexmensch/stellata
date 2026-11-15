@@ -1,6 +1,5 @@
 // Emit data/classic-ids/classic_id_overlay.tsv — the source_id-keyed classic
 // designation overlay — with its lineage and the two gate queues it views. See README.md.
-import { resolve } from 'node:path';
 
 import { loadClassicIdCrossWalks } from './binding-candidates';
 import { loadBindingEvidence, loadHipVMag } from '../membership/binding/binding-evidence';
@@ -20,12 +19,12 @@ import { CLASSIC_ID_KEYS } from './classic-id-keys';
 import { REJECTED_BINDINGS } from './rejected-bindings-tsv';
 import { ROUTE_DISAGREEMENTS } from './route-disagreements-tsv';
 import { CLASSIC_ID_OVERLAY, overlayRows } from './classic-id-overlay-tsv';
-import { REPO_ROOT as ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { stepInputHashes } from '../../util/step-input-hashes';
 import { CLASSIC_ID_OUTPUTS } from './classic-id-overlay-outputs';
 import { countSnapshotCheck } from '../../util/snapshot-check';
-import { derivedStage, nestByStage, type CountValue, type StagedCounts } from '../../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue } from '../../util/counts/count-stages-pure';
+import { CLASSIC_ID_OVERLAY_COUNTS } from './classic-id-overlay-expected-json';
 import { codeCount, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
@@ -35,10 +34,6 @@ import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-output
 const {
   overlay: OUT_OVERLAY, disagreements: OUT_DISAGREEMENTS, rejected: OUT_REJECTED,
 } = CLASSIC_ID_OUTPUTS.files;
-const EXPECTED_COUNTS = resolve(
-  ROOT,
-  'scripts/catalog/classic-ids/classic-id-overlay-expected.json',
-);
 
 function logOverlay(
   overlay: ClassicIdOverlay, counts: OverlayJoinCounts, codes: StageCounts<typeof CLASSIC_ID_CODES>,
@@ -96,14 +91,12 @@ export async function main(): Promise<void> {
       ...lineage.files,
     },
     members: lineage.members,
-    checks: [...lineage.checks, countSnapshotCheck<StagedCounts>({
-      snapshotPath: EXPECTED_COUNTS,
+    checks: [...lineage.checks, countSnapshotCheck(CLASSIC_ID_OVERLAY_COUNTS, {
       actual: nestByStage<(typeof CLASSIC_ID_COUNT_STAGES)[number], CountValue>(CLASSIC_ID_COUNT_STAGES, [
         { stage: CLASSIC_IDS_LINEAGE.stage, block: { kind: 'counted', counts: lineage.counts } },
         { stage: derivedStage(CLASSIC_IDS_LINEAGE.stage), block: { kind: 'counted', counts: { ...join.counts } } },
       ]),
       failureLabel: 'classic-id-overlay count',
-      script: 'build:classic-ids',
     })],
   });
   console.log(`wrote ${OUT_OVERLAY}`);

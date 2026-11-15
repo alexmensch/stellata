@@ -1,12 +1,13 @@
 // Declared data inputs and their reads. See README.md.
 
-import { createReadStream, readdirSync, readFileSync, statSync } from 'node:fs';
+import { createReadStream, existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { createInterface } from 'node:readline';
 
 import type { Artifact } from '../tsv/artifact-pure.ts';
 import { lfsContentReadable, REPO_ROOT } from '../paths.ts';
-import type { Declaration, RowKey, RowKeyOf } from './row-ref-pure.ts';
+import type { Cardinality, Declaration, RowKey, RowKeyOf } from './row-ref-pure.ts';
+import type { Snapshot } from './snapshot-pure.ts';
 
 export interface Declared {
   /** Repo-relative. */
@@ -29,19 +30,19 @@ export interface ParseInput extends SourceInput {
   member(file: string): SourceInput;
 }
 
-export interface SourceSpec<T, A extends unknown[], K> extends Declared {
+export interface SourceSpec<T, A extends unknown[], K, C extends Cardinality> extends Declared {
   parse(input: ParseInput, ...args: A): T;
   readonly members?: readonly Declared[] | ((input: SourceInput) => Declared[]);
-  readonly rowKey?: RowKey<K>;
+  readonly rowKey?: RowKey<K, C>;
 }
 
 export type Listing =
   | { readonly kind: 'listed'; readonly files: readonly string[] }
   | { readonly kind: 'unlistable'; readonly file: string };
 
-export interface Source<T, A extends unknown[] = [], K = never> extends Declared, Declaration {
+export interface Source<T, A extends unknown[] = [], K = never, C extends Cardinality = 'one'> extends Declared, Declaration {
   readonly kind: 'source';
-  readonly rowKey: RowKeyOf<K>;
+  readonly rowKey: RowKeyOf<K, C>;
   read(...args: A): T;
   files(): Listing;
 }
@@ -80,9 +81,9 @@ export function openDeclared(declared: Declared): SourceInput {
   };
 }
 
-export function defineSource<T, A extends unknown[] = [], K = never>(
-  spec: SourceSpec<T, A, K>,
-): Source<T, A, K> {
+export function defineSource<T, A extends unknown[] = [], K = never, C extends Cardinality = 'one'>(
+  spec: SourceSpec<T, A, K, C>,
+): Source<T, A, K, C> {
   const { members = [] } = spec;
   const memberList = (open: () => SourceInput): readonly Declared[] =>
     (typeof members === 'function' ? members(open()) : members);
@@ -90,7 +91,7 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
     kind: 'source',
     file: spec.file,
     hint: spec.hint,
-    rowKey: spec.rowKey as RowKeyOf<K>,
+    rowKey: spec.rowKey as RowKeyOf<K, C>,
     read: (...args: A) => {
       const input = openDeclared(spec);
       const opened = memberList(() => input).map(openDeclared);
@@ -105,7 +106,7 @@ export function defineSource<T, A extends unknown[] = [], K = never>(
       if (typeof members === 'function' && !isReadable(spec)) return { kind: 'unlistable', file: spec.file };
       return { kind: 'listed', files: [spec.file, ...memberList(() => openDeclared(spec)).map((m) => m.file)] };
     },
-  } as Source<T, A, K>;
+  } as Source<T, A, K, C>;
 }
 
 export interface FolderInput extends Declared {
@@ -166,4 +167,17 @@ export async function streamArtifact<C extends string, R, K>(
   const reader = artifact.lineReader(onRecord);
   await openDeclared(artifact).lines(reader);
   reader.finish();
+}
+
+/** The committed snapshot, or null when none is on disk. */
+export function readSnapshot<T>(snapshot: Snapshot<T>): T | null {
+  const path = resolve(REPO_ROOT, snapshot.file);
+  return existsSync(path) ? JSON.parse(readFileSync(path, 'utf8')) as T : null;
+}
+
+/** The committed snapshot; throws when none is on disk. */
+export function committedSnapshot<T>(snapshot: Snapshot<T>): T {
+  const held = readSnapshot(snapshot);
+  if (held === null) throw new Error(`${snapshot.file} is missing; ${snapshot.script} with --update-snapshots writes it`);
+  return held;
 }

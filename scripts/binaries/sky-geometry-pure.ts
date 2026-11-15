@@ -1,9 +1,9 @@
-// Sky geometry the binaries stages share: tangent-plane offsets and the (ρ, θ) one, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
+// Sky geometry the binaries stages share: the tangent-plane offset, chord tolerance tests, WDS (ρ, θ) prediction, parallax distance.
 
 import { ARCSEC_PER_DEG, DEG_TO_RAD, HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
-import type { SkyPosition, UnitVector } from '../../src/astro-core/equatorial-basis';
+import type { SkyPosition, TangentOffset, UnitVector } from '../../src/astro-core/equatorial-basis';
 import type { MeasuredOffset } from '../wds/wds-pure';
-import { pyMod } from './python-float-pure';
+import { pyMod } from '../../src/astro-core/angles';
 
 /** AT-HYG documents J2000.0, but its HIP-sourced rows sit at HIP1's J1991.25
  *  (α Cen A's stored RA is HIP1's 219.92041, not J2000's 219.9020); a row
@@ -15,17 +15,6 @@ export const ATHYG_REFERENCE_EPOCH = HIPPARCOS_EPOCH_JYEAR;
 export const WDS_PRECISE_COORD_EPOCH = 2000.0;
 
 export const COS_DEC_FLOOR = 1e-3;
-
-export interface TangentOffset {
-  eastArcsec: number;
-  northArcsec: number;
-}
-
-/** A WDS (ρ, θ) as a tangent-plane offset: θ east of north, ρ in arcsec. */
-export function polarToTangent(rhoArcsec: number, thetaDeg: number): TangentOffset {
-  const theta = thetaDeg * DEG_TO_RAD;
-  return { eastArcsec: rhoArcsec * Math.sin(theta), northArcsec: rhoArcsec * Math.cos(theta) };
-}
 
 /** Small-angle tangent-plane offset of `pos` from `ref`, RA wrapped to ±180°. */
 export function tangentOffset(pos: SkyPosition, ref: SkyPosition): TangentOffset {

@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -8,11 +8,14 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { declareOutputs } from '../util/emit-artifacts';
 
 import { artifactText, isReadable, readArtifact } from '../util/sources/source';
+import { REPO_ROOT } from '../util/paths';
+import { defineSnapshot } from '../util/sources/snapshot-pure';
+import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { retiredSids } from './events-pure';
 import { EVENTS } from './events-tsv';
 import { LEDGERS } from './ledger-tsv';
 import { SEEDED_BRANCH, seededCodeCheck } from '../catalog/lineage/count-block-fixture';
-import { identityRows } from '../catalog/lineage/identity-pure';
+import { identityRows } from '../catalog/lineage/identity/identity-pure';
 import { lineageRows, stageLineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LOCAL_GROUP_JSON } from '../local-group/local-group-json';
 import { allocateSibling, emitSibling, siblingLineage } from './sibling-allocation';
@@ -85,13 +88,13 @@ describe('siblingLineage', () => {
   const identity = [{ key: 'local-group:a', tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations: ['lg:a'] }];
 
   const snapshot = join(dir, 'expected.json');
-  const pinned = { ...spec, countsSnapshot: snapshot };
+  const pinned = defineSnapshot<StagedCounts>({ file: relative(REPO_ROOT, snapshot), script: spec.step });
   writeFileSync(snapshot, JSON.stringify({
     stages: { [stage]: { [`${stage}.resolved`]: 1, [`${stage}.minted`]: 0, [`${stage}.reinstated`]: 0 } },
   }));
 
   it('renders the stage file and its identity file, each decoding back to what the allocation held', () => {
-    const { files, checks, counts } = siblingLineage(pinned, { lines, identity }, lineageLayout(dir), {});
+    const { files, checks, counts } = siblingLineage(spec, { lines, identity }, pinned, lineageLayout(dir), {});
     const text = (key: keyof typeof files): string => gunzipSync(files[key] as Uint8Array).toString('utf8');
     expect([...lineageRows(text(`lineage:${stage}`), 'fixture')].map((r) => r.code)).toEqual([`${stage}.resolved`]);
     expect([...identityRows(text(`lineage:${stage}.identity`), 'fixture')]).toEqual(identity);
@@ -103,7 +106,7 @@ describe('siblingLineage', () => {
     const minted = [...lines, stageLineageLine(spec.codes, {
       stage, key: 'local-group:b', role: 'outcome', code: spec.codes.code('minted'), params: '', evidence: [],
     })];
-    const [, counts] = siblingLineage(pinned, { lines: minted, identity }, lineageLayout(dir), {}).checks;
+    const [, counts] = siblingLineage(spec, { lines: minted, identity }, pinned, lineageLayout(dir), {}).checks;
     expect(counts.kind).toBe('fail');
     expect(counts.kind === 'fail' && counts.report).toContain(`${stage}.minted`);
     expect(counts.kind === 'fail' && counts.message).toContain('build:local-group');

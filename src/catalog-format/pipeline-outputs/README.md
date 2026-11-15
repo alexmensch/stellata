@@ -12,7 +12,7 @@ Names are repo-relative. `declareOutputs` reads a relative path as
 repo-relative, so an outputs module passes them as they are.
 
 - `data-files.ts` — `DATA_FILES`, the committed `data/` files the
-  step-table outputs modules declare: the membership manifest and its three
+  step-table outputs modules declare: the membership manifest and its four
   ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
   WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, the label-merge
@@ -43,10 +43,10 @@ repo-relative, so an outputs module passes them as they are.
   pins it as the list's only production entry.
 - `build-files.ts` — `BUILD_FILES`, the build-only hand-offs under
   `build/` a declaration and its readers both name: the catalogue's
-  row-index map and the binaries binding audit's verdicts.
+  row-index map and pair ends, and the binaries binding audit's verdicts.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
-  is the checkout's own), each stage's spec (`CLASSIC_IDS_LINEAGE`, `MEMBERSHIP_LINEAGE`,
+  is the checkout's own), each stage's spec (`BINDING_LINEAGE`, `PAIRS_LINEAGE`, `CLASSIC_IDS_LINEAGE`, `MEMBERSHIP_LINEAGE`,
   `PLACEMENT_LINEAGE`, `BRIGHTNESS_COLOUR_LINEAGE`, `SIZE_LINEAGE`, `COHERENCE_LINEAGE`, `PROMOTION_LINEAGE`,
   `ALLOCATION_LINEAGE`, `NAMING_LINEAGE`, and the
   sibling builds' `CLOUDS_ALLOCATION_LINEAGE` and

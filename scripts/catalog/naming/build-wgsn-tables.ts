@@ -1,13 +1,11 @@
 // `pnpm run build:wgsn`: the keyed WGSN tables. See README.md.
 
-import { resolve } from 'node:path';
-
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
-import { REPO_ROOT } from '../../util/paths';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { countSnapshotCheck } from '../../util/snapshot-check';
 import { WGSN_FAINTS } from './wgsn-faints-source';
 import { WGSN_NEC } from './wgsn-nec-source';
+import { WGSN_COUNTS } from './wgsn-expected-json';
 import {
   foldNameKey,
   normaliseWgsnCell,
@@ -23,8 +21,6 @@ import type { WgsnNameRow } from './wgsn-index-pure';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
 import { WGSN_OUTPUTS } from './wgsn-tables-outputs';
-
-const SNAPSHOT = resolve(REPO_ROOT, 'scripts/catalog/naming/wgsn-expected.json');
 
 export interface WgsnCounts {
   necRows: number;
@@ -136,11 +132,9 @@ export async function main(): Promise<void> {
       names: WGSN_NAMES.serialize(nameRows),
       designations: WGSN_DESIGNATIONS.serialize(designations),
     },
-    checks: [countSnapshotCheck<WgsnCounts>({
-      snapshotPath: SNAPSHOT,
+    checks: [countSnapshotCheck(WGSN_COUNTS, {
       actual: counts,
       failureLabel: 'WGSN table counts',
-      script: 'build:wgsn',
     })],
   });
   console.log(`wgsn_names.tsv: ${nameRows.length} rows`);

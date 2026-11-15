@@ -40,11 +40,6 @@ collections, which are sparse under a roomy heap, so a sample misses the
 peak between them (it read 815–894 MiB for a pull replay that needs
 1,313 MiB), while the heap in use at any other moment counts garbage.
 
-How close a step runs to the budget is read by bisecting the smallest
-`--max-old-space-size` it completes in, as
-[How big a table may be](../../refresh/pull/README.md#how-big-a-table-may-be)
-did.
-
 **The runtime is part of the measurement.** The same `build:catalog` holds
 about 45% more live heap under Node 24 than under Node 26 (measured
 2026-10-30: 4,042 MiB against 2,782 MiB), so a pass under one major says
@@ -58,3 +53,32 @@ placement lineage keeps lines, not objects
 ([Storage and cost](../../catalog/lineage/README.md#storage-and-cost)). Raising
 the runner's heap (`--max-old-space-size` in CI) is the owner's call, and
 moves `CI_HEAP_LIMIT_MIB` with it.
+
+## Measured need
+
+How close a step runs to the budget is read by bisecting the smallest
+`--max-old-space-size` it completes in, as
+[How big a table may be](../../refresh/pull/README.md#how-big-a-table-may-be)
+did.
+
+### build:catalog
+
+`build:catalog` completes at `--max-old-space-size=2925` and runs out of
+heap at 2,900 (Node 26.7, 2026-11-15, the step run with `--any-baseline` so
+all three record-walk lineage diffs ran, each against a baseline from the same
+inputs). That is 16% under the 3,481 MiB budget (0.85 × 4,096). The peak
+is placement lineage's sort and diff inside `walkManifest`, while the
+reference tables are still held; `preAllocationStages` releases them before SID allocation,
+whose working set otherwise pushed the step past the budget. A diff against
+a baseline that differs by many keys holds its changed lines briefly on top
+([Run-to-run diff](../../catalog/lineage/README.md#run-to-run-diff)), which
+this figure does not include.
+
+The runner refuses `--any-baseline`, so the step runs under `node` directly,
+handed the input map a prior `pnpm run build:catalog` stamped; bisect `<N>`:
+
+```bash
+node -e "process.stdout.write(JSON.stringify(require('./build/stamps/build-catalog.json').inputs))" > build/catalog-inputs.json
+PIPELINE_STEP_INPUTS=build/catalog-inputs.json PIPELINE_STEP=build:catalog \
+  node --max-old-space-size=<N> --import tsx scripts/util/launch.ts scripts/catalog/build-catalog.ts --any-baseline
+```

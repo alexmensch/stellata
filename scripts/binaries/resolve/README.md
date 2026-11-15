@@ -17,7 +17,10 @@ scripts/binaries/resolve/
                                alone), Stage2Result, astrometryRequestIds,
                                stage2Counts.
   components-pure.ts           ResolvedComponent, DecomposedPair, Bound
-                               (an identifier and its origin), decompose
+                               (an identifier and its origin),
+                               GaiaBinding (a Gaia source's Bound plus the
+                               tier that found it; resolveViaOf reads
+                               `unresolved` off a null one), decompose
                                (the split), working (a pass's copy),
                                findOwningPair, RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
@@ -42,6 +45,10 @@ scripts/binaries/resolve/
                                build/binding-integrity-verdicts.tsv, and
                                bindingVerdictRow.
   stage2-report-pure.ts        The build-log lines, read off the result.
+  binding-lineage-pure.ts      BINDING_CODES and bindingLineageLines: the
+    (+ test)                   origins as the component-binding lineage
+                               stage
+                               (#binding-lineage).
   spot-check-pure.ts (+ test)  The spot-check's ground-truth rows and its
                                check (#the-spot-check).
   spot-check-source.ts         SPOT_CHECK_GROUND_TRUTH
@@ -92,6 +99,29 @@ The same-letter smear across a letter's rows copies the origin unchanged:
 one letter is one star, so its binding is its own on every row or inherited
 on every row. A copy names its immediate donor, never the donor's donor.
 
+## Binding lineage
+
+`build:binaries` writes the Gaia and HIP origins of every `multiples.tsv`
+row as the `component-binding` lineage stage, the first in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-component-binding-stage)).
+Two rows per component, keyed on its row (`multiples:<system_id>/<comp>`,
+the key promotion's rows use): `component-binding.<gaia|hip>.own`,
+`.inherited.<kind>` with the donor token in `params.from`, or `.unbound`.
+`params` carries the Gaia source bare and the HIP as its `hip:` designation,
+the forms trace matches a query on. They are read off the Stage 6 records,
+so they and the `gaia_origin` / `hip_origin` columns are one value written
+twice. The stage covers Gaia and HIP only, since the binaries pipeline's
+AT-HYG binding retires with its AT-HYG read (stellata-hooj.17). The counts
+fold into the snapshot's `component-binding` stage ([Composition, not counting](../counts/README.md#composition-not-counting)).
+
+`BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s for two rows per component,
+over the stage's <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> components.
+On 2026-11-14, 94,042 rows came to 898 KB gzipped in 386–752 ms across two
+runs, neither diffing against a baseline. A branch that changes this stage's
+inputs re-reads each changed file at the merge-base in one batched git read
+to refuse the baseline: 622 ms for the whole window on CI, 269 of it the
+baseline (f7a87137, 2026-11-15).
+
 ## Choices the outputs rest on
 
 `multiples.tsv` is pinned byte for byte, and these choices hold it where a
@@ -102,9 +132,12 @@ cleaner one would move a row; changing one is a correctness item of its own:
   `A`. The CCDM, position and seeding passes look pairs up this way.
 - **Gaia source_ids sort numerically** (`compareSourceIds`): the audit's
   source order, a contested label, the request file.
-- **A rebind keeps the instance's tier.** An instance an earlier verdict
-  unbound, which a later verdict rebinds, ends bound with `resolve_via`
-  `unresolved` — one component today (05371+2655 A), `stellata-hhaw.45.17.9`.
+- **A rebind takes its donor's tier.** Every instance of the rebound letter
+  carries the strongest `resolve_via` among the letter's instances already
+  bound to the winning source, read before enforcement, so the tag names the
+  tier that found the source it now holds. An identity refutation whose
+  SIMBAD source no instance of the letter holds rebinds under `simbad_xid`,
+  the tier that supplied it.
 - **The audit's verdicts are all computed before any is applied.** Every
   verdict reads the per-system context built before enforcement, never a
   component, so the order verdicts apply in never changes one; the
@@ -156,8 +189,9 @@ conflict).
 Every WDS pair row decomposes into a primary and a secondary letter
 (`AB` → `A`+`B`, `Aa,Ab` → `Aa`+`Ab`); each letter resolves through a
 strict-priority cascade (`cascade-pure.ts`). The
-canonical tag set is `RESOLVE_VIA`. Every tag but `unresolved` is set only
-when its tier binds a Gaia source, so `gaia_resolve_rate`
+canonical tag set is `RESOLVE_VIA`. A component's tag is its
+`GaiaBinding`'s `via`, or `unresolved` with no source bound, so no
+component carries a source without a tier, and `gaia_resolve_rate`
 ([Counts](../astrometry/README.md#counts)) counts every other tier:
 
 | Tag | When it fires |

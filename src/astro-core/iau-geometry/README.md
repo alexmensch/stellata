@@ -103,6 +103,13 @@ as parsed, never as `start + span`: the cell grid keys on exact
 equality against them and a reconstructed end differs in the last float
 digit, which splinters 236 RA bounds into 259.
 
+Every RA reduction goes through astro-core's `pyMod` (`../angles.ts`),
+whose range is 0 ≤ RA ≤ 360. A `SkyPosition` from `raDecFromUnitVector`
+already arrives with 0 ≤ RA < 360, so on every path through
+`createIauConstellationLookup` the reduction only normalises; a raw RA a
+rounding unit below 0, handed to `constellationEdgeCodeAt` directly, reads
+as 360 and resolves in the westmost column (Pegasus at Dec +11.9°, pinned).
+
 ## B1875
 
 `B1875_JD` (`/src/astro-core/precession.ts`) is 2405889.2586 — **1874 Dec

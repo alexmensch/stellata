@@ -7,12 +7,12 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { LAUNCHER } from '../../../util/import-closure-pure';
 import { REPO_ROOT } from '../../../util/paths';
-import { identityRows } from '../identity-pure';
+import { identityRows } from '../identity/identity-pure';
 import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
+  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, SIZE_LINEAGE, stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 const REFUSED_ONLY = '4000000000000000009';
@@ -204,8 +204,23 @@ const PROMOTION_IDENTITY = [
   `multiples:S-AB/B\t\t\t\t\t${MINTED}\tsynth:S-B|gaia_dr3:${MINTED}`,
 ].join('\n') + '\n';
 
+/** The system's components' bindings: A's and B's Gaia sources their own, D's
+ *  copied from C across their ρ = 0 pair. */
+const BINDING = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'component-binding\tmultiples:S-AB/A\toutcome\tcomponent-binding.gaia.own\t{"gaia":"222"}\t',
+  'component-binding\tmultiples:S-AB/A\toutcome\tcomponent-binding.hip.unbound\t\t',
+  `component-binding\tmultiples:S-AB/B\toutcome\tcomponent-binding.gaia.own\t{"gaia":"${MINTED}"}\t`,
+  'component-binding\tmultiples:S-AB/B\toutcome\tcomponent-binding.hip.unbound\t\t',
+  'component-binding\tmultiples:S-CD/C\toutcome\tcomponent-binding.gaia.own\t{"gaia":"999"}\t',
+  'component-binding\tmultiples:S-CD/C\toutcome\tcomponent-binding.hip.unbound\t\t',
+  'component-binding\tmultiples:S-CD/D\toutcome\tcomponent-binding.gaia.inherited.blend\t{"gaia":"999","from":"C"}\t',
+  'component-binding\tmultiples:S-CD/D\toutcome\tcomponent-binding.hip.unbound\t\t',
+].join('\n') + '\n';
+
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
+    { stage: 'component-binding', rows: () => lineageRows(BINDING, 'fixture/component-binding.tsv') },
     ...stages, { stage: 'promotion', rows: () => lineageRows(PROMOTION, 'fixture/promotion.tsv') },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
@@ -219,10 +234,34 @@ describe('traceRecords over a promoted system', () => {
     ]);
   });
 
+  it('says whether each component\'s identifiers were its own or copied, and from which token', () => {
+    const d = traceSystem('hd:5').find((r) => r.key === 'multiples:S-CD/D');
+    expect(d?.rows.filter((r) => r.stage === 'component-binding').map((r) => `${r.code} ${r.params}`)).toEqual([
+      'component-binding.gaia.inherited.blend {"gaia":"999","from":"C"}', 'component-binding.hip.unbound ',
+    ]);
+  });
+
+  it('finds every component holding a Gaia source, its own or copied, from the source alone', () => {
+    expect(traceSystem('gaia_dr3:999').map((r) => r.key)).toEqual(['multiples:S-CD/C', 'multiples:S-CD/D']);
+  });
+
+  it('finds a pair the binaries pipeline rejected from a Gaia source one of its sides carries', () => {
+    const pairs = [
+      'stage\tkey\trole\tcode\tparams\tevidence',
+      'pairs\twds:S/STF   1/CE\toutcome\tpairs.optical.sep-limit-rejected\t{"primary":"C","primary_gaia":"999","secondary":"E"}\t',
+    ].join('\n') + '\n';
+    const withPairs = [...withPromotion, { stage: 'pairs', rows: () => lineageRows(pairs, 'fixture/pairs.tsv') }];
+    const traced = traceRecords(
+      queryTerms(parseTraceQuery('gaia_dr3:999'), LOOKUPS), [...identity, ...promotionIdentity], [], withPairs,
+    );
+    expect(traced.find((r) => r.key === 'wds:S/STF   1/CE')?.rows.map((r) => r.code)).toEqual(['pairs.optical.sep-limit-rejected']);
+  });
+
   it('finds a minted companion through the identity row promotion writes for it', () => {
     const [minted] = traceSystem(MINTED);
     expect(minted.key).toBe('multiples:S-AB/B');
     expect(minted.rows.map((r) => r.code)).toEqual([
+      'component-binding.gaia.own', 'component-binding.hip.unbound',
       'promotion.brightness.dmag-imputed', 'promotion.colour.spectral-derived',
       'promotion.dust.edenhofer2024.absmag-only', 'promotion.minted.keyed',
     ]);
@@ -269,6 +308,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.identity!), gzipText(CLOUD_IDENTITY));
   writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.stage), gzipText(CLOUD_ALLOCATION));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
+  writeFileSync(stageFile(dir, BINDING_LINEAGE.stage), gzipText(BINDING));
   writeFileSync(stageFile(dir, CLASSIC_IDS_LINEAGE.stage), gzipText(CLASSIC_IDS));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
@@ -321,6 +361,10 @@ describe('pnpm run trace', () => {
 
   it('reads the promotion stage and its identity file', () => {
     expect(run(MINTED).split('\n')[0]).toBe('multiples:S-AB/B');
+  });
+
+  it('prints a component\'s binding provenance before its promotion rows', () => {
+    expect(run(MINTED)).toMatch(/multiples:S-AB\/B\n.*\n {2}outcome  component-binding\.gaia\.own +\{"gaia":"6000000000000000001"\}[\s\S]*promotion\.minted\.keyed/);
   });
 
   it('prints a minted companion\'s absmag-source, colour and A_V provenance', () => {

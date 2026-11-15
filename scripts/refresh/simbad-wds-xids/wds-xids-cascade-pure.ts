@@ -3,6 +3,7 @@
 import type { ParseLedger } from '../simbad/simbad-fetch-pure';
 import { HD, HIP, compose, identKey, parseIdent, replyJoiner, type Namespace, type ParsedIdent } from '../simbad/simbad-specs-pure';
 import { componentId, type WdsComponent } from './wds-components-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export const CASCADE_STRATEGIES = ['HD', 'CCDM', 'HIP'] as const;
 export type CascadeStrategy = (typeof CASCADE_STRATEGIES)[number];
@@ -127,7 +128,7 @@ export function cascadeRecoveries(
   const counts: Record<CascadeStrategy, number> = { HD: 0, CCDM: 0, HIP: 0 };
   const conflicts: string[] = [];
   for (const [key, { component, byOid }] of named) {
-    const entries = [...byOid].sort(([a], [b]) => a - b);
+    const entries = [...byOid].sort(([a], [b]) => ascending(a, b));
     if (entries.length > 1) {
       conflicts.push(`${key}: ${entries.map(([oid, aliases]) => `${oid} (${aliases.map((h) => h.id).join(', ')})`).join(', ')}`);
       continue;

@@ -13,7 +13,8 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           (sameAsClasses, the one class build: allocation
                           and the membership parity matcher both call
                           it, /docs/sid.md#41-same-as-equivalence-graph), per-record designation
-                          extraction (starDesignations),
+                          extraction (starDesignations) and the HIP
+                          designation's one spelling (hipDesignation),
                           parsers for every registry file, each taking
                           the declared file it reads (readTable in
                           exact mode, which also owns the LF / final-
@@ -183,14 +184,14 @@ sibling-allocation.ts     allocateSibling: one sibling namespace allocated
                           no registry file (null otherwise, never a
                           partial set); siblingLineage, its stage's
                           emission and count block, the block checked
-                          against the spec's count snapshot (each build's
+                          against the count snapshot its build passes in (each build's
                           log reads its minted figure off the block);
                           emitSibling, the artifact, that
                           emission and those files in one emitArtifacts
                           call. Called by build:local-group and
                           build:clouds.
 sibling-artifacts-pure.ts SIBLING_ARTIFACTS spec (ns / kind / step /
-                          mint code / rowId / count snapshot / lineage stage and its
+                          mint code / rowId / lineage stage and its
                           codes per sibling) + siblingArtifactObjects,
                           each object founded on its record of the
                           artifact the caller hands in, so the

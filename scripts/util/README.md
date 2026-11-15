@@ -28,11 +28,6 @@ same thing — single-use helpers stay with their consumer.
 - `map-buckets-pure.ts` (+ test) — `groupBy`, `pushTo` and `addTo`: a
   list or set per map key, created on first use, in first-seen key order.
   The binaries stages' indexes and grids group through it.
-- `order-pure.ts` (+ test) — `ascending`, the one three-way `<`
-  comparator (numbers and bigints by value, strings by code unit; a string
-  against a number does not compile), and
-  `compareCodeUnits`, its string case: the same order on every machine,
-  unlike `localeCompare`.
 
 - `baker_constants.py` (+ test) — `CONSTANTS`, `src/astro-core/baker-constants.json`
   loaded once: the facts the Python asset bakers share with TypeScript
@@ -150,11 +145,7 @@ same thing — single-use helpers stay with their consumer.
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `runnerTargets` the
-  targets of a script that is one `run.ts` call (`RUNNER`), else `null`;
-  `closureWithSiblings(closure, files)` adds every file beside a
-  closure module except code (`CODE_FILE`) and `.md`, which is how the `*-expected.json`
-  snapshots a build reads by path get keyed. `trackedFiles()` is the listing the
-  stamp passes as `files`.
+  targets of a script that is one `run.ts` call (`RUNNER`), else `null`.
 - `release-version.ts` (+ test) — the release version and its tag
   (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
   `releaseAt(ref)`, the newest release tag reachable from `ref`: the
@@ -168,7 +159,7 @@ same thing — single-use helpers stay with their consumer.
   It throws where no tag is reachable, so a checkout reading it needs full
   history and tags (`fetch-depth: 0` in CI). Imports only `node:`
   builtins, because `../release/`'s plain-`node` scripts import it too.
-- `git-provenance.ts` — what a build or instrument records about its
+- `git-provenance.ts` (+ test) — what a build or instrument records about its
   checkout: `headCommit`, `headState` (HEAD and whether
   the tree is dirty), `onMainBranch` (HEAD is on the branch `MAIN_REF`
   tracks; false when detached), `inHeadHistory` (whether a commit is HEAD or an
@@ -176,9 +167,11 @@ same thing — single-use helpers stay with their consumer.
   shallow clone), and `fileAtMergeBase`, a file as the merge-base holds it — `absent`
   when it is new on the branch, kept apart from `no-merge-base`. The lineage
   header, perf's `gitMeta` and the two merge-base guards read it. `gitIn` is
-  its git call, in a given folder; `fileAt(commit, path)`, a file's bytes as
-  a commit stores it, is what `fileAtMergeBase` decodes and
-  `input-hashes-at.ts` hashes.
+  its git call, in a given folder; `blobsAt(commit, paths)`, each file's bytes
+  as a commit stores it, read through one `git cat-file --batch` (build:binaries' 40 changed
+  inputs read in 15 ms, against 985 ms at two spawns per file, inside the
+  lineage write budget; 2026-11-15), is what `input-hashes-at.ts` hashes and
+  `fileAtMergeBase` decodes.
 - `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
   `inputHashes` map with each path that differs on disk from `commit`
   re-hashed from `commit`'s copy (code by identity; LFS content read from the
@@ -186,9 +179,7 @@ same thing — single-use helpers stay with their consumer.
   `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
   no copy — a git-ignored input, or LFS content not stored locally;
   `onDiskHashes(paths, hashed)`, a map over `paths` taking what it is handed
-  and hashing the rest from disk; and `deletedSiblingsSince(commit, inputs)`,
-  the files deleted since `commit` that sat beside a code input — the
-  siblings a build at `commit` read (`closureWithSiblings`'s rule). Kept out
+  and hashing the rest from disk. Kept out
   of `git-provenance.ts` so the perf instruments reading that do not load the
   TypeScript compiler. The lineage baseline verdict reads it
   ([The verdict](../catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).
@@ -216,8 +207,9 @@ same thing — single-use helpers stay with their consumer.
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
   (`../refresh/simbad-sample/`). A changed algorithm redraws both.
 - `step-inputs.ts` — `entryInputPaths(entries)`, every file a TypeScript
-  step reads: the closure of its entry files, the closure's siblings, and
-  every declaration the closure reads (`sources/`); the runner derives each
+  step reads: the closure of its entry files and every declaration the
+  closure reads (`sources/`), and nothing else, so a file merely sitting
+  beside a module is no step's input; the runner derives each
   TypeScript step's inputs with it ([The step table](../pipeline/step-table/README.md#the-step-table--stepsts)).
   `stepEntries(name)` is a step's entry: its `steps.ts` entry when the step is
   on the table (`package.json` then names only `run.ts`), else each `tsx` entry
@@ -226,7 +218,11 @@ same thing — single-use helpers stay with their consumer.
   own code imports this module: a step's input hashes come from
   `step-input-hashes.ts`.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
-  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`).
+  `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`);
+  `step-inputs.test.ts` holds every TypeScript step to the rule: no input
+  outside its closure and its declared reads, each snapshot module exporting
+  one snapshot and nothing else, each declared snapshot keyed by exactly the
+  step it names, and no undeclared snapshot keyed at all.
 - `step-input-hashes.ts` — the runner's pre-run input hashes, handed to a
   TypeScript step: `../pipeline/processes.ts`'s `runTs` writes them
   (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
@@ -335,8 +331,9 @@ same thing — single-use helpers stay with their consumer.
 - `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
   spelling of a step's command, for the runner's refusals, the snapshot
   refresh hint and every artifact or registry hint naming its writer.
-- `snapshot-check.ts` — `snapshotCheck(spec)`: a build script's computed
-  snapshot against its committed JSON, answered as an `emitArtifacts`
+- `snapshot-check.ts` — `snapshotCheck(snapshot, spec)`: a build script's
+  computed snapshot against its committed JSON, the declared `snapshot`
+  ([A snapshot](sources/README.md#a-snapshot)), answered as an `emitArtifacts`
   check — `pass`, `fail`, or `refresh` (the rewritten JSON) when
   `UPDATE_SNAPSHOTS` (`UPDATE_SNAPSHOTS_ENV`) is `1`, the variable the
   runner's `--update-snapshots` sets. It writes nothing itself. A missing

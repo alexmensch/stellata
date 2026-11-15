@@ -37,8 +37,9 @@ scripts/binaries/multiples/
 `Stage6Result.rows` is the file's row order: two rows per kept, placed pair in
 Stage 3's pair order, then the standalone rows in the SIMBAD cross-ID file's
 order. A kept pair with no position on either side and no system anchor is not
-a row; its `<wds_id><components>` is in `droppedNoPosition`, the only record of
-it. `mscMagFills` names the pairs whose magnitudes came from the MSC.
+a row; the pair itself is in `droppedNoPosition`, which the `pairs` lineage
+stage reads ([Pairs lineage](../README.md#pairs-lineage)). `mscMagFills`
+names the pairs whose magnitudes came from the MSC.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,
@@ -82,9 +83,10 @@ committed snapshot.
 The records encode to the committed `multiples.tsv` byte for byte, which
 `../build-binaries.test.ts` holds. Three places use arithmetic other than
 JavaScript's default: the photocentre's weighted sums are `pySum`, a
-compensated sum; the anchor position angle wraps through `pyMod`, the
-divisor's sign (both in `../python-float-pure.ts`); and the photocentre walk
-visits neighbours in token order.
+compensated sum (`../python-float-pure.ts`); the anchor position angle wraps
+through `pyMod`, the divisor's sign, inside astro-core's `tangentToPolar`
+(`src/astro-core/equatorial-basis.ts`); and the photocentre walk visits
+neighbours in token order.
 
 ## What each column carries
 
@@ -122,7 +124,9 @@ from, blank exactly when the identifier is: `own`, or `<kind>:<token>` for one
 copied from another component of the system — `blend:Aa`, `letter:Aa`,
 `parent:A`, `partner:Ca`. Stage 2 records them as it binds
 ([Identifier origins](../resolve/README.md#identifier-origins)); a standalone
-row's SIMBAD identifiers are `own`.
+row's SIMBAD identifiers are `own`. `resolve_via` is `unresolved` exactly
+when `gaia_source_id` is blank: `GaiaFields` carries the three columns as
+one value, and the codec refuses either other pairing.
 
 `hd` carries the component's own HD number, with the pair primary
 falling back to the coord-validated ORB6 entry's HD (stashed on the
@@ -134,10 +138,10 @@ Two other Stage-6 accounting
 mechanisms guard silent drops: WDS summary rows duplicated on
 (wds_id, discoverer, components) are collapsed at the parse boundary
 (`dedupWdsPairRows`, most-observed row wins — Pismis 24 CD carried
-two contradictory geometries; counted
-`wds_duplicate_pair_rows_dropped`), and Stage-5-kept pairs with no
-astrometry and no system anchor — which never reach the TSV — are
-counted `multiples_pairs_dropped_no_position` with a capped
+two contradictory geometries; a `pairs.duplicate-row` lineage row), and
+Stage-5-kept pairs with no astrometry and no system anchor — which never
+reach the TSV — are each a `pairs.no-position` lineage row
+([Pairs lineage](../README.md#pairs-lineage)), with a capped
 `droppedPairSample` build-log sample, mirroring the Stage-5
 separation-limit audit line.
 
@@ -221,7 +225,9 @@ Three system-level mechanisms run at emit time:
   `(wds_id, component)` SIMBAD has a cross-ID for that isn't already
   emitted gets a standalone row with `orbit_role = standalone` and
   `system_id` prefixed `-_<comp>`. Captures SIMBAD-known components
-  WDS doesn't enumerate as a side of any decomposing pair.
+  WDS doesn't enumerate as a side of any decomposing pair. Its
+  `resolve_via` is `simbad_xid` when SIMBAD gives a Gaia source, else
+  `unresolved` (a HIP alone binds no tier, as on a pair row).
 - **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
   no `q` (visual ORB6 with no spectroscopic counterpart),
   `massRatioFromComponents` in `../masses/mass-estimate-pure.ts`

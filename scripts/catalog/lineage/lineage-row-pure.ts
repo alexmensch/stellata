@@ -1,7 +1,7 @@
 // The lineage envelope every stage writes, its TSV line, and the one sort order over lines. See README.md#row-contract.
 
 import { fold } from '../../util/counts/tally-pure';
-import { compareCodeUnits } from '../../util/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { readTable, readTableLines, type TableSpec } from '../../util/tsv/table-pure';
 import type { StageCodes, StageCounts } from './reason-codes/reason-codes-pure';
 
@@ -72,9 +72,9 @@ function compareCodePoints(a: string, b: string): number {
     const y = b.charCodeAt(i);
     if (x === y) continue;
     if (isSurrogate(x) !== isSurrogate(y)) return isSurrogate(x) ? 1 : -1;
-    return x < y ? -1 : 1;
+    return ascending(x, y);
   }
-  return a.length === b.length ? 0 : a.length < b.length ? -1 : 1;
+  return ascending(a.length, b.length);
 }
 
 /** See README.md#sourcerowref for why the control characters below tab are refused. */
@@ -103,13 +103,15 @@ export interface RowCoder<B extends string> {
   roleOf(code: string): LineageRole;
 }
 
-/** A row of `codes`' stage, its role its code's declared one: the one way a stage builds its rows. */
+/** A row of `codes`' stage, its role its code's declared one and its evidence `evidenceTexts`': the one way a stage builds its rows. */
 export function stageRow<B extends string>(
   codes: RowCoder<B>, key: string, branch: B, params: LineageParams,
   evidence: readonly string[],
 ): LineageRow {
   const code = codes.code(branch);
-  return { stage: codes.stage, key, role: codes.roleOf(code), code, params: paramsText(params), evidence };
+  return {
+    stage: codes.stage, key, role: codes.roleOf(code), code, params: paramsText(params), evidence: evidenceTexts(key, evidence),
+  };
 }
 
 /** The row's line, refused when the stage does not write it, does not declare its code, declares it an admission code, or declares it in another role. */

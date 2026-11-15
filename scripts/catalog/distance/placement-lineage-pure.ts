@@ -2,7 +2,7 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, evidenceTexts, lineageLineCode, paramsOf, stageLineageLine,
+  decodeLineageLine, lineageLineCode, paramsOf, stageLineageLine,
   type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
@@ -15,7 +15,7 @@ import {
 } from './parallax/parked-ledger-pure';
 import {
   recordIdentifiersOf, recordKeyCells, type IdentityCells, type RecordIdentifiers,
-} from '../lineage/identity-pure';
+} from '../lineage/identity/identity-pure';
 import { VELOCITY_VIA_BY_PM_RESCUE, pmRescueOutcome, type PmRescueOutcome, type PmRescueResolution } from './pm-rescue/pm-rescue';
 import type { SpeedBand, VelocityVia } from './velocity';
 import { rvErrorBand, type RadialVelocityResolution, type RvErrorBand } from './radial-velocity/radial-velocity';
@@ -303,8 +303,7 @@ export function parkReason(p: ParkedPlacement): ParkedReason {
 export function placementLineageRows(p: Placement): LineageRow[] {
   const { key } = p;
   const out: LineageRow[] = [];
-  const evidence = (refs: readonly AnySourceRowRef[]): string[] =>
-    evidenceTexts(key, refs.map(sourceRowRefText));
+  const evidence = (refs: readonly AnySourceRowRef[]): string[] => refs.map(sourceRowRefText);
   const row = <B extends Branch>(branch: B, params: ParamsOf<B>, refs: readonly AnySourceRowRef[]): void => {
     out.push(stageRow(PLACEMENT_CODES, key, branch, params as LineageParams, evidence(refs)));
   };

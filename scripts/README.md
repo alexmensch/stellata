@@ -7,7 +7,7 @@ cross-script policy and pointers.
 
 - `catalog/` — single-star catalog build → `public/catalog.bin.<i>`
   transport chunks + `public/catalog-manifest.json` (+
-  `build/catalog-row-index-map.json`; companions promoted from
+  `build/catalog-row-index-map.json` and `build/catalog-pair-ends.json`; companions promoted from
   `data/binaries/multiples.tsv` ride catalog.bin as first-class
   records with `FLAG_BINARY_COMPANION_ONLY` set). The chunks are a
   byte-range split of the v9 binary that keeps every deployed asset
@@ -85,7 +85,7 @@ cross-script policy and pointers.
 Vite copies every file in `public/` into `dist/`, and the deploy uploads
 all of `dist/`. So `public/` holds only what the client fetches.
 A hand-off between build stages that no client code reads —
-`catalog-row-index-map.json`, `binding-integrity-verdicts.tsv` — goes in
+`catalog-row-index-map.json`, `catalog-pair-ends.json`, `binding-integrity-verdicts.tsv` — goes in
 the gitignored `build/` instead, where it costs no deploy bytes and
 counts against no asset limit.
 
@@ -107,8 +107,8 @@ each `package.json` target is `run.ts <step>`, which runs that step and every
 step upstream of it in data-flow order, and skips each on a **content-hash
 stamp**, never on mtimes. A stamp (`build/stamps/<step>.json`, written by the
 runner alone) records every input the step read — its esbuild import closure
-(`src/client/` modules included), the snapshots beside it and every declared
-source it reads — and every output it wrote, and the step is fresh while both re-hash the same. The stamp
+(`src/client/` modules included) and every declared source and count
+snapshot it reads — and every output it wrote, and the step is fresh while both re-hash the same. The stamp
 is cleared before the step runs and written only once it exits 0 with its
 declared outputs in place, so a failed or interrupted build always reruns.
 Unstamped families (the lineage baseline and diff) are never recorded. A

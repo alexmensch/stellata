@@ -41,8 +41,9 @@ Emits `public/local-group.json`, the `allocation-local-group` lineage stage
 `lg` SID registry partition through one `emitArtifacts` call (`../util/README.md`; the declaration is
 `local-group-outputs.ts`), with one entry per renderable object
 within `MAX_DISTANCE_PC` of Sol. Its check includes the step's count
-snapshot, `build-local-group-expected.json`: the allocation stage's count
-block, keyed on its reason codes ([The staged snapshot](../util/counts/README.md#the-staged-snapshot));
+snapshot, `build-local-group-expected.json` (declared in
+`build-local-group-expected-json.ts`, `../util/sources/README.md#a-snapshot`):
+the allocation stage's count block, keyed on its reason codes ([The staged snapshot](../util/counts/README.md#the-staged-snapshot));
 `pnpm run build:local-group --update-snapshots` refreshes it. The output schema is
 `/src/catalog-format/local-group/local-group-schema.ts` (`LgObjectRow`,
 `LocalGroupFile`), which the client loader at
@@ -61,7 +62,7 @@ A `build` step on the runner
 ([The runner](../pipeline/README.md#the-runner--runts)): `pnpm run build:local-group`
 skips it while its stamp holds `public/local-group.json` and every input
 `stepInputPaths` derives — the import closure of the entry
-(`../util/import-closure.ts`), its sibling files, and every declaration that
+(`../util/import-closure.ts`) and every declaration that
 closure reads — so a moved parser or a new import is never missed. No live fetches at build time; refresh
 of the LVDB snapshot is a manual `curl` of
 `raw.githubusercontent.com/apace7/local_volume_database/main/data/dwarf_all.csv`

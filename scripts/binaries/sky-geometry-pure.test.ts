@@ -3,17 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { unitVectorFromRaDec } from '../../src/astro-core/equatorial-basis';
 import {
   chordSqForTolerance, directionsWithin, distancePc, predictSecondaryPosition,
-  polarToTangent, tangentOffset,
+  tangentOffset,
 } from './sky-geometry-pure';
-
-describe('polarToTangent', () => {
-  it('puts θ = 0 due north and θ = 90° due east', () => {
-    expect(polarToTangent(5, 0)).toEqual({ eastArcsec: 0, northArcsec: 5 });
-    const east = polarToTangent(5, 90);
-    expect(east.eastArcsec).toBe(5);
-    expect(east.northArcsec).toBeCloseTo(0, 12);
-  });
-});
 
 describe('tangentOffset', () => {
   it('is east = ΔRA·cos δ₀ and north = ΔDec, in arcsec', () => {

@@ -1,8 +1,7 @@
 // Orchestrator for the catalog build; emits CATALOG_OUTPUTS (catalog-outputs.ts).
 // See scripts/catalog/README.md.
 
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 import {
   BINARY_VERSION,
@@ -25,14 +24,15 @@ import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
 } from './companions/overlap-gate-pure';
-import { BUILD_COUNTS_EXPECTED_FILE, CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
+import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json';
+import { CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
+import { DISTANCE_OUTLIERS } from './distance/refinement/build-distance-outliers-expected-json';
 import {
   buildRegressionReport,
   compareRegressionReports,
   formatRegressionDiff,
   mergeReasonsFromSnapshot,
   simbadSampleDistances,
-  type RegressionReport,
 } from './distance/refinement/distance-regression-check';
 import {
   CONSTELLATIONS,
@@ -56,17 +56,17 @@ import {
 import {
   PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
 } from './companions/promotion-lineage-pure';
-import { identityText } from './lineage/identity-pure';
+import { identityText } from './lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from './lineage/lineage-layout-pure';
 import { LineSpill } from './lineage/line-spill';
 import {
-  foldStageLines, lineageLineCode, stageLineageLine, stageLineageText, type LineageLine,
+  foldStageLines, lineageLineCode, stageLineageLine, type LineageLine,
 } from './lineage/lineage-row-pure';
 import { codeEffects, type StageCodes } from './lineage/reason-codes/reason-codes-pure';
 import {
-  countedStageLineage, stageLineage, upstreamLineage, type LineageBudget, type StageLineageEmission, type StageLineageRun,
+  countedStageLineage, namedStageRun, stageLineage, upstreamLineage, type NamedStage, type StageLineageEmission,
+  type StageLineageRun,
 } from './lineage/stage-lineage';
-import type { LineageInvariant } from './lineage/lineage-invariant-pure';
 import {
   BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines, brightnessColourSummary,
 } from './photometry/brightness-colour-lineage-pure';
@@ -76,8 +76,12 @@ import {
   buildComponentDesignations,
   type ComponentDesignation,
   renderableOrbitRelations,
+  resolvedMemberIndices,
   wingRenderablePrimaries,
 } from './companions/record-index/record-index';
+import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
+import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pure';
+import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
 } from './companions/record-index/catalog-row-index-map-pure';
@@ -126,7 +130,6 @@ import { NAME_OVERRIDES } from './naming/name-overrides-source';
 import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
-import { REPO_ROOT as ROOT } from '../util/paths';
 import type { FileHashes } from '../util/build-stamp';
 import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import {
@@ -136,7 +139,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check, type Emission,
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
-import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue, type StageBlock } from '../util/counts/count-stages-pure';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';
 import { allocate } from '../sid/allocate-pure';
@@ -156,48 +159,16 @@ import {
   NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, SIZE_LINEAGE, type StageLineageSpec,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 type CatalogOutputKey = keyof (typeof CATALOG_OUTPUTS)['files'] & string;
 
 const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
 
-const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
-const EXPECTED_OUTLIERS = resolve(
-  __dirname,
-  'distance/refinement/build-distance-outliers-expected.json',
-);
-
-/** A build:catalog stage's lineage: its lines file, named for the stage, and any sibling file its spec declares. */
-type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = {
-  readonly spec: StageLineageSpec<F, S>;
-  readonly codes: C;
-  readonly lines: () => readonly LineageLine[];
-  readonly budget: LineageBudget;
-  readonly invariants: readonly LineageInvariant[];
-  readonly inputs: FileHashes;
-} & ([Exclude<F, S>] extends [never]
-  ? { readonly siblings?: never }
-  : { readonly siblings: () => Readonly<Record<Exclude<F, S>, string | Uint8Array>> });
+type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = NamedStage<F, S, C>;
 
 function catalogStageRun<F extends string, S extends F, C extends StageCodes<string, S>>(
   stage: CatalogStage<F, S, C>,
 ): StageLineageRun<F, S> {
-  const { spec, codes, siblings } = stage;
-  return {
-    layout: LINEAGE_LAYOUT,
-    spec,
-    inputs: stage.inputs,
-    diffed: spec.stage,
-    lines: stage.lines,
-    render: (sorted) => ({ [spec.stage]: stageLineageText(codes, sorted), ...siblings?.() }) as Record<F, string | Uint8Array>,
-    joins: () => [],
-    budget: stage.budget,
-    invariants: stage.invariants,
-    argv: process.argv.slice(2),
-    upstream: UPSTREAM_LINEAGE,
-  };
+  return namedStageRun({ ...stage, upstream: UPSTREAM_LINEAGE });
 }
 
 function catalogStageLineage<F extends string, S extends F, C extends StageCodes<string, S>>(stage: CatalogStage<F, S, C>) {
@@ -294,10 +265,9 @@ function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
   return SIMBAD_SOURCED_DISTANCES.serialize(rows);
 }
 
-export async function main() {
-  sweepStaged(CATALOG_OUTPUTS);
-  const inputHashesAtStart = stepInputHashes();
-
+// A function of its own so the reference tables are unreachable once it returns:
+// held through SID allocation, encoding and emission, the build runs out of heap.
+async function preAllocationStages(inputHashesAtStart: FileHashes) {
   const inputs = await loadReadStarsInputs();
   const {
     bailerJones, apsisMap, simbadSpectral, directions,
@@ -418,16 +388,12 @@ export async function main() {
 
   const eclipsing = wingEclipsingBinaries(stars);
 
-  // Built here (not at the sidecar write below) so the wings pass resolves
-  // multiples.tsv rows exactly as the runtime binaries loader will.
   const rowIndexMap = buildCatalogRowIndexMap(stars, synthGaiaBridges);
+  const resolvedPairs = resolvePairs(pairsFromRows(multiplesRows), rowIndexMap);
 
-  const { memberIndices, ...renderableWings } = wingRenderablePrimaries(multiplesRows, stars, rowIndexMap);
+  const renderableWings = wingRenderablePrimaries(resolvedPairs, stars);
 
-  const overlaps = physicalOverlaps(
-    stars,
-    orbitChainExemption(renderableOrbitRelations(multiplesRows, rowIndexMap)),
-  );
+  const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
   console.log(promotionSummary(
     promotionCounts, promotionDerived, promotedRows.filter((r) => r.via === 'secondary').length,
@@ -437,9 +403,9 @@ export async function main() {
     console.log(`    ${overlapLabel(stars[a], a)} | ${overlapLabel(stars[b], b)}`);
   }
 
-  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(multiplesRows, rowIndexMap);
+  const { designations: componentDesignations, ...componentCount } = buildComponentDesignations(resolvedPairs);
   const statuses = multiplicityStatuses(
-    stars, memberIndices, (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
+    stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
   const multiplicity: MultiplicityCounts = {
@@ -447,6 +413,28 @@ export async function main() {
     ...componentCount, ...statuses.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
+
+  return {
+    stars,
+    sortedKey: order.map((i) => sortKey[i]),
+    apsisMap,
+    gspcMap: inputs.gspcMap,
+    conLookup: conAssignment.lookup,
+    inputsCounts: inputs.counts,
+    parkedLedger, simbadSourcedDistances,
+    placementEmission, brightnessEmission, sizeEmission, coherenceEmission, placementRemovals,
+    placementDerived: stats.placementDerived,
+    starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
+    figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
+  };
+}
+
+export async function main() {
+  sweepStaged(CATALOG_OUTPUTS);
+  const inputHashesAtStart = stepInputHashes();
+
+  const built = await preAllocationStages(inputHashesAtStart);
+  const { stars, promotionLines, promotionIdentity } = built;
 
   const registry = loadRegistry();
   const sidObjects = catalogSidObjects(stars);
@@ -457,13 +445,13 @@ export async function main() {
     events: registry.events,
     scope: inPartition(CATALOG_PARTITION),
     ...allocationRun(),
-  }, catalogUpstream({ placementRemovals, promotion: promotionLines, promotionIdentity }));
+  }, catalogUpstream({ placementRemovals: built.placementRemovals, promotion: promotionLines, promotionIdentity }));
   if (allocation.kind === 'failed') {
     const synthOrphans = allocation.unexplained.flatMap((k) => (k.startsWith('synth:') ? [k.slice('synth:'.length)] : []));
     const liveSynth = sidObjects.flatMap((o) => o.designations.flatMap((d) => (d.startsWith('synth:') ? [d.slice('synth:'.length)] : [])));
     throw new Error(
       `SID allocation failed for ${allocation.errors.length} object(s):\n  ${allocation.errors.join('\n  ')}`
-        + (synthOrphans.length === 0 ? '' : `\n${synthChurnReport(synthOrphans, liveSynth, multiplesRows)}`),
+        + (synthOrphans.length === 0 ? '' : `\n${synthChurnReport(synthOrphans, liveSynth, built.multiplesRows)}`),
     );
   }
   for (const { designation, objects } of allocation.ambiguous) {
@@ -478,7 +466,7 @@ export async function main() {
   // tiers alone — the runtime composes every designation off the search
   // index through the same pure function (/docs/star-naming.md#6-rendering--glyphs-everywhere-no-fallback-path).
   const display = assignDisplayNames(
-    stars, componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
+    stars, built.componentDesignations, CONSTELLATIONS, NAME_OVERRIDES.read(), recordSids,
   );
   const namingEmission = namingLineage(display.records, stars, inputHashesAtStart);
 
@@ -495,49 +483,52 @@ export async function main() {
   });
   console.log(allocationSummary(allocationEmission.counts, allocation.events.length));
 
-  const encoded = encodeCatalog({ stars, apsisMap, sids: recordSids, multiplicityStatus });
+  const encoded = encodeCatalog({
+    stars, apsisMap: built.apsisMap, sids: recordSids, multiplicityStatus: built.multiplicityStatus,
+  });
   const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(namingEmission.counts, namingDerived));
 
   emitArtifacts(catalogEmission({
     stars,
-    sortedKey: order.map((i) => sortKey[i]),
+    sortedKey: built.sortedKey,
     encoded,
-    apsisMap,
-    gspcMap: inputs.gspcMap,
-    conLookup: conAssignment.lookup,
+    apsisMap: built.apsisMap,
+    gspcMap: built.gspcMap,
+    conLookup: built.conLookup,
     inputHashes: inputHashesAtStart,
-    figureLines,
-    componentDesignations,
-    rowIndexMap,
+    figureLines: built.figureLines,
+    componentDesignations: built.componentDesignations,
+    rowIndexMap: built.rowIndexMap,
+    resolvedPairs: built.resolvedPairs,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
-      parkedLedger,
-      simbadSourcedDistances,
+      parkedLedger: built.parkedLedger,
+      simbadSourcedDistances: built.simbadSourcedDistances,
       ...registryTexts(CATALOG_PARTITION, allocation.minted, allocation.events),
     },
     lineage: {
-      placement: placementEmission,
-      brightnessColour: brightnessEmission,
-      size: sizeEmission,
-      coherence: coherenceEmission,
+      placement: built.placementEmission,
+      brightnessColour: built.brightnessEmission,
+      size: built.sizeEmission,
+      coherence: built.coherenceEmission,
       promotion: promotionEmission,
       allocation: allocationEmission,
       naming: namingEmission,
     },
     stageCounts: [
-      { stage: 'inputs', block: { kind: 'counted', counts: inputs.counts } },
-      { stage: 'placement', block: { kind: 'counted', counts: placementEmission.counts } },
-      { stage: derivedStage('placement'), block: { kind: 'counted', counts: stats.placementDerived } },
-      { stage: 'multiplicity', block: { kind: 'counted', counts: multiplicity } },
-      { stage: 'gcvs', block: { kind: 'counted', counts: gcvsCounts } },
+      { stage: 'inputs', block: { kind: 'counted', counts: built.inputsCounts } },
+      { stage: 'placement', block: { kind: 'counted', counts: built.placementEmission.counts } },
+      { stage: derivedStage('placement'), block: { kind: 'counted', counts: built.placementDerived } },
+      { stage: 'multiplicity', block: { kind: 'counted', counts: built.multiplicity } },
+      { stage: 'gcvs', block: { kind: 'counted', counts: built.gcvsCounts } },
       { stage: 'allocation', block: { kind: 'counted', counts: allocationEmission.counts } },
-      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...starNamingCounts } satisfies NamingCounts } },
+      { stage: 'naming', block: { kind: 'counted', counts: { ...namingEmission.counts, ...built.starNamingCounts } satisfies NamingCounts } },
       { stage: derivedStage('naming'), block: { kind: 'counted', counts: namingDerived } },
-      { stage: 'brightness-colour', block: { kind: 'counted', counts: brightnessEmission.counts } },
-      { stage: 'coherence', block: { kind: 'counted', counts: coherenceEmission.counts } },
-      { stage: 'promotion', block: { kind: 'counted', counts: promotionCounts satisfies PromotionCounts } },
-      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: promotionDerived } },
+      { stage: 'brightness-colour', block: { kind: 'counted', counts: built.brightnessEmission.counts } },
+      { stage: 'coherence', block: { kind: 'counted', counts: built.coherenceEmission.counts } },
+      { stage: 'promotion', block: { kind: 'counted', counts: built.promotionCounts satisfies PromotionCounts } },
+      { stage: derivedStage('promotion'), block: { kind: 'counted', counts: built.promotionDerived } },
     ],
   }));
 }
@@ -557,6 +548,7 @@ interface CatalogEmissionInputs {
   readonly figureLines: ReadonlyMap<number, readonly (readonly number[])[]>;
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
+  readonly resolvedPairs: readonly ResolvedPair[];
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -578,7 +570,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, sidEvents, ledgers, lineage,
   stageCounts,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -622,11 +614,16 @@ function catalogEmission({
   const search = buildSearchIndex(stars, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
-  const rowIndexMapJson = serializeCatalogRowIndexSidecar(handedFileHash(inputHashes, MULTIPLES_TSV.file), rowIndexMap);
+  const multiplesSha1 = handedFileHash(inputHashes, MULTIPLES_TSV.file);
+  const rowIndexMapJson = serializeCatalogRowIndexSidecar(multiplesSha1, rowIndexMap);
+  const pairEndsJson = serializeCatalogPairEnds(
+    multiplesSha1, new Map(resolvedPairs.map((r) => [r.pair.systemId, r.rendered])),
+  );
   console.log(
     `Row-index map ${CATALOG_OUTPUTS.files.rowIndexMap} (${Object.keys(rowIndexMap.byGaia).length} ` +
       `Gaia entries, ${Object.keys(rowIndexMap.byHip).length} HIP entries, ` +
-      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries)`,
+      `${Object.keys(rowIndexMap.bySynth).length} synthetic entries); ` +
+      `pair ends ${CATALOG_OUTPUTS.files.pairEnds} (${resolvedPairs.length} pairs)`,
   );
 
   const figures = figuresCounts(figureLines);
@@ -652,6 +649,7 @@ function catalogEmission({
       boundaries: boundaries.json,
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
+      pairEnds: pairEndsJson,
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,
@@ -677,11 +675,9 @@ function catalogEmission({
 }
 
 function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
-  return countSnapshotCheck<StagedCounts>({
-    snapshotPath: EXPECTED_COUNTS,
+  return countSnapshotCheck(BUILD_CATALOG_COUNTS, {
     actual: nestByStage(CATALOG_COUNT_STAGES, blocks),
     failureLabel: 'build-catalog count',
-    script: 'build:catalog',
   });
 }
 
@@ -694,8 +690,7 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       `SIMBAD outliers=${report.simbad.length}`,
   );
 
-  return snapshotCheck<RegressionReport>({
-    snapshotPath: EXPECTED_OUTLIERS,
+  return snapshotCheck(DISTANCE_OUTLIERS, {
     actual: report,
     refreshTransform: mergeReasonsFromSnapshot,
     compare: (expected, actual) => {
@@ -706,7 +701,6 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       };
     },
     failureLabel: 'distance-regression',
-    script: 'build:catalog',
   });
 }
 

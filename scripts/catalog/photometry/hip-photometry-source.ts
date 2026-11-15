@@ -6,6 +6,6 @@ import { parseHipPhotometryTsv, type HipPhotometryTables } from './hip-photometr
 export const HIP_PHOTOMETRY = defineSource({
   file: 'data/hipparcos/hip_main_vmag.tsv',
   hint: 'Re-run `pnpm run refresh:hip-vmag`.',
-  rowKey: { id: 'i239', text: (hip: number) => String(hip) },
+  rowKey: { id: 'i239', cardinality: 'one', text: (hip: number) => String(hip) },
   parse: (input): HipPhotometryTables => parseHipPhotometryTsv(input.text(), HIP_PHOTOMETRY),
 });

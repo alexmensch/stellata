@@ -213,7 +213,7 @@
         "spectral": 0,
         "held": 19
       },
-      "physicalOverlaps": 93
+      "physicalOverlaps": 55
     },
     "multiplicity": {
       "binaryPairs": 13480,
@@ -223,7 +223,7 @@
       "ccdmFlagged": 9387,
       "ccdmSuppressedOptical": 485,
       "eclipsingWinged": 1348,
-      "renderableCompanionWinged": 2854,
+      "renderableCompanionWinged": 2853,
       "componentDesignations": 24451,
       "multiplicityResolved": 24016,
       "multiplicityUnresolved": 10648

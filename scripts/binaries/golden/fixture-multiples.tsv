@@ -178,10 +178,10 @@ system_id	comp	hip	gaia_source_id	hd	x_pc	y_pc	z_pc	absmag	ci	spect	name	source	
 00047+3416-_C	C	375	2875176353485407744		806.284978	16.431314	549.551041				HIP 375	simbad	0	simbad_xid	own	own	gaia_5p	none	none	none	none	standalone									975.895384					25.700	4.00	A		
 00091+4051-_C	C	712	383223271646325760		153.122566	5.903316	132.461342			G5	HD    413	simbad	0	simbad_xid	own	own	gaia_5p	none	simbad	none	none	standalone									202.552157					158.500	268.00	A		
 00091+4051-_D	D		383223306006063232		586.175879	22.331142	507.146354				BD+40     7D	simbad	0	simbad_xid	own		gaia_5p	none	none	none	none	standalone									775.434243					230.000	273.00	A		
-03082+4057-_A	A	14576			14.189403	15.238779	18.072085			B8V	* bet Per	simbad	0	simbad_xid		own	system_inherited	none	simbad	none	none	standalone									27.570995							Aa		
+03082+4057-_A	A	14576			14.189403	15.238779	18.072085			B8V	* bet Per	simbad	0	unresolved		own	system_inherited	none	simbad	none	none	standalone									27.570995							Aa		
 03082+4057-_F	F		239112344178207488		2267.135950	2437.538735	2888.279220				UCAC3 262-30215	simbad	0	simbad_xid	own		gaia_5p	none	none	none	none	standalone									4407.227854							Aa		
 03082+4057-_G	G		239112344178207360		880.875236	947.010682	1122.185098				2MASS J03081731+4056481	simbad	0	simbad_xid	own		gaia_5p	none	none	none	none	standalone									1712.328767							Aa		
-05353-0523-_G	G				40.582407	374.537213	-35.527254			K0.7	* tet01 Ori G	simbad	0	simbad_xid			system_inherited	none	simbad	none	none	standalone									378.400900					13.864	100.28	A		
+05353-0523-_G	G				40.582407	374.537213	-35.527254			K0.7	* tet01 Ori G	simbad	0	unresolved			system_inherited	none	simbad	none	none	standalone									378.400900					13.864	100.28	A		
 07346+3153-_D	D		892347045645587456		-285.642661	653.510532	443.070802			K0III	BD+32  1580	simbad	0	simbad_xid	own		gaia_5p	none	simbad	none	none	standalone									839.630563					178.300	222.00	A		
 08122+1739-_D	D	40184	657057020502064384		-223.332189	342.183843	129.820829				BD+18  1870	simbad	0	simbad_xid	own	own	gaia_5p	none	none	none	none	standalone									428.742926					281.842	106.09	A		
 08122+1739-_E	E		657248232445233664		-240.472267	368.542882	141.179966				TYC 1381-1036-1	simbad	0	simbad_xid	own		gaia_5p	none	none	none	none	standalone									462.149921					561.879	26.03	A		

@@ -13,14 +13,15 @@ closure reaches is that step's data input set — derived, never listed
 
 ```
 scripts/util/sources/
-  source.ts            defineSource, readArtifact / streamArtifact, and
+  source.ts            defineSource, readArtifact / streamArtifact,
+                       readSnapshot / committedSnapshot, and
                        openDeclared — the one presence check and the one
                        place a declared file is opened. Vite's native
                        config loader reaches it (vite.env.ts →
                        ../../site/), so its value imports name their
                        `.ts` extension.
-  declared-inputs.ts   declaredInputs(closure) — the sources and artifacts an
-                       import closure reaches, by importing its declaring
+  declared-inputs.ts   declaredInputs(closure) — the sources, artifacts and
+                       snapshots an import closure reaches, by importing its declaring
                        modules, each classified read / written / both /
                        unused; isRead, the step's data inputs among them;
                        declaredFiles, their repo-relative files. It may
@@ -29,10 +30,12 @@ scripts/util/sources/
                        entry only exports main and runs through the one
                        launcher, so importing it runs nothing
                        (../README.md, emit-artifacts.ts entry).
-  row-ref-pure.ts      SourceRowRef, RowKey — a cited source row
+  row-ref-pure.ts      SourceRowRef, RowKey and its cardinality — a
+    (+ test)           cited source row, or a key's group of rows
                        (#sourcerowref).
   json-artifact-pure.ts  defineJsonArtifact (#a-json-artifact).
     (+ test)
+  snapshot-pure.ts     defineSnapshot (#a-snapshot).
 ```
 
 ## Declaring a source
@@ -99,10 +102,31 @@ of the file — compact, one final newline — so the writer emits through it an
 the step's closure classifies it `written`. The row key is required: a JSON
 file nothing cites needs no declaration.
 
+## A snapshot
+
+`defineSnapshot<T>({file, script})` (`snapshot-pure.ts`) declares a committed
+`*-expected.json` a step checks its output against: `file` is the snapshot,
+`script` the step whose `--update-snapshots` run rewrites it. The step passes
+it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), so it
+is an input of exactly the steps whose closure names it. `readSnapshot` (null
+when absent) and `committedSnapshot` (throws when absent), in `source.ts`, are
+the one place a step opens a snapshot (`../../doc-figures/` reads every
+`*-expected.json` by glob, and `../../perf/perf-section-guard.sh` the
+catalogue's, neither a step). Each lives in a `*-expected-json.ts` leaf
+beside its file (`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts`
+holds every `defineSnapshot` call to it), imported only by code that reads it:
+its step's check (`build:clouds` and `build:local-group` hand theirs to
+`siblingLineage`), and for build:catalog's, `committedBuildCounts` and
+`../../site/site-metrics.ts`. Its `use` is `read` wherever the closure's
+other modules name the constant: the leaf exports nothing else, so naming it
+is the only reason to import it. A snapshot only a test reads
+(`inherited-spine-expected.json`, `manifest-naming-expected.json`) is no
+step's input and needs no declaration.
+
 ## Reached means read
 
 A declaration lives only in a module named `*-source.ts`, `*-tsv.ts` or
-`*-json.ts`, and
+`*-json.ts` (a snapshot's `*-expected-json.ts` among them), and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
@@ -113,7 +137,7 @@ to it, and the report and on-demand writers of the step table's
 line names, and audits and validators are not steps. A writer whose commands
 `scriptParts` cannot classify fails the test. `declaredInputs(closure)` classifies each reached
 declaration by the calls in the closure's other modules: `read` (a source's
-`.read(`, an artifact read), `written` (an artifact's `serialize` /
+`.read(`, an artifact read, a snapshot named), `written` (an artifact's `serialize` /
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
 `both` ones (`isRead`), so a step never depends on its own output and an
 artifact it reads and rewrites stays an input; the test fails any step with
@@ -143,10 +167,21 @@ to a module of its own, or the closure of every caller reaches the file.
 `{ source, row }`: a row of a declared source or artifact, by that source's
 typed row key — never a path string
 ([SourceRowRef](../../catalog/lineage/README.md#sourcerowref)). A declaration
-carries a `rowKey` (`{id, text}`) only once something cites its rows; its
-type then holds a required `rowKey` (`RowKeyOf<K>`), and a keyless one holds
+carries a `rowKey` (`{id, cardinality, text}`) only once something cites its rows; its
+type then holds a required `rowKey` (`RowKeyOf<K, C>`), and a keyless one holds
 `undefined`, so `sourceRowRef` is a compile error on a keyless declaration
-or a wrongly typed row. Every declaration also carries a type-only brand
+or a wrongly typed row.
+
+**Cardinality.** A key is `'one'` when it names one row of the file, `'group'`
+when the file prints several rows under it. Only a `'one'` key is cited with
+`sourceRowRef(source, row)`. A `'group'` key is cited with
+`groupRowRef(source, key, lines)`, `lines` the group's file lines, never
+empty; parsers build these with `groupRowRefs` (one per key) or
+`withGroupOrigins` (each row stamped with its key's group as `origin`), so a
+citation always carries the whole group. Each call is a compile error on a
+key of the other cardinality, so a group can't be cited as a row it happens
+to hold. The text form is `<id>:<key>` either way. Group keys: WDS, ORB6, the
+MSC orbits and Gaia NSS. Every declaration also carries a type-only brand
 (`Declaration`) that no object literal can, so a hand-written
 `{file, rowKey}` stand-in does not compile either
 (`row-ref-pure.test.ts`). Keyed today: the spine (`spine:<line>`),
@@ -159,8 +194,10 @@ V/50 (`v50:<hr>`), IV/27A (`iv27a:<hd>`) and Gaia's HIP cross-match
 astrometry catalogue (`gaia-dr3-astrometry:<source_id>`) and NSS two-body
 table (`gaia-dr3-nss:<source_id>`), HIP2 (`i311:<hip>`), Tycho-2
 (`i259:<tyc>`), V/70A (`v70a:<number+comp>`), SIMBAD's values pull
-(`simbad:<simbad_oid>`) and Bailer-Jones 2021 (`i352:<source_id>`). Its text
-form is `<id>:<row>`. A parser of a keyed table takes the declaration itself
+(`simbad:<simbad_oid>`) and Bailer-Jones 2021 (`i352:<source_id>`), and the
+rows a binaries pair is founded on: the WDS summary
+(`wds:<wds_id>/<discoverer>/<components>`), ORB6 (`orb6:`, the same form) and
+the MSC orbits (`msc-orbits:<wds_id>/<syst>`). A parser of a keyed table takes the declaration itself
 as its `from` and stamps each row with its `SourceRowRef`; the declaration
 passes itself in, with the parse's return type stated so the
 self-reference type-checks.

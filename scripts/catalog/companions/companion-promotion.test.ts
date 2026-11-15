@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { tangentOffset, type Stage6Offset } from './anchor-offset-pure';
+import type { Stage6Offset } from './anchor-offset-pure';
+import { polarToTangent, tangentToPolar } from '../../../src/astro-core/equatorial-basis';
 import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
 import { decisionRows, familyTotal, PROMOTION_CODES, promotionDecision } from './promotion-lineage-pure';
 import {
@@ -74,7 +75,7 @@ function inputs(overrides: Partial<PromotionInputs> = {}): PromotionInputs {
 }
 
 const reached = (sepArcsec: number, paDeg: number): Stage6Offset =>
-  ({ kind: 'offset', offset: tangentOffset(sepArcsec, paDeg) });
+  ({ kind: 'offset', offset: polarToTangent(sepArcsec, paDeg) });
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -104,7 +105,7 @@ describe('parseMultiplesTsv', () => {
       absmag: 5.5, spect: 'G2V', photometryVia: 'athyg_own', orbitRole: 'primary',
       sepArcsec: 7.123, paDeg: 265.45, dmag: 0.85, anchorComp: 'Aa', magPri: 1.25, magSec: 1.55,
     });
-    expect(r.anchorOffset).toEqual({ kind: 'offset', offset: tangentOffset(3.5, 114.0) });
+    expect(r.anchorOffset).toEqual({ kind: 'offset', offset: polarToTangent(3.5, 114.0) });
     expect(r).not.toHaveProperty('anchorSepArcsec');
   });
 
@@ -2611,13 +2612,13 @@ describe('promoteCompanions', () => {
     const h = newStars.find(s => s.syntheticId === 'synth-00101+3825-H');
     expect(h).toBeDefined();
     if (!h) return;
-    const rad = Math.PI / 180;
-    const east = 42.1 * Math.sin(269 * rad) - 55.5 * Math.sin(259 * rad);
-    const north = 42.1 * Math.cos(269 * rad) - 55.5 * Math.cos(259 * rad);
-    const expected = projectFromSepPa(
-      d.x, d.y, d.z, Math.hypot(east, north),
-      ((Math.atan2(east, north) / rad) + 360) % 360,
-    );
+    const own = polarToTangent(42.1, 269);
+    const anchor = polarToTangent(55.5, 259);
+    const { sepArcsec, paDeg } = tangentToPolar({
+      eastArcsec: own.eastArcsec - anchor.eastArcsec,
+      northArcsec: own.northArcsec - anchor.northArcsec,
+    });
+    const expected = projectFromSepPa(d.x, d.y, d.z, sepArcsec, paDeg);
     expect(h.x).toBeCloseTo(expected?.x ?? NaN, 12);
     expect(h.y).toBeCloseTo(expected?.y ?? NaN, 12);
     expect(h.z).toBeCloseTo(expected?.z ?? NaN, 12);
@@ -2875,7 +2876,7 @@ describe('promoteCompanions / a parked record does not arrive by promotion', () 
       const ownFit = blendedRows.map((r) => (r.comp === 'B'
         ? {
           ...r, hip: 7980, hipOrigin: OWN, astrometryVia: 'gaia_5p' as const,
-          gaiaSourceId: '405578335904111745', gaiaOrigin: OWN, ...placement,
+          gaiaSourceId: '405578335904111745', gaiaOrigin: OWN, resolveVia: 'simbad_xid' as const, ...placement,
         }
         : r));
       const { codes } = promote(

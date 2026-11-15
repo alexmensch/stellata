@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type { IdentityRow } from '../catalog/lineage/identity-pure';
+import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { stageLineageLine, type LineageLine, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { codeEffects, outcomeCode, refusalCode, stageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { lineageAdmissions, lineageCauses } from './lineage-upstream-pure';

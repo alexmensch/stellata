@@ -1,10 +1,11 @@
 // Phase A of a manifest-keyed SIMBAD pull: the manifest's keys to oids, the widening ladder, and the corroboration rule. See README.md.
 
+import { percentOf } from '../../util/counts/tally-pure';
 import type { Ask } from '../pull/pull';
 import { fetchReleaseIds, resolveOids, type ParseLedger, type SimbadPhases } from './simbad-fetch-pure';
 import type { MembershipKeys } from './membership-keys-pure';
-import { percent, share } from './simbad-rows-pure';
 import { GAIA_DR3, WIDENING_LADDER, type Namespace } from './simbad-specs-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 export interface Verdicts {
   corroborated: number;
@@ -37,8 +38,6 @@ function add(request: OidRequest, label: string, requested: number, resolved: Re
   for (const [key, oid] of resolved) bound.set(key, oid);
 }
 
-export const coverage = (request: OidRequest, label: string): number => share(request.resolved.get(label) ?? 0, request.requested.get(label) ?? 0);
-
 export const verdictLine = (v: Verdicts): string =>
   `${v.corroborated} corroborated by a Gaia cross-ID, ${v.vetoed} vetoed on a contradicting DR3 id, ${v.uncorroborated} kept with no DR3 id to contradict them`;
 
@@ -47,7 +46,7 @@ export function requestReport(request: OidRequest): string[] {
     const got = request.resolved.get(label) ?? 0;
     const verdict = request.verdicts.get(label);
     return [
-      `  ${label.padEnd(14)} requested ${String(asked).padStart(7)} → resolved ${String(got).padStart(7)} (${percent(share(got, asked))})`,
+      `  ${label.padEnd(14)} requested ${String(asked).padStart(7)} → resolved ${String(got).padStart(7)} (${percentOf(got, asked)})`,
       ...(verdict ? [`  ${''.padEnd(14)} of the widened: ${verdictLine(verdict)}`] : []),
     ];
   });
@@ -64,7 +63,7 @@ export async function corroborate(
   const verdicts: Verdicts = { corroborated: 0, vetoed: 0, uncorroborated: 0 };
   const kept = new Map<string, number>();
   if (bound.size === 0) return { kept, verdicts };
-  const gaiaIds = await fetchReleaseIds(ask, phases, [...new Set(bound.values())].sort((a, b) => a - b), ledger);
+  const gaiaIds = await fetchReleaseIds(ask, phases, [...new Set(bound.values())].sort(ascending), ledger);
   for (const [suffix, oid] of bound) {
     const releases = gaiaIds.get(oid) ?? new Map<string, Set<string>>();
     const asking = askingIds.get(suffix) ?? null;

@@ -1,6 +1,7 @@
 // The records stage's count block over the sorted records, and the variability units each record writes. See README.md.
 
 import { encodeAmpUnits, encodePeriodUnits } from '../../../src/catalog-format/record/catalog-pure';
+import { percentOf } from '../../util/counts/tally-pure';
 
 /** The records stage's count block. */
 export type RecordsCounts = {
@@ -82,7 +83,6 @@ export function recordsCounts(
 }
 
 export function apsisCoverageSummary(c: RecordsCounts): string {
-  const pct = (n: number) => ((n / c.recordCount) * 100).toFixed(1);
-  return `Gaia DR3 Apsis: ${c.apsisMatched} / ${c.recordCount} records matched (${pct(c.apsisMatched)}%), `
-    + `Teff (gspphot OR gspspec) on ${c.apsisTeffEither} (${pct(c.apsisTeffEither)}%)`;
+  return `Gaia DR3 Apsis: ${c.apsisMatched} / ${c.recordCount} records matched (${percentOf(c.apsisMatched, c.recordCount)}), `
+    + `Teff (gspphot OR gspspec) on ${c.apsisTeffEither} (${percentOf(c.apsisTeffEither, c.recordCount)})`;
 }

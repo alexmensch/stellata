@@ -5,12 +5,14 @@ import { paramsOf, stageRow, type LineageParams, type LineageRow } from '../line
 import {
   outcomeCode, refusalCode, stageCodes, type CodeDeclaration, type LIVE,
 } from '../lineage/reason-codes/reason-codes-pure';
+import { hipDesignation } from '../../sid/sid-pure';
 import type { GateReason } from '../membership/binding/binding-gate-pure';
 import { PRINTED_V_TIERS, type PrintedVVia } from '../photometry/v-magnitude-pure';
 import { OVERLAY_VALUE_SEPARATOR, type DesignationReach, type GateRefusal, type RouteCheck } from './classic-id-overlay-pure';
 import type { RejectedBindingRow } from './rejected-bindings-tsv';
 import type { HdHipRouteDisagreement } from './route-disagreements-tsv';
 import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ascending } from '../../../src/astro-core/order-pure';
 
 /** The snapshot's one stage; its `-derived` slot holds the counts no row decides. */
 export const CLASSIC_ID_COUNT_STAGES = [CLASSIC_IDS_LINEAGE.stage] as const;
@@ -123,11 +125,10 @@ function paramsAs<B extends FactBranch>(r: LineageRow, branch: B): ParamsOf<B> {
 }
 
 const hdText = (hd: number): string => `hd:${hd}`;
-const hipText = (hip: number): string => `hip:${hip}`;
 const hrText = (hr: number): string => `hr:${hr}`;
-const optionalHip = (hip: number | null): { hip?: string } => (hip === null ? {} : { hip: hipText(hip) });
+const optionalHip = (hip: number | null): { hip?: string } => (hip === null ? {} : { hip: hipDesignation(hip) });
 
-/** The number in a designation param written by `hdText` / `hipText` / `hrText`. */
+/** The number in a designation param written by `hdText` / `hipDesignation` / `hrText`. */
 function designationNumber(value: string, ns: 'hd' | 'hip' | 'hr'): number {
   const prefix = `${ns}:`;
   const n = Number(value.slice(prefix.length));
@@ -176,7 +177,7 @@ function designationRow(r: DesignationReach, refused: ReadonlyMap<string, GateRe
         : none(d, 'hd.no-source');
     }
     case 'hip': {
-      const hip = hipText(r.hip);
+      const hip = hipDesignation(r.hip);
       return outcome(
         { key: keys.hipXmatch(r.hip), evidence: [], designation: hip, params: { hip } }, 'xmatch', [r.source], 'hip.bound', 'hip.gated',
       );
@@ -245,7 +246,7 @@ export function classicIdLineage(
   for (const c of routeChecks) {
     rows.push(row(keys.iv27a(c.hd), `route.${c.outcome}`, {
       hd: hdText(c.hd),
-      hip: hipText(c.hip),
+      hip: hipDesignation(c.hip),
       ...(c.hdRouteSourceIds.length === 0 ? {} : { hd_route_source_ids: c.hdRouteSourceIds.join(OVERLAY_VALUE_SEPARATOR) }),
       hip_route_source_id: c.hipRouteSourceId,
     }));
@@ -256,7 +257,7 @@ export function classicIdLineage(
 /** The text `rejected_bindings.tsv` names a source's designations by, in its fixed order. */
 function designationSummary(of: ReadonlyMap<DesignationKind, ReadonlySet<string>>): string {
   const values = (k: DesignationKind): string[] => [...of.get(k) ?? []];
-  const numbers = (k: 'hd' | 'hr'): number[] => values(k).map((v) => designationNumber(v, k)).sort((a, b) => a - b);
+  const numbers = (k: 'hd' | 'hr'): number[] => values(k).map((v) => designationNumber(v, k)).sort(ascending);
   const parts: string[] = [];
   const hd = numbers('hd');
   const hr = numbers('hr');

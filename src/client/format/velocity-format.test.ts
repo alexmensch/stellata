@@ -47,4 +47,8 @@ describe('formatSpaceVelocity', () => {
       formatSpaceVelocity({ kms: 13.9, lDeg: 56.6, bDeg: 8.9 }),
     ).toBe('14 km/s\nℓ 57° · b +9°');
   });
+
+  it('reads a heading just under 360° as ℓ 0°', () => {
+    expect(formatSpaceVelocity({ kms: 1, lDeg: 359.7, bDeg: 0 })).toBe('1 km/s\nℓ 0° · b +0°');
+  });
 });

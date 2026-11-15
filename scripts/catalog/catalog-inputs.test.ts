@@ -4,6 +4,8 @@ import { describe, expect, it } from 'vitest';
 
 import { REPO_ROOT } from '../util/paths';
 import { stepInputPaths } from '../util/step-inputs';
+import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json';
+import { DISTANCE_OUTLIERS } from './distance/refinement/build-distance-outliers-expected-json';
 
 const abs = (path: string): string => resolve(REPO_ROOT, path);
 
@@ -16,8 +18,8 @@ describe('stepInputPaths(build:catalog)', () => {
   });
 
   it('keys the count snapshots the build asserts against', () => {
-    expect(inputs).toContain(abs('scripts/catalog/build-catalog-expected.json'));
-    expect(inputs).toContain(abs('scripts/catalog/distance/refinement/build-distance-outliers-expected.json'));
+    expect(inputs).toContain(abs(BUILD_CATALOG_COUNTS.file));
+    expect(inputs).toContain(abs(DISTANCE_OUTLIERS.file));
   });
 
   it('keys the naming tables, the dust chunks and the magnitude pull', () => {

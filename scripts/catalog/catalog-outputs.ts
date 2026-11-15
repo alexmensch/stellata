@@ -23,6 +23,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     boundaries: publicFile(PUBLIC_FILES.boundaries),
     searchIndex: publicFile(PUBLIC_FILES.searchIndex),
     rowIndexMap: BUILD_FILES.catalogRowIndexMap,
+    pairEnds: BUILD_FILES.catalogPairEnds,
     parkedLedger: DATA_FILES.parkedLedger,
     simbadSourcedDistances: DATA_FILES.simbadSourcedDistances,
     ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PLACEMENT_LINEAGE),

@@ -9,6 +9,7 @@ import {
   type CadenceReport,
 } from '../../render-gate/cadence/clock-cadence-pure';
 import type { CadenceViolation } from '../../render-gate/cadence/cadence-trust-pure';
+import { ascending } from '../../../astro-core/order-pure';
 
 /** A tail that has been continuously unexpired for this long is not
  *  settling — something is stamping activity every tick. The focal ride
@@ -90,7 +91,7 @@ export interface RenderWatchVerdict {
 
 export function medianOf(values: readonly number[]): number {
   if (values.length === 0) return Number.NaN;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = [...values].sort(ascending);
   return sorted[sorted.length >> 1];
 }
 
