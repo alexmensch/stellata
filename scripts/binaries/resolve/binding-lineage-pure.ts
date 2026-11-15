@@ -10,7 +10,7 @@ import {
 } from '../multiples-record-pure';
 import { BINDING_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const BINDING_LINEAGE_BUDGET = { gzipBytes: 1_000_000, writeMs: 3_000 };
+export const BINDING_LINEAGE_BUDGET = { gzipBytes: 1_000_000, writeMs: 2_000 };
 
 const IDENTIFIERS = { gaia: 'Gaia DR3 source', hip: 'HIP number' } as const;
 type Identifier = keyof typeof IDENTIFIERS;

@@ -197,6 +197,8 @@ scripts/binaries/
                                   (per-strategy / per-tier counts),
                                   build-runtime-binaries (pair-emission
                                   counts).
+  *-expected-json.ts              Each snapshot's declaration
+                                  (../util/sources/README.md#a-snapshot).
 ```
 
 Inputs and outputs live in their own folders, each with its own README

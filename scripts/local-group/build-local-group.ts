@@ -5,6 +5,7 @@
 import { codeCount } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
+import { LOCAL_GROUP_COUNTS } from './build-local-group-expected-json';
 import { sweepStaged } from '../util/emit-artifacts';
 import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
@@ -101,7 +102,7 @@ export async function main(): Promise<void> {
 
   const spec = SIBLING_ARTIFACTS['local-group'];
   const allocation = allocateSibling(spec, LOCAL_GROUP_JSON, objects);
-  const lineage = siblingLineage(spec, allocation);
+  const lineage = siblingLineage(spec, allocation, LOCAL_GROUP_COUNTS);
   emitSibling(
     LOCAL_GROUP_OUTPUTS, { localGroup: LOCAL_GROUP_JSON.serialize(localGroupPayload(objects, allocation.sids)) }, allocation,
     lineage,
