@@ -19,6 +19,7 @@ import {
   projectFromSepPa,
   parkedRefusals,
   promoteCompanions,
+  recuratedRecords,
   type MintedBrightness,
   type MultiplesTsvRow,
   type PromotionInputs,
@@ -3147,6 +3148,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     expect(rewrites.get(b)!.brightness).toEqual([{
       pass: 'recurated', source: 'held', absmag: b.absmag, fromPc: dOld, toPc: dNew, avFrom: 0, avTo: 0,
     }]);
+    expect(recuratedRecords(rewrites)).toEqual([b]);
     expect(dNew).not.toBeCloseTo(dOld, 6);
     expect(b.absmag + 5 * Math.log10(dNew / 10)).toBeCloseTo(apparentBefore, 9);
   });

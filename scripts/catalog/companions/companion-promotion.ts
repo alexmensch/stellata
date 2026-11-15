@@ -239,6 +239,11 @@ export interface RecordRewrite {
   brightness: HeldRecordBrightness[];
 }
 
+/** The held records promotion re-curated onto their anchor's position. */
+export function recuratedRecords(rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>): Star[] {
+  return [...rewrites].flatMap(([star, r]) => (r.brightness.some((b) => b.pass === 'recurated') ? [star] : []));
+}
+
 /** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
 export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
   if (b.adjustment !== null) {

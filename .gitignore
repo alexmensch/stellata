@@ -22,6 +22,7 @@ public/catalog-manifest.json
 public/constellations.json
 public/constellation-boundaries.json
 public/search-index.json
+public/system-membership.json
 public/clouds.json
 public/local-group.json
 public/binaries.bin
