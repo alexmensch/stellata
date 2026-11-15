@@ -22,6 +22,7 @@ export const CATALOG_OUTPUTS = declareOutputs(
     constellations: publicFile(PUBLIC_FILES.constellations),
     boundaries: publicFile(PUBLIC_FILES.boundaries),
     searchIndex: publicFile(PUBLIC_FILES.searchIndex),
+    systemMembership: publicFile(PUBLIC_FILES.systemMembership),
     rowIndexMap: BUILD_FILES.catalogRowIndexMap,
     pairEnds: BUILD_FILES.catalogPairEnds,
     parkedLedger: DATA_FILES.parkedLedger,

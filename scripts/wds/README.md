@@ -17,7 +17,8 @@ scripts/wds/
                          tokens), dedupWdsPairRows (the duplicate-row
                          collapse over each WDS key's group, a decision
                          per row) and measuredOffset (a row's ρ > 0 and θ,
-                         or null), which every (ρ, θ) consumer reads.
+                         or null), which every (ρ, θ) consumer reads;
+                         wdsIdPosition, a WDS id's own coordinates.
   wds-source.ts          WDS_SUMM, ORB6: the two files, declared, each
                          keyed by wdsPairRowKey (wds_id/discoverer/
                          components as printed), a group key: each file

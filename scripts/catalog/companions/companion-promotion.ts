@@ -421,6 +421,13 @@ function emptyPromotionStats(): PromotionStats {
   };
 }
 
+type RecuratedAdoption = Extract<RowOutcome, { recurated: unknown }> & { recurated: RecuratedBrightness };
+
+/** An adoption whose existing member promotion re-curated onto its anchor. */
+export function isRecuratedAdoption(o: RowOutcome): o is RecuratedAdoption {
+  return o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null;
+}
+
 interface ExistingIndexes {
   byGaia: Map<string, number>;
   byHip: Map<number, number>;
