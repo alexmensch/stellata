@@ -82,10 +82,6 @@ export function blobsAt(commit: string, paths: readonly string[], root: string =
   return files;
 }
 
-export function fileAt(commit: string, path: string, root: string = REPO_ROOT): FileAt {
-  return blobsAt(commit, [path], root).get(path)!;
-}
-
 export type MergeBaseFile =
   | { readonly kind: 'present'; readonly text: string }
   | { readonly kind: 'absent' }
@@ -95,6 +91,6 @@ export type MergeBaseFile =
 export function fileAtMergeBase(path: string): MergeBaseFile {
   const base = mergeBaseWithMain();
   if (base === null) return { kind: 'no-merge-base' };
-  const at = fileAt(base, path);
+  const at = blobsAt(base, [path]).get(path)!;
   return at.kind === 'absent' ? at : { kind: 'present', text: at.bytes.toString('utf8') };
 }

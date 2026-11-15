@@ -170,8 +170,8 @@ same thing — single-use helpers stay with their consumer.
   its git call, in a given folder; `blobsAt(commit, paths)`, each file's bytes
   as a commit stores it, read through one `git cat-file --batch` (a spawn per
   file costs ~50 ms, which a branch's lineage baseline pays per changed input
-  inside its write budget), is what `input-hashes-at.ts` hashes, and its
-  one-path `fileAt` what `fileAtMergeBase` decodes.
+  inside its write budget), is what `input-hashes-at.ts` hashes and
+  `fileAtMergeBase` decodes.
 - `input-hashes-at.ts` (+ test) — `inputHashesAt(commit, inputs)`: an
   `inputHashes` map with each path that differs on disk from `commit`
   re-hashed from `commit`'s copy (code by identity; LFS content read from the
