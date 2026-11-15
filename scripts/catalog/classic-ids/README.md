@@ -148,6 +148,9 @@ scripts/catalog/classic-ids/
   classic-id-overlay-expected.json
                                   Pinned count snapshot. Refresh with
                                   --update-snapshots.
+  classic-id-overlay-expected-json.ts
+                                  CLASSIC_ID_OVERLAY_COUNTS, its declaration
+                                  (../../util/sources/README.md#a-snapshot).
 ```
 
 ## Join routes

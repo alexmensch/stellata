@@ -55,18 +55,38 @@ export type FileAt =
   | { readonly kind: 'present'; readonly bytes: Buffer }
   | { readonly kind: 'absent' };
 
-/** A file relative to `root` as `commit` stores it. `absent` is a real answer —
- *  `commit` has no such path — never a failed git. */
-export function fileAt(commit: string, path: string, root: string = REPO_ROOT): FileAt {
-  try {
-    gitIn(root, 'cat-file', '-e', `${commit}:${path}`);
-  } catch {
-    return { kind: 'absent' };
-  }
-  return {
-    kind: 'present',
-    bytes: execFileSync('git', ['show', `${commit}:${path}`], { cwd: root, maxBuffer: Number.MAX_SAFE_INTEGER }),
+const BATCH_OBJECT = /^[0-9a-f]+ (\w+) (\d+)$/;
+
+/** `absent` is a real answer — `commit` has no such path — never a failed git; a commit git cannot find throws. */
+export function blobsAt(commit: string, paths: readonly string[], root: string = REPO_ROOT): Map<string, FileAt> {
+  const files = new Map<string, FileAt>();
+  if (paths.length === 0) return files;
+  const out = execFileSync('git', ['cat-file', '--batch'], {
+    cwd: root,
+    input: [`${commit}^{commit}`, ...paths.map((path) => `${commit}:${path}`)].map((line) => `${line}\n`).join(''),
+    maxBuffer: Number.MAX_SAFE_INTEGER,
+  });
+  let at = 0;
+  const next = (): { readonly type: string; readonly bytes: Buffer } | null => {
+    const eol = out.indexOf(0x0a, at);
+    const header = out.toString('utf8', at, eol);
+    at = eol + 1;
+    if (header.endsWith(' missing')) return null;
+    const object = BATCH_OBJECT.exec(header);
+    if (object === null) throw new Error(`git cat-file: unexpected answer ${header}`);
+    const size = Number(object[2]);
+    const bytes = out.subarray(at, at + size);
+    at += size + 1;
+    return { type: object[1], bytes };
   };
+  if (next()?.type !== 'commit') throw new Error(`git cat-file: no commit ${commit} in ${root}`);
+  for (const path of paths) {
+    const object = next();
+    if (object === null) files.set(path, { kind: 'absent' });
+    else if (object.type !== 'blob') throw new Error(`git cat-file: ${commit}:${path} is not a file`);
+    else files.set(path, { kind: 'present', bytes: object.bytes });
+  }
+  return files;
 }
 
 export type MergeBaseFile =
@@ -78,6 +98,6 @@ export type MergeBaseFile =
 export function fileAtMergeBase(path: string): MergeBaseFile {
   const base = mergeBaseWithMain();
   if (base === null) return { kind: 'no-merge-base' };
-  const at = fileAt(base, path);
+  const at = blobsAt(base, [path]).get(path)!;
   return at.kind === 'absent' ? at : { kind: 'present', text: at.bytes.toString('utf8') };
 }

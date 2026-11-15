@@ -1,6 +1,5 @@
-// The esbuild import closure of a step's entry files, and the tracked-file listing beside it. See README.md.
+// The esbuild import closure of a step's entry files. See README.md.
 
-import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -32,10 +31,4 @@ export async function entryMetafile(entries: readonly string[]): Promise<Metafil
     logLevel: 'silent',
   });
   return metafile;
-}
-
-export function trackedFiles(): string[] {
-  return execFileSync('git', ['ls-files', '-z'], { cwd: REPO_ROOT, encoding: 'utf-8' })
-    .split('\0')
-    .filter((path) => path !== '');
 }
