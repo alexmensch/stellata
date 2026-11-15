@@ -6,7 +6,7 @@ import type { Column, Row, SortKey } from '../pull/columns-pure';
 import { near, type RowBand, type SpotRow } from '../pull/gates-pure';
 import type { Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { VIZIER } from '../pull/tap-pure';
-import { DOUBLE, FLOAT, vizierColumn } from '../vizier/vizier-pure';
+import { DOUBLE, FLOAT, vizierColumn, vizierRelease } from '../vizier/vizier-pure';
 
 export type Tyc = readonly [number, number, number];
 
@@ -80,7 +80,7 @@ const motion: readonly Column[] = [
 const icrs: readonly Column[] = [vizierColumn('RA(ICRS)', 'ra_icrs', DOUBLE), vizierColumn('DE(ICRS)', 'de_icrs', DOUBLE)];
 
 interface Tycho2Table {
-  readonly from: string;
+  readonly vizierId: string;
   readonly columns: readonly [Column, ...Column[]];
   /** Kept rows as a share of the mentioned TYCs, so the band moves with the request set. */
   readonly keptShare: { readonly min: number; readonly max: number };
@@ -89,7 +89,7 @@ interface Tycho2Table {
 
 /** RAmdeg/DEmdeg vs RA(ICRS), and why `pflag='X'` rows need both: /data/tycho2/README.md#which-position-to-propagate-from. */
 export const MAIN: Tycho2Table = {
-  from: 'I/259/tyc2',
+  vizierId: 'I/259/tyc2',
   columns: [
     ...tycColumns, vizierColumn('pflag', 'pflag'),
     vizierColumn('RAmdeg', 'ra_mdeg', DOUBLE), vizierColumn('DEmdeg', 'de_mdeg', DOUBLE),
@@ -108,7 +108,7 @@ export const MAIN: Tycho2Table = {
 };
 
 export const SUPPL1: Tycho2Table = {
-  from: 'I/259/suppl_1',
+  vizierId: 'I/259/suppl_1',
   columns: [...tycColumns, vizierColumn('flag', 'flag'), ...icrs, ...motion, ...photometry],
   keptShare: { min: 0.004, max: 0.012 },
   spotRows: [{ key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } }],
@@ -124,7 +124,7 @@ export function keptBand(share: Tycho2Table['keptShare'], mentioned: number): Ro
 
 export function bandPhase(table: Tycho2Table, [lo, hi]: readonly [number, number]): Phase {
   return {
-    from: VIZIER.quote(table.from),
+    from: VIZIER.quote(table.vizierId),
     where: `TYC1 BETWEEN ${lo} AND ${hi}`,
     columns: table.columns,
     scope: { kind: 'whole-table', maxRows: TYC1_BAND_ROWS },
@@ -177,7 +177,7 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
     outputs,
     phases: Object.fromEntries([...phases].map(([name, { phase }]) => [name, phase])),
     tables,
-    release: keys.map((key) => `VizieR ${TABLES[key].from}`).join(', '),
+    release: vizierRelease(keys.map((key) => TABLES[key])),
     request: { request: requestLines(request), requestFrom },
     async run(ask, log) {
       if (request.mentioned.size === 0) throw new Error(`${requestFrom.join(' and ')} name no TYC between them, so there is nothing to pull`);

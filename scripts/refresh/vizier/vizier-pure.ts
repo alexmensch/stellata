@@ -21,11 +21,19 @@ export function vizierColumn(vizier: string, name: string, format?: Format): Col
 const integer = (column: string): SortKey => ({ column, as: 'integer' });
 const text = (column: string): SortKey => ({ column, as: 'text' });
 
+export interface VizierTable extends PullTable {
+  readonly vizierId: string;
+}
+
+/** A pull's `release`: each table's VizieR id, in the pull's order. */
+export const vizierRelease = (tables: Iterable<{ readonly vizierId: string }>): string =>
+  [...tables].map(({ vizierId }) => `VizieR ${vizierId}`).join(', ');
+
 function wholeTable(
-  from: string, columns: readonly [Column, ...Column[]], sortBy: readonly [SortKey, ...SortKey[]], band: RowBand,
+  vizierId: string, columns: readonly [Column, ...Column[]], sortBy: readonly [SortKey, ...SortKey[]], band: RowBand,
   spotRows: readonly [SpotRow, ...SpotRow[]],
-): PullTable {
-  return { from: VIZIER.quote(from), columns, sortBy, scope: { kind: 'whole-table' }, band, spotRows };
+): VizierTable {
+  return { vizierId, from: VIZIER.quote(vizierId), columns, sortBy, scope: { kind: 'whole-table' }, band, spotRows };
 }
 
 const spot = (key: string, value: string, cells: Readonly<Record<string, Pinned>>): SpotRow => ({ key, value, cells });
