@@ -15,6 +15,7 @@ What the tables are for and which position a consumer propagates from:
 - `refresh-tycho2.ts` — the entry: reads the request off the manifest
   (`MEMBERSHIP_MANIFEST`) and IV/25 (`TYC2_HD`), both named in the record's
   `requestFrom`. `tycho2-outputs.ts`, its `declareOutputs`.
+- `{main,suppl1}.cfa.{tsv,fits}` — the [replies](#replies) recorded from CfA.
 - `tycho2.test.ts` — the request, bands, gates and run over a faked `ask`,
   and each table's [replies](#replies) replayed into its committed lines.
 
@@ -61,8 +62,8 @@ the record as they were.
 
 ## Replies
 
-CDS was unreachable when the pull was ported, so the suite's replies are
-synthetic: committed rows in the CSV dialect ESA, ARI and SIMBAD-Harvard
-answer with. The record was written from a checkpoint seeded with the
-committed rows, band by band, so its `answeredBy` is empty until its first
-live run.
+Each table's replies are CfA's TSV and FITS answers to one query,
+`<table>.cfa.{tsv,fits}` beside the suite (2026-11-15): the spot row's
+entry, asked by TYC1 and TYC2, read through `tapClient` as a live band is. CDS's
+replies wait on CDS answering, as the whole-table pulls' do
+([Replies](../vizier/README.md#replies)).

@@ -31,7 +31,7 @@ const STORE = join(PAPERS, 'pdf');
 const ROOTED_INDEX = '/data/papers/index.md';
 const IN_CI = Boolean(process.env.CI);
 const PUBLIC_COPY = ['public/', 'src/client/app/index.html', 'src/site/', 'CITATION.cff'];
-const DATA_TABLE = /^data\/.*\.(tsv|csv)$/;
+const DATA_TABLE = /^(data\/.*\.(tsv|csv)|scripts\/refresh\/.*\.cfa\.tsv)$/;
 
 const entries = parseIndex(readFileSync(INDEX, 'utf-8'));
 const entryKeys = new Set(entries.map(({ key }) => key));

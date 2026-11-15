@@ -182,9 +182,11 @@ and 3.7″ away on the observation epochs.
 ## Provenance
 
 - **Citation**: [Høg 2000](/data/papers/index.md#hog2000) (Tycho-2).
-- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over the CDS TAP endpoint
-  `scripts/refresh/pull/tap-pure.ts`'s `VIZIER` names.
-- **Retrieved**: 2026-08-25.
+- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over
+  `scripts/refresh/pull/tap-pure.ts`'s `VIZIER`: CDS, or the CfA mirror when
+  CDS is unreachable. The stamp (`data/stamps/refresh-tycho2.json`,
+  `answeredBy`) names which answered.
+- **Retrieved**: 2026-08-25; re-pulled from CfA 2026-11-15, byte-identical.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Høg 2000](/data/papers/index.md#hog2000).
 

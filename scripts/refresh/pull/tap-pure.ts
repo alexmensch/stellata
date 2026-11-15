@@ -1,18 +1,37 @@
-// One TAP sync backend for Gaia, VizieR and SIMBAD: CSV over POST /sync, overflow refused by row count. See README.md#the-tap-backend.
+// One sync backend for Gaia, VizieR and SIMBAD: TAP over POST /sync, or VizieR's ASU over GET; overflow refused by row count. See README.md#the-tap-backend.
 
 import { parse } from 'csv-parse/sync';
+
+import { readFitsTable } from './fits-pure';
 
 export interface TapMirror {
   readonly name: string;
   readonly url: string;
+  /** `asu`: VizieR's ASU interface, asked for FITS, for a mirror that serves no TAP. */
+  readonly protocol: 'tap' | 'asu';
   /** False until the live checks in README.md#the-tap-backend pass against it; a committed record it answered fails the suite. */
   readonly verified: boolean;
 }
 
 export interface TapArchive {
   readonly mirrors: readonly [TapMirror, ...TapMirror[]];
+  /** What a TAP mirror is asked to answer in: `fits` where a text reply would round a stored double. */
+  readonly format: 'csv' | 'fits';
   readonly retryDelaysMs: readonly number[];
   readonly quote: (identifier: string) => string;
+}
+
+/** A query as an ASU mirror asks it: each archive column under the name it answers as, and `column=value` constraints. */
+export interface AsuQuery {
+  readonly source: string;
+  readonly columns: readonly { readonly archive: string; readonly name: string }[];
+  readonly constraints: Readonly<Record<string, string>>;
+}
+
+/** A query every mirror of its archive can send: ADQL for TAP, and the ASU form where the archive has an ASU mirror. */
+export interface ArchiveQuery {
+  readonly adql: string;
+  readonly asu?: AsuQuery;
 }
 
 const bare = (identifier: string): string => identifier;
@@ -22,10 +41,11 @@ export const GAIA_DR3_RELEASE = 'Gaia DR3';
 /** The most rows a sliced Gaia pull puts in one slice: at LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
 export const GAIA_SLICE_ROWS = 24_000;
 
-const ESA_SYNC: TapMirror = { name: 'ESA-sync', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' };
+const ESA_SYNC: TapMirror = { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' };
 
 export const GAIA: TapArchive = {
-  mirrors: [ESA_SYNC, { name: 'ARI-sync', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' }],
+  mirrors: [ESA_SYNC, { name: 'ARI-sync', protocol: 'tap', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' }],
+  format: 'csv',
   retryDelaysMs: [2_000, 4_000, 8_000, 16_000],
   quote: bare,
 };
@@ -33,8 +53,13 @@ export const GAIA: TapArchive = {
 /** For a table only ESA publishes under its query's name: ARI hosts `external.*` under other schema names. */
 export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
 
+/** FITS, so a double reaches the TSV as stored: CDS's CSV and CfA's ASU text each round it their own way (README.md#fits-replies). */
 export const VIZIER: TapArchive = {
-  mirrors: [{ name: 'CDS', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' }],
+  mirrors: [
+    { name: 'CDS', protocol: 'tap', verified: false, url: 'https://tapvizier.u-strasbg.fr/TAPVizieR/tap' },
+    { name: 'CfA', protocol: 'asu', verified: true, url: 'https://vizier.cfa.harvard.edu/viz-bin' },
+  ],
+  format: 'fits',
   retryDelaysMs: [1_000, 2_000, 4_000],
   quote: (identifier) => `"${identifier}"`,
 };
@@ -44,9 +69,10 @@ export const SIMBAD_BATCH_SIZE = 1_000;
 
 export const SIMBAD: TapArchive = {
   mirrors: [
-    { name: 'SIMBAD-CDS', verified: false, url: 'https://simbad.cds.unistra.fr/simbad/sim-tap' },
-    { name: 'SIMBAD-Harvard', verified: true, url: 'https://simbad.cfa.harvard.edu/simbad/sim-tap' },
+    { name: 'SIMBAD-CDS', protocol: 'tap', verified: false, url: 'https://simbad.cds.unistra.fr/simbad/sim-tap' },
+    { name: 'SIMBAD-Harvard', protocol: 'tap', verified: true, url: 'https://simbad.cfa.harvard.edu/simbad/sim-tap' },
   ],
+  format: 'csv',
   retryDelaysMs: [1_000, 2_000, 4_000],
   quote: bare,
 };
@@ -54,8 +80,13 @@ export const SIMBAD: TapArchive = {
 export interface HttpReply {
   readonly status: number;
   readonly contentType: string;
-  readonly body: string;
+  readonly body: Uint8Array;
 }
+
+export const textReply = (status: number, contentType: string, text: string): HttpReply =>
+  ({ status, contentType, body: new TextEncoder().encode(text) });
+
+const replyText = (reply: HttpReply): string => new TextDecoder().decode(reply.body);
 
 /** A GET without `form`, a POST with it; a network failure throws. */
 export type Transport = (url: string, form?: URLSearchParams) => Promise<HttpReply>;
@@ -80,14 +111,86 @@ export interface TapResult {
   readonly rows: readonly (readonly (string | null)[])[];
 }
 
-/** `limit` rows or fewer, else `TapOverflow`: the query asks MAXREC = limit + 1, so more means truncated. */
+/** `result` when it holds `limit` rows or fewer, else `TapOverflow`: the query asks for limit + 1, so more means truncated. */
+function withinLimit(result: TapResult, limit: number, label: string): TapResult {
+  if (result.rows.length > limit) {
+    throw new TapOverflow(`${label}: more than ${limit} rows; the result is truncated, so raise the limit or batch the query`);
+  }
+  return result;
+}
+
 export function readCsv(body: string, limit: number, label: string): TapResult {
   const [columns, ...cells] = parse(body, { bom: true }) as string[][];
   if (columns === undefined) throw new TapRefused(`${label}: the reply has no CSV header`);
-  if (cells.length > limit) {
-    throw new TapOverflow(`${label}: more than ${limit} rows; the result is truncated, so raise the limit or batch the query`);
+  return withinLimit({ columns, rows: cells.map((row) => row.map((cell) => (cell === '' ? null : cell))) }, limit, label);
+}
+
+const csvCell = (cell: string | null): string => (cell === null ? '' : /[",\n\r]/.test(cell) || cell === '' ? `"${cell.replace(/"/g, '""')}"` : cell);
+
+/** The CSV `readCsv` reads back to the same columns and cells, a null as the empty cell. */
+export function csvText(columns: readonly string[], rows: readonly (readonly (string | null)[])[]): string {
+  return [columns, ...rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n';
+}
+
+type FloatsTable = TapResult & { readonly floats: readonly boolean[] };
+
+/** A FITS reply's table, `limit` rows or fewer, `null` for a file with none; a reply cut short is transient. */
+function readFits(reply: HttpReply, limit: number, label: string): FloatsTable | null {
+  const table = readFitsTable(reply.body);
+  if (table.kind === 'incomplete') throw new TapTransient(`${label}: FITS reply cut short (${table.reason})`);
+  if (table.kind === 'no-table') return null;
+  return { ...withinLimit({ columns: table.columns, rows: table.rows }, limit, label), floats: table.floats };
+}
+
+const ASU_ERROR = /^#\s*(?:INFO\s+)?Error\b/i;
+const ASU_UNAVAILABLE = /not currently reachable|no connection|postgres connect error/i;
+
+/** An `asu-tsv` reply: a header, a units line and a dashes line before the rows; a blank cell is null, every cell trimmed. */
+export function readAsuTsv(text: string, limit: number, label: string): TapResult {
+  const error = text.split('\n').find((line) => ASU_ERROR.test(line));
+  if (error !== undefined) {
+    const report = `${label}: ${error.replace(/\s+/g, ' ').trim()}`;
+    throw ASU_UNAVAILABLE.test(error) ? new TapTransient(report) : new TapRefused(report);
   }
-  return { columns, rows: cells.map((row) => row.map((cell) => (cell === '' ? null : cell))) };
+  const lines = text.split('\n').filter((line) => line !== '' && !line.startsWith('#'));
+  if (lines.length === 0) return { columns: [], rows: [] };
+  const [header, , dashes, ...data] = lines;
+  if (dashes === undefined || !/^[-\t]+$/.test(dashes)) throw new TapRefused(`${label}: an asu-tsv reply without its dashes line`);
+  const cells = (line: string): (string | null)[] => line.split('\t').map((cell) => cell.trim() || null);
+  return withinLimit({ columns: header.split('\t').map((c) => c.trim()), rows: data.map(cells) }, limit, label);
+}
+
+/** How ASU's FITS writer spells a VizieR column name in TTYPE: `RA(ICRS)` answers as `RA_ICRS_`, while `B-V` keeps its hyphen. */
+export const asuFitsName = (archive: string): string => archive.replace(/[()]/g, '_');
+
+/** A reply's leading columns must be the asked ones, in order: ASU silently drops a column it does not know, and appends link columns of its own. */
+function askedColumns(result: TapResult, asked: readonly string[], label: string): TapResult {
+  if (result.rows.length > 0 && asked.some((name, i) => result.columns[i] !== name)) {
+    throw new TapRefused(`${label}: ASU answered columns [${result.columns.join(', ')}] for the asked [${asked.join(', ')}]`);
+  }
+  return { columns: asked, rows: result.rows.map((row) => row.slice(0, asked.length)) };
+}
+
+/**
+ * The CfA mirror's two replies to one query as one: floats from its FITS, at their declared precision, every other
+ * cell from its TSV, whose blanks are the catalogue's nulls where its binary writers put a 0 or a type minimum. A cell
+ * both report with a value must agree, or the two replies are not of the same rows.
+ */
+export function joinAsu(query: AsuQuery, tsv: TapResult, fits: FloatsTable | null, label: string): TapResult {
+  const names = query.columns.map((c) => c.name);
+  const text = askedColumns(tsv, query.columns.map((c) => c.archive), label);
+  const binary = fits === null ? { columns: [], rows: [] } : askedColumns(fits, query.columns.map((c) => asuFitsName(c.archive)), label);
+  if (text.rows.length !== binary.rows.length) {
+    throw new TapTransient(`${label}: ASU answered ${text.rows.length} TSV rows and ${binary.rows.length} FITS rows to one query`);
+  }
+  const floats = fits?.floats ?? [];
+  const rows = text.rows.map((row, r) => row.map((cell, i) => {
+    const exact = binary.rows[r][i];
+    const disagree = floats[i] ? (cell === null) !== (exact === null) : cell !== null && exact !== null && cell !== exact;
+    if (disagree) throw new TapRefused(`${label}: row ${r + 1} ${names[i]} is "${cell ?? ''}" in ASU's TSV and "${exact ?? ''}" in its FITS`);
+    return floats[i] ? exact : cell;
+  }));
+  return { columns: names, rows };
 }
 
 const QUERY_STATUS = /<INFO\b[^>]*\bname="QUERY_STATUS"[^>]*\bvalue="([^"]*)"[^>]*?(?:\/>|>([\s\S]*?)<\/INFO>)/;
@@ -102,8 +205,9 @@ export function queryStatus(body: string): { readonly value: string; readonly me
 
 /** A reply that is not CSV, as the error it carries: refused when the archive's own message names a query fault or the status is a 4xx. */
 export function replyError(reply: HttpReply, label: string): TapRefused | TapTransient {
-  const status = queryStatus(reply.body);
-  const text = reply.body.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ');
+  const body = replyText(reply);
+  const status = queryStatus(body);
+  const text = body.replace(/<(style|script)\b[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]*>/g, ' ');
   const detail = (status ? `${status.value}: ${status.message}` : text.replace(/\s+/g, ' ').trim()).slice(0, DETAIL_CHARS);
   const report = `${label}: HTTP ${reply.status}, ${detail}`;
   if (status !== null && PERMANENT_FAULT.test(status.message)) return new TapRefused(report);
@@ -117,13 +221,27 @@ export function hardRowLimit(capabilities: string): number | null {
   return hard ? Number(hard[1]) : null;
 }
 
-export function syncForm(adql: string, limit: number): URLSearchParams {
-  return new URLSearchParams({ REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: 'csv', MAXREC: String(limit + 1), QUERY: adql });
+export function syncForm(adql: string, limit: number, format: TapArchive['format']): URLSearchParams {
+  return new URLSearchParams({ REQUEST: 'doQuery', LANG: 'ADQL', FORMAT: format, MAXREC: String(limit + 1), QUERY: adql });
 }
 
-const isCsv = (reply: HttpReply): boolean => reply.status >= 200 && reply.status < 300 && /^text\/csv\b/i.test(reply.contentType);
+/** The ASU URL for `query` in one of its two outputs, asking `-out.max` = limit + 1 so a truncated reply shows as one row too many. */
+export function asuUrl(mirror: TapMirror, output: 'asu-tsv' | 'asu-binfits', query: AsuQuery, limit: number): string {
+  const params = new URLSearchParams({
+    '-source': query.source, '-out': query.columns.map((c) => c.archive).join(','), ...query.constraints, '-out.max': String(limit + 1),
+  });
+  return `${mirror.url}/${output}?${params}`;
+}
+
+const CONTENT_TYPE: Readonly<Record<TapArchive['format'] | 'text', RegExp>> = {
+  csv: /^text\/csv\b/i, fits: /^application\/fits\b/i, text: /^text\/tab-separated-values\b/i,
+};
+
+const answers = (reply: HttpReply, format: keyof typeof CONTENT_TYPE): boolean =>
+  reply.status >= 200 && reply.status < 300 && CONTENT_TYPE[format].test(reply.contentType);
 
 export interface TapAnswer {
+  /** The answer as CSV, whatever the mirror sent: what the checkpoint keeps and `readCsv` replays. */
   readonly body: string;
   readonly result: TapResult;
   /** The mirror that answered. */
@@ -139,8 +257,8 @@ export interface TapClientDeps {
 
 export interface TapClient {
   readonly services: readonly string[];
-  /** The rows of `adql`, at most `limit` of them, from the first mirror that can hold `limit + 1` and answers. */
-  query(adql: string, limit: number): Promise<TapAnswer>;
+  /** The rows of `query`, at most `limit` of them, from the first mirror that can hold `limit + 1` and answers. */
+  query(query: ArchiveQuery, limit: number): Promise<TapAnswer>;
 }
 
 export async function withRetry<T>(run: () => Promise<T>, delaysMs: readonly number[], sleep: (ms: number) => Promise<void>): Promise<T> {
@@ -162,12 +280,13 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
   const caps = new Map<string, Promise<number | null>>();
 
   const capOf = (mirror: TapMirror): Promise<number | null> => {
+    if (mirror.protocol === 'asu') return Promise.resolve(null);
     let cap = caps.get(mirror.name);
     if (cap === undefined) {
       cap = withRetry(async () => {
         const reply = await deps.transport(`${mirror.url}/capabilities`);
         if (reply.status !== 200) throw new TapTransient(`${mirror.name} /capabilities: HTTP ${reply.status}`);
-        return hardRowLimit(reply.body);
+        return hardRowLimit(replyText(reply));
       }, archive.retryDelaysMs, deps.sleep);
       cap.catch(() => caps.delete(mirror.name));
       caps.set(mirror.name, cap);
@@ -175,15 +294,39 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     return cap;
   };
 
-  const ask = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
-    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(adql, limit));
-    if (!isCsv(reply)) throw replyError(reply, mirror.name);
-    return { body: reply.body, result: readCsv(reply.body, limit, mirror.name), service: mirror.name };
+  const answered = (mirror: TapMirror, result: TapResult): TapAnswer =>
+    ({ body: csvText(result.columns, result.rows), result, service: mirror.name });
+
+  const askTap = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
+    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(adql, limit, archive.format));
+    if (!answers(reply, archive.format)) throw replyError(reply, mirror.name);
+    if (archive.format === 'csv') {
+      const body = replyText(reply);
+      return { body, result: readCsv(body, limit, mirror.name), service: mirror.name };
+    }
+    const result = readFits(reply, limit, mirror.name);
+    if (result === null) throw new TapTransient(`${mirror.name}: a TAP FITS reply with no table`);
+    return answered(mirror, { columns: result.columns, rows: result.rows });
+  };
+
+  const askAsu = async (mirror: TapMirror, query: AsuQuery, limit: number): Promise<TapAnswer> => {
+    const tsv = await deps.transport(asuUrl(mirror, 'asu-tsv', query, limit));
+    if (!answers(tsv, 'text')) throw replyError(tsv, mirror.name);
+    const fits = await deps.transport(asuUrl(mirror, 'asu-binfits', query, limit));
+    if (!answers(fits, 'fits')) throw replyError(fits, mirror.name);
+    const text = readAsuTsv(replyText(tsv), limit, mirror.name);
+    return answered(mirror, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
+  };
+
+  const ask = (mirror: TapMirror, query: ArchiveQuery, limit: number): Promise<TapAnswer> => {
+    if (mirror.protocol === 'tap') return askTap(mirror, query.adql, limit);
+    if (query.asu === undefined) throw new TapRefused(`${mirror.name} answers ASU only, and the query has no ASU form: ${query.adql}`);
+    return askAsu(mirror, query.asu, limit);
   };
 
   return {
     services: archive.mirrors.map((m) => m.name),
-    async query(adql, limit) {
+    async query(query, limit) {
       const tooSmall: string[] = [];
       let lastTransient: unknown = null;
       for (const mirror of [...order]) {
@@ -193,7 +336,7 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
             tooSmall.push(`${mirror.name} (${cap})`);
             continue;
           }
-          const answer = await withRetry(() => ask(mirror, adql, limit), archive.retryDelaysMs, deps.sleep);
+          const answer = await withRetry(() => ask(mirror, query, limit), archive.retryDelaysMs, deps.sleep);
           order.splice(order.indexOf(mirror), 1);
           order.unshift(mirror);
           deps.report(mirror.name);

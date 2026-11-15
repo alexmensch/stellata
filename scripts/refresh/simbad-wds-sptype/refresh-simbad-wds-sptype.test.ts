@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import { runPull } from '../pull/pull';
-import { SIMBAD, type TapClientDeps } from '../pull/tap-pure';
+import { SIMBAD, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { wdsSptypeTable } from './simbad-wds-sptype-pure';
 
 describe('the pull', () => {
@@ -16,8 +16,8 @@ describe('the pull', () => {
 
   const deps = (body: string): TapClientDeps => ({
     transport: async (_url, form) => (form
-      ? { status: 200, contentType: 'text/csv', body }
-      : { status: 200, contentType: 'text/xml', body: '<capabilities/>' }),
+      ? textReply(200, 'text/csv', body)
+      : textReply(200, 'text/xml', '<capabilities/>')),
     sleep: async () => {},
     report: () => {},
     log: () => {},

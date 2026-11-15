@@ -1,0 +1,39 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:38:01 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:38:01	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=IV%2F27A%2Fcatalog&-out=HD%2CHR%2CHIP%2CBayer%2CFl%2CCst&HD=172167%2C48915%2C493&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_4027
+#Name: IV/27A
+#Title: HD-DM-GC-HR-HIP-Bayer-Flamsteed Cross Index (Kostjuk, 2002)
+#INFO	ivoid=ivo://cds.vizier/iv/27a	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/iv/27a	    IVOID of underlying data collection
+#INFO	creator=Kostjuk N.D.	    First author or institution
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/IV/27A	    Dataset landing page
+#INFO	publication_date=2020-07-01	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	IV_27A_catalog:
+#Name: IV/27A/catalog
+#Title: HD-DM-GC-HR-HIP-Bayer-Flamsteed Cross Index
+#Column	HD	(I6)	[1/257937] Henry Draper Catalog Number <III/135>	[ucd=meta.id;meta.main]
+#Column	HR	(I4)	[1/9110]? Harvard Revised Number=Bright Star Number <V/50> if one exists, otherwise blank	[ucd=meta.id]
+#Column	HIP	(I6)	[1/120416]? Hipparcos Catalog <I/196> number if one exists, otherwise blank	[ucd=meta.id]
+#Column	Bayer	(a5)	Bayer designation (G1)	[ucd=meta.id]
+#Column	Fl	(I3)	? Flamsteed number (G1)	[ucd=meta.id]
+#Column	Cst	(A3)	Constellation abbreviation (G1)	[ucd=meta.id.part]
+HD	HR	HIP	Bayer	Fl	Cst
+ 	 	 	 	 	
+------	----	------	-----	---	---
+   493	  24	   761	kap01	   	Scl
+ 48915	2491	 32349	alf  	  9	CMa
+172167	7001	 91262	alf  	  3	Lyr
+

@@ -1,0 +1,44 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:38:00 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:38:00	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=IV%2F25%2Ftyc2_hd&-out=TYC1%2CTYC2%2CTYC3%2CHD%2Cn_HD%2Cn_TYC&HD=172167%2C48915%2C39118%2C39119&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_4025
+#Name: IV/25
+#Title: HD identifications for Tycho-2 stars (Fabricius+, 2002)
+#INFO	ivoid=ivo://cds.vizier/iv/25	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/iv/25	    IVOID of underlying data collection
+#INFO	creator=Fabricius C	    First author or institution
+#INFO	cites=bibcode:2002A&A...386..709F	    Article or Data origin sources
+#INFO	journal=A&A	    Journal name
+#INFO	original_date=2002	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/IV/25	    Dataset landing page
+#INFO	publication_date=2017-10-13	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	J2000_2000.000:	eq_FK5 J2000
+#Table	IV_25_tyc2_hd:
+#Name: IV/25/tyc2_hd
+#Title: Catalog
+#Column	TYC1	(I4)	[1,9537]+= TYC1 from Tycho-2	[ucd=meta.id]
+#Column	TYC2	(I5)	[1,12121] TYC2 from Tycho-2	[ucd=meta.id]
+#Column	TYC3	(I1)	[1,4] TYC3 from Tycho-2	[ucd=meta.id]
+#Column	HD	(I6)	HD (Cat. <III/135>) identifier	[ucd=meta.id;meta.main]
+#Column	n_HD	(I1)	[1,2] number of HD stars for this Tyc2 star	[ucd=meta.note]
+#Column	n_TYC	(I1)	[1,2] number of Tyc2 stars for this HD star	[ucd=meta.note]
+TYC1	TYC2	TYC3	HD	n_HD	n_TYC
+ 	 	 	 	 	
+----	-----	-	------	-	-
+ 120	  877	1	 39118	2	1
+ 120	  877	1	 39119	2	1
+3105	 2070	1	172167	1	1
+5949	 2777	1	 48915	1	1
+
