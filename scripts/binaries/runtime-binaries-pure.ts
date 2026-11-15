@@ -35,13 +35,21 @@ export function sameRelationAlias(a: MultiplesPair, b: MultiplesPair): boolean {
   return alias(a.primaryComp, b.primaryComp) && alias(a.secondaryComp, b.secondaryComp);
 }
 
-function pairFate(pairs: readonly MultiplesPair[], i: number, ends: PairEnds, winner: number | undefined): PairFate {
+type Addressed =
+  | { readonly kind: 'primary-unresolved' | 'secondary-unresolved' | 'degenerate-idx' }
+  | { readonly kind: 'distinct'; readonly primary: number; readonly secondary: number };
+
+function addressed(ends: PairEnds): Addressed {
+  if (distinctEnds(ends)) return { kind: 'distinct', primary: ends.primary, secondary: ends.secondary };
   if (ends.primary === null) return { kind: 'primary-unresolved' };
-  if (ends.secondary === null) return { kind: 'secondary-unresolved' };
-  if (ends.primary === ends.secondary) return { kind: 'degenerate-idx' };
-  if (winner === undefined) throw new Error(`planRecords: pair ${pairs[i].systemId} has distinct ends but no relation winner`);
-  if (winner === i) return { kind: 'emitted', primary: ends.primary, secondary: ends.secondary };
-  return { kind: sameRelationAlias(pairs[i], pairs[winner]) ? 'same-relation-alias' : 'duplicate-relation', kept: winner };
+  return ends.secondary === null ? { kind: 'secondary-unresolved' } : { kind: 'degenerate-idx' };
+}
+
+function assertVisitsEachOnce(walkOrder: readonly number[], n: number): void {
+  const seen = new Set(walkOrder.filter((i) => Number.isInteger(i) && i >= 0 && i < n));
+  if (walkOrder.length !== n || seen.size !== n) {
+    throw new Error(`planRecords: the walk must visit each of ${n} pairs once; it visits ${seen.size} of them in ${walkOrder.length} steps`);
+  }
 }
 
 /** README.md#runtime-pairs-lineage. `parentRelation` is the parent's emitted position, not its input index. */
@@ -51,27 +59,33 @@ export function planRecords(
   walkOrder: readonly number[],
   ends: readonly PairEnds[],
 ): { records: BinaryRecord[]; fates: PairFate[]; counts: RuntimeBinariesCounts } {
-  if (walkOrder.length !== pairs.length) throw new Error(`planRecords: the walk visits ${walkOrder.length} of ${pairs.length} pairs`);
-  const relationKey = (i: number): string => `${ends[i].primary},${ends[i].secondary}`;
+  assertVisitsEachOnce(walkOrder, pairs.length);
+  const addresses = ends.map(addressed);
+  const relationKey = (a: { primary: number; secondary: number }): string => `${a.primary},${a.secondary}`;
   const relationWinner = new Map<string, number>();
   for (const i of walkOrder) {
-    if (!distinctEnds(ends[i])) continue;
-    const incumbent = relationWinner.get(relationKey(i));
+    const a = addresses[i];
+    if (a.kind !== 'distinct') continue;
+    const incumbent = relationWinner.get(relationKey(a));
     if (incumbent === undefined
       || (hasRenderableOrbit(pairs[i].elements) && !hasRenderableOrbit(pairs[incumbent].elements))) {
-      relationWinner.set(relationKey(i), i);
+      relationWinner.set(relationKey(a), i);
     }
   }
+  const fates = addresses.map((a, i): PairFate => {
+    if (a.kind !== 'distinct') return a;
+    const winner = relationWinner.get(relationKey(a)) as number;
+    if (winner === i) return { kind: 'emitted', primary: a.primary, secondary: a.secondary };
+    return { kind: sameRelationAlias(pairs[i], pairs[winner]) ? 'same-relation-alias' : 'duplicate-relation', kept: winner };
+  });
 
   const counts: RuntimeBinariesCounts = {
     pairs_total: pairs.length, pairs_with_orbit: 0, pairs_with_inclination: 0, pairs_inner_of_hierarchy: 0,
   };
   const records: BinaryRecord[] = [];
-  const fates = new Array<PairFate>(pairs.length);
   const inputToOutput = new Map<number, number>();
   for (const i of walkOrder) {
-    const fate = pairFate(pairs, i, ends[i], relationWinner.get(relationKey(i)));
-    fates[i] = fate;
+    const fate = fates[i];
     if (fate.kind !== 'emitted') continue;
     const { primary: primaryIdx, secondary: secondaryIdx } = fate;
     const p = pairs[i];

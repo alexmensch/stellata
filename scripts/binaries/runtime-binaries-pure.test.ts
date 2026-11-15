@@ -146,6 +146,15 @@ describe('planRecords', () => {
 
 });
 
+describe('planRecords walk', () => {
+  it('refuses a walk that skips a pair or visits one twice', () => {
+    const pairs = [pair('00000+0000-AB'), pair('00000+0000-CD', { primaryGaia: '3', secondaryGaia: '4' })];
+    const ends = resolvePairs(pairs, map()).map((r) => r.rendered);
+    expect(() => planRecords(pairs, [NO_PARENT, NO_PARENT], [0, 0], ends)).toThrow(/each of 2 pairs once/);
+    expect(() => planRecords(pairs, [NO_PARENT, NO_PARENT], [0], ends)).toThrow(/each of 2 pairs once/);
+  });
+});
+
 describe('multiplesHandshake', () => {
   it('passes on the same multiples.tsv and refuses another', () => {
     expect(multiplesHandshake('a'.repeat(40), 'a'.repeat(40)).kind).toBe('pass');
