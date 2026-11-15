@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
 import { afterAll, describe, expect, it } from 'vitest';
@@ -8,6 +8,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import { declareOutputs } from '../util/emit-artifacts';
 
 import { artifactText, isReadable, readArtifact } from '../util/sources/source';
+import { REPO_ROOT } from '../util/paths';
 import { defineSnapshot } from '../util/sources/snapshot-pure';
 import type { StagedCounts } from '../util/counts/count-stages-pure';
 import { retiredSids } from './events-pure';
@@ -87,7 +88,7 @@ describe('siblingLineage', () => {
   const identity = [{ key: 'local-group:a', tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations: ['lg:a'] }];
 
   const snapshot = join(dir, 'expected.json');
-  const pinned = defineSnapshot<StagedCounts>({ file: snapshot, script: spec.step });
+  const pinned = defineSnapshot<StagedCounts>({ file: relative(REPO_ROOT, snapshot), script: spec.step });
   writeFileSync(snapshot, JSON.stringify({
     stages: { [stage]: { [`${stage}.resolved`]: 1, [`${stage}.minted`]: 0, [`${stage}.reinstated`]: 0 } },
   }));

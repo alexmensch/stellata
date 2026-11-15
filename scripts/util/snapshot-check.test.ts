@@ -1,8 +1,9 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { REPO_ROOT } from './paths';
 import { defineSnapshot } from './sources/snapshot-pure';
 import {
   PIPELINE_STEP_ENV, UPDATE_SNAPSHOTS_ENV as ENV, countSnapshotCheck, snapshotCheck, type SnapshotCheckSpec,
@@ -23,7 +24,11 @@ describe('snapshotCheck', () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  const check = (actual: { n: number }) => snapshotCheck(defineSnapshot<{ n: number }>({ file: path, script: 'build' }), spec(actual));
+  it('refuses a snapshot declared by absolute path', () => {
+    expect(() => defineSnapshot({ file: path, script: 'build' })).toThrow(/must be repo-relative/);
+  });
+
+  const check = (actual: { n: number }) => snapshotCheck(defineSnapshot<{ n: number }>({ file: relative(REPO_ROOT, path), script: 'build' }), spec(actual));
 
   function spec(actual: { n: number }): SnapshotCheckSpec<{ n: number }> {
     return {
@@ -72,7 +77,7 @@ describe('snapshotCheck', () => {
 
   it('compares a count snapshot by its counts, naming the drifted one', () => {
     writeFileSync(path, JSON.stringify({ stages: { read: { rows: 3 } } }));
-    const counts = (rows: number) => countSnapshotCheck(defineSnapshot<object>({ file: path, script: 'build' }), {
+    const counts = (rows: number) => countSnapshotCheck(defineSnapshot<object>({ file: relative(REPO_ROOT, path), script: 'build' }), {
       actual: { stages: { read: { rows } } }, failureLabel: 'test',
     });
     expect(counts(3).kind).toBe('pass');
