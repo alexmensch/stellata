@@ -16,9 +16,9 @@ import type { MultiplicityCounts } from './multiplicity-stage-pure';
 // parseHipCcdm) drops because Hipparcos's main catalogue modelled
 // them as single stars (`MultFlag` blank, `Ncomp=1`). Each entry is a
 // system: a list of HIPs (one or more components found in this
-// catalog) plus a justification. parseHipCcdm groups these as
-// synthetic CCDM systems so the primary-only flagging in
-// applyDoublesFlag picks exactly one component per system.
+// catalog) plus a justification. doublesEvidence appends each as a
+// group of its own, so the primary-only flagging in applyDoublesFlag
+// picks exactly one component per system.
 //
 // Visual review of new chart-mode renders may surface more — extend
 // conservatively, only for systems where the pair is canonical enough
@@ -58,7 +58,7 @@ export const KNOWN_VISUAL_DOUBLE_HIPS: Set<number> = new Set(
 // dash-separator row, then data).
 //
 // Real CCDM keys only. A HIP the curated list already claims is skipped here
-// and unioned in by applyDoublesFlag instead, so no synthetic key is minted
+// and unioned in by doublesEvidence instead, so no synthetic key is minted
 // that would share a type with a real CCDM ID.
 const HIP_CCDM_COLUMNS = ['HIP', 'CCDM', 'MultFlag'] as const;
 
