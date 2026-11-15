@@ -659,10 +659,12 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-14: 106,734 rows — one outcome row per `multiples.tsv` row
-plus 59,713 facet rows, two of them (colour, dust) per minted record — and
-31,908 identity rows (the minted companions and the 17,232 rows promotion
-retires, parks or merges), 1.30 MB gzipped in 0.68 s (header, diff, write
-and invariants; 62 ms of it the baseline, 534 ms rendering);
-`PROMOTION_LINEAGE_BUDGET` pins 1.40 MB and 10 s. A CI run with a diff took
+Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
+59,713 facet rows (two of them, colour and dust, per minted record), 16,611
+size rows (one per record promotion sized: <!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mints, <!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> re-split,
+<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> dimmed anchors) and 1,945 held-record brightness rows — and 31,908
+identity rows (the minted companions and the 17,232 rows promotion retires,
+parks or merges), 1.55 MB gzipped in 0.24 s (header, diff, write and
+invariants; 109 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+1.67 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
