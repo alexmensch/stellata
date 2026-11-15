@@ -20,7 +20,7 @@ import { CNS5 } from '../classic-ids/cns5-source';
 import { cns5AstrometryByGj } from '../classic-ids/classic-ids-parse';
 import { createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import { readMultiplesTsv } from '../companions/companion-promotion';
+import { readMultiplesTsv } from '../companions/multiples-row';
 import { buildPairMemberParallaxIndex, unpulledSiblingsMessage } from '../distance/parallax/pair-member-parallax';
 import {
   readMagnitudeTermAstrometry,

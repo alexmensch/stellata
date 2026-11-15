@@ -152,7 +152,7 @@ synthetic id. A deeper floor converts promoted companions into ordinary records
 rather than adding to them. Two of those synthetic classes then match only
 retired sids and need `reinstate` events in `../../../../data/sid/events.tsv`, and seven
 rows reach the record only through a stored same-as edge
-([Same-as bridge to an already-admitted source](../../companions/README.md#same-as-bridge-to-an-already-admitted-source)).
+([Same-as bridge to an already-admitted source](../../companions/identity/README.md#same-as-bridge-to-an-already-admitted-source)).
 
 **Parking scaled close to the projection**, against today's 5,087:
 
@@ -226,7 +226,7 @@ Two identity consequences, both handled in `data/sid/`:
 same-as bridge names a Gaia source the deep population admits as its own
 record, and the promotion's already-in-catalog test matches on the row's own
 identifiers. Promotion now reads the stored edges
-([Same-as bridge to an already-admitted source](../../companions/README.md#same-as-bridge-to-an-already-admitted-source)),
+([Same-as bridge to an already-admitted source](../../companions/identity/README.md#same-as-bridge-to-an-already-admitted-source)),
 which refuses that mint and six more.
 
 ### What that costs on the wire
