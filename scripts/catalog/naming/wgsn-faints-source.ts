@@ -12,7 +12,7 @@ const CORRECTIONS: Declared = {
 
 export const WGSN_FAINTS = defineSource({
   file: DATA_FILES.wgsnFaints,
-  hint: 'Re-run scripts/refresh/refresh-iau-wgsn.py.',
+  hint: 'Re-run `pnpm run refresh:iau-wgsn`.',
   members: [CORRECTIONS],
   parse: (input) => {
     const [corrections] = input.members;

@@ -6,6 +6,6 @@ import { parseNecCsv } from './wgsn-parse-pure';
 
 export const WGSN_NEC = defineSource({
   file: DATA_FILES.wgsnNec,
-  hint: 'Re-run scripts/refresh/refresh-iau-wgsn.py.',
+  hint: 'Re-run `pnpm run refresh:iau-wgsn`.',
   parse: (input) => parseNecCsv(input.text(), input),
 });

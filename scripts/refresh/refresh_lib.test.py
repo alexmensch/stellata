@@ -1062,6 +1062,25 @@ class MembershipReaderTests(unittest.TestCase):
         self.assertEqual(rows[0]["rv_src"], "HYG")
 
 
+class MentionedTycTests(unittest.TestCase):
+    def _write(self, name: str, text: str) -> Path:
+        d = self.enterContext(tempfile.TemporaryDirectory())
+        p = Path(d) / name
+        p.write_text(text)
+        return p
+
+    def test_parse_tyc_reads_a_designation_and_refuses_anything_else(self) -> None:
+        self.assertEqual(rl.parse_tyc("  55-256-1 "), (55, 256, 1))
+        for bad in ("", "3694-2544", "3694-2544-1-2", "TYC 1-2-1", "3694--1", "a-b-c"):
+            self.assertIsNone(rl.parse_tyc(bad), bad)
+
+    def test_unions_the_manifest_column_with_iv25s_own_tycs(self) -> None:
+        manifest = self._write("manifest.tsv", "tyc\thip\n1-2-1\t10\n3-4-1\t11\n\t12\n")
+        iv25 = self._write("tyc2_hd.tsv", "tyc1\ttyc2\ttyc3\thd\n3\t4\t1\t999\n5\t6\t1\t998\n")
+        self.assertEqual(rl.read_mentioned_tycs(manifest, iv25), {(1, 2, 1), (3, 4, 1), (5, 6, 1)})
+        self.assertEqual(rl.read_membership_tycs(manifest), {(1, 2, 1), (3, 4, 1)})
+
+
 # ─── check_spot_row ──────────────────────────────────────────────────
 
 class CheckSpotRowTests(unittest.TestCase):
