@@ -3,7 +3,7 @@
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`; `parked-ledger.tsv`
 and `simbad_sourced_distances.tsv` by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
-the two files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
+the three files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
 membership-manifest.tsv  LFS. One row per admitted record: final
@@ -85,9 +85,12 @@ merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·
                          pair_moves · derived_only · differs — with the
-                         derived value and its witness. Moves no manifest
-                         row; it is the surface the switch off the spine
-                         settles (/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger).
+                         derived value and its witness. Its pair_moves rows
+                         are the HIP moves onto another spine record the
+                         pair rule applies, which parity gate (i) reads; the
+                         other kinds move no manifest row and are the surface
+                         the switch off the spine settles
+                         (/scripts/catalog/membership/merge-derivation/README.md#the-divergence-ledger).
 pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
                          a Tycho-2 pair the pair rule names no owner for:
                          the pair's entries and why
@@ -114,7 +117,8 @@ AT-HYG's merge decisions, its `gaia_source_id` column read only as the diff
 surface for the derived binding), the primaries the audit reads
 (`../classic-ids/`, `../gliese/`, `../hipparcos/` with I/239's `hd` column,
 `../tycho2/`, `../iau-wgsn/`, the two `../gaia/` cross-walks,
-`../simbad/simbad_sptype.tsv`), the `gl:` bridges of
+`../simbad/simbad_sptype.tsv`), `../simbad/simbad_tyc_hd.tsv` for the pair
+rule's SIMBAD check, the `gl:` bridges of
 `../sid/sameas-overrides.tsv`, the binding gates' evidence
 (`../gaia/gaia_dr3_astrometry.tsv` for G,
 `../hipparcos/hip_main_vmag.tsv` for printed V,
@@ -124,8 +128,8 @@ overlay `../classic-ids/classic_id_overlay.tsv`,
 `../classic-ids/cross_index_corrections.tsv` (which IV/27A arrives through, so
 an addition's Flamsteed number carries the correction too),
 `../binaries/multiples.tsv`, and
-this folder's own `binding-review-dispositions.tsv` and
-`spine-corrections.tsv`. Licence follows the inputs: CC-BY-SA-4.0 through the
+this folder's own `binding-review-dispositions.tsv`,
+`pair-review-dispositions.tsv` and `spine-corrections.tsv`. Licence follows the inputs: CC-BY-SA-4.0 through the
 spine.
 
 ## Consumed by
