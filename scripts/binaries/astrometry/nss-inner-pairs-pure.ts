@@ -5,7 +5,7 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { subResolutionPair } from '../load/subdivide-pure';
 import { nssInRegime, nssToCanonicalElements } from '../orbits/nss-elements-pure';
-import { componentsOf, inheritAs, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
+import { componentsOf, inheritAs, type DecomposedPair, type GaiaBinding, type ResolvedComponent } from '../resolve/components-pure';
 import { inheritedFrom } from '../multiples-record-pure';
 import { compareSourceIds } from '../../util/tsv/table-pure';
 import { splitComponents } from '../../wds/wds-pure';
@@ -25,7 +25,7 @@ export const NSS_SYNTHESIS_OUTCOMES = [
 export type NssSynthesisOutcome = (typeof NSS_SYNTHESIS_OUTCOMES)[number];
 
 interface Carrier {
-  readonly sourceId: string;
+  readonly gaia: GaiaBinding;
   readonly component: ResolvedComponent;
   readonly astrometry: ComponentAstrometry;
 }
@@ -35,18 +35,18 @@ function nssCarriers(pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<D
   for (const p of pairs) {
     const a = astrometry.get(p)!;
     for (const [component, ast, partner] of [[p.primary, a.primary, p.secondary], [p.secondary, a.secondary, p.primary]] as const) {
-      const sourceId = valueOf(component.gaia);
-      if (sourceId === null || !indices.srcToNss.has(sourceId)) continue;
-      if (partner.gaia === null || partner.gaia.value === sourceId) continue;
-      const key = `${component.wdsId}\t${sourceId}`;
+      const { gaia } = component;
+      if (gaia === null || !indices.srcToNss.has(gaia.value)) continue;
+      if (partner.gaia === null || partner.gaia.value === gaia.value) continue;
+      const key = `${component.wdsId}\t${gaia.value}`;
       const cur = carriers.get(key);
       if (cur === undefined || component.component.length > cur.component.component.length) {
-        carriers.set(key, { sourceId, component, astrometry: ast });
+        carriers.set(key, { gaia, component, astrometry: ast });
       }
     }
   }
   return [...carriers.values()].sort((x, y) =>
-    compareCodeUnits(x.component.wdsId, y.component.wdsId) || compareSourceIds(x.sourceId, y.sourceId));
+    compareCodeUnits(x.component.wdsId, y.component.wdsId) || compareSourceIds(x.gaia.value, y.gaia.value));
 }
 
 export interface NssInnerPairs {
@@ -91,7 +91,7 @@ export function synthesizeNssInnerPairs(
     const { component: c, astrometry: ast } = carrier;
     const measured = ast.astrometryVia === 'unresolved' ? null : ast;
     const existing = tokensBySystem.get(c.wdsId)!;
-    const verdict = nssVerdict(carrier, existing, indices.srcToNss.get(carrier.sourceId)!);
+    const verdict = nssVerdict(carrier, existing, indices.srcToNss.get(carrier.gaia.value)!);
     outcomes.push(verdict.outcome);
     if (verdict.outcome !== 'synthesized') continue;
 
@@ -102,7 +102,7 @@ export function synthesizeNssInnerPairs(
     const fromCarrier = inheritedFrom(c.component, 'parent');
     const child = (component: string, isPrimary: boolean): ResolvedComponent => ({
       wdsId: c.wdsId, discoverer: SYNTH_NSS_DISCOVERER, component, isPrimary,
-      gaia: { value: carrier.sourceId, origin: fromCarrier }, resolveVia: c.resolveVia,
+      gaia: inheritAs(carrier.gaia, fromCarrier),
       hip: c.hip === null ? null : inheritAs(c.hip, fromCarrier),
       athyg: c.athyg === null ? null : inheritAs(c.athyg, fromCarrier), hd: null,
     });

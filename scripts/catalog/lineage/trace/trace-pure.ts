@@ -3,7 +3,7 @@
 import { ALLOCATION_CODES, type AllocationSidRow } from '../../../sid/allocation-lineage-pure';
 import { isValidDesignation } from '../../../sid/sid-pure';
 import { foldNameKey } from '../../naming/wgsn-normalise-pure';
-import type { IdentityRow } from '../identity-pure';
+import type { IdentityRow } from '../identity/identity-pure';
 import { sortUtf8, type LineageRow } from '../lineage-row-pure';
 
 /** Gaia DR3 source_ids run to 10 digits and more; a SID never does. */

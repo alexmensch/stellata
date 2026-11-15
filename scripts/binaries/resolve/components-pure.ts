@@ -3,7 +3,7 @@
 import { discovererKey, type DiscovererKey } from '../component-tokens-pure';
 import type { AthygRow } from '../load/athyg-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
-import { OWN, RESOLVE_VIA, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
+import { OWN, RESOLVE_VIA, type GaiaVia, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
 /** Lower is stronger evidence. */
@@ -24,8 +24,21 @@ export function own<T>(value: T): Bound<T> {
 }
 
 /** The same identifier, now held under `origin`. */
-export function inheritAs<T>(b: Bound<T>, origin: IdOrigin): Bound<T> {
-  return { value: b.value, origin };
+export function inheritAs<B extends Bound<unknown>>(b: B, origin: IdOrigin): B {
+  return { ...b, origin };
+}
+
+/** A Gaia source, where the component came by it, and the tier that found it. */
+export interface GaiaBinding extends Bound<string> {
+  readonly via: GaiaVia;
+}
+
+export function ownGaia(value: string, via: GaiaVia): GaiaBinding {
+  return { value, origin: OWN, via };
+}
+
+export function resolveViaOf(c: { readonly gaia: GaiaBinding | null }): ResolveVia {
+  return c.gaia === null ? 'unresolved' : c.gaia.via;
 }
 
 export function valueOf<T>(b: Bound<T> | null): T | null {
@@ -39,8 +52,7 @@ export interface ResolvedComponent {
   /** As the components field writes it: a truncated secondary stays `"2"`. */
   readonly component: string;
   readonly isPrimary: boolean;
-  readonly gaia: Bound<string> | null;
-  readonly resolveVia: ResolveVia;
+  readonly gaia: GaiaBinding | null;
   readonly hip: Bound<number> | null;
   /** The position-matched AT-HYG row, for a row whose identifiers no index reaches. */
   readonly athyg: Bound<AthygRow> | null;
@@ -53,7 +65,7 @@ export type Draft = { -readonly [K in keyof ResolvedComponent]: ResolvedComponen
 export function unresolvedComponent(pair: WdsPair, component: string, isPrimary: boolean): ResolvedComponent {
   return {
     wdsId: pair.wdsId, discoverer: pair.discoverer, component, isPrimary,
-    gaia: null, resolveVia: 'unresolved', hip: null, athyg: null, hd: null,
+    gaia: null, hip: null, athyg: null, hd: null,
   };
 }
 

@@ -80,6 +80,9 @@ scripts/catalog/spine/
   association-audit-pure.ts       Per row, whether the primaries' own
     (+ test)                      cross-references connect every identifier
                                   it carries (README.md#the-association-audit).
+                                  Its link tables and partitionRow are also
+                                  on the build path: ../membership/merge-
+                                  derivation/ joins on them.
   association-audit.ts            `pnpm run audit:spine-associations` —
                                   prints the report; --out=<dir> writes the
                                   rows behind it.

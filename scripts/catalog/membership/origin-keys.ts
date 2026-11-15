@@ -1,4 +1,4 @@
-// ORIGIN_KEYS: each membership record's origin SourceRowRef, from the declarations of the rows that found it. See ../lineage/README.md#identity--the-origin-source-row.
+// ORIGIN_KEYS: each membership record's origin SourceRowRef, from the declarations of the rows that found it. See ../lineage/identity/README.md.
 
 import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { CNS5 } from '../classic-ids/cns5-source';

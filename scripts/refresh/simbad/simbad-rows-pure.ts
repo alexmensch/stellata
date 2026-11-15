@@ -1,5 +1,6 @@
 // A SIMBAD pull's written rows: basic columns, then per-oid blocks, each bibcoded group shipped only beside its bibcode; and its fill gates. See README.md.
 
+import { floorVerdict, formatFraction, formatShare, percentOf, type Share } from '../../util/counts/tally-pure';
 import type { Check } from '../../util/emit-artifacts';
 import type { Column, Row } from '../pull/columns-pure';
 import type { BasicCells } from './simbad-fetch-pure';
@@ -61,15 +62,16 @@ export const countFilled = <T>(rows: Iterable<T>, filled: (row: T) => boolean): 
   return n;
 };
 
-/** `n` of `d`; a zero `d` divides by 1, so an empty population reads 0, never NaN. */
-export const share = (n: number, d: number): number => n / Math.max(1, d);
-export const percent = (fraction: number, digits = 1): string => `${(100 * fraction).toFixed(digits)}%`;
-
 export const fillLine = (label: string, filled: number, total: number): string =>
-  `  ${label.padEnd(16)} ${String(filled).padStart(6)}/${total} = ${percent(share(filled, total))}`;
+  `  ${label.padEnd(16)} ${String(filled).padStart(6)}/${total} = ${percentOf(filled, total)}`;
 
-/** A fill below its floor means the response shape or the request drifted, not a sparse cohort. */
-export function floorCheck(label: string, fraction: number, floor: number, diagnosis: string): Check {
-  const line = `${label} ${percent(fraction)}, floor ${percent(floor, 0)}`;
-  return fraction >= floor ? { kind: 'pass', report: line } : { kind: 'fail', message: `${line}: ${diagnosis}; investigate before pinning` };
+/** A fill below its floor means the response shape or the request drifted, not a sparse cohort; an empty population fails it too. */
+export function floorCheck(label: string, fill: Share, floor: number, diagnosis: string): Check {
+  const line = `${label} ${formatShare(fill)}, floor ${formatFraction(floor, 0)}`;
+  const fail = (why: string): Check => ({ kind: 'fail', message: `${line}: ${why}; investigate before pinning` });
+  switch (floorVerdict(fill, floor)) {
+    case 'meets': return { kind: 'pass', report: line };
+    case 'under': return fail(diagnosis);
+    case 'no-denominator': return fail('no rows to rate');
+  }
 }

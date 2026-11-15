@@ -16,6 +16,8 @@ export const A_VIA = ['catalog', 'kepler_mass_estimate', 'none'] as const;
 export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 
 export type ResolveVia = (typeof RESOLVE_VIA)[number];
+/** The tier of a bound Gaia source: every tag but `unresolved`. */
+export type GaiaVia = Exclude<ResolveVia, 'unresolved'>;
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];
 
 export type OrbitVia = (typeof ORBIT_VIA)[number];
@@ -83,11 +85,15 @@ export interface IdentifierWithOrigin<T> {
 }
 
 /** A DR3 source_id is kept as a string: it exceeds Number.MAX_SAFE_INTEGER. */
-export type GaiaFields = { gaiaSourceId: null; gaiaOrigin: null } | { gaiaSourceId: string; gaiaOrigin: IdOrigin };
+export type GaiaFields =
+  | { gaiaSourceId: null; gaiaOrigin: null; resolveVia: 'unresolved' }
+  | { gaiaSourceId: string; gaiaOrigin: IdOrigin; resolveVia: GaiaVia };
 export type HipFields = { hip: null; hipOrigin: null } | { hip: number; hipOrigin: IdOrigin };
 
-export function gaiaFields(id: IdentifierWithOrigin<string> | null): GaiaFields {
-  return id === null ? { gaiaSourceId: null, gaiaOrigin: null } : { gaiaSourceId: id.value, gaiaOrigin: id.origin };
+export function gaiaFields(id: (IdentifierWithOrigin<string> & { readonly via: GaiaVia }) | null): GaiaFields {
+  return id === null
+    ? { gaiaSourceId: null, gaiaOrigin: null, resolveVia: 'unresolved' }
+    : { gaiaSourceId: id.value, gaiaOrigin: id.origin, resolveVia: id.via };
 }
 
 export function hipFields(id: IdentifierWithOrigin<number> | null): HipFields {
@@ -108,7 +114,6 @@ export interface MultiplesRecordFields {
   name: string;
   source: (typeof MULTIPLES_SOURCES)[number];
   regime: number;
-  resolveVia: ResolveVia;
   astrometryVia: AstrometryVia;
   orbitVia: OrbitVia;
   spectVia: SpectVia;

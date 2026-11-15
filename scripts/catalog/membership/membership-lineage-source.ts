@@ -2,7 +2,7 @@
 
 import { gunzipSync } from 'node:zlib';
 
-import { identityRows } from '../lineage/identity-pure';
+import { identityRows } from '../lineage/identity/identity-pure';
 import { lineageLines } from '../lineage/lineage-row-pure';
 import { defineSource } from '../../util/sources/source';
 import {
