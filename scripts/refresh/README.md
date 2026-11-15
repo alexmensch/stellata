@@ -45,7 +45,8 @@ one), and atomically replaces its output TSV under `data/`.
 
 ### One-time setup
 
-The refresh scripts use astropy + numpy + pyvo + requests. Pin them to a
+The Python pulls (the SIMBAD pulls, tyc-hd, Edenhofer) use astropy + numpy +
+pyvo + requests. Pin them to a
 local virtualenv so the system Python stays clean:
 
 ```bash
@@ -232,10 +233,12 @@ outputs.
 Non-network dependency: `refresh-simbad-tyc-hd.test.py` covers that pull's
 request-set union, the space-padded ident join, its compose gates and the
 row-count / spot-row bands against an in-memory TAP backend. Run it with
-`python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`.
+`python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`. The in-memory TAP
+backend the Python suites use (`FakeTable`, `fake_tap_client`) lives in
+`scripts/test_helpers.py`.
 
 `scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
-atomic-rename plumbing every refresh script imports — handles retry,
+atomic-rename plumbing every Python pull imports — handles retry,
 schema validation, row-count and
 coverage gating (`assert_row_count`, `report_coverage`), spot-check
 pinning (`validate_spot_rows`), and
@@ -254,9 +257,6 @@ TypeScript `Pull`s in `scripts/refresh/vizier/`, with its own README.
 Tycho-2 is a filtered subset rather than a whole table, scanned in TYC1
 bands and gated on kept rows as a share of the request set: a phased pull
 in `scripts/refresh/tycho2/`, with its own README.
-
-The in-memory TAP backend every non-network suite here uses (`FakeTable`,
-`fake_tap_client`) lives in `scripts/test_helpers.py`.
 
 ### Gaia TAP: synchronous endpoints only
 
@@ -283,7 +283,7 @@ hard output limit from its `/capabilities` and routing around it; the
 whole-table and magnitude-bounded pulls are sliced to fit ESA's 50,000
 ([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
 
-### The Python TAP clients (CDS, SIMBAD)
+### The Python TAP client (SIMBAD)
 
 The Python `TapClient` moves whichever backend answered to the front, so a
 mirror that is down costs its retry schedule (about 5 min of connect
@@ -293,9 +293,7 @@ service list, the one a pull's `--describe` states.
 
 `TapClient` takes `backends=` as a required argument — there is no
 default list, because which service can serve a query is a property of
-the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
-would fail with a misleading "table not found". SIMBAD
-gets `simbad_client()` for its divergent dialect — CDS primary, the
+the table. SIMBAD gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
 
 ### Magnitude-bounded pulls
