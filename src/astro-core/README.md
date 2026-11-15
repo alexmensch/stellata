@@ -76,8 +76,8 @@ Each has its own README.
   so it stays a unit vector through the poles. `unitVectorFromRaDec` is
   the `u` component alone and `raDecFromUnitVector` its inverse (ra
   wrapped to [0, 360)); `SkyPosition` is the `{raDeg, decDeg}` pair both
-  sides speak. `offsetDirection(pos, eastRad, northRad)` is the one way a
-  direction moves by an east / north offset: linear along the tangent
+  sides speak. `offsetDirection(pos, eastRad, northRad)` moves a
+  direction by an east / north offset: linear along the tangent
   basis and renormalised (the gnomonic projection's inverse, so an offset
   `t` lands at angle `atan t`), exact in cos δ and stable through the
   poles. `directionAtEpoch` is the one proper-motion propagation, that
