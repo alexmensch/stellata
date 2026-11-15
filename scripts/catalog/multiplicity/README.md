@@ -55,11 +55,10 @@ known multiplicity so the hover/info surface can say "this is a
 binary" even when no companion renders:
 
 - **`MULTIPLICITY_RESOLVED` (1)** — a resolved multiples.tsv member
-  row backs the record. The set comes from the same
-  `resolvePairComponents` walk the wings pass runs
-  (`wingRenderablePrimaries` returns it), so it tracks the records the
-  binaries pipeline actually addresses — primaries AND promoted
-  companions alike.
+  row backs the record. The set is `resolvedMemberIndices` over the one
+  pair resolution (`../companions/record-index/README.md`), so it tracks
+  the records the binaries pipeline actually addresses — primaries AND
+  promoted companions alike.
 - **`MULTIPLICITY_UNRESOLVED` (2)** — SIMBAD flags the star as a
   multiple (`otype = '**'` in `data/simbad/simbad_sptype.tsv`, keyed by
   Gaia source_id) but nothing resolves: the spectroscopic-binary
