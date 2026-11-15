@@ -12,7 +12,7 @@ export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
   const records = stars.map((s, i): SidObject => ({
     designations: starDesignations({ ...s, isSol: (s.flags & FLAG_IS_SOL) !== 0 }),
     kind: 'star',
-    label: `record ${i}${s.proper ? ` (${s.proper})` : ''}`,
+    label: `record ${i}${s.printedName ? ` (${s.printedName})` : ''}`,
     origin: s.originKey,
     admission: { kind: 'lineage' },
   }));

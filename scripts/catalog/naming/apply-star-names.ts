@@ -35,7 +35,7 @@ export function loadStarNamingInputs(): StarNamingInputs {
 /** Structural subset of `Star` the ladder reads and writes. */
 export interface NamingTarget {
   flags: number;
-  proper: string | null;
+  readonly printedName: string | null;
   iauName: string | null;
   eponym: string | null;
   bayer: string | null;
@@ -115,7 +115,7 @@ export function applyStarNames(
 
   for (const star of stars) {
     const keys = {
-      hip: star.hip, hd: star.hd, hr: star.hr, proper: star.proper,
+      hip: star.hip, hd: star.hd, hr: star.hr, proper: star.printedName,
     };
     const spineBayer = star.bayer;
     star.bayer = null;
@@ -131,17 +131,17 @@ export function applyStarNames(
       // Published alternates the authority split out of a multi-name cell,
       // plus the spine's own spelling where the IAU superseded it.
       for (const alias of name.row.aliases) star.aliases.push(alias);
-      if (star.proper !== null
-          && foldNameKey(star.proper) !== foldNameKey(name.row.name)) {
-        star.aliases.push(star.proper);
+      if (star.printedName !== null
+          && foldNameKey(star.printedName) !== foldNameKey(name.row.name)) {
+        star.aliases.push(star.printedName);
       }
     } else if ((star.flags & FLAG_IS_SOL) !== 0) {
       // The one hand-emitted record: no catalogue names it, and it is exempt
       // from the naming-authority disposition gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) rather than absent from it.
-      star.eponym = star.proper;
-    } else if (star.proper !== null) {
+      star.eponym = star.printedName;
+    } else if (star.printedName !== null) {
       const routed = routeDisposedProper(
-        star.proper, inputs.dispositions.get(star.proper),
+        star.printedName, inputs.dispositions.get(star.printedName),
       );
       star.eponym = routed.eponym;
       if (routed.alias !== null) star.aliases.push(routed.alias);

@@ -19,8 +19,8 @@ export interface WalkStats {
   rvRadialRejectedSample: string[];   // per-rejected-star "id: rv @ dist" for build-log review
 }
 
-function sampleLabel({ proper, hip, gaiaSourceId }: Star): string {
-  return proper ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
+function sampleLabel({ printedName, hip, gaiaSourceId }: Star): string {
+  return printedName ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
 }
 
 /** A streaming fold, so the walk holds no outcome past its own row. */

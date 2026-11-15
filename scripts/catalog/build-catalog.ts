@@ -512,13 +512,15 @@ export async function main() {
   console.log(allocationSummary(allocationEmission.counts, allocation.events.length));
 
   const encoded = encodeCatalog({
-    stars, apsisMap: built.apsisMap, sids: recordSids, multiplicityStatus: built.multiplicityStatus,
+    stars, apsisMap: built.apsisMap, sids: recordSids, displayNames: display.displayNames,
+    multiplicityStatus: built.multiplicityStatus,
   });
   const namingDerived: NamingDerivedCounts = { ...display.counts, nameTableEntries: encoded.nameTableEntries };
   console.log(namingSummary(namingEmission.counts, namingDerived));
 
   emitArtifacts(catalogEmission({
     stars,
+    displayNames: display.displayNames,
     sortedKey: built.sortedKey,
     encoded,
     apsisMap: built.apsisMap,
@@ -569,6 +571,8 @@ type EmissionOf<T> = T extends StageLineageSpec<infer F, infer S> ? StageLineage
 interface CatalogEmissionInputs {
   /** Sorted: record order. */
   readonly stars: readonly Star[];
+  /** Each record's name-table string, in record order. */
+  readonly displayNames: readonly (string | null)[];
   /** Each record's apparent-V sort key, in record order. */
   readonly sortedKey: readonly number[];
   readonly encoded: EncodedCatalog;
@@ -603,7 +607,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, systemMembership, sidEvents, ledgers, lineage,
+  stars, displayNames, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, systemMembership, sidEvents, ledgers, lineage,
   stageCounts,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -644,7 +648,7 @@ function catalogEmission({
   const boundaries = renderBoundaryArtifact(stars, conLookup);
   console.log(`Built ${CATALOG_OUTPUTS.files.boundaries} ${boundaryArtifactSummary(boundaries)}`);
 
-  const search = buildSearchIndex(stars, componentDesignations);
+  const search = buildSearchIndex(stars, displayNames, componentDesignations);
   const searchJson = JSON.stringify(search.entries) + '\n';
 
   const multiplesSha1 = handedFileHash(inputHashes, MULTIPLES_TSV.file);

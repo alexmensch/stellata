@@ -219,8 +219,8 @@ function athygDoubleProbeNames(
   const { row, anchorPrimaryRow, systemAnchorStar, canonicalComp } = ctx;
   if (!canonicalComp) return [];
   const bases = [
-    row.name, anchorPrimaryRow.name, anchorStar?.proper ?? '',
-    systemAnchorStar?.proper ?? '',
+    row.name, anchorPrimaryRow.name, anchorStar?.printedName ?? '',
+    systemAnchorStar?.printedName ?? '',
   ].map((b) => b.trim()).filter((b) => b !== '');
   return [...new Set(bases.map((base) => `${base} ${canonicalComp}`))];
 }
@@ -554,7 +554,7 @@ function promoteRow(
     conIndex,
     desigCon,
     flags,
-    proper: null,
+    printedName: null,
     iauName: null,
     eponym: null,
     bayer: null,

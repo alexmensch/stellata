@@ -20,12 +20,13 @@ export type SearchCounts = {
 /** One entry per record carrying an identifier a user might type, in record order. */
 export function buildSearchIndex(
   records: readonly SearchEntrySource[],
+  displayNames: readonly (string | null)[],
   components: ReadonlyMap<number, ComponentDesignation>,
 ): { entries: SearchEntry[]; counts: SearchCounts } {
   const entries: SearchEntry[] = [];
   let designationConMismatch = 0;
   for (let i = 0; i < records.length; i++) {
-    const entry = buildSearchEntry(records[i], i, components.get(i));
+    const entry = buildSearchEntry(records[i], displayNames[i], i, components.get(i));
     if (entry === null) continue;
     entries.push(entry);
     if (entry.dc !== undefined) designationConMismatch++;

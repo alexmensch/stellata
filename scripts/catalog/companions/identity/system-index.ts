@@ -32,7 +32,7 @@ export class SystemIndex {
       const s = stars[i];
       if (s.gaiaSourceId && !this.byGaia.has(s.gaiaSourceId)) this.byGaia.set(s.gaiaSourceId, i);
       if (s.hip !== null && s.hip > 0 && !this.byHip.has(s.hip)) this.byHip.set(s.hip, i);
-      if (s.proper && !this.byProper.has(s.proper)) this.byProper.set(s.proper, i);
+      if (s.printedName && !this.byProper.has(s.printedName)) this.byProper.set(s.printedName, i);
     }
     const groups = new Map<string, PairCursor>();
     for (const r of rows) {

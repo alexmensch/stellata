@@ -54,7 +54,7 @@ const shipped = (
   size: {
     key: 'spine:1', radius: physicalRadius(4.83, SPECTRAL_UNKNOWN), apsis: null, classEvidence: [],
   },
-  star: makeStar({ proper: 'Fixture', spectral: SPECTRAL_UNKNOWN }),
+  star: makeStar({ printedName: 'Fixture', spectral: SPECTRAL_UNKNOWN }),
   facts: { distPc: 100, speedKmS: 30, ...facts },
 });
 

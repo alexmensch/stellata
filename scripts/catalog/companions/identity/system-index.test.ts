@@ -4,7 +4,7 @@ import { multiplesRow } from '../multiples-fixture';
 import { SystemIndex } from './system-index';
 
 describe('SystemIndex', () => {
-  const primary = makeStar({ gaiaSourceId: '100', hip: 32349, proper: 'Sirius', x: 2.6 });
+  const primary = makeStar({ gaiaSourceId: '100', hip: 32349, printedName: 'Sirius', x: 2.6 });
   const secondary = makeStar({ gaiaSourceId: '200', x: 2.6 });
 
   it('matches a secondary on HIP only when it carries no Gaia source', () => {

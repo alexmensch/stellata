@@ -684,7 +684,6 @@ export interface SearchEntry {
 // Structural subset of Star the search index draws from. Local so this
 // module stays free of the stars-parse import (which depends on it).
 export interface SearchEntrySource {
-  proper: string | null;
   bayer: string | null;
   bayerSup: number | null;
   bayerComponent: string | null;
@@ -771,6 +770,7 @@ export function buildAliasedIdIndex<K>(
 
 export function buildSearchEntry(
   s: SearchEntrySource,
+  displayName: string | null,
   i: number,
   component: { comp: string; primaryIdx: number } | undefined,
 ): SearchEntry | null {
@@ -778,13 +778,13 @@ export function buildSearchEntry(
   // composed from its WDS root anchor's designation plus its own letter, so
   // the component designation is itself a searchable identifier and the
   // entry has to exist for the runtime composer to reach it.
-  if (!s.proper && !s.bayer && s.hip === null && s.hd === null
+  if (!displayName && !s.bayer && s.hip === null && s.hd === null
       && s.hr === null && s.flam === null && s.gould === null && !s.gl
       && !s.gcvsName && component === undefined) {
     return null;
   }
   const entry: SearchEntry = { i };
-  if (s.proper) entry.p = s.proper;
+  if (displayName) entry.p = displayName;
   if (s.bayer) entry.b = s.bayer;
   if (s.bayerSup !== null) entry.bx = s.bayerSup;
   if (s.bayerComponent !== null) entry.bc = s.bayerComponent;

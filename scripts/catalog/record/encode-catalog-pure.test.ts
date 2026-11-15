@@ -24,17 +24,18 @@ const APSIS: ApsisRow = {
   teffGspphot: 5800, loggGspphot: null, mhGspphot: null, azeroGspphot: null,
   teffGspspec: null, loggGspspec: 4.5, mhGspspec: null, spectraltypeEsphs: null,
 };
-const SOL = makeStar({ proper: 'Sol' });
+const SOL = makeStar();
 const STAR = makeStar({
   x: 1.5, y: -2.25, z: 3.75, vx: 0.125, vy: -0.25, vz: 0.375, absmag: 4.5, ci: 0.625, physicalRadius: 2.5,
   spectral: { kind: 'mk', letter: 4, subclass: 2, lumClass: 3 },
   conIndex: 7, flags: FLAG_HAS_NAME | FLAG_HAS_BAYER, varType: VAR_TYPE_MIRA,
-  proper: 'Fixture', hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
+  hip: 42, gaiaSourceId: GAIA_ID, companionIdx: 0,
   periodDays: 10, amplitudeMag: 0.5,
 });
 
 const encode = (stars = [SOL, makeStar({ conIndex: 3 }), STAR]) => encodeCatalog({
-  stars, apsisMap: new Map([[GAIA_ID, APSIS]]), sids: stars.map((_, i) => 100 + i), multiplicityStatus: Uint8Array.of(0, 1, 2),
+  stars, apsisMap: new Map([[GAIA_ID, APSIS]]), sids: stars.map((_, i) => 100 + i),
+  displayNames: ['Sol', null, 'Fixture'], multiplicityStatus: Uint8Array.of(0, 1, 2),
 });
 
 describe('encodeCatalog', () => {
@@ -80,14 +81,17 @@ describe('encodeCatalog', () => {
     expect(readRecordField(view, star, 'multiplicityStatus')).toBe(2);
   });
 
-  it('throws on a SID or multiplicity status list that does not pair with the records, and on NO_SID', () => {
+  it('throws on a SID, display-name or multiplicity status list that does not pair with the records, and on NO_SID', () => {
     const stars = [SOL, STAR];
     const apsisMap = new Map<string, ApsisRow>();
-    expect(() => encodeCatalog({ stars, apsisMap, sids: [1], multiplicityStatus: Uint8Array.of(0, 0) }))
-      .toThrow(/2 records but 1 SIDs and 2 multiplicity statuses/);
-    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, 2], multiplicityStatus: Uint8Array.of(0) }))
-      .toThrow(/2 records but 2 SIDs and 1 multiplicity statuses/);
-    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, NO_SID], multiplicityStatus: Uint8Array.of(0, 0) }))
+    const displayNames = ['Sol', null];
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1], displayNames, multiplicityStatus: Uint8Array.of(0, 0) }))
+      .toThrow(/2 records but 1 SIDs, 2 display names and 2 multiplicity statuses/);
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, 2], displayNames: ['Sol'], multiplicityStatus: Uint8Array.of(0, 0) }))
+      .toThrow(/2 records but 2 SIDs, 1 display names and 2 multiplicity statuses/);
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, 2], displayNames, multiplicityStatus: Uint8Array.of(0) }))
+      .toThrow(/2 records but 2 SIDs, 2 display names and 1 multiplicity statuses/);
+    expect(() => encodeCatalog({ stars, apsisMap, sids: [1, NO_SID], displayNames, multiplicityStatus: Uint8Array.of(0, 0) }))
       .toThrow(/record 1 carries NO_SID/);
   });
 
