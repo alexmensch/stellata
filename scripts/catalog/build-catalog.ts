@@ -49,9 +49,9 @@ import {
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
 import {
-  isRecuratedAdoption,
   promoteCompanions,
   readMultiplesTsv,
+  recuratedRecords,
   parkedRefusals,
   type MultiplesTsvRow,
   type PromotionDerivedCounts,
@@ -265,7 +265,7 @@ function promoteAndTrace(
   return {
     stats, identity, lines: lineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     decidedRows: rows.length, secondaryRows: rows.filter((r) => r.via === 'secondary').length,
-    recuratedRecords: rows.flatMap(({ outcome: o }) => (isRecuratedAdoption(o) ? [stars[o.idx]] : [])),
+    recurated: recuratedRecords(rewrites),
   };
 }
 
@@ -344,13 +344,13 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
   const {
-    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows, recuratedRecords,
+    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows, recurated,
   } = promoteAndTrace(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   }, manifestFounded);
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
-  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, recuratedRecords);
+  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, recurated);
   console.log(`  promotion decided ${decidedRows} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any

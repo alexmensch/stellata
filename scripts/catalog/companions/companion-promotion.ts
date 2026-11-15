@@ -239,6 +239,11 @@ export interface RecordRewrite {
   brightness: HeldRecordBrightness[];
 }
 
+/** The held records promotion re-curated onto their anchor's position. */
+export function recuratedRecords(rewrites: ReadonlyMap<Star, Readonly<RecordRewrite>>): Star[] {
+  return [...rewrites].flatMap(([star, r]) => (r.brightness.some((b) => b.pass === 'recurated') ? [star] : []));
+}
+
 /** Blend split takes only `own` mints and the anchor re-split only `dmag_imputed` ones, so a second pass is a bug. */
 export function adjustMinted(b: MintedBrightness, a: MintedAdjustment): void {
   if (b.adjustment !== null) {
@@ -419,13 +424,6 @@ function emptyPromotionStats(): PromotionStats {
     companionBlendDimBeyondSeparation: 0,
     companionBlendDimMisfit: 0,
   };
-}
-
-type RecuratedAdoption = Extract<RowOutcome, { recurated: unknown }> & { recurated: RecuratedBrightness };
-
-/** An adoption whose existing member promotion re-curated onto its anchor. */
-export function isRecuratedAdoption(o: RowOutcome): o is RecuratedAdoption {
-  return o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null;
 }
 
 interface ExistingIndexes {
