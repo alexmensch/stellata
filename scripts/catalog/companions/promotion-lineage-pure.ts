@@ -14,10 +14,10 @@ import type { Star } from '../parse/stars-parse';
 import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
 import { ABSMAG_PARAM_DECIMALS, radiusRouteParams, type RadiusRouteParams } from '../spectral/size-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
+import type { MultiplesTsvRow } from './multiples-row';
 import type {
-  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, MultiplesTsvRow,
-  PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
-} from './companion-promotion';
+  CompanionAbsmagSource, CompanionCiVia, HeldRecordBrightness, MintedAdjustment, MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RecuratedBrightness, RowOutcome, SizingPass,
+} from './promotion-outcome';
 import { PROMOTION_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
@@ -149,12 +149,12 @@ const SAMEAS_BRIDGED_ROWS = new Map([
 export const PROMOTION_INVARIANTS: readonly LineageInvariant[] = [
   namedExceptionsInvariant(
     PROMOTION_CODES, 'dropped.anchor-is-component',
-    'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (README.md#companion-promotion-from-databinariesmultiplestsv)',
+    'no multiples.tsv row resolves onto its own anchor\'s record but the mis-keyed rows named (identity/README.md#anchor-is-the-component-refusal)',
     MISKEYED_ANCHOR_ROWS,
   ),
   namedExceptionsInvariant(
     PROMOTION_CODES, 'adopted.sameas-bridge',
-    'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (README.md#same-as-bridge-to-an-already-admitted-source)',
+    'every multiples.tsv row whose star the catalogue holds reaches it on an id of its own, not a same-as bridge, but the rows named (identity/README.md#same-as-bridge-to-an-already-admitted-source)',
     SAMEAS_BRIDGED_ROWS,
   ),
   lineageInvariant(

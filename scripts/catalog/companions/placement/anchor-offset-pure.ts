@@ -1,9 +1,9 @@
 /** Stage 6 anchor offsets re-based onto promotion's WDS-root anchor:
- *  README.md#promoted-companion-field-inheritance. */
+ *  README.md#re-basing-a-stage-6-offset. */
 
 import {
   polarToTangent, tangentToPolar, type PolarOffset, type TangentOffset,
-} from '../../../src/astro-core/equatorial-basis';
+} from '../../../../src/astro-core/equatorial-basis';
 
 export interface AnchorOffsetRow {
   comp: string;

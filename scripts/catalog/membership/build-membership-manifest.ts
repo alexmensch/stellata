@@ -28,10 +28,7 @@ import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-over
 import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
-import {
-  readMultiplesTsv,
-  sourceIdsWithSiblingComponent,
-} from '../companions/companion-promotion';
+import { readMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/multiples-row';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V, magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';

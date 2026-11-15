@@ -109,7 +109,7 @@ export interface Star {
    *  Written to catalog.bin v8; the runtime epoch-advance pass reads it
    *  once at load to propagate positions off the J2016.0 baseline. Pair
    *  members share one systemic velocity so the advance never shears a
-   *  pair (see companion-promotion's systemic-velocity pass). */
+   *  pair (see companions/post-passes/systemic-velocity.ts). */
   vx: number; vy: number; vz: number;
   absmag: number;
   ci: number;

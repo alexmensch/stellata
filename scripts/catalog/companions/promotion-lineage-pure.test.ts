@@ -10,7 +10,7 @@ import { makeStar } from '../parse/star-fixture';
 import type { RadiusResolution } from '../../../src/catalog-format/spectral/physical-radius';
 import type {
   MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
-} from './companion-promotion';
+} from './promotion-outcome';
 import { multiplesRow } from './multiples-fixture';
 import {
   decisionRows, PROMOTION_CODES, PROMOTION_INVARIANTS, promotionDecision, promotionLineage, promotionOriginKey, promotionSummary, rewriteRows,
