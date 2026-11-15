@@ -55,7 +55,10 @@ export type CoherenceAnchor = AnchorBasis & {
 };
 
 export type MemberVerdict =
-  | { readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number }
+  | {
+    readonly kind: 'snapped'; readonly idx: number; readonly fromPc: number; readonly toPc: number;
+    readonly toAbsmag: number; readonly radiusFactor: number;
+  }
   | { readonly kind: 'at-anchor-distance'; readonly idx: number }
   | { readonly kind: 'significant-depth'; readonly idx: number; readonly gapPc: number; readonly sigmaPc: number }
   | { readonly kind: 'wide-gap'; readonly idx: number; readonly gapPc: number }
@@ -169,16 +172,29 @@ function scaledPosition(p: Position, scale: number): Position {
   return { x: p.x * scale, y: p.y * scale, z: p.z * scale };
 }
 
-/** Move `star` radially to `distPc`, preserving its (mas-accurate)
- *  measured direction. Apparent brightness is invariant: absmag is
- *  re-derived at the new distance and the Stefan-Boltzmann radius follows
- *  (R ∝ √L at fixed Teff). */
-function repositionRadially(star: Star, distPc: number): void {
-  const dOld = starDist(star);
-  Object.assign(star, scaledPosition(star, distPc / dOld));
-  const absmag = absoluteMagnitude(apparentMagnitude(star.absmag, dOld), distPc);
-  star.physicalRadius *= Math.pow(10, (star.absmag - absmag) / 5);
-  star.absmag = absmag;
+/** See README.md#system-distance-coherence Brightness invariance. */
+export function snapPhotometry(
+  absmag: number, from: SightlinePoint, to: SightlinePoint,
+): { toAbsmag: number; radiusFactor: number } {
+  const toAbsmag = absoluteMagnitude(apparentMagnitude(absmag, from.pc) + from.av - to.av, to.pc);
+  return { toAbsmag, radiusFactor: Math.pow(10, (absmag - toAbsmag) / 5) };
+}
+
+/** A distance and the Sol-to-star A_V there. */
+export interface SightlinePoint {
+  readonly pc: number;
+  readonly av: number;
+}
+
+/** Coherence holds the de-extincted apparent magnitude across a move: no A_V at either end. */
+const DUST_FREE = 0;
+
+/** Move the snapped member radially onto its anchor's distance, preserving
+ *  its (mas-accurate) measured direction. */
+function repositionRadially(star: Star, m: MemberVerdict & { kind: 'snapped' }): void {
+  Object.assign(star, scaledPosition(star, m.toPc / m.fromPc));
+  star.physicalRadius *= m.radiusFactor;
+  star.absmag = m.toAbsmag;
 }
 
 /** Group the pair rows of `multiplesRows` by WDS root and, per system,
@@ -356,7 +372,7 @@ export function systemCoherenceVerdicts(
         continue;
       }
       movedDist.set(idx, starDist(scaledPosition(member, scale)));
-      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist });
+      decided.push({ kind: 'snapped', idx, fromPc: dOld, toPc: anchorDist, ...snapPhotometry(member.absmag, { pc: dOld, av: DUST_FREE }, { pc: anchorDist, av: DUST_FREE }) });
     }
     processed.add(anchor.idx);
     verdicts.push({ kind: 'coherent', root, anchor, anchorPc: anchorDist, members: decided });
@@ -368,6 +384,6 @@ export function systemCoherenceVerdicts(
 export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVerdict[]): void {
   for (const v of verdicts) {
     if (v.kind !== 'coherent') continue;
-    for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m.toPc);
+    for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m);
   }
 }
