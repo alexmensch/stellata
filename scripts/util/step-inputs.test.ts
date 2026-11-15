@@ -24,10 +24,17 @@ const steps = await Promise.all(STEPS.steps.filter((s) => s.language === 'ts').m
 
 const keyedBy = (file: string): string[] => steps.filter((s) => s.inputs.includes(file)).map((s) => s.name);
 
-const declarations = await Promise.all(gitFiles(REPO_ROOT, [`scripts/**/*${SNAPSHOT_MODULE_SUFFIX}`]).map(async (module) =>
-  Object.values(await import(resolve(REPO_ROOT, module)) as Record<string, Snapshot<unknown>>)[0]));
+const snapshotModules = await Promise.all(gitFiles(REPO_ROOT, [`scripts/**/*${SNAPSHOT_MODULE_SUFFIX}`]).map(async (module) =>
+  ({ module, exported: Object.values(await import(resolve(REPO_ROOT, module)) as Record<string, unknown>) })));
+
+const declarations = snapshotModules.flatMap(({ exported }) => exported as Snapshot<unknown>[]);
 
 describe('entryInputPaths over every TypeScript step', () => {
+  it('finds each snapshot module exporting one snapshot and nothing else, since naming its export is what reads it', () => {
+    expect(snapshotModules.map(({ module, exported }) => ({ module, kinds: exported.map((v) => (v as { kind?: unknown }).kind) })))
+      .toEqual(snapshotModules.map(({ module }) => ({ module, kinds: ['snapshot'] })));
+  });
+
   it('keys only what the closure imports and the declarations it reads', () => {
     const stray = steps.flatMap((s) => s.inputs
       .filter((p) => !s.closure.has(p) && !s.reads.has(p))

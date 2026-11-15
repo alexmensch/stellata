@@ -218,8 +218,9 @@ same thing — single-use helpers stay with their consumer.
   Each step's own suite pins its set (`../catalog/catalog-inputs.test.ts`,
   `../local-group/local-group-inputs.test.ts`, `../clouds/clouds-inputs.test.ts`);
   `step-inputs.test.ts` holds every TypeScript step to the rule: no input
-  outside its closure and its declared reads, each declared snapshot keyed
-  by exactly the step it names, and no undeclared snapshot keyed at all.
+  outside its closure and its declared reads, each snapshot module exporting
+  one snapshot and nothing else, each declared snapshot keyed by exactly the
+  step it names, and no undeclared snapshot keyed at all.
 - `step-input-hashes.ts` — the runner's pre-run input hashes, handed to a
   TypeScript step: `../pipeline/processes.ts`'s `runTs` writes them
   (`writeStepInputs`) to `build/step-inputs/<step>.json`, names it in
