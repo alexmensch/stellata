@@ -34,7 +34,7 @@ scripts/catalog/simbad/
 ## What the TYC → HD pull adjudicates
 
 Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
-over the 331,738 manifest rows carrying both a TYC and an HD that this file
+over the 331,756 manifest rows carrying both a TYC and an HD that this file
 answers for — the two classes, and only the first is reachable without it:
 
 - **SIMBAD shares no HD with IV/25 on the row's own TYC — 220 rows.** IV/25 is
@@ -59,9 +59,9 @@ answers for — the two classes, and only the first is reachable without it:
   an HD IV/25 does publish for the entry, on the row the lookup dropped. β Lyr
   is the shape — IV/25 gives TYC 2642-2929-1 both 174638 and 174639, SIMBAD
   says 174638, the manifest ships 174638, and nothing disagrees with anything.
-- **SIMBAD and IV/25 agree and the manifest ships a different HD — 15 rows.**
-  Both TYC witnesses against the shipped cell: α Psc A, 32 Eri B, β Mon B,
-  k¹ Pup, ζ Boo B, ε Boo B, ρ Her A, ε¹ Lyr B, CD-29 12513B, 6 plain-HD stars.
+- **SIMBAD and IV/25 agree and the manifest ships a different HD — 4 rows.**
+  Both TYC witnesses against the shipped cell: α Psc A, HD 72737, HD 157778,
+  HD 197312.
 
   **Two witnesses agreeing about a TYC is not two witnesses agreeing about the
   RECORD**, and this section read this class as manifest errors "with no
@@ -69,12 +69,14 @@ answers for — the two classes, and only the first is reachable without it:
   backs the shipped cell on most: [Which witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd)
   partitions them and carries what is left of the move set.
 
-  **The class was 23 until the eight `stellata-hooj.14` asserted left it** —
-  an asserted row ships the HD both TYC witnesses name, so it stops being
-  contradicted. Why that means nothing here can re-flag one: [Which witness
-  decides a close pair's HD](#which-witness-decides-a-close-pairs-hd).
+  **Two things keep the class this small.** An asserted row (`stellata-hooj.14`)
+  ships the HD both TYC witnesses name. And a record the pair rule moves onto
+  its own Tycho-2 entry — ε Boo, 32 Eri, β Mon, k¹ Pup, ζ Boo, ε¹ Lyr,
+  CD-29 12513 and four plain-HD stars — carries a TYC whose HD both witnesses
+  agree it ships ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
+  Why neither can be re-flagged here: [Which witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd).
 
-So 225 shipped HD cells are contradicted and 10 are vindicated against the
+So 224 shipped HD cells are contradicted and 10 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
 reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 (224635 / 224636) — which is what says the file agrees with the hand
@@ -135,6 +137,11 @@ fourth witness splits them:
 | refuse | 12 | the record's source is the OTHER component, so the TYC cell is the crossed one and the HD stands |
 | silent | 2 | no SIMBAD object for the record's source (TYC 8568-3121-1, 2604-1777-1) |
 
+Over today's manifest the split is move 3 / refuse 1 / silent 0. A refused
+row's TYC cell is the crossed one, and the pair rule, which follows the same
+source, moves eleven of the twelve records onto their own entry; the twelfth,
+HD 197312 (HIP 102206), waits on the pair-review queue.
+
 **HD and HR move together or not at all.** V/50 pairs an HR with an HD, so
 moving one while the other stays composes a pair no catalogue publishes: every
 row in the move set carries both (α Psc A's HR 595 → 596, and so on), and
@@ -145,7 +152,8 @@ record holds HIP 72105 and TYC 2019-1250-1; IV/25, SIMBAD-by-TYC and I/239 all
 call that Tycho entry HD 129988 (ε Boo B), and a rule keyed on the TYC would
 hand Izar its companion's number. SIMBAD's object for the record's own source
 is `* eps Boo` — Izar — so the shipped HD 129989 is right and the TYC cell is
-the crossed one. **`kappa` Pup, ζ Boo and 32 Eri sit in `refuse` on the same
+the crossed one, and the pair rule now moves the record onto Izar's own entry,
+TYC 2019-1251-1. **`kappa` Pup, ζ Boo and 32 Eri were refused on the same
 evidence**, which is why `stellata-3bsf.50`'s first rule — prefer the own-TYC
 HD — was reverted after reaching them.
 
@@ -155,7 +163,7 @@ whichever component the blended entry printed; it backs the shipped cell on 18
 of the 23 and agrees with the TYC on 5, and neither reading is component
 evidence.
 
-**Silence is silence.** 21,613 manifest rows carrying both a TYC and an HD get
+**Silence is silence.** 21,606 manifest rows carrying both a TYC and an HD get
 no answer from the pull at all, f Pup among them, and a rule must leave a row
 whose source has no object alone rather than treat absence as agreement. The
 two of these 23 that were silent (TYC 8568-3121-1 / HD 72737, 2604-1777-1 /
@@ -173,8 +181,9 @@ contested the moment the override lands, and the fourth witness would never be
 weighed on it again. `simbad-tyc-hd-parse.test.ts`'s *the asserted move set*
 re-derives all four on the value ASSERTED instead, and pins V/50's HD↔HR
 pairing, which the move-together rule turns on and nothing else checks. That is
-also why [What the TYC → HD pull adjudicates](#what-the-tyc--hd-pull-adjudicates) counts 15 rather than 23: the
-eight left the class by being fixed, not by being re-measured.
+also why [What the TYC → HD pull adjudicates](#what-the-tyc--hd-pull-adjudicates) counts 4: the eight left the
+class by being fixed, and the pair rule's eleven by their records moving, not
+by being re-measured.
 
 **Eight of the nine are asserted**, in
 `data/classic-ids/classic_id_overrides.tsv` ([Curated overrides](../classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them)),

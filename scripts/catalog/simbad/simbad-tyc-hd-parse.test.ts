@@ -151,9 +151,9 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353351);
-      expect(counts.answered).toBe(331738);
-      expect(counts.silent).toBe(21613);
+      expect(counts.bothCells).toBe(353362);
+      expect(counts.answered).toBe(331756);
+      expect(counts.silent).toBe(21606);
     });
 
     it('finds 220 dissents, every one on an internally consistent IV/25 entry', () => {
@@ -167,12 +167,10 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
       expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
     });
 
-    // 23 before the eight rows the four-witness rule licensed were asserted
-    // (README.md#which-witness-decides-a-close-pairs-hd). What is left is
-    // the twelve the rule refuses and the three it licenses but no override
-    // asserts yet — see the move set's own comment.
-    it('finds 15 rows both witnesses contradict', () => {
-      expect(counts.bothAgainst).toBe(15);
+    // README.md#which-witness-decides-a-close-pairs-hd: the three the
+    // four-witness rule licenses but no override asserts, and one it refuses.
+    it('finds 4 rows both witnesses contradict', () => {
+      expect(counts.bothAgainst).toBe(4);
     });
 
     it('reproduces the two dissents measured by hand against live SIMBAD', () => {
@@ -204,6 +202,9 @@ const SIMBAD_SPTYPE_OBJECTS = {
  *  An empty set here means the rule has no remaining reach. */
 const FOUR_WITNESS_MOVE = ['2604-1777-1', '40-1338-1', '8568-3121-1'];
 
+/** see README.md#which-witness-decides-a-close-pairs-hd */
+const FOUR_WITNESS_REFUSE = ['1097-10-1'];
+
 /** Rows with no SIMBAD object for the record's own source: the fourth witness
  *  is silent and the rule leaves them alone. */
 const FOUR_WITNESS_SILENT: string[] = [];
@@ -222,8 +223,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     }
     const simbad = SIMBAD_TYC_HD.read();
 
-    // The rows both TYC witnesses contradict — the 15 of README.md#what-the-tyc--hd-pull-adjudicates
-    // the eight asserted having left the class.
+    // The rows both TYC witnesses contradict (README.md#what-the-tyc--hd-pull-adjudicates).
     // Keyed on the TYC, not the source: a mutual swap is two rows.
     const contested = new Map<string, string>();
     for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
@@ -261,18 +261,16 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     for (const list of [move, refuse, silent]) list.sort();
   });
 
-  it('splits the remaining contested rows three / twelve / none', () => {
-    expect(move.length + refuse.length + silent.length).toBe(15);
+  it('splits the remaining contested rows three / one / none', () => {
     expect(move).toEqual(FOUR_WITNESS_MOVE);
+    expect(refuse).toEqual(FOUR_WITNESS_REFUSE);
     expect(silent).toEqual(FOUR_WITNESS_SILENT);
-    expect(refuse).toHaveLength(12);
   });
 
-  // ε Boo is why the rule is not "prefer the own-TYC HD": IV/25, SIMBAD and
-  // I/239 all call TYC 2019-1250-1 HD 129988 (ε Boo B), and the record's own
-  // source is Izar. A TYC-keyed rule ships Izar under its companion's number.
-  it('refuses ε Bootis, whose TYC cell is the crossed one', () => {
-    expect(refuse).toContain('2019-1250-1');
+  // see README.md#which-witness-decides-a-close-pairs-hd
+  it('leaves ε Bootis uncontested, on Izar\'s own entry', () => {
+    expect([...move, ...refuse, ...silent]).not.toContain('2019-1250-1');
+    expect([...move, ...refuse, ...silent]).not.toContain('2019-1251-1');
   });
 });
 
