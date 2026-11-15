@@ -51,7 +51,9 @@ import {
   promoteCompanions,
   readMultiplesTsv,
   parkedRefusals,
+  type MultiplesTsvRow,
   type PromotionDerivedCounts,
+  type PromotionInputs,
 } from './companions/companion-promotion';
 import {
   PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
@@ -246,6 +248,20 @@ function namingLineage(records: readonly NamedRecord[], stars: readonly Star[], 
   });
 }
 
+// A function of its own so promotion's rows and rewrites are unreachable once
+// it returns, leaving only its lines, as coherence's and naming's are.
+function promoteAndTrace(
+  multiplesRows: MultiplesTsvRow[], stars: Star[], inputs: PromotionInputs, founded: ReadonlySet<string>,
+) {
+  const { newStars, stats, rows, rewrites } = promoteCompanions(multiplesRows, stars, inputs);
+  for (const ns of newStars) stars.push(ns);
+  const { lineage, identity } = promotionLineage(rows, stars, founded, rewrites);
+  return {
+    stats, identity, lines: lineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
+    decidedRows: rows.length, secondaryRows: rows.filter((r) => r.via === 'secondary').length,
+  };
+}
+
 function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
   const parked = parkedLedgerView(placementLines);
   console.log(`  parked (record parity): ${parked.length} → ${PARKED_LEDGER.file}`);
@@ -322,15 +338,14 @@ export async function main() {
   console.log(coherenceSummary(coherenceEmission.counts));
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
-  const { newStars, stats: ps, rows: promotedRows, rewrites: promotionRewrites } = promoteCompanions(multiplesRows, stars, {
+  const {
+    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows,
+  } = promoteAndTrace(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
-  });
-  for (const ns of newStars) stars.push(ns);
-  const { lineage: promotionLineageRows, identity: promotionIdentity } = promotionLineage(promotedRows, stars, manifestFounded, promotionRewrites);
-  const promotionLines = promotionLineageRows.map((row) => stageLineageLine(PROMOTION_CODES, row));
+  }, manifestFounded);
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
-  console.log(`  promotion decided ${promotedRows.length} rows in ${Date.now() - tProm}ms`);
+  console.log(`  promotion decided ${decidedRows} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
   // prefix of the record array is a usable sky and the transport chunks can
@@ -399,7 +414,7 @@ export async function main() {
   const overlaps = physicalOverlaps(stars, orbitChainExemption(renderableOrbitRelations(resolvedPairs)));
   const promotionDerived: PromotionDerivedCounts = { ...ps, physicalOverlaps: overlaps.length };
   console.log(promotionSummary(
-    promotionCounts, promotionDerived, promotedRows.filter((r) => r.via === 'secondary').length,
+    promotionCounts, promotionDerived, secondaryRows,
   ));
   console.log(`  physical overlaps outside an orbit chain: ${overlaps.length}`);
   for (const [a, b] of overlaps) {
