@@ -93,13 +93,43 @@ function sourceFiles(dir: string): string[] {
   });
 }
 
-/** Outside tests, each `enterPhase('<phase>', …)` call site by phase, and each `allocatedSids(` call site. */
+const PHASE_MODULE = 'scripts/catalog/record/record-phase.ts';
+const PHASE_TYPES = new Set(['Records', 'Sorted', 'Unsorted', 'AllocatedSids', 'Finalised']);
+
+/** Outside tests, each `enterPhase` call site keyed by its phase literal (or
+ *  `non-literal phase`), each `allocatedSids` call site, and each cast to a phase type
+ *  outside the phase module, through whatever local names the imports give them. */
 function tagConstructors(): Record<string, string[]> {
   const out: Record<string, string[]> = {};
   for (const path of [...sourceFiles(resolve(REPO, 'scripts')), ...sourceFiles(resolve(REPO, 'src'))]) {
+    const file = relative(REPO, path);
     const text = readFileSync(path, 'utf8');
-    for (const m of text.matchAll(/\benterPhase\(\s*'(\w+)'/g)) (out[m[1]] ??= []).push(relative(REPO, path));
-    for (const _ of text.matchAll(/(?<!function )\ballocatedSids\(/g)) (out.allocatedSids ??= []).push(relative(REPO, path));
+    if (file === PHASE_MODULE || !text.includes('record-phase')) continue;
+    const sf = ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true);
+    const imported = new Map<string, string>();
+    for (const st of sf.statements) {
+      if (!ts.isImportDeclaration(st) || !ts.isStringLiteral(st.moduleSpecifier)
+        || !st.moduleSpecifier.text.endsWith('/record-phase')) continue;
+      const bindings = st.importClause?.namedBindings;
+      if (bindings && ts.isNamedImports(bindings)) {
+        for (const el of bindings.elements) imported.set(el.name.text, (el.propertyName ?? el.name).text);
+      }
+    }
+    const visit = (n: ts.Node): void => {
+      if (ts.isCallExpression(n) && ts.isIdentifier(n.expression)) {
+        const callee = imported.get(n.expression.text);
+        const [first] = n.arguments;
+        if (callee === 'enterPhase') {
+          (out[first && ts.isStringLiteralLike(first) ? first.text : 'non-literal phase'] ??= []).push(file);
+        } else if (callee === 'allocatedSids') (out.allocatedSids ??= []).push(file);
+      }
+      if ((ts.isAsExpression(n) || ts.isTypeAssertionExpression(n)) && ts.isTypeReferenceNode(n.type)
+        && ts.isIdentifier(n.type.typeName) && PHASE_TYPES.has(imported.get(n.type.typeName.text) ?? '')) {
+        (out.cast ??= []).push(file);
+      }
+      ts.forEachChild(n, visit);
+    };
+    visit(sf);
   }
   return out;
 }
@@ -112,7 +142,7 @@ describe('build-catalog.ts wiring ratchet', () => {
     ).toEqual([]);
   });
 
-  it('enters each phase once, in the pass that completes it, and tags the SIDs only in allocation', () => {
+  it('enters each phase once, in the pass that completes it, tags the SIDs only in allocation, and casts to no phase type', () => {
     expect(tagConstructors()).toEqual({
       ...Object.fromEntries(Object.entries(PHASE_ENTRIES).map(([p, f]) => [p, [f]])),
       allocatedSids: [SIDS_ENTRY],

@@ -69,5 +69,11 @@ closing `emitArtifacts` call: logic lands in a stage, never in the wiring.
 Each handle to a superseded phase (`walked`, `named`, `promoted`) must be
 read exactly once, by the stage that supersedes it: the phase tags refuse a
 pass given the wrong phase, but only this check refuses an old handle
-reused after a later stage has run. It also pins each phase's `enterPhase` call to the one pass that completes
-that phase, and the SIDs' `allocatedSids` tag to the allocation stage.
+reused after a later stage has run.
+
+Across `scripts/` and `src/`, outside tests, it also pins each phase's
+`enterPhase` call to the one pass that completes that phase and the SIDs'
+`allocatedSids` tag to the allocation stage, finding them through the
+syntax tree under any import alias; a phase given as anything but a string
+literal fails, as does any cast to a phase type outside
+`../record/record-phase.ts`.
