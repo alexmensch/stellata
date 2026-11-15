@@ -6,6 +6,7 @@ import {
 } from '../../../src/catalog-format/record/catalog-pure';
 import {
   inferBinaries,
+  mutualPairs,
   pickBrightest,
   markPrimary,
   markPrimaryIfUnflagged,
@@ -519,5 +520,12 @@ describe('binary-flags-pure / wingEclipsingBinaries', () => {
     ];
     expect(wingEclipsingBinaries(stars)).toEqual({ eclipsingWinged: 1 });
     expect(stars.map((s) => s.flags)).toEqual([FLAG_BINARY_PRIMARY, FLAG_BINARY_PRIMARY, 0]);
+  });
+});
+
+describe('binary-flags-pure / mutualPairs', () => {
+  it('lists each pair whose members chose each other once, lower index first; one-way choices are not pairs', () => {
+    const stars = [3, 2, 1, 0, 3, -1].map((companionIdx) => ({ companionIdx }));
+    expect(mutualPairs(stars)).toEqual([[0, 3], [1, 2]]);
   });
 });

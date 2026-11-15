@@ -322,19 +322,20 @@ export function inferBinaries(
     }
   }
 
-  // Second pass: identify mutual pairs (A↔B where each is the other's
-  // directed nearest) and flag the brighter member as primary. Iterate
-  // i < j to count each pair exactly once.
-  let mutualPairs = 0;
-  for (let i = 0; i < n; i++) {
-    const j = stars[i].companionIdx;
-    if (j < 0 || j <= i) continue;
-    if (stars[j].companionIdx !== i) continue;
-    mutualPairs++;
-    markPrimary(stars, [i, j]);
-  }
+  const mutual = mutualPairs(stars);
+  for (const pair of mutual) markPrimary(stars, [...pair]);
 
-  return { binaryPairs: pairs, binaryMutualPairs: mutualPairs };
+  return { binaryPairs: pairs, binaryMutualPairs: mutual.length };
+}
+
+/** Each A↔B where each is the other's directed nearest (`companionIdx`), once, as [lower index, higher]. */
+export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]): (readonly [number, number])[] {
+  const out: (readonly [number, number])[] = [];
+  for (let i = 0; i < stars.length; i++) {
+    const j = stars[i].companionIdx;
+    if (j > i && stars[j].companionIdx === i) out.push([i, j]);
+  }
+  return out;
 }
 
 /** ORs FLAG_BINARY_PRIMARY onto every eclipsing record the earlier passes
