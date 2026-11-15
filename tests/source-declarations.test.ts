@@ -103,6 +103,15 @@ describe('source declarations', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('names a non-code scripts/ file in a step\'s closure only in a declaring or outputs module', async () => {
+    const stepModules = new Set((await Promise.all(TS_STEPS.map(async (step) => [...await entryClosure(stepEntries(step))]))).flat());
+    const offenders = codeLinesOutsideSpellers()
+      .filter(({ rel, code }) => stepModules.has(rel) && !DECLARING_MODULE.test(rel) && !/-outputs\.ts$/.test(rel)
+        && /['"`]scripts\/[^'"`]*\.(json|tsv|txt|csv)['"`]/.test(code))
+      .map(({ at }) => at);
+    expect(offenders).toEqual([]);
+  }, 60_000);
+
   it('lets only DATA_FILES spell a data/ path among production modules', () => {
     expect(DATA_PATH_SPELLERS.filter((rel) => /^(scripts|src)\//.test(rel) && isProductionTs(rel))).toEqual([DATA_FILES_MODULE]);
   });

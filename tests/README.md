@@ -239,7 +239,10 @@ source-declarations.test.ts
                          and declaring modules included;
                          a declaration call (DECLARATION_CALL) only
                          in a *-source.ts / *-tsv.ts / *-json.ts module,
-                         a defineSnapshot only in a *-expected-json.ts; every
+                         a defineSnapshot only in a *-expected-json.ts;
+                         a non-code scripts/ path literal in a step's
+                         closure only in a declaring or outputs module
+                         (a step opening one by path reads no input); every
                          package.json tsx command goes through the
                          launcher; every launched entry's top level is
                          declarations only (TypeScript's parser; no bare
