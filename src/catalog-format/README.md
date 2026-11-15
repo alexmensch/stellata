@@ -25,6 +25,8 @@ Each has its own README.
   chain.
 - `binaries/` — the `binaries.bin` wire layout: header, record offsets,
   flag bits.
+- `system-membership/` — the `system-membership.json` schema: each physical
+  system's tree of records and the companions with no record.
 - `boundaries/` — the `constellation-boundaries.json` wire shape, its
   quantisation and fade statistics.
 - `ephemerides/` — the planet element tables: roster, wire schema,

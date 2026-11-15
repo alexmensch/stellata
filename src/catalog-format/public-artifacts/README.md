@@ -10,7 +10,7 @@ drift from the URL its reader fetches.
 - `PUBLIC_FILES` — the single-file artifacts: `constellations.json`,
   `search-index.json`, `constellation-boundaries.json`, `binaries.bin`,
   `local-bubble.bin`, `cloud-surfaces.bin`, `clouds.json`,
-  `local-group.json`.
+  `local-group.json`, `system-membership.json`.
 - `PUBLIC_FOLDERS` — the mirrored folders: `dust/`, `probes/`,
   `ephemerides/`, `textures/`. What each mirror copies is its own output
   declaration (`scripts/<layer>/<layer>-mirror-outputs.ts`), built from the

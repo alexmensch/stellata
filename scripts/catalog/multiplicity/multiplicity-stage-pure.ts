@@ -3,9 +3,13 @@
 import {
   MULTIPLICITY_RESOLVED, MULTIPLICITY_SINGLE, MULTIPLICITY_UNRESOLVED,
 } from '../../../src/catalog-format/record/catalog-pure';
+import type { SystemMembershipCounts } from '../system-membership/system-membership-pure';
 
-/** The multiplicity stage's count block. */
-export type MultiplicityCounts = {
+/** The multiplicity stage's count block; system membership's share is ../system-membership/README.md#counts. */
+export type MultiplicityCounts = MultiplicityPassCounts & SystemMembershipCounts;
+
+/** The flag, CCDM and status passes' share of the block. */
+export type MultiplicityPassCounts = {
   /** `inferBinaries` companion assignments. */
   binaryPairs: number;
   /** Pairs where both stars chose each other (sets FLAG_BINARY_PRIMARY). */
@@ -19,7 +23,7 @@ export type MultiplicityCounts = {
   ccdmFlagged: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
-   *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */
+   *  pair / eclipsing / geometric evidence. See isOpticalDoubleMember. */
   ccdmSuppressedOptical: number;
   /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
    *  varType == ECLIPSING records not already flagged by the geometric
@@ -65,7 +69,7 @@ export function multiplicityStatuses(
   return { status, counts: { multiplicityResolved: resolvedMembers.size, multiplicityUnresolved } };
 }
 
-export function multiplicitySummary(c: MultiplicityCounts): string {
+export function multiplicitySummary(c: MultiplicityPassCounts): string {
   return `multiplicity: ${c.binaryPairs} companion assignments, ${c.binaryMutualPairs} mutual pairs; `
     + `CCDM ${c.ccdmGroups} systems → ${c.ccdmResolved} resolved in catalog, ${c.ccdmFlagged} new primaries flagged, `
     + `${c.ccdmSuppressedOptical} suppressed as optical doubles; wings on ${c.eclipsingWinged} eclipsing binaries `
