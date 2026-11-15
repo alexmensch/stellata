@@ -230,6 +230,7 @@ const input = {
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   simbadTycHd: new Map<string, SimbadTycHdRow>(),
+  pairDispositions: new Map(),
   magnitudeTerm: null,
   publishesGaiaParallax: (_sourceId: string) => true,
   keys: ORIGIN_KEYS,

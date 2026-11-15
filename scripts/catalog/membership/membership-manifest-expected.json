@@ -125,6 +125,8 @@
       "membership.merge.pair.confirmed": 274,
       "membership.merge.pair.moves": 163,
       "membership.merge.pair.moves-record": 1,
+      "membership.merge.pair.disposed": 0,
+      "membership.merge.pair.disposed-record": 0,
       "membership.merge.pair.review.no-hip-source": 85,
       "membership.merge.pair.review.no-entry-matches": 2,
       "membership.merge.pair.review.several-match": 2,

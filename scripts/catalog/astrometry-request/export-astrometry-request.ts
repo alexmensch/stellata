@@ -14,6 +14,7 @@ import {
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding-review-dispositions-source';
+import { PAIR_REVIEW_DISPOSITIONS } from '../membership/pair-review-dispositions-source';
 import { additionItemCells } from '../membership/additions/addition-items-pure';
 import { applyEveryPairMove, pairLinksFrom } from '../membership/merge-derivation/merge-derivation-pure';
 import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
@@ -36,7 +37,7 @@ async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set
   const corrected = applySpineCorrections(spine, SPINE_CORRECTIONS.read()).kept;
   const tables = await loadPrimaryTables(corrected.map((r) => r.tyc).filter((t) => t !== ''));
   const printedV = printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese);
-  const moved = applyEveryPairMove(corrected, pairLinksFrom(tables));
+  const moved = applyEveryPairMove(corrected, pairLinksFrom(tables), PAIR_REVIEW_DISPOSITIONS.read());
   const gate = magnitudeWeighableSourceIds(
     joinOverlayCandidates({
       tyc2Hd: tables.iv25,

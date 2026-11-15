@@ -18,6 +18,7 @@ import {
   applyPairRule, iv25TycHds, mergeDivergences, pairLinksFrom, simbadRefusedMoves,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import type { PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
@@ -64,6 +65,8 @@ export interface MembershipInput {
   corrections: readonly SpineCorrectionRow[];
   /** SIMBAD's TYC→HD pull, which can refuse a pair move (merge-derivation/README.md#applying-the-pair-rule). */
   simbadTycHd: ReadonlyMap<string, SimbadTycHdRow>;
+  /** The committed dispositions of the pair-review queue, by HIP (merge-derivation/README.md#disposing-a-queued-pair). */
+  pairDispositions: ReadonlyMap<number, PairDisposition>;
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
   /** Whether the pulled astrometry gives this source a parallax — what decides
@@ -90,7 +93,9 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
 
   const pairPass = (refused: ReadonlySet<number>) => {
-    const pair = applyPairRule(correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, refused);
+    const pair = applyPairRule(
+      correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, refused, input.pairDispositions,
+    );
     const settlement = settleSpineBindings({
       kept: pair.rows, keyOf, derive, dispositions: input.dispositions, evidence, tables,
     });

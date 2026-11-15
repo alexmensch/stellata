@@ -91,11 +91,15 @@ scripts/catalog/membership/
   binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated
     source.ts                     dispositions' declaration
                                   (../../util/sources/).
+  pair-review-dispositions-       The pair-review queue's dispositions:
+    pure.ts (+ test)              columns, reader and its checks, and
+  pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
+    source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
-                                  multiples.tsv, the review dispositions and
-                                  SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
+                                  multiples.tsv, both queues' dispositions
+                                  and SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
                                   merge's queue
                                   (data/classic-ids/label_flips.tsv) and its
                                   lineage, baseline rotation and change

@@ -11,6 +11,8 @@ import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-p
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
 import type { PairReviewReason } from '../ledger-rows-pure';
+import type { BindingDispositionBasis } from '../binding-review-dispositions-pure';
+import type { PairDisposition } from '../pair-review-dispositions-pure';
 
 
 /** The cells a spine row can leave empty that a primary's link fills. */
@@ -45,13 +47,23 @@ export type MergeDivergence =
     readonly onto: PairMoveTarget;
   }
   | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
+  | {
+    readonly kind: 'pair-disposed';
+    readonly hip: number;
+    readonly keep: string;
+    readonly basis: BindingDispositionBasis;
+    readonly onto: PairDisposedTarget;
+  }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
   | { readonly kind: 'differs'; readonly link: DiffersLink; readonly spine: string; readonly derived: readonly string[] };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
-/** What `applyPairRule` decided on a row the Gaia test alone would move. */
-export type PairDecision = Extract<MergeDivergence, { kind: 'pair-moves' | 'pair-review' }>;
+/** `stays` when the disposition keeps the entry the row already sits on. */
+export const PAIR_DISPOSED_TARGETS = ['stays', ...PAIR_MOVE_TARGETS] as const;
+export type PairDisposedTarget = (typeof PAIR_DISPOSED_TARGETS)[number];
+/** What `applyPairRule` decided on a row the Gaia test would move, or a disposition settled. */
+export type PairDecision = Extract<MergeDivergence, { kind: 'pair-moves' | 'pair-review' | 'pair-disposed' }>;
 
 export interface PairLinks {
   links: LinkTables;
@@ -152,9 +164,13 @@ type PairRuleResult = {
   received: ReadonlySet<number>;
 };
 
-/** Every move the Gaia test makes, each applied unless `refusal` names why it is queued instead. */
+/** `strict` refuses a disposition on a move nothing refused. see README.md#disposing-a-queued-pair */
 function applyMoves(
-  kept: readonly SpineRow[], m: PairLinks, refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
+  kept: readonly SpineRow[],
+  m: PairLinks,
+  dispositions: ReadonlyMap<number, PairDisposition>,
+  strict: boolean,
+  refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
 ): PairRuleResult {
   const rows = [...kept];
   const byTyc = new Map<string, number>();
@@ -162,39 +178,67 @@ function applyMoves(
   const decided = new Map<number, PairDecision>();
   const received = new Set<number>();
   const owners = new Set<string>();
-  kept.forEach((row, i) => {
-    const move = pairVerdict(row, intOf(row.hip), m).divergence;
-    if (move?.kind !== 'pair-moves') return;
-    const j = byTyc.get(move.owner);
+  const disposed = new Set<number>();
+  const receiverOf = (row: SpineRow, hip: number, owner: string): { j: number | undefined; receiver: SpineRow } => {
+    const j = byTyc.get(owner);
     if (j !== undefined && kept[j].hip !== '') {
-      throw new Error(`pair rule: HIP ${move.hip} moves onto ${move.owner}, whose spine record carries HIP ${kept[j].hip}`);
+      throw new Error(`pair rule: HIP ${hip} moves onto ${owner}, whose spine record carries HIP ${kept[j].hip}`);
     }
-    const receiver = j === undefined ? { ...row, tyc: move.owner } : { ...kept[j], hip: String(move.hip) };
-    const reason = refusal(move, receiver);
-    if (reason !== null) {
-      decided.set(i, { kind: 'pair-review', hip: move.hip, entries: m.hipEntries.get(move.hip)!, reason });
-      return;
-    }
-    if (owners.has(move.owner)) throw new Error(`pair rule: two HIPs move onto Tycho-2 entry ${move.owner}`);
-    owners.add(move.owner);
+    return { j, receiver: j === undefined ? { ...row, tyc: owner } : { ...kept[j], hip: String(hip) } };
+  };
+  const place = (i: number, owner: string, { j, receiver }: ReturnType<typeof receiverOf>): PairMoveTarget => {
+    if (owners.has(owner)) throw new Error(`pair rule: two HIPs move onto Tycho-2 entry ${owner}`);
+    owners.add(owner);
     if (j === undefined) {
       rows[i] = receiver;
-      decided.set(i, move);
-      return;
+      return 'entry';
     }
     rows[i] = { ...rows[i], hip: '' };
     rows[j] = receiver;
     received.add(j);
-    decided.set(i, { ...move, onto: 'record' });
+    return 'record';
+  };
+  kept.forEach((row, i) => {
+    const verdict = pairVerdict(row, intOf(row.hip), m).divergence;
+    if (verdict?.kind !== 'pair-moves' && verdict?.kind !== 'pair-review') return;
+    const { hip } = verdict;
+    const entries = m.hipEntries.get(hip)!;
+    const reason = verdict.kind === 'pair-review'
+      ? verdict.reason
+      : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
+    const d = dispositions.get(hip);
+    if (d !== undefined && (reason !== null || !strict)) {
+      if ([...d.entries].sort().join('|') !== entries.join('|')) {
+        throw new Error(`pair-review disposition for HIP ${hip} restates ${d.entries.join('|')}, but the pair is ${entries.join('|')}: review it again`);
+      }
+      disposed.add(hip);
+      const onto = d.keepEntry === row.tyc ? 'stays' : place(i, d.keepEntry, receiverOf(row, hip, d.keepEntry));
+      decided.set(i, { kind: 'pair-disposed', hip, keep: d.keepEntry, basis: d.basis, onto });
+      return;
+    }
+    if (verdict.kind === 'pair-review') return;
+    if (reason !== null) {
+      decided.set(i, { kind: 'pair-review', hip, entries, reason });
+      return;
+    }
+    const onto = place(i, verdict.owner, receiverOf(row, hip, verdict.owner));
+    decided.set(i, onto === 'entry' ? verdict : { ...verdict, onto });
   });
+  for (const hip of dispositions.keys()) {
+    if (!disposed.has(hip)) throw new Error(`pair-review disposition names HIP ${hip}, which the pair rule does not queue`);
+  }
   return { rows, decided, received };
 }
 
 /** see README.md#applying-the-pair-rule */
 export function applyPairRule(
-  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null, refused: ReadonlySet<number>,
+  kept: readonly SpineRow[],
+  m: PairLinks,
+  binds: (row: SpineRow) => string | null,
+  refused: ReadonlySet<number>,
+  dispositions: ReadonlyMap<number, PairDisposition>,
 ): PairRuleResult {
-  return applyMoves(kept, m, (move, receiver) => {
+  return applyMoves(kept, m, dispositions, true, (move, receiver) => {
     if (binds(receiver) !== move.sourceId) return 'gate_refused';
     return refused.has(move.hip) ? 'simbad_refused' : null;
   });
@@ -234,8 +278,10 @@ export function simbadRefusedMoves(
 }
 
 /** see README.md#applying-the-pair-rule */
-export function applyEveryPairMove(kept: readonly SpineRow[], m: PairLinks): SpineRow[] {
-  return applyMoves(kept, m, () => null).rows;
+export function applyEveryPairMove(
+  kept: readonly SpineRow[], m: PairLinks, dispositions: ReadonlyMap<number, PairDisposition>,
+): SpineRow[] {
+  return applyMoves(kept, m, dispositions, false, () => null).rows;
 }
 
 /** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */

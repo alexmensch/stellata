@@ -280,6 +280,7 @@ type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`
 const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
 type MergeBranch =
   | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
+  | 'merge.pair.disposed' | 'merge.pair.disposed-record'
   | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
@@ -306,6 +307,14 @@ const MERGE_BRANCHES: readonly {
   {
     branch: 'merge.pair.moves-record', of: 'pair-moves', ledger: 'pair_moves',
     description: `${PAIR} the HIP's Gaia source is the entry another spine record sits on, so the pair rule moves the HIP onto that record.`,
+  },
+  {
+    branch: 'merge.pair.disposed', of: 'pair-disposed', ledger: null,
+    description: `${PAIR} the pair rule names no owner, and a committed pair-review disposition puts the HIP on the entry it names.`,
+  },
+  {
+    branch: 'merge.pair.disposed-record', of: 'pair-disposed', ledger: 'pair_moves',
+    description: `${PAIR} the pair rule names no owner, and a committed pair-review disposition moves the HIP onto the entry another spine record sits on.`,
   },
   ...PAIR_REVIEW_REASONS.map((r) => ({
     branch: PAIR_REVIEW_BRANCHES[r], of: 'pair-review' as const, ledger: null,
@@ -606,6 +615,10 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
     case 'pair-moves':
       return row(key, d.onto === 'entry' ? 'merge.pair.moves' : 'merge.pair.moves-record', {
         cells: 'hip', derived: d.owner, evidence: d.sourceId,
+      });
+    case 'pair-disposed':
+      return row(key, d.onto === 'record' ? 'merge.pair.disposed-record' : 'merge.pair.disposed', {
+        cells: 'hip', derived: d.keep, evidence: d.basis,
       });
     case 'pair-review':
       return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });

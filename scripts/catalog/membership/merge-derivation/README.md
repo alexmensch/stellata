@@ -20,6 +20,8 @@ scripts/catalog/membership/merge-derivation/
                              tables), pairOwner, applyPairRule (the kept rows
                              with every move applied that no gate refuses),
                              applyEveryPairMove (every move, none refused),
+                             applying ../pair-review-dispositions-pure.ts's
+                             dispositions over the queue,
                              simbadRefusedMoves and iv25TycHds (SIMBAD's
                              TYC→HD check on the applied moves) and
                              mergeDivergences, one row's divergences. Pure.
@@ -112,7 +114,22 @@ entry naming the HIP, and `reason` — `no_hip_source`, `no_entry_matches`,
 `several_match`, `gate_refused` or `simbad_refused`, as
 [Applying the pair rule](#applying-the-pair-rule) defines them. It is a view of
 the `merge.pair.review.*` lineage rows, and the spine's entry ships on every
-row it lists.
+row it lists until a disposition settles it.
+
+## Disposing a queued pair
+
+`data/membership/pair-review-dispositions.tsv` is hand-written and read by
+`build:membership`, which never writes it: `hip`, `entries` (the queue row's,
+restated), `keep_entry`, `basis` and `evidence`, the shape and closed `basis`
+set of the binding queue's dispositions ([The spine side](../README.md#the-spine-side)).
+A disposition is the authority: the build puts the HIP on `keep_entry` the way
+a Gaia move would — the record onto that entry, or the HIP onto the spine
+record already there — and no gate weighs it again (`merge.pair.disposed`,
+`merge.pair.disposed-record`, the second ledgered as a `pair_moves` row so
+gate (i) matches it). The build fails on a disposition whose `entries` no
+longer match the pair, so a Tycho-2 or Gaia change reopens the review; on a
+`keep_entry` off the pair; and on a HIP the rule does not queue. Settling the
+queue is `stellata-hooj.17.11.5`.
 
 ## The divergence ledger
 

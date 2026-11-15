@@ -92,6 +92,10 @@ pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
                          a Tycho-2 pair the pair rule names no owner for:
                          the pair's entries and why
                          (/scripts/catalog/membership/merge-derivation/README.md#the-pair-review-queue).
+pair-review-dispositions.tsv
+                         Regular git. Hand-curated; header only today. The
+                         entry each disposed HIP ships on, as the authority
+                         (/scripts/catalog/membership/merge-derivation/README.md#disposing-a-queued-pair).
 ```
 
 The five ledgers above that `build:membership` writes, and
