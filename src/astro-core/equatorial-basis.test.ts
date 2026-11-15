@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 
+import { ARCSEC_TO_RAD, MAS_TO_RAD } from './astronomy-constants';
 import {
   angularSeparationArcsec,
   directionAtEpoch,
   equatorialTangentBasis,
   equatorialTangentBasisAt,
   equatorialTangentBasisRad,
+  offsetDirection,
   polarToTangent,
   raDecFromUnitVector,
   skyPositionAtEpoch,
@@ -208,6 +210,24 @@ describe('skyPositionAtEpoch', () => {
     const pole = { raDeg: 10, decDeg: 90 };
     const moved = skyPositionAtEpoch(pole, { pmRaMasyr: 3600, pmDecMasyr: 0 }, 2000, 2001);
     expect(90 - moved.decDeg).toBeCloseTo(3.6 / 3600, 9);
+  });
+});
+
+describe('offsetDirection', () => {
+  it('is directionAtEpoch with the motion already integrated', () => {
+    const pos = { raDeg: 269.45, decDeg: 4.74 };
+    const pm = { pmRaMasyr: -801.551, pmDecMasyr: 10362.394 };
+    expect(offsetDirection(pos, pm.pmRaMasyr * MAS_TO_RAD * 16, pm.pmDecMasyr * MAS_TO_RAD * 16))
+      .toEqual(directionAtEpoch(pos, pm, 2000, 2016));
+  });
+
+  it('puts a tangent-plane offset t at angle atan(t) from the origin, at the pole too', () => {
+    const t = 300 * ARCSEC_TO_RAD;
+    for (const decDeg of [0, 88, 90]) {
+      const moved = offsetDirection({ raDeg: 40, decDeg }, t * Math.SQRT1_2, t * Math.SQRT1_2);
+      expect(angularSeparationArcsec(moved, unitVectorFromRaDec(40, decDeg)))
+        .toBeCloseTo(Math.atan(t) / ARCSEC_TO_RAD, 9);
+    }
   });
 });
 
