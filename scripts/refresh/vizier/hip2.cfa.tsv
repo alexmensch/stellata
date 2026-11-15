@@ -1,0 +1,47 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:50 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:50	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=I%2F311%2Fhip2&-out=HIP%2CRArad%2CDErad%2CPlx%2Ce_Plx%2CpmRA%2CpmDE%2Ce_pmRA%2Ce_pmDE%2CF2%2CNtr&HIP=1%2C32349&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_1311
+#Name: I/311
+#Title: Hipparcos, the New Reduction (van Leeuwen, 2007)
+#INFO	ivoid=ivo://cds.vizier/i/311	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/i/311	    IVOID of underlying data collection
+#INFO	creator=van Leeuwen F.	    First author or institution
+#INFO	cites=bibcode:2007A&A...474..653V	    Article or Data origin sources
+#INFO	journal=A&A	    Journal name
+#INFO	original_date=2007	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/I/311	    Dataset landing page
+#INFO	publication_date=2017-12-22	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	J2000_1991.250:	eq_FK5 J2000
+#Table	I_311_hip2:
+#Name: I/311/hip2
+#Title: The Astrometric Catalogue
+#Column	HIP	(I6)	Hipparcos identifier	[ucd=meta.id;meta.main]
+#Column	RArad	(F12.8)	Right Ascension in ICRS, Ep=1991.25	[ucd=pos.eq.ra;meta.main]
+#Column	DErad	(F12.8)	Declination in ICRS, Ep=1991.25	[ucd=pos.eq.dec;meta.main]
+#Column	Plx	(F7.2)	Parallax	[ucd=pos.parallax]
+#Column	e_Plx	(F6.2)	Formal error on Plx	[ucd=stat.error;pos.parallax]
+#Column	pmRA	(F8.2)	Proper motion in Right Ascension	[ucd=pos.pm;pos.eq.ra]
+#Column	pmDE	(F8.2)	Proper motion in Declination	[ucd=pos.pm;pos.eq.dec]
+#Column	e_pmRA	(F6.2)	Formal error on pmRA	[ucd=stat.error;pos.pm;pos.eq.ra]
+#Column	e_pmDE	(F6.2)	Formal error on pmDE	[ucd=stat.error;pos.pm;pos.eq.dec]
+#Column	F2	(F5.2)	Goodness of fit	[ucd=stat.fit.goodness]
+#Column	Ntr	(I3)	Number of field transits used	[ucd=meta.id;obs.field]
+HIP	RArad	DErad	Plx	e_Plx	pmRA	pmDE	e_pmRA	e_pmDE	F2	Ntr
+ 	deg	deg	mas	mas	mas/yr	mas/yr	mas/yr	mas/yr	 	
+------	------------	------------	-------	------	--------	--------	------	------	-----	---
+     1	000.00091185	+01.08901332	   4.55	  1.33	   -4.55	   -1.19	  1.25	  0.75	 0.91	 90
+ 32349	101.28854105	-16.71314306	 379.21	  1.58	 -546.01	-1223.07	  1.33	  1.24	 0.00	 47
+

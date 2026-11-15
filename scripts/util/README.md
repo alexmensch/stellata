@@ -201,7 +201,11 @@ same thing — single-use helpers stay with their consumer.
   whose multiply moves near-ties. Beside them, `formatRepr(x, width)`,
   Python's `repr(x)` of a double or numpy's `str` of a float32: the
   shortest digits that read back to `x`, no rounding (a refresh pull's
-  shortest-digits column format).
+  shortest-digits column format); and `formatDeclared(x, digits, width)`,
+  a VizieR value at its catalogue's declared `Fw.d`: those shortest digits
+  rounded half away from zero, which reproduces CDS's printed values where
+  rounding the exact binary value does not
+  ([FITS replies](../refresh/pull/README.md#fits-replies)).
 - `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
   uniform generator: the synthetic faint catalogue's draws
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's

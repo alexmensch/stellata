@@ -9,7 +9,7 @@ import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import type { Cell } from '../pull/columns-pure';
 import { describePhasedPull, runPhasedPull } from '../pull/pull';
 import { recordedTableCases } from '../pull/recorded-reply';
-import { GAIA, type TapClientDeps } from '../pull/tap-pure';
+import { GAIA, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { deepPopulationPull, type DeepPopulationTable } from './deep-population-pure';
 import { APSIS_TABLE, MIN_APSIS_SPECTRAL_TYPE, MIN_APSIS_TEFF_LOGG } from './deep-population-tables-pure';
 import { bailerJonesPull } from './refresh-bailer-jones';
@@ -40,10 +40,10 @@ function deps(reply: (adql: string) => string) {
   const asked: string[] = [];
   const d: TapClientDeps = {
     transport: async (_url, form) => {
-      if (!form) return { status: 200, contentType: 'text/xml', body: '<capabilities/>' };
+      if (!form) return textReply(200, 'text/xml', '<capabilities/>');
       const adql = form.get('QUERY') ?? '';
       asked.push(adql);
-      return { status: 200, contentType: 'text/csv', body: reply(adql) };
+      return textReply(200, 'text/csv', reply(adql));
     },
     sleep: async () => {},
     report: () => {},

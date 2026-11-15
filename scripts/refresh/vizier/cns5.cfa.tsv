@@ -1,0 +1,54 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:38:02 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:38:02	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J%2FA%2BA%2F670%2FA19%2Fcns5&-out=CNS5%2CGJ%2CComp%2CGaiaDR3%2CHIP%2CRAJ2000%2CDEJ2000%2CEpoch%2Cr_pos%2Cplx%2Ce_plx%2Cr_plx%2CpmRA%2Ce_pmRA%2CpmDE%2Ce_pmDE%2Cr_pmRA&CNS5=1%2C56%2C3591&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_36700019
+#Name: J/A+A/670/A19
+#Title: Fifth Catalogue of Nearby Stars (CNS5) (Golovin+, 2023)
+#INFO	ivoid=ivo://cds.vizier/j/a+a/670/a19	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/j/a+a/670/a19	    IVOID of underlying data collection
+#INFO	creator=Golovin A.	    First author or institution
+#INFO	cites=bibcode:2023A&A...670A..19G	    Article or Data origin sources
+#INFO	journal=A&A	    Journal name
+#INFO	original_date=2023	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/J/A+A/670/A19	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier.36700019	    Dataset identifier that can be used for citation
+#INFO	publication_date=2024-09-14	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	J_A_A_670_A19_cns5:
+#Name: J/A+A/670/A19/cns5
+#Title: Fifth Catalogue of Nearby Stars (CNS5) (corrected version 13-Dec-2023)
+#Column	CNS5	(I4)	[0/5930] CNS5 designation (cns5_id)	[ucd=meta.id]
+#Column	GJ	(A6)	Gliese-Jahreiss number (gj_id)	[ucd=meta.id;meta.main]
+#Column	Comp	(A4)	Suffix for a component of binary or multiple system (component_id)	[ucd=meta.code.multip]
+#Column	GaiaDR3	(I19)	? Source identifier in Gaia EDR3 (gaia_edr3_id)	[ucd=meta.id]
+#Column	HIP	(I6)	? Hipparcos identifier (hip_id)	[ucd=meta.id]
+#Column	RAJ2000	(F15.11)	? Right ascension (J2000) at Ep=Epoch (ra)	[ucd=pos.eq.ra;meta.main]
+#Column	DEJ2000	(F15.11)	? Declination (J2000) at Ep=Epoch (dec)	[ucd=pos.eq.dec;meta.main]
+#Column	Epoch	(F9.4)	[1991.25/2017.97]? Reference epoch for coordinates (epoch)	[ucd=meta.ref;time.epoch]
+#Column	r_pos	(A19)	Source of the position (coordinates_bibcode)	[ucd=meta.ref;pos.frame]
+#Column	plx	(F7.2)	? Absolute trigonometric parallax (parallax)	[ucd=pos.parallax.trig]
+#Column	e_plx	(F6.2)	? Error in parallax (parallax_error)	[ucd=stat.error;pos.parallax]
+#Column	r_plx	(A19)	Source of the parallax (parallax_bibcode)	[ucd=meta.ref;pos.frame]
+#Column	pmRA	(F8.2)	? Proper motion in right ascension (d(RAcosDE)/dt) (pmra)	[ucd=pos.pm;pos.eq.ra]
+#Column	e_pmRA	(F8.3)	? Error in pmRA (pmra_error)	[ucd=stat.error;pos.pm;pos.eq.ra]
+#Column	pmDE	(F8.2)	? Proper motion in declination (pmdec)	[ucd=pos.pm;pos.eq.dec]
+#Column	e_pmDE	(F8.3)	? Error of pmDE (pmdec_error)	[ucd=stat.error;pos.pm;pos.eq.dec]
+#Column	r_pmRA	(A19)	Source of the proper motion (pm_bibcode)	[ucd=meta.ref;pos.pm;pos.eq.ra]
+CNS5	GJ	Comp	GaiaDR3	HIP	RAJ2000	DEJ2000	Epoch	r_pos	plx	e_plx	r_plx	pmRA	e_pmRA	pmDE	e_pmDE	r_pmRA
+ 	 	 	 	 	deg	deg	yr	 	mas	mas	 	mas/yr	mas/yr	mas/yr	mas/yr	
+----	------	----	-------------------	------	---------------	---------------	---------	-------------------	-------	------	-------------------	--------	--------	--------	--------	-------------------
+  56	1004  	    	 395234439752169344	      	  3.05821931355	+50.41997493299	2016.0000	2020yCat.1350....0G	  92.00	  0.02	2020yCat.1350....0G	 -461.33	   0.015	 -551.67	   0.013	2020yCat.1350....0G
+   1	10001 	    	                   	      	  0.05633803966	+25.90551781631	2015.5000	2018A&A...616A...1G	  70.80	  1.90	2012ApJS..201...19D	  -19.10	   1.500	  126.70	   1.300	2012ApJS..201...19D
+3591	551   	C   	5853498713190525696	 70890	217.39232147201	-62.67607511677	2016.0000	2020yCat.1350....0G	 768.07	  0.06	2020yCat.1350....0G	-3781.74	   0.031	  769.47	   0.051	2020yCat.1350....0G
+

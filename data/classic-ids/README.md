@@ -58,9 +58,11 @@ classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
 
 ## Provenance
 
-Every table is a whole-table column slice pulled over CDS/VizieR TAP by
-`scripts/refresh/vizier/refresh-classic-ids.ts` (`pnpm run refresh:classic-ids`),
-verified against VizieR 2026-07-28. Licence: public domain via CDS for
+Every table is a whole-table column slice pulled from VizieR by
+`scripts/refresh/vizier/refresh-classic-ids.ts` (`pnpm run refresh:classic-ids`):
+CDS, or the CfA mirror when CDS is unreachable, named in the stamp's
+`answeredBy` (`data/stamps/refresh-classic-ids.json`). Verified against
+VizieR 2026-07-28; re-pulled from CfA 2026-11-15. Licence: public domain via CDS for
 all four; cite the paper per table.
 
 - **`tyc2_hd.tsv`** ← VizieR `IV/25/tyc2_hd`.

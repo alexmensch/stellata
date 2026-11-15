@@ -1,12 +1,14 @@
 {
   "inputs": {},
   "outputs": {
-    "data/msc/msc_components.tsv": "34e8fcd78bcd6f3be148cfa3fd7f5f030be9068e",
-    "data/msc/msc_orbits.tsv": "6b8d6ab4e00f91193443d6cfbb8d1ab2d1be4441",
-    "data/msc/msc_systems.tsv": "dca89df6c78710c73a5920945d1de26d1f860129"
+    "data/msc/msc_components.tsv": "f63295eaa3514c359f6587523a36443e0f3b7115",
+    "data/msc/msc_orbits.tsv": "d28c53f617f28bf0fae1a74f1aaa664ff0460a19",
+    "data/msc/msc_systems.tsv": "2c2095742bb414a46ba365fbf4de77c901774361"
   },
-  "query": "68facf83bc7f062e9eb16c27840ce8e673ffb271",
-  "answeredBy": [],
+  "query": "66d863b01024aefbf395c8e6ebddb70a2a1c6ed8",
+  "answeredBy": [
+    "CfA"
+  ],
   "release": "VizieR J/ApJS/235/6/systems, VizieR J/ApJS/235/6/orbits, VizieR J/ApJS/235/6/catalog",
   "requestFrom": []
 }

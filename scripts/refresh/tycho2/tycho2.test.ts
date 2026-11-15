@@ -1,33 +1,30 @@
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { declareOutputs } from '../../util/emit-artifacts';
+import { REPO_ROOT } from '../../util/paths';
 import type { Row } from '../pull/columns-pure';
-import { describePhasedPull, phaseQueries, type Ask } from '../pull/pull';
-import { recordedTableCases } from '../pull/recorded-reply';
+import { describePhasedPull, phaseQueries, type Ask, type Phase } from '../pull/pull';
+import { recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
 import { VIZIER } from '../pull/tap-pure';
 import {
-  MAIN, TYC1_MAX, TYC1_MIN, bandPhase, keptBand, membershipCover, pairCarriedAsOneStar, parseTyc, requestLines,
+  MAIN, SUPPL1, TYC1_MAX, TYC1_MIN, bandPhase, keptBand, membershipCover, pairCarriedAsOneStar, parseTyc, requestLines,
   tyc1Bands, tycho2Pull, tycho2Request, unscannable, type Tycho2Request,
 } from './tycho2-pure';
-
-/** Synthetic, not recorded: committed rows written in the CSV dialect ESA, ARI and SIMBAD-Harvard answer with (README.md#replies). */
-const REPLIES = {
-  main: [
-    '1,13,1,,1.12558209,2.267394,1990.76,1989.25,27.7,-0.5,1.2,1.2,1.12551889,2.26739556,10.488,0.038,8.67,0.015,999,',
-    '3694,2544,1,,34.60250679,56.55991447,1991.07,1991.0,341.5,-223.6,1.3,1.3,34.60108028,56.56043583,9.438,0.019,8.354,0.012,999,',
-  ],
-  suppl1: [
-    '4,1063,1,H,0.82923787,4.68713578,-24.5,-85.4,3.6,2.4,,,12.126,0.01,999,263',
-    '4,1130,1,H,0.01814144,3.94648893,226.3,-12.8,6.2,3.2,,,12.449,0.009,999,6',
-  ],
-};
 
 const OUTPUTS = declareOutputs({ main: 'tycho2_main.tsv', suppl1: 'tycho2_suppl1.tsv' });
 const WRITTEN = tycho2Pull(OUTPUTS, { request: tycho2Request([], []), requestFrom: [] }).tables;
 
-describe('main', () => recordedTableCases('main', DATA_FILES.tycho2Main, WRITTEN.main, REPLIES.main));
-describe('suppl1', () => recordedTableCases('suppl1', DATA_FILES.tycho2Suppl1, WRITTEN.suppl1, REPLIES.suppl1));
+/** Recorded from the CfA mirror, the spot row's entry each (README.md#replies). */
+function recorded(name: string, phase: Phase): RecordedAsu {
+  if (phase.scope.kind !== 'whole-table' || phase.scope.asu === undefined) throw new Error(`${name} has no ASU form`);
+  return { stem: join(REPO_ROOT, `scripts/refresh/tycho2/${name}.cfa`), asu: phase.scope.asu };
+}
+
+describe('main', () => recordedTableCases('main', DATA_FILES.tycho2Main, WRITTEN.main, recorded('main', bandPhase(MAIN, [3601, 4000]))));
+describe('suppl1', () => recordedTableCases('suppl1', DATA_FILES.tycho2Suppl1, WRITTEN.suppl1, recorded('suppl1', bandPhase(SUPPL1, [1, 400]))));
 
 describe('parseTyc', () => {
   it('reads a well-formed designation, surrounding space allowed', () => {
@@ -55,10 +52,15 @@ describe('the TYC1 bands', () => {
     expect(tyc1Bands(1000).at(-1)?.[1]).toBe(TYC1_MAX);
   });
 
-  it('ask one quoted range query per band and table', () => {
-    const [query] = phaseQueries(bandPhase(MAIN, [401, 800]), undefined, VIZIER.quote);
-    expect(query).toContain('FROM "I/259/tyc2" WHERE TYC1 BETWEEN 401 AND 800');
+  it('ask one quoted range query per band and table, and the same range of CfA\'s ASU', () => {
+    const phase = bandPhase(MAIN, [401, 800]);
+    const [query] = phaseQueries(phase, undefined, VIZIER.quote);
+    expect(query).toContain('FROM "I/259/tyc2" WHERE "TYC1" BETWEEN 401 AND 800');
     expect(query).toContain('"RA(ICRS)" AS ra_icrs');
+    const asu = phase.scope.kind === 'whole-table' ? phase.scope.asu : undefined;
+    expect(asu?.source).toBe('I/259/tyc2');
+    expect(asu?.constraints).toEqual({ TYC1: '401..800' });
+    expect(asu?.columns.find((c) => c.name === 'ra_icrs')?.archive).toBe('RA(ICRS)');
     expect(tyc1Bands()).toHaveLength(24);
   });
 
@@ -126,6 +128,6 @@ describe('the run', () => {
     const described = describePhasedPull(tycho2Pull(OUTPUTS, { request, requestFrom: ['m', 't'] }));
     expect(Object.keys(JSON.parse(described.query).phases)).toHaveLength(48);
     expect(described.request).toEqual(['1-2-1', '4-5-1', '9000-3-1']);
-    expect(described.services).toEqual(['CDS']);
+    expect(described.services).toEqual(['CDS', 'CfA']);
   });
 });

@@ -10,11 +10,38 @@ export const FLOAT: Format = { repr: true, float32: true };
 /** A VOTable `double`, written as Python's repr. */
 export const DOUBLE: Format = { repr: true };
 
-export function vizierColumn(vizier: string, name: string, format?: Format): Column {
+/** A column under the name its TSV writes, keeping the VizieR name an ASU mirror asks it by. */
+export interface VizierColumn extends Column {
+  readonly vizier: string;
+}
+
+export function vizierColumn(vizier: string, name: string, format?: Format): VizierColumn {
   return {
     name,
+    vizier,
     ...(vizier === name ? {} : { select: `${VIZIER.quote(vizier)} AS ${name}` }),
     ...(format === undefined ? {} : { format }),
+  };
+}
+
+/** An inclusive range on one VizieR column. */
+export interface VizierRange {
+  readonly column: string;
+  readonly min: number;
+  readonly max: number;
+}
+
+/** One VizieR query as both its ADQL parts and its ASU form, so the CDS and CfA mirrors ask the same rows. */
+export function vizierQuery(vizierId: string, columns: readonly [VizierColumn, ...VizierColumn[]], range?: VizierRange) {
+  return {
+    from: VIZIER.quote(vizierId),
+    columns,
+    ...(range === undefined ? {} : { where: `${VIZIER.quote(range.column)} BETWEEN ${range.min} AND ${range.max}` }),
+    asu: {
+      source: vizierId,
+      columns: columns.map((c) => ({ archive: c.vizier, name: c.name })),
+      constraints: range === undefined ? {} : { [range.column]: `${range.min}..${range.max}` },
+    },
   };
 }
 
@@ -29,11 +56,18 @@ export interface VizierTable extends PullTable {
 export const vizierRelease = (tables: Iterable<{ readonly vizierId: string }>): string =>
   [...tables].map(({ vizierId }) => `VizieR ${vizierId}`).join(', ');
 
+/** `keys`, then every other column as text: rows tied on the keys would otherwise keep whichever order the answering mirror sent. */
+export function totalOrder(columns: readonly Column[], keys: readonly [SortKey, ...SortKey[]]): readonly [SortKey, ...SortKey[]] {
+  const keyed = new Set(keys.map((k) => k.column));
+  return [...keys, ...columns.filter((c) => !keyed.has(c.name)).map((c) => text(c.name))];
+}
+
 function wholeTable(
-  vizierId: string, columns: readonly [Column, ...Column[]], sortBy: readonly [SortKey, ...SortKey[]], band: RowBand,
+  vizierId: string, columns: readonly [VizierColumn, ...VizierColumn[]], keys: readonly [SortKey, ...SortKey[]], band: RowBand,
   spotRows: readonly [SpotRow, ...SpotRow[]],
 ): VizierTable {
-  return { vizierId, from: VIZIER.quote(vizierId), columns, sortBy, scope: { kind: 'whole-table' }, band, spotRows };
+  const { asu, ...query } = vizierQuery(vizierId, columns);
+  return { vizierId, ...query, sortBy: totalOrder(columns, keys), scope: { kind: 'whole-table', asu }, band, spotRows };
 }
 
 const spot = (key: string, value: string, cells: Readonly<Record<string, Pinned>>): SpotRow => ({ key, value, cells });
