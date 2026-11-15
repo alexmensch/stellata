@@ -3,7 +3,7 @@
 import type { ColumnTable } from '../../util/tsv/table-pure';
 import {
   flagGroupPrimaries,
-  isOpticalDoublePrimary,
+  isOpticalDoubleMember,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
 } from './binary-flags-pure';
@@ -125,35 +125,38 @@ export function collectPhysicalPairKeys(
   return { hips, gaia };
 }
 
-// Build the union of CCDM groups (parsed from Hipparcos) and the curated
-// KNOWN_VISUAL_DOUBLES overrides, then delegate to `flagGroupPrimaries`,
-// which handles the per-group "brightest in-catalog component, idempotent
-// with existing flags" logic.
-//
-// `physical` gates the optical-double suppression (isOpticalDoublePrimary):
-// CCDM keeps a tail of wide line-of-sight optical pairs whose brightest
-// member would otherwise get spurious chart-mode wings. The curated
-// KNOWN_VISUAL_DOUBLES are folded into the physical-evidence set so they
-// are never suppressed.
-export function applyDoublesFlag(
-  stars: Star[],
-  ccdmGroups: Map<string, number[]>,
-  hipToIndex: Map<number, number>,
-  physical: PhysicalPairKeys,
-): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
-  const allGroups: Iterable<Iterable<number>> = (function* () {
-    yield* ccdmGroups.values();
-    for (const sys of KNOWN_VISUAL_DOUBLES) yield sys.components;
-  })();
+/** The double-star systems both the wings pass and system membership read, with the optical-double gate's context. */
+export interface DoublesEvidence {
+  /** Each system's HIPs: every real CCDM group, then each curated system. */
+  readonly groups: readonly (readonly number[])[];
+  readonly ccdmGroupCount: number;
+  readonly optical: OpticalDoubleContext;
+}
+
+// The curated KNOWN_VISUAL_DOUBLES are folded into the physical-evidence set
+// so the optical-double gate never fires on them.
+export function doublesEvidence(ccdmGroups: ReadonlyMap<string, readonly number[]>, physical: PhysicalPairKeys): DoublesEvidence {
   const physicalHips = new Set<number>(physical.hips);
   for (const h of KNOWN_VISUAL_DOUBLE_HIPS) physicalHips.add(h);
-  const ctx: OpticalDoubleContext = {
-    physicalHips,
-    physicalGaia: physical.gaia,
-    minSepPc: OPTICAL_DOUBLE_MIN_SEP_PC,
+  return {
+    groups: [...ccdmGroups.values(), ...KNOWN_VISUAL_DOUBLES.map((sys) => sys.components)],
+    ccdmGroupCount: ccdmGroups.size,
+    optical: { physicalHips, physicalGaia: physical.gaia, minSepPc: OPTICAL_DOUBLE_MIN_SEP_PC },
   };
+}
+
+// Delegates to `flagGroupPrimaries` for the per-group "brightest in-catalog
+// component, idempotent with existing flags" logic, vetoing an optical
+// double's primary (isOpticalDoubleMember): CCDM keeps a tail of wide
+// line-of-sight optical pairs whose brightest member would otherwise get
+// spurious chart-mode wings.
+export function applyDoublesFlag(
+  stars: Star[],
+  evidence: DoublesEvidence,
+  hipToIndex: Map<number, number>,
+): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
   const suppress = (primaryIdx: number, memberIndices: number[]): boolean =>
-    isOpticalDoublePrimary(primaryIdx, memberIndices, stars, ctx);
-  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, allGroups, hipToIndex, suppress);
-  return { ccdmGroups: ccdmGroups.size, ccdmResolved: systems, ccdmFlagged: flagged, ccdmSuppressedOptical: suppressed };
+    isOpticalDoubleMember(primaryIdx, memberIndices, stars, evidence.optical);
+  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, evidence.groups, hipToIndex, suppress);
+  return { ccdmGroups: evidence.ccdmGroupCount, ccdmResolved: systems, ccdmFlagged: flagged, ccdmSuppressedOptical: suppressed };
 }

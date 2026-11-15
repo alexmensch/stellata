@@ -19,7 +19,7 @@ export type MultiplicityCounts = {
   ccdmFlagged: number;
   /** CCDM primaries the optical-double gate vetoed: nearest same-group
    *  sibling >1 pc away in 3D at Gaia-quality distances, with no physical
-   *  pair / eclipsing / geometric evidence. See isOpticalDoublePrimary. */
+   *  pair / eclipsing / geometric evidence. See isOpticalDoubleMember. */
   ccdmSuppressedOptical: number;
   /** FLAG_BINARY_PRIMARY bits newly set by the eclipsing-binary pass:
    *  varType == ECLIPSING records not already flagged by the geometric

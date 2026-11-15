@@ -62,7 +62,7 @@ export function markPrimary(
 }
 
 // Vetoes a freshly-picked primary before its FLAG_BINARY_PRIMARY bit is
-// set — the CCDM optical-double gate (see isOpticalDoublePrimary).
+// set — the CCDM optical-double gate (see isOpticalDoubleMember).
 export type SuppressPredicate = (
   primaryIdx: number,
   memberIndices: number[],
@@ -112,7 +112,7 @@ export function markPrimaryIfUnflagged(
 // helper just walks it.
 //
 // `suppress` (optional) is forwarded to `markPrimaryIfUnflagged` to veto
-// optical doubles — see isOpticalDoublePrimary.
+// optical doubles — see isOpticalDoubleMember.
 //
 // Returns:
 //   systems     — count of groups that resolved at least one in-catalog HIP.
@@ -173,7 +173,7 @@ export function flagGroupPrimaries(
 // double. Mirrors the binaries pipeline's Stage-5 SEPARATION_LIMIT_PC.
 export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
-// Fields isOpticalDoublePrimary reads. Star satisfies this structurally.
+// Fields isOpticalDoubleMember reads. Star satisfies this structurally.
 /** Whether a record's distance rests on a Gaia parallax, raw or through the
  *  Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) posterior
  *  over it. The optical-double suppression needs it
@@ -209,27 +209,27 @@ export interface OpticalDoubleContext {
   minSepPc: number;
 }
 
-// True when a CCDM group's picked primary should NOT be winged: it's an
-// optical double with no independent physical evidence. See
+// True when a CCDM group member is a line-of-sight optical double with no
+// independent physical evidence: the wings pass vetoes its picked primary on
+// it, and system membership drops each member it holds for. See
 // /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 //
-// Suppression fires only on positive evidence the asserted pair is optical
-// — the nearest same-group sibling with a Gaia-quality distance sits
-// farther than ctx.minSepPc in 3D. It never fires on mere absence of
-// physical evidence, so a noisy parallax can't strip real wings. Keeps the
-// wings (returns false) when any holds:
-//  - the primary is a component of a kept physical pair, or eclipsing
-//    (extrinsic wings earned) — the geometric mutual-pair flag is honoured
-//    upstream by markPrimaryIfUnflagged's already-flagged short-circuit;
-//  - the primary lacks a Gaia-quality distance (separation untrustworthy);
+// Fires only on positive evidence the asserted pair is optical — the nearest
+// same-group sibling with a Gaia-quality distance sits farther than
+// ctx.minSepPc in 3D. It never fires on mere absence of physical evidence, so
+// a noisy parallax can't strip a real pair. Returns false when any holds:
+//  - the member is a component of a kept physical pair, or eclipsing — the
+//    geometric mutual-pair flag is honoured upstream by
+//    markPrimaryIfUnflagged's already-flagged short-circuit;
+//  - the member lacks a Gaia-quality distance (separation untrustworthy);
 //  - no same-group sibling with a Gaia-quality distance exists to measure.
-export function isOpticalDoublePrimary(
-  primaryIdx: number,
-  memberIndices: number[],
-  stars: OpticalDoubleStar[],
+export function isOpticalDoubleMember(
+  memberIdx: number,
+  memberIndices: readonly number[],
+  stars: readonly OpticalDoubleStar[],
   ctx: OpticalDoubleContext,
 ): boolean {
-  const p = stars[primaryIdx];
+  const p = stars[memberIdx];
   if (p.varType === VAR_TYPE_ECLIPSING) return false;
   if (p.hip !== null && ctx.physicalHips.has(p.hip)) return false;
   if (p.gaiaSourceId !== null && ctx.physicalGaia.has(p.gaiaSourceId)) return false;
@@ -237,7 +237,7 @@ export function isOpticalDoublePrimary(
 
   let nearestSq = Infinity;
   for (const j of memberIndices) {
-    if (j === primaryIdx) continue;
+    if (j === memberIdx) continue;
     const q = stars[j];
     if (!hasGaiaQualityDistance(q.distVia)) continue;
     const dx = q.x - p.x;

@@ -45,6 +45,7 @@ import { boundaryArtifactSummary, renderBoundaryArtifact } from './boundaries/bu
 import {
   applyDoublesFlag,
   collectPhysicalPairKeys,
+  doublesEvidence,
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
 import {
@@ -395,8 +396,8 @@ export async function main() {
   // sources without double-flagging components of the same system.
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
-  const ccdmGroups = parseHipCcdm(HIP_CCDM.read());
-  const ccdm = applyDoublesFlag(stars, ccdmGroups, hipToIndex, collectPhysicalPairKeys(multiplesRows));
+  const doubles = doublesEvidence(parseHipCcdm(HIP_CCDM.read()), collectPhysicalPairKeys(multiplesRows));
+  const ccdm = applyDoublesFlag(stars, doubles, hipToIndex);
   console.log(`  in ${Date.now() - tCcdm}ms`);
 
   const eclipsing = wingEclipsingBinaries(stars);

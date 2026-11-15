@@ -11,7 +11,7 @@ import {
   markPrimaryIfUnflagged,
   flagGroupPrimaries,
   hasGaiaQualityDistance,
-  isOpticalDoublePrimary,
+  isOpticalDoubleMember,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleStar,
   type OpticalDoubleContext,
@@ -454,7 +454,7 @@ describe('binary-flags-pure / hasGaiaQualityDistance', () => {
   });
 });
 
-describe('binary-flags-pure / isOpticalDoublePrimary', () => {
+describe('binary-flags-pure / isOpticalDoubleMember', () => {
   // Two components 3 pc apart on the x-axis, both Gaia-quality, no physical
   // evidence — the canonical optical double.
   function make(overrides: Partial<OpticalDoubleStar>[] = []): OpticalDoubleStar[] {
@@ -475,30 +475,30 @@ describe('binary-flags-pure / isOpticalDoublePrimary', () => {
   });
 
   it('suppresses when the nearest Gaia-quality sibling is beyond the limit', () => {
-    expect(isOpticalDoublePrimary(0, [0, 1], make(), ctx())).toBe(true);
+    expect(isOpticalDoubleMember(0, [0, 1], make(), ctx())).toBe(true);
   });
   it('keeps when the nearest sibling is within the limit', () => {
     const stars = make([{}, { x: 0.5 }]); // 0.5 pc apart
-    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('keeps when the primary is a component of a physical pair (by HIP)', () => {
-    expect(isOpticalDoublePrimary(0, [0, 1], make(), ctx({ physicalHips: new Set([100]) }))).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], make(), ctx({ physicalHips: new Set([100]) }))).toBe(false);
   });
   it('keeps when the primary is a physical-pair member by Gaia source_id', () => {
     const stars = make([{ gaiaSourceId: 'g1' }]);
-    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx({ physicalGaia: new Set(['g1']) }))).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], stars, ctx({ physicalGaia: new Set(['g1']) }))).toBe(false);
   });
   it('keeps eclipsing primaries (extrinsic wings earned)', () => {
     const stars = make([{ varType: VAR_TYPE_ECLIPSING }]);
-    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('keeps when the primary lacks a Gaia-quality distance', () => {
     const stars = make([{ distVia: 'hip2_parallax' }]);
-    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('keeps when no sibling has a Gaia-quality distance to measure against', () => {
     const stars = make([{}, { x: 3, distVia: 'hip2_parallax' }]);
-    expect(isOpticalDoublePrimary(0, [0, 1], stars, ctx())).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1], stars, ctx())).toBe(false);
   });
   it('measures the NEAREST sibling — a near Gaia-quality partner keeps the wings even beside a far one', () => {
     const stars: OpticalDoubleStar[] = [
@@ -506,7 +506,7 @@ describe('binary-flags-pure / isOpticalDoublePrimary', () => {
       { absmag: 1, x: 0.3, y: 0, z: 0, hip: 200, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // bound
       { absmag: 2, x: 900, y: 0, z: 0, hip: 300, gaiaSourceId: null, distVia: 'bailer_jones', varType: 0 }, // background
     ];
-    expect(isOpticalDoublePrimary(0, [0, 1, 2], stars, ctx())).toBe(false);
+    expect(isOpticalDoubleMember(0, [0, 1, 2], stars, ctx())).toBe(false);
   });
 });
 
