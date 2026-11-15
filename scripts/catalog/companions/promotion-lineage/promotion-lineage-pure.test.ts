@@ -9,7 +9,7 @@ import { SEEDED_BRANCH, seededCodeCheck } from '../../lineage/count-block-fixtur
 import { makeStar } from '../../parse/star-fixture';
 import type { RadiusResolution } from '../../../../src/catalog-format/spectral/physical-radius';
 import type {
-  MintedBrightness, PromotedRow, PromotionDerivedCounts, RecordRewrite, RowOutcome,
+  MintedBrightness, PromotedRow, PromotionStats, RecordRewrite, RowOutcome,
 } from '../promotion-outcome';
 import { multiplesRow } from '../multiples-fixture';
 import {
@@ -151,11 +151,10 @@ describe('promotion count block', () => {
   });
 
   it('summarises the families as the build log has them', () => {
-    const derived: PromotionDerivedCounts = {
+    const derived: PromotionStats = {
       companionRepositionedInnerToParent: 0,
       companionBlendDimSkipped: 0, companionBlendDimUnfit: 0, companionBlendDimOutside: 0,
       companionBlendDimGaiaResolved: 0, companionBlendDimBeyondSeparation: 0, companionBlendDimMisfit: 0,
-      physicalOverlaps: 0,
     };
     const summary = promotionSummary(foldStageLines(PROMOTION_CODES, LINES), derived, 7);
     expect(summary).toContain('scanned 7 pair rows; promoted 2 (1 via synthetic ID); already-in-catalog 2 ');
@@ -288,7 +287,7 @@ describe('rewriteRows', () => {
 
 describe('PROMOTION_INVARIANTS', () => {
   const violations = (lines: LineageLine[]) => invariantViolations(PROMOTION_INVARIANTS, lines);
-  const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.key));
+  const [miskeyed, bridged] = violations([]).map((v) => v.stale.map((s) => s.name));
   const rowAt = (key: string) => {
     const [systemId, comp] = key.slice(`${MULTIPLES_ROW_KEY.id}:`.length).split('/');
     return multiplesRow({ systemId, comp });

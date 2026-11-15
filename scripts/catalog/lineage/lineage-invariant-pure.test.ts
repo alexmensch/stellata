@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
-  invariantCheck, invariantViolations, lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, VIOLATIONS_LISTED,
+  invariantCheck, invariantViolations, lineageInvariant, namedExceptionsInvariant, namedRow, namedRowsInvariant, NO_EXCEPTIONS, VIOLATIONS_LISTED,
 } from './lineage-invariant-pure';
 import { paramsText, stageLineageLine, type LineageLine } from './lineage-row-pure';
 import { outcomeCode, stageCodes } from './reason-codes/reason-codes-pure';
@@ -77,7 +77,7 @@ describe('named exceptions', () => {
   it('fails naming each listed row no line carries any more', () => {
     const [v] = invariantViolations([inv], [line('a:1', 'gap')]);
     expect(v.rows).toEqual([]);
-    expect(v.stale).toEqual([{ key: 'a:2', what: 'the second reviewed row' }]);
+    expect(v.stale).toEqual([{ name: 'a:2', what: 'the second reviewed row' }]);
     const check = invariantCheck(v);
     if (check.kind !== 'fail') throw new Error('expected a failed check');
     expect(check.message).toBe(
@@ -93,6 +93,16 @@ describe('named exceptions', () => {
     expect(check.message.split('\n').map((l) => l.split(':')[0])).toEqual([
       'invariant broken by 1 demo.gap rows', '  b', '1 declared demo.gap exceptions no row carries any more; delete them', '  a',
     ]);
+  });
+
+  it('named by key and params, a listed key with other params is a new row, and a listed pair it no longer carries is stale', () => {
+    const byPair = namedRowsInvariant(CODES, 'gap', 'no gap but a reviewed pair', new Map([
+      [namedRow('a:1', { other: 'a:2' }), 'the reviewed pair'],
+      [namedRow('a:1', { other: 'a:3' }), 'the pair since fixed'],
+    ]));
+    const [v] = invariantViolations([byPair], [line('a:1', 'gap', { other: 'a:2' }), line('a:1', 'gap', { other: 'a:4' })]);
+    expect(v.rows.map((r) => r.params)).toEqual([paramsText({ other: 'a:4' })]);
+    expect(v.stale).toEqual([{ name: namedRow('a:1', { other: 'a:3' }), what: 'the pair since fixed' }]);
   });
 
   it('a rule-excepted invariant has nothing to go stale', () => {

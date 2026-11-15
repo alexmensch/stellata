@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are component-binding's, pairs' and classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs', runtime-pairs', overlap's and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -113,7 +113,9 @@ Every stage writes the same envelope:
   folds or ledgers each one — has no such variant, since a code nothing
   emits is a placeholder. A missing row then always means the record left
   that stage, never a silent pass-through; identical-code rows cost almost
-  nothing compressed.
+  nothing compressed. A stage recording a fact about a pair of records
+  writes rows only for the pairs it holds for, so there a missing row means
+  the fact does not hold ([Overlap lineage](../overlap/README.md#overlap-lineage)).
 - SID, record index and designations live on the identity row only; the
   build version — the release the build stood on as it ran (`releaseAt()`),
   which for a releasing commit can be the release before it or its own,
@@ -157,9 +159,12 @@ count says a number moved, a query names the rows that moved it. Each
 `LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
 appear, what holds while it does not, and its allowed exceptions: a rule, a
 predicate over the row's `params` (`lineageInvariant`; `NO_EXCEPTIONS` for a
-zero-pin), or a list of named rows, by each row's own key, with what it is
-(`namedExceptionsInvariant`); any other row fails, whatever its params share
-with a listed one. A named row no line carries any more fails the check too,
+zero-pin), or a list of named rows with what each is
+(`namedExceptionsInvariant`). A row is named by its own key, or — for a stage
+whose key alone recurs on rows of one code, a row about a pair of records
+keyed on one of them — by its key and params together (`namedRowsInvariant`, each listed as
+`namedRow(key, params)`, a type a plain key cannot pass for); any other row
+fails, whatever it shares with a listed one. A named row no line carries any more fails the check too,
 naming it, so the list only shrinks: a
 known defect fixed upstream is deleted from it in the same change. A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
@@ -169,9 +174,14 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 ([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
+Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
+`dropped.duplicate-relation`
+([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
 Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
 and named rows alone for two codes
 ([Promotion's invariants](../companions/promotion-lineage/README.md#promotions-invariants)).
+Overlap's (`OVERLAP_INVARIANTS`): named pairs alone, by key and params
+([Overlap lineage](../overlap/README.md#overlap-lineage)).
 Membership's (`MEMBERSHIP_INVARIANTS`): no `admit.magnitude.withheld` row
 ([The additions](../membership/additions/README.md#grouping-and-admission)), and no
 `binding.unweighed-no-pulled-row` row
@@ -244,9 +254,11 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
+[runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/promotion-lineage/README.md#promotion-lineage),
+[overlap's](../overlap/README.md#overlap-lineage),
 [placement's](../distance/README.md#placement-lineage),
 [brightness-colour's](../photometry/README.md#brightness-colour-lineage),
 [size's](../spectral/README.md#size-lineage),
@@ -416,3 +428,16 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 
 `build:catalog`'s companion promotion is the stage after coherence; its
 contract lives beside its module, in [Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage).
+
+## The overlap stage
+
+`build:catalog`'s overlap gate is the stage after promotion: one row per
+pair of records drawn inside one another, keyed on one of the two. Its
+contract lives beside its module, in [Overlap lineage](../overlap/README.md#overlap-lineage).
+
+## The runtime-pairs stage
+
+`build:binaries-runtime` writes it, after naming: every `multiples.tsv`
+pair's fate in `binaries.bin`, keyed on the pair's secondary row. Its
+contract lives beside its module, in
+[Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage).
