@@ -6,8 +6,8 @@ import { basename, join, resolve } from 'node:path';
 
 import { ignoredPaths, inputHashes, type FileHashes } from './build-stamp';
 import { codeIdentities } from './code-identity';
-import { fileAt, gitIn } from './git-provenance';
-import { closureWithSiblings, CODE_FILE } from './import-closure-pure';
+import { blobsAt, gitIn } from './git-provenance';
+import { CODE_FILE } from './import-closure-pure';
 import { isLfsPointer, REPO_ROOT } from './paths';
 import { hashBytes, hashFile } from './stamp-hash';
 
@@ -70,8 +70,9 @@ export function inputHashesAt(
   if (changed.length === 0) return { kind: 'hashed', hashes };
   const lfs = new Set(listed('check-attr', 'filter', '--', ...changed)
     .filter((line) => line.endsWith(LFS_ATTR)).map((line) => line.slice(0, -LFS_ATTR.length)));
+  const files = blobsAt(commit, changed, root);
   for (const path of changed) {
-    const stored = fileAt(commit, path, root);
+    const stored = files.get(path)!;
     if (stored.kind === 'absent') {
       hashes[path] = null;
       continue;
@@ -93,9 +94,3 @@ export function onDiskHashes(paths: readonly string[], hashed: FileHashes, root:
   return Object.fromEntries(paths.map((path) => [path, path in hashed ? hashed[path] : rest[path]]));
 }
 
-/** Paths deleted since `commit` that sat beside a code input: the siblings a build at `commit` read. */
-export function deletedSiblingsSince(commit: string, inputs: readonly string[], root: string = REPO_ROOT): string[] {
-  const deleted = gitIn(root, 'diff', '--name-only', '--no-renames', '--diff-filter=D', commit).split('\n').filter(Boolean);
-  const code = new Set(inputs.filter((path) => CODE_FILE.test(path)));
-  return closureWithSiblings(code, deleted).filter((path) => !code.has(path));
-}

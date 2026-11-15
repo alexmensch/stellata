@@ -13,14 +13,15 @@ closure reaches is that step's data input set — derived, never listed
 
 ```
 scripts/util/sources/
-  source.ts            defineSource, readArtifact / streamArtifact, and
+  source.ts            defineSource, readArtifact / streamArtifact,
+                       readSnapshot / committedSnapshot, and
                        openDeclared — the one presence check and the one
                        place a declared file is opened. Vite's native
                        config loader reaches it (vite.env.ts →
                        ../../site/), so its value imports name their
                        `.ts` extension.
-  declared-inputs.ts   declaredInputs(closure) — the sources and artifacts an
-                       import closure reaches, by importing its declaring
+  declared-inputs.ts   declaredInputs(closure) — the sources, artifacts and
+                       snapshots an import closure reaches, by importing its declaring
                        modules, each classified read / written / both /
                        unused; isRead, the step's data inputs among them;
                        declaredFiles, their repo-relative files. It may
@@ -34,6 +35,7 @@ scripts/util/sources/
                        (#sourcerowref).
   json-artifact-pure.ts  defineJsonArtifact (#a-json-artifact).
     (+ test)
+  snapshot-pure.ts     defineSnapshot (#a-snapshot).
 ```
 
 ## Declaring a source
@@ -100,10 +102,31 @@ of the file — compact, one final newline — so the writer emits through it an
 the step's closure classifies it `written`. The row key is required: a JSON
 file nothing cites needs no declaration.
 
+## A snapshot
+
+`defineSnapshot<T>({file, script})` (`snapshot-pure.ts`) declares a committed
+`*-expected.json` a step checks its output against: `file` is the snapshot,
+`script` the step whose `--update-snapshots` run rewrites it. The step passes
+it to `snapshotCheck` / `countSnapshotCheck` (`../snapshot-check.ts`), so it
+is an input of exactly the steps whose closure names it. `readSnapshot` (null
+when absent) and `committedSnapshot` (throws when absent), in `source.ts`, are
+the one place a step opens a snapshot (`../../doc-figures/` reads every
+`*-expected.json` by glob, and `../../perf/perf-section-guard.sh` the
+catalogue's, neither a step). Each lives in a `*-expected-json.ts` leaf
+beside its file (`SNAPSHOT_MODULE_SUFFIX`; `tests/source-declarations.test.ts`
+holds every `defineSnapshot` call to it), imported only by code that reads it:
+its step's check (`build:clouds` and `build:local-group` hand theirs to
+`siblingLineage`), and for build:catalog's, `committedBuildCounts` and
+`../../site/site-metrics.ts`. Its `use` is `read` wherever the closure's
+other modules name the constant: the leaf exports nothing else, so naming it
+is the only reason to import it. A snapshot only a test reads
+(`inherited-spine-expected.json`, `manifest-naming-expected.json`) is no
+step's input and needs no declaration.
+
 ## Reached means read
 
 A declaration lives only in a module named `*-source.ts`, `*-tsv.ts` or
-`*-json.ts`, and
+`*-json.ts` (a snapshot's `*-expected-json.ts` among them), and
 that module is imported only by code that reads (or, for an artifact, writes)
 the file through it. Import reachability then equals reading, which is what
 lets a step's data inputs be derived from its closure.
@@ -114,7 +137,7 @@ to it, and the report and on-demand writers of the step table's
 line names, and audits and validators are not steps. A writer whose commands
 `scriptParts` cannot classify fails the test. `declaredInputs(closure)` classifies each reached
 declaration by the calls in the closure's other modules: `read` (a source's
-`.read(`, an artifact read), `written` (an artifact's `serialize` /
+`.read(`, an artifact read, a snapshot named), `written` (an artifact's `serialize` /
 `encodeLine`), `both`, or `unused`. A step's data inputs are the `read` and
 `both` ones (`isRead`), so a step never depends on its own output and an
 artifact it reads and rewrites stays an input; the test fails any step with

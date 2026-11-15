@@ -1,8 +1,7 @@
 // Orchestrator for the catalog build; emits CATALOG_OUTPUTS (catalog-outputs.ts).
 // See scripts/catalog/README.md.
 
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 
 import {
   BINARY_VERSION,
@@ -25,14 +24,15 @@ import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
 } from './companions/overlap-gate-pure';
-import { BUILD_COUNTS_EXPECTED_FILE, CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
+import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json';
+import { CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
+import { DISTANCE_OUTLIERS } from './distance/refinement/build-distance-outliers-expected-json';
 import {
   buildRegressionReport,
   compareRegressionReports,
   formatRegressionDiff,
   mergeReasonsFromSnapshot,
   simbadSampleDistances,
-  type RegressionReport,
 } from './distance/refinement/distance-regression-check';
 import {
   CONSTELLATIONS,
@@ -137,7 +137,6 @@ import { NAME_OVERRIDES } from './naming/name-overrides-source';
 import { SIMBAD_SAMPLE } from './validate/simbad-sample-source';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from './membership/membership-manifest-tsv';
 import { artifactRows } from '../util/sources/source';
-import { REPO_ROOT as ROOT } from '../util/paths';
 import type { FileHashes } from '../util/build-stamp';
 import { handedFileHash, stepInputHashes } from '../util/step-input-hashes';
 import {
@@ -147,7 +146,7 @@ import {
   emitArtifacts, sweepStaged, type ArtifactContents, type Check, type Emission,
 } from '../util/emit-artifacts';
 import { countSnapshotCheck, snapshotCheck } from '../util/snapshot-check';
-import { derivedStage, nestByStage, type CountValue, type StageBlock, type StagedCounts } from '../util/counts/count-stages-pure';
+import { derivedStage, nestByStage, type CountValue, type StageBlock } from '../util/counts/count-stages-pure';
 import { watchHeap } from '../util/heap-budget/heap-budget';
 import { syntheticGaiaBridges } from '../sid/sid-pure';
 import { sidSuccessorPairs, type EventRow } from '../sid/events-pure';
@@ -168,18 +167,9 @@ import {
   NAMING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, SIZE_LINEAGE, type StageLineageSpec,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
 type CatalogOutputKey = keyof (typeof CATALOG_OUTPUTS)['files'] & string;
 
 const UPSTREAM_LINEAGE = upstreamLineage(LINEAGE_LAYOUT, [MEMBERSHIP_LINEAGE]);
-
-const EXPECTED_COUNTS = resolve(ROOT, BUILD_COUNTS_EXPECTED_FILE);
-const EXPECTED_OUTLIERS = resolve(
-  __dirname,
-  'distance/refinement/build-distance-outliers-expected.json',
-);
 
 type CatalogStage<F extends string, S extends F, C extends StageCodes<string, S>> = NamedStage<F, S, C>;
 
@@ -683,11 +673,9 @@ function catalogEmission({
 }
 
 function buildCountsCheck(blocks: readonly StageBlock<CatalogCountStage, CountValue>[]): Check {
-  return countSnapshotCheck<StagedCounts>({
-    snapshotPath: EXPECTED_COUNTS,
+  return countSnapshotCheck(BUILD_CATALOG_COUNTS, {
     actual: nestByStage(CATALOG_COUNT_STAGES, blocks),
     failureLabel: 'build-catalog count',
-    script: 'build:catalog',
   });
 }
 
@@ -700,8 +688,7 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       `SIMBAD outliers=${report.simbad.length}`,
   );
 
-  return snapshotCheck<RegressionReport>({
-    snapshotPath: EXPECTED_OUTLIERS,
+  return snapshotCheck(DISTANCE_OUTLIERS, {
     actual: report,
     refreshTransform: mergeReasonsFromSnapshot,
     compare: (expected, actual) => {
@@ -712,7 +699,6 @@ function distanceOutliersCheck(stars: readonly Star[]): Check {
       };
     },
     failureLabel: 'distance-regression',
-    script: 'build:catalog',
   });
 }
 

@@ -6,11 +6,12 @@ import { resolve } from 'node:path';
 import { selectAll } from 'hast-util-select';
 
 import { catalogChunkFilename, readCatalogHeader } from '../../src/catalog-format/record/catalog-pure.ts';
-import { BUILD_COUNTS_EXPECTED_FILE as COUNT_SNAPSHOT } from '../catalog/build-counts.ts';
+import { BUILD_CATALOG_COUNTS } from '../catalog/build-catalog-expected-json.ts';
 import type { IndexEntry } from '../util/citation-index-pure.ts';
 import { flattenStages } from '../util/counts/count-stages-pure.ts';
 import { parseHtml } from '../util/parse-html.ts';
 import { REPO_ROOT, publicFile, publicRepoPath } from '../util/paths.ts';
+import { committedSnapshot } from '../util/sources/source.ts';
 import { CITATION_INDEX } from './citation-index-source.ts';
 
 const APP_DOC = 'src/client/app/index.html';
@@ -29,13 +30,13 @@ export type AbsentCatalogue = 'quote-snapshot' | 'refuse';
 export function catalogueRecordCount(absent: AbsentCatalogue): number {
   return recordCountOf(
     readIfPresent(publicFile(catalogChunkFilename(0))),
-    () => readFileSync(resolve(REPO_ROOT, COUNT_SNAPSHOT), 'utf8'),
+    () => committedSnapshot(BUILD_CATALOG_COUNTS),
     absent,
   );
 }
 
 /** The first transport chunk's header; with no chunk built, the count snapshot or a refusal, as `absent` says. */
-export function recordCountOf(chunk: Buffer | null, snapshot: () => string, absent: AbsentCatalogue): number {
+export function recordCountOf(chunk: Buffer | null, snapshot: () => unknown, absent: AbsentCatalogue): number {
   if (chunk === null) {
     if (absent === 'refuse') {
       throw new Error(
@@ -48,10 +49,10 @@ export function recordCountOf(chunk: Buffer | null, snapshot: () => string, abse
   return readCatalogHeader(bytes as ArrayBuffer).count;
 }
 
-function snapshotRecordCount(json: string): number {
-  const { recordCount } = flattenStages(JSON.parse(json)) as { recordCount?: unknown };
+function snapshotRecordCount(snapshot: unknown): number {
+  const { recordCount } = flattenStages(snapshot) as { recordCount?: unknown };
   if (!Number.isInteger(recordCount) || (recordCount as number) <= 0) {
-    throw new Error(`site metrics: ${COUNT_SNAPSHOT} states no recordCount`);
+    throw new Error(`site metrics: ${BUILD_CATALOG_COUNTS.file} states no recordCount`);
   }
   return recordCount as number;
 }

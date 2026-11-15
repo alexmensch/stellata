@@ -3,6 +3,7 @@
 import { codeCount } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { allocateSibling, emitSibling, siblingLineage } from '../sid/sibling-allocation';
 import { SIBLING_ARTIFACTS } from '../sid/sibling-artifacts-pure';
+import { CLOUDS_COUNTS } from './build-clouds-expected-json';
 import { sweepStaged } from '../util/emit-artifacts';
 import { buildClouds, cloudsPayload, zuckerProfiledPayload } from './build-clouds-pure';
 import { CLOUDS_JSON } from './clouds-json';
@@ -19,7 +20,7 @@ export async function main(): Promise<void> {
 
   const spec = SIBLING_ARTIFACTS.clouds;
   const allocation = allocateSibling(spec, CLOUDS_JSON, clouds);
-  const lineage = siblingLineage(spec, allocation);
+  const lineage = siblingLineage(spec, allocation, CLOUDS_COUNTS);
   emitSibling(CLOUDS_OUTPUTS, {
     clouds: CLOUDS_JSON.serialize(cloudsPayload(clouds, allocation.sids)),
     zuckerProfiled: `${JSON.stringify(zuckerProfiledPayload(profiled), null, 2)}\n`,

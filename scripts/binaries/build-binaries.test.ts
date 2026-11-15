@@ -20,6 +20,7 @@ import { MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS } from './load/msc-source';
 import { runStages, type StageResults } from './build-binaries';
 import type { Stage3Result } from './astrometry/attach-astrometry';
 import { binariesCounts } from './counts/binaries-counts';
+import { BUILD_BINARIES_COUNTS } from './build-binaries-expected-json';
 import { foldStageLines } from '../catalog/lineage/lineage-row-pure';
 import { PAIRS_CODES, pairsLineageLines } from './pairs-lineage-pure';
 import { BINDING_CODES, bindingLineageLines } from './resolve/binding-lineage-pure';
@@ -42,7 +43,6 @@ const INPUTS = [
 
 const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '../..', file), 'utf8');
 
-const snapshotText = (file: string): string => readFileSync(resolve(__dirname, file), 'utf8');
 const asWritten = (snapshot: unknown): string => `${JSON.stringify(snapshot, null, 2)}\n`;
 
 describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(isReadable))('Stages 1..6 through the shell, over the committed inputs', () => {
@@ -136,7 +136,7 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     const binding = foldStageLines(BINDING_CODES, bindingLineageLines(results.multiples.rows));
     const pairs = foldStageLines(PAIRS_CODES, pairsLineageLines(results));
-    expect(asWritten(binariesCounts(results, { binding, pairs })) === snapshotText('build-binaries-expected.json')).toBe(true);
+    expect(asWritten(binariesCounts(results, { binding, pairs })) === readRepoFile(BUILD_BINARIES_COUNTS.file)).toBe(true);
   });
 });
 

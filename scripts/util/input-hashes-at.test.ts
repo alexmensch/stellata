@@ -8,7 +8,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { inputHashes } from './build-stamp';
 import { tsIdentity } from './code-identity';
-import { deletedSiblingsSince, inputHashesAt, onDiskHashes } from './input-hashes-at';
+import { inputHashesAt, onDiskHashes } from './input-hashes-at';
 import { hashBytes } from './stamp-hash';
 
 describe('inputHashesAt', () => {
@@ -96,9 +96,4 @@ describe('inputHashesAt', () => {
     });
   });
 
-  it('deletedSiblingsSince lists a file deleted since the commit beside a code input, and none beside no code input', () => {
-    rmSync(join(root, 'gone.tsv'), { force: true });
-    expect(deletedSiblingsSince(commit, ['code.ts', 'data.tsv'], root)).toEqual(['gone.tsv']);
-    expect(deletedSiblingsSince(commit, ['data.tsv'], root)).toEqual([]);
-  });
 });
