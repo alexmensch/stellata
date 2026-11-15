@@ -46,8 +46,10 @@ build's:
   sits beyond `OPTICAL_DOUBLE_MIN_SEP_PC` (1 pc) leaves the group. In a
   two-member optical group, each is the other's optical double, so both
   leave. The gate never fires on missing evidence, nor on a member with
-  physical-pair evidence or an eclipsing type — the wings pass's exemptions,
-  one predicate.
+  physical-pair evidence or an eclipsing type — the predicate's two
+  exemptions, shared with the wings pass. The wings pass also skips a group
+  the geometric pass already winged; here a dropped member in a qualified
+  geometric pair still joins through that pair.
 - **Geometric** — the mutual pairs `inferBinaries` (the 0.005 pc pass) returns.
 
 ### Geometric pairs
