@@ -107,7 +107,7 @@ export type PromotionStats = {
 
 /** Promotion's derived count block: its counts with no per-row decision. */
 export type PromotionDerivedCounts = PromotionStats & {
-  /** README.md#overlap-gate. Ratchets DOWN. */
+  /** ../overlap/README.md#overlap-gate. Ratchets DOWN. */
   physicalOverlaps: number;
 };
 

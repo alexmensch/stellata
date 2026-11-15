@@ -62,9 +62,6 @@ scripts/catalog/companions/
                                   observed, so carry the A_V that
                                   de-extinction subtracts: read by the mint
                                   and by promotion's dust row.
-  overlap-gate-pure.ts (+ test)   physicalOverlaps: record pairs closer than
-                                  the sum of their radii, less those an orbit
-                                  chain separates. See Overlap gate below.
   multiples-fixture.ts            Default-valued MultiplesTsvRow factory.
                                   A module, NOT an export from
                                   companion-promotion.test.ts: importing one
@@ -112,7 +109,8 @@ own (the list is [Promotion lineage](promotion-lineage/README.md#promotion-linea
 count is a fold of its lineage codes. The [post-passes](post-passes/README.md) act on records,
 not rows; each writes rows keyed on the records it changes
 ([Promotion lineage](promotion-lineage/README.md#promotion-lineage)), and `PromotionStats`, promotion's
-derived count block with `physicalOverlaps`, counts what no row records.
+derived count block with `physicalOverlaps`
+([Overlap gate](../overlap/README.md#overlap-gate)), counts what no row records.
 
 Per-row gates and resolution:
 
@@ -269,28 +267,6 @@ nothing in this file reads back from it.
 The Tier A regression corpus in `known-stars.tsv` pins Sirius B's
 record specifically (addressed by gaia_source_id, no HIP) as a
 stand-in for the broader category.
-
-#### Overlap gate
-
-After the record sort, build-catalog counts every pair of records whose
-centres sit closer than the sum of their physical radii — a star drawn inside
-another, whatever placement rule put it there — at the 32-bit positions
-`catalog.bin` ships, where two records the build keeps 1 AU apart at 1 kpc
-collapse onto one point. The check is catalogue-wide, not companion-only.
-
-A pair is exempt only when a chain of renderable orbits fixes their relative
-position — one record an ancestor of the other along (primary, secondary)
-relations — since the runtime then draws them apart from the elements, and a
-bit-identical bake there is the deliberate sub-resolution placement above. Two
-siblings of one primary are not exempt: each moves on its own orbit, and
-nothing keeps them apart. The relations come from the runtime's own pairing —
-`renderableOrbitRelations` in `record-index/`, the `rendered` ends of
-`resolvePairs` (the resolution the writer takes) filtered to renderable
-orbits — never from promotion's cursor walk, which records a pair
-before its parent is minted.
-
-Counted `physicalOverlaps` (<!-- count:build-catalog/physicalOverlaps -->55<!-- /count -->), a ratchet-down metric; the
-build log names each pair.
 
 #### Promoted-companion field inheritance
 

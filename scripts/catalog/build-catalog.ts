@@ -23,7 +23,7 @@ import { encodeCatalog, type EncodedCatalog } from './record/encode-catalog-pure
 import { avSolToStar } from './distance/dust/dust-deextinction-pure';
 import {
   orbitChainExemption, overlapLabel, physicalOverlaps,
-} from './companions/overlap-gate-pure';
+} from './overlap/overlap-gate-pure';
 import { BUILD_CATALOG_COUNTS } from './build-catalog-expected-json';
 import { CATALOG_COUNT_STAGES, type CatalogCountStage } from './build-counts';
 import { DISTANCE_OUTLIERS } from './distance/refinement/build-distance-outliers-expected-json';
