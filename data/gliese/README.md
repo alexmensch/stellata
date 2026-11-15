@@ -152,4 +152,5 @@ the newer catalogue does not retire this one.
 ## Refresh
 
 `pnpm run refresh:gliese` (`scripts/refresh/vizier/refresh-gliese.ts`).
-`--force` overrides the mtime skip.
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).

@@ -221,4 +221,5 @@ both tables carry.
 ## Refresh
 
 `pnpm run refresh:tycho2` (`scripts/refresh/tycho2/`).
-`--force` overrides the mtime skip.
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).
