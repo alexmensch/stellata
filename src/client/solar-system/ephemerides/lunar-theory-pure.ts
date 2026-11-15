@@ -2,6 +2,7 @@
 // ch. 47): the Moon's geocentric position in the mean ecliptic
 // and equinox of date. See README.md#moon-ephemeris.
 
+import { pyMod } from '../../../astro-core/angles';
 import { J2000_JD } from '../../../astro-core/astronomy-constants';
 
 const DEG = Math.PI / 180;
@@ -30,7 +31,7 @@ function secularCorrDeg(T: number, t2Arcsec: number, t3Arcsec: number): number {
   return (t2Arcsec * T * T + t3Arcsec * T * T * T) / 3600;
 }
 
-const wrapDeg = (x: number): number => ((x % 360) + 360) % 360;
+const wrapDeg = (x: number): number => pyMod(x, 360);
 
 // Table 47.A: D, M, M′, F, Σl (1e-6 deg), Σr (1e-3 km).
 const LON_DIST_TERMS = [

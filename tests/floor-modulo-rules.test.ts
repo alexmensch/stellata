@@ -13,19 +13,6 @@ const RULES: ReadonlyArray<LineRule> = [
   { name: 'if (x < 0) x += m', re: new RegExp(String.raw`if\s*\(\s*${M}\s*<\s*0\s*\)\s*\{?\s*\1\s*\+=`) },
 ];
 
-const HAND_ROLLED_ALLOWED: ReadonlyMap<string, number> = new Map([
-  ['src/client/attitude/attitude-ball.ts', 1],
-  ['src/client/debug/perf-hud.ts', 1],
-  ['src/client/format/velocity-format.ts', 1],
-  ['src/client/galactic/coord-spheres/coord-sphere-frames.ts', 2],
-  ['src/client/solar-system/ephemerides/lunar-theory-pure.ts', 1],
-  ['src/client/solar-system/planets/rotation/earth-orientation-pure.ts', 1],
-  ['src/client/solar-system/planets/rotation/rotation-elements-pure.ts', 1],
-  ['src/client/typeahead/typeahead.ts', 1],
-]);
-
-const hits = (path: string): string[] => lineHits(path, RULES);
-
 describe('floor-modulo shapes', () => {
   it('catches each hand-rolled shape', () => {
     for (const [line, rule] of [
@@ -63,15 +50,9 @@ describe('floor-modulo shapes', () => {
 describe('floor modulos', () => {
   const files = scanTree(['src', 'scripts'], isProductionTs, new Set([OWNER]));
 
-  it('no hand-rolled floor modulo outside pyMod and the allowlist', () => {
-    const found = files.filter((p) => !HAND_ROLLED_ALLOWED.has(p)).flatMap(hits);
+  it('no hand-rolled floor modulo outside pyMod', () => {
+    const found = files.flatMap((p) => lineHits(p, RULES));
     expect(found, `call pyMod from ${OWNER}`).toEqual([]);
-  });
-
-  it('each allowlisted file holds exactly its pinned count', () => {
-    for (const [path, count] of HAND_ROLLED_ALLOWED) {
-      expect(hits(path), `${path}: a site fixed here leaves the allowlist`).toHaveLength(count);
-    }
   });
 
   it('the owner holds pyMod and only its docstring naming the shape', () => {

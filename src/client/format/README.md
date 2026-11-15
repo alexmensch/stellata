@@ -38,6 +38,12 @@ velocity-format.ts        spaceVelocity(vx, vy, vz) → { kms, lDeg,
                           /src/astro-core/galactic-coords.ts). The
                           formatter puts the heading on its own line
                           (consumers use white-space: pre-line).
+angle-format.ts           fmtLonDeg: a longitude as whole degrees in
+                          [0, 360), rounded BEFORE wrapping so 359.6
+                          reads 0°, never 360°. The galactic and
+                          ecliptic grid labels
+                          (../galactic/coord-spheres/) and the
+                          space-velocity heading share it.
 probe-format.ts           Deep-space-probe mission stats:
                           formatSolDistance (AU + light-hours — the
                           light-time is what makes the AU figure mean

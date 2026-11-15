@@ -3,6 +3,7 @@
 // from a linear IAU row. See README.md#earth-is-not-a-linear-row.
 
 import { ARCSEC_TO_RAD, J2000_JD } from '../../../../astro-core/astronomy-constants';
+import { raDecFromUnitVector, type SkyPosition } from '../../../../astro-core/equatorial-basis';
 import {
   longTermEquatorPole,
   longTermEquinox,
@@ -33,12 +34,8 @@ function dot(a: { x: number; y: number; z: number }, b: { x: number; y: number; 
 /** Earth's pole (deg, ICRS) at model time `t`, from the long-term
  *  precession model. The pole is a dynamical quantity, so its argument
  *  is TT — unlike the spin below. */
-export function earthPoleRaDecDeg(t: number): { raDeg: number; decDeg: number } {
-  const p = longTermEquatorPole(tToJdTdb(t));
-  return {
-    raDeg: (Math.atan2(p.y, p.x) / DEG + 360) % 360,
-    decDeg: Math.asin(Math.max(-1, Math.min(1, p.z))) / DEG,
-  };
+export function earthPoleRaDecDeg(t: number): SkyPosition {
+  return raDecFromUnitVector(longTermEquatorPole(tToJdTdb(t)));
 }
 
 /** Greenwich mean sidereal time (deg) — the right ascension of date of
