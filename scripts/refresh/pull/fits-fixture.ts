@@ -9,6 +9,8 @@ export interface FitsColumn {
   /** `nA`, `L`, `B`, `I`, `J`, `K`, `E` or `D`. */
   readonly form: string;
   readonly tnull?: number;
+  /** A display format, `Fw.d`. */
+  readonly tdisp?: string;
 }
 
 const card = (key: string, value: string): string => `${key.padEnd(8)}= ${value}`.padEnd(80);
@@ -55,6 +57,7 @@ export function fitsBytes(columns: readonly FitsColumn[] | null, rows: readonly 
     ...columns.flatMap((c, i) => [
       card(`TFORM${i + 1}`, text(c.form)), card(`TTYPE${i + 1}`, text(c.name)),
       ...(c.tnull === undefined ? [] : [card(`TNULL${i + 1}`, String(c.tnull).padStart(20))]),
+      ...(c.tdisp === undefined ? [] : [card(`TDISP${i + 1}`, text(c.tdisp))]),
     ]),
   ]);
   const data = new Uint8Array(Math.ceil((rowBytes * rows.length) / BLOCK) * BLOCK);

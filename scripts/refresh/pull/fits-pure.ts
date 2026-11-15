@@ -1,12 +1,18 @@
-// A FITS reply's first binary table as text cells: exact doubles and float32s, integers, strings, nulls. See README.md#fits-replies.
+// A FITS reply's first binary table as text cells: floats at their declared precision, integers, strings, nulls. See README.md#fits-replies.
 
-import { formatRepr } from '../../util/round-pure';
+import { formatDeclared, formatRepr, type FloatWidth } from '../../util/round-pure';
 
 const BLOCK = 2880;
 const CARD = 80;
 
 export type FitsTable =
-  | { readonly kind: 'table'; readonly columns: readonly string[]; readonly rows: readonly (readonly (string | null)[])[] }
+  | {
+    readonly kind: 'table';
+    readonly columns: readonly string[];
+    /** Which columns are `E` or `D`: the cells a binary reply carries exactly, where a text reply rounds. */
+    readonly floats: readonly boolean[];
+    readonly rows: readonly (readonly (string | null)[])[];
+  }
   /** A complete file with no table: VizieR's ASU answers a query that matched no row this way. */
   | { readonly kind: 'no-table' }
   /** Cut short: the server stopped mid-reply, which a retry can change. */
@@ -47,10 +53,21 @@ function integerCard(header: Header, key: string): number {
 interface Field {
   readonly name: string;
   readonly width: number;
+  readonly float: boolean;
   readonly read: (view: DataView, at: number) => string | null;
 }
 
 const BLANK_ENDS = /^[\0 ]+|[\0 ]+$/g;
+
+/** A float's text: at its declared `TDISPn = 'Fw.d'` when it has one, else the shortest digits; any other display format throws. */
+function floatText(header: Header, n: number, name: string, width: FloatWidth): (value: number) => string {
+  const tdisp = header.get(`TDISP${n}`);
+  if (tdisp === undefined) return (value) => formatRepr(value, width);
+  const fixed = /^F\d+\.(\d+)$/.exec(tdisp);
+  if (!fixed) throw new Error(`FITS column ${name}: TDISP "${tdisp}" is not read`);
+  const digits = Number(fixed[1]);
+  return (value) => formatDeclared(value, digits, width);
+}
 
 /** One TFORM's reader; an array, a bit field or a heap descriptor is refused, since no pull asks for one. */
 function field(header: Header, n: number): Field {
@@ -66,21 +83,24 @@ function field(header: Header, n: number): Field {
   const repeat = parsed[1] === '' ? 1 : Number(parsed[1]);
   const type = parsed[2];
   if (type === 'A') {
-    return { name, width: repeat, read: (view, at) => ascii(new Uint8Array(view.buffer, view.byteOffset + at, repeat)).replace(BLANK_ENDS, '') || null };
+    return { name, width: repeat, float: false, read: (view, at) => ascii(new Uint8Array(view.buffer, view.byteOffset + at, repeat)).replace(BLANK_ENDS, '') || null };
   }
   if (repeat !== 1) throw new Error(`FITS column ${name}: TFORM "${form}" is an array`);
   const tnull = header.get(`TNULL${n}`);
-  const isNull = (value: bigint | number): boolean => tnull !== undefined && BigInt(value) === BigInt(tnull);
-  const integer = (width: number, get: (view: DataView, at: number) => bigint | number): Field =>
-    ({ name, width, read: (view, at) => { const v = get(view, at); return isNull(v) ? null : String(v); } });
+  const integer = (width: number, minimum: bigint | null, get: (view: DataView, at: number) => bigint | number): Field => {
+    const nullValue = tnull === undefined ? minimum : BigInt(tnull);
+    return { name, width, float: false, read: (view, at) => { const v = get(view, at); return BigInt(v) === nullValue ? null : String(v); } };
+  };
+  const float = (width: number, get: (view: DataView, at: number) => number, text: (value: number) => string): Field =>
+    ({ name, width, float: true, read: (view, at) => { const v = get(view, at); return Number.isNaN(v) ? null : text(v); } });
   switch (type) {
-    case 'L': return { name, width: 1, read: (view, at) => ({ 84: 'true', 70: 'false' } as Record<number, string>)[view.getUint8(at)] ?? null };
-    case 'B': return integer(1, (view, at) => view.getUint8(at));
-    case 'I': return integer(2, (view, at) => view.getInt16(at));
-    case 'J': return integer(4, (view, at) => view.getInt32(at));
-    case 'K': return integer(8, (view, at) => view.getBigInt64(at));
-    case 'E': return { name, width: 4, read: (view, at) => { const v = view.getFloat32(at); return Number.isNaN(v) ? null : formatRepr(v, 'float32'); } };
-    case 'D': return { name, width: 8, read: (view, at) => { const v = view.getFloat64(at); return Number.isNaN(v) ? null : formatRepr(v); } };
+    case 'L': return { name, width: 1, float: false, read: (view, at) => ({ 84: 'true', 70: 'false' } as Record<number, string>)[view.getUint8(at)] ?? null };
+    case 'B': return integer(1, null, (view, at) => view.getUint8(at));
+    case 'I': return integer(2, -(2n ** 15n), (view, at) => view.getInt16(at));
+    case 'J': return integer(4, -(2n ** 31n), (view, at) => view.getInt32(at));
+    case 'K': return integer(8, -(2n ** 63n), (view, at) => view.getBigInt64(at));
+    case 'E': return float(4, (view, at) => view.getFloat32(at), floatText(header, n, name, 'float32'));
+    case 'D': return float(8, (view, at) => view.getFloat64(at), floatText(header, n, name, 'double'));
     default: throw new Error(`FITS column ${name}: TFORM "${form}" is not read`);
   }
 }
@@ -117,5 +137,5 @@ export function readFitsTable(bytes: Uint8Array): FitsTable {
     }
     rows.push(row);
   }
-  return { kind: 'table', columns: fields.map((f) => f.name), rows };
+  return { kind: 'table', columns: fields.map((f) => f.name), floats: fields.map((f) => f.float), rows };
 }

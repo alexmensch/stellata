@@ -252,16 +252,24 @@ mirror passes on its own; the bead closes once both have.
 
 ## FITS replies
 
-A FITS binary table carries each value as the archive stores it, where a
-text reply prints it: VizieR's ASU text cuts a double off at the catalogue's
-printed precision, and CDS's TAP CSV rounds it its own way. `readFitsTable`
-writes a `D` cell as the shortest digits that read back to the double and an
-`E` cell as the shortest that read back to the float32 (`formatRepr`), an
-integer equal to its `TNULLn` or a NaN as `null`, and a string without the
-blanks or NULs at either end, `null` when nothing is left: CfA's FITS keeps
-a right-justified field's leading blanks (`  3Alp Lyr` in V/50) where
-CDS's text replies drop them. Arrays, bit fields,
-heaps and scaled columns throw: no pull asks for one.
+**A VizieR number means what its catalogue's declared format says.** The
+catalogue standard makes a catalogue its ASCII file and ReadMe format
+([Standards for Astronomical Catalogues](https://vizier.cfa.harvard.edu/vizier/catstd/catstd-3.4.htx)),
+and VOTable's `precision` is the meaningful digits "irrespective of the
+number of digits presented"; VizieR's stored doubles carry noise below it
+(`e_pmRA` `0.015000000000000001`). A FITS reply carries the stored value and
+the declared format as `TDISPn`. `readFitsTable` writes an `E` or `D` cell at
+its `TDISPn = 'Fw.d'` (`formatDeclared`: the shortest digits, rounded half
+away from zero, which reproduces all 235,910 of hip2's committed CDS RA/Dec
+cells), or as the shortest digits that read back to it where none is
+declared; any other display format throws. A NaN is `null`. An integer is
+`null` at its `TNULLn`, or at its signed type's minimum where none is
+declared: VizieR writes that for a blank without declaring it (V/50 `HD`,
+CNS5 `GaiaDR3`). A string drops the blanks or NULs at either end, `null` when
+nothing is left: CfA's FITS keeps a right-justified field's leading blanks
+(`  3Alp Lyr` in V/50) where CDS's text replies drop them. Arrays, bit
+fields, heaps and scaled columns throw: no pull asks for one. The table
+states which columns are floats, for [the CfA mirror's join](#the-tap-backend).
 
 A file whose bytes end inside a header block or the rows is `incomplete`,
 which a retry can change: CfA's ASU sends a 1,120-byte `200` reply cut

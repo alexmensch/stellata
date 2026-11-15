@@ -19,6 +19,7 @@ describe('readFitsTable', () => {
     expect(readFitsTable(bytes)).toEqual({
       kind: 'table',
       columns: ['Name', 'HD', 'Sn', 'flag', 'source_id', 'B', 'Vmag', 'RAJ2000'],
+      floats: [false, false, false, false, false, false, true, true],
       rows: [
         ['GJ 1001', '1326', '5', 'true', '5853498713190525696', '7', '12.84', '50.41997493299496'],
         [null, null, null, null, null, '0', null, null],
@@ -26,9 +27,24 @@ describe('readFitsTable', () => {
     });
   });
 
-  it('writes a double as the shortest digits that read back to it, not a catalogue\'s printed precision', () => {
-    const table = readFitsTable(fitsBytes([{ name: 'DEB1950', form: 'D' }], [[-40.963333333333324]]));
-    expect(table.kind === 'table' && table.rows[0][0]).toBe('-40.963333333333324');
+  it('writes a float at its declared TDISP Fw.d, dropping the stored value\'s conversion noise', () => {
+    const table = readFitsTable(fitsBytes(
+      [{ name: 'e_pmRA', form: 'D', tdisp: 'F8.3' }, { name: 'RArad', form: 'D', tdisp: 'F12.8' }, { name: 'Vmag', form: 'E', tdisp: 'F6.2' }],
+      [[0.015000000000000001, 104.550895415, 14.9]],
+    ));
+    expect(table.kind === 'table' && table.rows[0]).toEqual(['0.015', '104.55089542', '14.90']);
+  });
+
+  it('reads a signed integer at its type\'s minimum as null where no TNULL is declared, as VizieR writes one', () => {
+    const table = readFitsTable(fitsBytes(
+      [{ name: 'HD', form: 'J' }, { name: 'GaiaDR3', form: 'K' }, { name: 'n', form: 'B' }],
+      [[-2147483648, -9223372036854775808n, 0], [1, 2n, 3]],
+    ));
+    expect(table.kind === 'table' && table.rows).toEqual([[null, null, '0'], ['1', '2', '3']]);
+  });
+
+  it('refuses a display format it does not read', () => {
+    expect(() => readFitsTable(fitsBytes([{ name: 'x', form: 'D', tdisp: 'E12.5' }], [[1]]))).toThrow(/TDISP "E12.5"/);
   });
 
   it('writes a float32 as the shortest digits that read back to that float32', () => {
