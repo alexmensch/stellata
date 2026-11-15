@@ -345,10 +345,10 @@ parks on the existing ledger under the existing codes — Tycho-2 publishes no
 parallax, so most of the ~4.5k with neither a DR3 neighbour nor a HIP park,
 as do CNS5's 514 without a DR3 id, which no V tier reaches. Identity rides
 on the manifest's `binding` column, four classes: `crosswalk_gated`
-358,465 (a TYC, HIP or CNS5 candidate through the gates) ·
-`simbad_corroborated` 16,613 (SIMBAD's source for the record's own
+358,472 (a TYC, HIP or CNS5 candidate through the gates) ·
+`simbad_corroborated` 16,616 (SIMBAD's source for the record's own
 designation, through the gates) · `reviewed` 53 (a disposition row's value) ·
-`none` 1,778 (derived refusals, Sol, and additions the derivation cannot
+`none` 1,779 (derived refusals, Sol, and additions the derivation cannot
 bind) — spine rows and additions through the one derivation. The review queue is
 `data/membership/binding-review.tsv` with its dispositions beside it, 53
 rows. The swap itself was 63,672 mints,

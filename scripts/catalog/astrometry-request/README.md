@@ -69,7 +69,7 @@ source proposes
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The 1,778 primaries rows carrying none are the no-Gaia tier. The
+The 1,779 primaries rows carrying none are the no-Gaia tier. The
 `term = magnitude` rows are not requested: their astrometry is the magnitude
 pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
