@@ -2,7 +2,7 @@
 
 import { isMoreCanonicalAnchor, wdsRootOf } from '../../../binaries/component-tokens-pure';
 import type { Star } from '../../parse/stars-parse';
-import type { MultiplesTsvRow } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
 
 export interface PairCursor {
   primary: MultiplesTsvRow | null;

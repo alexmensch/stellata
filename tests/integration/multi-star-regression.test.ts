@@ -34,7 +34,7 @@ import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure'
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC, RAD_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import { pyMod } from '../../src/astro-core/angles';
-import { readMultiplesTsv } from '../../scripts/catalog/companions/companion-promotion';
+import { readMultiplesTsv } from '../../scripts/catalog/companions/multiples-row';
 import { wdsRootOf } from '../../scripts/binaries/component-tokens-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';

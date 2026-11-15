@@ -5,7 +5,7 @@
 import type { Star } from '../parse/stars-parse';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
-import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';
 import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';

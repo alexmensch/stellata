@@ -6,16 +6,10 @@ import {
   decisionRows, familyTotal, PROMOTION_CODES, promotionDecision, rewriteRows, type PromotionCounts,
 } from './promotion-lineage-pure';
 import {
-  imputeCompanionAbsmag,
-  adjustMinted,
-  companionCi,
-  isDisjointSingleLetter,
-  parseMultiplesTsv,
-  promoteCompanions,
-  type MintedBrightness,
-  type MultiplesTsvRow,
-  type PromotionInputs,
+  imputeCompanionAbsmag, companionCi, isDisjointSingleLetter, promoteCompanions, type PromotionInputs,
 } from './companion-promotion';
+import { parseMultiplesTsv, type MultiplesTsvRow } from './multiples-row';
+import { adjustMinted, type MintedBrightness } from './promotion-outcome';
 import {
   ANCHOR_DIM_MAX_FIT_RESIDUAL_MAG, componentDepth, GAIA_BLEND_MAX_SEP_ARCSEC, PRINTED_BLEND_MAX_SEP_ARCSEC,
 } from './post-passes/anchor-dim';

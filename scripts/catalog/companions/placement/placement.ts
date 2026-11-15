@@ -4,7 +4,7 @@ import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/bina
 import { ARCSEC_TO_RAD } from '../../../../src/astro-core/astronomy-constants';
 import { equatorialTangentBasisAt, polarToTangent } from '../../../../src/astro-core/equatorial-basis';
 import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../../multiplicity/binary-flags-pure';
-import type { MultiplesTsvRow } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
 import { rebasedAnchorOffset } from './anchor-offset-pure';
 
 const INDEPENDENT_FIT_ROUTES: ReadonlySet<string> = new Set([

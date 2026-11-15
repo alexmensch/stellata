@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeStar } from '../../parse/star-fixture';
-import type { MultiplesTsvRow } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
 import { multiplesRow } from '../multiples-fixture';
 import { emptyParkedRefusals, parkedRefusals, type ParkedRefusals } from './parked-refusals';
 import { MintedIds, resolveRowIdentity, type RowIdentity } from './row-identity';

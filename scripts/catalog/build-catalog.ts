@@ -49,14 +49,9 @@ import {
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
 import { parkedRefusals } from './companions/identity/parked-refusals';
-import {
-  isRecuratedAdoption,
-  promoteCompanions,
-  readMultiplesTsv,
-  type MultiplesTsvRow,
-  type PromotionDerivedCounts,
-  type PromotionInputs,
-} from './companions/companion-promotion';
+import { promoteCompanions, type PromotionInputs } from './companions/companion-promotion';
+import { readMultiplesTsv, type MultiplesTsvRow } from './companions/multiples-row';
+import { isRecuratedAdoption, type PromotionDerivedCounts } from './companions/promotion-outcome';
 import {
   PROMOTION_CODES, PROMOTION_LINEAGE_BUDGET, promotionLineage, promotionSummary, type PromotionCounts,
 } from './companions/promotion-lineage-pure';

@@ -30,13 +30,22 @@ scripts/catalog/companions/
                                   Runs before the absmag
                                   sort so promoted records take the same
                                   final indexing as everything else.
-                                  readMultiplesTsv reads through the
+  promotion-outcome.ts            What promotion decides — RowOutcome,
+                                  PromotedRow, RecordRewrite — and
+                                  PromotionStats: the contract the walk,
+                                  identity/ and promotion-lineage-pure.ts
+                                  share.
+  multiples-row.ts                MultiplesTsvRow, the row every reader of
+                                  multiples.tsv takes. readMultiplesTsv reads through the
                                   `MULTIPLES_TSV` codec (readArtifact,
                                   so a missing file fails the build)
                                   (../../binaries/multiples-tsv.ts) and
                                   hands promotion each row with its anchor
                                   offset already parsed, never the raw
                                   anchor cells.
+  subfolder-boundary.test.ts      No file under a subfolder imports
+                                  companion-promotion.ts: the wiring
+                                  imports them, never the reverse.
   identity/                       Which record a pair row names: the
                                   system index and the per-row identity
                                   gates (identity/README.md).

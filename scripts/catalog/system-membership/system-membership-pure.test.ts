@@ -7,7 +7,7 @@ import {
 import {
   serializeSystemMembership, type SystemNode,
 } from '../../../src/catalog-format/system-membership/system-membership-format';
-import { isRecuratedAdoption } from '../companions/companion-promotion';
+import { isRecuratedAdoption } from '../companions/promotion-outcome';
 import { OPTICAL_DOUBLE_MIN_SEP_PC } from '../multiplicity/binary-flags-pure';
 import type { DoublesEvidence } from '../multiplicity/visual-doubles';
 import { wdsIdPosition } from '../../wds/wds-pure';

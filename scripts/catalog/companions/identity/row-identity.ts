@@ -1,7 +1,8 @@
 // Which record a pair row names: one already held, one minted earlier this build, a refusal, or a new one. See README.md#row-identity.
 
 import type { Star } from '../../parse/stars-parse';
-import type { MultiplesTsvRow, RowOutcome } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
+import type { RowOutcome } from '../promotion-outcome';
 import { hasIndependentFitRoute } from '../placement/placement';
 import { refusalStated, type ParkedRefusals } from './parked-refusals';
 import type { SystemIndex } from './system-index';
