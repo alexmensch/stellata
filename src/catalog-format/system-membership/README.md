@@ -15,7 +15,7 @@ decision, made on live positions.
 ## Shape
 
 - **`systems`** — one `MembershipSystem` per physical system: its `root`
-  group and the `sources` (`wds`, `ccdm`, `geometric`) that joined at least one
+  group and the `sources` (`wds`, `ccdm`, `geometric`) that linked at least two
   of its records.
 - **Nodes.** A `RecordNode` is a catalogue record index — true only for the
   `catalog.bin` written by the same build, like every record index the build

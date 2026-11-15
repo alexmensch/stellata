@@ -26,7 +26,7 @@ export interface GroupNode {
 export type SystemNode = RecordNode | GroupNode;
 
 export interface MembershipSystem {
-  /** Each evidence source that joined at least one of its records, in EVIDENCE_SOURCES order. */
+  /** Each evidence source that linked at least two of its records, in EVIDENCE_SOURCES order. */
   readonly sources: readonly EvidenceSource[];
   readonly root: GroupNode;
 }
