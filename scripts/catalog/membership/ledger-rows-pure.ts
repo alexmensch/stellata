@@ -68,6 +68,17 @@ export interface LabelDropRow extends RecordIdentifiers {
 export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
+export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;
+export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'pair_review', 'derived_only', 'differs'] as const;
+export type MergeDivergenceKind = (typeof MERGE_DIVERGENCE_KINDS)[number];
+/** see merge-derivation/README.md#the-divergence-ledger */
+export interface MergeDivergenceRow extends RecordIdentifiers {
+  divergence: MergeDivergenceKind;
+  cells: string;
+  derived: string;
+  evidence: string;
+}
+
 /** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
  *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
  *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
