@@ -141,11 +141,7 @@ scripts/binaries/
                                   reference epochs. Proper motion
                                   propagates through astro-core's
                                   directionAtEpoch / skyPositionAtEpoch,
-                                  the formula the catalogue uses, and a
-                                  WDS ρ, θ converts to an east / north
-                                  offset through its polarToTangent /
-                                  tangentToPolar, which Stage 6 and
-                                  companion promotion share.
+                                  the formula the catalogue uses.
   python-float-pure.ts (+ test)   pySum, the compensated sum
                                   multiples.tsv rests on where JavaScript's
                                   left fold differs. Its sibling pyMod, `%`
