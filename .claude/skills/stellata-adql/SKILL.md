@@ -92,7 +92,7 @@ not — which is a policy constraint here, not just a schema one
 Double-quote every identifier: table ids contain `/`, and column names are
 case-sensitive and may carry parentheses. `SELECT TOP 2 HIP FROM
 I/239/hip_main` is a parse error on the slash. Prefer `rl.select_columns()`,
-which quotes for you, and `vizier_slice.py` for the whole-table-subset case.
+which quotes for you; a TypeScript pull quotes through `VIZIER.quote`.
 
 ## MAXREC, and the truncation that answers 200
 

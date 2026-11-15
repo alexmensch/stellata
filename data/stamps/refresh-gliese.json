@@ -1,9 +1,9 @@
 {
   "inputs": {},
   "outputs": {
-    "data/gliese/gliese_v70a.tsv": "9c1d5e57ab0bf141f902c5a127b81e4f21d68c94"
+    "data/gliese/gliese_v70a.tsv": "2844632a839631db2b2a8374d541e39e83061ab9"
   },
-  "query": "6888ef35229e405ae35509d4423120bf07a1a9d0",
+  "query": "eaa5c0a56d7cfbc2417bcc53dac173b50f8486e5",
   "answeredBy": [],
   "release": "VizieR V/70A/catalog",
   "requestFrom": []

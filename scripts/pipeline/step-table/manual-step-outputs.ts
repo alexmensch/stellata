@@ -16,6 +16,10 @@ const tsManual = (kind: ManualKind, name: string, entry: string, module: string,
   name, ...kind, language: 'ts', entry, outputs: { module, name: constant },
 });
 
+const vizierPull = (name: string, entry: string, constant: string): ManualStep => tsManual(
+  { kind: 'pull' }, name, `scripts/refresh/vizier/${entry}`, 'scripts/refresh/vizier/vizier-outputs.ts', constant,
+);
+
 const bake = (
   name: string, entry: string, outputs: readonly string[],
   { describes = false, families = [] }: { describes?: boolean; families?: readonly OutputFamily[] } = {},
@@ -60,13 +64,13 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:bailer-jones', 'scripts/refresh/magnitude/refresh-bailer-jones.ts',
     'scripts/refresh/magnitude/magnitude-outputs.ts', 'BAILER_JONES_OUTPUTS',
   ),
-  pull('refresh:hip2', 'refresh-hipparcos2.py', [DATA_FILES.hip2]),
-  pull('refresh:hip-vmag', 'refresh-hipparcos-vmag.py', [DATA_FILES.hipMainVmag]),
-  pull('refresh:classic-ids', 'refresh-classic-ids.py', [DATA_FILES.tyc2Hd, DATA_FILES.crossIndex, DATA_FILES.bsc5, DATA_FILES.cns5]),
+  vizierPull('refresh:hip2', 'refresh-hipparcos2.ts', 'HIP2_OUTPUTS'),
+  vizierPull('refresh:hip-vmag', 'refresh-hipparcos-vmag.ts', 'HIP_VMAG_OUTPUTS'),
+  vizierPull('refresh:classic-ids', 'refresh-classic-ids.ts', 'CLASSIC_IDS_OUTPUTS'),
   pull('refresh:iau-wgsn', 'refresh-iau-wgsn.py', [DATA_FILES.wgsnNec, DATA_FILES.wgsnFaints]),
   pull('refresh:tycho2', 'refresh-tycho2.py', [DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1]),
-  pull('refresh:gliese', 'refresh-gliese.py', [DATA_FILES.gliese]),
-  pull('refresh:msc', 'refresh-msc.py', [DATA_FILES.mscSystems, DATA_FILES.mscOrbits, DATA_FILES.mscComponents]),
+  vizierPull('refresh:gliese', 'refresh-gliese.ts', 'GLIESE_OUTPUTS'),
+  vizierPull('refresh:msc', 'refresh-msc.ts', 'MSC_OUTPUTS'),
   tsManual(
     { kind: 'pull' }, 'refresh:simbad', 'scripts/refresh/simbad-sample/refresh-simbad-sample.ts',
     'scripts/refresh/simbad-sample/simbad-sample-outputs.ts', 'SIMBAD_SAMPLE_OUTPUTS',

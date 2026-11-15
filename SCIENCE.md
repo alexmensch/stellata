@@ -249,7 +249,7 @@ enough to see it.
   pair-side V magnitudes for sub-resolution pairs WDS publishes
   without photometry. Committed as three TSVs under `data/msc/`
   (label convention + column detail in `data/msc/README.md`);
-  refresh via `scripts/refresh/refresh-msc.py`. Because MSC compiles
+  refresh via `scripts/refresh/vizier/refresh-msc.ts`. Because MSC compiles
   from the same primary literature the other orbit sources curate, its
   orbit route ranks below ORB6 and Gaia NSS and fires for
   sub-resolution pairs only ([Stage 4](scripts/binaries/orbits/README.md#what-each-route-decides)).

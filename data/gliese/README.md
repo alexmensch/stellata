@@ -65,8 +65,8 @@ indexes under itself — no record's `gl` cell reaches it.
 
 Where the catalogue resolved a system into components and a record's cell
 names none of them, the bare number answers with the **alphabetically first**
-component, which the pull's `order_by=("Name", "Comp")` makes stable across
-re-pulls rather than a function of row order. 403 numbers are in that shape;
+component, which the pull's sort (name, then component, by code unit) makes
+stable across re-pulls rather than a function of row order. 403 numbers are in that shape;
 no spine cell reaches one today (measured over all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count --> `gl` cells, 2,566 of
 them bare), so this decides nothing yet and would need revisiting if the
 magnitude pull widens the cohort.
@@ -151,5 +151,5 @@ the newer catalogue does not retire this one.
 
 ## Refresh
 
-`pnpm run refresh:gliese` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
+`pnpm run refresh:gliese` (`scripts/refresh/vizier/refresh-gliese.ts`).
 `--force` overrides the mtime skip.

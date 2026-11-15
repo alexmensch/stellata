@@ -55,5 +55,5 @@ labels.
 
 ## Refresh
 
-`pnpm run refresh:msc` → `scripts/refresh/refresh-msc.py` (venv per
-[One-time setup](/scripts/refresh/README.md#one-time-setup)).
+`pnpm run refresh:msc` → `scripts/refresh/vizier/refresh-msc.ts`
+([Whole-table VizieR pulls](/scripts/refresh/vizier/README.md)).

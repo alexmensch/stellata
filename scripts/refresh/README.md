@@ -84,12 +84,12 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:gaia-gspc` | `gaia-request/refresh-gaia-gspc.ts` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_astrometry_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
 | `refresh:gaia-dr2-neighbourhood` | `gaia-request/refresh-gaia-dr2-neighbourhood.ts` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — [§ 6.2 DR2→DR3 dry run](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07), incl. the request-file derivation recipe. |
 | `refresh:bailer-jones` | `magnitude/refresh-bailer-jones.ts` | `data/bailer-jones/bailer-jones-dr3.tsv` | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
-| `refresh:hip2` | `refresh-hipparcos2.py` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 ([van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007)) reduction. |
-| `refresh:hip-vmag` | `refresh-hipparcos-vmag.py` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
-| `refresh:classic-ids` | `refresh-classic-ids.py` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`). Four slices in one script; `--only <stem>` limits it to one. |
+| `refresh:hip2` | `vizier/refresh-hipparcos2.ts` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 ([van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007)) reduction. |
+| `refresh:hip-vmag` | `vizier/refresh-hipparcos-vmag.ts` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
+| `refresh:classic-ids` | `vizier/refresh-classic-ids.ts` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`), written together. |
 | `refresh:iau-wgsn` | `refresh-iau-wgsn.py` | `data/iau-wgsn/{NEC,wgsnFaints}.csv` | The IAU WGSN naked-eye catalogue + faint approved names (plain HTTP, not TAP; schema / row-band / spot-row gates). Follow with `pnpm run build:wgsn`. |
 | `refresh:tycho2` | `refresh-tycho2.py` | `data/tycho2/{tycho2_main,tycho2_suppl1}.tsv` | Tycho-2 (`I/259` `tyc2` + `suppl_1`) mean positions with per-star mean epochs, PM, BT/VT — filtered to the TYCs the manifest and IV/25 mention. Range-batched over TYC1 and filtered locally; VizieR can express no server-side filter on the full identifier ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)). |
-| `refresh:gliese` | `refresh-gliese.py` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
+| `refresh:gliese` | `vizier/refresh-gliese.ts` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `simbad-sample/refresh-simbad-sample.ts` | `data/simbad/simbad_sample.tsv` | V-stratified seeded 50k SIMBAD sample (validation corpus). TypeScript, on `pull/`; own README. |
 | `refresh:simbad-values` | `simbad-values/refresh-simbad-values.ts` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those Gaia's 5p tables (`gaia_dr3_astrometry.tsv`, `gaia_dr3_magnitude_pull.tsv`) already complete, and `build:membership` reads both, so it runs AFTER `refresh:gaia-astrometry`, `refresh:gaia-magnitude` and the `build:membership` that follows them. |
 | `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — shared with `refresh:tycho2` rather than restated, so both cover the same entries by construction. Composes the `simbad/` plumbing and states no ADQL of its own. |
@@ -100,14 +100,12 @@ script directly writes no record, so the build then stops on that pull.
 
 `refresh:simbad-sptype` (`simbad-sptype/`, TypeScript, own README) writes
 `data/simbad/simbad_sptype.tsv`, the manifest-keyed spectral types membership
-and the catalogue read. `refresh:msc` runs `refresh-msc.py` (outputs
-`data/msc/msc_*.tsv`). The TypeScript SIMBAD pulls share
+and the catalogue read. `refresh:msc` (`vizier/refresh-msc.ts`) pulls the
+three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into
+`data/msc/msc_*.tsv`, written together — source detail in
+`data/msc/README.md`. The TypeScript SIMBAD pulls share
 `scripts/refresh/simbad/`'s core, and the one Python one left (tyc-hd) its
 `specs.py` and `query.py`; that folder's own README carries the roster.
-`refresh-msc.py` pulls the
-three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into `data/msc/` with
-per-table schema validation and row bounds — source detail in
-`data/msc/README.md`.
 
 ### Request sets are membership-derived
 
@@ -249,12 +247,12 @@ an all-or-none write ([pull/README.md](pull/README.md)).
 
 ### VizieR
 
-The declarative whole-table case — `VizierSlice` / `pull_slices()`, CDS's
-non-load-bearing MAXREC, identifier quoting — lives in
-`scripts/refresh/vizier/` with its own README.
+The whole-table pulls — classic-ids, hip-vmag, hip2, gliese, msc — are
+TypeScript `Pull`s in `scripts/refresh/vizier/`, with its own README.
 
-`refresh-tycho2.py` stays here and does not use `VizierSlice` — why is
-`vizier/README.md`'s to state. **Its pull and its write are separate calls
+`refresh-tycho2.py` stays here: its output is a filtered subset rather than
+a whole table, and its gate a band on kept rows as a fraction of the request
+set. **Its pull and its write are separate calls
 on purpose** — `pull_table` gates and returns rows, `write_table` commits
 them, and
 nothing is written until the cross-table membership cover has also passed
@@ -304,8 +302,8 @@ service list, the one a pull's `--describe` states.
 default list, because which service can serve a query is a property of
 the table. CDS VizieR doesn't host `gaiadr3.*`, so an ESA→CDS fallback
 would fail with a misleading "table not found";
-`refresh-hipparcos2.py` goes the other way and uses
-`cds_client()` (CDS alone) because `I/311/hip2` is VizieR-only. SIMBAD
+`refresh-tycho2.py` goes the other way and uses
+`cds_client()` (CDS alone) because `I/259` is VizieR-only. SIMBAD
 gets `simbad_client()` for its divergent dialect — CDS primary, the
 Harvard CfA mirror as fallback, both serving the same database and oids.
 

@@ -59,7 +59,7 @@ classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
 ## Provenance
 
 Every table is a whole-table column slice pulled over CDS/VizieR TAP by
-`scripts/refresh/refresh-classic-ids.py` (`pnpm run refresh:classic-ids`),
+`scripts/refresh/vizier/refresh-classic-ids.ts` (`pnpm run refresh:classic-ids`),
 verified against VizieR 2026-07-28. Licence: public domain via CDS for
 all four; cite the paper per table.
 
