@@ -156,6 +156,7 @@ describe('promotion count block', () => {
     const summary = promotionSummary(foldStageLines(PROMOTION_CODES, LINES), derived, 7);
     expect(summary).toContain('scanned 7 pair rows; promoted 2 (1 via synthetic ID); already-in-catalog 2 ');
     expect(summary).toContain('refused-parked=2 (via gaia_5p 1, owned fit 1)');
+    expect(summary).toContain('(re-curated dmag_imputed=0, wds_mag=0, spectral=0, held=0, ');
   });
 });
 

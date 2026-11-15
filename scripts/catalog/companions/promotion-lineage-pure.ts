@@ -5,6 +5,7 @@ import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity/identity-pure';
 import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { formatPartition } from '../../util/counts/tally-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
@@ -280,12 +281,20 @@ export const familyTotal = (counts: PromotionCounts, family: string): number => 
   return PROMOTION_CODES.live.reduce((n, code) => (code.startsWith(prefix) ? n + counts[code] : n), 0);
 };
 
+function recuratedPartition(counts: PromotionCounts): Record<RecuratedBrightness, number> {
+  const c = (code: HeldCode): number => counts[PROMOTION_CODES.liveCode(code)];
+  return {
+    dmag_imputed: c(recuratedCode('dmag_imputed')), wds_mag: c(recuratedCode('wds_mag')),
+    spectral: c(recuratedCode('spectral')), held: c('existing.recurated.held'),
+  };
+}
+
 export function promotionSummary(counts: PromotionCounts, derived: PromotionDerivedCounts, pairRows: number): string {
   const c = (branch: LiveBranch): number => counts[PROMOTION_CODES.liveCode(branch)];
   return `  scanned ${pairRows} pair rows; promoted ${familyTotal(counts, 'minted')} `
     + `(${c('minted.synthetic')} via synthetic ID); `
     + `already-in-catalog ${familyTotal(counts, 'adopted')} `
-    + `(re-curated ${familyTotal(counts, 'existing.recurated')}, `
+    + `(re-curated ${formatPartition(recuratedPartition(counts))}, `
     + `${c('adopted.sameas-bridge')} via same-as bridge); `
     + `dropped (no-position=${c('dropped.no-position')}, beyond-tidal=${c('dropped.beyond-tidal-limit')}, `
     + `no-absmag=${c('dropped.no-absmag')}, compound-comp=${c('dropped.compound-comp')}, `
