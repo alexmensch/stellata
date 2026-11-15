@@ -72,11 +72,11 @@ const COMPARE: Record<SortKey['as'], (a: string, b: string) => number> = {
   text: compareCodeUnits,
 };
 
-/** Every row, across batches, in `keys` order; an empty cell sorts first. */
-export function sortRows(columns: readonly Column[], rows: readonly Row[], keys: readonly SortKey[], label: string): Row[] {
+/** Two rows in `keys` order; an empty cell sorts first. */
+export function rowOrder(columns: readonly Column[], keys: readonly SortKey[], label: string): (a: Row, b: Row) => number {
   const at = columnIndex(columns, label);
   const steps = keys.map((k) => ({ i: at(k.column), compare: COMPARE[k.as] }));
-  return [...rows].sort((a, b) => {
+  return (a, b) => {
     for (const { i, compare } of steps) {
       const x = a[i];
       const y = b[i];
@@ -84,7 +84,12 @@ export function sortRows(columns: readonly Column[], rows: readonly Row[], keys:
       if (d !== 0) return d;
     }
     return 0;
-  });
+  };
+}
+
+/** Every row, across batches, in `keys` order. */
+export function sortRows(columns: readonly Column[], rows: readonly Row[], keys: readonly SortKey[], label: string): Row[] {
+  return [...rows].sort(rowOrder(columns, keys, label));
 }
 
 function formatted(file: string, column: Column, cell: string | null): string {

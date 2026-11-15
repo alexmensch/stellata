@@ -51,7 +51,7 @@ across runs and a server `ORDER BY` cannot order across batches, so
 `runPull` sorts every row of a table, all batches together, by `sortBy`
 before writing: each key a column compared as `integer` (exactly, through
 `BigInt`, so a source_id past 2^53 orders right), `decimal` or `text` (code
-unit), an empty cell first (`sortRows`). A re-pull of unchanged data writes
+unit), an empty cell first (`sortRows`, by `rowOrder`). A re-pull of unchanged data writes
 the same bytes. `orderBy` is only for a query that needs a server order, such
 as one under `TOP`. Scopes:
 
