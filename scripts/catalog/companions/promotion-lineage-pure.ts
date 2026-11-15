@@ -57,7 +57,7 @@ const LAST_SIZED = 'and no later promotion pass re-sized it; params name the rad
 
 const SIZE_CODES = {
   'size.mint': outcomeCode(`Promotion sized the minted record from its absolute magnitude and spectral class, ${LAST_SIZED}.`),
-  'size.recurated': outcomeCode(`Re-curation re-derived the held record's radius from its new absolute magnitude and its class as the record's two bytes keep it, ${LAST_SIZED}.`),
+  'size.recurated': outcomeCode(`Re-curation re-derived the held record's radius from its new absolute magnitude, ${LAST_SIZED}.`),
   'size.blend-split': outcomeCode(`Blend split re-derived the minted record's radius from its split absolute magnitude, ${LAST_SIZED}.`),
   'size.anchor-dimmed': outcomeCode(`Anchor dimming re-derived the record's radius from its dimmed absolute magnitude, ${LAST_SIZED}.`),
   'size.anchor-re-split': outcomeCode(`The anchor re-split re-derived the record's radius from its re-split absolute magnitude, ${LAST_SIZED}.`),
