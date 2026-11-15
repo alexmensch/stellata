@@ -242,7 +242,7 @@ describe('rewriteRows', () => {
     expect(paramsOf(rows({ sizing: { pass: 'mint', radius: whiteDwarf }, brightness: [] })[0])).toEqual({ route: 'white-dwarf' });
   });
 
-  it('writes each change to a held record\'s brightness with the value that pass set and its inputs', () => {
+  it('writes each change to a held record\'s brightness with the value that pass set and its inputs, a dimmed anchor citing the members it lost', () => {
     const out = rows({
       sizing: { pass: 'anchor-re-split', radius: classTeff },
       brightness: [
@@ -259,13 +259,14 @@ describe('rewriteRows', () => {
       sizing: { pass: 'anchor-dimmed', radius: classTeff },
       brightness: [
         { pass: 'recurated', source: 'held', absmag: 9, fromPc: 10, toPc: 12.5, avFrom: 0.1, avTo: 0.2 },
-        { pass: 'anchor-dimmed', absmag: 1.2, members: 2 },
+        { pass: 'anchor-dimmed', absmag: 1.2, members: ['spine:9', 'multiples:S-AB/B'] },
       ],
     });
     expect(held.code).toBe('promotion.existing.recurated.held');
     expect(paramsOf(held)).toEqual({ absmag: '9.0000', from_pc: '10', to_pc: '12.5', av_from: '0.1000', av_to: '0.2000' });
     expect(dimmed.code).toBe('promotion.existing.anchor-dimmed');
-    expect(paramsOf(dimmed)).toEqual({ absmag: '1.2000', members: '2' });
+    expect(paramsOf(dimmed)).toEqual({ absmag: '1.2000' });
+    expect(dimmed.evidence).toEqual(['multiples:S-AB/B', 'spine:9']);
   });
 
   it('adds the rewrites to the stage\'s lines, each a code the writer accepts', () => {

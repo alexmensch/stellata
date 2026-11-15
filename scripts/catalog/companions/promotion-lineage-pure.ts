@@ -4,7 +4,7 @@ import { MULTIPLES_ROW_KEY } from '../../binaries/multiples-row-key-pure';
 import { starDesignations } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { IdentityRow } from '../lineage/identity/identity-pure';
-import { stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
+import { sortUtf8, stageRow, type LineageParams, type LineageRow } from '../lineage/lineage-row-pure';
 import { codeEffects, outcomeCode, retired, stageCodes, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import type { Star } from '../parse/stars-parse';
 import { AV_PARAM_DECIMALS, dustParams, EDENHOFER_AV_PHRASE } from '../photometry/brightness-colour-lineage-pure';
@@ -70,7 +70,7 @@ const HELD_CODES = {
   'existing.recurated.wds-mag': outcomeCode(`${RECURATED} the row's own WDS magnitude at the distance it now sits at, de-reddened by params.av at its new position, and its B−V by params.ci_via.`),
   'existing.recurated.spectral': outcomeCode(`${RECURATED} its spectral class's absolute magnitude, and its B−V by params.ci_via de-reddened by params.av where observed.`),
   'existing.recurated.held': outcomeCode('Re-curation moved the held record onto its anchor\'s distance with no curated brightness, so it keeps its apparent brightness: its absolute magnitude is re-derived across params.from_pc to params.to_pc and the A_V change params.av_from to params.av_to, its B−V untouched.'),
-  'existing.anchor-dimmed': outcomeCode('The record anchors members whose light its catalogued magnitude holds, so its absolute magnitude is dimmed to the residual once params.members members\' light is removed.'),
+  'existing.anchor-dimmed': outcomeCode('The record anchors members whose light its catalogued magnitude holds, so its absolute magnitude is dimmed to the residual once the light of the members it cites is removed.'),
   'existing.anchor-re-split': outcomeCode('The held record\'s absolute magnitude is re-split by its magnitude difference from the anchor params.record, whose absolute magnitude anchor dimming lowered.'),
 };
 type HeldCode = keyof typeof HELD_CODES;
@@ -152,7 +152,7 @@ type AbsmagParam = { absmag: string };
 type HeldParamsOf<C extends HeldCode> =
   C extends 'existing.recurated.held' ? AbsmagParam & { from_pc: string; to_pc: string; av_from: string; av_to: string }
   : C extends `existing.recurated.${string}` ? AbsmagParam & { av: string; ci_via: CompanionCiVia }
-  : C extends 'existing.anchor-dimmed' ? AbsmagParam & { members: string }
+  : C extends 'existing.anchor-dimmed' ? AbsmagParam
   : AbsmagParam & { record: string };
 
 type FacetEntry = readonly [Facet, LineageParams];
@@ -243,8 +243,8 @@ const avText = (av: number): string => av.toFixed(AV_PARAM_DECIMALS);
 /** A rewritten record's rows, keyed on its own origin key: its last sizing pass with that radius's route params, then each change to a held record's brightness. */
 export function rewriteRows(key: string, rewrite: RecordRewrite, recordKey: (idx: number) => string): LineageRow[] {
   const sized = (code: SizeCode, params: RadiusRouteParams): LineageRow => stageRow(PROMOTION_CODES, key, code, params, []);
-  const held = <C extends HeldCode>(code: C, params: HeldParamsOf<C>): LineageRow => (
-    stageRow(PROMOTION_CODES, key, code, params as LineageParams, [])
+  const held = <C extends HeldCode>(code: C, params: HeldParamsOf<C>, evidence: readonly string[] = []): LineageRow => (
+    stageRow(PROMOTION_CODES, key, code, params as LineageParams, evidence)
   );
   const brightnessRow = (b: HeldRecordBrightness): LineageRow => {
     switch (b.pass) {
@@ -256,7 +256,7 @@ export function rewriteRows(key: string, rewrite: RecordRewrite, recordKey: (idx
         }
         return held(RECURATED_CODES[b.source], { absmag: absmagText(b.absmag), av: avText(b.av), ci_via: b.ci });
       case 'anchor-dimmed':
-        return held('existing.anchor-dimmed', { absmag: absmagText(b.absmag), members: String(b.members) });
+        return held('existing.anchor-dimmed', { absmag: absmagText(b.absmag) }, sortUtf8([...b.members], (k) => k));
       case 'anchor-re-split':
         return held('existing.anchor-re-split', { absmag: absmagText(b.absmag), record: recordKey(b.anchorIdx) });
       default: {

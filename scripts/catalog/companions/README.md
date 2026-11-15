@@ -636,8 +636,8 @@ one the record ships. A key's rows are a set, so the size row is what says
 which pass came last. A record the catalogue already held also gets one row
 per change to its brightness: `existing.recurated.<source>` (the
 re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
-`av_from`, `av_to` instead), `existing.anchor-dimmed` (`params.members`, the
-members whose light it lost) and `existing.anchor-re-split` (`params.record`,
+`av_from`, `av_to` instead), `existing.anchor-dimmed` (citing by origin key the
+members whose light it lost, so trace reaches it from each) and `existing.anchor-re-split` (`params.record`,
 the dimmed anchor). A key's rows are a set, ordered as every stage file is
 ([SourceRowRef](../lineage/README.md#sourcerowref)). A
 pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.

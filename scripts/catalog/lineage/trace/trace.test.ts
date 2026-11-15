@@ -200,7 +200,7 @@ const PROMOTION = [
   'promotion\tmultiples:S-CD/C\toutcome\tpromotion.not-applicable.pair-anchor\t{"via":"primary"}\tspine:9|spine:3',
   'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
   'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted.synthetic\t{"via":"secondary"}\tspine:99',
-  'promotion\tspine:3\toutcome\tpromotion.existing.anchor-dimmed\t{"absmag":"1.4000","members":"1"}\t',
+  'promotion\tspine:3\toutcome\tpromotion.existing.anchor-dimmed\t{"absmag":"1.4000"}\tmultiples:S-AB/B',
   'promotion\tspine:3\toutcome\tpromotion.size.anchor-dimmed\t{"route":"class-teff","absmag":"1.4000","class_index":"stated"}\t',
 ].join('\n') + '\n';
 
@@ -391,7 +391,7 @@ describe('pnpm run trace', () => {
 
   it('names the pass that set each component\'s shipped radius and absmag, with its inputs', () => {
     const out = run('hd:5');
-    expect(out).toMatch(/spine:3\n[\s\S]*size\.apsis-teff[\s\S]*promotion\.existing\.anchor-dimmed +\{"absmag":"1\.4000","members":"1"\}/);
+    expect(out).toMatch(/spine:3\n[\s\S]*size\.apsis-teff[\s\S]*promotion\.existing\.anchor-dimmed +\{"absmag":"1\.4000"\} +evidence multiples:S-AB\/B/);
     expect(out).toMatch(/promotion\.size\.anchor-dimmed +\{"route":"class-teff","absmag":"1\.4000","class_index":"stated"\}/);
     expect(out).toMatch(/spine:9\n[\s\S]*coherence\.brightness\.held +\{"root":"S","absmag":"4\.1000"\}/);
     expect(out).toMatch(/coherence\.size\.rescaled +\{"root":"S","factor":"1\.0414"\}/);

@@ -3177,7 +3177,7 @@ describe('an existing member whose own 5p solution Gaia rejects', () => {
     const anchor = rewrites.get(a)!;
     expect(anchor.sizing.pass).toBe('anchor-dimmed');
     expect(anchor.sizing.radius.rSun).toBe(a.physicalRadius);
-    expect(anchor.brightness).toEqual([{ pass: 'anchor-dimmed', absmag: a.absmag, members: 1 }]);
+    expect(anchor.brightness).toEqual([{ pass: 'anchor-dimmed', absmag: a.absmag, members: [b.originKey] }]);
     const member = rewrites.get(b)!;
     expect(member.sizing.pass).toBe('anchor-re-split');
     expect(member.sizing.radius.rSun).toBe(b.physicalRadius);

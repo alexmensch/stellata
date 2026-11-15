@@ -231,7 +231,7 @@ export type HeldRecordBrightness =
     absmag: number; av: number; ci: CompanionCiVia;
   }
   | { pass: 'recurated'; source: 'held'; absmag: number; fromPc: number; toPc: number; avFrom: number; avTo: number }
-  | { pass: 'anchor-dimmed'; absmag: number; members: number }
+  | { pass: 'anchor-dimmed'; absmag: number; members: readonly string[] }
   | { pass: 'anchor-re-split'; anchorIdx: number; absmag: number };
 
 /** See README.md#promotion-lineage. */
@@ -2134,7 +2134,7 @@ export function promoteCompanions(
     // but an already-in-catalog member carries its own, and ξ Sco B's is 3.4 pc
     // past A's.
     let ownFlux = 0;
-    let appliedIndependents = 0;
+    const appliedIndependents: string[] = [];
     const relatives: Array<{ cand: AnchorDimCandidate; delta: number }> = [];
     for (const c of applied) {
       const memberMObs = obsMag(c);
@@ -2150,12 +2150,12 @@ export function promoteCompanions(
         continue;
       }
       ownFlux += Math.pow(10, -0.4 * memberMObs);
-      appliedIndependents++;
+      appliedIndependents.push(c.member.originKey);
     }
-    if (relatives.length === 0 && appliedIndependents === 0) continue;
+    if (relatives.length === 0 && appliedIndependents.length === 0) continue;
     const residualFlux = Math.pow(10, -0.4 * mObs) - ownFlux;
     if (!(residualFlux > 0)) {
-      post.companionBlendDimSkipped += appliedIndependents;
+      post.companionBlendDimSkipped += appliedIndependents.length;
       continue;
     }
     const relSum = relatives.reduce((s, r) => s + Math.pow(10, -0.4 * r.delta), 0);
@@ -2172,7 +2172,8 @@ export function promoteCompanions(
     const anchorRadius = physicalRadius(anchor.absmag, recordSpectralInfo(anchor));
     anchor.physicalRadius = anchorRadius.rSun;
     recordRewrite(state, anchor, 'anchor-dimmed', anchorRadius, {
-      pass: 'anchor-dimmed', absmag: anchor.absmag, members: relatives.length + appliedIndependents,
+      pass: 'anchor-dimmed', absmag: anchor.absmag,
+      members: [...appliedIndependents, ...relatives.map(({ cand }) => cand.member.originKey)],
     });
   }
   const rows = multiplesRows.map((row) => {
