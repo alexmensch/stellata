@@ -245,9 +245,9 @@ pinning (`validate_spot_rows`), and
 partial-write protection so a mid-run failure never leaves a
 half-written TSV under `data/`.
 
-The pulls port onto `pull/`, the TypeScript runtime: one CSV TAP backend whose
-overflow check is a row count, a query-keyed resume cache, required gates and
-an all-or-none write ([pull/README.md](pull/README.md)).
+The pulls port onto `pull/`, the TypeScript runtime: one backend, TAP in CSV
+or FITS and VizieR's ASU on the CfA mirror, a query-keyed resume cache,
+required gates and an all-or-none write ([pull/README.md](pull/README.md)).
 
 ### VizieR
 
