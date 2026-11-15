@@ -2,6 +2,7 @@
 // Sol planets, evaluated at model time `t`. Sources + dropped-terms
 // rationale in ../README.md#planet-rotation.
 
+import { pyMod } from '../../../../astro-core/angles';
 import { J2000_JD } from '../../../../astro-core/astronomy-constants';
 import { tToJdTdb } from '../../time/time';
 import { earthPoleRaDecDeg, earthSpinDeg } from './earth-orientation-pure';
@@ -374,7 +375,7 @@ export function poleRaDecDegAt(
   return poleRaDecDegInto(rot, t, { raDeg: 0, decDeg: 0 });
 }
 
-/** Prime-meridian angle W (deg, wrapped to [0, 360)) at Unix-seconds
+/** Prime-meridian angle W (deg, wrapped to [0, 360]) at Unix-seconds
  *  `t`. Wrapped before use in radians — W grows to ~1e9 deg at the
  *  model-clock bounds, where an unwrapped float64 radian value has
  *  degraded precision. */
@@ -385,8 +386,7 @@ export function spinDegAt(rot: RotationElements, t: number): number {
     : rot.w0Deg
       + rot.wDegPerDay * days
       + periodicSum(rot.terms, days / DAYS_PER_JULIAN_CENTURY, 'wDeg', Math.sin);
-  const w = raw % 360;
-  return w < 0 ? w + 360 : w;
+  return pyMod(raw, 360);
 }
 
 /** Scratch for the accessors below that only read the pair back out. */
