@@ -20,6 +20,9 @@ SIMBAD. A pull is a `pull` step on the step table
   `emitArtifacts` check.
 - `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
   conditions, per-slice counts, and cutting edges from a table.
+- `fits-pure.ts` (+ test) — `readFitsTable`, a FITS reply's first binary
+  table as text cells ([FITS replies](#fits-replies)); `fits-fixture.ts`,
+  for tests, writes one from typed cells.
 - `checkpoint.ts` — the resume cache.
 - `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
   archive replayed into a committed table's lines, the committed table's rows,
@@ -215,6 +218,22 @@ land until it runs that mirror's group of live checks in
 stellata-hhaw.45.29.9, records its limit here, fixes whatever the checks find
 and sets the flag. The two are separate hosts and may return apart, so each
 mirror passes on its own; the bead closes once both have.
+
+## FITS replies
+
+A FITS binary table carries each value as the archive stores it, where a
+text reply prints it: VizieR's ASU text cuts a double off at the catalogue's
+printed precision, and CDS's TAP CSV rounds it its own way. `readFitsTable`
+writes a `D` cell as the shortest digits that read back to the double and an
+`E` cell as the shortest that read back to the float32 (`formatRepr`), an
+integer equal to its `TNULLn` or a NaN as `null`, and a string without its
+trailing blanks or NULs, `null` when nothing is left. Arrays, bit fields,
+heaps and scaled columns throw: no pull asks for one.
+
+A file whose bytes end inside a header block or the rows is `incomplete`,
+which a retry can change: CfA's ASU sends a 1,120-byte `200` reply cut
+inside the primary header now and then (measured 2026-11-15). A complete
+file with no table is `no-table`, ASU's answer to a query no row matched.
 
 ## Columns
 
