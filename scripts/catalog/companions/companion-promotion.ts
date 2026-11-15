@@ -240,6 +240,13 @@ export type PromotionDerivedCounts = PromotionStats & {
   physicalOverlaps: number;
 };
 
+type RecuratedAdoption = Extract<RowOutcome, { recurated: unknown }> & { recurated: RecuratedBrightness };
+
+/** An adoption whose existing member promotion re-curated onto its anchor. */
+export function isRecuratedAdoption(o: RowOutcome): o is RecuratedAdoption {
+  return o.kind === 'adopted' && o.via !== 'earlier-mint' && o.recurated !== null;
+}
+
 /** True when the row's `ci` is its OWN observed B−V (dust-reddened), so
  *  build-time de-extinction must de-redden it. False when the row's ci is
  *  inherited from the system primary (Sirius B's row carrying Sirius A's

@@ -45,10 +45,12 @@ import { boundaryArtifactSummary, renderBoundaryArtifact } from './boundaries/bu
 import {
   applyDoublesFlag,
   collectPhysicalPairKeys,
+  doublesEvidence,
   parseHipCcdm,
 } from './multiplicity/visual-doubles';
 import { parkedRefusals } from './companions/identity/parked-refusals';
 import {
+  isRecuratedAdoption,
   promoteCompanions,
   readMultiplesTsv,
   type MultiplesTsvRow,
@@ -83,6 +85,10 @@ import {
 } from './companions/record-index/record-index';
 import { resolvePairs, type ResolvedPair } from './companions/record-index/pair-resolution-pure';
 import { serializeCatalogPairEnds } from './companions/record-index/pair-ends-pure';
+import {
+  anchorMovedRecords, buildSystemMembership, lentDistanceRecords, systemMembershipSummary,
+} from './system-membership/system-membership-pure';
+import { serializeSystemMembership } from '../../src/catalog-format/system-membership/system-membership-format';
 import { pairsFromRows } from '../binaries/pairs-pure';
 import {
   serializeCatalogRowIndexSidecar, type CatalogRowIndexMap,
@@ -259,6 +265,7 @@ function promoteAndTrace(
   return {
     stats, identity, lines: lineage.map((row) => stageLineageLine(PROMOTION_CODES, row)),
     decidedRows: rows.length, secondaryRows: rows.filter((r) => r.via === 'secondary').length,
+    recuratedRecords: rows.flatMap(({ outcome: o }) => (isRecuratedAdoption(o) ? [stars[o.idx]] : [])),
   };
 }
 
@@ -337,12 +344,13 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
   console.log('Promoting binary companions from multiples.tsv...');
   const tProm = Date.now();
   const {
-    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows,
+    stats: ps, lines: promotionLines, identity: promotionIdentity, decidedRows, secondaryRows, recuratedRecords,
   } = promoteAndTrace(multiplesRows, stars, {
     conAssignment, dustGrid, parked: parkedRefusals(stats.parked),
     gaiaAstrometry: directions.gaiaAstrometry, synthGaiaBridges,
   }, manifestFounded);
   const promotionCounts = foldStageLines(PROMOTION_CODES, promotionLines);
+  const anchorMoved = anchorMovedRecords(stars, coherenceVerdicts, recuratedRecords);
   console.log(`  promotion decided ${decidedRows} rows in ${Date.now() - tProm}ms`);
 
   // Sort by apparent V from Sol ascending (brightest-looking first), so any
@@ -398,8 +406,8 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
   // sources without double-flagging components of the same system.
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
-  const ccdmGroups = parseHipCcdm(HIP_CCDM.read());
-  const ccdm = applyDoublesFlag(stars, ccdmGroups, hipToIndex, collectPhysicalPairKeys(multiplesRows));
+  const doubles = doublesEvidence(parseHipCcdm(HIP_CCDM.read()), collectPhysicalPairKeys(multiplesRows), hipToIndex);
+  const ccdm = applyDoublesFlag(stars, doubles);
   console.log(`  in ${Date.now() - tCcdm}ms`);
 
   const eclipsing = wingEclipsingBinaries(stars);
@@ -424,9 +432,18 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     stars, resolvedMemberIndices(resolvedPairs), (sourceId) => simbadSpectral.bySourceId.get(sourceId)?.otype === SIMBAD_OTYPE_MULTIPLE,
   );
   const multiplicityStatus = statuses.status;
+  // Serialized here so the tree objects are not held through emission (the CI heap budget).
+  const systems = (() => {
+    const result = buildSystemMembership({
+      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
+      geometricPairs: binaries.mutual, lentDistance: lentDistanceRecords(stars, anchorMoved),
+    });
+    return { json: serializeSystemMembership(result.membership), counts: result.counts };
+  })();
+  console.log(`  ${systemMembershipSummary(systems.counts)}`);
   const multiplicity: MultiplicityCounts = {
-    ...binaries, ...ccdm, ...eclipsing, ...renderableWings,
-    ...componentCount, ...statuses.counts,
+    ...binaries.counts, ...ccdm, ...eclipsing, ...renderableWings,
+    ...componentCount, ...statuses.counts, ...systems.counts,
   };
   console.log(`  ${multiplicitySummary(multiplicity)}`);
 
@@ -442,6 +459,7 @@ async function preAllocationStages(inputHashesAtStart: FileHashes) {
     placementDerived: stats.placementDerived,
     starNamingCounts, multiplesRows, promotionLines, promotionIdentity, promotionCounts, promotionDerived,
     figureLines, gcvsCounts, componentDesignations, rowIndexMap, resolvedPairs, multiplicityStatus, multiplicity,
+    systemMembership: systems.json,
   };
 }
 
@@ -518,6 +536,7 @@ export async function main() {
     componentDesignations: built.componentDesignations,
     rowIndexMap: built.rowIndexMap,
     resolvedPairs: built.resolvedPairs,
+    systemMembership: built.systemMembership,
     sidEvents: [...registry.events, ...allocation.events],
     ledgers: {
       parkedLedger: built.parkedLedger,
@@ -567,6 +586,7 @@ interface CatalogEmissionInputs {
   readonly componentDesignations: ReadonlyMap<number, ComponentDesignation>;
   readonly rowIndexMap: CatalogRowIndexMap;
   readonly resolvedPairs: readonly ResolvedPair[];
+  readonly systemMembership: string;
   /** The registry's events and this run's. */
   readonly sidEvents: readonly EventRow[];
   readonly ledgers: {
@@ -589,7 +609,7 @@ interface CatalogEmissionInputs {
 
 /** Every CATALOG_OUTPUTS file, family member and check, ready for emitArtifacts; logs what it built. */
 function catalogEmission({
-  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, sidEvents, ledgers, lineage,
+  stars, sortedKey, encoded, apsisMap, gspcMap, conLookup, inputHashes, figureLines, componentDesignations, rowIndexMap, resolvedPairs, systemMembership, sidEvents, ledgers, lineage,
   stageCounts, heap,
 }: CatalogEmissionInputs): Emission<CatalogOutputKey> {
   const totalLength = encoded.buffer.byteLength;
@@ -669,6 +689,7 @@ function catalogEmission({
       searchIndex: searchJson,
       rowIndexMap: rowIndexMapJson,
       pairEnds: pairEndsJson,
+      systemMembership,
       ...ledgers,
       ...lineage.placement.files,
       ...lineage.brightnessColour.files,

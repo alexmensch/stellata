@@ -6,6 +6,7 @@ import {
   VAR_TYPE_ECLIPSING,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
 
 // Pairs within this 3D distance are flagged as a physical binary/multiple
@@ -32,7 +33,7 @@ export interface BinaryStar {
 // in inferBinaries; CCDM groups + curated doubles in flagGroupPrimaries).
 export function pickBrightest(
   stars: Pick<BinaryStar, 'absmag'>[],
-  indices: number[],
+  indices: readonly number[],
 ): number {
   let bestIdx = -1;
   let bestMag = Infinity;
@@ -53,7 +54,7 @@ export function pickBrightest(
 // produces the same flag bits.
 export function markPrimary(
   stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: number[],
+  indices: readonly number[],
 ): number {
   const bestIdx = pickBrightest(stars, indices);
   if (bestIdx === -1) return -1;
@@ -62,10 +63,10 @@ export function markPrimary(
 }
 
 // Vetoes a freshly-picked primary before its FLAG_BINARY_PRIMARY bit is
-// set — the CCDM optical-double gate (see isOpticalDoublePrimary).
+// set — the CCDM optical-double gate (see isOpticalDoubleMember).
 export type SuppressPredicate = (
   primaryIdx: number,
-  memberIndices: number[],
+  memberIndices: readonly number[],
 ) => boolean;
 
 // Like markPrimary, but a no-op when any star in `indices` already carries
@@ -86,7 +87,7 @@ export type SuppressPredicate = (
 // was already flagged, or -3 if `suppress` vetoed the pick.
 export function markPrimaryIfUnflagged(
   stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: number[],
+  indices: readonly number[],
   suppress?: SuppressPredicate,
 ): number {
   if (indices.length === 0) return -1;
@@ -100,22 +101,16 @@ export function markPrimaryIfUnflagged(
   return bestIdx;
 }
 
-// Apply FLAG_BINARY_PRIMARY across an iterable of HIP-indexed groups. Each
-// group's brightest in-catalog component (lowest absmag) gets the bit,
+// Apply FLAG_BINARY_PRIMARY across groups of record indices (resolveGroups).
+// Each group's brightest component (lowest absmag) gets the bit,
 // idempotent with any pre-existing flags from `inferBinaries` (the
-// geometric mutual-pair pass can have already marked one member). Groups
-// with no in-catalog members are silently skipped.
-//
-// The `groups` iterable is the union of CCDM groups parsed from the
-// Hipparcos cross-reference and the curated `KNOWN_VISUAL_DOUBLES`
-// overrides — the caller (build-catalog) constructs the union; this
-// helper just walks it.
+// geometric mutual-pair pass can have already marked one member).
 //
 // `suppress` (optional) is forwarded to `markPrimaryIfUnflagged` to veto
-// optical doubles — see isOpticalDoublePrimary.
+// optical doubles — see isOpticalDoubleMember.
 //
 // Returns:
-//   systems     — count of groups that resolved at least one in-catalog HIP.
+//   systems     — count of groups.
 //   flagged     — count of groups where this pass set a fresh primary
 //                 (i.e. excludes groups whose primary was already set by a
 //                 prior pass).
@@ -142,28 +137,32 @@ export function buildHipToIndex(
   return m;
 }
 
+/** Each group's in-catalogue records, ascending and deduplicated; a group with none is dropped. */
+export function resolveGroups(
+  groups: Iterable<Iterable<number>>,
+  hipToIndex: ReadonlyMap<number, number>,
+): number[][] {
+  const out: number[][] = [];
+  for (const hips of groups) {
+    const indices = [...new Set([...hips].flatMap((h) => hipToIndex.get(h) ?? []))].sort(ascending);
+    if (indices.length > 0) out.push(indices);
+  }
+  return out;
+}
+
 export function flagGroupPrimaries(
   stars: DoublesStar[],
-  groups: Iterable<Iterable<number>>,
-  hipToIndex: Map<number, number>,
+  groups: readonly (readonly number[])[],
   suppress?: SuppressPredicate,
 ): { systems: number; flagged: number; suppressed: number } {
-  let systems = 0;
   let flagged = 0;
   let suppressed = 0;
-  for (const hips of groups) {
-    const indices: number[] = [];
-    for (const h of hips) {
-      const idx = hipToIndex.get(h);
-      if (idx !== undefined) indices.push(idx);
-    }
-    if (indices.length === 0) continue;
-    systems++;
+  for (const indices of groups) {
     const picked = markPrimaryIfUnflagged(stars, indices, suppress);
     if (picked >= 0) flagged++;
     else if (picked === -3) suppressed++;
   }
-  return { systems, flagged, suppressed };
+  return { systems: groups.length, flagged, suppressed };
 }
 
 // ---- CCDM optical-double suppression ------------------------------------
@@ -173,7 +172,7 @@ export function flagGroupPrimaries(
 // double. Mirrors the binaries pipeline's Stage-5 SEPARATION_LIMIT_PC.
 export const OPTICAL_DOUBLE_MIN_SEP_PC = 1.0;
 
-// Fields isOpticalDoublePrimary reads. Star satisfies this structurally.
+// Fields isOpticalDoubleMember reads. Star satisfies this structurally.
 /** Whether a record's distance rests on a Gaia parallax, raw or through the
  *  Bailer-Jones 2021 (/data/papers/index.md#bailerjones2021) posterior
  *  over it. The optical-double suppression needs it
@@ -209,27 +208,27 @@ export interface OpticalDoubleContext {
   minSepPc: number;
 }
 
-// True when a CCDM group's picked primary should NOT be winged: it's an
-// optical double with no independent physical evidence. See
+// True when a CCDM group member is a line-of-sight optical double with no
+// independent physical evidence: the wings pass vetoes its picked primary on
+// it, and system membership drops each member it holds for. See
 // /scripts/catalog/multiplicity/README.md#ccdm-double-star-cross-match.
 //
-// Suppression fires only on positive evidence the asserted pair is optical
-// — the nearest same-group sibling with a Gaia-quality distance sits
-// farther than ctx.minSepPc in 3D. It never fires on mere absence of
-// physical evidence, so a noisy parallax can't strip real wings. Keeps the
-// wings (returns false) when any holds:
-//  - the primary is a component of a kept physical pair, or eclipsing
-//    (extrinsic wings earned) — the geometric mutual-pair flag is honoured
-//    upstream by markPrimaryIfUnflagged's already-flagged short-circuit;
-//  - the primary lacks a Gaia-quality distance (separation untrustworthy);
+// Fires only on positive evidence the asserted pair is optical — the nearest
+// same-group sibling with a Gaia-quality distance sits farther than
+// ctx.minSepPc in 3D. It never fires on mere absence of physical evidence, so
+// a noisy parallax can't strip a real pair. Returns false when any holds:
+//  - the member is a component of a kept physical pair, or eclipsing — the
+//    geometric mutual-pair flag is honoured upstream by
+//    markPrimaryIfUnflagged's already-flagged short-circuit;
+//  - the member lacks a Gaia-quality distance (separation untrustworthy);
 //  - no same-group sibling with a Gaia-quality distance exists to measure.
-export function isOpticalDoublePrimary(
-  primaryIdx: number,
-  memberIndices: number[],
-  stars: OpticalDoubleStar[],
+export function isOpticalDoubleMember(
+  memberIdx: number,
+  memberIndices: readonly number[],
+  stars: readonly OpticalDoubleStar[],
   ctx: OpticalDoubleContext,
 ): boolean {
-  const p = stars[primaryIdx];
+  const p = stars[memberIdx];
   if (p.varType === VAR_TYPE_ECLIPSING) return false;
   if (p.hip !== null && ctx.physicalHips.has(p.hip)) return false;
   if (p.gaiaSourceId !== null && ctx.physicalGaia.has(p.gaiaSourceId)) return false;
@@ -237,7 +236,7 @@ export function isOpticalDoublePrimary(
 
   let nearestSq = Infinity;
   for (const j of memberIndices) {
-    if (j === primaryIdx) continue;
+    if (j === memberIdx) continue;
     const q = stars[j];
     if (!hasGaiaQualityDistance(q.distVia)) continue;
     const dx = q.x - p.x;
@@ -266,7 +265,7 @@ export function isOpticalDoublePrimary(
 // Mutates `stars[i].companionIdx` and `stars[i].flags` in place.
 export function inferBinaries(
   stars: BinaryStar[],
-): Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'> {
+): { counts: Pick<MultiplicityCounts, 'binaryPairs' | 'binaryMutualPairs'>; mutual: (readonly [number, number])[] } {
   const cell = BINARY_MAX_SEP_PC;
   const cellInv = 1 / cell;
   const grid = new Map<number, number[]>();
@@ -322,19 +321,20 @@ export function inferBinaries(
     }
   }
 
-  // Second pass: identify mutual pairs (A↔B where each is the other's
-  // directed nearest) and flag the brighter member as primary. Iterate
-  // i < j to count each pair exactly once.
-  let mutualPairs = 0;
-  for (let i = 0; i < n; i++) {
-    const j = stars[i].companionIdx;
-    if (j < 0 || j <= i) continue;
-    if (stars[j].companionIdx !== i) continue;
-    mutualPairs++;
-    markPrimary(stars, [i, j]);
-  }
+  const mutual = mutualPairs(stars);
+  for (const pair of mutual) markPrimary(stars, [...pair]);
 
-  return { binaryPairs: pairs, binaryMutualPairs: mutualPairs };
+  return { counts: { binaryPairs: pairs, binaryMutualPairs: mutual.length }, mutual };
+}
+
+/** Each A↔B where each is the other's directed nearest (`companionIdx`), once, as [lower index, higher]. */
+export function mutualPairs(stars: readonly Pick<BinaryStar, 'companionIdx'>[]): (readonly [number, number])[] {
+  const out: (readonly [number, number])[] = [];
+  for (let i = 0; i < stars.length; i++) {
+    const j = stars[i].companionIdx;
+    if (j > i && stars[j].companionIdx === i) out.push([i, j]);
+  }
+  return out;
 }
 
 /** ORs FLAG_BINARY_PRIMARY onto every eclipsing record the earlier passes
