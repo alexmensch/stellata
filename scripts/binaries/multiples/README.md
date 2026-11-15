@@ -84,7 +84,8 @@ The records encode to the committed `multiples.tsv` byte for byte, which
 JavaScript's default: the photocentre's weighted sums are `pySum`, a
 compensated sum (`../python-float-pure.ts`); the anchor position angle wraps
 through `pyMod`, the divisor's sign, inside astro-core's `tangentToPolar`
-(`src/astro-core/equatorial-basis.ts`); and the photocentre walk visits neighbours in token order.
+(`src/astro-core/equatorial-basis.ts`); and the photocentre walk visits
+neighbours in token order.
 
 ## What each column carries
 
