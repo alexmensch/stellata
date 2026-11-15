@@ -38,8 +38,7 @@ scripts/catalog/companions/
                                   Stage 6 reached either from no measured
                                   geometry, the two coincide, or the row is
                                   the chaining letter itself. Offsets
-                                  convert through
-                                  ../../binaries/sky-geometry-pure.ts's
+                                  convert through astro-core's
                                   polarToTangent / tangentToPolar, the pair
                                   Stage 6 writes them with.
   promotion-lineage-pure.ts       Promotion as a lineage stage: its reason

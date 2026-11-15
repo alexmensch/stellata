@@ -9,7 +9,7 @@ import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from '../optical/optical-tier
 import { pySum } from '../python-float-pure';
 import { addEdge, addNewestEdge, pairVector, walk, type Edge } from '../resolve/binding-audit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
-import { tangentToPolar, type PolarOffset, type TangentOffset } from '../sky-geometry-pure';
+import { tangentToPolar, type PolarOffset, type TangentOffset } from '../../../src/astro-core/equatorial-basis';
 import type { WdsPair } from '../../wds/wds-pure';
 import { pairMagnitudes, wdsDmag } from './pair-photometry-pure';
 

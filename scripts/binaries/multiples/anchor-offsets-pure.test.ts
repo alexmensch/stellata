@@ -8,7 +8,7 @@ import type { OpticalVia } from '../optical/optical-tiers-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed } from '../resolve/resolve-fixture';
 import { addSiblingEdge, computeAnchorOffsets, photocentreOffsets, type SiblingAdj } from './anchor-offsets-pure';
-import type { PolarOffset } from '../sky-geometry-pure';
+import type { PolarOffset } from '../../../src/astro-core/equatorial-basis';
 
 const W = 'WDS-1';
 type Spec = readonly [components: string, rho: number | null, theta: number | null, kept: boolean];

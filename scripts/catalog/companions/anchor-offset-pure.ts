@@ -3,7 +3,7 @@
 
 import {
   polarToTangent, tangentToPolar, type PolarOffset, type TangentOffset,
-} from '../../binaries/sky-geometry-pure';
+} from '../../../src/astro-core/equatorial-basis';
 
 export interface AnchorOffsetRow {
   comp: string;
