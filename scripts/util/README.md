@@ -145,10 +145,7 @@ same thing — single-use helpers stay with their consumer.
   without anyone listing it. `scriptParts` is the one parser of a
   script's `&&`-chained commands (`tsx`, `python3`, `pnpm run`, or `other`)
   and `tsxEntries` every `tsx` entry among them; `runnerTargets` the
-  targets of a script that is one `run.ts` call (`RUNNER`), else `null`;
-  `closureWithSiblings(closure, files)` is every file in `files` beside a
-  closure module except code (`CODE_FILE`) and `.md`; only
-  `deletedSiblingsSince` (`input-hashes-at.ts`) calls it.
+  targets of a script that is one `run.ts` call (`RUNNER`), else `null`.
 - `release-version.ts` (+ test) — the release version and its tag
   (`TAG_PREFIX`, `TAG_GLOB`, `tagOf`, `versionOfTag`, `parseVersion`), and
   `releaseAt(ref)`, the newest release tag reachable from `ref`: the
@@ -180,9 +177,7 @@ same thing — single-use helpers stay with their consumer.
   `GIT_LFS_SKIP_SMUDGE` pointer read as content), `unknown` where git holds
   no copy — a git-ignored input, or LFS content not stored locally;
   `onDiskHashes(paths, hashed)`, a map over `paths` taking what it is handed
-  and hashing the rest from disk; and `deletedSiblingsSince(commit, inputs)`,
-  the files deleted since `commit` that sat beside a code input — the
-  siblings a build at `commit` read (`closureWithSiblings`'s rule). Kept out
+  and hashing the rest from disk. Kept out
   of `git-provenance.ts` so the perf instruments reading that do not load the
   TypeScript compiler. The lineage baseline verdict reads it
   ([The verdict](../catalog/lineage/baseline/README.md#the-verdict--one-map-comparison)).

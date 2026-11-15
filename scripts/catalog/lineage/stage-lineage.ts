@@ -9,7 +9,7 @@ import type { ArtifactContents, Check } from '../../util/emit-artifacts';
 import { headCommit, inHeadHistory, mergeBaseWithMain, onMainBranch } from '../../util/git-provenance';
 import { REPO_ROOT } from '../../util/paths';
 import { diffLineage, stageDiffText, tallyKeyChanges, type DiffJoin, type KeyChangeTally } from './lineage-diff-pure';
-import { deletedSiblingsSince, inputHashesAt, onDiskHashes, type HashesAt } from '../../util/input-hashes-at';
+import { inputHashesAt, onDiskHashes, type HashesAt } from '../../util/input-hashes-at';
 import {
   ACCEPT_ANY_BASELINE_FLAG, AGAINST_FLAG, acceptedFiles, baseAt, planBaseline, type BaselineContext, type BaselineSource,
   type InputsAt,
@@ -97,12 +97,6 @@ export function inputsAtFrom(handed: FileHashes, known: (commit: string) => Know
   };
 }
 
-/** Listed on first ask, once. */
-function branchPaths(mergeBase: string, inputs: readonly string[]): () => readonly string[] {
-  let listed: readonly string[] | undefined;
-  return () => (listed ??= [...inputs, ...deletedSiblingsSince(mergeBase, inputs)]);
-}
-
 export interface UpstreamLineage {
   /** Each upstream stage's files as `commit` holds them, by repo-relative path; hashed once per commit. */
   readonly filesAt: (commit: string) => Known;
@@ -128,7 +122,7 @@ function upstreamFiles(layout: LineageLayout, specs: readonly StageLineageSpec<s
       const current = headers[1];
       const read = current.kind === 'read' ? Object.keys(current.header.inputs) : [];
       const files = acceptedFiles(headers, {
-        base: { kind: 'fixed', commit, paths: branchPaths(commit, read) },
+        base: { kind: 'fixed', commit, paths: () => read },
         inputsAt: inputsAtFrom({}, () => ({ kind: 'known', hashes: {} })),
       });
       if (files === null) continue;
@@ -148,7 +142,7 @@ function baselineContext<F extends string, S extends string>(run: StageLineageRu
   return {
     base: baseAt(
       { onMainBranch: onMainBranch(), commit: headCommit() }, mergeBase, inHeadHistory,
-      branchPaths(mergeBase, Object.keys(run.inputs)),
+      () => Object.keys(run.inputs),
     ),
     inputsAt: inputsAtFrom(run.inputs, (commit) => run.upstream?.filesAt(commit) ?? { kind: 'known', hashes: {} }),
   };
