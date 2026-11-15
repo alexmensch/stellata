@@ -1,6 +1,6 @@
 // The row-index sidecar and the post-sort readers of resolvePairs. See README.md.
 
-import { pickBrightest, type PrimaryClaims } from '../../multiplicity/binary-flags-pure';
+import { groupPrimaryClaims, type PrimaryClaims } from '../../multiplicity/binary-flags-pure';
 import type { MultiplicityCounts } from '../../multiplicity/multiplicity-stage-pure';
 import { isMoreCanonicalAnchor } from '../../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../../src/catalog-format/binaries/binaries-format';
@@ -72,16 +72,8 @@ export function renderableCompanionClaims(
     drawn.add(rendered.secondary);
   }
 
-  const claims: number[] = [];
-  const mine = new Set<number>();
-  for (const indices of drawnPerSystem.values()) {
-    const drawn = [...indices];
-    if (drawn.some((idx) => claimed.has(idx) || mine.has(idx))) continue;
-    const anchor = pickBrightest(stars, drawn);
-    claims.push(anchor);
-    mine.add(anchor);
-  }
-  return { claims, counts: { renderableCompanionWinged: claims.length } };
+  const { claims, counts } = groupPrimaryClaims(stars, [...drawnPerSystem.values()].map((drawn) => [...drawn]), claimed);
+  return { claims, counts: { renderableCompanionWinged: counts.flagged } };
 }
 
 // ---- Component-letter search designations ------------------------------
