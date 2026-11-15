@@ -43,16 +43,14 @@ printed V and B−V are `{fixed: 3, float32: true}`.
 
 ## Order
 
-Each table is sorted by the key its Python pull ordered by, which reproduces
-the committed bytes, except two:
+Each table is sorted by the key that reproduces the committed bytes, with
+two choices of key worth knowing:
 
-- **`gliese_v70a.tsv`** sorts name then component by code unit. CDS's
-  `ORDER BY Name, Comp` collated punctuation-blind (`Gl 100.1` before
-  `Gl 10.1`); 245 of 3,803 rows moved, the same lines.
-- **`msc_components.tsv`** sorts by `wds_id` then `comp`. The Python pull
-  sent no `ORDER BY` and wrote CDS's reply order, which matched no key, not
-  even VizieR's own record order (by ID); all 12,484 rows moved, the same
-  lines, and `build:binaries` reads them into the same `multiples.tsv`.
+- **`gliese_v70a.tsv`** sorts name then component by code unit, where CDS
+  collates `Name` punctuation-blind (`Gl 100.1` before `Gl 10.1`).
+- **`msc_components.tsv`** sorts by `wds_id` then `comp`: CDS's reply order
+  matches no key, not even VizieR's own record order (by ID).
+  `build:binaries` reads any order into the same `multiples.tsv`.
 
 Rows tied on the sort key keep the archive's order: 197 TYCs in `tyc2_hd`
 carry two HD rows, and `wds_id` repeats in `msc_systems` and `msc_orbits`.

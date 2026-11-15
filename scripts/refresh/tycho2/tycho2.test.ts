@@ -69,7 +69,7 @@ describe('the TYC1 bands', () => {
 });
 
 describe('the kept band', () => {
-  it('floors both ends of the share, as the Python pull did', () => {
+  it('floors both ends of the share', () => {
     expect(keptBand({ min: 0.98, max: 1 }, 372_618)).toEqual({ min: 365_165, max: 372_618 });
     expect(keptBand({ min: 0.004, max: 0.012 }, 372_618)).toEqual({ min: 1_490, max: 4_471 });
   });

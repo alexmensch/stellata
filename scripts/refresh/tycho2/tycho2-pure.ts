@@ -117,7 +117,7 @@ export const SUPPL1: Tycho2Table = {
 export const TABLES = { main: MAIN, suppl1: SUPPL1 } as const;
 export type Tycho2Key = keyof typeof TABLES;
 
-/** Python's `int(share * n)`: floored, both ends. */
+/** Floored, both ends. */
 export function keptBand(share: Tycho2Table['keptShare'], mentioned: number): RowBand {
   return { min: Math.floor(share.min * mentioned), max: Math.floor(share.max * mentioned) };
 }
