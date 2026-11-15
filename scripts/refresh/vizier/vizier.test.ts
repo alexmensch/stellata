@@ -72,6 +72,13 @@ describe('the pulls', () => {
     }
   });
 
+  it('order each table totally: its keys, then every other column as text', () => {
+    expect(TYC2_HD.sortBy.map((k) => `${k.column}:${k.as}`)).toEqual([
+      'tyc1:integer', 'tyc2:integer', 'tyc3:integer', 'hd:text', 'n_hd:text', 'n_tyc:text',
+    ]);
+    for (const { table } of TABLES) expect(new Set(table.sortBy.map((k) => k.column))).toEqual(new Set(table.columns.map((c) => c.name)));
+  });
+
   it('hold every row within the table cell cap', () => {
     for (const pull of PULLS) expect(() => assertTablesFit(pull)).not.toThrow();
   });

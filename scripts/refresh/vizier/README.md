@@ -52,8 +52,13 @@ two choices of key worth knowing:
   matches no key, not even VizieR's own record order (by ID).
   `build:binaries` reads any order into the same `multiples.tsv`.
 
-Rows tied on the sort key keep the archive's order: 197 TYCs in `tyc2_hd`
-carry two HD rows, and `wds_id` repeats in `msc_systems` and `msc_orbits`.
+**The order is total**: after its keys, a table sorts on every other column
+as text (`totalOrder`), so rows tied on the keys are written the same
+whichever mirror answered — CDS and CfA send ties in different orders. Ties
+on the keys are common: 197 TYCs in `tyc2_hd` carry two HD rows, and
+`wds_id` repeats in `msc_systems` and `msc_orbits`. Only rows identical in
+every column stay tied, and their order cannot show (three in
+`msc_orbits`).
 
 ## Replies
 

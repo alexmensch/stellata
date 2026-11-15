@@ -29,11 +29,17 @@ export interface VizierTable extends PullTable {
 export const vizierRelease = (tables: Iterable<{ readonly vizierId: string }>): string =>
   [...tables].map(({ vizierId }) => `VizieR ${vizierId}`).join(', ');
 
+/** `keys`, then every other column as text: rows tied on the keys would otherwise keep whichever order the answering mirror sent. */
+export function totalOrder(columns: readonly Column[], keys: readonly [SortKey, ...SortKey[]]): readonly [SortKey, ...SortKey[]] {
+  const keyed = new Set(keys.map((k) => k.column));
+  return [...keys, ...columns.filter((c) => !keyed.has(c.name)).map((c) => text(c.name))];
+}
+
 function wholeTable(
-  vizierId: string, columns: readonly [Column, ...Column[]], sortBy: readonly [SortKey, ...SortKey[]], band: RowBand,
+  vizierId: string, columns: readonly [Column, ...Column[]], keys: readonly [SortKey, ...SortKey[]], band: RowBand,
   spotRows: readonly [SpotRow, ...SpotRow[]],
 ): VizierTable {
-  return { vizierId, from: VIZIER.quote(vizierId), columns, sortBy, scope: { kind: 'whole-table' }, band, spotRows };
+  return { vizierId, from: VIZIER.quote(vizierId), columns, sortBy: totalOrder(columns, keys), scope: { kind: 'whole-table' }, band, spotRows };
 }
 
 const spot = (key: string, value: string, cells: Readonly<Record<string, Pinned>>): SpotRow => ({ key, value, cells });
