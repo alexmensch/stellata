@@ -2,9 +2,8 @@
 
 import type { StagedCounts } from '../../util/counts/count-stages-pure';
 import { defineSnapshot } from '../../util/sources/snapshot-pure.ts';
-import { MEMBERSHIP_EXPECTED_FILE } from './membership-manifest-pure';
 
 export const MEMBERSHIP_COUNTS = defineSnapshot<StagedCounts>({
-  file: MEMBERSHIP_EXPECTED_FILE,
+  file: 'scripts/catalog/membership/membership-manifest-expected.json',
   script: 'build:membership',
 });
