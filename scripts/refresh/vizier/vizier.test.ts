@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { assertTablesFit, batchQueries, describePull, type Pull } from '../pull/pull';
-import { recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
+import { rowOrder } from '../pull/columns-pure';
+import { committedRows, recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
 import { VIZIER } from '../pull/tap-pure';
-import { REPO_ROOT } from '../../util/paths';
+import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
 import { CLASSIC_IDS_PULL, GLIESE_PULL, HIP2_PULL, HIP_VMAG_PULL, MSC_PULL } from './vizier';
 import {
   BSC5, CNS5, CROSS_INDEX, GLIESE, HIP2, HIP_MAIN_VMAG, MSC_COMPONENTS, MSC_ORBITS, MSC_SYSTEMS, TYC2_HD, type VizierTable,
@@ -33,6 +34,17 @@ const recorded = (name: string, table: VizierTable): RecordedAsu => {
 
 describe.each(TABLES)('$name', ({ name, file, table }) => {
   recordedTableCases(name, file, table, recorded(name, table));
+});
+
+const TIED_ON_KEYS = TABLES.filter(({ name }) => ['tyc2Hd', 'systems', 'orbits', 'components'].includes(name));
+
+describe.each(TIED_ON_KEYS)('$name', ({ name, file, table }) => {
+  it.skipIf(!lfsContentReadable(join(REPO_ROOT, file)))('ties no two distinct committed lines under its sort', () => {
+    const { lines, rows } = committedRows(file);
+    const order = rowOrder(table.columns, table.sortBy, name);
+    const tied = rows.slice(1).flatMap((row, i) => (order(rows[i], row) === 0 && lines[i] !== lines[i + 1] ? [lines[i + 1]] : []));
+    expect(tied).toEqual([]);
+  });
 });
 
 const PULLS: readonly Pull<string>[] = [CLASSIC_IDS_PULL, HIP_VMAG_PULL, GLIESE_PULL, HIP2_PULL, MSC_PULL];
