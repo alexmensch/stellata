@@ -155,8 +155,12 @@ stages' declarations: [reason-codes/](reason-codes/README.md).
 A tripwire is an invariant over a stage's own lines, never a pinned count: a
 count says a number moved, a query names the rows that moved it. Each
 `LineageInvariant` (`lineage-invariant-pure.ts`) names one code that must not
-appear, what holds while it does not, and its allowed exceptions as a
-predicate over the row's `params` (`NO_EXCEPTIONS` for a zero-pin). A stage
+appear, what holds while it does not, and its allowed exceptions: a rule, a
+predicate over the row's `params` (`lineageInvariant`; `NO_EXCEPTIONS` for a
+zero-pin), or a list of named records, the values one `params` field may take,
+each with what it is (`namedExceptionsInvariant`). A named exception no row
+carries any more fails the check too, naming it, so the list only shrinks: a
+known defect fixed upstream is deleted from it in the same change. A stage
 declares its invariants beside its codes and hands them to `stageLineage`,
 which checks every line before emission: a violation is a failed check, so
 nothing lands, and the message lists the offending rows' keys and params.
