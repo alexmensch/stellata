@@ -234,7 +234,10 @@ export function main(): void {
     const cappedMib = Number(read('capped.out'));
     expect(cappedMib).toBeGreaterThanOrEqual(HEAP_BUDGET_MIB);
     expect(cappedMib).toBeLessThan(CI_HEAP_LIMIT_MIB);
-    expect(Number(read('free.out'))).toBeGreaterThan(cappedMib);
+    const inheritedMib = Number(execFileSync(
+      process.execPath, ['-p', 'require("node:v8").getHeapStatistics().heap_size_limit / 2 ** 20'], { encoding: 'utf8' },
+    ));
+    expect(Number(read('free.out'))).toBe(inheritedMib);
   });
 
   it('runs a TypeScript step under the runner\'s own Node, the one its Node-major check reads', async () => {
