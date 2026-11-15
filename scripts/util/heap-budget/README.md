@@ -40,6 +40,12 @@ full collections, which is what the headroom covers. Over budget, the check
 fails the emission like any other, so nothing lands; the build log prints
 the peak beside the budget either way.
 
+When the step is legitimately bigger, shrink what it holds first — the
+placement lineage keeps lines, not objects
+([Storage and cost](../../catalog/lineage/README.md#storage-and-cost)). Raising
+the runner's heap (`--max-old-space-size`) is the owner's call, and moves
+`CI_HEAP_LIMIT_BYTES` with it.
+
 ## Measured need — build:catalog
 
 `build:catalog` completes at `--max-old-space-size=2925` and runs out of
@@ -52,9 +58,3 @@ whose working set otherwise pushed the step past the budget. A diff against
 a baseline that differs by many keys holds its changed lines briefly on top
 ([Run-to-run diff](../../catalog/lineage/README.md#run-to-run-diff)), which
 this figure does not include.
-
-When the step is legitimately bigger, shrink what it holds first — the
-placement lineage keeps lines, not objects
-([Storage and cost](../../catalog/lineage/README.md#storage-and-cost)). Raising
-the runner's heap (`--max-old-space-size`) is the owner's call, and moves
-`CI_HEAP_LIMIT_BYTES` with it.
