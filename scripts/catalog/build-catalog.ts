@@ -391,8 +391,8 @@ export async function main() {
   // sources without double-flagging components of the same system.
   console.log('Parsing Hipparcos CCDM double-star cross-reference...');
   const tCcdm = Date.now();
-  const doubles = doublesEvidence(parseHipCcdm(HIP_CCDM.read()), collectPhysicalPairKeys(multiplesRows));
-  const ccdm = applyDoublesFlag(stars, doubles, hipToIndex);
+  const doubles = doublesEvidence(parseHipCcdm(HIP_CCDM.read()), collectPhysicalPairKeys(multiplesRows), hipToIndex);
+  const ccdm = applyDoublesFlag(stars, doubles);
   console.log(`  in ${Date.now() - tCcdm}ms`);
 
   const eclipsing = wingEclipsingBinaries(stars);
@@ -420,7 +420,7 @@ export async function main() {
   // Serialized here so the tree objects are not held through emission (the CI heap budget).
   const systems = (() => {
     const built = buildSystemMembership({
-      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles, hipToIndex,
+      records: stars, multiplicityStatus, wdsPairs: resolvedPairs, doubles,
       geometricPairs: mutualPairs(stars), lentDistance: lentDistanceRecords(stars, anchorMoved),
     });
     return { json: serializeSystemMembership(built.membership), counts: built.counts };

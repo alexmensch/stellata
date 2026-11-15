@@ -26,7 +26,6 @@ export interface SystemMembershipInputs {
   readonly multiplicityStatus: Uint8Array;
   readonly wdsPairs: readonly WdsPairEnds[];
   readonly doubles: DoublesEvidence;
-  readonly hipToIndex: ReadonlyMap<number, number>;
   /** The geometric pass's mutual pairs. */
   readonly geometricPairs: readonly (readonly [number, number])[];
   /** Records whose distance is not their own measurement (README.md#geometric-pairs). */
@@ -155,8 +154,7 @@ export function buildSystemMembership(inputs: SystemMembershipInputs): { members
   const ccdmGroups: number[][] = [];
   const ccdmSingles = new Set<number>();
   let systemCcdmOpticalMembers = 0;
-  for (const hips of inputs.doubles.groups) {
-    const members = [...new Set(hips.flatMap((h) => inputs.hipToIndex.get(h) ?? []))].sort(ascending);
+  for (const members of inputs.doubles.groups) {
     if (members.length === 1) ccdmSingles.add(members[0]);
     if (members.length < 2) continue;
     const kept = members.filter((m) => !isOpticalDoubleMember(m, members, inputs.records, inputs.doubles.optical));

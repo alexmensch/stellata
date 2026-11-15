@@ -4,6 +4,7 @@ import type { ColumnTable } from '../../util/tsv/table-pure';
 import {
   flagGroupPrimaries,
   isOpticalDoubleMember,
+  resolveGroups,
   OPTICAL_DOUBLE_MIN_SEP_PC,
   type OpticalDoubleContext,
 } from './binary-flags-pure';
@@ -127,7 +128,7 @@ export function collectPhysicalPairKeys(
 
 /** The double-star systems both the wings pass and system membership read, with the optical-double gate's context. */
 export interface DoublesEvidence {
-  /** Each system's HIPs: every real CCDM group, then each curated system. */
+  /** Each system's catalogue records (resolveGroups): every real CCDM group, then each curated system. */
   readonly groups: readonly (readonly number[])[];
   readonly ccdmGroupCount: number;
   readonly optical: OpticalDoubleContext;
@@ -135,11 +136,15 @@ export interface DoublesEvidence {
 
 // The curated KNOWN_VISUAL_DOUBLES are folded into the physical-evidence set
 // so the optical-double gate never fires on them.
-export function doublesEvidence(ccdmGroups: ReadonlyMap<string, readonly number[]>, physical: PhysicalPairKeys): DoublesEvidence {
+export function doublesEvidence(
+  ccdmGroups: ReadonlyMap<string, readonly number[]>,
+  physical: PhysicalPairKeys,
+  hipToIndex: ReadonlyMap<number, number>,
+): DoublesEvidence {
   const physicalHips = new Set<number>(physical.hips);
   for (const h of KNOWN_VISUAL_DOUBLE_HIPS) physicalHips.add(h);
   return {
-    groups: [...ccdmGroups.values(), ...KNOWN_VISUAL_DOUBLES.map((sys) => sys.components)],
+    groups: resolveGroups([...ccdmGroups.values(), ...KNOWN_VISUAL_DOUBLES.map((sys) => sys.components)], hipToIndex),
     ccdmGroupCount: ccdmGroups.size,
     optical: { physicalHips, physicalGaia: physical.gaia, minSepPc: OPTICAL_DOUBLE_MIN_SEP_PC },
   };
@@ -153,10 +158,9 @@ export function doublesEvidence(ccdmGroups: ReadonlyMap<string, readonly number[
 export function applyDoublesFlag(
   stars: Star[],
   evidence: DoublesEvidence,
-  hipToIndex: Map<number, number>,
 ): Pick<MultiplicityCounts, 'ccdmGroups' | 'ccdmResolved' | 'ccdmFlagged' | 'ccdmSuppressedOptical'> {
-  const suppress = (primaryIdx: number, memberIndices: number[]): boolean =>
+  const suppress = (primaryIdx: number, memberIndices: readonly number[]): boolean =>
     isOpticalDoubleMember(primaryIdx, memberIndices, stars, evidence.optical);
-  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, evidence.groups, hipToIndex, suppress);
+  const { systems, flagged, suppressed } = flagGroupPrimaries(stars, evidence.groups, suppress);
   return { ccdmGroups: evidence.ccdmGroupCount, ccdmResolved: systems, ccdmFlagged: flagged, ccdmSuppressedOptical: suppressed };
 }

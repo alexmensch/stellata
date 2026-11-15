@@ -227,9 +227,11 @@ same predicate to every member of a group
 
 `parseHipCcdm` returns systems grouped by `CCDM_ID`, **real CCDM strings
 only** — it skips any HIP the curated list already claims, and mints no
-key of its own for one. `applyDoublesFlag` is what unions the two, and it
-does so as bare component lists rather than keyed groups, so a curated
-system never needs a CCDM identifier it does not have.
+key of its own for one. `doublesEvidence` unions the two as bare component
+lists rather than keyed groups, so a curated system never needs a CCDM
+identifier it does not have, and resolves each to its catalogue records
+once (`resolveGroups`: deduplicated, ascending, empty groups dropped) for
+both the wings pass and system membership.
 `flagGroupPrimaries` (`binary-flags-pure.ts`) then walks each group, picks the **brightest** catalog member (lowest
 `absmag`), and — unless the optical-double gate above vetoes it —
 ORs `0x10` onto only that one, so each Hipparcos-resolved system

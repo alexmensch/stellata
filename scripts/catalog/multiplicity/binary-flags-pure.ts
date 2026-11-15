@@ -6,6 +6,7 @@ import {
   VAR_TYPE_ECLIPSING,
   type DistVia,
 } from '../../../src/catalog-format/record/catalog-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 import type { MultiplicityCounts } from './multiplicity-stage-pure';
 
 // Pairs within this 3D distance are flagged as a physical binary/multiple
@@ -32,7 +33,7 @@ export interface BinaryStar {
 // in inferBinaries; CCDM groups + curated doubles in flagGroupPrimaries).
 export function pickBrightest(
   stars: Pick<BinaryStar, 'absmag'>[],
-  indices: number[],
+  indices: readonly number[],
 ): number {
   let bestIdx = -1;
   let bestMag = Infinity;
@@ -53,7 +54,7 @@ export function pickBrightest(
 // produces the same flag bits.
 export function markPrimary(
   stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: number[],
+  indices: readonly number[],
 ): number {
   const bestIdx = pickBrightest(stars, indices);
   if (bestIdx === -1) return -1;
@@ -65,7 +66,7 @@ export function markPrimary(
 // set — the CCDM optical-double gate (see isOpticalDoubleMember).
 export type SuppressPredicate = (
   primaryIdx: number,
-  memberIndices: number[],
+  memberIndices: readonly number[],
 ) => boolean;
 
 // Like markPrimary, but a no-op when any star in `indices` already carries
@@ -86,7 +87,7 @@ export type SuppressPredicate = (
 // was already flagged, or -3 if `suppress` vetoed the pick.
 export function markPrimaryIfUnflagged(
   stars: Pick<BinaryStar, 'absmag' | 'flags'>[],
-  indices: number[],
+  indices: readonly number[],
   suppress?: SuppressPredicate,
 ): number {
   if (indices.length === 0) return -1;
@@ -100,22 +101,16 @@ export function markPrimaryIfUnflagged(
   return bestIdx;
 }
 
-// Apply FLAG_BINARY_PRIMARY across an iterable of HIP-indexed groups. Each
-// group's brightest in-catalog component (lowest absmag) gets the bit,
+// Apply FLAG_BINARY_PRIMARY across groups of record indices (resolveGroups).
+// Each group's brightest component (lowest absmag) gets the bit,
 // idempotent with any pre-existing flags from `inferBinaries` (the
-// geometric mutual-pair pass can have already marked one member). Groups
-// with no in-catalog members are silently skipped.
-//
-// The `groups` iterable is the union of CCDM groups parsed from the
-// Hipparcos cross-reference and the curated `KNOWN_VISUAL_DOUBLES`
-// overrides — the caller (build-catalog) constructs the union; this
-// helper just walks it.
+// geometric mutual-pair pass can have already marked one member).
 //
 // `suppress` (optional) is forwarded to `markPrimaryIfUnflagged` to veto
 // optical doubles — see isOpticalDoubleMember.
 //
 // Returns:
-//   systems     — count of groups that resolved at least one in-catalog HIP.
+//   systems     — count of groups.
 //   flagged     — count of groups where this pass set a fresh primary
 //                 (i.e. excludes groups whose primary was already set by a
 //                 prior pass).
@@ -142,28 +137,32 @@ export function buildHipToIndex(
   return m;
 }
 
+/** Each group's in-catalogue records, ascending and deduplicated; a group with none is dropped. */
+export function resolveGroups(
+  groups: Iterable<Iterable<number>>,
+  hipToIndex: ReadonlyMap<number, number>,
+): number[][] {
+  const out: number[][] = [];
+  for (const hips of groups) {
+    const indices = [...new Set([...hips].flatMap((h) => hipToIndex.get(h) ?? []))].sort(ascending);
+    if (indices.length > 0) out.push(indices);
+  }
+  return out;
+}
+
 export function flagGroupPrimaries(
   stars: DoublesStar[],
-  groups: Iterable<Iterable<number>>,
-  hipToIndex: Map<number, number>,
+  groups: readonly (readonly number[])[],
   suppress?: SuppressPredicate,
 ): { systems: number; flagged: number; suppressed: number } {
-  let systems = 0;
   let flagged = 0;
   let suppressed = 0;
-  for (const hips of groups) {
-    const indices: number[] = [];
-    for (const h of hips) {
-      const idx = hipToIndex.get(h);
-      if (idx !== undefined) indices.push(idx);
-    }
-    if (indices.length === 0) continue;
-    systems++;
+  for (const indices of groups) {
     const picked = markPrimaryIfUnflagged(stars, indices, suppress);
     if (picked >= 0) flagged++;
     else if (picked === -3) suppressed++;
   }
-  return { systems, flagged, suppressed };
+  return { systems: groups.length, flagged, suppressed };
 }
 
 // ---- CCDM optical-double suppression ------------------------------------

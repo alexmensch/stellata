@@ -40,7 +40,7 @@ function doubles(groups: number[][], physicalHips: number[] = []): DoublesEviden
   };
 }
 
-// 0–5 Castor (WDS); 6 a CCDM extra of Castor (HIP 106 shares HIP 100's group);
+// 0–5 Castor (WDS); 6 a CCDM extra of Castor (shares record 0's group);
 // 7 a geometric partner of 4; 8–9 a CCDM-only pair; 10 + 11 a CCDM pair 50 pc apart
 // along the sightline, so each member is the other's optical double; 12–13 a geometric-only pair; 14–15 a geometric pair with
 // a minted member; 16 eclipsing; 17 SIMBAD multiple; 18 alone in its CCDM group.
@@ -63,8 +63,7 @@ function fixture(): SystemMembershipInputs {
       pair(CASTOR, 'A', 'B', 0, 1), pair(CASTOR, 'A', 'C', 0, 2),
       pair(CASTOR, 'Aa', 'Ab', 0, 3), pair(CASTOR, 'Ba', 'Bb', 1, 4), pair(CASTOR, 'Ca', 'Cb', 2, 5),
     ],
-    doubles: doubles([[100, 106], [108, 109], [110, 111], [118]]),
-    hipToIndex: new Map(records.flatMap((s, i) => (s.hip === null ? [] : [[s.hip, i] as const]))),
+    doubles: doubles([[0, 6], [8, 9], [10, 11], [18]]),
     geometricPairs: [[4, 7], [12, 13], [14, 15], [0, 3]],
     lentDistance: lentDistanceRecords(records, new Set()),
   };
@@ -112,7 +111,7 @@ describe('buildSystemMembership', () => {
     const out = buildSystemMembership({
       records, multiplicityStatus: new Uint8Array(4),
       wdsPairs: [pair(CASTOR, 'A', 'B', 0, 1), pair(OTHER, 'A', 'B', 2, 3)],
-      doubles: doubles([[1, 3]], [1, 3]), hipToIndex: new Map([[1, 0], [3, 2]]),
+      doubles: doubles([[0, 2]], [1, 3]),
       geometricPairs: [], lentDistance: new Set(),
     });
     expect(out.membership.systems).toEqual([
@@ -125,7 +124,7 @@ describe('buildSystemMembership', () => {
     const out = buildSystemMembership({
       records, multiplicityStatus: new Uint8Array(3),
       wdsPairs: [pair(CASTOR, 'Aa', 'Ab', 0, 1)],
-      doubles: doubles([]), hipToIndex: new Map(), geometricPairs: [[1, 2]], lentDistance: new Set(),
+      doubles: doubles([]), geometricPairs: [[1, 2]], lentDistance: new Set(),
     });
     expect(out.membership.systems[0].root).toEqual(g(null, r(0), g(null, r(1), r(2))));
   });
