@@ -75,6 +75,12 @@ describe('wdsTrees', () => {
     const pairs = [pair(a, 'A', 'B', 1, 9), pair(b, 'A', 'B', 2, 9)];
     const inside = wdsTrees(pairs, (i) => (i === 9 ? atWds(a, WDS_IDENTITY_MAX_ARCMIN - 0.01) : atWds(a)));
     expect(inside.counts.systemWdsIdentityGated).toBe(1);
+    expect(inside.trees.map((t) => t.wdsId)).toEqual([a]);
+
+    const near = [pair(a, 'A', 'B', 1, 9), pair(b, 'A', 'B', 2, 9)];
+    const outside = wdsTrees(near, (i) => (i === 9 ? atWds(a, WDS_IDENTITY_MAX_ARCMIN + 0.01) : atWds(a)));
+    expect(outside.counts).toMatchObject({ systemWdsIdentityGated: 0, systemWdsAmbiguous: 1 });
+    expect(outside.trees).toEqual([]);
   });
 
   it('throws on a claiming WDS id with no parsable coordinates', () => {
