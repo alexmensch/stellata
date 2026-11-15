@@ -1,7 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import { applyDesignationConstellations } from '../classic-ids/apply-designation-constellation';
-import type { DesignationConIndex } from '../classic-ids/designation-constellation-pure';
 import { promoteCompanions, type PromotionInputs } from '../companions/companion-promotion';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
 import type { ResolvedPair } from '../companions/record-index/pair-resolution-pure';
@@ -13,13 +11,13 @@ import { assignDisplayNames } from '../naming/display-names';
 import { applyVariability } from '../parse/gcvs/gcvs-parse';
 import { makeStar } from '../parse/star-fixture';
 import { sortByApparentV } from './record-order-pure';
-import { allocatedSids, enterPhase, finalise } from './record-phase';
+import { allocatedSids, enterPhase, finalise, type Records } from './record-phase';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 
 declare const rows: MultiplesTsvRow[];
 declare const promotionInputs: PromotionInputs;
 declare const verdicts: readonly SystemVerdict[];
 declare const pairs: readonly ResolvedPair[];
-declare const conIndex: DesignationConIndex;
 declare const namingInputs: StarNamingInputs;
 
 describe('record phases', () => {
@@ -40,8 +38,8 @@ describe('record phases', () => {
       ],
       [
         // @ts-expect-error naming runs before promotion
-        () => applyStarNames(promoted, namingInputs, []),
-        () => applyStarNames(walked, namingInputs, []),
+        () => applyStarNames(promoted, (s) => s.desigCon, namingInputs, []),
+        () => applyStarNames(walked, () => NO_DESIGNATION_CON, namingInputs, []),
       ],
       [
         // @ts-expect-error coherence runs before promotion
@@ -74,11 +72,6 @@ describe('record phases', () => {
         () => renderableCompanionClaims(pairs, sorted, new Set()),
       ],
       [
-        // @ts-expect-error designation constellations precede variability
-        () => applyDesignationConstellations(sorted, conIndex),
-        () => applyDesignationConstellations(walked, conIndex),
-      ],
-      [
         // @ts-expect-error variability fills desigCon only where IV/27A left it empty
         () => applyVariability(walked, new Map(), xref),
         () => applyVariability(sorted, new Map(), xref),
@@ -94,7 +87,18 @@ describe('record phases', () => {
         () => assignDisplayNames(sorted, new Map(), [], new Map(), sids),
       ],
     ];
-    expect(refusedBesideInPlace).toHaveLength(12);
+    expect(refusedBesideInPlace).toHaveLength(11);
+  });
+
+  it('refuses a field group read on a record whose phase precedes the step that attaches it, at compile time', () => {
+    const readBeforeBeside = [
+      [
+        // @ts-expect-error the naming step attaches the naming fields
+        (r: Records<'walked'>) => r[0].bayer,
+        (r: Records<'named'>) => r[0].bayer,
+      ],
+    ];
+    expect(readBeforeBeside).toHaveLength(1);
   });
 
   it('finalises only when the SIDs and display names pair one-for-one with the records', () => {

@@ -4,7 +4,7 @@ import { parkedRecord } from '../distance/placement-lineage-pure';
 import { placementDerivedFold, type PlacementDerivedCounts } from '../distance/placement-counts-pure';
 import type { ParkedRecord } from '../distance/parallax/parked-ledger-pure';
 import { GALACTIC_ESCAPE_VELOCITY_KM_S, VELOCITY_SANITY_CEILING_KM_S } from '../distance/velocity';
-import type { RowOutcome, Star } from './stars-parse';
+import type { RowOutcome, WalkedStar } from './stars-parse';
 
 export const VELOCITY_ABOVE_ESCAPE_SAMPLE_CAP = 25;
 
@@ -19,7 +19,7 @@ export interface WalkStats {
   rvRadialRejectedSample: string[];   // per-rejected-star "id: rv @ dist" for build-log review
 }
 
-function sampleLabel({ printedName, hip, gaiaSourceId }: Star): string {
+function sampleLabel({ printedName, hip, gaiaSourceId }: WalkedStar): string {
   return printedName ?? (hip !== null ? `HIP ${hip}` : gaiaSourceId ? `Gaia ${gaiaSourceId}` : '(anon)');
 }
 

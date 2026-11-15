@@ -21,6 +21,7 @@ export function makeStar(overrides: Partial<Star> = {}): Star {
     desigCon: NO_DESIGNATION_CON,
     flags: 0,
     printedName: null,
+    printedBayer: null,
     iauName: null,
     eponym: null,
     bayer: null,

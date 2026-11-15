@@ -556,6 +556,7 @@ function promoteRow(
     desigCon,
     flags,
     printedName: null,
+    printedBayer: null,
     iauName: null,
     eponym: null,
     bayer: null,

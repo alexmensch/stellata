@@ -86,7 +86,7 @@ scripts/catalog/naming/
                                 `membershipProperKey` is the one place its
                                 join key is built.
   apply-star-names.ts           I/O + the record pass: loads the committed
-    (+ test)                    tables and writes each record's authority
+    (+ test)                    tables and attaches each record's authority
                                 tiers, aliases and designation
                                 constellation. Also loads the curated
                                 override table (`data/naming/`).

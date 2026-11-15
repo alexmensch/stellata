@@ -22,7 +22,6 @@ import { angularSeparationArcsec, directionAtEpoch, unitVectorFromRaDec } from '
 import type { GlieseIndex } from '../gliese-parse-pure';
 import { GLIESE } from '../gliese-source';
 import { TYCHO2 } from '../tycho2-source';
-import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
 import { CNS5 } from '../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
@@ -400,16 +399,12 @@ describe('readStars constellation assignment', () => {
     expect(stars[0].conIndex).toBe(conIndexOf('del'));
   });
 
-  it('names no designation constellation — the manifest has no editorial cell', () => {
-    // ρ Aql is the sharpest case: the walk used to read "Aql" off AT-HYG's
-    // `con` column, and nothing replaces it here. The IV/27A, WGSN and GCVS
-    // passes downstream are the only sources, and this row reaches none of
-    // them in a bare walk, so its aliases fall back to the positional index.
+  it('carries no naming field — the manifest has no editorial constellation cell, and the naming step attaches them', () => {
     const { stars } = readStarsDiscarding(
       manifestRows([RHO_AQL, { ...AT_ORIGIN_SIGHTLINE, proper: 'Anon' }]),
       { ...BASE_OPTIONS, directions: RHO_AQL_DIRECTIONS(), gliese: RHO_AQL_GLIESE() },
     );
-    expect(stars.map((s) => s.desigCon)).toEqual([NO_DESIGNATION_CON, NO_DESIGNATION_CON]);
+    expect(stars.map((s) => 'desigCon' in s || 'bayer' in s || 'aliases' in s)).toEqual([false, false]);
   });
 
   it('leaves Sol unclassified — the origin has no sky direction', () => {

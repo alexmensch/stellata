@@ -14,7 +14,7 @@ const row = (over: Partial<DesignationRow>): DesignationRow => ({
 });
 
 const apply = (stars: ReturnType<typeof makeStar>[], designations: DesignationRow[]) =>
-  applyStarNames(enterPhase('walked', stars), { names: [], designations, dispositions: new Map() }, CONSTELLATIONS);
+  applyStarNames(enterPhase('walked', stars), (s) => s.desigCon, { names: [], designations, dispositions: new Map() }, CONSTELLATIONS);
 
 describe('applyStarNames: the designation constellation', () => {
   it('records the IV/27A constellation the authority\'s Bayer designation displaced (16 Lyn is ψ¹⁰ Aur)', () => {
@@ -35,6 +35,16 @@ describe('applyStarNames: the designation constellation', () => {
     const star = makeStar({ hd: 2 });
     apply([star], [row({ kind: 'gould', num: 268, dc: 'Cet', hd: 2 })]);
     expect(star.desigCon).toEqual({ via: 'wgsn-gould', index: con('Cet'), displaced: null });
+  });
+});
+
+describe('applyStarNames: the printed Bayer cell', () => {
+  it('counts a letter the authority adds over no printed cell, and a printed cell it does not reach', () => {
+    const added = makeStar({ hd: 1 });
+    const dropped = makeStar({ hd: 2, printedBayer: 'Pi-1' });
+    const { counts } = apply([added, dropped], [row({ letter: 'μ', dc: 'Dra', hd: 1 })]);
+    expect([counts.namingBayerAdded, counts.namingBayerDropped]).toEqual([1, 1]);
+    expect([added.bayer, dropped.bayer]).toEqual(['μ', null]);
   });
 });
 

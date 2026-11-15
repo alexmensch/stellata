@@ -17,7 +17,7 @@ import { lineageLineCode, type LineageLine } from '../lineage/lineage-row-pure';
 import { codeEffects } from '../lineage/reason-codes/reason-codes-pure';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from '../membership/membership-manifest-tsv';
 import type { ReadStarsInputs } from '../parse/read-stars-inputs';
-import { readStars, type Star } from '../parse/stars-parse';
+import { readStars, type WalkedStar } from '../parse/stars-parse';
 import { walkVelocitySummary } from '../parse/walk-stats-pure';
 import {
   BRIGHTNESS_COLOUR_CODES, BRIGHTNESS_COLOUR_LINEAGE_BUDGET, brightnessColourLineageLines, brightnessColourSummary,
@@ -97,7 +97,7 @@ function parkedLedgerTsv(placementLines: readonly LineageLine[]): string {
  *  from the SIMBAD tier cannot be verified against SIMBAD's own parallax, so
  *  the sample validator needs to know which records those are. It reads
  *  catalog.bin, which carries no `distVia`, hence the file. */
-function simbadSourcedDistancesTsv(stars: readonly Star[]): string {
+function simbadSourcedDistancesTsv(stars: readonly WalkedStar[]): string {
   const rows = stars
     .filter((s) => s.distVia === 'simbad_plx')
     .map((s) => ({ gaiaSourceId: s.gaiaSourceId, hip: s.hip }));

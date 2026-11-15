@@ -61,7 +61,7 @@ not compile:
 
 | Phase | Entered by | Passes that take it |
 | --- | --- | --- |
-| `walked` | the manifest walk | `applyDesignationConstellations`, `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
+| `walked` | the manifest walk | `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
 | `named` | the walked passes | `promoteCompanions` |
 | `promoted` | promotion | `sortByApparentV` |
 | `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `ccdmClaims`, `eclipsingClaims`, `buildCatalogRowIndexMap`, `renderableCompanionClaims`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
@@ -81,8 +81,9 @@ Each order it holds, and why:
   ([Record order](/src/catalog-format/record/README.md#record-order)).
 - **The row-index map, then the wings** — the wings take resolved pairs, which
   only the map resolves, and the map takes `Sorted`.
-- **Designation constellations, then variability** — GCVS fills `desigCon`
-  only where IV/27A left it empty.
+- **Naming, then variability** — GCVS fills `desigCon` only where IV/27A
+  left it empty, and `desigCon` exists only once naming attaches it
+  ([Field groups](#field-groups)).
 - **SID allocation, then display names** — the curated overrides key on SIDs,
   and `assignDisplayNames` takes `AllocatedSids`, which only the allocation
   stage tags (`allocatedSids`).
@@ -97,6 +98,24 @@ and `encodeCatalog` sets the bit from its union.
 only by `finalise`, which throws unless the three pair one-for-one, and is
 what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
 printed name (`printedName`), so no reader can take the one for the other.
+
+## Field groups
+
+A field filled after the walk does not exist on a record before the step that
+fills it: the walk builds `WalkedStar` (`../parse/stars-parse.ts`), and each
+step attaches its group with `attach` (`record-phase.ts`), which writes the
+fields onto the same records and hands them back typed with them. A read of a
+group member on an earlier handle does not compile.
+
+| Group | Fields | Attached by |
+| --- | --- | --- |
+| `NamingFields` | `desigCon`, `iauName`, `eponym`, `bayer`, `bayerSup`, `bayerComponent`, `gould`, `gouldHalf`, `aliases` | `applyStarNames`, from IV/27A's `desigCon` (`designationConstellation`) |
+
+Each phase's record type is the default of `Records<P>`: `walked` records are
+`WalkedStar`, every later phase `Star`. The walk's own copy of the manifest's
+Bayer cell is `printedBayer`, read only for the ladder's added / dropped
+counts. A record promotion mints is a `Star` literal, so it states every
+naming field; leaving one to a default does not compile.
 
 `enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
 is entered once, by the pass that completes it, the SIDs are tagged once, by

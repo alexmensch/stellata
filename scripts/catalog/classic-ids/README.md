@@ -14,8 +14,9 @@ Two entry points, and they split cleanly: **this build joins the overlay,
 - `build:membership` runs `mergeClassicIdLabels` as it assembles each manifest
   row, keyed on the binding it derived, and writes
   `data/classic-ids/label_flips.tsv` (`label-merge/README.md`). The record
-  build reads the merged cells off the manifest and applies only
-  `applyDesignationConstellations` ([The designation constellation](#the-designation-constellation)).
+  build reads the merged cells off the manifest and takes only
+  `designationConstellation` ([The designation constellation](#the-designation-constellation)),
+  where the naming ladder starts each record's `desigCon`.
 
 ## Subfolders
 
@@ -125,9 +126,12 @@ scripts/catalog/classic-ids/
                                   IAU set. Pure.
   apply-designation-constellation.ts
     (+ test)                      The record build's one remaining classic-ID
-                                  pass: loads IV/27A's cross-index and applies
-                                  designation-constellation-pure to the Star
-                                  array. The label merge does NOT run here —
+                                  step: loads IV/27A's cross-index and answers
+                                  each walked record's designation
+                                  constellation through
+                                  designation-constellation-pure, the tier
+                                  the naming ladder starts from. The label
+                                  merge does NOT run here —
                                   the manifest's cells are already final
                                   (label-merge/README.md).
   designation-constellation.test.ts
