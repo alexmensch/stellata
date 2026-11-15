@@ -101,17 +101,17 @@ class Run {
     const stampFile = tree.buildStamp(step.name);
     const judged = buildFreshness(step, resolved, tree);
     if (judged.freshness.kind === 'fresh' && !this.forced(step.name)) return judged.freshness;
+    const capped = step.heap === 'ci-budget';
+    if (capped) {
+      const runtime = heapRuntimeVerdict(nodeRuntime());
+      if (runtime.kind === 'other') return { kind: 'failed', reason: runtime.reason };
+    }
 
     clearStamp(stampFile);
     const env: NodeJS.ProcessEnv = { ...process.env, [PIPELINE_STEP_ENV]: step.name };
     if (this.options.updateSnapshots) env[UPDATE_SNAPSHOTS_ENV] = '1';
     else delete env[UPDATE_SNAPSHOTS_ENV];
     const { inputs } = judged;
-    const capped = step.heap === 'ci-budget';
-    if (capped) {
-      const runtime = heapRuntimeVerdict(nodeRuntime());
-      if (runtime.kind === 'other') return { kind: 'failed', reason: runtime.reason };
-    }
     const code = await runTs(tree, step.name, tree.abs(step.entry), [], inputs, capped ? heapCappedEnv(env, HEAP_BUDGET_MIB) : env);
     if (code !== 0) {
       const cap = capped ? ` with its heap capped at the CI budget, ${HEAP_BUDGET_MIB} MiB (/scripts/util/heap-budget/README.md)` : '';
