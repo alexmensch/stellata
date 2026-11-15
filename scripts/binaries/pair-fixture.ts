@@ -17,7 +17,7 @@ export function pair(systemId = '00000+0000-AB', over: PairOver = {}): Multiples
     : [components[0], components[1] ?? ''];
   const isElement = (k: string): boolean => (BINARY_ELEMENT_KEYS as readonly string[]).includes(k);
   return {
-    systemId, wdsId: wdsRootOf(systemId) as string,
+    systemId, wdsId: wdsRootOf(systemId) as string, origin: `multiples:${systemId}/${secondaryCell}`,
     primaryComp, secondaryComp: canonicalCompLetter(primaryComp, secondaryCell),
     primaryGaia: '1', primaryHip: null, secondaryGaia: '2', secondaryHip: null,
     ...Object.fromEntries(Object.entries(over).filter(([k]) => !isElement(k))),

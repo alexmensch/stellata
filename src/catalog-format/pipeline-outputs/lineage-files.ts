@@ -81,6 +81,11 @@ export const NAMING_LINEAGE: StageLineageSpec<'naming', 'naming'> = {
   files: ['naming'],
 };
 
+export const RUNTIME_PAIRS_LINEAGE: StageLineageSpec<'runtime-pairs', 'runtime-pairs'> = {
+  stage: 'runtime-pairs',
+  files: ['runtime-pairs'],
+};
+
 /** A sibling build's allocation stage: its rows, and identity rows carrying each object's designation. */
 export function siblingAllocationLineage<S extends string>(stage: S): StageLineageSpec<S | `${S}.identity`, S> {
   return { stage, files: [stage, `${stage}.identity`], identity: `${stage}.identity` };

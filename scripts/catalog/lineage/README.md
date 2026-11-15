@@ -15,7 +15,7 @@ keys are its codes, beside a derived block
 brightness-colour's, promotion's and naming's snapshot keys are their codes,
 folded from their lines (naming's beside a code-less authority tally,
 [Naming lineage](../naming/README.md#naming-lineage); promotion's post-passes,
-which act on records, file a derived block), and so are component-binding's, pairs' and classic-ids' (beside
+which act on records, file a derived block), and so are component-binding's, pairs', runtime-pairs' and classic-ids' (beside
 a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
@@ -169,6 +169,9 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 ([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
+Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
+`dropped.duplicate-relation`
+([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
 Promotion's (`PROMOTION_INVARIANTS`): no `brightness.anchor-collocated` row,
 and named rows alone for two codes
 ([Promotion's invariants](../companions/promotion-lineage/README.md#promotions-invariants)).
@@ -244,6 +247,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
+[runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
 [classic-ids'](../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),
 [promotion's](../companions/promotion-lineage/README.md#promotion-lineage),
@@ -416,3 +420,10 @@ contract lives beside its module, in [Naming lineage](../naming/README.md#naming
 
 `build:catalog`'s companion promotion is the stage after coherence; its
 contract lives beside its module, in [Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage).
+
+## The runtime-pairs stage
+
+`build:binaries-runtime` writes it, after naming: every `multiples.tsv`
+pair's fate in `binaries.bin`, keyed on the pair's secondary row. Its
+contract lives beside its module, in
+[Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage).

@@ -478,6 +478,12 @@ promotion.size.blend-split	promotion	none	outcome	live		7.1.27	Blend split re-de
 promotion.size.mint	promotion	none	outcome	live		7.1.27	Promotion sized the minted record from its absolute magnitude and spectral class, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.size.recurated	promotion	none	outcome	live		7.1.27	Re-curation re-derived the held record's radius from its new absolute magnitude, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.spectral.ms-from-own-absmag	promotion	none	outcome	live		7.1.20	The minted record's spectral class is a main-sequence estimate from its own absolute magnitude, the row's type being its primary's or blank.
+runtime-pairs.dropped.degenerate-idx	runtime-pairs	none	outcome	live		7.1.27	A pair whose two ends resolve to one catalogue record.
+runtime-pairs.dropped.duplicate-relation	runtime-pairs	none	outcome	live		7.1.27	A pair whose distinct star collapsed onto the records of another pair, the one kept: a missing minted slot.
+runtime-pairs.dropped.primary-unresolved	runtime-pairs	none	outcome	live		7.1.27	A pair whose primary resolves to no catalogue record.
+runtime-pairs.dropped.same-relation-alias	runtime-pairs	none	outcome	live		7.1.27	A pair naming the same physical link as the kept pair of its (primary, secondary) records, at another granularity.
+runtime-pairs.dropped.secondary-unresolved	runtime-pairs	none	outcome	live		7.1.27	A pair whose secondary resolves to no catalogue record.
+runtime-pairs.emitted	runtime-pairs	none	outcome	live		7.1.27	A pair emitted to the runtime orbit file as a record of its own.
 size.apsis-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.
 size.class-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and the class-table Teff and bolometric correction.
 size.non-finite-luminosity	size	none	outcome	live		7.1.16	The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.
