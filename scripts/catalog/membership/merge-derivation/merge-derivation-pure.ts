@@ -277,6 +277,26 @@ export function simbadRefusedMoves(
   return out;
 }
 
+/** The pair rule to its fixed point under the SIMBAD check: `downstream` carries one pass's rows to the HDs they ship.
+ *  see README.md#applying-the-pair-rule */
+export function settlePairRule<T>(
+  kept: readonly SpineRow[],
+  m: PairLinks,
+  binds: (row: SpineRow) => string | null,
+  dispositions: ReadonlyMap<number, PairDisposition>,
+  tycHds: (tyc: string) => readonly number[],
+  downstream: (rows: readonly SpineRow[]) => { value: T; shippedHd: (row: number) => number | null },
+): PairRuleResult & { value: T } {
+  const refused = new Set<number>();
+  for (;;) {
+    const pair = applyPairRule(kept, m, binds, refused, dispositions);
+    const { value, shippedHd } = downstream(pair.rows);
+    const newlyRefused = simbadRefusedMoves(pair.rows, pair.decided, shippedHd, tycHds);
+    if (newlyRefused.size === 0) return { ...pair, value };
+    for (const hip of newlyRefused) refused.add(hip);
+  }
+}
+
 /** see README.md#applying-the-pair-rule */
 export function applyEveryPairMove(
   kept: readonly SpineRow[], m: PairLinks, dispositions: ReadonlyMap<number, PairDisposition>,

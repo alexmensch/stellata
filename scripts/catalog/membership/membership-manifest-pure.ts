@@ -15,7 +15,7 @@ import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
 import {
-  applyPairRule, iv25TycHds, mergeDivergences, pairLinksFrom, simbadRefusedMoves,
+  iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 import type { PairDisposition } from './pair-review-dispositions-pure';
@@ -92,27 +92,20 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
   const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
 
-  const pairPass = (refused: ReadonlySet<number>) => {
-    const pair = applyPairRule(
-      correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, refused, input.pairDispositions,
-    );
-    const settlement = settleSpineBindings({
-      kept: pair.rows, keyOf, derive, dispositions: input.dispositions, evidence, tables,
-    });
-    const spine = spineSide({
-      kept: pair.rows, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
-      siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
-    });
-    const newlyRefused = simbadRefusedMoves(pair.rows, pair.decided, (i) => spine.rows[i].hd, tycHds);
-    return { ...pair, settlement, spine, newlyRefused };
-  };
-  const refused = new Set<number>();
-  let pass = pairPass(refused);
-  while (pass.newlyRefused.size > 0) {
-    for (const hip of pass.newlyRefused) refused.add(hip);
-    pass = pairPass(refused);
-  }
-  const { rows: kept, decided, received, settlement, spine } = pass;
+  const pair = settlePairRule(
+    correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, input.pairDispositions, tycHds,
+    (rows) => {
+      const settlement = settleSpineBindings({
+        kept: rows, keyOf, derive, dispositions: input.dispositions, evidence, tables,
+      });
+      const spine = spineSide({
+        kept: rows, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
+        siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
+      });
+      return { value: { settlement, spine }, shippedHd: (i) => spine.rows[i].hd };
+    },
+  );
+  const { rows: kept, decided, received, value: { settlement, spine } } = pair;
   const keptKeys = spineKeys(kept);
   const mergeLinks = { ...pairLinks, held: keptKeys };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i), received.has(i)).map(
