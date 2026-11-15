@@ -2,7 +2,7 @@
 
 The source_id list the one Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_astrometry_source_id_request.tsv`
-— **388,914** ids, the union of four contributions the table's
+— **388,982** ids, the union of four contributions the table's
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -83,8 +83,8 @@ different sets, so the request is the union of all four:
 | Contribution | Ids | Consumer |
 |---|---|---|
 | `../classic-ids/`' binding-gate candidates | 354,987 | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 376,161, +21,412 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows as the pair rule leaves them ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)), and every addition item `additionItemCells` enumerates, admitted or not |
-| `../../binaries/`' Stage 2 candidates | 24,512, +12,485 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
+| `../membership/`' binding-derivation candidates | 376,306, +21,557 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows both as they stand and with every move the pair rule's Gaia test makes applied, so either entry a queued pair can ship on is covered ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)), and every addition item `additionItemCells` enumerates over each arrangement, admitted or not |
+| `../../binaries/`' Stage 2 candidates | 24,512, +12,408 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
 | `binding-review-dispositions.tsv`' `keep_source_id` column | 53, +30 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
 
 `build:astrometry-request` prints every figure in this table — each
@@ -174,8 +174,8 @@ silently accepting bindings: the overlay through classic-ID lineage's
 `unweighed-no-pulled-row` invariant, which names each designation and source,
 and the derivation through membership lineage's
 `binding.unweighed-no-pulled-row` invariant, which names each record and
-source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 388,912 rows against the request's
-388,914: 2 requested ids have no row, and both are reviewed bindings rather
+source ([Invariants](../lineage/README.md#invariants)). Neither fires today. The pull holds 388,980 rows against the request's
+388,982: 2 requested ids have no row, and both are reviewed bindings rather
 than candidates — the two DR2 ids of `data/athyg/stale_gaia_source_ids.tsv` SIMBAD
 holds no DR3 successor for ([Six source_ids DR3 does not publish](../spine/README.md#six-source_ids-dr3-does-not-publish)).
 HD 2094 B's source, which only the spine's uncorrected TYC reached

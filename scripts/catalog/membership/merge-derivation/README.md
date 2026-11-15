@@ -18,8 +18,10 @@ scripts/catalog/membership/merge-derivation/
   merge-derivation-pure.ts   pairLinksFrom (the links the derivation joins on,
     (+ test)                 built over ../../spine/association-audit-pure.ts's
                              tables), pairOwner, applyPairRule (the kept rows
-                             with every move applied) and mergeDivergences,
-                             one row's divergences. Pure.
+                             with every move applied that no gate refuses),
+                             applyEveryPairMove (every move, none refused)
+                             and mergeDivergences, one row's divergences.
+                             Pure.
 ```
 
 `../membership-manifest-pure.ts` applies the pair rule to the kept spine rows
@@ -52,8 +54,10 @@ star.
 
 `applyPairRule` runs on the kept spine rows before anything else reads them, so
 the binding derivation, the label merge and the additions all see the moved
-rows. `build:astrometry-request` applies it the same way, so the request
-weighs the entries the records now sit on. A move changes one of two things:
+rows. `build:astrometry-request` requests both arrangements — the rows as
+they stand and with every Gaia move applied (`applyEveryPairMove`) — so
+whichever entry a record ends on, queued or moved, its candidates were
+pulled. A move changes one of two things:
 
 - **The row's TYC**, when the owner entry is no spine record's: the record
   keeps its HIP, HD and SID and moves onto the other entry, so its position,
@@ -77,8 +81,7 @@ source Gaia's two cross-matches named — the magnitude gate finding G more than
 a magnitude below the record's printed V, or SIMBAD giving the source to
 another component — Gaia contradicts itself, so the HIP is queued
 (`gate_refused`) rather than moved. On those pairs Gaia's HIP cross-match
-most likely names the fainter star. `build:astrometry-request` derives the
-same bindings over the pull it requests, so the two make the same move.
+most likely names the fainter star.
 
 A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot

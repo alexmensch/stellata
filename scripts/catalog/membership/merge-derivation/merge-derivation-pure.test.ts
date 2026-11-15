@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
-import { applyPairRule, hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
+import { applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairOwner, type MergeLinks } from './merge-derivation-pure';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -104,6 +104,15 @@ describe('applyPairRule', () => {
     expect(decided).toEqual(new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' }]]));
     expect(mergeDivergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
       .toContainEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
+  });
+});
+
+describe('applyEveryPairMove', () => {
+  it('applies a move whatever the binding gates would make of it', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' }), row({ tyc: '2-2-2', hip: '20' })];
+    expect(applyEveryPairMove(kept, mergeLinks(links({ [B]: 'S1' })))).toEqual([
+      row({ tyc: B, hip: '10', hd: '100' }), row({ tyc: '2-2-2', hip: '20' }),
+    ]);
   });
 });
 

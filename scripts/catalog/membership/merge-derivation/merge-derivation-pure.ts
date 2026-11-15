@@ -145,10 +145,13 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   };
 }
 
-/** `binds` is the source the binding derivation ships for a row. see README.md#applying-the-pair-rule */
-export function applyPairRule(
-  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null,
-): { rows: SpineRow[]; decided: ReadonlyMap<number, PairDecision> } {
+type PairMove = Extract<MergeDivergence, { kind: 'pair-moves' }>;
+type PairRuleResult = { rows: SpineRow[]; decided: ReadonlyMap<number, PairDecision> };
+
+/** Every move the Gaia test makes, each applied unless `refusal` names why it is queued instead. */
+function applyMoves(
+  kept: readonly SpineRow[], m: PairLinks, refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
+): PairRuleResult {
   const rows = [...kept];
   const byTyc = new Map<string, number>();
   kept.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
@@ -162,8 +165,9 @@ export function applyPairRule(
       throw new Error(`pair rule: HIP ${move.hip} moves onto ${move.owner}, whose spine record carries HIP ${kept[j].hip}`);
     }
     const receiver = j === undefined ? { ...row, tyc: move.owner } : { ...kept[j], hip: String(move.hip) };
-    if (binds(receiver) !== move.sourceId) {
-      decided.set(i, { kind: 'pair-review', hip: move.hip, entries: m.hipEntries.get(move.hip)!, reason: 'gate_refused' });
+    const reason = refusal(move, receiver);
+    if (reason !== null) {
+      decided.set(i, { kind: 'pair-review', hip: move.hip, entries: m.hipEntries.get(move.hip)!, reason });
       return;
     }
     if (owners.has(move.owner)) throw new Error(`pair rule: two HIPs move onto Tycho-2 entry ${move.owner}`);
@@ -178,6 +182,18 @@ export function applyPairRule(
     decided.set(i, { ...move, onto: 'record' });
   });
   return { rows, decided };
+}
+
+/** `binds` is the source the binding derivation ships for a row. see README.md#applying-the-pair-rule */
+export function applyPairRule(
+  kept: readonly SpineRow[], m: PairLinks, binds: (row: SpineRow) => string | null,
+): PairRuleResult {
+  return applyMoves(kept, m, (move, receiver) => (binds(receiver) === move.sourceId ? null : 'gate_refused'));
+}
+
+/** see README.md#applying-the-pair-rule */
+export function applyEveryPairMove(kept: readonly SpineRow[], m: PairLinks): SpineRow[] {
+  return applyMoves(kept, m, () => null).rows;
 }
 
 /** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */
