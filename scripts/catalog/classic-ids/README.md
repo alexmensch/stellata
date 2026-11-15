@@ -304,7 +304,7 @@ component letter exists to tell the two apart and both records compose the
 identical label. `data/classic-ids/cross_index_corrections.tsv` is where
 review says so, keyed on the HD whose row leaves the table and naming the HD
 the designation belongs to; `CROSS_INDEX` applies it, so the join, the
-designation-constellation pass, the naming ladder's Bayer union and the
+naming ladder's IV/27A tier (`designationConstellation`), its Bayer union and the
 primaries audit all read the corrected table. Two rows today (23 Ori and
 104 Aqr), each backed by V/50 membership, SIMBAD's own identification and the
 two stars' distances, and each removing one row of
