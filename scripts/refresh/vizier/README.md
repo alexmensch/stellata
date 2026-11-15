@@ -65,7 +65,9 @@ two choices of key worth knowing:
   collates `Name` punctuation-blind (`Gl 100.1` before `Gl 10.1`).
 - **`msc_components.tsv`** sorts by `wds_id` then `comp`: CDS's reply order
   matches no key, not even VizieR's own record order (by ID).
-  `build:binaries` reads any order into the same `multiples.tsv`.
+  `build:binaries` settles a tie between a pair's MSC orbits, and a
+  component's spectral type, by file order, so the order is part of
+  `multiples.tsv`'s input.
 
 **The order is total**: after its keys, a table sorts on every other column
 as text (`totalOrder`), so rows tied on the keys are written the same
