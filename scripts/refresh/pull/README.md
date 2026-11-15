@@ -26,8 +26,9 @@ SIMBAD, over TAP and, for VizieR's CfA mirror, ASU. A pull is a `pull` step on t
   for tests, writes one from typed cells.
 - `checkpoint.ts` — the resume cache.
 - `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
-  archive replayed into a committed table's lines, the committed table's rows,
-  and its slices measured against `sliceRows`.
+  archive, CSV lines or an ASU FITS file read through `tapClient`
+  (`RecordedFits`), replayed into a committed table's lines, the committed
+  table's rows, and its slices measured against `sliceRows`.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
   `runPhasedPull`, and `LIVE`, the network transport.

@@ -27,6 +27,7 @@ all; there is no per-table run.
   `declareOutputs`.
 - `refresh-{classic-ids,hipparcos-vmag,hipparcos2,gliese,msc}.ts` — one entry
   per step.
+- `<table>.cfa.fits` — each table's [reply](#replies) recorded from CfA.
 - `vizier.test.ts` — each table's replies replayed into lines of its
   committed table, its spot rows and its sort order ([Replies](#replies)),
   and every query one quoted whole-table query to CDS with the same table's
@@ -74,11 +75,12 @@ every column stay tied, and their order cannot show (three in
 
 ## Replies
 
-CDS Strasbourg was unreachable when these pulls were ported, so the suite's
-replies are synthetic: committed rows written in the CSV dialect ESA, ARI and
-SIMBAD-Harvard answer with. They hold the projection's names, the formats and
-the sort against the committed tables; CDS's own CSV dialect (quoting, a BOM,
-the empty cell) stays unmeasured until its mirror verifies
-([The TAP backend](../pull/README.md#the-tap-backend)). Each pull's record
-was written from a checkpoint seeded with its committed rows, so its
-`answeredBy` is empty until its first live run.
+Each table's reply is a FITS file recorded from the CfA mirror,
+`<table>.cfa.fits` beside the suite (2026-11-15): a few rows, its spot rows
+among them, asked by `recno` or a key list in place of the whole table. The
+suite reads it through `tapClient` as a live ASU answer, so the header
+match, ASU's own link columns, the formats and the sort are all held against
+the committed tables, which a CfA run wrote. CDS's replies are not recorded:
+CDS has not answered since 2026-11-14, and whether its TAP serves the same
+cells as FITS is what its live checks settle once it does
+([The TAP backend](../pull/README.md#the-tap-backend)).
