@@ -77,14 +77,27 @@ export function compoundContains(a: string, b: string): boolean {
   return within(lb, la) || within(la, lb);
 }
 
+/** The steps that rank two pair primaries under one WDS root, in order. */
+export const ANCHOR_RANK_STEPS = ['letter', 'length', 'alphabetical'] as const;
+export type AnchorRankStep = (typeof ANCHOR_RANK_STEPS)[number];
+
+/** The first rank step on which two tokens differ; null for one token. */
+export function anchorRankStep(a: string, b: string): AnchorRankStep | null {
+  if (a === b) return null;
+  if (a.charAt(0) !== b.charAt(0)) return 'letter';
+  if (a.length !== b.length) return 'length';
+  return 'alphabetical';
+}
+
 /** The more canonical of two pair primaries under one WDS root: the
  *  top-level letter decides, then token length, then alphabetical order. */
 export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
-  if (candidateComp === incumbentComp) return false;
-  const branch = (comp: string) => comp.charAt(0);
-  if (branch(candidateComp) !== branch(incumbentComp)) return branch(candidateComp) < branch(incumbentComp);
-  if (candidateComp.length !== incumbentComp.length) return candidateComp.length < incumbentComp.length;
-  return candidateComp < incumbentComp;
+  switch (anchorRankStep(candidateComp, incumbentComp)) {
+    case null: return false;
+    case 'letter': return candidateComp.charAt(0) < incumbentComp.charAt(0);
+    case 'length': return candidateComp.length < incumbentComp.length;
+    case 'alphabetical': return candidateComp < incumbentComp;
+  }
 }
 
 declare const KEY_SPACE: unique symbol;

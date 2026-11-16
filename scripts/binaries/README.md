@@ -134,7 +134,9 @@ scripts/binaries/
                                   parentComponentToken is the immediate
                                   parent); isMoreCanonicalAnchor, the
                                   order Stage 6 and companion promotion
-                                  rank a root's anchor letter by. And the
+                                  rank a root's anchor letter by, and
+                                  anchorRankStep, the step of that order
+                                  two tokens first differ on. And the
                                   map keys, one branded
                                   type per key space so one cannot look up
                                   another's map: componentKey

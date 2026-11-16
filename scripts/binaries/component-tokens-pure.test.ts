@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  anchorRankStep,
   canonicalCompLetter,
   childComponentTokens,
   composeSyntheticId,
@@ -161,5 +162,13 @@ describe('isMoreCanonicalAnchor', () => {
 
   it('ranks across branches alphabetically', () => {
     expect(isMoreCanonicalAnchor('B', 'C')).toBe(true);
+  });
+});
+
+describe('anchorRankStep', () => {
+  it('names the first step on which two tokens differ, and none for one token', () => {
+    expect([['Aa', 'B'], ['A', 'Aa'], ['Aa', 'Ab'], ['A', 'A']].map(([a, b]) => anchorRankStep(a, b))).toEqual([
+      'letter', 'length', 'alphabetical', null,
+    ]);
   });
 });
