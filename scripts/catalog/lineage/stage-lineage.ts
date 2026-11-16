@@ -59,6 +59,21 @@ export interface StageLineageEmission<F extends string, S extends string> {
   readonly changes: KeyChangeTally | null;
 }
 
+type EmissionFile<T> = T extends { readonly files: Record<infer K extends string, ArtifactContents> } ? K : never;
+
+/** Several stages' emissions as one emitArtifacts part: every stage's files, members and checks. */
+export function mergedEmissions<const T extends readonly StageLineageEmission<string, string>[]>(emissions: T): {
+  readonly files: Record<EmissionFile<T[number]>, ArtifactContents>;
+  readonly members: Map<string, ArtifactContents>;
+  readonly checks: Check[];
+} {
+  return {
+    files: Object.assign({}, ...emissions.map((e) => e.files)),
+    members: new Map(emissions.flatMap((e) => [...e.members])),
+    checks: emissions.flatMap((e) => e.checks),
+  };
+}
+
 function baselineSource<F extends string, S extends string>(run: StageLineageRun<F, S>): BaselineSource {
   const at = run.argv.indexOf(AGAINST_FLAG);
   if (at >= 0) {

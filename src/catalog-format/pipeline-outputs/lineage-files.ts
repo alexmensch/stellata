@@ -150,6 +150,15 @@ export function stageOutputFiles<F extends string, S extends string>(
   return files;
 }
 
+type SpecOutputKey<T> = T extends StageLineageSpec<infer F, infer S> ? StageOutputKey<F, S> : never;
+
+/** Several stages' current files as one set of `declareOutputs` keys, typed so a stage left out of the emission fails to compile. */
+export function stagesOutputFiles<const T extends readonly StageLineageSpec<string>[]>(
+  layout: LineageLayout, specs: T,
+): Record<SpecOutputKey<T[number]>, string> {
+  return Object.assign({}, ...specs.map((spec) => stageOutputFiles(layout, spec)));
+}
+
 /** The baseline copies and the stage diff, as `declareOutputs` families: emitted
  *  when they exist, deleted when a run does not emit them, and no other stage's
  *  file ever matches. */

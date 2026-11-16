@@ -68,7 +68,9 @@ scripts/catalog/lineage/
                                  count block; namedStageRun, the run of
                                  a stage whose lines file is named for it,
                                  which build:catalog and build:binaries
-                                 build their stages with.
+                                 build their stages with; mergedEmissions,
+                                 several stages' emissions as one
+                                 emitArtifacts part.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -87,6 +89,7 @@ scripts/catalog/lineage/
                                  a code is seeded, so each counted stage pins
                                  that a new code reaches the snapshot.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
+  stage-merge.test.ts            stagesOutputFiles and mergedEmissions.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
                                  stage's files are never touched.

@@ -8,7 +8,7 @@ import type { LineageInvariant } from '../catalog/lineage/lineage-invariant-pure
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { FileHashes } from '../util/build-stamp';
 import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { countedStageLineage, foldedStageLineage, namedStageRun, stageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
+import { countedStageLineage, foldedStageLineage, mergedEmissions, namedStageRun, stageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
 import { PAIRS_CODES, PAIRS_LINEAGE_BUDGET, pairsLineageLines } from './pairs-lineage-pure';
 import { binariesCounts } from './counts/binaries-counts';
@@ -113,31 +113,18 @@ export async function main(): Promise<void> {
     spec: MASSES_LINEAGE, codes: MASSES_CODES, lines: () => massesLineageLines(multiples.massReads), budget: MASSES_LINEAGE_BUDGET,
     invariants: MASSES_INVARIANTS,
   }));
+  const lineage = mergedEmissions([binding, resolve, astrometry, orbits, pairs, anchors, masses]);
   emitArtifacts({
     outputs: BINARIES_OUTPUTS,
     files: {
       multiples: MULTIPLES_TSV.serialize(multiples.rows),
       bindingVerdicts: BINDING_VERDICTS_TSV.serialize(resolved.verdicts.map(bindingVerdictRow)),
-      ...binding.files,
-      ...resolve.files,
-      ...astrometry.files,
-      ...orbits.files,
-      ...pairs.files,
-      ...anchors.files,
-      ...masses.files,
+      ...lineage.files,
     },
-    members: new Map([
-      ...binding.members, ...resolve.members, ...astrometry.members, ...orbits.members, ...pairs.members, ...anchors.members, ...masses.members,
-    ]),
+    members: lineage.members,
     checks: [
       ...reference.checks,
-      ...binding.checks,
-      ...resolve.checks,
-      ...astrometry.checks,
-      ...orbits.checks,
-      ...pairs.checks,
-      ...anchors.checks,
-      ...masses.checks,
+      ...lineage.checks,
       countSnapshotCheck(BUILD_BINARIES_COUNTS, {
         actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, astrometry: astrometry.counts, orbits: orbits.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',

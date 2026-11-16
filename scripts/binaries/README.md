@@ -81,7 +81,9 @@ scripts/binaries/
                                   byte, and runs the spot-check
                                   (pnpm run test:spotcheck,
                                   resolve/README.md#the-spot-check).
-  binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
+  binaries-outputs.ts             BINARIES_LINEAGE, the lineage stages it
+                                  writes, and BINARIES_OUTPUTS, its
+                                  declaration, derived from that list.
   pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
                                   pair row the stages decide, as the pairs
                                   lineage stage (#pairs-lineage); pairParams,
