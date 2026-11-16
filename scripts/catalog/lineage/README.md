@@ -20,7 +20,9 @@ a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
 beside a derived block of the shipped tiers
-([Placement counts](../distance/README.md#placement-counts)).
+([Placement counts](../distance/README.md#placement-counts)). Resolve's
+snapshot keys fold from its lines without being its codes, each audit verdict
+counted once ([Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage)).
 
 ## Files in this area
 
@@ -176,6 +178,9 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 ([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
+Resolve's (`RESOLVE_INVARIANTS`): named rows alone for the two
+`audit.*.unbound-ambiguous.refused` codes
+([Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage)).
 Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
 `dropped.duplicate-relation`
 ([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
@@ -306,9 +311,17 @@ and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.m
 named token of its system. Its contract lives beside its module, in
 [Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
 
+## The resolve stage
+
+`build:binaries` writes it after component-binding: each WDS component's
+resolve tier, every candidate a cascade gate refused, and its part in each
+binding-integrity verdict, keyed on its `multiples.tsv` row. Its contract lives
+beside its module, in
+[Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage).
+
 ## The pairs stage
 
-`build:binaries` writes it too, after component-binding: every WDS pair row
+`build:binaries` writes it too, after resolve: every WDS pair row
 the binaries stages decide — a duplicate, a blank row left out, each Stage 5
 verdict, a position-less drop — keyed on the row that founded the pair. Its
 contract lives beside its module, in

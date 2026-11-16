@@ -6,13 +6,13 @@ import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
 import { stage4Counts } from '../orbits/attach-orbits';
-import { stage2Counts } from '../resolve/resolve-pairs';
 import type { PairsCounts } from '../pairs-lineage-pure';
 import type { BindingCounts } from '../resolve/binding-lineage-pure';
+import type { ResolveCounts } from '../resolve/resolve-lineage-pure';
 import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
-  ReturnType<typeof stage1Counts> & ReturnType<typeof stage2Counts> & ReturnType<typeof stage3Counts>
+  ReturnType<typeof stage1Counts> & ResolveCounts & ReturnType<typeof stage3Counts>
   & ReturnType<typeof stage4Counts> & ReturnType<typeof stage6Counts>
 );
 const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'multiples'] as const;
@@ -41,12 +41,13 @@ function withPrefix<K extends string, P extends string>(counts: Readonly<Record<
 
 export interface LineageCounts {
   readonly binding: BindingCounts;
+  readonly resolve: ResolveCounts;
   readonly pairs: PairsCounts;
 }
 
 export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
-  const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = stage2Counts(r.resolved);
+  const { ccdm_sibling_owned_rejected, ...bindingIntegrity } = lineage.resolve;
   const s3 = stage3Counts(r.reference, r.resolved, r.astrometry);
   const stages = filed({
     ingest: {

@@ -571,7 +571,9 @@ function rekey<K extends string, V extends string>(table: Readonly<Record<K, V>>
   return out;
 }
 
-export function bindingIntegrityCounts(verdicts: readonly BindingVerdict[]): Record<BindingIntegrityCountKey, number> {
+export function bindingIntegrityCounts(
+  verdicts: readonly Pick<BindingVerdict, 'shape' | 'verdict'>[],
+): Record<BindingIntegrityCountKey, number> {
   return {
     ...rekey(SHAPE_COUNT_KEY, fold(BINDING_SHAPES, verdicts, (v) => v.shape)),
     ...rekey(VERDICT_COUNT_KEY, fold(BINDING_VERDICTS, verdicts, (v) => v.verdict)),

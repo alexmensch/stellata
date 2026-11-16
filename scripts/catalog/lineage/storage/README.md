@@ -55,6 +55,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 20 s: a CI run that diffs against a restored merge-base baseline took
 11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
+[resolve's](/scripts/binaries/resolve/README.md#resolve-lineage),
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
 [runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
 [classic-ids'](../../classic-ids/README.md#classic-id-lineage),

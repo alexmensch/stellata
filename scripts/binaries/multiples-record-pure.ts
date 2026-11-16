@@ -16,6 +16,8 @@ export const A_VIA = ['catalog', 'kepler_mass_estimate', 'none'] as const;
 export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 
 export type ResolveVia = (typeof RESOLVE_VIA)[number];
+/** Tags no tier binds yet: resolve/README.md#what-each-tier-decides */
+export const RESERVED_RESOLVE_VIA = ['position_pm', 'position_nopm'] as const satisfies readonly ResolveVia[];
 /** The tier of a bound Gaia source: every tag but `unresolved`. */
 export type GaiaVia = Exclude<ResolveVia, 'unresolved'>;
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];

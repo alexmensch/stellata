@@ -9,7 +9,7 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import {
-  auditBindingIntegrity, bindingAuditSourceIds, bindingIntegrityCounts,
+  auditBindingIntegrity, bindingAuditSourceIds,
   enforceBindingVerdicts, verdictTouches, type BindingVerdict, type VerdictTouch,
 } from './binding-audit-pure';
 import {
@@ -86,12 +86,4 @@ export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIn
 
 export function refusalTally(result: Stage2Result): Record<CascadeGate, number> {
   return fold(CASCADE_GATES, result.refusals, (r) => r.gate);
-}
-
-/** The count-snapshot keys Stage 2's code alone produces. */
-export function stage2Counts(result: Stage2Result) {
-  return {
-    ccdm_sibling_owned_rejected: refusalTally(result).ccdm_sibling_owned,
-    ...bindingIntegrityCounts(result.verdicts),
-  };
 }
