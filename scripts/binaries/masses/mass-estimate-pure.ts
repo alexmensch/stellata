@@ -15,7 +15,7 @@ const CLASS_IDX: Readonly<Record<string, number>> = {
   C: 7, S: 7, W: 7, N: 7, R: 7,
 };
 const CARBON_CLASS_IDX = 7;
-const UNKNOWN_CLASS_IDX = 8;
+const WHITE_DWARF_CLASS_IDX = 8;
 const UNKNOWN_LUM_CLASS = 255;
 const DEFAULT_SUBCLASS = 5;
 
@@ -49,7 +49,7 @@ export function spectralText(raw: string | null): string | null {
 /** A stated type (`spectralText`'s) read off; null when the parser cannot read it. */
 export function parseSpectralType(s: string): ParsedSpect | null {
   if (/^D[ABCOHQXZV]+/.test(s)) {
-    return { classIdx: UNKNOWN_CLASS_IDX, subclass: DEFAULT_SUBCLASS, lumClass: 0, isWhiteDwarf: true };
+    return { classIdx: WHITE_DWARF_CLASS_IDX, subclass: DEFAULT_SUBCLASS, lumClass: 0, isWhiteDwarf: true };
   }
   const yerkes = s.match(/^([dg])([OBAFGKM])(\d(?:\.\d)?)?/);
   if (yerkes) {
@@ -139,7 +139,6 @@ export type SpectralMass =
 function tableMass(parsed: ParsedSpect): SpectralMass {
   if (parsed.isWhiteDwarf) return { kind: 'white_dwarf', msun: WD_MASS_DEFAULT };
   if (parsed.classIdx === CARBON_CLASS_IDX) return { kind: 'carbon_wr', msun: CARBON_WR_MASS_DEFAULT };
-  if (parsed.classIdx === UNKNOWN_CLASS_IDX) return { kind: 'unparsed' };
   const c = parsed.classIdx;
   const sub = Math.max(0, Math.min(9, parsed.subclass));
   switch (parsed.lumClass) {
