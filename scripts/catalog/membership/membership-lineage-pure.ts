@@ -27,9 +27,11 @@ import {
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding/binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES, UNLINKED_SETTLEMENTS_BY_CELL,
   type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
+  type UnlinkedSettlement,
 } from './merge-derivation/merge-derivation-pure';
+import { KEY_CELLS, type KeyCell } from '../spine/association-audit-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
 } from './ledger-rows-pure';
@@ -50,6 +52,7 @@ export interface OriginKeys {
 
 const RETIRED_7_1_20 = retired('7.1.20');
 const RETIRED_7_1_31 = retired('7.1.31');
+const RETIRED_7_2_1 = retired('7.2.1');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -299,9 +302,27 @@ const differsPrefix = (l: DiffersLink): string =>
 type DiffersQueuedBranch =`${DiffersBranch}.queued`;
 const differsQueuedBranch = (l: DiffersLink): DiffersQueuedBranch => `${differsBranch(l)}.queued`;
 
+const UNLINKED_DESCRIPTION = 'Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.';
+
+type UnlinkedQueuedBranch = `merge.unlinked.${KeyCell}.queued`;
+type UnlinkedSettledBranch = { [C in KeyCell]: `merge.unlinked.${C}.${UnlinkedSettlement<C>}` }[KeyCell];
+const unlinkedQueuedBranch = (c: KeyCell): UnlinkedQueuedBranch => `merge.unlinked.${c}.queued`;
+const unlinkedSettledBranch = <C extends KeyCell>(c: C, s: UnlinkedSettlement<C>): UnlinkedSettledBranch =>
+  `merge.unlinked.${c}.${s}` as UnlinkedSettledBranch;
+
+const UNLINKED_SETTLEMENT_DESCRIPTIONS = {
+  ...DIFFERS_SETTLEMENT_DESCRIPTIONS,
+  'not-shipped': 'the label rules already moved the spine\'s value off the record, so that label row is the decision',
+  'v70a-position': 'V/70A\'s position for the shipped GJ, carried to the record\'s own Tycho-2 entry, lands inside the witness tolerance',
+} as const satisfies Record<UnlinkedSettlement, string>;
+
+const unlinkedPrefix = (c: KeyCell): string =>
+  `Neither the primaries' own cross-references nor the Gaia and SIMBAD witnesses connect the spine row's ${c} to its other identifiers; only AT-HYG associates them`;
+
 type MergeBranch =
-  | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
+  | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
+  | UnlinkedQueuedBranch | UnlinkedSettledBranch
   | PairReviewBranch | DerivedOnlyBranch | DiffersQueuedBranch | DiffersSettledBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
@@ -313,10 +334,14 @@ const MERGE_BRANCHES: readonly {
   ledger: MergeDivergenceKind | null;
   description: string;
 }[] = [
-  {
-    branch: 'merge.unlinked', of: 'unlinked', ledger: 'unlinked',
-    description: 'Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.',
-  },
+  ...KEY_CELLS.map((c) => ({
+    branch: unlinkedQueuedBranch(c), of: 'unlinked' as const, ledger: 'unlinked' as const,
+    description: `${unlinkedPrefix(c)}, and no rule settles the cell: it is queued for review and the shipped value stands.`,
+  })),
+  ...KEY_CELLS.flatMap((c) => (UNLINKED_SETTLEMENTS_BY_CELL[c] as readonly UnlinkedSettlement[]).map((s) => ({
+    branch: unlinkedSettledBranch(c, s), of: 'unlinked' as const, ledger: null,
+    description: `${unlinkedPrefix(c)}, and ${UNLINKED_SETTLEMENT_DESCRIPTIONS[s]}.`,
+  }))),
   {
     branch: 'merge.pair.confirmed', of: 'pair-confirmed', ledger: null,
     description: `${PAIR} the HIP's Gaia source is the spine entry's own.`,
@@ -449,6 +474,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
   'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP a spine record carries, so it leaves the record.'),
   ...MERGE_CODES,
+  'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
   ...RETIRED_DIFFERS_CODES,
 });
 
@@ -645,8 +671,14 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
 
 function mergeRow(key: string, d: MergeDivergence): LineageRow {
   switch (d.kind) {
-    case 'unlinked':
-      return row(key, 'merge.unlinked', { cells: d.cells.join('+'), derived: d.witnessed, evidence: d.published });
+    case 'unlinked': {
+      const witness = d.separations.length === 0 ? '' : `; v70a ${d.separations[0].separationArcsec.toFixed(1)}"`;
+      const params = { cells: d.cell, derived: d.witnessed };
+      if ('settled' in d.verdict) {
+        return row(key, unlinkedSettledBranch(d.cell, d.verdict.settled), { ...params, evidence: `${d.published}${witness}` });
+      }
+      return row(key, unlinkedQueuedBranch(d.cell), { ...params, evidence: `${d.published}; ${d.verdict.queued}${witness}` });
+    }
     case 'pair-confirmed':
       return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
     case 'pair-moves':

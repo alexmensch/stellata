@@ -65,17 +65,17 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     expect(insideV70aTolerance.length).toBe(1024);
   });
 
-  it("tests each unlinked GJ cell's V/70A position against the row's own TYC", () => {
+  it("finds every GJ cell the merge derivation queues outside the gap above the V/70A tolerance", () => {
     const gliese = GLIESE.read();
     const rows = MERGE_DIVERGENCE.parse(readFileSync(resolve(REPO_ROOT, MERGE_DIVERGENCE.file), 'utf-8'))
-      .filter((r) => r.divergence === 'unlinked' && r.gl !== null && r.tyc !== null);
+      .filter((r) => r.divergence === 'unlinked' && r.cells === 'gl');
     const astrometry = rows.map((r) => ({ r, a: lookupGliese(gliese, r.gl)?.astrometryB1950 ?? null }));
     const witnessed = astrometry.flatMap(({ r, a }) => (a === null ? [] : [witnessV70a(a, candidates([r.tyc!]))]));
-    expect(rows.length).toBe(132);
-    expect(astrometry.length - witnessed.length).toBe(23);
-    const { match, none } = tallyKinds(witnessed);
-    expect({ match, none }).toEqual({ match: 84, none: 25 });
-    const own = witnessed.map((v) => v.separations[0].separationArcsec);
-    expect(gapAround(own, V70A_WITNESS_TOLERANCE_ARCSEC, 1)).toEqual([13.8, 20.7]);
+    expect(rows.length).toBe(24);
+    expect(astrometry.length - witnessed.length).toBe(1);
+    expect(tallyKinds(witnessed)).toEqual({ match: 0, none: 23, several: 0 });
+    const nearest = Math.min(...witnessed.map((v) => v.separations[0].separationArcsec));
+    expect(Number(nearest.toFixed(1))).toBe(20.7);
+    expect(nearest).toBeGreaterThan(V70A_WITNESS_TOLERANCE_ARCSEC);
   });
 });

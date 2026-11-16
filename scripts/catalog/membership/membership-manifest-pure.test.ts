@@ -1022,7 +1022,7 @@ describe('codecs', () => {
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
     const closePair = { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined };
-    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair };
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair, positional: { v70a: () => null, tycho2: () => undefined } };
     const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, gaiaSourceId: null };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
@@ -1043,13 +1043,20 @@ describe('codecs', () => {
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', sourceId: '5', onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
-      merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { queued: 'v70a-none' }, separations: [{ tyc: '1-1-1', separationArcsec: 20.71 }],
+      }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { settled: 'v70a-position' }, separations: [{ tyc: '1-1-1', separationArcsec: 5.3 }],
+      }),
     ], identity);
     expect(ledger).toHaveLength(3);
     expect(ledger).toEqual(expect.arrayContaining([
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
-      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
+      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl; v70a-none; v70a 20.7"' },
     ]));
     expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);

@@ -6,7 +6,9 @@ import {
 import { rowIndexByTyc, spineIds, type SpineIds, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
-import type { GlieseRow } from '../../gliese-parse-pure';
+import type { GlieseRow, V70aAstrometry } from '../../gliese-parse-pure';
+import type { Tycho2Row } from '../../tycho2-parse';
+import { witnessV70a, type WitnessSeparation } from '../positional-witness/positional-witness-pure';
 import { confirmsLabel, formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import type { ManifestRecord } from '../membership-manifest-tsv';
 import {
@@ -54,6 +56,33 @@ export type DiffersVerdict<C extends DiffersCell = DiffersCell> =
   | { readonly settled: DiffersSettlement<C> }
   | { readonly queued: DiffersQueueReason };
 
+/** What settles an unlinked cell without review, per cell: `not-shipped` where the label rules already
+ *  moved the spine's value off the record, else the differs rule for that cell, and for a GJ the positional
+ *  witness. see README.md#settling-an-unlinked-cell */
+export const UNLINKED_SETTLEMENTS_BY_CELL = {
+  tyc: ['not-shipped'],
+  hip: ['not-shipped'],
+  hd: ['not-shipped', ...DIFFERS_SETTLEMENTS_BY_CELL.hd],
+  hr: ['not-shipped', ...DIFFERS_SETTLEMENTS_BY_CELL.hr],
+  gl: ['not-shipped', ...DIFFERS_SETTLEMENTS_BY_CELL.gl, 'v70a-position'],
+} as const satisfies Record<KeyCell, readonly string[]>;
+export type UnlinkedSettlement<C extends KeyCell = KeyCell> = (typeof UNLINKED_SETTLEMENTS_BY_CELL)[C][number];
+type V70aQueueReason = 'v70a-none' | 'v70a-several' | 'no-v70a-astrometry' | 'no-tycho2-entry';
+export type UnlinkedVerdict<C extends KeyCell = KeyCell> =
+  | { readonly settled: UnlinkedSettlement<C> }
+  | { readonly queued: DiffersQueueReason | V70aQueueReason };
+
+type UnlinkedOf<C extends KeyCell> = {
+  readonly kind: 'unlinked';
+  readonly cell: C;
+  readonly witnessed: string;
+  readonly published: string;
+  readonly verdict: UnlinkedVerdict<C>;
+  /** The positional witness's separations, nearest first, where it ran. */
+  readonly separations: readonly WitnessSeparation[];
+};
+type Unlinked = { [C in KeyCell]: UnlinkedOf<C> }[KeyCell];
+
 type DiffersOf<L extends DiffersLink> = {
   readonly kind: 'differs';
   readonly link: L;
@@ -65,7 +94,7 @@ type DiffersOf<L extends DiffersLink> = {
 type Differs = { [K in DiffersLink['key']]: DiffersOf<Extract<DiffersLink, { key: K }>> }[DiffersLink['key']];
 
 export type MergeDivergence =
-  | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
+  | Unlinked
   | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
   | {
     readonly kind: 'pair-moves';
@@ -110,6 +139,10 @@ export interface PairLinks {
 export interface MergeLinks extends PairLinks {
   held: SpineKeys;
   closePair: ClosePairWitnesses;
+  positional: {
+    v70a: (gl: string) => V70aAstrometry | null;
+    tycho2: (tyc: string) => Tycho2Row | undefined;
+  };
 }
 
 function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -414,6 +447,45 @@ const DIFFERS_VERDICT: { [C in DiffersCell]: (shipped: ShippedCells, m: MergeLin
   hip: () => ({ queued: 'no-rule' }),
 };
 
+/** Every value the record answers to in each label cell: display and aliases. */
+function answersTo(shipped: ShippedCells): Record<DiffersCell, readonly string[]> {
+  return {
+    hip: shipped.hip === null ? [] : [String(shipped.hip)],
+    hd: [shipped.hd, ...shipped.hdAlt].filter((v) => v !== null).map(String),
+    hr: [shipped.hr, ...shipped.hrAlt].filter((v) => v !== null).map(String),
+    gl: shipped.gl === null ? [] : [shipped.gl],
+  };
+}
+
+const NOT_WITNESSED: readonly WitnessSeparation[] = [];
+
+function v70aVerdict(shipped: ShippedCells, m: MergeLinks): Pick<UnlinkedOf<'gl'>, 'verdict' | 'separations'> {
+  const entry = shipped.tyc === null ? undefined : m.positional.tycho2(shipped.tyc);
+  if (entry === undefined) return { verdict: { queued: 'no-tycho2-entry' }, separations: NOT_WITNESSED };
+  const astrometry = shipped.gl === null ? null : m.positional.v70a(shipped.gl);
+  if (astrometry === null) return { verdict: { queued: 'no-v70a-astrometry' }, separations: NOT_WITNESSED };
+  const witness = witnessV70a(astrometry, [entry]);
+  const verdict = ({ match: { settled: 'v70a-position' }, none: { queued: 'v70a-none' }, several: { queued: 'v70a-several' } } as const)[witness.kind];
+  return { verdict, separations: witness.separations };
+}
+
+/** see README.md#settling-an-unlinked-cell */
+function unlinkedOf(
+  cell: KeyCell, row: SpineRow, partition: { witnessed: string; published: string }, shipped: ShippedCells, m: MergeLinks,
+): Unlinked {
+  const base = { kind: 'unlinked' as const, ...partition, separations: NOT_WITNESSED };
+  const shipsSpineValue = cell === 'tyc'
+    ? shipped.tyc === row.tyc
+    : answersTo(shipped)[cell].some((h) => confirmsLabel(cell, row[cell], h));
+  if (!shipsSpineValue) return { ...base, cell, verdict: { settled: 'not-shipped' } };
+  if (cell === 'tyc') return { ...base, cell, verdict: { queued: 'no-rule' } };
+  if (cell === 'hip') return { ...base, cell, verdict: DIFFERS_VERDICT.hip(shipped, m) };
+  if (cell === 'hd') return { ...base, cell, verdict: DIFFERS_VERDICT.hd(shipped, m) };
+  if (cell === 'hr') return { ...base, cell, verdict: DIFFERS_VERDICT.hr(shipped, m) };
+  const cns5 = DIFFERS_VERDICT.gl(shipped, m);
+  return { ...base, cell, ...('settled' in cns5 ? { verdict: cns5 } : v70aVerdict(shipped, m)) };
+}
+
 function differsOf<L extends DiffersLink>(
   link: L, ships: string | null, derived: readonly string[], shipped: ShippedCells, m: MergeLinks,
 ): DiffersOf<L> {
@@ -434,15 +506,10 @@ function differsCells(
     'gl<hip': () => (m.links.glHip(row.gl) === hip ? [] : m.cns5ByHip.get(hip!) ?? []),
     'gl<hd': () => (m.links.glHd(row.gl) === hd ? [] : m.v70aByHd.get(hd!) ?? []),
   } satisfies Record<LinkKey, () => readonly (number | string)[]>;
-  const answersTo = {
-    hip: shipped.hip === null ? [] : [String(shipped.hip)],
-    hd: [shipped.hd, ...shipped.hdAlt].filter((v) => v !== null).map(String),
-    hr: [shipped.hr, ...shipped.hrAlt].filter((v) => v !== null).map(String),
-    gl: shipped.gl === null ? [] : [shipped.gl],
-  } satisfies Record<DiffersLink['to'], readonly string[]>;
+  const shippedValues = answersTo(shipped);
   const out: MergeDivergence[] = [];
   for (const link of DIFFERS_LINKS) {
-    const held = answersTo[link.to];
+    const held = shippedValues[link.to];
     if (row[link.from] === '' || row[link.to] === '') continue;
     const derived = [...new Set(derivedBy[link.key]().map(String))].sort();
     if (derived.length === 0 || derived.some((d) => held.some((h) => confirmsLabel(link.to, d, h)))) continue;
@@ -457,14 +524,9 @@ export function mergeDivergences(
   row: SpineRow, shipped: ShippedCells, m: MergeLinks, decided?: PairDecision, received = false,
 ): MergeDivergence[] {
   const partition = partitionRow(row, m.links);
-  const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
-    ? [{
-      kind: 'unlinked',
-      cells: partition.minority.witnessed,
-      witnessed: partition.partition.witnessed,
-      published: partition.partition.published,
-    }]
-    : [];
+  const unlinked: MergeDivergence[] = partition === null ? [] : partition.minority.witnessed.map((cell) => unlinkedOf(
+    cell, row, { witnessed: partition.partition.witnessed, published: partition.partition.published }, shipped, m,
+  ));
   const ids = spineIds(row);
   const pair = pairVerdict(row, ids.hip, m);
   if (!received && decided === undefined && pair.divergence?.kind === 'pair-moves') {
