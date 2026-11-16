@@ -24,7 +24,7 @@ Two scopes, set by what each class costs over the whole of SIMBAD (counted
 2026-11-16 on SIMBAD-Harvard):
 
 - **Whole-sky**: `* ` (Bayer and Flamsteed, and every other number SIMBAD
-  writes in the `NN Con` form),
+  writes in the `NN Con` form, [Which SIMBAD numbers are Flamsteed numbers](../../catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)),
   `NAME `, `LAL `, `Ross `, `Wolf ` — 20,715 ids in one query.
 - **Reached**: `** ` (double-star discoverer codes, 132,504 whole-sky),
   `V* ` (53,134), `X ` — asked only on the objects the request names.

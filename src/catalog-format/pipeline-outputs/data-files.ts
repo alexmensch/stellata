@@ -47,6 +47,7 @@ export const DATA_FILES = {
   simbadSptype: 'data/simbad/simbad_sptype.tsv',
   simbadTycHd: 'data/simbad/simbad_tyc_hd.tsv',
   simbadIdents: 'data/simbad/simbad_idents.tsv',
+  flamsteedRefusals: 'data/membership/flamsteed-refusals.tsv',
   reasonCodes: 'data/lineage/reason-codes.tsv',
   vaidmanSupergiants: 'data/distance-validation/vaidman-2025-supergiants.tsv',
 } as const;

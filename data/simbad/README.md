@@ -174,7 +174,9 @@ numbered `* NN Con` idents, `NAME`, LAL, Ross and Wolf over all of SIMBAD;
 double-star (`**`), variable (`V*`) and `X` idents on the objects
 `simbad_sptype.tsv` resolved the manifest to — beside each object's HIP, HD,
 GJ and Gaia DR3 keys, so a record joins an object on an identifier it
-already owns. 70,157 objects at the 2026-11-16 pull.
+already owns. 70,157 objects at the 2026-11-16 pull. A `* NN Con` ident is
+not always a Flamsteed number; which ones are is
+[Which SIMBAD numbers are Flamsteed numbers](/scripts/catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers).
 Pull and gates: [scripts/refresh/simbad-idents/](/scripts/refresh/simbad-idents/README.md).
 
 ## Provenance

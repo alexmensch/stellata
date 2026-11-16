@@ -29,7 +29,52 @@ scripts/catalog/simbad/
                                   dropped, for the integer comparison against
                                   IV/25. The test carries the adjudication
                                   below, pinned over the committed tables.
+  simbad-idents-source.ts         SIMBAD_IDENTS, data/simbad/simbad_idents.tsv
+  simbad-idents-parse.ts          declared and read as one object per row.
+  simbad-flamsteed-pure.ts        The Flamsteed rule below: which `* NN Con`
+    (+ test)                      idents count, indexed by HIP and HD, and the
+                                  refused ones with their evidence. Pure.
+  flamsteed-refusals-pure.ts      The refused numbers on catalogue stars as
+  flamsteed-refusals-source.ts    rows, their codec, and the frozen list
+  flamsteed-refusals.test.ts      declared; the test holds the list to the
+                                  rule over the committed tables.
 ```
+
+## Which SIMBAD numbers are Flamsteed numbers
+
+SIMBAD writes every numbered designation as `* NN Con` and does not say which
+catalogue the number is from. Flamsteed's (*Historia Coelestis*, 1725) shares
+the form with Gould's southern numbering and others, so the ident alone cannot
+attest a Flamsteed cell. Far-southern constellations Flamsteed never observed
+(Car, Vel, Cen, Mus, Cir, Lup, Ara, Tuc, Hor, Gru) carry `* NN Con` idents in
+SIMBAD all the same.
+
+**The rule: a number counts where it lies within IV/27A's Flamsteed range for
+its constellation and IV/27A gives it to no other star.** IV/27A
+([Kostjuk 2002](/data/papers/index.md#kostjuk2002)) is the whole Bayer- and
+Flamsteed-bearing cross index, so its highest number per constellation bounds
+what a Flamsteed number there can be; a number IV/27A gives to a different
+star — by HD and HIP both — is that star's. `classifySimbadFlamsteed` applies
+it to every object; the accepted numbers index by the object's HIP and HD.
+
+A star Flamsteed catalogued twice, once in each of two neighbouring
+constellations (β Tau = 112 Tau = 23 Aur), keeps the number IV/27A publishes:
+IV/27A gives one per star, and the number a record already carries is never
+replaced.
+
+The rule refuses some real Flamsteed numbers — 51 Lib on ξ Sco lies past
+IV/27A's highest Lib number, 50 — and the refusals wait for a primary edition
+of the catalogue to classify them (`stellata-hooj.46.3`).
+
+## The refused numbers
+
+`data/membership/flamsteed-refusals.tsv` is every number the rule refuses on
+an object whose HIP or HD names a catalogue record: the object, its keys, the
+designation, the reason (`beyond_iv27a_range`, `iv27a_names_another_star`) and
+IV/27A's evidence. 37 rows. Hand-curated in that a re-pull moving a row fails
+`flamsteed-refusals.test.ts` until the list is re-read and rewritten from the
+rule — the test derives the rows over the committed tables and holds the file
+to them byte for byte, so the list never drifts from the rule silently.
 
 ## What the TYC → HD pull adjudicates
 

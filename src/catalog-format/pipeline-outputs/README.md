@@ -13,7 +13,7 @@ repo-relative, so an outputs module passes them as they are.
 
 - `data-files.ts` — `DATA_FILES`, the committed `data/` files the
   step-table outputs modules declare: the membership manifest and its four
-  ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
+  ledgers, the frozen Flamsteed refusal list, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
   WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, SIMBAD's TYC → HD attributions and designation idents, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
