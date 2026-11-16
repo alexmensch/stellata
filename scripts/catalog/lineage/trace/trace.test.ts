@@ -12,7 +12,7 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, RESOLVE_LINEAGE, SIZE_LINEAGE,
+  ASTROMETRY_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, ORBITS_LINEAGE, RESOLVE_LINEAGE, SIZE_LINEAGE,
   stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -241,6 +241,19 @@ const RESOLVE = [
   `resolve\tmultiples:S-AB/A\trefused\tresolve.audit.letter-sources.geometric.refused\t{"wds":"S","contested":"A:222/${REBOUND_FROM}","gaia":"${REBOUND_FROM}","reference":"B","reference_gaia":"4000000000000000045","winner":"222"}\t`,
 ].join('\n') + '\n';
 
+/** Stage 3's route for the rebound component, citing the row it read. */
+const ASTROMETRY = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'astrometry\tmultiples:S-AB/A\toutcome\tastrometry.route.gaia-5p\t{"gaia":"222"}\tgaia-dr3-astrometry:222',
+].join('\n') + '\n';
+
+/** Stage 4's source for the pair, and the NSS solution it outranked. */
+const ORBITS = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'orbits\twds:S/STF   1/AB\toutcome\torbits.source.orb6\t{"primary":"A","primary_gaia":"222","secondary":"B"}\torb6:S/STF   1/AB',
+  'orbits\twds:S/STF   1/AB\trefused\torbits.passed.gaia-nss.outranked\t{"primary":"A","primary_gaia":"222","secondary":"B"}\tgaia-dr3-nss:222',
+].join('\n') + '\n';
+
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
     { stage: 'component-binding', rows: () => lineageRows(BINDING, 'fixture/component-binding.tsv') },
@@ -344,6 +357,8 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, BINDING_LINEAGE.stage), gzipText(BINDING));
   writeFileSync(stageFile(dir, RESOLVE_LINEAGE.stage), gzipText(RESOLVE));
+  writeFileSync(stageFile(dir, ASTROMETRY_LINEAGE.stage), gzipText(ASTROMETRY));
+  writeFileSync(stageFile(dir, ORBITS_LINEAGE.stage), gzipText(ORBITS));
   writeFileSync(stageFile(dir, CLASSIC_IDS_LINEAGE.stage), gzipText(CLASSIC_IDS));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
@@ -406,6 +421,18 @@ describe('pnpm run trace', () => {
   it('prints a component\'s resolve tier and the candidate the audit refused, after its binding provenance', () => {
     expect(run(REBOUND_FROM)).toMatch(
       /multiples:S-AB\/A\n[\s\S]*component-binding\.gaia\.own[\s\S]*outcome  resolve\.tier\.simbad-xid[\s\S]*refused  resolve\.audit\.letter-sources\.geometric\.refused/,
+    );
+  });
+
+  it('prints a component\'s astrometry route after its resolve rows, citing the row it read', () => {
+    expect(run(REBOUND_FROM)).toMatch(
+      /multiples:S-AB\/A\n[\s\S]*resolve\.audit\.letter-sources\.geometric\.refused[\s\S]*outcome  astrometry\.route\.gaia-5p +\{"gaia":"222"\} +evidence gaia-dr3-astrometry:222/,
+    );
+  });
+
+  it('prints a pair\'s orbit source and the candidate it passed over, from a Gaia source one side carries', () => {
+    expect(run('gaia_dr3:222')).toMatch(
+      /wds:S\/STF   1\/AB\n {2}outcome  orbits\.source\.orb6 .* +evidence orb6:S\/STF   1\/AB\n {2}refused  orbits\.passed\.gaia-nss\.outranked .* +evidence gaia-dr3-nss:222/,
     );
   });
 

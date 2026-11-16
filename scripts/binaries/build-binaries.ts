@@ -31,8 +31,11 @@ import {
 } from './resolve/resolve-lineage-pure';
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
+import {
+  ORBITS_CODES, ORBITS_INVARIANTS, ORBITS_LINEAGE_BUDGET, orbitsCounts, orbitsLineageLines,
+} from './orbits/orbits-lineage-pure';
 import { stage4Report } from './orbits/stage4-report-pure';
-import { ASTROMETRY_LINEAGE, BINDING_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ASTROMETRY_LINEAGE, BINDING_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
@@ -70,7 +73,7 @@ function binariesStageLineage<S extends string, B extends string, L extends B>(
 
 export async function main(): Promise<void> {
   const results = await runStages(log);
-  const { reference, resolved, astrometry: routed, optical, multiples } = results;
+  const { reference, resolved, astrometry: routed, orbits: sourced, optical, multiples } = results;
   const binding = binariesStageLineage(
     BINDING_LINEAGE, BINDING_CODES, () => bindingLineageLines(multiples.rows), BINDING_LINEAGE_BUDGET,
   );
@@ -82,6 +85,10 @@ export async function main(): Promise<void> {
     spec: ASTROMETRY_LINEAGE, codes: ASTROMETRY_CODES, lines: () => astrometryLineageLines(routed), budget: ASTROMETRY_LINEAGE_BUDGET,
     invariants: ASTROMETRY_INVARIANTS, inputs: stepInputHashes(),
   }), astrometryCounts);
+  const orbits = foldedStageLineage(namedStageRun({
+    spec: ORBITS_LINEAGE, codes: ORBITS_CODES, lines: () => orbitsLineageLines(sourced), budget: ORBITS_LINEAGE_BUDGET,
+    invariants: ORBITS_INVARIANTS, inputs: stepInputHashes(),
+  }), orbitsCounts);
   const pairs = binariesStageLineage(
     PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
   );
@@ -93,17 +100,19 @@ export async function main(): Promise<void> {
       ...binding.files,
       ...resolve.files,
       ...astrometry.files,
+      ...orbits.files,
       ...pairs.files,
     },
-    members: new Map([...binding.members, ...resolve.members, ...astrometry.members, ...pairs.members]),
+    members: new Map([...binding.members, ...resolve.members, ...astrometry.members, ...orbits.members, ...pairs.members]),
     checks: [
       ...reference.checks,
       ...binding.checks,
       ...resolve.checks,
       ...astrometry.checks,
+      ...orbits.checks,
       ...pairs.checks,
       countSnapshotCheck(BUILD_BINARIES_COUNTS, {
-        actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, astrometry: astrometry.counts, pairs: pairs.counts }),
+        actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, astrometry: astrometry.counts, orbits: orbits.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',
       }),
     ],

@@ -1,6 +1,6 @@
 // Stage 4: each pair's orbit, keyed by DecomposedPair, and the counts it completes. See README.md.
 
-import { fold, prefixed, share, sumOf, type Share } from '../../util/counts/tally-pure';
+import { fold, share, sumOf, type Share } from '../../util/counts/tally-pure';
 import type { Orb6Entry } from '../../wds/wds-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { systemParallaxAnchors } from '../astrometry/system-anchors-pure';
@@ -49,10 +49,6 @@ export function orbitTally(result: Stage4Result): Record<OrbitVia, number> {
 }
 
 export type Stage4Counts = Record<`orbit_${OrbitVia}`, number>;
-
-export function stage4Counts(result: Stage4Result): Stage4Counts {
-  return prefixed('orbit_', orbitTally(result));
-}
 
 /** The share of pairs with elements whose elements are Gaia NSS's. */
 export function stage4Rates(counts: Stage4Counts): Record<'nss_orbit_rate', Share> {

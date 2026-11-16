@@ -6,7 +6,9 @@ or the MSC, keyed by its pair. The NSS conversion here is also what Stage 3's
 NSS inner-pair synthesis gates on; `../build-binaries.ts` calls it. What each
 route's gate decides, what each NSS solution type constrains, the
 Thiele-Innes algebra and why the photocentre's a0 is never the relative orbit's
-a: [What each route decides](#what-each-route-decides).
+a: [What each route decides](#what-each-route-decides); each pair's source and
+the candidates passed over as the `orbits` lineage stage:
+[Orbits lineage](#orbits-lineage).
 
 ## Files in this area
 
@@ -27,7 +29,11 @@ scripts/binaries/orbits/
                                  and keplerSemimajorAxisAu.
   attach-orbits.ts (+ test)      attachStage4 (every pair's candidates,
                                  then selectOrbit), Stage4Result,
-                                 orbitTally, stage4Counts, stage4Rates.
+                                 orbitTally, stage4Rates.
+  orbits-lineage-pure.ts         ORBITS_CODES, orbitsLineageLines,
+    (+ test)                     orbitsCounts and ORBITS_INVARIANTS: the
+                                 decisions as the orbits lineage stage
+                                 (#orbits-lineage).
   stage4-report-pure.ts          The build-log line, read off the result.
 ```
 
@@ -59,13 +65,40 @@ refresh carrying one outside the window stops the build at Stage 4.
 
 ## Counts
 
-`stage4Counts` returns the `orbit_*` keys, one per route, folded through the
-one tally helper; `stage4Rates` derives `nss_orbit_rate`, the NSS share of
-the pairs with elements, through the tally module's `share`,
+The `orbit_*` keys, one per route, fold from the orbits stage's lines
+(`orbitsCounts`, [Orbits lineage](#orbits-lineage)); `stage4Rates` derives
+`nss_orbit_rate`, the NSS share of the pairs with elements, through the tally
+module's `share`,
 `no-denominator` when no pair has any; `stage4Report` logs it, `n/a` when
 absent. The keys are held to the
 committed count snapshot, as Stage 3's are
 ([Counts](../astrometry/README.md#counts)).
+
+## Orbits lineage
+
+`build:binaries` writes each pair's decision as the `orbits` lineage stage,
+after `astrometry` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-orbits-stage)), from
+`orbits-lineage-pure.ts` over the `Stage4Result`'s candidates. Rows are keyed
+on the pair's founding row, the `pairs` stage's key
+([Pairs lineage](../README.md#pairs-lineage)), with its `params` (each side's
+letter, Gaia source and `hip:`), so trace reaches them from either side's
+identifiers.
+
+| Code | Written for |
+| --- | --- |
+| `orbits.source.<via>` | every pair, once, one code per `ORBIT_VIA` tag, underscores as dashes; its evidence is the chosen row, none for `none` or where that row is the key itself (an MSC inner pair) |
+| `orbits.passed.<route>.<rule>` | each candidate the cascade passed over, one code per rule `ORBIT_PASS_RULES` gives the route; its evidence is the candidate's row |
+
+`orbitsCounts` folds the `orbit_*` snapshot keys from the `source` codes.
+`ORBITS_INVARIANTS` holds the four `unreadable` codes, an orbit row on file
+that converts to no elements: none allowed but the two ORB6 non-visual rows
+it names, STF 326 AB and BIL 5, whose rows state no period
+([Invariants](/scripts/catalog/lineage/README.md#invariants)).
+
+`ORBITS_LINEAGE_BUDGET` pins 1.3 MB and 2 s: 48,309 rows came to 1,117,812
+bytes gzipped in 134–147 ms across two runs, neither diffing against a
+baseline (2026-11-16).
 
 ## Conventions the outputs rest on
 

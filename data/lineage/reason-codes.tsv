@@ -358,6 +358,23 @@ naming.name.own.gould	naming	none	outcome	live		7.1.17	The record displays the h
 naming.name.own.iau	naming	none	outcome	live		7.1.17	The record displays the highest tier of the naming ladder it carries in its own right: its IAU WGSN approved name.
 naming.name.own.override	naming	none	outcome	live		7.1.17	The record displays the highest tier of the naming ladder it carries in its own right: its curated override name.
 naming.name.unlabelled	naming	none	outcome	live		7.1.12	The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.
+orbits.passed.gaia-nss.out-of-regime	orbits	none	refused	live		7.1.30	A Gaia NSS solution passed over: outside Gaia's astrometric-detectability regime.
+orbits.passed.gaia-nss.outranked	orbits	none	refused	live		7.1.30	A Gaia NSS solution passed over: outranked by the orbit a higher route chose.
+orbits.passed.gaia-nss.partner-distinct-source	orbits	none	refused	live		7.1.30	A Gaia NSS solution passed over: interior to its side, the pair's other side being a different Gaia source.
+orbits.passed.gaia-nss.separation-inconsistent	orbits	none	refused	live		7.1.30	A Gaia NSS solution passed over: too short a period for the pair's WDS separation at the system distance.
+orbits.passed.gaia-nss.unreadable	orbits	none	refused	live		7.1.30	A Gaia NSS solution passed over: converting to no elements (an unreadable period, unit or solution type).
+orbits.passed.msc.measured-separation	orbits	none	refused	live		7.1.30	An MSC row passed over: off a pair with a measured WDS separation.
+orbits.passed.msc.outranked	orbits	none	refused	live		7.1.30	An MSC row passed over: outranked by the orbit a higher route chose.
+orbits.passed.msc.unreadable	orbits	none	refused	live		7.1.30	An MSC row passed over: converting to no elements (an unreadable period, unit or solution type).
+orbits.passed.orb6-spectroscopic.outranked	orbits	none	refused	live		7.1.30	An ORB6 non-visual row passed over: outranked by the orbit a higher route chose.
+orbits.passed.orb6-spectroscopic.unreadable	orbits	none	refused	live		7.1.30	An ORB6 non-visual row passed over: converting to no elements (an unreadable period, unit or solution type).
+orbits.passed.orb6.outranked	orbits	none	refused	live		7.1.30	An ORB6 visual row passed over: outranked by the orbit a higher route chose.
+orbits.passed.orb6.unreadable	orbits	none	refused	live		7.1.30	An ORB6 visual row passed over: converting to no elements (an unreadable period, unit or solution type).
+orbits.source.gaia-nss	orbits	none	outcome	live		7.1.30	The pair's orbit is a Gaia DR3 NSS two-body solution of a source on its sides.
+orbits.source.msc	orbits	none	outcome	live		7.1.30	The pair's orbit is its best MSC row, the pair being sub-resolution.
+orbits.source.none	orbits	none	outcome	live		7.1.30	No orbit row on file for the pair yields elements.
+orbits.source.orb6	orbits	none	outcome	live		7.1.30	The pair's orbit is its best ORB6 visual row (grades 1-5).
+orbits.source.orb6-spectroscopic	orbits	none	outcome	live		7.1.30	The pair's orbit is its best ORB6 non-visual row (grades 7-9).
 overlap.inside	overlap	none	outcome	live		7.1.27	A record drawn inside another at the positions the catalogue ships, no orbit chain holding them apart; params name the other record.
 pairs.blank-deferred	pairs	none	outcome	live		7.1.24	A blank-components row with no ORB6 orbit or SIMBAD cross-ID for its system, left for the full blank → AB ingest.
 pairs.blank-donor	pairs	none	outcome	live		7.1.24	A blank-components row whose measurements an ORB6 orphan pair of its discoverer took; the orphan carries the pair on.

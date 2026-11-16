@@ -48,7 +48,8 @@ function sideParams(side: 'primary' | 'secondary', c: ResolvedComponent): Lineag
   };
 }
 
-function pairParams(p: DecomposedPair): LineageParams {
+/** Each side's letter, Gaia source and `hip:`, the forms trace matches a pair on. */
+export function pairParams(p: DecomposedPair): LineageParams {
   return { ...sideParams('primary', p.primary), ...sideParams('secondary', p.secondary) };
 }
 

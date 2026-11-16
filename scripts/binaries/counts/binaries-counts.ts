@@ -6,7 +6,7 @@ import type { AstrometryCounts } from '../astrometry/astrometry-lineage-pure';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
-import { stage4Counts } from '../orbits/attach-orbits';
+import type { OrbitsCounts } from '../orbits/orbits-lineage-pure';
 import type { PairsCounts } from '../pairs-lineage-pure';
 import type { BindingCounts } from '../resolve/binding-lineage-pure';
 import type { ResolveCounts } from '../resolve/resolve-lineage-pure';
@@ -14,7 +14,7 @@ import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipe
 
 type StageCountKey = keyof (
   ReturnType<typeof stage1Counts> & ResolveCounts & ReturnType<typeof stage3Counts> & AstrometryCounts
-  & ReturnType<typeof stage4Counts> & ReturnType<typeof stage6Counts>
+  & OrbitsCounts & ReturnType<typeof stage6Counts>
 );
 const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'multiples'] as const;
 type BinariesStage = (typeof BINARIES_STAGES)[number];
@@ -44,6 +44,7 @@ export interface LineageCounts {
   readonly binding: BindingCounts;
   readonly resolve: ResolveCounts;
   readonly astrometry: AstrometryCounts;
+  readonly orbits: OrbitsCounts;
   readonly pairs: PairsCounts;
 }
 
@@ -73,7 +74,7 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
       ...bindingIntegrity,
     },
     astrometry: lineage.astrometry,
-    orbits: stage4Counts(r.orbits),
+    orbits: lineage.orbits,
     multiples: stage6Counts(r.multiples),
   }, true);
   return nestByStage<SnapshotStage, number>(SNAPSHOT_STAGES, [

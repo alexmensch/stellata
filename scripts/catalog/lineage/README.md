@@ -24,7 +24,9 @@ beside a derived block of the shipped tiers
 snapshot keys fold from its lines without being its codes, each audit verdict
 counted once ([Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage)),
 and so do astrometry's, both unresolved codes as one
-([Astrometry lineage](/scripts/binaries/astrometry/README.md#astrometry-lineage)).
+([Astrometry lineage](/scripts/binaries/astrometry/README.md#astrometry-lineage)),
+and orbits', from its source codes
+([Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage)).
 
 ## Files in this area
 
@@ -186,6 +188,9 @@ Resolve's (`RESOLVE_INVARIANTS`): named rows alone for the two
 Astrometry's (`ASTROMETRY_INVARIANTS`): named rows alone for
 `route.unresolved.identifier-bound`
 ([Astrometry lineage](/scripts/binaries/astrometry/README.md#astrometry-lineage)).
+Orbits' (`ORBITS_INVARIANTS`): named rows alone for the four
+`passed.*.unreadable` codes
+([Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage)).
 Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
 `dropped.duplicate-relation`
 ([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
@@ -331,9 +336,16 @@ citing the row it read, and each AT-HYG match the sibling guard refused,
 keyed on its `multiples.tsv` row. Its contract lives beside its module, in
 [Astrometry lineage](/scripts/binaries/astrometry/README.md#astrometry-lineage).
 
+## The orbits stage
+
+`build:binaries` writes it after astrometry: each pair's Stage 4 orbit source,
+citing the row chosen, and every candidate row passed over with the rule that
+passed it, keyed on the pair's founding row. Its contract lives beside its
+module, in [Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage).
+
 ## The pairs stage
 
-`build:binaries` writes it too, after astrometry: every WDS pair row
+`build:binaries` writes it too, after orbits: every WDS pair row
 the binaries stages decide — a duplicate, a blank row left out, each Stage 5
 verdict, a position-less drop — keyed on the row that founded the pair. Its
 contract lives beside its module, in

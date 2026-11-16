@@ -57,6 +57,7 @@ refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
 measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
 [resolve's](/scripts/binaries/resolve/README.md#resolve-lineage),
 [astrometry's](/scripts/binaries/astrometry/README.md#astrometry-lineage),
+[orbits'](/scripts/binaries/orbits/README.md#orbits-lineage),
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
 [runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
 [classic-ids'](../../classic-ids/README.md#classic-id-lineage),
