@@ -50,7 +50,7 @@ implementation's own statement of all three rules.
 | `IV/25`, CNS5, `I/239` | mechanical | HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
-| AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
+| AT-HYG `proper` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
 | Stellarium `common_names` | **rejected as authority** | 659 HIP-keyed folk names, alias candidates only | `data/stellarium/README.md` |
 | SIMBAD live resolution | **rejected** | — | frozen-data policy, `data/README.md` |
 
