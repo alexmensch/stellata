@@ -427,6 +427,20 @@ describe('settling an unlinked cell', () => {
       .toEqual({ settled: 'not-shipped' });
   });
 
+  it('judges the spine\'s value where the record ships it only as an alias, not the display HD', () => {
+    const hdRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    const m = {
+      ...mergeLinks(links({})),
+      closePair: {
+        iv25Hds: (tyc: string) => (tyc === '2-2-2' ? new Set([999]) : undefined),
+        simbadTycHd: new Map([['2-2-2', { hdIdents: ['999'], simbadOid: 5, mainId: null }]]),
+        simbadObjectOf: () => undefined,
+      },
+    };
+    expect(unlinked(hdRow, m, { ...shippedAsIs(hdRow), hd: 300, hdAlt: [999] })[0].verdict)
+      .toEqual({ settled: 'close-pair-uncontested' });
+  });
+
   it('settles an HR V/50 pairs with the shipped HD, and queues a HIP on no rule', () => {
     const hrRow = row({ tyc: '2-2-2', hd: '300', hr: '9' });
     expect(unlinked(hrRow, mergeLinks(links({})))).toMatchObject([{ cell: 'hr', verdict: { settled: 'v50-pair' } }]);

@@ -482,8 +482,9 @@ function unlinkedOf(
     : answersTo(shipped)[cell].some((h) => confirmsLabel(cell, row[cell], h));
   if (!shipsSpineValue) return { ...base, cell, verdict: { settled: 'not-shipped' } };
   if (cell === 'tyc') return { ...base, cell, verdict: { queued: 'no-rule' } };
-  const verdict = DIFFERS_VERDICT[cell](shipped, m);
-  if (cell === 'gl' && !('settled' in verdict)) return { ...base, cell, ...v70aVerdict(shipped, m) };
+  const judged: ShippedCells = cell === 'gl' ? { ...shipped, gl: row.gl } : { ...shipped, [cell]: Number(row[cell]) };
+  const verdict = DIFFERS_VERDICT[cell](judged, m);
+  if (cell === 'gl' && !('settled' in verdict)) return { ...base, cell, ...v70aVerdict(judged, m) };
   return { ...base, cell, verdict } as Unlinked;
 }
 
