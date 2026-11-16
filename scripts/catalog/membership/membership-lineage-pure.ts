@@ -13,7 +13,7 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration, type StageCodes, type StageCounts,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
-import type { ClassicalCell } from '../spine/primaries-audit-pure';
+import type { IdentifierCell } from '../spine/primaries-audit-pure';
 import { SPINE_CORRECTION_CELLS, type SpineCorrectionCell } from './spine-corrections/spine-corrections-pure';
 import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
@@ -158,7 +158,7 @@ export type DispositionQueue = (typeof DISPOSITION_QUEUES)[number];
 type DispositionBranch = `disposition.${BindingDisposition}.${DispositionQueue}`;
 
 /** The classical cells a manifest row can ship unattested: `hd` and `flam` leave the row instead (README.md#the-unattested-labels-leave-the-row). */
-export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'proper'] as const satisfies readonly ClassicalCell[];
+export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'proper'] as const satisfies readonly IdentifierCell[];
 export type UnattestedCell = (typeof UNATTESTED_CELLS)[number];
 
 const UNATTESTED_BRANCHES = {
