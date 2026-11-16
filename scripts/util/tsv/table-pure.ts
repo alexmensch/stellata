@@ -170,8 +170,16 @@ export class TableRow<C extends string> {
     return this.cell(c, floatCell);
   }
 
+  requiredFloat(c: C): number {
+    return this.cell(c, (raw) => present(floatCell(raw)));
+  }
+
   int(c: C): number | null {
     return this.cell(c, intCell);
+  }
+
+  requiredInt(c: C): number {
+    return this.cell(c, (raw) => present(intCell(raw)));
   }
 
   id(c: C): number | null {

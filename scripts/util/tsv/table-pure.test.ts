@@ -186,6 +186,17 @@ describe('readTable', () => {
     expect(empty.idList('v', '|')).toEqual([3, 4]);
   });
 
+  it('requiredFloat and requiredInt refuse an empty cell as they refuse a malformed one', () => {
+    const [row] = readTable(SPEC, 'id\tv\n12\t\n');
+    expect(row.requiredFloat('id')).toBe(12);
+    expect(row.requiredInt('id')).toBe(12);
+    expect(() => row.requiredFloat('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => row.requiredInt('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    const [bad] = readTable(SPEC, 'id\tv\n1.5\tx\n');
+    expect(() => bad.requiredInt('id')).toThrow('fixture/t.tsv:2: id: "1.5" is not an integer. Re-run x.');
+    expect(() => bad.requiredFloat('v')).toThrow('fixture/t.tsv:2: v: "x" is not a decimal number. Re-run x.');
+  });
+
   it('oneOf accepts only the listed values', () => {
     const [row] = readTable(SPEC, 'id\tv\nA\tq\n');
     expect(row.oneOf('id', ['A', 'B'] as const)).toBe('A');

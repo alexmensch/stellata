@@ -68,7 +68,7 @@ export function parseOverrides(tsv: string, from: Declared): OverrideRow[] {
 function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
   const opt = (col: (typeof OVERRIDES_OPTIONAL)[number]): string | undefined => row.text(col) ?? undefined;
   const optNum = (col: (typeof OVERRIDES_OPTIONAL)[number]): number | undefined => row.float(col) ?? undefined;
-  const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.float(col) ?? row.fail(`${col} is empty`);
+  const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.requiredFloat(col);
   const name = row.text('name') ?? '';
   const result: OverrideRow = {
     name,
