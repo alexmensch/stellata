@@ -88,7 +88,6 @@ function push<K>(into: Map<K, FlamsteedDesignation[]>, key: K, d: FlamsteedDesig
   else if (!held.some((h) => h.number === d.number && h.conIndex === d.conIndex)) held.push(d);
 }
 
-/** README.md#which-simbad-numbers-are-flamsteed-numbers: a number counts where it lies within IV/27A's Flamsteed range for its constellation and IV/27A gives it to no other star. */
 export function classifySimbadFlamsteed(objects: Iterable<SimbadIdentsObject>, crossIndex: readonly CrossIndexRow[]): SimbadFlamsteed {
   const iv27a = iv27aFlamsteed(crossIndex);
   const byHip = new Map<number, FlamsteedDesignation[]>();
