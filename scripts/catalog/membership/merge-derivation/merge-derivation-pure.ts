@@ -482,11 +482,9 @@ function unlinkedOf(
     : answersTo(shipped)[cell].some((h) => confirmsLabel(cell, row[cell], h));
   if (!shipsSpineValue) return { ...base, cell, verdict: { settled: 'not-shipped' } };
   if (cell === 'tyc') return { ...base, cell, verdict: { queued: 'no-rule' } };
-  if (cell === 'hip') return { ...base, cell, verdict: DIFFERS_VERDICT.hip(shipped, m) };
-  if (cell === 'hd') return { ...base, cell, verdict: DIFFERS_VERDICT.hd(shipped, m) };
-  if (cell === 'hr') return { ...base, cell, verdict: DIFFERS_VERDICT.hr(shipped, m) };
-  const cns5 = DIFFERS_VERDICT.gl(shipped, m);
-  return { ...base, cell, ...('settled' in cns5 ? { verdict: cns5 } : v70aVerdict(shipped, m)) };
+  const verdict = DIFFERS_VERDICT[cell](shipped, m);
+  if (cell === 'gl' && !('settled' in verdict)) return { ...base, cell, ...v70aVerdict(shipped, m) };
+  return { ...base, cell, verdict } as Unlinked;
 }
 
 function differsOf<L extends DiffersLink>(
