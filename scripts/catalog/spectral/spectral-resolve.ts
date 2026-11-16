@@ -71,12 +71,15 @@ export interface SimbadSptype {
   spectral: SimbadSpectralIndex;
   xids: Map<string, SimbadXids>;
   sourcelessXids: SimbadXids[];
+  /** SIMBAD's object (its oid) for each Gaia DR3 source_id. */
+  objectOfSource: Map<string, number>;
 }
 
 export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<number>): SimbadSptype {
   const index = emptySimbadSpectralIndex();
   const xids = new Map<string, SimbadXids>();
   const sourcelessXids: SimbadXids[] = [];
+  const objectOfSource = new Map<string, number>();
   for (const row of readTable({ ...from, columns: SPTYPE_TABLE_COLUMNS }, text)) {
     const spType = row.text('sp_type');
     const spQual = row.text('sp_qual');
@@ -91,6 +94,7 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
     if (keys.sourceId !== null) {
       if (xids.has(keys.sourceId)) throw new Error(`${from.file} has two rows keyed source_id=${keys.sourceId}. ${from.hint}`);
       xids.set(keys.sourceId, rowXids);
+      objectOfSource.set(keys.sourceId, row.requiredId('simbad_oid'));
     } else sourcelessXids.push(rowXids);
     const indexed = indexedKeys(keys, spType, otype);
     if (indexed === null) continue;
@@ -115,7 +119,7 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
       },
     );
   }
-  return { spectral: index, xids, sourcelessXids };
+  return { spectral: index, xids, sourcelessXids, objectOfSource };
 }
 
 /** A typeless row is never a match and loses every tie, so only the multiple-star

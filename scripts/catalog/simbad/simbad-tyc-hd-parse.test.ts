@@ -4,7 +4,6 @@ import { resolve } from 'node:path';
 import { beforeAll, describe, it, expect } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { readTable } from '../../util/tsv/table-pure';
 import { BSC5 } from '../classic-ids/bsc5-source';
 import { TYC2_HD } from '../classic-ids/tyc2-hd-source';
 import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-overrides-source';
@@ -16,6 +15,7 @@ import {
   type SimbadTycHdRow,
 } from './simbad-tyc-hd-parse';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
+import { closePairHdVerdict, type ClosePairWitnesses } from './close-pair-hd-pure';
 
 const TYC_HD_FROM = { file: 'simbad_tyc_hd.tsv', hint: 'h' };
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
@@ -182,11 +182,6 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 
 const SRC_SIMBAD_SPTYPE = AT(SIMBAD_SPTYPE.file);
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
-const SIMBAD_SPTYPE_OBJECTS = {
-  file: SIMBAD_SPTYPE.file,
-  hint: SIMBAD_SPTYPE.hint,
-  columns: ['source_id', 'simbad_main_id'] as const,
-};
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
  *  rows all four witnesses agree the record's own component is not the one its
@@ -221,42 +216,22 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
       if (at === undefined) iv.set(row.tyc, new Set([row.hd]));
       else at.add(row.hd);
     }
-    const simbad = SIMBAD_TYC_HD.read();
+    const w: ClosePairWitnesses = {
+      iv25Hds: (tyc) => iv.get(tyc),
+      simbadTycHd: SIMBAD_TYC_HD.read(),
+      simbadObjectOfSource: SIMBAD_SPTYPE.read().objectOfSource,
+    };
 
-    // The rows both TYC witnesses contradict (README.md#what-the-tyc--hd-pull-adjudicates).
     // Keyed on the TYC, not the source: a mutual swap is two rows.
-    const contested = new Map<string, string>();
-    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
-      const { tyc, hd: shipped } = row;
-      if (tyc === null || shipped === null) continue;
-      const answer = simbad.get(tyc);
-      const printed = iv.get(tyc);
-      if (answer === undefined) continue;
-      if (printed === undefined) continue;
-      const stated = hdNumbers(answer);
-      if (!stated.some((hd) => printed.has(hd))) continue;
-      if (stated.includes(shipped) || printed.has(shipped)) continue;
-      contested.set(tyc, row.gaiaSourceId ?? '');
-    }
-
-    // The fourth witness: SIMBAD's object for the record's own Gaia source.
-    // Header-keyed, like every other reader of this table — a positional
-    // column index reads a neighbouring cell after a re-pull reorders it.
-    const sources = new Set([...contested.values()].filter((s) => s !== ''));
-    const objectOfSource = new Map<string, string>();
-    for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
-      const sourceId = row.raw('source_id');
-      if (sources.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
-    }
-
     move = [];
     refuse = [];
     silent = [];
-    for (const [tyc, sourceId] of contested) {
-      const ofSource = sourceId === '' ? undefined : objectOfSource.get(sourceId);
-      if (ofSource === undefined) silent.push(tyc);
-      else if (ofSource === simbad.get(tyc)!.mainId) move.push(tyc);
-      else refuse.push(tyc);
+    for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
+      if (row.tyc === null || row.hd === null) continue;
+      const verdict = closePairHdVerdict(row, w).kind;
+      if (verdict === 'move') move.push(row.tyc);
+      else if (verdict === 'refuse') refuse.push(row.tyc);
+      else if (verdict === 'source-silent') silent.push(row.tyc);
     }
     for (const list of [move, refuse, silent]) list.sort();
   });
@@ -297,7 +272,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
     let refusals: string[];
     let ivHd: Map<string, Set<number>>;
     let simbad: Map<string, SimbadTycHdRow>;
-    let objectOfSource: Map<string, string>;
+    let objectOfSource: ReadonlyMap<string, number>;
     let hdOfHr: Map<number, number | null>;
 
     beforeAll(() => {
@@ -336,11 +311,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
         hr: hrBySource.get(sourceId) ?? null,
       }));
 
-      objectOfSource = new Map();
-      for (const row of readTable(SIMBAD_SPTYPE_OBJECTS, readFileSync(SRC_SIMBAD_SPTYPE, 'utf-8'))) {
-        const sourceId = row.raw('source_id');
-        if (hdBySource.has(sourceId)) objectOfSource.set(sourceId, row.raw('simbad_main_id'));
-      }
+      objectOfSource = SIMBAD_SPTYPE.read().objectOfSource;
     });
 
     it('asserts eight records and refuses one', () => {
@@ -359,7 +330,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
     it('has the record\'s own source resolving to the component that entry names', () => {
       for (const { sourceId, tyc } of asserted) {
         expect(objectOfSource.get(sourceId), `source ${sourceId}`)
-          .toBe(simbad.get(tyc)!.mainId);
+          .toBe(simbad.get(tyc)!.simbadOid);
       }
     });
 

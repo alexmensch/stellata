@@ -29,6 +29,9 @@ scripts/catalog/simbad/
                                   dropped, for the integer comparison against
                                   IV/25. The test carries the adjudication
                                   below, pinned over the committed tables.
+  close-pair-hd-pure.ts (+ test)  closePairHdVerdict, the four-witness rule
+                                  below as one function, which the
+                                  adjudication test calls. Pure.
 ```
 
 ## What the TYC → HD pull adjudicates
@@ -118,7 +121,8 @@ it can be the sibling's — that is the crossed-cell case, and it cannot move
 an HD on its own however many printed indexes agree with it.
 
 So the rule takes **four witnesses**, and only moves a cell where they all
-name the record's own component:
+name the record's own component (`closePairHdVerdict`; two objects are the
+same component when their SIMBAD oids are equal):
 
 ```
 IV/25 for the row's own TYC, read as a SET  ┐
