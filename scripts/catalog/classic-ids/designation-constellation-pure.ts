@@ -3,6 +3,7 @@
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import type { CrossIndexRow } from './classic-ids-parse';
+import { flamsteedFor, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 
 /** IV/27A's `cst` in the `CONSTELLATIONS` index space, keyed by both
  *  identifiers the table carries. HD is the table's own key; HIP covers the
@@ -53,19 +54,22 @@ export function resolveDesignationConIndex(
  *  An authority tier names the IV/27A value it overwrote with a different one. */
 export type DesignationCon =
   | { via: 'none' }
-  | { via: 'iv27a' | 'gcvs' | 'anchor'; index: number }
+  | { via: 'iv27a' | 'simbad' | 'gcvs' | 'anchor'; index: number }
   | { via: 'wgsn-bayer' | 'wgsn-gould'; index: number; displaced: number | null };
 
 export type StatedDesignationCon = Exclude<DesignationCon, { via: 'none' }>;
 
 export const NO_DESIGNATION_CON: DesignationCon = { via: 'none' };
 
-/** IV/27A's tier of the cascade: where the naming ladder starts each walked record's `desigCon`. */
+/** IV/27A's tier of the cascade, then SIMBAD's constellation for the record's own Flamsteed number: where the naming ladder starts each walked record's `desigCon`. */
 export function designationConstellation(
-  index: DesignationConIndex, star: { readonly hd: number | null; readonly hip: number | null },
+  index: DesignationConIndex, simbad: SimbadFlamsteed,
+  star: { readonly hd: number | null; readonly hip: number | null; readonly flam: number | null },
 ): DesignationCon {
   const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
-  return conIndex === NO_CONSTELLATION_INDEX ? NO_DESIGNATION_CON : { via: 'iv27a', index: conIndex };
+  if (conIndex !== NO_CONSTELLATION_INDEX) return { via: 'iv27a', index: conIndex };
+  const named = star.flam === null ? undefined : flamsteedFor(simbad, star.hd, star.hip).find((d) => d.number === star.flam);
+  return named === undefined ? NO_DESIGNATION_CON : { via: 'simbad', index: named.conIndex };
 }
 
 /** A companion's designation constellation, taken from its system anchor. */

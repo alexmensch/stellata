@@ -10,6 +10,8 @@ import {
   buildDesignationConIndex, designationConstellation, type DesignationConIndex,
 } from '../classic-ids/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
+import { classifySimbadFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -29,14 +31,18 @@ export interface StarNamingInputs {
   dispositions: Map<string, ProperDisposition>;
   /** IV/27A's designation constellations, the tier below the authority's. */
   designationCons: DesignationConIndex;
+  /** SIMBAD's Flamsteed numbers the rule accepts, the tier below IV/27A's. */
+  simbadFlamsteed: SimbadFlamsteed;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
+  const crossIndex = CROSS_INDEX.read();
   return {
     names: readArtifact(WGSN_NAMES),
     designations: readArtifact(WGSN_DESIGNATIONS),
     dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
-    designationCons: buildDesignationConIndex(CROSS_INDEX.read()),
+    designationCons: buildDesignationConIndex(crossIndex),
+    simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_IDENTS.read(), crossIndex),
   };
 }
 
@@ -108,7 +114,7 @@ export function applyStarNames<S extends NamingSource>(
 
   const named = attach(stars, (star): NamingFields => {
     const fields: NamingFields = {
-      desigCon: designationConstellation(inputs.designationCons, star),
+      desigCon: designationConstellation(inputs.designationCons, inputs.simbadFlamsteed, star),
       iauName: null,
       eponym: null,
       bayer: null,

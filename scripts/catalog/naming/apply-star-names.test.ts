@@ -5,6 +5,7 @@ import { makeStar } from '../parse/star-fixture';
 import { applyStarNames, starNamingSummary } from './apply-star-names';
 import type { DesignationRow } from './wgsn-tables-pure';
 import { enterPhase } from '../record/record-phase';
+import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 
 const con = (code: string): number => CON_INDEX.get(code.toLowerCase())!;
 
@@ -18,6 +19,7 @@ const apply = (
 ) => applyStarNames(enterPhase('walked', stars), {
   names: [], designations, dispositions: new Map(),
   designationCons: { byHd: new Map(iv27aByHd.map(([hd, code]) => [hd, con(code)])), byHip: new Map() },
+  simbadFlamsteed: classifySimbadFlamsteed([], []),
 }, CONSTELLATIONS);
 
 describe('applyStarNames: the designation constellation', () => {
