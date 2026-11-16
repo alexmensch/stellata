@@ -52,6 +52,20 @@ export type LiveBranch<D> = {
 
 export type StageCode<S extends string, B extends string> = `${S}.${B}`;
 
+/** A snake_case tag as a code branch's dash-separated word. */
+export type Kebab<T extends string> = T extends `${infer A}_${infer B}` ? `${A}-${Kebab<B>}` : T;
+
+export function kebab<T extends string>(tag: T): Kebab<T> {
+  return tag.replaceAll('_', '-') as Kebab<T>;
+}
+
+/** One code per tag of a closed set, each branch `prefix` plus the tag in dashes. */
+export function taggedCodes<T extends string, P extends string>(
+  prefix: P, tags: readonly T[], declare: (tag: T) => CodeDeclaration,
+): Record<`${P}${Kebab<T>}`, CodeDeclaration> {
+  return Object.fromEntries(tags.map((tag) => [`${prefix}${kebab(tag)}`, declare(tag)])) as Record<`${P}${Kebab<T>}`, CodeDeclaration>;
+}
+
 export interface StageCodes<B extends string, S extends string = string, L extends B = B> {
   readonly stage: S;
   readonly declarations: Readonly<Record<B, CodeDeclaration>>;

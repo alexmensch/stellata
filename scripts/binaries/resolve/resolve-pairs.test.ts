@@ -39,7 +39,7 @@ describe('resolveCascade', () => {
 
 describe('astrometryRequestIds', () => {
   const result = (pairs: DecomposedPair[], verdicts: BindingVerdict[] = []): Stage2Result =>
-    ({ pairs, siblingRejections: [], synthesizedSeeds: [], verdicts });
+    ({ pairs, refusals: [], synthesizedSeeds: [], verdicts, touches: [] });
   const pair = (wdsId: string, primary: Side, secondary: Side) => decomposed(wdsPair({ wdsId, components: 'AB' }), { primary, secondary });
   const withRejects = (xwalk: IdentifierIndices['xwalkMagRejected'], athyg: IdentifierIndices['athygGaiaMagRejected']) =>
     ({ ...indices(), xwalkMagRejected: xwalk, athygGaiaMagRejected: athyg });
@@ -55,7 +55,7 @@ describe('astrometryRequestIds', () => {
 
   it('keeps every source a gate weighed', () => {
     const verdict: BindingVerdict = {
-      wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', reference: null, winner: null,
+      wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', weighed: [], reference: null, winner: null,
       candidates: [{ label: '555', tokens: ['A'], sourceId: '555', errArcsec: Infinity, predictedSepArcsec: 0 }],
       action: { kind: 'unbind', targets: [{ token: 'A', sourceId: '555' }] },
     };

@@ -2,6 +2,7 @@
 
 import { PAIRS_CODES } from '../../binaries/pairs-lineage-pure';
 import { BINDING_CODES } from '../../binaries/resolve/binding-lineage-pure';
+import { RESOLVE_CODES } from '../../binaries/resolve/resolve-lineage-pure';
 import { RUNTIME_PAIRS_CODES } from '../../binaries/runtime-pairs-lineage-pure';
 import { ALLOCATION_CODES } from '../../sid/allocation-lineage-pure';
 import { SIBLING_ARTIFACTS } from '../../sid/sibling-artifacts-pure';
@@ -17,7 +18,7 @@ import { SIZE_CODES } from '../spectral/size-lineage-pure';
 import type { StageCodes } from './reason-codes/reason-codes-pure';
 import {
   ALLOCATION_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, COHERENCE_LINEAGE, OVERLAP_LINEAGE, PROMOTION_LINEAGE, PLACEMENT_LINEAGE, MEMBERSHIP_LINEAGE,
-  NAMING_LINEAGE, PAIRS_LINEAGE, RUNTIME_PAIRS_LINEAGE, SIZE_LINEAGE,
+  NAMING_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, RUNTIME_PAIRS_LINEAGE, SIZE_LINEAGE,
   type StageLineageSpec,
 } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -28,6 +29,7 @@ export interface LineageStage {
 
 export const LINEAGE_STAGES: readonly LineageStage[] = [
   { codes: BINDING_CODES, spec: BINDING_LINEAGE },
+  { codes: RESOLVE_CODES, spec: RESOLVE_LINEAGE },
   { codes: PAIRS_CODES, spec: PAIRS_LINEAGE },
   { codes: CLASSIC_ID_CODES, spec: CLASSIC_IDS_LINEAGE },
   { codes: MEMBERSHIP_CODES, spec: MEMBERSHIP_LINEAGE },

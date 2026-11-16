@@ -9,12 +9,12 @@ import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
 import {
-  auditBindingIntegrity, bindingAuditSourceIds, bindingIntegrityCounts,
-  enforceBindingVerdicts, type BindingVerdict,
+  auditBindingIntegrity, bindingAuditSourceIds,
+  enforceBindingVerdicts, verdictTouches, type BindingVerdict, type VerdictTouch,
 } from './binding-audit-pure';
 import {
-  SIBLING_REJECTION_TIERS, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
-  type SiblingRejection, type SiblingRejectionTier,
+  CASCADE_GATES, groupOrb6ByPair, resolveComponent, resolveViaCcdm, resolveViaPosition, resolveViaSimbad,
+  type CascadeGate, type CascadeRefusal,
 } from './cascade-pure';
 import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
@@ -29,27 +29,33 @@ export interface CascadeInputs {
 
 export function resolveCascade(
   inputs: CascadeInputs,
-): { pairs: readonly DecomposedPair[]; siblingRejections: readonly SiblingRejection[] } {
+): { pairs: readonly DecomposedPair[]; refusals: readonly CascadeRefusal[] } {
   const orb6ByPair = groupOrb6ByPair(inputs.orb6);
-  const first = decompose(inputs.pairs, (pair, token, isPrimary) => resolveComponent(
-    pair, token, isPrimary, orb6ByPair.get(pairRowKey(pair.wdsId, pair.components)) ?? [], inputs.indices,
-  ));
+  const offCoord: CascadeRefusal[] = [];
+  const first = decompose(inputs.pairs, (pair, token, isPrimary) => {
+    const { component, refused } = resolveComponent(
+      pair, token, isPrimary, orb6ByPair.get(pairRowKey(pair.wdsId, pair.components)) ?? [], inputs.indices,
+    );
+    offCoord.push(...refused);
+    return component;
+  });
   const simbad = resolveViaSimbad(first, inputs.simbadWdsXids);
   const ccdm = resolveViaCcdm(simbad, inputs.indices);
   const position = resolveViaPosition(ccdm.pairs, inputs.athyg);
   return {
     pairs: propagateIdentities(position.pairs),
-    siblingRejections: [...ccdm.rejected, ...position.rejected],
+    refusals: [...offCoord, ...ccdm.rejected, ...position.rejected],
   };
 }
 
 export interface Stage2Result {
   readonly pairs: readonly DecomposedPair[];
-  /** One per candidate the sibling-identity guard refused, CCDM tier then AT-HYG position tier. */
-  readonly siblingRejections: readonly SiblingRejection[];
+  /** One per candidate a cascade gate refused, in gate order. */
+  readonly refusals: readonly CascadeRefusal[];
   /** Synthesized pairs' components the seeding pass bound. */
   readonly synthesizedSeeds: readonly ResolvedComponent[];
   readonly verdicts: readonly BindingVerdict[];
+  readonly touches: readonly VerdictTouch[];
 }
 
 export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
@@ -60,9 +66,10 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
   const audit = auditBindingIntegrity(seeds.pairs, reference.indices, reference.simbadWdsXids);
   return Object.freeze({
     pairs: freezePairs(enforceBindingVerdicts(audit, reference.indices)),
-    siblingRejections: Object.freeze([...cascade.siblingRejections]),
+    refusals: Object.freeze([...cascade.refusals]),
     synthesizedSeeds: Object.freeze([...seeds.seeded]),
     verdicts: Object.freeze([...audit.verdicts]),
+    touches: Object.freeze(verdictTouches(audit)),
   });
 }
 
@@ -77,14 +84,6 @@ export function astrometryRequestIds(result: Stage2Result, indices: IdentifierIn
   return ids;
 }
 
-export function siblingRejectionTally(result: Stage2Result): Record<SiblingRejectionTier, number> {
-  return fold(SIBLING_REJECTION_TIERS, result.siblingRejections, (r) => r.tier);
-}
-
-/** The count-snapshot keys Stage 2's code alone produces. */
-export function stage2Counts(result: Stage2Result) {
-  return {
-    ccdm_sibling_owned_rejected: siblingRejectionTally(result).ccdm_sibling_owned,
-    ...bindingIntegrityCounts(result.verdicts),
-  };
+export function refusalTally(result: Stage2Result): Record<CascadeGate, number> {
+  return fold(CASCADE_GATES, result.refusals, (r) => r.gate);
 }

@@ -323,7 +323,7 @@ direction tier's 38.
 ran, in walk order, up to the park that stopped it or the record it shipped.
 `placementLineageRows` serialises it through an exhaustive `switch`, and
 `placementLineageLines` turns those rows into the lines the build keeps
-([Storage and cost](../lineage/README.md#storage-and-cost)):
+([Storage and cost](../lineage/storage/README.md)):
 
 - every step writes its outcome code and its refused candidates, the
   candidate's tier in `params`; a refusal code names the rule, never the tier;

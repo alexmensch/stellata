@@ -193,27 +193,62 @@ export interface BindingCandidate {
   readonly predictedSepArcsec: number;
 }
 
-export interface UnbindTarget {
+export interface TokenBinding {
   readonly token: string;
   readonly sourceId: string;
 }
 
-export interface BindingVerdict {
+/** Every instance of the letter: README.md#choices-the-outputs-rest-on */
+type RebindAction = { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia };
+type UnbindAction = { readonly kind: 'unbind'; readonly targets: readonly TokenBinding[] };
+export type VerdictAction = RebindAction | UnbindAction;
+
+/** What enforcement does on each verdict; null for a skipped conflict. */
+interface ActionOf {
+  geometric: VerdictAction;
+  identity_refuted: RebindAction;
+  unbound_ambiguous: UnbindAction;
+  skipped_no_reference: null;
+  skipped_photocentre_blend: null;
+}
+
+export type VerdictPart = 'won' | 'refused' | 'skipped';
+
+/** The verdicts each shape reaches, and the parts each verdict gives the
+ *  components holding a binding it weighed (`partOf`). */
+export const VERDICT_PARTS = {
+  source_letters: {
+    geometric: ['won', 'refused'],
+    identity_refuted: ['won', 'refused'],
+    unbound_ambiguous: ['refused'],
+    skipped_no_reference: ['skipped'],
+    skipped_photocentre_blend: ['skipped'],
+  },
+  letter_sources: {
+    geometric: ['won', 'refused'],
+    unbound_ambiguous: ['refused'],
+    skipped_no_reference: ['skipped'],
+    skipped_photocentre_blend: ['skipped'],
+  },
+} as const satisfies Record<BindingShape, Partial<Record<BindingVerdictKind, readonly VerdictPart[]>>>;
+
+type VerdictOf<S extends BindingShape> = keyof (typeof VERDICT_PARTS)[S] & BindingVerdictKind;
+
+interface VerdictFields {
   readonly wdsId: string;
-  readonly shape: BindingShape;
-  readonly verdict: BindingVerdictKind;
   readonly contested: string;
+  /** Every token and source the contradiction holds, before enforcement. */
+  readonly weighed: readonly TokenBinding[];
   readonly reference: { readonly token: string; readonly sourceId: string } | null;
   readonly winner: BindingCandidate | null;
   readonly candidates: readonly BindingCandidate[];
-  /** What enforcement does; null for a skipped conflict. */
-  readonly action: VerdictAction | null;
 }
 
-export type VerdictAction =
-  /** Every instance of the letter: README.md#choices-the-outputs-rest-on */
-  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia }
-  | { readonly kind: 'unbind'; readonly targets: readonly UnbindTarget[] };
+export type BindingVerdict = {
+  [S in BindingShape]: {
+    [K in VerdictOf<S>]: VerdictFields & { readonly shape: S; readonly verdict: K; readonly action: ActionOf[K] }
+  }[VerdictOf<S>]
+}[BindingShape];
 
 interface Reference {
   readonly token: string;
@@ -320,8 +355,6 @@ function xidOwnSource(
   return indices.hipToGaia.get(xid.hip) ?? indices.hipToAthyg.get(xid.hip)?.gaia ?? null;
 }
 
-type RebindAction = Extract<VerdictAction, { kind: 'rebind' }>;
-
 /** A measured-pair "blend" where SIMBAD gives exactly one side the contested
  *  source and the other side a different one is a cross-walk mis-match. The
  *  loser must be one token: rebinding re-homes one letter. */
@@ -348,15 +381,15 @@ function auditSystem(
   ctx: SystemContext, indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
 ): BindingVerdict[] {
   const verdicts: BindingVerdict[] = [];
-  const verdict = (
-    shape: BindingShape, kind: BindingVerdictKind, contested: string, ref: Reference | null,
-    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], action: VerdictAction | null,
+  const verdict = <S extends BindingShape, K extends VerdictOf<S>>(
+    shape: S, kind: K, contested: string, weighed: readonly TokenBinding[], ref: Reference | null,
+    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], action: ActionOf[K],
   ): void => {
     verdicts.push({
-      wdsId: ctx.wdsId, shape, verdict: kind, contested,
+      wdsId: ctx.wdsId, shape, verdict: kind, contested, weighed,
       reference: ref === null ? null : { token: ref.token, sourceId: ref.sourceId },
       winner, candidates, action,
-    });
+    } as BindingVerdict);
   };
   const blendLetters = new Set<string>();
   const identityRebound = new Set<string>();
@@ -372,9 +405,10 @@ function auditSystem(
     const clusters = clusterTokens(tokens, ctx.blendPairs);
     if (clusters.length < 2) continue;
     const contested = `${src}:${clusters.map(clusterRepresentative).sort().join('/')}`;
+    const weighed = [...tokens].sort().map((token) => ({ token, sourceId: src }));
     const ref = selectReference(ctx, tokens, new Set([src]), indices);
     if (ref === null) {
-      verdict('source_letters', 'skipped_no_reference', contested, null, null, [], null);
+      verdict('source_letters', 'skipped_no_reference', contested, weighed, null, null, [], null);
       continue;
     }
     const cands = clusters.map((cluster): BindingCandidate => {
@@ -387,19 +421,19 @@ function auditSystem(
       && (!isBlend || (Number.isFinite(winner.errArcsec) && winner.errArcsec <= ARBITRATION_BLEND_FLOOR_ARCSEC));
     if (decisive) {
       const targets = cands.filter((c) => c !== winner).flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
-      verdict('source_letters', 'geometric', contested, ref, winner, cands, { kind: 'unbind', targets });
+      verdict('source_letters', 'geometric', contested, weighed, ref, winner, cands, { kind: 'unbind', targets });
     } else if (isBlend) {
       const refutation = refutePhotocentreBlend(ctx, cands, src, indices, xids);
       if (refutation !== null) {
         identityRebound.add(refutation.rebind.letter);
-        verdict('source_letters', 'identity_refuted', contested, ref, refutation.owner, cands, refutation.rebind);
+        verdict('source_letters', 'identity_refuted', contested, weighed, ref, refutation.owner, cands, refutation.rebind);
       } else {
         for (const c of cands) for (const t of c.tokens) blendLetters.add(t);
-        verdict('source_letters', 'skipped_photocentre_blend', contested, ref, winner, cands, null);
+        verdict('source_letters', 'skipped_photocentre_blend', contested, weighed, ref, winner, cands, null);
       }
     } else {
       const targets = cands.flatMap((c) => c.tokens.map((token) => ({ token, sourceId: src })));
-      verdict('source_letters', 'unbound_ambiguous', contested, ref, null, cands, { kind: 'unbind', targets });
+      verdict('source_letters', 'unbound_ambiguous', contested, weighed, ref, null, cands, { kind: 'unbind', targets });
     }
   }
 
@@ -408,14 +442,15 @@ function auditSystem(
     const sources = [...held.keys()].sort(compareSourceIds);
     if (sources.length < 2) continue;
     const contested = `${tok}:${sources.join('/')}`;
+    const weighed = sources.map((sourceId) => ({ token: tok, sourceId }));
     if (identityRebound.has(tok)) continue;
     if (blendLetters.has(tok)) {
-      verdict('letter_sources', 'skipped_photocentre_blend', contested, null, null, [], null);
+      verdict('letter_sources', 'skipped_photocentre_blend', contested, weighed, null, null, [], null);
       continue;
     }
     const ref = selectReference(ctx, new Set([tok]), new Set(), indices);
     if (ref === null) {
-      verdict('letter_sources', 'skipped_no_reference', contested, null, null, [], null);
+      verdict('letter_sources', 'skipped_no_reference', contested, weighed, null, null, [], null);
       continue;
     }
     const cands = sources.map((s): BindingCandidate => {
@@ -424,13 +459,11 @@ function auditSystem(
     });
     const winner = decide(cands);
     if (winner !== null) {
-      verdict('letter_sources', 'geometric', contested, ref, winner, cands, {
+      verdict('letter_sources', 'geometric', contested, weighed, ref, winner, cands, {
         kind: 'rebind', letter: tok, sourceId: winner.sourceId, via: held.get(winner.sourceId)!,
       });
     } else {
-      verdict('letter_sources', 'unbound_ambiguous', contested, ref, null, cands, {
-        kind: 'unbind', targets: sources.map((sourceId) => ({ token: tok, sourceId })),
-      });
+      verdict('letter_sources', 'unbound_ambiguous', contested, weighed, ref, null, cands, { kind: 'unbind', targets: weighed });
     }
   }
   return verdicts;
@@ -506,6 +539,44 @@ export function enforceBindingVerdicts(
   return smearIfSeeded(inheritDownwardParentBindings(propagateIdentities(out), enforced));
 }
 
+/** One component holding a binding a verdict weighed, and what the verdict made of it. */
+export interface VerdictTouch {
+  readonly verdict: BindingVerdict;
+  readonly pair: WdsPair;
+  /** As the components field writes it. */
+  readonly component: string;
+  readonly sourceId: string;
+  readonly part: VerdictPart;
+}
+
+function partOf(action: VerdictAction | null, b: TokenBinding): VerdictPart {
+  if (action === null) return 'skipped';
+  if (action.kind === 'rebind') return b.token === action.letter && b.sourceId !== action.sourceId ? 'refused' : 'won';
+  return action.targets.some((t) => t.token === b.token && t.sourceId === b.sourceId) ? 'refused' : 'won';
+}
+
+/** Every verdict's weighed bindings, at each instance holding them before enforcement. */
+export function verdictTouches({ pairs, systems, verdicts }: BindingAudit): VerdictTouch[] {
+  return verdicts.flatMap((verdict) => {
+    const ctx = systems.get(verdict.wdsId)!;
+    const touches = verdict.weighed.flatMap((b) => {
+      const part = partOf(verdict.action, b);
+      const instances = ctx.instances.get(b.token);
+      if (instances === undefined) throw new Error(`${verdict.wdsId}: weighed token ${b.token} has no component instance`);
+      return instances.flatMap((i): VerdictTouch[] => {
+        const c = pairs[i.pairIdx][i.side];
+        return c.gaia?.value === b.sourceId
+          ? [{ verdict, pair: pairs[i.pairIdx].pair, component: c.component, sourceId: b.sourceId, part }]
+          : [];
+      });
+    });
+    if (touches.length === 0) {
+      throw new Error(`${verdict.wdsId} ${verdict.shape} ${verdict.verdict}: no component holds a binding it weighed`);
+    }
+    return touches;
+  });
+}
+
 const SHAPE_COUNT_KEY = {
   source_letters: 'binding_conflicts_source_letters',
   letter_sources: 'binding_conflicts_letter_sources',
@@ -534,7 +605,9 @@ function rekey<K extends string, V extends string>(table: Readonly<Record<K, V>>
   return out;
 }
 
-export function bindingIntegrityCounts(verdicts: readonly BindingVerdict[]): Record<BindingIntegrityCountKey, number> {
+export function bindingIntegrityCounts(
+  verdicts: readonly Pick<BindingVerdict, 'shape' | 'verdict'>[],
+): Record<BindingIntegrityCountKey, number> {
   return {
     ...rekey(SHAPE_COUNT_KEY, fold(BINDING_SHAPES, verdicts, (v) => v.shape)),
     ...rekey(VERDICT_COUNT_KEY, fold(BINDING_VERDICTS, verdicts, (v) => v.verdict)),

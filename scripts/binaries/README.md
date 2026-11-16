@@ -62,8 +62,9 @@ scripts/binaries/
                                   1-6 in order, then main hands
                                   multiples.tsv, the binding verdicts and
                                   the component-binding
-                                  (resolve/README.md#binding-lineage) and
-                                  pairs (#pairs-lineage) lineage stages
+                                  (resolve/README.md#binding-lineage),
+                                  resolve (resolve/README.md#resolve-lineage)
+                                  and pairs (#pairs-lineage) lineage stages
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
@@ -228,7 +229,10 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    (`build/binding-integrity-verdicts.tsv`, a gitignored review surface),
    each component's Gaia and HIP binding provenance as the
    `component-binding` lineage stage
-   (`build/lineage/component-binding.tsv.gz`), and every pair row's fate as
+   (`build/lineage/component-binding.tsv.gz`), Stage 2's tiers, refusals and
+   audit verdicts per component as the `resolve` stage
+   (`build/lineage/resolve.tsv.gz`, [Resolve lineage](resolve/README.md#resolve-lineage)),
+   and every pair row's fate as
    the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
@@ -310,7 +314,7 @@ Ba/Bb sub-letter blend the inner-pair hierarchy owns
 ## Pairs lineage
 
 `build:binaries` writes every pair row the stages decide as the `pairs`
-lineage stage, after `component-binding` in `LINEAGE_STAGES`
+lineage stage, after `resolve` in `LINEAGE_STAGES`
 ([Record lineage](/scripts/catalog/lineage/README.md#the-pairs-stage)), from
 `pairs-lineage-pure.ts`. A pair founds no record, so its rows are keyed on
 the rows that founded it, the pair's `origin`
