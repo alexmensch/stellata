@@ -8,7 +8,7 @@ import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-fi
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import type { Cell } from '../pull/columns-pure';
 import { describePhasedPull, runPhasedPull } from '../pull/pull';
-import { recordedTableCases } from '../pull/recorded-reply';
+import { QUIET_DEPS, recordedTableCases } from '../pull/recorded-reply';
 import { GAIA, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { deepPopulationPull, type DeepPopulationTable } from './deep-population-pure';
 import { APSIS_TABLE, MIN_APSIS_SPECTRAL_TYPE, MIN_APSIS_TEFF_LOGG } from './deep-population-tables-pure';
@@ -39,15 +39,13 @@ function answer(adql: string, missing: readonly string[] = []): string {
 function deps(reply: (adql: string) => string) {
   const asked: string[] = [];
   const d: TapClientDeps = {
+    ...QUIET_DEPS,
     transport: async (_url, form) => {
       if (!form) return textReply(200, 'text/xml', '<capabilities/>');
       const adql = form.get('QUERY') ?? '';
       asked.push(adql);
       return textReply(200, 'text/csv', reply(adql));
     },
-    sleep: async () => {},
-    report: () => {},
-    log: () => {},
   };
   return { deps: d, asked };
 }

@@ -8,6 +8,7 @@ import { declareOutputs } from '../../util/emit-artifacts';
 import { cellReader } from '../pull/columns-pure';
 import { bandCheck, spotRowCheck } from '../pull/gates-pure';
 import { phaseLimit, runPhasedPull } from '../pull/pull';
+import { QUIET_DEPS } from '../pull/recorded-reply';
 import { TapOverflow, textReply } from '../pull/tap-pure';
 import { fakeAsk } from '../simbad/simbad-fake-pure';
 import { MAIN_ID } from '../simbad/simbad-specs-pure';
@@ -92,10 +93,8 @@ describe('an overflowed SIMBAD reply', () => {
     const overfull = `oidref,id\n${Array.from({ length: phaseLimit(TYC_HD_PHASES.resolve) + 1 }, (_, i) => `${i},TYC 1-${i}-1`).join('\n')}\n`;
     const pull = tycHdPull(declareOutputs({ tycHd: join(dir, 'tyc-hd.tsv') }), { request: tycho2Request(['1-1-1'], []), requestFrom: [] });
     await expect(runPhasedPull(pull, {
+      ...QUIET_DEPS,
       transport: async (_url, form) => (form ? textReply(200, 'text/csv', overfull) : textReply(200, 'text/xml', '<capabilities/>')),
-      sleep: async () => {},
-      report: () => {},
-      log: () => {},
     })).rejects.toThrow(TapOverflow);
     expect(readdirSync(dir).filter((f) => f.endsWith('.tsv'))).toEqual([]);
   });

@@ -35,7 +35,9 @@ simbad-rows-pure.ts         Written rows (basic columns, then ident and flux
 simbad-fake-pure.ts         An in-memory SIMBAD answering declared phases, as
                             an ask or a TAP transport; an id lookup matches
                             whatever either side's space padding.
-simbad-test-fixtures.ts     Manifest-record and fake builders for the suites.
+simbad-test-fixtures.ts     Manifest-record and fake builders for the suites,
+                            and replayedTable: a pull's output run against a
+                            fake, which every committed-table replay uses.
 *-pure.test.ts              Each module's vitest suite, beside it.
 ```
 
