@@ -10,7 +10,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { pairSystemId } from '../multiples-row-key-pure';
-import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
+import { massOf, massRatio, spectralMass, type SpectralMass } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
 import { ownGaia, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
@@ -123,13 +123,43 @@ const NO_ORBIT_FIELDS: OrbitFields = {
   pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null, aVia: 'none',
 };
 
+/** What a component's spectral-type mass was read for: the q backfill, the Kepler a. */
+export type MassUse = 'q' | 'a';
+
+export interface MassRead {
+  readonly mass: SpectralMass;
+  readonly uses: readonly MassUse[];
+}
+
+/** Each side's mass as Stage 6 read it; null where it read none. */
+export interface PairMassReads {
+  readonly primary: MassRead | null;
+  readonly secondary: MassRead | null;
+}
+
+const NO_MASS_READS: PairMassReads = { primary: null, secondary: null };
+
+export interface PairOrbitFields {
+  readonly fields: OrbitFields;
+  readonly masses: PairMassReads;
+}
+
 /** The orbit's elements, q backfilled from both spectral types, then — on
  *  the estimated-element routes only — q, a circular ω and a Kepler a
  *  backstopped: README.md#what-each-column-carries */
-export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpect: string): OrbitFields {
-  if (orbit.orbitVia === 'none') return NO_ORBIT_FIELDS;
+export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpect: string): PairOrbitFields {
+  if (orbit.orbitVia === 'none') return { fields: NO_ORBIT_FIELDS, masses: NO_MASS_READS };
   const el = orbit.elements;
-  let q = el.q ?? massRatioFromComponents(primarySpect, secondarySpect);
+  const primaryMass = spectralMass(primarySpect);
+  const secondaryMass = spectralMass(secondarySpect);
+  const primaryUses: MassUse[] = [];
+  const secondaryUses: MassUse[] = [];
+  let q = el.q;
+  if (q === null) {
+    q = massRatio(primaryMass, secondaryMass);
+    primaryUses.push('q');
+    secondaryUses.push('q');
+  }
   let omegaRad = el.periastronRad;
   let aAU = el.aAu;
   let aVia: MultiplesRecord['aVia'] = aAU === null ? 'none' : 'catalog';
@@ -137,7 +167,8 @@ export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpe
     q ??= UNKNOWN_COMPANION_MASS_RATIO_Q;
     if (omegaRad === null && el.e === 0) omegaRad = CIRCULAR_ORBIT_OMEGA_RAD;
     if (aAU === null && el.pDays !== null) {
-      const mPrimary = massFromSpectralClass(primarySpect) ?? DEFAULT_PRIMARY_MASS_MSUN;
+      primaryUses.push('a');
+      const mPrimary = massOf(primaryMass) ?? DEFAULT_PRIMARY_MASS_MSUN;
       const kepler = keplerSemimajorAxisAu(el.pDays, mPrimary / (1.0 - q));
       if (kepler !== null) {
         aAU = kepler;
@@ -145,7 +176,11 @@ export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpe
       }
     }
   }
-  return { pDays: el.pDays, tJd: el.tJd, e: el.e, aAU, iRad: el.iRad, omegaRad, OmegaRad: el.nodeRad, q, aVia };
+  const read = (mass: SpectralMass, uses: readonly MassUse[]): MassRead | null => (uses.length === 0 ? null : { mass, uses });
+  return {
+    fields: { pDays: el.pDays, tJd: el.tJd, e: el.e, aAU, iRad: el.iRad, omegaRad, OmegaRad: el.nodeRad, q, aVia },
+    masses: { primary: read(primaryMass, primaryUses), secondary: read(secondaryMass, secondaryUses) },
+  };
 }
 
 function geometryFields(p: DecomposedPair, mags: PairMagnitudes): Pick<
@@ -175,6 +210,7 @@ export interface PairRows {
   readonly rows: readonly [MultiplesRecord, MultiplesRecord];
   /** The pair's magnitudes came from the MSC: WDS printed none. */
   readonly mscMags: boolean;
+  readonly masses: PairMassReads;
 }
 
 /** A kept pair's two records; null when neither side nor the system has a position. */
@@ -194,11 +230,12 @@ export function pairRows(
   }, indices);
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);
+  const { fields, masses } = orbitFields(orbit, pri.spect, sec.spect);
   const shared = {
     systemId: pairSystemId(p.pair),
     regime: ORBIT_VIA_PROPERTIES[orbit.orbitVia].regime,
     orbitVia: orbit.orbitVia,
-    ...orbitFields(orbit, pri.spect, sec.spect),
+    ...fields,
     ...geometryFields(p, mags),
   };
   return {
@@ -207,6 +244,7 @@ export function pairRows(
       { ...shared, ...sec, orbitRole: 'secondary', ...anchorFields(wdsId, sTok, anchors) },
     ],
     mscMags: mags.source === 'msc',
+    masses,
   };
 }
 

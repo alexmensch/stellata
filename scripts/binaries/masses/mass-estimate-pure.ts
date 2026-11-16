@@ -122,28 +122,52 @@ const IV_MS_WEIGHT = 1.0 - IV_GIANT_WEIGHT;
 export const WD_MASS_DEFAULT = 0.6;
 export const CARBON_WR_MASS_DEFAULT = 3.0;
 
-/** Null for an empty or unparseable string. */
-export function massFromSpectralClass(spect: string | null): number | null {
-  const parsed = parseSpectralType(spect);
-  if (parsed === null) return null;
-  if (parsed.isWhiteDwarf) return WD_MASS_DEFAULT;
-  if (parsed.classIdx === CARBON_CLASS_IDX) return CARBON_WR_MASS_DEFAULT;
-  if (parsed.classIdx === UNKNOWN_CLASS_IDX) return null;
+/** The branch a mass is read off: a table row (`main_sequence_assumed` where the type states no luminosity class) or a default. */
+export const MASS_BRANCHES = [
+  'main_sequence', 'main_sequence_assumed', 'subgiant', 'giant', 'supergiant', 'white_dwarf', 'carbon_wr',
+] as const;
+export type MassBranch = (typeof MASS_BRANCHES)[number];
+
+export type SpectralMass =
+  | { readonly kind: 'no_type' }
+  | { readonly kind: 'unparsed' }
+  | { readonly kind: MassBranch; readonly msun: number };
+
+function tableMass(parsed: ParsedSpect): SpectralMass {
+  if (parsed.isWhiteDwarf) return { kind: 'white_dwarf', msun: WD_MASS_DEFAULT };
+  if (parsed.classIdx === CARBON_CLASS_IDX) return { kind: 'carbon_wr', msun: CARBON_WR_MASS_DEFAULT };
+  if (parsed.classIdx === UNKNOWN_CLASS_IDX) return { kind: 'unparsed' };
   const c = parsed.classIdx;
   const sub = Math.max(0, Math.min(9, parsed.subclass));
   switch (parsed.lumClass) {
-    case 0: return WD_MASS_DEFAULT;
-    case 4: case 5: return III_MASS[c][sub];
-    case 3: return IV_GIANT_WEIGHT * III_MASS[c][sub] + IV_MS_WEIGHT * MS_MASS[c][sub];
-    case 6: case 7: case 8: case 9: return I_MASS[c][sub];
-    default: return MS_MASS[c][sub];
+    case 0: return { kind: 'white_dwarf', msun: WD_MASS_DEFAULT };
+    case 4: case 5: return { kind: 'giant', msun: III_MASS[c][sub] };
+    case 3: return { kind: 'subgiant', msun: IV_GIANT_WEIGHT * III_MASS[c][sub] + IV_MS_WEIGHT * MS_MASS[c][sub] };
+    case 6: case 7: case 8: case 9: return { kind: 'supergiant', msun: I_MASS[c][sub] };
+    case 1: case 2: return { kind: 'main_sequence', msun: MS_MASS[c][sub] };
+    default: return { kind: 'main_sequence_assumed', msun: MS_MASS[c][sub] };
   }
 }
 
-/** q = M₂ / (M₁ + M₂) from both components' types; null when either has no mass. */
-export function massRatioFromComponents(primarySpect: string | null, secondarySpect: string | null): number | null {
-  const mA = massFromSpectralClass(primarySpect);
-  const mB = massFromSpectralClass(secondarySpect);
+export function spectralMass(spect: string | null): SpectralMass {
+  if (!spect?.replace(/\s+/g, '')) return { kind: 'no_type' };
+  const parsed = parseSpectralType(spect);
+  return parsed === null ? { kind: 'unparsed' } : tableMass(parsed);
+}
+
+export function massOf(m: SpectralMass): number | null {
+  return 'msun' in m ? m.msun : null;
+}
+
+/** Null for an empty or unparseable string. */
+export function massFromSpectralClass(spect: string | null): number | null {
+  return massOf(spectralMass(spect));
+}
+
+/** q = M₂ / (M₁ + M₂); null when either has no mass. */
+export function massRatio(primary: SpectralMass, secondary: SpectralMass): number | null {
+  const mA = massOf(primary);
+  const mB = massOf(secondary);
   if (mA === null || mB === null || mA + mB <= 0) return null;
   return mB / (mA + mB);
 }

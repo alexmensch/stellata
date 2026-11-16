@@ -12,12 +12,15 @@ The spectral type comes from `../components/`'s cascade.
 
 ```
 scripts/binaries/masses/
-  mass-estimate-pure.ts (+ test)   parseSpectralType and
-                                   massFromSpectralClass: the main-sequence,
-                                   giant and supergiant tables (Cox 2000),
-                                   the subgiant weighting, the white-dwarf
-                                   and carbon / Wolf-Rayet defaults;
-                                   massRatioFromComponents, a pair's q.
+  mass-estimate-pure.ts (+ test)   parseSpectralType and spectralMass:
+                                   the branch a mass is read off (the
+                                   main-sequence, giant and supergiant
+                                   tables of Cox 2000, the subgiant
+                                   weighting, the white-dwarf and carbon /
+                                   Wolf-Rayet defaults) or why there is
+                                   none (no type, or one the parser
+                                   cannot read); massFromSpectralClass,
+                                   its mass alone; massRatio, a pair's q.
   pair-masses.ts                   pairMasses: both sides summed, an
                                    unparseable type at
                                    UNKNOWN_COMPONENT_MASS_MSUN.

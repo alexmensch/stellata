@@ -9,6 +9,7 @@ import type { OrbitViaOnFile } from '../multiples-record-pure';
 import { indices, xid } from '../resolve/resolve-fixture';
 import {
   CIRCULAR_ORBIT_OMEGA_RAD, UNKNOWN_COMPANION_MASS_RATIO_Q, orbitFields, positionPc, standaloneRow, wdsYearToJd,
+  type PairMassReads,
 } from './multiples-rows-pure';
 import { measured } from '../astrometry/astrometry-fixture';
 import { elements } from './stage6-fixture';
@@ -57,30 +58,44 @@ describe('orbitFields — the estimated-element backstops', () => {
   const nss = (over: Parameters<typeof elements>[0] = {}) => ({ orbitVia: 'gaia_nss' as const, elements: elements(over) });
 
   it('derives a Kepler a at the default q', () => {
-    const f = orbitFields(nss(), 'G2V', '');
+    const f = orbitFields(nss(), 'G2V', '').fields;
     expect(f.q).toBe(UNKNOWN_COMPANION_MASS_RATIO_Q);
     expect(f.aAU).toBeCloseTo(1.5 ** (1 / 3), 9);
     expect(f.aVia).toBe('kepler_mass_estimate');
   });
 
   it('leaves a catalogue a and q alone', () => {
-    const f = orbitFields(nss({ aAu: 23.0, q: 0.4 }), 'G2V', '');
+    const f = orbitFields(nss({ aAu: 23.0, q: 0.4 }), 'G2V', '').fields;
     expect([f.aAU, f.aVia, f.q]).toEqual([23.0, 'catalog', 0.4]);
   });
 
   it('backfills a circular orbit\'s ω, never an eccentric one\'s', () => {
-    expect(orbitFields(nss({ e: 0.0, periastronRad: null }), 'G2V', '').omegaRad).toBe(CIRCULAR_ORBIT_OMEGA_RAD);
-    expect(orbitFields(nss({ e: 0.3, periastronRad: null }), 'G2V', '').omegaRad).toBeNull();
+    expect(orbitFields(nss({ e: 0.0, periastronRad: null }), 'G2V', '').fields.omegaRad).toBe(CIRCULAR_ORBIT_OMEGA_RAD);
+    expect(orbitFields(nss({ e: 0.3, periastronRad: null }), 'G2V', '').fields.omegaRad).toBeNull();
   });
 
   it('takes the default primary mass for an unparseable type', () => {
-    expect(orbitFields(nss(), '', '').aAU).toBeCloseTo(1.5 ** (1 / 3), 9);
+    expect(orbitFields(nss(), '', '').fields.aAU).toBeCloseTo(1.5 ** (1 / 3), 9);
   });
 
   it('backstops nothing without an orbit, or on a visual orbit', () => {
-    expect(orbitFields({ orbitVia: 'none' }, 'G2V', '')).toMatchObject({ q: null, aAU: null, aVia: 'none' });
-    const visual = orbitFields({ orbitVia: 'orb6' satisfies OrbitViaOnFile, elements: elements({ e: 0.0, periastronRad: null }) }, 'G2V', '');
+    expect(orbitFields({ orbitVia: 'none' }, 'G2V', '').fields).toMatchObject({ q: null, aAU: null, aVia: 'none' });
+    const visual = orbitFields({ orbitVia: 'orb6' satisfies OrbitViaOnFile, elements: elements({ e: 0.0, periastronRad: null }) }, 'G2V', '').fields;
     expect([visual.q, visual.aAU, visual.omegaRad]).toEqual([null, null, null]);
+  });
+});
+
+describe('orbitFields — the masses read', () => {
+  const nss = (over: Parameters<typeof elements>[0] = {}) => ({ orbitVia: 'gaia_nss' as const, elements: elements(over) });
+  const reads = (m: PairMassReads) => [m.primary && [m.primary.mass.kind, m.primary.uses], m.secondary && [m.secondary.mass.kind, m.secondary.uses]];
+
+  it('reads both sides for the q backfill and the primary again for the Kepler a', () => {
+    expect(reads(orbitFields(nss(), 'G2V', 'L4').masses)).toEqual([['main_sequence', ['q', 'a']], ['unparsed', ['q']]]);
+  });
+
+  it('reads no mass where the orbit publishes q and a, or there is no orbit', () => {
+    expect(reads(orbitFields(nss({ aAu: 23.0, q: 0.4 }), 'G2V', '').masses)).toEqual([null, null]);
+    expect(reads(orbitFields({ orbitVia: 'none' }, 'G2V', '').masses)).toEqual([null, null]);
   });
 });
 

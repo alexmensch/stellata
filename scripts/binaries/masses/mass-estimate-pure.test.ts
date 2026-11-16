@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatioFromComponents, parseSpectralType, WD_MASS_DEFAULT,
+  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatio, parseSpectralType, spectralMass, WD_MASS_DEFAULT,
 } from './mass-estimate-pure';
+
+const massRatioFromComponents = (a: string, b: string) => massRatio(spectralMass(a), spectralMass(b));
 
 const triple = (s: string) => {
   const p = parseSpectralType(s)!;
@@ -88,7 +90,18 @@ describe('massFromSpectralClass', () => {
   });
 });
 
-describe('massRatioFromComponents', () => {
+describe('spectralMass', () => {
+  it('names the branch each type is read off', () => {
+    const kinds = ['G2V', 'G2', 'G2IV', 'K0III', 'B0Ia', 'DA1.9', 'sdK5', 'WN5', 'L4', '(B8)III', '', ' ', null]
+      .map((s) => spectralMass(s).kind);
+    expect(kinds).toEqual([
+      'main_sequence', 'main_sequence_assumed', 'subgiant', 'giant', 'supergiant', 'white_dwarf', 'main_sequence',
+      'carbon_wr', 'unparsed', 'unparsed', 'no_type', 'no_type', 'no_type',
+    ]);
+  });
+});
+
+describe('massRatio', () => {
   it('reads Sirius (A1V + DA1.9) at 0.6 / (2.6 + 0.6)', () => {
     expect(massRatioFromComponents('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
   });

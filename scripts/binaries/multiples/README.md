@@ -39,7 +39,10 @@ Stage 3's pair order, then the standalone rows in the SIMBAD cross-ID file's
 order. A kept pair with no position on either side and no system anchor is not
 a row; the pair itself is in `droppedNoPosition`, which the `pairs` lineage
 stage reads ([Pairs lineage](../README.md#pairs-lineage)). `mscMagFills`
-names the pairs whose magnitudes came from the MSC.
+names the pairs whose magnitudes came from the MSC. `massReads` carries every
+row, in file order, with the spectral-type mass `orbitFields` read for it —
+the branch it came off and whether it fed the q backfill, the Kepler a or
+both — or null where it read none.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,
@@ -230,7 +233,7 @@ Three system-level mechanisms run at emit time:
   `unresolved` (a HIP alone binds no tier, as on a pair row).
 - **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
   no `q` (visual ORB6 with no spectroscopic counterpart),
-  `massRatioFromComponents` in `../masses/mass-estimate-pure.ts`
+  `massRatio` in `../masses/mass-estimate-pure.ts`
   parses both components' spectral strings (SIMBAD per-component
   preferred, AT-HYG inherited fallback) into class / subclass / lum
   class and reads a `q = M_secondary / (M_primary + M_secondary)` off
