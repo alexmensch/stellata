@@ -132,6 +132,11 @@ describe('parseTycho2Tsvs', () => {
     expect(r.fromIcrs).toBe(false);
   });
 
+  it('refuses a supplement row with no observed cell', () => {
+    const blank = supplRow(['2', '2', '1']).split('\t').map((c, i) => (i === 4 || i === 5 ? '' : c)).join('\t');
+    expect(() => parseTycho2Tsvs(main(), suppl(blank), TYCHO2)).toThrow(/no observed position/);
+  });
+
   it('refuses a main row with no observed cell, mean solution or not', () => {
     for (const mean of [['', '', '', ''], ['33.5', '12.25', '', '']] as const) {
       expect(() => parseTycho2Tsvs(

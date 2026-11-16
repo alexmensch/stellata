@@ -126,10 +126,8 @@ export function parseTycho2Tsvs(
   for (const row of readTable({ ...suppl1.from, columns: SUPPL1_COLUMNS }, suppl1.text)) {
     const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
     if (out.has(key)) continue;
-    const position = icrsPosition(
-      row.float('ra_icrs'), row.float('de_icrs'),
-    );
-    if (position === null) continue;
+    const position = icrsPosition(row.float('ra_icrs'), row.float('de_icrs'))
+      ?? row.fail('no observed position');
     out.set(key, {
       ...position,
       observed: { raDeg: position.raDeg, decDeg: position.decDeg },
