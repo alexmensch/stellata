@@ -3,7 +3,7 @@ import {
   CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatio, parseSpectralType, spectralMass, spectralText, WD_MASS_DEFAULT,
 } from './mass-estimate-pure';
 
-const massRatioFromComponents = (a: string, b: string) => massRatio(spectralMass(a), spectralMass(b));
+const qFromTypes = (a: string, b: string) => massRatio(spectralMass(a), spectralMass(b));
 
 const triple = (s: string) => {
   const p = parseSpectralType(s)!;
@@ -109,20 +109,20 @@ describe('spectralMass', () => {
 
 describe('massRatio', () => {
   it('reads Sirius (A1V + DA1.9) at 0.6 / (2.6 + 0.6)', () => {
-    expect(massRatioFromComponents('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
+    expect(qFromTypes('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
   });
 
   it('reads Procyon (F5IV-V + DQZ) with the subgiant weighting', () => {
-    expect(massRatioFromComponents('F5IV-V', 'DQZ')).toBeCloseTo(0.2703, 4);
+    expect(qFromTypes('F5IV-V', 'DQZ')).toBeCloseTo(0.2703, 4);
   });
 
   it('reads α Cen (G2V + K1V)', () => {
     // The tables' value, not the truth: Pourbaix 2016 (/data/papers/index.md#pourbaix2016) measures κ = 0.4617.
-    expect(massRatioFromComponents('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
+    expect(qFromTypes('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
   });
 
   it('is null when either type is unparseable', () => {
-    expect(massRatioFromComponents('', 'K1V')).toBeNull();
-    expect(massRatioFromComponents('G2V', '')).toBeNull();
+    expect(qFromTypes('', 'K1V')).toBeNull();
+    expect(qFromTypes('G2V', '')).toBeNull();
   });
 });
