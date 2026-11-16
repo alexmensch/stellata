@@ -10,7 +10,8 @@ import { indices, xid } from '../resolve/resolve-fixture';
 import {
   CIRCULAR_ORBIT_OMEGA_RAD, UNKNOWN_COMPANION_MASS_RATIO_Q, orbitFields, positionPc, standaloneRow, wdsYearToJd,
 } from './multiples-rows-pure';
-import { elements, measured } from './stage6-fixture';
+import { measured } from '../astrometry/astrometry-fixture';
+import { elements } from './stage6-fixture';
 
 describe('positionPc', () => {
   it('reads 10 mas at (0, 0) as 100 pc down the x axis', () => {

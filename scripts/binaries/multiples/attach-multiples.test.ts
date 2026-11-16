@@ -9,7 +9,8 @@ import { ORBIT_VIA_ON_FILE, type MultiplesRecord } from '../multiples-record-pur
 import { indices, sourced, xid } from '../resolve/resolve-fixture';
 import { stage6Counts } from './attach-multiples';
 import { stage6Report } from './stage6-report-pure';
-import { elements, measured, runStage6 } from './stage6-fixture';
+import { measured } from '../astrometry/astrometry-fixture';
+import { elements, runStage6 } from './stage6-fixture';
 
 const UNRESOLVED_PAIR = [UNRESOLVED_ASTROMETRY, UNRESOLVED_ASTROMETRY] as const;
 const sides = (p: string | null, s: string | null) => ({ primary: sourced(p), secondary: sourced(s) });

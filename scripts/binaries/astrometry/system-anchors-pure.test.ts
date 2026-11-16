@@ -3,13 +3,9 @@ import { describe, expect, it } from 'vitest';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed } from '../resolve/resolve-fixture';
+import { measured } from './astrometry-fixture';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type PairAstrometry } from './routes-pure';
 import { positiveParallaxMas, systemParallaxAnchors, systemPmAnchors } from './system-anchors-pure';
-
-const measured = (over: Partial<Extract<ComponentAstrometry, { parallaxMas: unknown }>> = {}): ComponentAstrometry => ({
-  astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05, pmraMasyr: 1, pmdecMasyr: -1, refEpoch: 2016,
-  ...over,
-});
 
 function system(rows: readonly (readonly [string, ComponentAstrometry, ComponentAstrometry])[]) {
   const pairs: DecomposedPair[] = rows.map(([components]) => decomposed(wdsPair({ wdsId: 'PX-1', components })));

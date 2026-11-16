@@ -197,7 +197,8 @@ table (`gaia-dr3-nss:<source_id>`), HIP2 (`i311:<hip>`), Tycho-2
 (`simbad:<simbad_oid>`) and Bailer-Jones 2021 (`i352:<source_id>`), and the
 rows a binaries pair is founded on: the WDS summary
 (`wds:<wds_id>/<discoverer>/<components>`), ORB6 (`orb6:`, the same form) and
-the MSC orbits (`msc-orbits:<wds_id>/<syst>`). A parser of a keyed table takes the declaration itself
+the MSC orbits (`msc-orbits:<wds_id>/<syst>`), and AT-HYG (`athyg:<id>`), which
+Stage 3's position fallback reads. A parser of a keyed table takes the declaration itself
 as its `from` and stamps each row with its `SourceRowRef`; the declaration
 passes itself in, with the parse's return type stated so the
 self-reference type-checks.

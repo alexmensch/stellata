@@ -9,6 +9,7 @@ import type { NssOrbitRow } from '../load/gaia-pure';
 import type { MscOrbitRow } from '../load/msc-pure';
 import { ORBIT_VIA_ON_FILE, type OrbitViaOnFile } from '../multiples-record-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import {
   ORB6_SPECTROSCOPIC_GRADES, ORB6_VISUAL_GRADES, mscToCanonicalElements, orb6ToCanonicalElements, pickBestMsc, pickBestOrb6,
 } from './catalog-elements-pure';
@@ -51,52 +52,133 @@ export interface OrbitCandidates {
   readonly systemParallaxMas: number | null;
 }
 
-function orb6Route(entries: readonly Orb6Entry[], grades: ReadonlySet<number>, plxMas: number | null): OrbitElements | null {
+/** Each route's own gates, in the order they run. */
+const ROUTE_GATES = {
+  orb6: [],
+  gaia_nss: ['partner_distinct_source', 'out_of_regime', 'separation_inconsistent'],
+  orb6_spectroscopic: [],
+  msc: ['measured_separation'],
+} as const satisfies Readonly<Record<OrbitViaOnFile, readonly string[]>>;
+
+type GateRule<R extends OrbitViaOnFile> = (typeof ROUTE_GATES)[R][number];
+export type OrbitPassRule<R extends OrbitViaOnFile> = GateRule<R> | 'unreadable' | 'outranked';
+export type AnyOrbitPassRule = OrbitPassRule<OrbitViaOnFile>;
+
+/** Why the cascade can pass over one of `route`'s candidates, in the order it checks. */
+export function orbitPassRules<R extends OrbitViaOnFile>(route: R): readonly OrbitPassRule<R>[] {
+  return [...ROUTE_GATES[route], 'unreadable', 'outranked'];
+}
+
+/** One orbit row the cascade weighed for a pair: the one it chose, or why it passed it over. */
+export type OrbitCandidate = {
+  [R in OrbitViaOnFile]: { readonly route: R; readonly from: AnySourceRowRef; readonly verdict: 'chosen' | OrbitPassRule<R> }
+}[OrbitViaOnFile];
+
+/** The one place a route is paired with its verdict: the union cannot be built from a generic route without it. */
+function orbitCandidate<R extends OrbitViaOnFile>(route: R, from: AnySourceRowRef, verdict: 'chosen' | OrbitPassRule<R>): OrbitCandidate {
+  return { route, from, verdict } as OrbitCandidate;
+}
+
+export interface OrbitDecision {
+  readonly orbit: PairOrbit;
+  /** In the cascade's order; exactly one is `chosen` unless the orbit is `none`. */
+  readonly candidates: readonly OrbitCandidate[];
+}
+
+type Weighed<R extends OrbitViaOnFile> =
+  | { readonly kind: 'elements'; readonly elements: OrbitElements }
+  | { readonly kind: 'passed'; readonly rule: Exclude<OrbitPassRule<R>, 'outranked'> };
+
+interface RouteCandidate<R extends OrbitViaOnFile> {
+  readonly from: AnySourceRowRef;
+  readonly weigh: () => Weighed<R>;
+}
+
+const passed = <R extends OrbitViaOnFile>(rule: Exclude<OrbitPassRule<R>, 'outranked'>): Weighed<R> => ({ kind: 'passed', rule });
+
+function readable<R extends OrbitViaOnFile>(elements: OrbitElements | null): Weighed<R> {
+  return elements === null ? passed<R>('unreadable') : { kind: 'elements', elements };
+}
+
+function orb6Candidates<R extends 'orb6' | 'orb6_spectroscopic'>(
+  entries: readonly Orb6Entry[], grades: ReadonlySet<number>, plxMas: number | null,
+): RouteCandidate<R>[] {
   const band = entries.filter((e) => grades.has(e.grade));
-  return band.length === 0 ? null : orb6ToCanonicalElements(pickBestOrb6(band), plxMas);
+  if (band.length === 0) return [];
+  const best = pickBestOrb6(band);
+  return [{ from: best.origin, weigh: () => readable<R>(orb6ToCanonicalElements(best, plxMas)) }];
 }
 
 /** An NSS orbit is its source's own; a partner that is a different source
  *  means the orbit is interior to this side (../astrometry/'s NSS inner pairs). */
-function nssRoute(
+function nssCandidates(
   p: DecomposedPair, plxMas: number | null, systemParallaxMas: number | null, srcToNss: ReadonlyMap<string, NssOrbitRow>,
-): OrbitElements | null {
+): RouteCandidate<'gaia_nss'>[] {
+  const out: RouteCandidate<'gaia_nss'>[] = [];
+  const seen = new Set<string>();
   for (const [side, other] of [[p.primary, p.secondary], [p.secondary, p.primary]] as const) {
     if (side.gaia === null) continue;
     const source = side.gaia.value;
-    if (other.gaia !== null && other.gaia.value !== source) continue;
     const row = srcToNss.get(source);
-    if (row === undefined || !nssInRegime(row)) continue;
-    if (!nssSeparationConsistent(row, p.pair.rhoLast, plxMas ?? systemParallaxMas)) continue;
-    const elements = nssToCanonicalElements(row, plxMas);
-    if (elements !== null) return elements;
+    if (row === undefined || seen.has(source)) continue;
+    seen.add(source);
+    out.push({
+      from: row.origin,
+      weigh: () => {
+        if (other.gaia !== null && other.gaia.value !== source) return passed('partner_distinct_source');
+        if (!nssInRegime(row)) return passed('out_of_regime');
+        if (!nssSeparationConsistent(row, p.pair.rhoLast, plxMas ?? systemParallaxMas)) return passed('separation_inconsistent');
+        return readable(nssToCanonicalElements(row, plxMas));
+      },
+    });
   }
-  return null;
+  return out;
 }
 
 const subResolution = (rho: number | null): boolean => rho === null || rho <= 0;
+
+function mscCandidates(p: DecomposedPair, rows: readonly MscOrbitRow[], plxMas: number | null): RouteCandidate<'msc'>[] {
+  if (rows.length === 0) return [];
+  const best = pickBestMsc(rows);
+  return [{
+    from: best.origin,
+    weigh: () => (subResolution(p.pair.rhoLast) ? readable(mscToCanonicalElements(best, plxMas)) : passed('measured_separation')),
+  }];
+}
 
 /** README.md#what-each-route-decides. Throws on an
  *  emitted epoch outside the plausible window: README.md#the-shape-of-a-result */
 export function selectOrbit(
   p: DecomposedPair, astrometry: PairAstrometry, candidates: OrbitCandidates, srcToNss: ReadonlyMap<string, NssOrbitRow>,
-): PairOrbit {
+): OrbitDecision {
   const plxMas = positiveParallaxMas(astrometry.primary) ?? positiveParallaxMas(astrometry.secondary);
-  const route: Readonly<Record<OrbitViaOnFile, () => OrbitElements | null>> = {
-    orb6: () => orb6Route(candidates.orb6, ORB6_VISUAL_GRADES, plxMas),
-    gaia_nss: () => nssRoute(p, plxMas, candidates.systemParallaxMas, srcToNss),
-    orb6_spectroscopic: () => orb6Route(candidates.orb6, ORB6_SPECTROSCOPIC_GRADES, plxMas),
-    msc: () => (candidates.msc.length > 0 && subResolution(p.pair.rhoLast)
-      ? mscToCanonicalElements(pickBestMsc(candidates.msc), plxMas)
-      : null),
+  const routes: { readonly [R in OrbitViaOnFile]: () => readonly RouteCandidate<R>[] } = {
+    orb6: () => orb6Candidates(candidates.orb6, ORB6_VISUAL_GRADES, plxMas),
+    gaia_nss: () => nssCandidates(p, plxMas, candidates.systemParallaxMas, srcToNss),
+    orb6_spectroscopic: () => orb6Candidates(candidates.orb6, ORB6_SPECTROSCOPIC_GRADES, plxMas),
+    msc: () => mscCandidates(p, candidates.msc, plxMas),
   };
-  for (const orbitVia of ORBIT_VIA_ON_FILE) {
-    const elements = route[orbitVia]();
-    if (elements === null) continue;
-    if (elements.pDays !== null && elements.tJd !== null && !isPlausibleT0Jd(elements.tJd)) {
-      throw new Error(`Stage 4 periastron epoch out of range for ${p.pair.wdsId}/${p.pair.components} via ${orbitVia}: T_jd=${elements.tJd}`);
+  let orbit: PairOrbit = NO_ORBIT;
+  const weighed: OrbitCandidate[] = [];
+  const weighRoute = <R extends OrbitViaOnFile>(route: R): void => {
+    for (const c of routes[route]()) {
+      if (orbit !== NO_ORBIT) {
+        weighed.push(orbitCandidate(route, c.from, 'outranked'));
+        continue;
+      }
+      const w = c.weigh();
+      if (w.kind === 'passed') {
+        weighed.push(orbitCandidate(route, c.from, w.rule));
+        continue;
+      }
+      const { elements } = w;
+      if (elements.pDays !== null && elements.tJd !== null && !isPlausibleT0Jd(elements.tJd)) {
+        throw new Error(`Stage 4 periastron epoch out of range for ${p.pair.wdsId}/${p.pair.components} via ${route}: T_jd=${elements.tJd}`);
+      }
+      orbit = { orbitVia: route, elements };
+      weighed.push(orbitCandidate(route, c.from, 'chosen'));
     }
-    return { orbitVia, elements };
-  }
-  return NO_ORBIT;
+  };
+  for (const route of ORBIT_VIA_ON_FILE) weighRoute(route);
+  return { orbit, candidates: weighed };
 }

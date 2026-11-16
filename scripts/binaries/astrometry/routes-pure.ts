@@ -12,6 +12,7 @@ import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
 import { ATHYG_REFERENCE_EPOCH } from '../sky-geometry-pure';
+import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** The routes Stage 3 tags, in priority order: every `astrometry_via` but Stage 6's `system_inherited`. */
 export type RoutedVia = Exclude<AstrometryVia, 'system_inherited'>;
@@ -27,6 +28,8 @@ export interface MeasuredAstrometry {
   readonly pmdecMasyr: number | null;
   /** The measuring catalogue's own epoch; Stage 6 advances the position to the scene epoch. */
   readonly refEpoch: number;
+  /** The row the values are read off. */
+  readonly from: AnySourceRowRef;
 }
 
 export type ComponentAstrometry = MeasuredAstrometry | { readonly astrometryVia: 'unresolved' };
@@ -44,14 +47,14 @@ export const HIP2_COMPANION_SEPARATION_ARCSEC = 5.0;
 export function fromGaia(row: GaiaAstrometryRow, astrometryVia: 'gaia_5p' | 'gaia_nss_systemic'): MeasuredAstrometry {
   return Object.freeze({
     astrometryVia, raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.parallaxMas, parallaxErrorMas: row.parallaxErrorMas,
-    pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch,
+    pmraMasyr: row.pmraMasyr, pmdecMasyr: row.pmdecMasyr, refEpoch: row.refEpoch, from: row.ref,
   });
 }
 
 function fromHip2(row: Hip2AstrometryRow): MeasuredAstrometry {
   return Object.freeze({
     astrometryVia: 'hip2_long_baseline', raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.plxMas, parallaxErrorMas: row.plxErrorMas,
-    pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDeMasyr, refEpoch: HIP2_REF_EPOCH,
+    pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDeMasyr, refEpoch: HIP2_REF_EPOCH, from: row.ref,
   });
 }
 
@@ -60,7 +63,7 @@ export function fromAthygPosition(row: AthygRow): MeasuredAstrometry | null {
   if (row.distPc <= 0) return null;
   return Object.freeze({
     astrometryVia: 'athyg_position', raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: 1000 / row.distPc, parallaxErrorMas: null,
-    pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDecMasyr, refEpoch: ATHYG_REFERENCE_EPOCH,
+    pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDecMasyr, refEpoch: ATHYG_REFERENCE_EPOCH, from: row.ref,
   });
 }
 

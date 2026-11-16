@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { hip2AstrometryRow } from '../../catalog/sources/hip2-fixture';
-import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
+import { HIP2, type Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
 import { HIPPARCOS_EPOCH_JYEAR } from '../../../src/astro-core/astronomy-constants';
 import { wdsPair } from '../../wds/wds-fixture';
+import { sourceRowRef, sourceRowRefText } from '../../util/sources/row-ref-pure';
+import { ATHYG_CLASSIC_IDS } from '../../catalog/spine/athyg-classic-ids-source';
 import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import { gaia5pRow } from '../load/load-fixture';
@@ -14,7 +16,7 @@ import { nssRow } from '../orbits/nss-fixture';
 import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
 
 const hip2Map = (rows: readonly (readonly [number, Partial<Hip2AstrometryRow>])[]): Map<number, Hip2AstrometryRow> =>
-  new Map(rows.map(([hip, over]) => [hip, hip2AstrometryRow(over)]));
+  new Map(rows.map(([hip, over]) => [hip, hip2AstrometryRow({ ref: sourceRowRef(HIP2, hip), ...over })]));
 
 const nssFor = (...ids: string[]) => new Map(ids.map((id) => [id, nssRow({ sourceId: id, period: 100 })]));
 
@@ -40,6 +42,7 @@ describe('routeAstrometry', () => {
     expect(a.astrometryVia).toBe('hip2_long_baseline');
     expect(a.pmraMasyr).toBe(-546);
     expect(a.refEpoch).toBe(HIPPARCOS_EPOCH_JYEAR);
+    expect(sourceRowRefText(a.from)).toBe('i311:32349');
   });
 
   it('falls back to HIP2 when the source is outside the pull', () => {
@@ -68,6 +71,7 @@ describe('routeAstrometry', () => {
     const row = gaia5pRow({ sourceId: '42', raDeg: 12, pmraMasyr: 7 });
     const a = measured(routeAstrometry(resolved({ gaiaSourceId: '42' }), null, indices({ srcToAstrometry: astrometryMap([row]) })));
     expect(a).toMatchObject({ astrometryVia: 'gaia_5p', raDeg: 12, pmraMasyr: 7, refEpoch: 2016 });
+    expect(sourceRowRefText(a.from)).toBe('gaia-dr3-astrometry:42');
   });
 
   it('tags an NSS source with an unreliable 5p fit gaia_nss_systemic, on either indicator', () => {
@@ -156,7 +160,7 @@ describe('routePairs — the AT-HYG position fallback', () => {
     });
 
   it('places both sides of a ξ UMa-shape pair Gaia and HIP2 both miss, parallax from the row\'s distance', () => {
-    const row = at(XI_UMA.ra, XI_UMA.dec, { distPc: 10.4, pmRaMasyr: -425.24, pmDecMasyr: -581.01 });
+    const row = at(XI_UMA.ra, XI_UMA.dec, { distPc: 10.4, pmRaMasyr: -425.24, pmDecMasyr: -581.01, ref: sourceRowRef(ATHYG_CLASSIC_IDS, 61174) });
     const p = pairOf(XI_UMA.ra, XI_UMA.dec, 2.6, 135, {
       primary: { gaiaSourceId: '756853643638639104', hip: 55203 },
       secondary: { gaiaSourceId: '756853643637996160', resolveVia: 'simbad_xid' },
@@ -166,6 +170,7 @@ describe('routePairs — the AT-HYG position fallback', () => {
     expect([a.primary.astrometryVia, a.secondary.astrometryVia]).toEqual(['athyg_position', 'athyg_position']);
     expect(measured(a.primary).parallaxMas).toBeCloseTo(1000 / 10.4, 9);
     expect(measured(a.primary).refEpoch).toBe(HIPPARCOS_EPOCH_JYEAR);
+    expect(sourceRowRefText(measured(a.secondary).from)).toBe('athyg:61174');
   });
 
   it('records the matched row on a component that had none, and only there', () => {

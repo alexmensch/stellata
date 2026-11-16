@@ -9,16 +9,14 @@ import {
 } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
 import { hipDesignation } from '../../sid/sid-pure';
-import { rowKeyText } from '../../util/sources/row-ref-pure';
-import type { WdsPair } from '../../wds/wds-pure';
 import { RESOLVE_VIA, isReservedResolveVia } from '../multiples-record-pure';
-import { MULTIPLES_ROW_KEY, pairSystemId } from '../multiples-row-key-pure';
+import { componentRowKey as rowKey } from '../multiples-row-key-pure';
 import {
   BINDING_SHAPES, BINDING_VERDICTS, VERDICT_PARTS, bindingIntegrityCounts,
   type BindingShape, type BindingVerdictKind, type VerdictPart, type VerdictTouch,
 } from './binding-audit-pure';
 import { CASCADE_GATES, type CascadeGate } from './cascade-pure';
-import { componentSides, resolveViaOf, valueOf } from './components-pure';
+import { componentSides, resolveViaOf, valueOf, type ResolvedComponent } from './components-pure';
 import type { Stage2Result } from './resolve-pairs';
 import { RESOLVE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -91,10 +89,6 @@ export const RESOLVE_CODES = stageCodes(RESOLVE_LINEAGE.stage, {
   ...Object.fromEntries([...AUDIT_CODES.keys()].map((b) => [b, auditDeclaration(b)])) as Record<AuditBranch, CodeDeclaration>,
 });
 
-function rowKey(pair: Pick<WdsPair, 'wdsId' | 'components'>, component: string): string {
-  return rowKeyText(MULTIPLES_ROW_KEY, { systemId: pairSystemId(pair), comp: component });
-}
-
 function tierBranch(via: BoundTier): `tier.${Kebab<BoundTier>}` {
   return `tier.${kebab(via)}`;
 }
@@ -109,14 +103,19 @@ function touchParams({ verdict, sourceId }: VerdictTouch): LineageParams {
   };
 }
 
+/** A component's Gaia source bare and its HIP as `hip:`, where bound: the forms trace matches a query on. */
+export function componentIdParams(c: Pick<ResolvedComponent, 'gaia' | 'hip'>): LineageParams {
+  const gaia = valueOf(c.gaia);
+  const hip = valueOf(c.hip);
+  return {
+    ...(gaia === null ? {} : { gaia }),
+    ...(hip === null ? {} : { hip: hipDesignation(hip) }),
+  };
+}
+
 export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): Generator<LineageRow> {
   for (const { row, component: c } of componentSides(result.pairs)) {
-    const gaia = valueOf(c.gaia);
-    const hip = valueOf(c.hip);
-    yield stageRow(RESOLVE_CODES, rowKey(row, c.component), tierBranch(resolveViaOf(c)), {
-      ...(gaia === null ? {} : { gaia }),
-      ...(hip === null ? {} : { hip: hipDesignation(hip) }),
-    }, []);
+    yield stageRow(RESOLVE_CODES, rowKey(row, c.component), tierBranch(resolveViaOf(c)), componentIdParams(c), []);
   }
   for (const r of result.refusals) {
     yield stageRow(RESOLVE_CODES, rowKey(r.pair, r.component), `refused.${kebab(r.gate)}`, { hip: hipDesignation(r.hip) }, []);
