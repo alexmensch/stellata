@@ -183,7 +183,8 @@ scripts/catalog/
                                   V cascade, trigonometric tier of parallax.
   gliese-fixture.ts               Test-only V/70A table text, its header
                                   written once for the spine/ and
-                                  membership/ suites.
+                                  membership/ suites, and the GlieseRow
+                                  builder distance/ and parse/ suites use.
   catalog-lookup.ts (+ test)      Reads a built catalog back (loadCatalog) — the
                                   shared reader for verify-catalog, the frozen
                                   corpora, validate-simbad-sample, trace.

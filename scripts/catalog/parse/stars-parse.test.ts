@@ -20,7 +20,7 @@ import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { angularSeparationArcsec, directionAtEpoch, unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse-pure';
-import { GLIESE } from '../gliese-source';
+import { glieseRow } from '../gliese-fixture';
 import { tycho2Row } from '../tycho2-fixture';
 import { CNS5 } from '../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
@@ -87,12 +87,9 @@ function glieseParallaxes(
   rows: ReadonlyArray<{ gl: string; distPc: number }>,
 ): GlieseIndex {
   return {
-    byKey: new Map(rows.map((r) => [r.gl, {
-      name: `Gl ${r.gl}`, comp: '',
-      vMag: null, bMinusV: null, spectral: null, hd: null,
+    byKey: new Map(rows.map((r) => [r.gl, glieseRow(r.gl, {
       parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
-      ref: sourceRowRef(GLIESE, r.gl),
-    }])),
+    })])),
     rowCount: rows.length,
   };
 }
