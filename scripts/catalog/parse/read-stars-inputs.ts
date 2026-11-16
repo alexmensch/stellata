@@ -22,10 +22,7 @@ import { createConstellationAssignment, iauEdgeRecords } from './constellations/
 import { STELLARIUM } from './constellations/stellarium-source';
 import { readMultiplesTsv } from '../companions/multiples-row';
 import { buildPairMemberParallaxIndex, unpulledSiblingsMessage } from '../distance/parallax/pair-member-parallax';
-import {
-  readMagnitudeTermAstrometry,
-  readMagnitudeTermSourceIds,
-} from '../membership/magnitude-term/magnitude-term';
+import { addMagnitudeTermAstrometry } from '../membership/magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import type { ReadStarsOptions } from './stars-parse';
 
@@ -138,14 +135,8 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   };
   if (MAGNITUDE_FLOOR_V !== null) {
     const done = timer('Parsing Gaia DR3 5p astrometry (magnitude term)');
-    const keep = await readMagnitudeTermSourceIds();
-    let added = 0;
-    for (const [sourceId, row] of await readMagnitudeTermAstrometry(keep)) {
-      if (directions.gaiaAstrometry.has(sourceId)) continue;
-      directions.gaiaAstrometry.set(sourceId, row);
-      added++;
-    }
-    done(`${added} of ${keep.size} sources`);
+    const { added, requested } = await addMagnitudeTermAstrometry(directions.gaiaAstrometry);
+    done(`${added} of ${requested} sources`);
   }
 
   const { vmag: hipVMag, bv: hipBv } = timed(

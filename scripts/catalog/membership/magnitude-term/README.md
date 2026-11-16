@@ -25,7 +25,9 @@ scripts/catalog/membership/magnitude-term/
                                 on its Gaia DR3 source_id.
   magnitude-term.ts             The streaming reads: the floor's selection and
                                 the 5p astrometry over the ~200 MB pull, and
-                                the term's own source_ids out of the manifest.
+                                the term's own source_ids out of the manifest;
+                                addMagnitudeTermAstrometry, the term's rows
+                                into a Gaia astrometry map.
   magnitude-term-gate.test.ts   The floor measured over the COMMITTED pull and
                                 manifest, pinning the four figures
                                 data/gaia/README.md states. LFS-gated.

@@ -40,3 +40,18 @@ export async function readMagnitudeTermAstrometry(
   await MAGNITUDE_PULL.read(acc.line);
   return acc.result();
 }
+
+/** The term's sources' pull rows into `gaia`, where the catalogue file holds
+ *  none: README.md#the-astrometry-comes-with-it. */
+export async function addMagnitudeTermAstrometry(
+  gaia: Map<string, GaiaAstrometryRow>,
+): Promise<{ added: number; requested: number }> {
+  const keep = await readMagnitudeTermSourceIds();
+  let added = 0;
+  for (const [sourceId, row] of await readMagnitudeTermAstrometry(keep)) {
+    if (gaia.has(sourceId)) continue;
+    gaia.set(sourceId, row);
+    added++;
+  }
+  return { added, requested: keep.size };
+}
