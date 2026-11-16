@@ -1,13 +1,17 @@
 // Every WDS pair row the binaries pipeline decides, keyed on its founding row, as the `pairs` lineage stage. See README.md#pairs-lineage.
 
+import { identityRow, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { stageLines, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
-import { kebab, outcomeCode, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { kebab, outcomeCode, retired, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { synthDesignation } from '../sid/sid-pure';
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
+import { canonicalCompLetter, rowSyntheticId, syntheticIdIn } from './component-tokens-pure';
 import type { BlankRescueOutcome } from './load/blank-rescue-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage6Result } from './multiples/attach-multiples';
+import type { MultiplesRecord } from './multiples-record-pure';
 import type { Stage5Result } from './optical/attach-optical';
-import { OPTICAL_VIA, OPTICAL_VIA_PROPERTIES } from './optical/optical-tiers-pure';
+import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from './optical/optical-tiers-pure';
 import type { DecomposedPair, ResolvedComponent } from './resolve/components-pure';
 import { componentIdParams } from './resolve/resolve-lineage-pure';
 import { PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -22,10 +26,26 @@ const UNPAIRED_BLANKS: Record<UnpairedBlank, string> = {
   enumerated: 'A blank-components row of a system that already has an AB pair, so promoting it would write the pair twice.',
 };
 
+type KeptVia = Extract<OpticalVia, `${string}_kept`>;
+type RejectedVia = Extract<OpticalVia, `${string}_rejected`>;
+type RejectionTier<V extends RejectedVia> = V extends `${infer T}_rejected` ? T : never;
+
+const KEPT_VIA = (Object.keys(OPTICAL_VIA_PROPERTIES) as OpticalVia[]).filter((v): v is KeptVia => OPTICAL_VIA_PROPERTIES[v].physical);
+const REJECTED_VIA = (Object.keys(OPTICAL_VIA_PROPERTIES) as OpticalVia[]).filter((v): v is RejectedVia => !OPTICAL_VIA_PROPERTIES[v].physical);
+const rejectionTier = <V extends RejectedVia>(via: V): RejectionTier<V> => via.replace(/_rejected$/, '') as RejectionTier<V>;
+const REJECTION_TIERS = REJECTED_VIA.map(rejectionTier);
+
+const RETIRED_7_1_31 = retired('7.1.31');
+const DEPARTED = 'A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component\'s synthetic key retires.';
+
 export const PAIRS_CODES = stageCodes(PAIRS_LINEAGE.stage, {
   'duplicate-row': outcomeCode('A WDS summary row repeating another\'s wds_id, discoverer and components; the more-observed row is kept.'),
   ...taggedCodes('blank-', Object.keys(UNPAIRED_BLANKS) as UnpairedBlank[], (b) => outcomeCode(UNPAIRED_BLANKS[b])),
-  ...taggedCodes('optical.', OPTICAL_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description)),
+  ...taggedCodes('optical.', KEPT_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description)),
+  ...taggedCodes('optical.', REJECTED_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description, 'none', RETIRED_7_1_31)),
+  ...taggedCodes('rejected.', REJECTION_TIERS, (tier) => outcomeCode(
+    `${OPTICAL_VIA_PROPERTIES[`${tier}_rejected`].description} ${DEPARTED}`, 'retire',
+  )),
   'no-position': outcomeCode('A pair Stage 5 kept with no position on either side and no system anchor, so it never reaches multiples.tsv.'),
 });
 
@@ -35,7 +55,9 @@ export type PairsCounts = StageCounts<typeof PAIRS_CODES>;
 export interface PairDecisions {
   readonly reference: Pick<ReferenceCatalogs, 'wdsDedup' | 'blankRescue'>;
   readonly optical: Stage5Result;
-  readonly multiples: Pick<Stage6Result, 'droppedNoPosition'>;
+  readonly multiples: Pick<Stage6Result, 'droppedNoPosition'> & {
+    readonly rows: readonly Pick<MultiplesRecord, 'systemId' | 'comp' | 'orbitRole'>[];
+  };
 }
 
 function sideParams(side: 'primary' | 'secondary', c: ResolvedComponent): LineageParams {
@@ -48,6 +70,12 @@ export function pairParams(p: DecomposedPair): LineageParams {
   return { ...sideParams('primary', p.primary), ...sideParams('secondary', p.secondary) };
 }
 
+const isRejected = (via: OpticalVia): via is RejectedVia => !OPTICAL_VIA_PROPERTIES[via].physical;
+
+function opticalCode(via: OpticalVia) {
+  return isRejected(via) ? `rejected.${kebab(rejectionTier(via))}` as const : `optical.${kebab(via)}` as const;
+}
+
 export function* pairsLineageRows({ reference, optical, multiples }: PairDecisions): Generator<LineageRow> {
   for (const { row, outcome } of reference.wdsDedup) {
     if (outcome === 'dropped') yield stageRow(PAIRS_CODES, sourceRowRefText(row.origin), 'duplicate-row', {}, []);
@@ -58,7 +86,7 @@ export function* pairsLineageRows({ reference, optical, multiples }: PairDecisio
     yield stageRow(PAIRS_CODES, sourceRowRefText(d.row.origin), `blank-${d.outcome}`, {}, evidence);
   }
   for (const [p, via] of optical.optical) {
-    yield stageRow(PAIRS_CODES, sourceRowRefText(p.pair.origin), `optical.${kebab(via)}`, pairParams(p), []);
+    yield stageRow(PAIRS_CODES, sourceRowRefText(p.pair.origin), opticalCode(via), pairParams(p), []);
   }
   for (const p of multiples.droppedNoPosition) {
     yield stageRow(PAIRS_CODES, sourceRowRefText(p.pair.origin), 'no-position', pairParams(p), []);
@@ -67,4 +95,34 @@ export function* pairsLineageRows({ reference, optical, multiples }: PairDecisio
 
 export function pairsLineageLines(decisions: PairDecisions): LineageLine[] {
   return stageLines(PAIRS_CODES, pairsLineageRows(decisions));
+}
+
+/** The synthetic keys of a pair's two sides, as promotion composes them for the pair's rows. */
+function pairSyntheticIds(p: DecomposedPair): readonly [string, string] {
+  const wdsId = p.primary.wdsId;
+  return [
+    syntheticIdIn(wdsId, p.primary.component),
+    syntheticIdIn(wdsId, canonicalCompLetter(p.primary.component, p.secondary.component)),
+  ];
+}
+
+/** One identity row per pair Stage 5 rejected that names a component no multiples.tsv row composes, carrying that component's synthetic key, so a SID keyed on it joins the rejection's retire. */
+export function pairsIdentity({ optical, multiples }: Pick<PairDecisions, 'optical' | 'multiples'>): IdentityRow[] {
+  const shipped = multiplesSyntheticIds(multiples.rows);
+  const rows: IdentityRow[] = [];
+  for (const [p, via] of optical.optical) {
+    if (!isRejected(via)) continue;
+    const departed = [...new Set(pairSyntheticIds(p))].filter((id) => !shipped.has(id));
+    if (departed.length === 0) continue;
+    rows.push(identityRow(
+      sourceRowRefText(p.pair.origin), { tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '' }, departed.map(synthDesignation),
+    ));
+  }
+  return rows;
+}
+
+/** Every synthetic key a multiples.tsv row composes. */
+function multiplesSyntheticIds(rows: Pick<PairDecisions, 'multiples'>['multiples']['rows']): Set<string> {
+  const primaryComp = new Map(rows.filter((r) => r.orbitRole === 'primary').map((r) => [r.systemId, r.comp]));
+  return new Set(rows.map((r) => rowSyntheticId(r, primaryComp.get(r.systemId) ?? null)));
 }

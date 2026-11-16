@@ -375,12 +375,15 @@ the next while the physical object persists. This is an active
 failure mode, not a hypothetical.
 
 **Ownership pin:** all synth-SID reconciliation lives in allocation
-(`scripts/sid/`); the binaries pipeline stays sid-free. A ledger row
+(`scripts/sid/`); the binaries pipeline allocates no SID. A ledger row
 whose canonical `synth:` key is absent from the build is settled by
 promotion's decision on the `multiples.tsv` row that would carry that
-key: a component promotion drops retires under that row's code. A key
-whose row left `multiples.tsv` altogether has no decision, so the build
-**fails closed**, and resolution is one of:
+key — a component promotion drops retires under that row's code — or, for
+a component every pair of which Stage 5 rejected as optical, by that
+rejection, which the binaries pairs stage records with the component's key
+([Ownership pin](/scripts/sid/README.md#ownership-pin--synth-churn-resolves-here)). A key
+no stage records has no decision, so the build **fails closed**, and
+resolution is one of:
 
 - **Bridge** — one line in `sameas-overrides.tsv`,
   `synth:04357+1010-Aa,Ab` = `synth:04357+1010-Aa1,2` (same physical

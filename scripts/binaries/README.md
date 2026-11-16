@@ -86,8 +86,9 @@ scripts/binaries/
                                   declaration, derived from that list.
   pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
                                   pair row the stages decide, as the pairs
-                                  lineage stage (#pairs-lineage); pairParams,
-                                  which the orbits stage writes too.
+                                  lineage stage (#pairs-lineage); pairsIdentity,
+                                  the components a rejection removes;
+                                  pairParams, which the orbits stage writes too.
   load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
   orbits/ optical/ multiples/
   counts/
@@ -357,14 +358,22 @@ form, components as printed), an MSC inner pair's first orbit row's key
 | --- | --- |
 | `pairs.duplicate-row` | a WDS row the duplicate collapse dropped; the kept row shares its key |
 | `pairs.blank-deferred` / `-donor` / `-enumerated` | a blank-components row the rescue did not rescue ([Blank-components rescue](load/README.md#blank-components-rescue)); a donor cites the ORB6 orphans it donated to as evidence |
-| `pairs.optical.<tag>` | every pair Stage 5 classified, one code per `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.optical.<tag>` | every pair Stage 5 kept, one code per keeping `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.rejected.<tier>` | every pair Stage 5 rejected, one code per rejecting tag less its `_rejected`; effect `retire` |
 | `pairs.no-position` | a pair Stage 5 kept that Stage 6 could not place, beside its optical row |
 
 A decomposed pair's `params` carry each side's letter and, where bound, its
 Gaia source bare and its HIP as `hip:` — the forms trace matches a query on.
-Every code is an outcome with no removal effect, and the stage writes no
-identity rows. Its counts fold into the snapshot's `pairs` stage
-([Composition, not counting](counts/README.md#composition-not-counting)).
+Every code but `pairs.rejected.*` is an outcome with no removal effect. A
+rejected pair whose side composes no `multiples.tsv` row's synthetic key
+(`rowSyntheticId`; the secondary on its canonical letter) has left the file
+because of the rejection, so the stage writes an identity row
+(`pairs.identity.tsv.gz`, `pairsIdentity`) under the pair's key carrying
+each such side's `synth:` key. SID allocation joins a ledger key that left
+the build to that row and retires it under the rejection's code
+([SID events](/scripts/sid/README.md#sid-events)); a side some kept pair still
+ships stays promotion's to decide. Its counts fold into the snapshot's
+`pairs` stage ([Composition, not counting](counts/README.md#composition-not-counting)).
 
 `PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
 bytes gzipped in 379–384 ms across two runs, neither diffing against a

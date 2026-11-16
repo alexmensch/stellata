@@ -1,8 +1,8 @@
-// The lineage build:catalog's allocation asks: membership's files from the last build:membership, placement's and promotion's from this build.
+// The lineage build:catalog's allocation asks: membership's files from the last build:membership, pairs' from the last build:binaries, placement's and promotion's from this build.
 
 import { PROMOTION_ADMISSION_CODES, PROMOTION_CODES } from '../catalog/companions/promotion-lineage/promotion-lineage-pure';
 import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
-import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
+import { lineageLineCode, type LineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LINEAGE_STAGES } from '../catalog/lineage/lineage-stages';
 import { codeEffects } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { stageLineageSources } from '../catalog/lineage/stage-lineage-sources';
@@ -10,7 +10,7 @@ import { MEMBERSHIP_ADMISSION_CODES } from '../catalog/membership/membership-lin
 import type { Upstream } from './allocate-pure';
 import { lineageAdmissions, lineageCauses } from './lineage-upstream-pure';
 import {
-  ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
+  ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE, PAIRS_LINEAGE,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface CatalogLineage {
@@ -21,6 +21,7 @@ export interface CatalogLineage {
 }
 
 const MEMBERSHIP = stageLineageSources(MEMBERSHIP_LINEAGE, 'Run pnpm run build:membership.');
+const PAIRS = stageLineageSources(PAIRS_LINEAGE, 'Run pnpm run build:binaries.');
 
 const UPSTREAM_ORDER = LINEAGE_STAGES.map((s) => s.codes.stage).filter((stage) => stage !== ALLOCATION_LINEAGE.stage);
 const EFFECTS = codeEffects(LINEAGE_STAGES.map((s) => s.codes));
@@ -29,6 +30,7 @@ const ADMISSIONS = new Set([...MEMBERSHIP_ADMISSION_CODES, ...PROMOTION_ADMISSIO
 export function catalogUpstream(local: CatalogLineage): Upstream {
   function* lines(): Generator<LineageLine> {
     yield* MEMBERSHIP.lines.read();
+    for (const line of PAIRS.lines.read()) if (EFFECTS.get(lineageLineCode(line)) !== 'none') yield line;
     yield* local.placementRemovals;
     yield* local.promotion;
   }
@@ -37,6 +39,7 @@ export function catalogUpstream(local: CatalogLineage): Upstream {
       keys,
       [
         { stage: MEMBERSHIP_LINEAGE.stage, rows: MEMBERSHIP.identity.read() },
+        { stage: PAIRS_LINEAGE.stage, rows: PAIRS.identity.read() },
         { stage: PROMOTION_CODES.stage, rows: local.promotionIdentity },
       ],
       lines(), EFFECTS, UPSTREAM_ORDER,

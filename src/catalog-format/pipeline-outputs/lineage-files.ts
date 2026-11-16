@@ -17,7 +17,7 @@ export const LINEAGE_REPO_LAYOUT = lineageLayout('build');
 export interface StageLineageSpec<F extends string, S extends string = string> {
   readonly stage: S;
   readonly files: readonly F[];
-  /** The stem holding identity rows for the records the stage founds. */
+  /** The stem holding identity rows: the records the stage founds, and those its removals name. */
   readonly identity?: F;
 }
 
@@ -44,9 +44,10 @@ export const ORBITS_LINEAGE: StageLineageSpec<'orbits', 'orbits'> = {
   files: ['orbits'],
 };
 
-export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
+export const PAIRS_LINEAGE: IdentityStageSpec<'pairs' | 'pairs.identity', 'pairs'> = {
   stage: 'pairs',
-  files: ['pairs'],
+  files: ['pairs', 'pairs.identity'],
+  identity: 'pairs.identity',
 };
 
 export const ANCHORS_LINEAGE: StageLineageSpec<'anchors', 'anchors'> = {

@@ -359,7 +359,8 @@ module, in [Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage).
 
 `build:binaries` writes it too, after orbits: every WDS pair row
 the binaries stages decide — a duplicate, a blank row left out, each Stage 5
-verdict, a position-less drop — keyed on the row that founded the pair. Its
+verdict, a position-less drop — keyed on the row that founded the pair, and
+an identity row naming each component a Stage 5 rejection removes. Its
 contract lives beside its module, in
 [Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
 
