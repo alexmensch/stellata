@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
-import { classifySimbadFlamsteed, designationText, flamsteedFor, numberedDesignation, type SimbadIdentsObject } from './simbad-flamsteed-pure';
+import { acceptedFlamsteed, classifySimbadFlamsteed, designationText, numberedDesignation, type SimbadIdentsObject } from './simbad-flamsteed-pure';
 
 const IV27A: CrossIndexRow[] = [
   { hd: 100, hip: 10, bayer: null, flamsteed: 11, cst: 'Sgr' },
@@ -32,12 +32,13 @@ describe('classifySimbadFlamsteed', () => {
   ], IV27A);
 
   it('accepts a number inside IV/27A\'s range that no other star holds, by HIP and HD', () => {
-    expect(flamsteedFor(index, 500, null).map(designationText)).toEqual(['12 Sgr']);
-    expect(flamsteedFor(index, null, 50).map(designationText)).toEqual(['12 Sgr']);
+    expect(designationText(acceptedFlamsteed(index, 500, null, 12)!)).toBe('12 Sgr');
+    expect(designationText(acceptedFlamsteed(index, null, 50, 12)!)).toBe('12 Sgr');
+    expect(acceptedFlamsteed(index, 500, 50, 13)).toBeUndefined();
   });
 
   it('accepts the number IV/27A gives the same star', () => {
-    expect(flamsteedFor(index, 100, 10).map(designationText)).toEqual(['11 Sgr']);
+    expect(designationText(acceptedFlamsteed(index, 100, 10, 11)!)).toBe('11 Sgr');
   });
 
   it('refuses past the range, in a constellation IV/27A numbers nothing in, and on another star\'s number', () => {
@@ -46,6 +47,6 @@ describe('classifySimbadFlamsteed', () => {
       [3, '4 Ara', 'beyond_iv27a_range', 'IV/27A publishes no Flamsteed number in Ara'],
       [4, '11 Sgr', 'iv27a_names_another_star', 'IV/27A gives 11 Sgr to HD 100'],
     ]);
-    expect(flamsteedFor(index, 503, 53)).toEqual([]);
+    expect(acceptedFlamsteed(index, 503, 53, 11)).toBeUndefined();
   });
 });

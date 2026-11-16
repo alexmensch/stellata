@@ -4,7 +4,7 @@
 
 import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
-import { flamsteedFor, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { acceptedFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 import type {
   Bsc5Row,
   Cns5Row,
@@ -288,7 +288,7 @@ function attestFlam(
     || publishesFlam(idx.iv27aFlamByHip, hip, flam)) return 'iv27a';
   if (publishesFlam(tables.wgsn.flamByHd, hd, flam)
     || publishesFlam(tables.wgsn.flamByHip, hip, flam)) return 'wgsn';
-  if (flamsteedFor(tables.simbadFlamsteed, hd, hip).some((d) => d.number === flam)) return 'simbad';
+  if (acceptedFlamsteed(tables.simbadFlamsteed, hd, hip, flam) !== undefined) return 'simbad';
   return null;
 }
 

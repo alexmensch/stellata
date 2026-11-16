@@ -3,7 +3,7 @@
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import type { CrossIndexRow } from './classic-ids-parse';
-import { flamsteedFor, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { acceptedFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 
 /** IV/27A's `cst` in the `CONSTELLATIONS` index space, keyed by both
  *  identifiers the table carries. HD is the table's own key; HIP covers the
@@ -66,7 +66,7 @@ export function designationConstellation(
 ): DesignationCon {
   const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
   if (conIndex !== NO_CONSTELLATION_INDEX) return { via: 'iv27a', index: conIndex };
-  const named = star.flam === null ? undefined : flamsteedFor(simbad, star.hd, star.hip).find((d) => d.number === star.flam);
+  const named = star.flam === null ? undefined : acceptedFlamsteed(simbad, star.hd, star.hip, star.flam);
   return named === undefined ? NO_DESIGNATION_CON : { via: 'simbad', index: named.conIndex };
 }
 

@@ -109,11 +109,8 @@ export function classifySimbadFlamsteed(objects: Iterable<SimbadIdentsObject>, c
   return { byHip, byHd, refused };
 }
 
-/** Every accepted designation SIMBAD gives the star by either of its identifiers, deduplicated. */
-export function flamsteedFor(index: SimbadFlamsteed, hd: number | null, hip: number | null): FlamsteedDesignation[] {
-  const out: FlamsteedDesignation[] = [];
-  for (const d of [...(hd === null ? [] : index.byHd.get(hd) ?? []), ...(hip === null ? [] : index.byHip.get(hip) ?? [])]) {
-    if (!out.some((o) => o.number === d.number && o.conIndex === d.conIndex)) out.push(d);
-  }
-  return out;
+/** The accepted designation numbered `number` SIMBAD gives the star by its HD, else by its HIP. */
+export function acceptedFlamsteed(index: SimbadFlamsteed, hd: number | null, hip: number | null, number: number): FlamsteedDesignation | undefined {
+  const numbered = (ds: readonly FlamsteedDesignation[] | undefined) => ds?.find((d) => d.number === number);
+  return (hd === null ? undefined : numbered(index.byHd.get(hd))) ?? (hip === null ? undefined : numbered(index.byHip.get(hip)));
 }
