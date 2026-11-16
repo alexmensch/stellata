@@ -205,8 +205,8 @@ const tables: PrimaryTables = {
   hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999'], [50, '1414']]),
   simbadSourceless: [],
   simbadBySourceId: new Map([
-    ['222', { hip: null, tyc: '1-2-1', gj: null }],
-    ['888', { hip: null, tyc: '9-9-9', gj: null }],
+    ['222', { oid: 0, hip: null, tyc: '1-2-1', gj: null }],
+    ['888', { oid: 0, hip: null, tyc: '9-9-9', gj: null }],
   ]),
 };
 
@@ -362,7 +362,7 @@ describe('buildMembership — the spine side', () => {
       tables: {
         ...tables,
         hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { oid: 0, hip: 70, tyc: null, gj: null }]]),
       },
     };
     const contested = buildMembership(contestedInput);
@@ -394,7 +394,7 @@ describe('buildMembership — the spine side', () => {
       tables: {
         ...tables,
         hipToSource: new Map([...tables.hipToSource, [70, '7070']]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { hip: 70, tyc: null, gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['7071', { oid: 0, hip: 70, tyc: null, gj: null }]]),
       },
       evidence: gateEvidence(tables, new Map([['7070', 5.0], ['7071', 12.0]]), printedHipTable([[70, 5.0]]), null),
     });
@@ -754,7 +754,7 @@ describe('buildMembership — the additions', () => {
         ...tables,
         iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }],
         tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(9)]]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5050', { hip: null, tyc: '5-5-1', gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5050', { oid: 0, hip: null, tyc: '5-5-1', gj: null }]]),
       }),
       magnitudeTerm: {
         keptSourceIds: new Set(['5050', '777']),
@@ -809,7 +809,7 @@ describe('buildMembership — the additions', () => {
         iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
         hipI239: new Set([...tables.hipI239, 61]),
         tycho2: new Map([...tables.tycho2, ['5-6-1', tycho2(9)]]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { oid: 0, hip: 61, tyc: '5-6-1', gj: null }]]),
       }),
     });
     expect(oneStar.rows.filter((r) => r.gaiaSourceId === '5151'))
@@ -826,7 +826,7 @@ describe('buildMembership — the additions', () => {
         iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
         hipI239: new Set([...tables.hipI239, 61]),
         tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { oid: 0, hip: 61, tyc: '5-6-1', gj: null }]]),
       }),
     });
     const unweighed = (r: LineageRow): boolean => r.code === 'membership.binding.unweighed-no-pulled-row';
@@ -845,7 +845,7 @@ describe('buildMembership — the additions', () => {
       iv25: [...tables.iv25, { tyc: '5-6-1', hd: 501, nHd: 1, nTyc: 1 }],
       hipI239: new Set([...tables.hipI239, 61]),
       tycho2: new Map([...tables.tycho2, ['5-6-1', { ...tycho2(9), btMag: 9.2 }]]),
-      simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { hip: 61, tyc: '5-6-1', gj: null }]]),
+      simbadBySourceId: new Map([...tables.simbadBySourceId, ['5151', { oid: 0, hip: 61, tyc: '5-6-1', gj: null }]]),
     };
     const oneStar = buildMembership({ ...withTables(t), evidence: gateEvidence(t, undefined, printedHipTable([[61, 9.0]])) });
     const rows = oneStar.lineage
@@ -869,7 +869,7 @@ describe('buildMembership — the additions', () => {
         iv25: [...tables.iv25, { tyc: '5-7-1', hd: 502, nHd: 1, nTyc: 1 }],
         tycho2: new Map([...tables.tycho2, ['5-7-1', tycho2(9)]]),
         tycToSource: new Map([...tables.tycToSource, ['5-7-1', '5171']]),
-        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { hip: null, tyc: '5-7-1', gj: null }]]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['5172', { oid: 0, hip: null, tyc: '5-7-1', gj: null }]]),
       }),
     });
     expect(twoSources.rows.find((r) => r.tyc === '5-7-1')?.gaiaSourceId).toBe('5171');
@@ -988,8 +988,10 @@ describe('codecs', () => {
       gliese: parseGlieseTsv(gliese, GLIESE),
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
-    const m = { ...pairLinksFrom(t), held: spineKeys(spine) };
-    const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
+    const closePair = { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined };
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair };
+    const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, gaiaSourceId: null };
+    const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
     expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
     expect(derivedOnly(spineRow({ tyc: '4-2-1' }))).toEqual(['hd:301:free', 'gl:GJ 3002:free']);
@@ -1233,8 +1235,8 @@ describe('membership lineage', () => {
 
   it('shows a row re-bound onto a companion, with its component letters and code', () => {
     const before = buildMembership(withXids(tables));
-    const simbad = new Map([...tables.simbadBySourceId, ['2223', { hip: null, tyc: '1-2-1', gj: null }]]);
-    simbad.set('222', { hip: null, tyc: '9-9-8', gj: null });
+    const simbad = new Map([...tables.simbadBySourceId, ['2223', { oid: 0, hip: null, tyc: '1-2-1', gj: null }]]);
+    simbad.set('222', { oid: 0, hip: null, tyc: '9-9-8', gj: null });
     const after = buildMembership(withXids({ ...tables, simbadBySourceId: simbad }));
     const changes = diffLineage(sorted(before.lineage), sorted(after.lineage));
     const rebound = changes.find((c) => c.key === 'spine:4')!;

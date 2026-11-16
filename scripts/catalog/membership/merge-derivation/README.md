@@ -147,20 +147,52 @@ cells like the other ledgers, one row per divergence:
 | `unlinked` | the cells outside the row's largest connected group | the witnessed partition | the published partition |
 | `pair_moves` | `hip` | the entry the pair rule moved the HIP onto, another spine record's | the HIP's Gaia source |
 | `derived_only` | the cell | the value a primary's link puts there | `held` if another spine row carries it, else `free` |
-| `differs` | the filled cell | the values a primary's link puts there, none of them the spine's | the cell the link reads, and the spine's value |
+| `differs` | the cell the spine fills | the values a primary's link puts there, none of them one the record ships | the cell the link reads, and the value the record ships (`none` where a label rule emptied it) |
 
 `unlinked` is the association audit's `witnessed` residual over the corrected
 rows. `derived_only` covers a cell the spine leaves empty and a primary fills:
 a HIP through Tycho-2's column (only on the entry the pair rule names), an HD
 through IV/25 or the HIP's I/239 and IV/27A links, an HR through V/50, a GJ
 through CNS5's `hip` or V/70A's `HD`, each GJ written in the record's own
-form. `differs` is the filled-cell side of the same links, one row per link
-whose values leave out the spine's — HIP by Tycho-2's column, HD by IV/25 and
-by the HIP's I/239 and IV/27A rows, HR by V/50, GJ by CNS5 and by V/70A — so a
-pair of HDs the spine swapped between two records shows on both. On a pair
+form. `differs` is the filled-cell side of the same links — HIP by Tycho-2's
+column, HD by IV/25 and by the HIP's I/239 and IV/27A rows, HR by V/50, GJ by
+CNS5 and by V/70A — read off the spine row's cells, one row per link whose
+values name nothing the record ships in that cell once the label merge has
+run: its display value or an alias, a GJ compared on the merge's own
+[specificity rule](../../classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware).
+A spine cell the merge already moved onto the primary's value therefore
+writes no row, its label flip being the decision; a pair of HDs swapped
+between two records shows on both. On a pair
 row IV/25's TYC→HD link does not count, since which entry the HD belongs to
 is the pair rule's verdict. Rows the pair rule confirms carry
 `merge.pair.confirmed` in lineage and no ledger row.
 
 The counts are the `membership.merge.*` codes in
 `../membership-manifest-expected.json`; read them there.
+
+## Settling a differs cell
+
+A `differs` cell is weighed by the rule that already decides that kind of
+cell elsewhere in the pipeline, and **only a cell no rule settles reaches the
+ledger**, where it waits for review with the shipped value standing. A
+settled cell writes `merge.differs.<to>.<from>.<settlement>` in lineage and
+no ledger row. The spine's value and I/239's HD are never evidence: the first
+is the decision being replaced, and Hipparcos printed one HD for a pair it
+did not resolve
+([I/239's HD for a HIP is not a fourth opinion](../../simbad/README.md#which-witness-decides-a-close-pairs-hd)).
+
+| Cell | Rule | Settles as |
+|---|---|---|
+| `hd` | the close-pair rule, `closePairHdVerdict` ([Which witness decides a close pair's HD](../../simbad/README.md#which-witness-decides-a-close-pairs-hd)) on the shipped HD | `close-pair-uncontested` (both TYC witnesses share an HD and one names the shipped value), `close-pair-refuse` (the record's source is another object than its TYC's, so the HD stands) |
+| `hr` | V/50 publishes HD and HR as a pair | `v50-pair` (V/50 pairs the shipped HR with the shipped HD) |
+| `gl` | a record's identity is its Gaia binding | `cns5-source` (CNS5's row for the record's own source names the shipped GJ) |
+| `hip` | none | — |
+
+Everything else queues as `merge.differs.<to>.<from>.queued`, the reason as
+the evidence's last field:
+`close-pair-split` (the two TYC witnesses share no HD), `close-pair-unanswered`
+(IV/25 or SIMBAD has no row for the record's TYC, or it has none),
+`close-pair-source-silent`, `close-pair-move` (all four witnesses name another
+HD: the rule's move set, which reaches the build through
+`classic_id_overrides.tsv` after review, as the rule's other moves do), or
+`no-rule`.

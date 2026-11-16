@@ -29,6 +29,14 @@ scripts/catalog/simbad/
                                   dropped, for the integer comparison against
                                   IV/25. The test carries the adjudication
                                   below, pinned over the committed tables.
+  close-pair-hd-pure.ts (+ test)  closePairHdVerdict, the four-witness rule
+                                  below as one function: the adjudication
+                                  test and build:membership's divergence
+                                  ledger both call it
+                                  (../membership/merge-derivation/README.md#settling-a-differs-cell);
+                                  iv25HdSets, IV/25's HD set per Tycho entry,
+                                  which the spine's link tables read too.
+                                  Pure.
   simbad-idents-source.ts         SIMBAD_IDENTS, data/simbad/simbad_idents.tsv
   simbad-idents-parse.ts          declared and read as one object per row.
   simbad-flamsteed.ts             readSimbadFlamsteed: that table classified
@@ -143,12 +151,15 @@ A consumer therefore has three verdicts to handle, not two — agrees, dissents,
 and silent, the last being the rows the pull answers for at all ([Which
 witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd), Silence is silence).
 
-**One build step reads it**: `build:membership`'s pair rule queues a move
+**`build:membership` reads it twice.** Its pair rule queues a move
 onto the other entry of a Tycho-2 pair wherever SIMBAD names that entry by
 HDs the moved record does not ship
-([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
-The rule the next section settles reaches the build through curation rather
-than a join: eight of the
+([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)),
+and its divergence ledger joins the next section's rule to settle or queue an
+HD cell a primary contradicts
+([Settling a differs cell](../membership/merge-derivation/README.md#settling-a-differs-cell)).
+That rule's moves reach the build through curation rather than the join:
+eight of the
 nine records it licenses are asserted as rows of
 `data/classic-ids/classic_id_overrides.tsv` (`stellata-hooj.14`), each carrying
 the component the witnesses named. α Psc is the ninth, held back on
@@ -171,7 +182,8 @@ it can be the sibling's — that is the crossed-cell case, and it cannot move
 an HD on its own however many printed indexes agree with it.
 
 So the rule takes **four witnesses**, and only moves a cell where they all
-name the record's own component:
+name the record's own component (`closePairHdVerdict`; two objects are the
+same component when their SIMBAD oids are equal):
 
 ```
 IV/25 for the row's own TYC, read as a SET  ┐
