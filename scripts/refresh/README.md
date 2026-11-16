@@ -49,7 +49,7 @@ re-pulls) and rewrites the record after every run
 ([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 Running a script directly writes no record, so the build then stops on that
 pull. The two Edenhofer pulls are Python in `scripts/dust/`, with their own
-setup ([Running the pulls](/scripts/dust/README.md#running-the-pulls)).
+setup ([Python environment](/scripts/dust/README.md#python-environment)).
 
 ### Per-script targets
 
