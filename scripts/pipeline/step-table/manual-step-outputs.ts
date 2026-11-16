@@ -7,8 +7,8 @@ import type { OutputFamily } from '../../util/emit-artifacts';
 import { publicRepoPath } from '../../util/paths';
 import type { ManualKind, ManualStep } from './step-table-pure';
 
-const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
-  name, kind: 'pull', language: 'python', entry: `scripts/refresh/${entry}`, outputs,
+const dustPull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
+  name, kind: 'pull', language: 'python', entry: `scripts/dust/${entry}`, outputs,
 });
 
 const tsManual = (kind: ManualKind, name: string, entry: string, module: string, constant: string): ManualStep => ({
@@ -98,8 +98,8 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:simbad-tyc-hd', 'scripts/refresh/simbad-tyc-hd/refresh-simbad-tyc-hd.ts',
     'scripts/refresh/simbad-tyc-hd/simbad-tyc-hd-outputs.ts', 'SIMBAD_TYC_HD_OUTPUTS',
   ),
-  pull('refresh:edenhofer2024-main', 'refresh-edenhofer2024-main.py', ['data/dust/edenhofer2024-main.json']),
-  pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
+  dustPull('refresh:edenhofer2024-main', 'refresh-edenhofer2024-main.py', ['data/dust/edenhofer2024-main.json']),
+  dustPull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
   tsManual({ kind: 'pull' }, 'fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),
   tsManual({ kind: 'pull' }, 'fetch:ephemerides', 'scripts/ephemerides/fetch-planet-elements.ts', 'scripts/ephemerides/planet-element-outputs.ts', 'ELEMENT_TABLE_OUTPUTS'),
   tsManual({ kind: 'bake', describes: true }, 'measure:band-resolved', 'scripts/milkyway-calibration/measure-resolved-light.ts', 'scripts/milkyway-calibration/resolved-hole-table-outputs.ts', 'RESOLVED_HOLE_TABLE_OUTPUTS'),

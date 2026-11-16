@@ -255,7 +255,7 @@ def resample_edenhofer(*, flavor: str) -> np.ndarray:
     except ImportError as e:
         raise SystemExit(
             f"Missing dependency: {e.name}. Install with:\n"
-            f"  pip install -r scripts/requirements-dust.txt"
+            f"  pip install -r scripts/dust/requirements-dust.txt"
         ) from None
 
     query = Edenhofer2023Query(flavor=flavor)

@@ -136,7 +136,7 @@ Each pull states its query as data, so the runner can hash the current query
 without a network call: every pull prints it under `--describe` (a
 TypeScript pull through its exported `describe`, which the launcher prints). A Python pull's describe
 path imports the standard library only, since every build runs it and a
-worktree has no refresh virtualenv (`steps.test.ts`, [step-table/README.md](step-table/README.md#files)).
+worktree has no `.venv` ([Python environment](../dust/README.md#python-environment); `steps.test.ts`, [step-table/README.md](step-table/README.md#files)).
 
 Manual-step stamps are committed because frozen data needs a committed record
 of what produced it; `build/` is gitignored. One file per step, since several

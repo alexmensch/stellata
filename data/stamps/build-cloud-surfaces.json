@@ -5,7 +5,7 @@
     "scripts/cloud-surfaces/build-cloud-surfaces.py": "012592678421634d9ed6465570cf5b51148569bd",
     "scripts/cloud-surfaces/cloud_geometry.py": "fc11aa275198b4e0b6bd4a593600222b2262733f",
     "scripts/cloud-surfaces/trace_surfaces.py": "36e06965299787a751b04cc3875f13b806cdc0d9",
-    "scripts/dust/edenhofer2024.py": "0aabd7a3d00b5f2389260f442535c63050e7e4c3",
+    "scripts/dust/edenhofer2024.py": "aa2d22d61153a2794c72a9a05ddab66bcac22f79",
     "scripts/util/baker_constants.py": "39afaedc61d5574bb6cebb106abba6a33ae1c705",
     "scripts/util/paths.py": "c570852282c2f3be0781466bfa28930ae71e1a6f",
     "src/astro-core/baker-constants.json": "238d1c125cd62e2ebf2cde18a8dc8a525d1b6122"
