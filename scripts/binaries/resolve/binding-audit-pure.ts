@@ -531,15 +531,21 @@ function partOf(action: VerdictAction | null, b: TokenBinding): VerdictPart {
 export function verdictTouches({ pairs, systems, verdicts }: BindingAudit): VerdictTouch[] {
   return verdicts.flatMap((verdict) => {
     const ctx = systems.get(verdict.wdsId)!;
-    return verdict.weighed.flatMap((b) => {
+    const touches = verdict.weighed.flatMap((b) => {
       const part = partOf(verdict.action, b);
-      return (ctx.instances.get(b.token) ?? []).flatMap((i): VerdictTouch[] => {
+      const instances = ctx.instances.get(b.token);
+      if (instances === undefined) throw new Error(`${verdict.wdsId}: weighed token ${b.token} has no component instance`);
+      return instances.flatMap((i): VerdictTouch[] => {
         const c = pairs[i.pairIdx][i.side];
         return c.gaia?.value === b.sourceId
           ? [{ verdict, pair: pairs[i.pairIdx].pair, component: c.component, sourceId: b.sourceId, part }]
           : [];
       });
     });
+    if (touches.length === 0) {
+      throw new Error(`${verdict.wdsId} ${verdict.shape} ${verdict.verdict}: no component holds a binding it weighed`);
+    }
+    return touches;
   });
 }
 

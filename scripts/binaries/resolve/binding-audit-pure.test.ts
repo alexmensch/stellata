@@ -331,6 +331,17 @@ describe('verdictTouches', () => {
       `source_letters skipped_photocentre_blend AB/B ${SX} skipped`,
     ]);
   });
+
+  it('refuses a weighed token with no instance, and a verdict no component holds a binding of', () => {
+    const { audited } = audit(
+      [['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]],
+      [biAstro(SA, 0, 0), biAstro(SX, 0, 3)],
+    );
+    const weighing = (weighed: BindingVerdict['weighed']) =>
+      ({ ...audited, verdicts: audited.verdicts.map((v) => ({ ...v, weighed })) });
+    expect(() => verdictTouches(weighing([{ token: 'Z', sourceId: SX }]))).toThrow(/weighed token Z has no component instance/);
+    expect(() => verdictTouches(weighing([{ token: 'B', sourceId: '999' }]))).toThrow(/no component holds a binding it weighed/);
+  });
 });
 
 const blendRowsForTouches: BiRow[] = [['AB', 5.0, 0.0, [SX, null], [SX, null]], ['AC', 10.0, 0.0, [SX, null], [SC, null]]];
