@@ -11,7 +11,7 @@ import {
 } from '../classic-ids/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import type { SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
-import { readSimbadFlamsteed } from '../simbad/simbad-idents-source';
+import { readSimbadFlamsteed } from '../simbad/simbad-flamsteed';
 import {
   buildWgsnIndex,
   routeDisposedProper,

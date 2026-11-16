@@ -10,7 +10,7 @@ import { REPO_ROOT, isLfsPointerFile } from '../../util/paths';
 import { artifactRows } from '../../util/sources/source';
 import { FLAMSTEED_REFUSALS_LIST } from './flamsteed-refusals-source';
 import { formatRefusals, refusalRows } from './flamsteed-refusals-pure';
-import { readSimbadFlamsteed } from './simbad-idents-source';
+import { readSimbadFlamsteed } from './simbad-flamsteed';
 
 const INPUTS = [DATA_FILES.simbadIdents, DATA_FILES.membershipManifest].map((file) => resolve(REPO_ROOT, file));
 
