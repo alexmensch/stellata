@@ -117,9 +117,9 @@ group member on an earlier handle does not compile.
 Each phase's record type is the default of `Records<P>`: `walked` records are
 `WalkedStar`, `named`, `promoted` and `sorted` ones `NamedStar`. The groups
 attached inside the sorted phase ride the handle `sortedPasses` returns, which
-every later stage takes as `Sorted<Star>`. A record promotion mints is a `NamedStar` literal, so it
-states every naming field and no later group; leaving one to a default does
-not compile.
+every later stage takes as `Sorted<Star>`. A record promotion mints is a
+`NamedStar` literal, so it states every naming field and no later group;
+leaving one to a default does not compile.
 
 `enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
 is entered once, by the pass that completes it, the SIDs are tagged once, by
