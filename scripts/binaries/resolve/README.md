@@ -26,7 +26,9 @@ scripts/binaries/resolve/
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
-                               sibling-identity rejections they record.
+                               CascadeRefusal each gate records (the ORB6
+                               HIP's coordinate check, the two
+                               sibling-identity guards).
   athyg-match-pure.ts          The AT-HYG position match Stage 3 reuses:
                                the 1° grid, the nearest-row search,
                                pairAthygMatches.
@@ -38,6 +40,8 @@ scripts/binaries/resolve/
                                inheritDownwardParentBindings.
   binding-audit-pure.ts        auditBindingIntegrity (the verdicts) and
                                enforceBindingVerdicts (applying them),
+                               verdictTouches (each instance holding a
+                               binding a verdict weighed, and its part),
                                bindingIntegrityCounts, addNewestEdge (the
                                pair-geometry graph Stage 6's anchor offsets
                                build too).

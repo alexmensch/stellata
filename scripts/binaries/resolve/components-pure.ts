@@ -123,6 +123,11 @@ export function pairRows(pairs: readonly DecomposedPair[]): readonly WdsPair[] {
   return pairs.map((p) => p.pair);
 }
 
+/** Each component's own pair row, in `componentsOf` order. */
+export function componentPairRows(pairs: readonly DecomposedPair[]): readonly WdsPair[] {
+  return pairs.flatMap((p) => [p.pair, p.pair]);
+}
+
 /** Every pair row that splits, each side bound by `bind`. */
 export function decompose(
   rows: readonly WdsPair[], bind: (pair: WdsPair, token: string, isPrimary: boolean) => ResolvedComponent,

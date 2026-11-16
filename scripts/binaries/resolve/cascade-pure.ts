@@ -16,7 +16,7 @@ import {
 import { athygDirectionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
-  findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
+  componentPairRows, findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import {
@@ -24,15 +24,17 @@ import {
 } from './sibling-identity-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
-/** A sibling-identity rejection, one per candidate refused. */
-export interface SiblingRejection {
-  readonly tier: SiblingRejectionTier;
-  readonly wdsId: string;
+export const CASCADE_GATES = ['orb6_hip_off_coord', 'ccdm_sibling_owned', 'athyg_match_sibling_claimed'] as const;
+export type CascadeGate = (typeof CASCADE_GATES)[number];
+
+/** A candidate HIP a cascade gate refused for one side of one pair row. */
+export interface CascadeRefusal {
+  readonly gate: CascadeGate;
+  readonly pair: WdsPair;
+  /** As the components field writes it. */
   readonly component: string;
   readonly hip: number;
 }
-export const SIBLING_REJECTION_TIERS = ['ccdm_sibling_owned', 'athyg_match_sibling_claimed'] as const;
-export type SiblingRejectionTier = (typeof SIBLING_REJECTION_TIERS)[number];
 
 export function groupOrb6ByPair(orb6: readonly Orb6Entry[]): ReadonlyMap<PairRowKey, readonly Orb6Entry[]> {
   return groupBy(orb6, (e) => pairRowKey(e.wdsId, e.components));
@@ -76,24 +78,30 @@ function orb6HipMatchesPairCoord(hip: number, pair: WdsPair, indices: Identifier
 export function resolveComponent(
   pair: WdsPair, component: string, isPrimary: boolean,
   orb6ForPair: readonly Orb6Entry[], indices: IdentifierIndices,
-): ResolvedComponent {
+): { component: ResolvedComponent; refused: readonly CascadeRefusal[] } {
   const base = unresolvedComponent(pair, component, isPrimary);
   const candidates: number[] = [];
+  const refused: CascadeRefusal[] = [];
   const hdByHip = new Map<number, number | null>();
+  const bound = (c: ResolvedComponent) => ({ component: c, refused });
   if (isPrimary) {
     for (const e of orb6ForPair) {
-      if (e.hip === null || !orb6HipMatchesPairCoord(e.hip, pair, indices)) continue;
+      if (e.hip === null) continue;
+      if (!orb6HipMatchesPairCoord(e.hip, pair, indices)) {
+        refused.push({ gate: 'orb6_hip_off_coord', pair, component, hip: e.hip });
+        continue;
+      }
       candidates.push(e.hip);
       if (!hdByHip.has(e.hip)) hdByHip.set(e.hip, e.hd);
       const gaia = indices.hipToGaia.get(e.hip);
-      if (gaia !== undefined) return { ...base, gaia: ownGaia(gaia, 'orb6_hip'), hip: own(e.hip), hd: hdByHip.get(e.hip)! };
+      if (gaia !== undefined) return bound({ ...base, gaia: ownGaia(gaia, 'orb6_hip'), hip: own(e.hip), hd: hdByHip.get(e.hip)! });
     }
   }
   for (const hip of candidates) {
     const gaia = gaiaFromAthygViaHip(hip, indices);
-    if (gaia !== null) return { ...base, gaia: ownGaia(gaia, 'athyg_gaia_native'), hip: own(hip), hd: hdByHip.get(hip)! };
+    if (gaia !== null) return bound({ ...base, gaia: ownGaia(gaia, 'athyg_gaia_native'), hip: own(hip), hd: hdByHip.get(hip)! });
   }
-  return candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! };
+  return bound(candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! });
 }
 
 /** A SIMBAD cross-ID for a still-unbound component: its DR3 source binds as
@@ -168,14 +176,15 @@ interface CcdmQuery {
   readonly partner: string;
 }
 
-/** The candidate HIP nearest the target, skipping one a disjoint letter owns
- *  by geometry or by an existing binding. */
+/** The candidate HIP nearest the target, skipping, and listing, each one a
+ *  disjoint letter owns by geometry or by an existing binding. */
 function ccdmCandidateHip(
   q: CcdmQuery, indices: IdentifierIndices, letterPositions: ReadonlyMap<string, SkyPosition> | undefined,
-  claims: HipClaims, rejected: SiblingRejection[],
-): number | null {
+  claims: HipClaims,
+): { hip: number | null; owned: readonly number[] } {
   const threshold = chordSqForTolerance(CCDM_POSITION_MATCH_TOLERANCE_ARCSEC);
   const target = unitVectorFromRaDec(q.target.raDeg, q.target.decDeg);
+  const ownedHips: number[] = [];
   let bestHip: number | null = null;
   let best = Infinity;
   for (const hip of q.candidates) {
@@ -187,7 +196,7 @@ function ccdmCandidateHip(
     const owned = (letterPositions !== undefined && siblingLetterOwnsCandidate(cand, d, q.token, q.partner, letterPositions))
       || hipClaimedByDisjointLetter(claims, q.wdsId, hip, q.token, q.partner);
     if (owned) {
-      rejected.push({ tier: 'ccdm_sibling_owned', wdsId: q.wdsId, component: q.token, hip });
+      ownedHips.push(hip);
       continue;
     }
     if (d < best) {
@@ -195,7 +204,7 @@ function ccdmCandidateHip(
       bestHip = hip;
     }
   }
-  return bestHip;
+  return { hip: bestHip, owned: ownedHips };
 }
 
 /** Binds the HIP if none is bound yet; a Gaia source through it tags `ccdm_hip`. */
@@ -213,18 +222,24 @@ function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
  *  skipped: their prediction sits on the primary. */
 export function resolveViaCcdm(
   pairs: readonly DecomposedPair[], indices: IdentifierIndices,
-): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
+): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
   const w = working(pairs);
   const out = w.components;
-  const rejected: SiblingRejection[] = [];
+  const rejected: CascadeRefusal[] = [];
   if (indices.ccdmToHips.size === 0) return { pairs: w.pairs, rejected };
   const rows = pairRows(pairs);
+  const rowOf = componentPairRows(pairs);
   const index = pairsByDiscoverer(rows);
   const letterPositions = buildSystemLetterPositions(rows);
   const claims = buildSystemHipClaims(out);
   const primaryHipByPair = new Map<WdsPair, number>();
+  const ccdmPick = (i: number, q: CcdmQuery): number | null => {
+    const { hip, owned } = ccdmCandidateHip(q, indices, letterPositions.get(q.wdsId), claims);
+    for (const h of owned) rejected.push({ gate: 'ccdm_sibling_owned', pair: rowOf[i], component: out[i].component, hip: h });
+    return hip;
+  };
 
-  for (const c of out) {
+  for (const [i, c] of out.entries()) {
     if (c.gaia !== null || !c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     if (pair === null || pair.precise === null) continue;
@@ -236,17 +251,14 @@ export function resolveViaCcdm(
       continue;
     }
     const [, partner] = pairComponentTokens(pair.components)!;
-    const hip = ccdmCandidateHip(
-      { target: pair.precise, candidates, wdsId: c.wdsId, token: c.component, partner },
-      indices, letterPositions.get(c.wdsId), claims, rejected,
-    );
+    const hip = ccdmPick(i, { target: pair.precise, candidates, wdsId: c.wdsId, token: c.component, partner });
     if (hip === null) continue;
     primaryHipByPair.set(pair, hip);
     bindCcdmHip(c, hip, indices);
     claimHip(claims, c.wdsId, hip, c.component);
   }
 
-  for (const c of out) {
+  for (const [i, c] of out.entries()) {
     if (c.gaia !== null || c.isPrimary) continue;
     const pair = findOwningPair(c, index);
     const offset = pair === null ? null : measuredOffset(pair);
@@ -261,14 +273,11 @@ export function resolveViaCcdm(
       continue;
     }
     const [primaryToken] = splitComponents(pair.components)!;
-    const hip = ccdmCandidateHip(
-      {
-        target: predictSecondaryPosition(pair.precise, offset),
-        candidates: narrowed, wdsId: c.wdsId,
-        token: canonicalCompLetter(primaryToken, c.component), partner: primaryToken,
-      },
-      indices, letterPositions.get(c.wdsId), claims, rejected,
-    );
+    const hip = ccdmPick(i, {
+      target: predictSecondaryPosition(pair.precise, offset),
+      candidates: narrowed, wdsId: c.wdsId,
+      token: canonicalCompLetter(primaryToken, c.component), partner: primaryToken,
+    });
     if (hip === null) continue;
     bindCcdmHip(c, hip, indices);
     claimHip(claims, c.wdsId, hip, c.component);
@@ -278,8 +287,9 @@ export function resolveViaCcdm(
 
 export function resolveViaPosition(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
-): { pairs: readonly DecomposedPair[]; rejected: readonly SiblingRejection[] } {
+): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
   const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, { skip: (_i, c) => c.gaia !== null });
+  const rowOf = componentPairRows(pairs);
   const w = working(pairs);
   const out = w.components;
   for (const m of matches) {
@@ -292,8 +302,8 @@ export function resolveViaPosition(
       c.gaia = ownGaia(row.gaia, 'athyg_gaia_native');
     }
   }
-  const rejected = siblingClaimed.map((s): SiblingRejection => ({
-    tier: 'athyg_match_sibling_claimed', wdsId: out[s.componentIdx].wdsId, component: out[s.componentIdx].component, hip: s.hip,
+  const rejected = siblingClaimed.map((s): CascadeRefusal => ({
+    gate: 'athyg_match_sibling_claimed', pair: rowOf[s.componentIdx], component: out[s.componentIdx].component, hip: s.hip,
   }));
   return { pairs: w.pairs, rejected };
 }
