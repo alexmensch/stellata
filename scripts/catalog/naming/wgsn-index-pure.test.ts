@@ -173,31 +173,26 @@ describe('the naming-authority disposition gate', () => {
 
 describe('manifestNaming', () => {
   const manifestRow = (over: Partial<ManifestNamingRow>): ManifestNamingRow => ({
-    proper: null, bayer: null, hip: null, hd: null, isSol: false, ...over,
+    proper: null, hip: null, hd: null, isSol: false, ...over,
   });
   const approved = buildWgsnIndex(
     WGSN_NAMES.parse(`${NAMES_HEADER}Vega\t\t91262\t\t7001\t172167\t\t0.03\tnec\t1\nUnurgunite\tNganurganity\t\t\t\t50\t\t\tnec\t2\n`),
     [],
   ).approvedNameKeys;
   const rows = [
-    manifestRow({ proper: 'Vega', bayer: 'Alp', hip: 91262, hd: 172167 }),
+    manifestRow({ proper: 'Vega', hip: 91262, hd: 172167 }),
     manifestRow({ proper: 'Nganurganity', hd: 50 }),
     manifestRow({ proper: 'Sol', isSol: true }),
     manifestRow({ proper: 'Ross 248' }),
-    manifestRow({ bayer: 'Bet', hd: 7 }),
   ];
 
-  it('matches aliases, skips Sol, and counts Bayer rows the table reaches', () => {
-    const result = manifestNaming(
-      rows, approved, [bayer({ hip: 91262 })], [{ proper: 'Ross 248', hip: null, hd: null }],
-    );
+  it('matches aliases and skips Sol', () => {
+    const result = manifestNaming(rows, approved, [{ proper: 'Ross 248', hip: null, hd: null }]);
     expect(result).toEqual({
       counts: {
         membershipPropers: 3,
         membershipProperMatched: 2,
         membershipProperResiduals: 1,
-        membershipBayerRows: 2,
-        membershipBayerRowsCovered: 1,
       },
       missing: [],
       stale: [],
@@ -205,9 +200,7 @@ describe('manifestNaming', () => {
   });
 
   it('names an undisposed residual and a disposition the authority now covers', () => {
-    const { missing, stale } = manifestNaming(
-      rows, approved, [], [{ proper: 'Vega', hip: 91262, hd: 172167 }],
-    );
+    const { missing, stale } = manifestNaming(rows, approved, [{ proper: 'Vega', hip: 91262, hd: 172167 }]);
     expect({ missing, stale }).toEqual({
       missing: [membershipProperKey('Ross 248', null, null)],
       stale: [membershipProperKey('Vega', 91262, 172167)],

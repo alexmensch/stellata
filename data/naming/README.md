@@ -1,4 +1,4 @@
-# Naming — the curated override table
+# Naming — the curated override table and the Bayer drop ledger
 
 The naming ladder's escape hatch ([§ 7](/docs/star-naming.md#7-curation-seam)), and the only
 hand-written input to it. Every other tier is compiled from a published
@@ -16,6 +16,17 @@ name_overrides.tsv  Hand-curated, header-only today. Columns: sid,
                     published source can be re-read to check, so a
                     retired or mistyped SID must not pass review as an
                     applied row that displays nothing.
+bayer_drops.tsv     Hand-curated, frozen. Columns: hd, bayer, reason,
+                    evidence. The Bayer cells AT-HYG printed on a record
+                    the naming authority's tables (WGSN, then the IV/27A
+                    and V/50 tail) leave bare. Reason sibling_holds: the
+                    authority keys the designation on another
+                    component's record. Read by no build;
+                    ../../scripts/catalog/membership/membership-manifest-gate.test.ts
+                    holds that each row keys one manifest record the
+                    build's Bayer join leaves bare and that exactly one
+                    other record holds the designation, so a refresh
+                    that moves either fails until the row changes.
 ```
 
 ## What does NOT belong in it

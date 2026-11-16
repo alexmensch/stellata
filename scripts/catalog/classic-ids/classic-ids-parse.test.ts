@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import {
+  crossIndexHipsByHd,
   applyCrossIndexCorrections,
   cns5AstrometryByGj,
   parseBsc5Tsv,
@@ -126,6 +127,13 @@ describe('classic-ids-parse / cross-index corrections', () => {
     expect(() => applyCrossIndexCorrections(
       parseCrossIndexTsv(PAIR, FROM), corrections('35148\t172167\n'), FROM,
     )).toThrow(/orphan the designation/);
+  });
+});
+
+describe('classic-ids-parse / crossIndexHipsByHd', () => {
+  it('keeps every HIP an HD is linked to and skips HIP-less rows', () => {
+    const row = (hd: number, hip: number | null) => ({ hd, hip, bayer: null, flamsteed: null, cst: null });
+    expect(crossIndexHipsByHd([row(1, 10), row(1, 11), row(2, null)])).toEqual(new Map([[1, [10, 11]]]));
   });
 });
 

@@ -61,7 +61,7 @@ export function spineSide(input: {
       const overlayEntry = record.gaiaSourceId !== null && overlay.has(record.gaiaSourceId);
       outcomes.push({ key, outcome: { kind: 'bright', overlayEntry } });
     }
-    const printed = { tyc: textCell(kept[i].tyc), bayer: textCell(kept[i].bayer), proper: textCell(kept[i].proper) };
+    const printed = { tyc: textCell(kept[i].tyc), proper: textCell(kept[i].proper) };
     const merged = primariesManifestRecord(printed, record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });

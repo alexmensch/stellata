@@ -1,5 +1,6 @@
 // `pnpm run build:wgsn`: the keyed WGSN tables. See README.md.
 
+import { BSC5 } from '../classic-ids/bsc5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { emitArtifacts } from '../../util/emit-artifacts';
 import { countSnapshotCheck } from '../../util/snapshot-check';
@@ -14,7 +15,9 @@ import {
 import {
   designationFromCell,
   duplicateDesignationRows,
-  unionIv27aBayer,
+  bsc5BayerCells,
+  iv27aBayerCells,
+  unionBayerTail,
   type DesignationRow,
 } from './wgsn-tables-pure';
 import type { WgsnNameRow } from './wgsn-index-pure';
@@ -45,6 +48,11 @@ export interface WgsnCounts {
   iv27aBayerCovered: number;
   iv27aVariableRejected: number;
   iv27aUnparsed: number;
+  v50BayerCells: number;
+  v50BayerAdded: number;
+  v50BayerCovered: number;
+  v50VariableRejected: number;
+  v50Unparsed: number;
   designationRows: number;
   designationsKeyless: number;
   designationDuplicateRows: number;
@@ -92,8 +100,11 @@ export async function main(): Promise<void> {
     }
   }
 
-  const iv27a = unionIv27aBayer(designations, CROSS_INDEX.read());
+  const crossIndex = CROSS_INDEX.read();
+  const iv27a = unionBayerTail(designations, iv27aBayerCells(crossIndex), 'iv27a');
   designations.push(...iv27a.added);
+  const v50 = unionBayerTail(designations, bsc5BayerCells(BSC5.read(), crossIndex), 'v50');
+  designations.push(...v50.added);
 
   const counts: WgsnCounts = {
     necRows: nec.length,
@@ -118,6 +129,11 @@ export async function main(): Promise<void> {
     iv27aBayerCovered: iv27a.covered,
     iv27aVariableRejected: iv27a.variableRejected,
     iv27aUnparsed: iv27a.unparsed,
+    v50BayerCells: v50.cells,
+    v50BayerAdded: v50.added.length,
+    v50BayerCovered: v50.covered,
+    v50VariableRejected: v50.variableRejected,
+    v50Unparsed: v50.unparsed,
     designationRows: designations.length,
     designationsKeyless: designations.filter(
       (d) => d.hip === null && d.hr === null && d.hd === null,

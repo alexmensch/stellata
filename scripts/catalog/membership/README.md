@@ -153,17 +153,17 @@ audit, so the two instruments read one table set.
 ## Columns
 
 ```
-tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  bayer  proper
+tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  proper
 gaia_source_id  binding  routes  term  origin_key
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
   the classic-ID label merge has already run
   (`../classic-ids/label-merge/README.md`), so `hd_alt` / `hr_alt` hold the
-  alias lists and there is no second designation set to flip against. `bayer` and `proper` are the
-  spine's printed cells on spine rows and empty on additions — the naming
-  ladder resolves both from HD / HIP at build time and reads the cell only as
-  a counter (`../naming/README.md`).
+  alias lists and there is no second designation set to flip against. `proper`
+  is the spine's printed cell on spine rows and empty on additions. Bayer
+  designations are the naming ladder's, from the authority's tables by
+  HR / HD / HIP (`../naming/README.md`).
 - `binding` says how `gaia_source_id` is justified: `crosswalk_gated` (a TYC,
   HIP or CNS5 candidate the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gates passed), `simbad_corroborated` (the
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
@@ -334,7 +334,9 @@ arithmetic and label-flips replay:
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 - **The naming authority's residual**: the manifest propers no WGSN name
   matches are exactly the disposed ones, with the counts pinned in
-  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)).
+  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)),
+  and each `data/naming/bayer_drops.tsv` row keys one record the Bayer join
+  leaves bare, while exactly one other record holds its designation.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin
