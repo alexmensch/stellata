@@ -3,13 +3,12 @@
 
 import { lookupGliese } from '../gliese-parse-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
-import type { SpineRow } from './inherited-spine-pure';
+import { spineIds, type SpineRow } from './inherited-spine-pure';
 import {
   bareGjKey, cns5RowFor, indexCns5, type PrimaryTables,
 } from './primaries-audit-pure';
 import type { SimbadXids } from '../spectral/spectral-resolve';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
-import { idCell } from '../../util/tsv/table-pure';
 
 export type KeyCell = 'tyc' | 'hip' | 'hd' | 'hr' | 'gl';
 export const KEY_CELLS: readonly KeyCell[] = ['tyc', 'hip', 'hd', 'hr', 'gl'];
@@ -98,9 +97,7 @@ export function partitionRow(row: SpineRow, links: LinkTables): RowPartition | n
   const cells = KEY_CELLS.filter((c) => row[c] !== '');
   if (cells.length < 2) return null;
   const at = new Map(cells.map((c, i) => [c, i] as const));
-  const hip = idCell(row.hip);
-  const hd = idCell(row.hd);
-  const hr = idCell(row.hr);
+  const { hip, hd, hr } = spineIds(row);
   const has = (c: KeyCell): boolean => at.has(c);
 
   const published = (uf: UnionFind): void => {

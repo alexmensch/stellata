@@ -138,7 +138,8 @@ and its parse each have one owner.
   `decode`. Codecs decode a typed record — numbers parsed, a closed
   column through `oneOf`, so an unknown value fails at the read rather than
   downstream. The spine (`INHERITED_SPINE`, frozen and read verbatim) is the
-  one **cell record**, every column the string as written (`row.cells()`);
+  one **cell record**, every column the string as written (`row.cells()`),
+  though its read refuses a malformed `hip` / `hd` / `hr` or `gaia_source_id`;
   `BINDING_REVIEW` keeps the spine's key cells and `derived_source_id` as
   written beside its typed verdict, since the curated dispositions join on
   that text: the key through `bindingReviewKey`, the id by equality with

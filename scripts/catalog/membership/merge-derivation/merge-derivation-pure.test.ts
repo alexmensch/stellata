@@ -113,9 +113,4 @@ describe('mergeDivergences', () => {
       { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, spine: '555', derived: ['100'] },
     ]);
   });
-
-  it('refuses an identifier cell that is not bare digits rather than reading it as NaN', () => {
-    expect(() => mergeDivergences(row({ tyc: '2-2-2', hip: '20', hr: '7a' }), mergeLinks(links({}))))
-      .toThrow('"7a" is not an identifier');
-  });
 });

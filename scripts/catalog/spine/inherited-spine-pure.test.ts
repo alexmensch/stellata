@@ -81,6 +81,12 @@ describe('serializeSpine / parseSpineTsv', () => {
       .toThrow(new RegExp(`expected ${SPINE_COLUMNS.length}`));
   });
 
+  it('refuses an identifier cell that is not bare digits, naming file, line and column', () => {
+    const text = INHERITED_SPINE.serialize([row({ hip: '1' }), row({ hr: '7a' })]);
+    expect(() => INHERITED_SPINE.parse(text))
+      .toThrow('data/athyg/inherited-spine.tsv:3: hr: "7a" is not an identifier.');
+  });
+
   // The header has exactly as many cells as a data row, so a walk that reads
   // it twice yields a row of column names — 'hip' parsing as a designation.
   it('yields nothing from a terminated header alone, and refuses an unterminated one', () => {

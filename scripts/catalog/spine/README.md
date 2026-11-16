@@ -35,9 +35,11 @@ behind it, are [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membe
 ```
 scripts/catalog/spine/
   inherited-spine-pure.ts         Column layout, row assembly, per-column
-    (+ test)                      counts, and the designation recovery
-                                  (spineDesignations). Pure, and off the
-                                  build:catalog path entirely.
+    (+ test)                      counts, the designation recovery
+                                  (spineDesignations), and spineIds, the
+                                  one number form of a row's hip / hd / hr
+                                  cells. Pure, and off the build:catalog
+                                  path entirely.
   inherited-spine-tsv.ts          INHERITED_SPINE, the codec, in a leaf of
                                   its own so a module needing only the
                                   layout does not reach the file. Its row
