@@ -1,7 +1,7 @@
 // The LVDB snapshot, override and alias parsers behind build:local-group. See README.md.
 
 import type { Declared } from '../util/sources/source';
-import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
+import { readTable, type ColumnTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import {
   canonicalDesignation,
   type AliasRow,
@@ -16,8 +16,8 @@ const LVDB_COLUMNS = [
 const LVDB_FLAG = ['0', '1'] as const;
 
 /** Position and the two confirmation flags are required; an empty structure or photometry cell is null. */
-export function parseLvdb(csv: string, from: Declared): LvdbRow[] {
-  return [...readTable({ ...from, columns: LVDB_COLUMNS, delimiter: 'comma' }, csv)].map((row) => {
+export function parseLvdb(table: ColumnTable): LvdbRow[] {
+  return [...table(LVDB_COLUMNS)].map((row) => {
     const key = row.requiredText('key');
     return {
       key,
