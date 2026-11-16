@@ -2,6 +2,7 @@
 
 import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { IDENTS_COLUMN, IDENTS_SEPARATOR } from '../../catalog/simbad/simbad-idents-parse';
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Column, Row } from '../pull/columns-pure';
@@ -37,21 +38,11 @@ export const IDENTS_PHASES = {
   basic: CORE.basic,
 } as const satisfies Record<string, Phase>;
 
-/** The written columns' names; `IDENTS_COLUMNS` is their order. */
-export const IDENTS = {
-  oid: OID.tsv, mainId: MAIN_ID.tsv, hip: HIP.name, hd: HD.name, gj: GJ.name, sourceId: GAIA_DR3.name, idents: 'idents',
-} as const;
-
-const IDENTS_COLUMNS: readonly [Column, ...Column[]] = [
-  { name: IDENTS.oid }, { name: IDENTS.mainId }, { name: IDENTS.hip }, { name: IDENTS.hd },
-  { name: IDENTS.gj }, { name: IDENTS.sourceId }, { name: IDENTS.idents },
-];
+const [FIRST_COLUMN, ...OTHER_COLUMNS] = Object.values(IDENTS_COLUMN);
+const IDENTS_COLUMNS: readonly [Column, ...Column[]] = [{ name: FIRST_COLUMN }, ...OTHER_COLUMNS.map((name) => ({ name }))];
 
 /** An id with SIMBAD's space padding collapsed: `*  39 Psc` is written `* 39 Psc`. */
 export const collapseSpaces = (id: string): string => id.replace(/\s+/g, ' ').trim();
-
-/** The values one row joins with `|`. */
-export const VALUE_SEPARATOR = '|';
 
 /** Each oid's ids among `classes`, spaces collapsed. */
 export function identsByOid(rows: readonly Row[], classes: readonly Namespace[]): Map<number, Set<string>> {
@@ -86,12 +77,12 @@ export function identsRows(
   return [...idents.keys()].sort(ascending).map((oid) => {
     const keyCell = (ns: Namespace): string | null => {
       const values = [...(keys.get(oid)?.get(ns.name) ?? [])].sort(ns.numeric ? numericOrder : compareCodeUnits);
-      return values.length === 0 ? null : values.join(VALUE_SEPARATOR);
+      return values.length === 0 ? null : values.join(IDENTS_SEPARATOR);
     };
     return [
       String(oid), basic.get(oid)?.[MAIN_ID.column] ?? null,
       keyCell(HIP), keyCell(HD), keyCell(GJ), keyCell(GAIA_DR3),
-      [...idents.get(oid)!].sort(compareCodeUnits).join(VALUE_SEPARATOR),
+      [...idents.get(oid)!].sort(compareCodeUnits).join(IDENTS_SEPARATOR),
     ];
   });
 }
@@ -102,11 +93,11 @@ export interface IdentsGates {
 }
 
 export function identsTable({ band, spotRows }: IdentsGates): WrittenTable {
-  return { columns: IDENTS_COLUMNS, sortBy: [{ column: IDENTS.oid, as: 'integer' }], band, spotRows };
+  return { columns: IDENTS_COLUMNS, sortBy: [{ column: IDENTS_COLUMN.oid, as: 'integer' }], band, spotRows };
 }
 
 const spot = (oid: string, mainId: string, hip: string | null, hd: string | null, idents: string) => ({
-  key: IDENTS.oid, value: oid, cells: { [IDENTS.mainId]: mainId, [IDENTS.hip]: hip, [IDENTS.hd]: hd, [IDENTS.idents]: idents },
+  key: IDENTS_COLUMN.oid, value: oid, cells: { [IDENTS_COLUMN.mainId]: mainId, [IDENTS_COLUMN.hip]: hip, [IDENTS_COLUMN.hd]: hd, [IDENTS_COLUMN.idents]: idents },
 });
 
 /** README.md#gates. */
@@ -123,8 +114,8 @@ export const IDENTS_GATES: IdentsGates = {
 /** Every distinct oid a simbad_sptype.tsv row names, ascending. */
 export function sptypeOids(text: string): number[] {
   const oids = new Set<number>();
-  for (const row of readTable({ file: DATA_FILES.simbadSptype, columns: [IDENTS.oid], hint: 'Re-run `pnpm run refresh:simbad-sptype`.' }, text)) {
-    oids.add(row.requiredId(IDENTS.oid));
+  for (const row of readTable({ file: DATA_FILES.simbadSptype, columns: [IDENTS_COLUMN.oid], hint: 'Re-run `pnpm run refresh:simbad-sptype`.' }, text)) {
+    oids.add(row.requiredId(IDENTS_COLUMN.oid));
   }
   return [...oids].sort(ascending);
 }
