@@ -9,7 +9,7 @@ fails.
 
 ```
 bailer-jones-dr3.tsv   ~95 MB, LFS. Keyed by Gaia DR3 source_id.
-                       1,277,736 rows.
+                       1,277,737 rows.
 ```
 
 ## Provenance

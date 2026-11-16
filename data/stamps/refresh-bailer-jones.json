@@ -1,9 +1,9 @@
 {
   "inputs": {
-    "data/gaia/gaia_astrometry_source_id_request.tsv": "a7bfa3bd5f84d26b78815acb42fcacab572a1c0e"
+    "data/gaia/gaia_astrometry_source_id_request.tsv": "e0096fa50bb44e10008db80db05d7908aa62edb4"
   },
   "outputs": {
-    "data/bailer-jones/bailer-jones-dr3.tsv": "ddccc548c3e54ec938568a967b40eef99db895a7"
+    "data/bailer-jones/bailer-jones-dr3.tsv": "5cf8817e567bba57f72e075d5e9acb3976644a20"
   },
   "query": "ddee9d0dfbc8c453b711b8ef8558bbe370a9c8cd",
   "answeredBy": [
