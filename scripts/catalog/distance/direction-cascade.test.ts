@@ -23,7 +23,7 @@ import { type GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { GAIA_NSS } from '../sources/gaia-nss-source';
 import { HIP2, type Hip2AstrometryRow } from '../sources/hip2-source';
 import { hip2AstrometryRow } from '../sources/hip2-fixture';
-import { TYCHO2 } from '../tycho2-source';
+import { tycho2Row as tycho2Fixture } from '../tycho2-fixture';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { groupRowRef, sourceRowRef, type GroupRowRef } from '../../util/sources/row-ref-pure';
 import { cns5Astrometry } from '../classic-ids/cns5-fixture';
@@ -73,15 +73,12 @@ function hip2Row(overrides: Partial<Hip2AstrometryRow> = {}): Hip2AstrometryRow 
 const TYC = '3694-2544-1';
 
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
-  return {
+  return tycho2Fixture(TYC, {
     raDeg: 33.5, decDeg: 12.25,
-    epoch: TYCHO2_MEAN_EPOCH,
     pmRaMasyr: 10, pmDecMasyr: -10,
     btMag: 9.5, vtMag: 8.9,
-    fromIcrs: false, isPhotocentre: false, hip: null,
-    ref: sourceRowRef(TYCHO2, TYC),
     ...overrides,
-  };
+  });
 }
 
 function sources(overrides: Partial<DirectionSources> = {}): DirectionSources {

@@ -10,9 +10,8 @@ import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import { TYCHO2 } from '../tycho2-source';
+import { tycho2Row } from '../tycho2-fixture';
 import { GLIESE } from '../gliese-source';
-import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { buildMembership, type MembershipResult } from './membership-manifest-pure';
 import { matchSpineToManifest, withRecordMoves } from './spine-match-pure';
 import {
@@ -86,11 +85,7 @@ function manifestRow(cells: Partial<Record<ManifestColumn, string>>): ManifestRe
 }
 
 function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
-  return {
-    raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
-    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
-    ref: sourceRowRef(TYCHO2, '1-1-1'),
-  };
+  return tycho2Row('1-1-1', { vtMag, hip });
 }
 
 function entry(e: Partial<OverlayEntry>): OverlayEntry {

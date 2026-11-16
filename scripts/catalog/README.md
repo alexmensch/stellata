@@ -168,6 +168,10 @@ scripts/catalog/
                                   the main-table-wins rule resolved at parse
                                   time (data/tycho2/README.md). Feeds the
                                   direction, PM-rescue and V cascades.
+  tycho2-fixture.ts               Test-only Tycho2Row builder: suites in
+                                  distance/, parse/, spine/ and membership/
+                                  build these rows, and a field added to the
+                                  interface lands here once.
   gliese-source.ts                GLIESE, V/70A's declaration.
   gliese-parse-pure.ts            data/gliese/ keyed on the bare Gliese
     (+ test)
