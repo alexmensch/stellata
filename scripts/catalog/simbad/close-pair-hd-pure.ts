@@ -15,17 +15,7 @@ export interface ClosePairWitnesses {
  *  and the fourth witness — SIMBAD's object for the record's own source — says
  *  whether that HD is the record's (`move`), the TYC cell is the crossed one
  *  (`refuse`), or nothing (`source-silent`). */
-export type ClosePairVerdict =
-  | { readonly kind: 'unanswered' }
-  | { readonly kind: 'split' }
-  | { readonly kind: 'uncontested' }
-  | { readonly kind: 'move'; readonly hds: readonly number[] }
-  | { readonly kind: 'refuse' }
-  | { readonly kind: 'source-silent' };
-export type ClosePairVerdictKind = ClosePairVerdict['kind'];
-export const CLOSE_PAIR_VERDICT_KINDS = [
-  'unanswered', 'split', 'uncontested', 'move', 'refuse', 'source-silent',
-] as const satisfies readonly ClosePairVerdictKind[];
+export type ClosePairVerdict = 'unanswered' | 'split' | 'uncontested' | 'move' | 'refuse' | 'source-silent';
 
 export function closePairHdVerdict(
   record: { tyc: string | null; gaiaSourceId: string | null; hd: number | null },
@@ -33,13 +23,10 @@ export function closePairHdVerdict(
 ): ClosePairVerdict {
   const answer = record.tyc === null ? undefined : w.simbadTycHd.get(record.tyc);
   const printed = record.tyc === null ? undefined : w.iv25Hds(record.tyc);
-  if (answer === undefined || printed === undefined) return { kind: 'unanswered' };
-  const agreed = hdNumbers(answer).filter((hd) => printed.has(hd));
-  if (agreed.length === 0) return { kind: 'split' };
-  if (record.hd !== null && (printed.has(record.hd) || hdNumbers(answer).includes(record.hd))) {
-    return { kind: 'uncontested' };
-  }
+  if (answer === undefined || printed === undefined) return 'unanswered';
+  if (!hdNumbers(answer).some((hd) => printed.has(hd))) return 'split';
+  if (record.hd !== null && (printed.has(record.hd) || hdNumbers(answer).includes(record.hd))) return 'uncontested';
   const ofSource = record.gaiaSourceId === null ? undefined : w.simbadObjectOfSource.get(record.gaiaSourceId);
-  if (ofSource === undefined) return { kind: 'source-silent' };
-  return ofSource === answer.simbadOid ? { kind: 'move', hds: agreed } : { kind: 'refuse' };
+  if (ofSource === undefined) return 'source-silent';
+  return ofSource === answer.simbadOid ? 'move' : 'refuse';
 }

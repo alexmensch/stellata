@@ -228,7 +228,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     silent = [];
     for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(SPLIT_INPUTS[2], 'utf-8'))) {
       if (row.tyc === null || row.hd === null) continue;
-      const verdict = closePairHdVerdict(row, w).kind;
+      const verdict = closePairHdVerdict(row, w);
       if (verdict === 'move') move.push(row.tyc);
       else if (verdict === 'refuse') refuse.push(row.tyc);
       else if (verdict === 'source-silent') silent.push(row.tyc);

@@ -10,7 +10,7 @@ import type { GlieseRow } from '../../gliese-parse-pure';
 import { confirmsLabel, formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import type { ManifestRecord } from '../membership-manifest-tsv';
 import {
-  closePairHdVerdict, type ClosePairVerdictKind, type ClosePairWitnesses,
+  closePairHdVerdict, type ClosePairVerdict, type ClosePairWitnesses,
 } from '../../simbad/close-pair-hd-pure';
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
@@ -394,12 +394,12 @@ const CLOSE_PAIR_QUEUE = {
   split: 'close-pair-split',
   'source-silent': 'close-pair-source-silent',
   move: 'close-pair-move',
-} as const satisfies Partial<Record<ClosePairVerdictKind, DiffersQueueReason>>;
+} as const satisfies Partial<Record<ClosePairVerdict, DiffersQueueReason>>;
 
 /** see README.md#settling-a-differs-cell */
 const DIFFERS_VERDICT: { [C in DiffersCell]: (shipped: ShippedCells, m: MergeLinks) => DiffersVerdict<C> } = {
   hd: (shipped, m) => {
-    const { kind } = closePairHdVerdict(shipped, m.closePair);
+    const kind = closePairHdVerdict(shipped, m.closePair);
     if (kind === 'uncontested') return { settled: 'close-pair-uncontested' };
     if (kind === 'refuse') return { settled: 'close-pair-refuse' };
     return { queued: CLOSE_PAIR_QUEUE[kind] };
