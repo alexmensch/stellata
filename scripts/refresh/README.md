@@ -107,7 +107,7 @@ these paths itself has drifted from it. The two pulls scoped to Tycho
 entries share one TYC request set, read once: `readTycRequest` (`tycho2/`), over
 integer triples ([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25));
 `refresh:tycho2` alone adds the manifest's HIPs (`readTycho2Inputs`).
-[Request sets come off the membership term](/data/simbad/README.md#request-sets-come-off-the-membership-term) carries
+[Request sets come off the membership term](/scripts/refresh/simbad-sptype/README.md#the-request-set) carries
 the measured drop/gain of the SIMBAD rebase.
 
 The manifest's `gaia_source_id` is the binding the manifest **justified**, its
