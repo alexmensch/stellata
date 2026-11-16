@@ -31,7 +31,9 @@ and its proper motion match the Gaia source
 (`data/membership/README.md`). The four name columns (`dm`, `giclas`,
 `lhs`, `other_name`) are the same review's cross-names. `parseGlieseTsv`
 reads the four astrometry columns into `astrometryB1950`, null on the 51
-rows missing any of them, and none of the name columns.
+rows missing any of them, for the
+[positional witness](/scripts/catalog/membership/positional-witness/README.md#the-two-witnesses);
+it reads none of the name columns.
 
 ## Why this table exists at all
 

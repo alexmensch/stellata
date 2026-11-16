@@ -139,6 +139,9 @@ scripts/catalog/membership/
                                   against what the primaries' own links
                                   derive, the pair rule it applies, and the
                                   divergence ledger it writes. Own README.
+  positional-witness/             Whether a V/70A or Hipparcos position
+                                  names one of a set of Tycho-2 entries,
+                                  and the measured tolerances. Own README.
   spine-corrections/              The curated corrections to AT-HYG's merge
                                   decisions, and the spine they leave. Own
                                   README.
