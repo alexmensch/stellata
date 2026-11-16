@@ -125,11 +125,9 @@ const IV27A: CrossIndexRow[] = [
   { hd: 60, hip: null, bayer: null, flamsteed: 7, cst: 'Cas' },
 ];
 
-/** SIMBAD's numbered idents against IV/27A's Cas range (to 7): HIP 70's `9 Cas`
- *  lies past it; HIP 20 (Gl 165A) carries one accepted number and no cell;
- *  HD 200500 two; HIP 40 one. */
+/** SIMBAD's numbered idents within IV/27A's Cas range (to 7): HIP 20 (Gl 165A)
+ *  carries one accepted number and no cell; HD 200500 two; HIP 40 one. */
 const SIMBAD_OBJECTS: SimbadIdentsObject[] = [
-  { oid: 1, hips: [70], hds: [70000], idents: ['* 9 Cas'] },
   { oid: 2, hips: [20], hds: [], idents: ['* 3 Cas'] },
   { oid: 3, hips: [], hds: [200500], idents: ['* 2 Cas', '* 4 Cas'] },
   { oid: 4, hips: [40], hds: [], idents: ['* 6 Cas'] },
