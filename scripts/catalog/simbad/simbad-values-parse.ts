@@ -138,15 +138,7 @@ export function parseSimbadValuesTsv(text: string, from: Declared & RowKeyed<num
   return index;
 }
 
-/** The record's SIMBAD row over the namespaces the request was composed from,
- *  source_id first, then `WIDENING_LADDER`'s order (`scripts/refresh/simbad/simbad-specs-pure.ts`). A widened row is readable
- *  not because the two ladders share an order but because its emitted row
- *  carries the asking designation in the namespace that bound it, so this
- *  walk reaches it whichever rung matches first. What arrives here is already
- *  adjudicated (`/scripts/refresh/simbad/README.md#the-widening-falls-through-on-resolution-not-on-cell-presence` carries its
- *  own corroboration rule). Its `source_id` cell may name a DIFFERENT source
- *  from the record's — the DR2/DR3 case, inert because no record asks for it,
- *  and pinned in `spine/inherited-spine-guard.test.ts`. */
+/** The record's SIMBAD row, walked in `SIMBAD_NAMESPACE_VALUES` order. Its `source_id` cell may name another source than the record's (the DR2/DR3 case, pinned in `spine/inherited-spine-guard.test.ts`). */
 export function lookupSimbadValues(
   index: SimbadValueIndex,
   keys: SimbadRecordKeys,
