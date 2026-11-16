@@ -1,10 +1,10 @@
-// A stage's lineage lines held in a temporary file while another stage's are in memory. See README.md#storage-and-cost.
+// A stage's lineage lines held in a temporary file while another stage's are in memory. See README.md#holding-lines.
 
 import { appendFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { ENCODE_BATCH, LINEAGE_COLUMNS, lineageLines, utf8Batch, type LineageLine } from './lineage-row-pure';
+import { ENCODE_BATCH, LINEAGE_COLUMNS, lineageLines, utf8Batch, type LineageLine } from '../lineage-row-pure';
 
 export class LineSpill {
   readonly dir = mkdtempSync(join(tmpdir(), 'stellata-lineage-'));

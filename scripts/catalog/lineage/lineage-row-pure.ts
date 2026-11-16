@@ -144,7 +144,7 @@ export function utf8Batch(lines: readonly string[]): Buffer {
   return Buffer.from(`${lines.join('\n')}\n`);
 }
 
-/** See README.md#storage-and-cost. */
+/** See storage/README.md. */
 export function utf8Lines(header: string, lines: Iterable<string>, batch = ENCODE_BATCH): Uint8Array {
   const parts: Buffer[] = [utf8Batch([header])];
   let pending: string[] = [];
