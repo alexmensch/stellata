@@ -22,11 +22,6 @@ const B1950_JD = besselianEpochToJd(1950);
 const B1950_JULIAN_YEAR = julianYearOfJd(B1950_JD);
 const B1950_TO_J2000 = precessionRotationFromJ2000(B1950_JD);
 
-export interface WitnessCandidate {
-  tyc: string;
-  entry: Tycho2Row;
-}
-
 export interface WitnessSeparation {
   tyc: string;
   separationArcsec: number;
@@ -40,11 +35,11 @@ export type WitnessVerdict =
 
 function verdictOf(
   witness: (entry: Tycho2Row) => number,
-  candidates: readonly WitnessCandidate[],
+  candidates: readonly Tycho2Row[],
   toleranceArcsec: number,
 ): WitnessVerdict {
   const separations = candidates
-    .map(({ tyc, entry }) => ({ tyc, separationArcsec: witness(entry) }))
+    .map((entry) => ({ tyc: entry.ref.row, separationArcsec: witness(entry) }))
     .sort((a, b) => ascending(a.separationArcsec, b.separationArcsec) || ascending(a.tyc, b.tyc));
   const inside = separations.filter((s) => s.separationArcsec <= toleranceArcsec).map((s) => s.tyc);
   if (inside.length === 0) return { kind: 'none', separations };
@@ -78,7 +73,7 @@ export function v70aPositionAt(astrometry: V70aAstrometry, epoch: number): SkyPo
 }
 
 export function witnessV70a(
-  astrometry: V70aAstrometry, candidates: readonly WitnessCandidate[],
+  astrometry: V70aAstrometry, candidates: readonly Tycho2Row[],
 ): WitnessVerdict {
   return verdictOf((entry) => {
     const { position, epoch } = singleStarPosition(entry);
@@ -87,7 +82,7 @@ export function witnessV70a(
 }
 
 export function witnessHipparcos(
-  hip: Pick<Hip2AstrometryRow, 'raDeg' | 'decDeg'>, candidates: readonly WitnessCandidate[],
+  hip: Pick<Hip2AstrometryRow, 'raDeg' | 'decDeg'>, candidates: readonly Tycho2Row[],
 ): WitnessVerdict {
   return verdictOf(
     (entry) => separationArcsec(hip, entry.observed),

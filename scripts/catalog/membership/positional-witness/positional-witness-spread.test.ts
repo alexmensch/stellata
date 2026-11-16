@@ -8,10 +8,11 @@ import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { lookupGliese } from '../../gliese-parse-pure';
 import { GLIESE } from '../../gliese-source';
 import { HIP2 } from '../../sources/hip2-source';
+import type { Tycho2Row } from '../../tycho2-parse';
 import { TYCHO2 } from '../../tycho2-source';
 import { MERGE_DIVERGENCE } from '../merge-divergence-tsv';
 import { PAIR_REVIEW } from '../pair-review-tsv';
-import { witnessHipparcos, witnessV70a, type WitnessCandidate, type WitnessVerdict } from './positional-witness-pure';
+import { witnessHipparcos, witnessV70a, type WitnessVerdict } from './positional-witness-pure';
 
 const readable = [
   DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1, DATA_FILES.gliese, DATA_FILES.hip2,
@@ -25,10 +26,10 @@ function tallyKinds(verdicts: readonly WitnessVerdict[]): Record<WitnessVerdict[
 
 describe.skipIf(!readable)('the witness over the committed queues (README.md#the-tolerances)', () => {
   const tycho2 = TYCHO2.read();
-  const candidates = (tycs: readonly string[]): WitnessCandidate[] => tycs.map((tyc) => {
+  const candidates = (tycs: readonly string[]): Tycho2Row[] => tycs.map((tyc) => {
     const entry = tycho2.get(tyc);
     if (entry === undefined) throw new Error(`${tyc}: no Tycho-2 row`);
-    return { tyc, entry };
+    return entry;
   });
 
   it("settles the pair queue's no_hip_source HIPs on HIP2's position", () => {
