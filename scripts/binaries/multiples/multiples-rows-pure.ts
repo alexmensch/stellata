@@ -123,12 +123,13 @@ const NO_ORBIT_FIELDS: OrbitFields = {
   pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null, aVia: 'none',
 };
 
-/** What a component's spectral-type mass was read for: the q backfill, the Kepler a. */
-export type MassUse = 'q' | 'a';
-
+/** A component's spectral-type mass as Stage 6 read it, and what became of it. */
 export interface MassRead {
   readonly mass: SpectralMass;
-  readonly uses: readonly MassUse[];
+  /** Read for the q backfill: `fed` when both sides had a mass, so q came from them. */
+  readonly q: 'fed' | 'unfed' | null;
+  /** Read for a Kepler a that was written: `default` when the primary mass default stood in. */
+  readonly a: 'fed' | 'default' | null;
 }
 
 /** Each side's mass as Stage 6 read it; null where it read none. */
@@ -152,13 +153,12 @@ export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpe
   const el = orbit.elements;
   const primaryMass = spectralMass(primarySpect);
   const secondaryMass = spectralMass(secondarySpect);
-  const primaryUses: MassUse[] = [];
-  const secondaryUses: MassUse[] = [];
+  let qUse: MassRead['q'] = null;
+  let aUse: MassRead['a'] = null;
   let q = el.q;
   if (q === null) {
     q = massRatio(primaryMass, secondaryMass);
-    primaryUses.push('q');
-    secondaryUses.push('q');
+    qUse = q === null ? 'unfed' : 'fed';
   }
   let omegaRad = el.periastronRad;
   let aAU = el.aAu;
@@ -167,19 +167,20 @@ export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpe
     q ??= UNKNOWN_COMPANION_MASS_RATIO_Q;
     if (omegaRad === null && el.e === 0) omegaRad = CIRCULAR_ORBIT_OMEGA_RAD;
     if (aAU === null && el.pDays !== null) {
-      primaryUses.push('a');
-      const mPrimary = massOf(primaryMass) ?? DEFAULT_PRIMARY_MASS_MSUN;
-      const kepler = keplerSemimajorAxisAu(el.pDays, mPrimary / (1.0 - q));
+      const own = massOf(primaryMass);
+      const kepler = keplerSemimajorAxisAu(el.pDays, (own ?? DEFAULT_PRIMARY_MASS_MSUN) / (1.0 - q));
       if (kepler !== null) {
         aAU = kepler;
         aVia = 'kepler_mass_estimate';
+        aUse = own === null ? 'default' : 'fed';
       }
     }
   }
-  const read = (mass: SpectralMass, uses: readonly MassUse[]): MassRead | null => (uses.length === 0 ? null : { mass, uses });
+  const read = (mass: SpectralMass, uses: Pick<MassRead, 'q' | 'a'>): MassRead | null =>
+    (uses.q === null && uses.a === null ? null : { mass, ...uses });
   return {
     fields: { pDays: el.pDays, tJd: el.tJd, e: el.e, aAU, iRad: el.iRad, omegaRad, OmegaRad: el.nodeRad, q, aVia },
-    masses: { primary: read(primaryMass, primaryUses), secondary: read(secondaryMass, secondaryUses) },
+    masses: { primary: read(primaryMass, { q: qUse, a: aUse }), secondary: read(secondaryMass, { q: qUse, a: null }) },
   };
 }
 

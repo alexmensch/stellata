@@ -25,9 +25,9 @@ const BRANCH_TEXT: Record<MassBranch, string> = {
 
 export const MASSES_CODES = stageCodes(MASSES_LINEAGE.stage, {
   ...taggedCodes('read.', MASS_BRANCHES, (branch) => outcomeCode(`Stage 6 read the component's mass off ${BRANCH_TEXT[branch]}.`)),
-  'read.no-type': outcomeCode('Stage 6 read the component\'s mass and found no spectral type, so none.'),
-  'read.unparsed': outcomeCode('Stage 6 read the component\'s mass and found a spectral type the parser cannot read, so none.'),
-  'not-read': outcomeCode('Stage 6 read no mass for the component: no orbit, or one publishing q and a.'),
+  'read.no-type': outcomeCode('Stage 6 read the component\'s mass and found no spectral type, so none: no q comes from spectra, and a Kepler a takes the default primary mass.'),
+  'read.unparsed': outcomeCode('Stage 6 read the component\'s mass and found a spectral type the parser cannot read, so none: no q comes from spectra, and a Kepler a takes the default primary mass.'),
+  'not-read': outcomeCode('Stage 6 read no mass for the component: no orbit, or one whose q is published and whose a is published or not estimated.'),
 });
 
 function idParams(r: MultiplesRecord): LineageParams {
@@ -44,8 +44,12 @@ export function* massesLineageRows(massReads: ReadonlyMap<MultiplesRecord, MassR
       yield stageRow(MASSES_CODES, key, 'not-read', idParams(r), []);
       continue;
     }
-    const spect: LineageParams = r.spect === '' ? {} : { spect: r.spect };
-    yield stageRow(MASSES_CODES, key, `read.${kebab(read.mass.kind)}`, { ...idParams(r), ...spect, for: read.uses.join(',') }, []);
+    yield stageRow(MASSES_CODES, key, `read.${kebab(read.mass.kind)}`, {
+      ...idParams(r),
+      ...(r.spect === '' ? {} : { spect: r.spect }),
+      ...(read.q === null ? {} : { q: read.q }),
+      ...(read.a === null ? {} : { a: read.a }),
+    }, []);
   }
 }
 

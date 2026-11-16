@@ -49,9 +49,12 @@ order. A kept pair with no position on either side and no system anchor is not
 a row; the pair itself is in `droppedNoPosition`, which the `pairs` lineage
 stage reads ([Pairs lineage](../README.md#pairs-lineage)). `mscMagFills`
 names the pairs whose magnitudes came from the MSC. `massReads` carries every
-row, in file order, with the spectral-type mass `orbitFields` read for it —
-the branch it came off and whether it fed the q backfill, the Kepler a or
-both — or null where it read none.
+row, in file order, with the spectral-type mass `orbitFields` read for it and
+what became of it — or null where it read none. Read for the q backfill, `q`
+is `fed` when both sides had a mass and `unfed` when either had none (q then
+stays blank, or takes the default ⅓ on the estimated routes). Read for a
+Kepler a that was written, `a` is `fed`, or `default` when the primary had no
+mass and `DEFAULT_PRIMARY_MASS_MSUN` stood in.
 
 `anchors` holds, per system with a kept pair, its anchor choice beside a
 binding. Promotion ranks only primaries a catalogue record holds
@@ -138,13 +141,14 @@ stage, after `anchors`
 ([Record lineage](/scripts/catalog/lineage/README.md#the-masses-stage)), from
 `masses-lineage-pure.ts` over `Stage6Result.massReads`. Rows are keyed on the
 row (`multiples:<system_id>/<comp>`); `params` carry its Gaia source, `hip:`,
-spectral type and what the mass fed (`q`, `a` or both).
+spectral type, and the read's `q` and `a`
+([The shape of a result](#the-shape-of-a-result)).
 
 | Code | Written for |
 | --- | --- |
 | `masses.read.<branch>` | a row whose mass `orbitFields` read, one code per `MASS_BRANCHES` branch (`../masses/`), underscores as dashes |
 | `masses.read.no-type` / `.unparsed` | a row whose mass it read and found none: no spectral type, or one the parser cannot read |
-| `masses.not-read` | a row it read no mass for: no orbit, or one publishing q and a, and every standalone row |
+| `masses.not-read` | a row it read no mass for: no orbit, or one whose q is published and whose a is published or not estimated, and every standalone row |
 
 `MASSES_INVARIANTS` allows a `read.unparsed` row only for the 19 it names:
 L and T dwarfs and types whose class sits in parentheses. Moving to the

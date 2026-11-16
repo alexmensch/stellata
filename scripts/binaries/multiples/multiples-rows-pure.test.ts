@@ -88,10 +88,18 @@ describe('orbitFields — the estimated-element backstops', () => {
 
 describe('orbitFields — the masses read', () => {
   const nss = (over: Parameters<typeof elements>[0] = {}) => ({ orbitVia: 'gaia_nss' as const, elements: elements(over) });
-  const reads = (m: PairMassReads) => [m.primary && [m.primary.mass.kind, m.primary.uses], m.secondary && [m.secondary.mass.kind, m.secondary.uses]];
+  const reads = (m: PairMassReads) => [m.primary && [m.primary.mass.kind, m.primary.q, m.primary.a], m.secondary && [m.secondary.mass.kind, m.secondary.q, m.secondary.a]];
 
   it('reads both sides for the q backfill and the primary again for the Kepler a', () => {
-    expect(reads(orbitFields(nss(), 'G2V', 'L4').masses)).toEqual([['main_sequence', ['q', 'a']], ['unparsed', ['q']]]);
+    expect(reads(orbitFields(nss(), 'G2V', 'K1V').masses)).toEqual([['main_sequence', 'fed', 'fed'], ['main_sequence', 'fed', null]]);
+  });
+
+  it('says q came from no mass when either side has none, so the default q stood in', () => {
+    expect(reads(orbitFields(nss(), 'G2V', 'L4').masses)).toEqual([['main_sequence', 'unfed', 'fed'], ['unparsed', 'unfed', null]]);
+  });
+
+  it('says the default primary mass stood in for a Kepler a when the primary has no type', () => {
+    expect(reads(orbitFields(nss(), '', 'K1V').masses)).toEqual([['no_type', 'unfed', 'default'], ['main_sequence', 'unfed', null]]);
   });
 
   it('reads no mass where the orbit publishes q and a, or there is no orbit', () => {
