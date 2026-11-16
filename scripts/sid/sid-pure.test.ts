@@ -16,6 +16,7 @@ import {
   parseSameasTsv,
   parseSolObjectsTsv,
   starDesignations,
+  synthDesignation,
   validateLedger,
   type LedgerRow,
 } from './sid-pure';
@@ -43,6 +44,11 @@ describe('designation grammar', () => {
     expect(isValidDesignation('hip:')).toBe(false);
     expect(isValidDesignation('gl:Gl 804')).toBe(false);
     expect(isValidDesignation('hip:1\t2')).toBe(false);
+  });
+
+  it('spells a runtime synthetic id as its synth: key, refusing one without the prefix', () => {
+    expect(synthDesignation('synth-04357+1010-Aa,Ab')).toBe('synth:04357+1010-Aa,Ab');
+    expect(() => synthDesignation('04357+1010-Ab')).toThrow(/lacks the synth- prefix/);
   });
 });
 

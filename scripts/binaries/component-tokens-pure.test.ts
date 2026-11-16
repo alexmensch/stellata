@@ -12,6 +12,7 @@ import {
   parentComponentToken,
   relatedHier,
   subcomponentTopLetter,
+  syntheticIdIn,
   tokenLetters,
   wdsRootOf,
 } from './component-tokens-pure';
@@ -84,6 +85,16 @@ describe('composeSyntheticId', () => {
 
   it('throws when system_id has no dash (malformed)', () => {
     expect(() => composeSyntheticId('NODASH', 'Ab')).toThrow(/no synthetic key/);
+  });
+});
+
+describe('syntheticIdIn', () => {
+  it('is the key composeSyntheticId builds, from the WDS id itself', () => {
+    expect(syntheticIdIn('16120-1928', 'Ab')).toBe(composeSyntheticId('16120-1928-Aa,Ab', 'Ab'));
+  });
+
+  it('throws on an empty comp letter', () => {
+    expect(() => syntheticIdIn('16120-1928', ' ')).toThrow(/no synthetic key/);
   });
 });
 
