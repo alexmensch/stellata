@@ -160,7 +160,7 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
     wdsSumm: WDS_SUMM.read(),
     orb6: ORB6.read(),
     orb6ComponentOverrides: ORB6_COMPONENT_OVERRIDES.read(),
-    athyg: parseAthygRows(ATHYG_CLASSIC_IDS.read()),
+    athyg: parseAthygRows(ATHYG_CLASSIC_IDS.read(), ATHYG_CLASSIC_IDS),
     ccdm: parseCcdmIndex(HIP_CCDM.read()),
     hip2: HIP2.read().astrometry,
     hipToGaia: GAIA_HIP_XMATCH.read(),

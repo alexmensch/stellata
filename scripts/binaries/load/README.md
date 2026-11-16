@@ -35,7 +35,8 @@ scripts/binaries/load/
   simbad-pure.ts               SIMBAD's WDS cross-IDs, the sp_type pull, and
                                their join on simbad_oid.
   simbad-wds-sptype-source.ts  SIMBAD_WDS_SPTYPE.
-  athyg-pure.ts                The AT-HYG rows, off ATHYG_CLASSIC_IDS.
+  athyg-pure.ts                The AT-HYG rows, off ATHYG_CLASSIC_IDS, each
+                               citing its row (`athyg:<id>`).
   readers-pure.test.ts         The curated, Gaia, SIMBAD, AT-HYG and MSC
                                readers.
   indices-pure.ts (+ test)     IdentifierIndices, the CCDM index, and the
