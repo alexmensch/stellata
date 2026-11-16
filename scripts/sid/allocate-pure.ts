@@ -273,11 +273,12 @@ export function allocate(input: AllocateInput, upstream: Upstream): Allocation {
   const unexplained = orphans
     .filter((row) => !ambiguous.some((a) => a.designation === row.canonicalKey) && causesOf(row.canonicalKey).decisions.length === 0)
     .map((row) => row.canonicalKey);
-  const ambiguousCarriers = new Map(ambiguous.map((a) => [a.designation, a.objects.length]));
+  const ambiguousCarriers = new Map(ambiguous.map((a) => [a.designation, a.objects.map((i) => objects[i])]));
   for (const row of orphans) {
     const carriers = ambiguousCarriers.get(row.canonicalKey);
     if (carriers !== undefined) {
-      errors.push(`sid ${row.sid} (${row.canonicalKey}) left the build: ${carriers} objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which`);
+      const named = carriers.map((o) => `${o.origin} {${o.designations.join(', ')}}`).join('; ');
+      errors.push(`sid ${row.sid} (${row.canonicalKey}) left the build: ${carriers.length} objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which: ${named}`);
       continue;
     }
     const settled = settle(row, 'left the build');

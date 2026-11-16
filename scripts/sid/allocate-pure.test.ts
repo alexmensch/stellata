@@ -236,7 +236,7 @@ describe('allocate: SIDs that leave the build', () => {
       ledger: [row(1, 'hip:1'), row(2, 'hd:9'), row(3, 'hip:3')],
     }));
     expect(errors).toEqual([
-      'sid 2 (hd:9) left the build: 2 objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which',
+      'sid 2 (hd:9) left the build: 2 objects now carry its key, so it names none of them; a bridge in sameas-overrides.tsv to the one it was must say which: spine:1 {hip:1, hd:9}; spine:3 {hip:3, hd:9}',
     ]);
   });
 
