@@ -4,7 +4,8 @@ import { declareOutputs } from '../util/emit-artifacts';
 import { BUILD_FILES } from '../../src/catalog-format/pipeline-outputs/build-files';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  ASTROMETRY_LINEAGE, BINDING_LINEAGE, LINEAGE_REPO_LAYOUT, ORBITS_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, stageFamilies, stageOutputFiles,
+  ANCHORS_LINEAGE, ASTROMETRY_LINEAGE, BINDING_LINEAGE, LINEAGE_REPO_LAYOUT, MASSES_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE,
+  stageFamilies, stageOutputFiles,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const BINARIES_OUTPUTS = declareOutputs({
@@ -15,4 +16,7 @@ export const BINARIES_OUTPUTS = declareOutputs({
   ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ASTROMETRY_LINEAGE),
   ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ORBITS_LINEAGE),
   ...stageOutputFiles(LINEAGE_REPO_LAYOUT, PAIRS_LINEAGE),
-}, [BINDING_LINEAGE, RESOLVE_LINEAGE, ASTROMETRY_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE].flatMap((spec) => stageFamilies(LINEAGE_REPO_LAYOUT, spec)));
+  ...stageOutputFiles(LINEAGE_REPO_LAYOUT, ANCHORS_LINEAGE),
+  ...stageOutputFiles(LINEAGE_REPO_LAYOUT, MASSES_LINEAGE),
+}, [BINDING_LINEAGE, RESOLVE_LINEAGE, ASTROMETRY_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, ANCHORS_LINEAGE, MASSES_LINEAGE]
+  .flatMap((spec) => stageFamilies(LINEAGE_REPO_LAYOUT, spec)));

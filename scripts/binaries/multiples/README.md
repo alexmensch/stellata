@@ -28,6 +28,10 @@ scripts/binaries/multiples/
   anchor-binding-pure.ts (+ test)   anchorBindings: whether each system's
                                     anchor is a letter companion
                                     promotion can anchor on.
+  anchors-lineage-pure.ts (+ test)  ANCHORS_CODES, anchorsLineageLines and
+                                    ANCHORS_INVARIANTS (#anchors-lineage).
+  masses-lineage-pure.ts (+ test)   MASSES_CODES, massesLineageLines and
+                                    MASSES_INVARIANTS (#masses-lineage).
   gaia-photometry-pure.ts (+ test)  gaiaPhotometryAbsmagCi: M_V and B−V from
                                     a component's own Gaia row.
   pair-photometry-pure.ts (+ test)  pairMagnitudes (WDS's, else the MSC's)
@@ -96,7 +100,60 @@ most rows; adopting the catalogue's is `stellata-hooj.43.1`.
 `../build-binaries-expected.json`, each folded through the one tally helper
 (`/scripts/util/counts/tally-pure.ts`); a populated count is the `populated`
 bucket of a two-variant fold. `../build-binaries.test.ts` holds them to the
-committed snapshot.
+committed snapshot. The anchors and masses lineage stages add no key: no
+`multiples` key counts what their codes record.
+
+## Anchors lineage
+
+`build:binaries` writes each system's anchor as the `anchors` lineage stage,
+after `pairs` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-anchors-stage)), from
+`anchors-lineage-pure.ts` over `Stage6Result.anchors`. A system founds no
+row, so its rows are keyed on the anchor's own row
+(`multiples:<system_id>/<comp>`, the first kept pair naming it primary), where
+trace already finds that component's resolve and astrometry rows; `params`
+carry each named letter's Gaia source and `hip:`, and each other letter's row
+is cited as evidence, so trace reaches the system from any primary it names.
+
+| Code | Written for |
+| --- | --- |
+| `anchors.chosen.sole` / `.letter` / `.length` / `.alphabetical` | every system, once: its anchor, and the rank step that put it ahead of the next candidate |
+| `anchors.ranked-out.<step>` | each other kept primary, with the step that put it below the anchor |
+| `anchors.binding.<kind>` | every system, once, one code per `anchorBindings` kind ([The shape of a result](#the-shape-of-a-result)); `re-basable` and `promotion-anchor-unreached` name the bound primary |
+
+`ANCHORS_INVARIANTS` allows a `binding.promotion-anchor-unreached` row only
+for the 19 systems it names, where no measured edge links the anchor to the
+primary promotion anchors on, so promotion refuses every member's offset
+([Invariants](/scripts/catalog/lineage/README.md#invariants)). Making Stage 6
+rank bound primaries first, as promotion does, is `stellata-hooj.43.4`.
+
+`ANCHORS_LINEAGE_BUDGET` pins 600 kB and 1 s: 38,430 rows came to 509,980
+bytes gzipped in 163–171 ms across two runs, not diffing against a baseline
+(2026-11-16).
+
+## Masses lineage
+
+`build:binaries` writes each row's spectral-type mass as the `masses` lineage
+stage, after `anchors`
+([Record lineage](/scripts/catalog/lineage/README.md#the-masses-stage)), from
+`masses-lineage-pure.ts` over `Stage6Result.massReads`. Rows are keyed on the
+row (`multiples:<system_id>/<comp>`); `params` carry its Gaia source, `hip:`,
+spectral type and what the mass fed (`q`, `a` or both).
+
+| Code | Written for |
+| --- | --- |
+| `masses.read.<branch>` | a row whose mass `orbitFields` read, one code per `MASS_BRANCHES` branch (`../masses/`), underscores as dashes |
+| `masses.read.no-type` / `.unparsed` | a row whose mass it read and found none: no spectral type, or one the parser cannot read |
+| `masses.not-read` | a row it read no mass for: no orbit, or one publishing q and a, and every standalone row |
+
+`MASSES_INVARIANTS` allows a `read.unparsed` row only for the 19 it names:
+L and T dwarfs and types whose class sits in parentheses. Moving to the
+catalogue's spectral parser is `stellata-hhaw.45.17.12`, which strikes each
+row it fixes off the list.
+
+`MASSES_LINEAGE_BUDGET` pins 800 kB and 1 s: 47,021 rows came to 698,089
+bytes gzipped in 95–96 ms across two runs, not diffing against a baseline
+(2026-11-16).
 
 ## Choices the outputs rest on
 

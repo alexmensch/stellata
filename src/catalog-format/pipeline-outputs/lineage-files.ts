@@ -46,6 +46,16 @@ export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
   files: ['pairs'],
 };
 
+export const ANCHORS_LINEAGE: StageLineageSpec<'anchors', 'anchors'> = {
+  stage: 'anchors',
+  files: ['anchors'],
+};
+
+export const MASSES_LINEAGE: StageLineageSpec<'masses', 'masses'> = {
+  stage: 'masses',
+  files: ['masses'],
+};
+
 export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'> = {
   stage: 'classic-ids',
   files: ['classic-ids'],

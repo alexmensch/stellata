@@ -12,7 +12,8 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  ASTROMETRY_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, ORBITS_LINEAGE, RESOLVE_LINEAGE, SIZE_LINEAGE,
+  ANCHORS_LINEAGE, ASTROMETRY_LINEAGE, BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE,
+  MASSES_LINEAGE, ORBITS_LINEAGE, RESOLVE_LINEAGE, SIZE_LINEAGE,
   stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -254,6 +255,22 @@ const ORBITS = [
   'orbits\twds:S/STF   1/AB\trefused\torbits.passed.gaia-nss.outranked\t{"primary":"A","primary_gaia":"222","secondary":"B"}\tgaia-dr3-nss:222',
 ].join('\n') + '\n';
 
+const RANKED_OUT = '4000000000000000046';
+
+/** Stage 6's anchor for the system, the primary it outranked, and its binding. */
+const ANCHORS = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'anchors\tmultiples:S-AB/A\toutcome\tanchors.binding.bound\t\t',
+  'anchors\tmultiples:S-AB/A\toutcome\tanchors.chosen.letter\t{"anchor":"A","gaia":"222"}\t',
+  `anchors\tmultiples:S-AB/A\trefused\tanchors.ranked-out.letter\t{"candidate":"C","gaia":"${RANKED_OUT}"}\tmultiples:S-CD/C`,
+].join('\n') + '\n';
+
+/** Stage 6's mass read for the anchor. */
+const MASSES = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'masses\tmultiples:S-AB/A\toutcome\tmasses.read.main-sequence\t{"gaia":"222","spect":"G2V","for":"q"}\t',
+].join('\n') + '\n';
+
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
     { stage: 'component-binding', rows: () => lineageRows(BINDING, 'fixture/component-binding.tsv') },
@@ -359,6 +376,8 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, RESOLVE_LINEAGE.stage), gzipText(RESOLVE));
   writeFileSync(stageFile(dir, ASTROMETRY_LINEAGE.stage), gzipText(ASTROMETRY));
   writeFileSync(stageFile(dir, ORBITS_LINEAGE.stage), gzipText(ORBITS));
+  writeFileSync(stageFile(dir, ANCHORS_LINEAGE.stage), gzipText(ANCHORS));
+  writeFileSync(stageFile(dir, MASSES_LINEAGE.stage), gzipText(MASSES));
   writeFileSync(stageFile(dir, CLASSIC_IDS_LINEAGE.stage), gzipText(CLASSIC_IDS));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
@@ -434,6 +453,16 @@ describe('pnpm run trace', () => {
     expect(run('gaia_dr3:222')).toMatch(
       /wds:S\/STF   1\/AB\n {2}outcome  orbits\.source\.orb6 .* +evidence orb6:S\/STF   1\/AB\n {2}refused  orbits\.passed\.gaia-nss\.outranked .* +evidence gaia-dr3-nss:222/,
     );
+  });
+
+  it('prints a system\'s anchor and each candidate it outranked with the rank step, from the outranked primary\'s Gaia source', () => {
+    expect(run(RANKED_OUT)).toMatch(
+      /multiples:S-AB\/A\n[\s\S]*outcome  anchors\.chosen\.letter +\{"anchor":"A","gaia":"222"\}\n {2}refused  anchors\.ranked-out\.letter +\{"candidate":"C","gaia":"4000000000000000046"\} +evidence multiples:S-CD\/C/,
+    );
+  });
+
+  it('prints a component\'s mass source after its anchor rows', () => {
+    expect(run('gaia_dr3:222')).toMatch(/anchors\.ranked-out\.letter[\s\S]*outcome  masses\.read\.main-sequence +\{"gaia":"222","spect":"G2V","for":"q"\}/);
   });
 
   it('prints a minted companion\'s absmag-source, colour and A_V provenance', () => {

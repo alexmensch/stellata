@@ -1,4 +1,4 @@
-// build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the verdicts and the binding and pairs lineage. See README.md#pipeline-at-a-glance.
+// build:binaries: Stages 1-6 in order, then Stage 7's count snapshot check gates multiples.tsv, the verdicts and every binaries lineage stage. See README.md#pipeline-at-a-glance.
 
 import { emitArtifacts } from '../util/emit-artifacts';
 import { countSnapshotCheck } from '../util/snapshot-check';
@@ -6,7 +6,7 @@ import { BUILD_BINARIES_COUNTS } from './build-binaries-expected-json';
 import { stepInputHashes } from '../util/step-input-hashes';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { countedStageLineage, foldedStageLineage, namedStageRun, type LineageBudget } from '../catalog/lineage/stage-lineage';
+import { countedStageLineage, foldedStageLineage, namedStageRun, stageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
 import { PAIRS_CODES, PAIRS_LINEAGE_BUDGET, pairsLineageLines } from './pairs-lineage-pure';
 import { binariesCounts } from './counts/binaries-counts';
@@ -20,7 +20,9 @@ import { stage3Report } from './astrometry/stage3-report-pure';
 import { loadReferenceCatalogs, type ReferenceCatalogs } from './load/reference-catalogs';
 import { stage1Report } from './load/stage1-report-pure';
 import { pairMasses } from './masses/pair-masses';
+import { ANCHORS_CODES, ANCHORS_INVARIANTS, ANCHORS_LINEAGE_BUDGET, anchorsLineageLines } from './multiples/anchors-lineage-pure';
 import { attachStage6, type Stage6Result } from './multiples/attach-multiples';
+import { MASSES_CODES, MASSES_INVARIANTS, MASSES_LINEAGE_BUDGET, massesLineageLines } from './multiples/masses-lineage-pure';
 import { stage6Report } from './multiples/stage6-report-pure';
 import { attachStage5, type Stage5Result } from './optical/attach-optical';
 import { stage5Report } from './optical/stage5-report-pure';
@@ -35,7 +37,9 @@ import {
   ORBITS_CODES, ORBITS_INVARIANTS, ORBITS_LINEAGE_BUDGET, orbitsCounts, orbitsLineageLines,
 } from './orbits/orbits-lineage-pure';
 import { stage4Report } from './orbits/stage4-report-pure';
-import { ASTROMETRY_LINEAGE, BINDING_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import {
+  ANCHORS_LINEAGE, ASTROMETRY_LINEAGE, BINDING_LINEAGE, MASSES_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
@@ -92,6 +96,14 @@ export async function main(): Promise<void> {
   const pairs = binariesStageLineage(
     PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
   );
+  const anchors = stageLineage(namedStageRun({
+    spec: ANCHORS_LINEAGE, codes: ANCHORS_CODES, lines: () => anchorsLineageLines(multiples.anchors), budget: ANCHORS_LINEAGE_BUDGET,
+    invariants: ANCHORS_INVARIANTS, inputs: stepInputHashes(),
+  }));
+  const masses = stageLineage(namedStageRun({
+    spec: MASSES_LINEAGE, codes: MASSES_CODES, lines: () => massesLineageLines(multiples.massReads), budget: MASSES_LINEAGE_BUDGET,
+    invariants: MASSES_INVARIANTS, inputs: stepInputHashes(),
+  }));
   emitArtifacts({
     outputs: BINARIES_OUTPUTS,
     files: {
@@ -102,8 +114,12 @@ export async function main(): Promise<void> {
       ...astrometry.files,
       ...orbits.files,
       ...pairs.files,
+      ...anchors.files,
+      ...masses.files,
     },
-    members: new Map([...binding.members, ...resolve.members, ...astrometry.members, ...orbits.members, ...pairs.members]),
+    members: new Map([
+      ...binding.members, ...resolve.members, ...astrometry.members, ...orbits.members, ...pairs.members, ...anchors.members, ...masses.members,
+    ]),
     checks: [
       ...reference.checks,
       ...binding.checks,
@@ -111,6 +127,8 @@ export async function main(): Promise<void> {
       ...astrometry.checks,
       ...orbits.checks,
       ...pairs.checks,
+      ...anchors.checks,
+      ...masses.checks,
       countSnapshotCheck(BUILD_BINARIES_COUNTS, {
         actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, astrometry: astrometry.counts, orbits: orbits.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',
