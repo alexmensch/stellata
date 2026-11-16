@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT, isLfsPointerFile } from '../../util/paths';
 import { WDS_SUMM } from '../../wds/wds-source';
 import { REPLAY_TIMEOUT_MS, replayedTable } from '../simbad/simbad-test-fixtures';
@@ -23,7 +24,7 @@ describe.skipIf(isLfsPointerFile(COMMITTED) || isLfsPointerFile(resolve(REPO_ROO
       overridesFile: WDS_XIDS_OVERRIDES.file,
       requestFrom: [],
     };
-    const replayed = await replayedTable((outputs) => xidsPull(outputs, inputs), 'xids', xidsFake(committed, DATA_FILES.simbadWdsXids));
+    const replayed = await replayedTable((file) => xidsPull(declareOutputs({ xids: file }), inputs), xidsFake(committed, DATA_FILES.simbadWdsXids));
     expect(replayed === committed).toBe(true);
   }, REPLAY_TIMEOUT_MS);
 });

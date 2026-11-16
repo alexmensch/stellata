@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
+import { declareOutputs } from '../../util/emit-artifacts';
 import { REPO_ROOT, isLfsPointerFile } from '../../util/paths';
 import { REPLAY_TIMEOUT_MS, record, replayedTable } from '../simbad/simbad-test-fixtures';
 import { readTable } from '../../util/tsv/table-pure';
@@ -28,8 +29,8 @@ describe.skipIf(isLfsPointerFile(COMMITTED))('the committed simbad_values.tsv', 
   it('replays through the pull to its own bytes', async () => {
     const committed = readFileSync(COMMITTED, 'utf8');
     const records = recordsOf(committed);
-    const pull = (outputs: Parameters<typeof valuesPull>[0]) => valuesPull(outputs, { records: () => records, gaiaComplete: new Set(), requestFrom: [] });
-    const replayed = await replayedTable(pull, 'values', valuesFake(committed, DATA_FILES.simbadValues));
+    const pull = (file: string) => valuesPull(declareOutputs({ values: file }), { records: () => records, gaiaComplete: new Set(), requestFrom: [] });
+    const replayed = await replayedTable(pull, valuesFake(committed, DATA_FILES.simbadValues));
     expect(replayed === committed).toBe(true);
   }, REPLAY_TIMEOUT_MS);
 });
