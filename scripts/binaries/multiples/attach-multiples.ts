@@ -11,6 +11,7 @@ import { OPTICAL_VIA_PROPERTIES } from '../optical/optical-tiers-pure';
 import type { Stage5Result } from '../optical/attach-optical';
 import { orbitOf, type Stage4Result } from '../orbits/attach-orbits';
 import type { DecomposedPair } from '../resolve/components-pure';
+import { anchorBindings, type SystemAnchor } from './anchor-binding-pure';
 import { computeAnchorOffsets } from './anchor-offsets-pure';
 import { pairRows, positionPc, standaloneRow, type MassRead } from './multiples-rows-pure';
 
@@ -23,6 +24,8 @@ export interface Stage6Result {
   readonly mscMagFills: readonly string[];
   /** Every row, in `rows` order, with the mass Stage 6 read for it; null where it read none. */
   readonly massReads: ReadonlyMap<MultiplesRecord, MassRead | null>;
+  /** Each system with a kept pair: its anchor, the candidates it outranked, and whether promotion can anchor on it. */
+  readonly anchors: ReadonlyMap<string, SystemAnchor>;
 }
 
 export function attachStage6(
@@ -36,6 +39,7 @@ export function attachStage6(
   const droppedNoPosition: DecomposedPair[] = [];
   const mscMagFills: string[] = [];
   const emitted = new Set<ComponentKey>();
+  const placed: DecomposedPair[] = [];
   for (const p of stage3.pairs) {
     if (!OPTICAL_VIA_PROPERTIES[stage5.optical.get(p)!].physical) continue;
     const built = pairRows(
@@ -45,6 +49,7 @@ export function attachStage6(
       droppedNoPosition.push(p);
       continue;
     }
+    placed.push(p);
     const [primary, secondary] = built.rows;
     massReads.set(Object.freeze(primary), built.masses.primary);
     massReads.set(Object.freeze(secondary), built.masses.secondary);
@@ -60,6 +65,7 @@ export function attachStage6(
     droppedNoPosition: Object.freeze(droppedNoPosition),
     mscMagFills: Object.freeze(mscMagFills),
     massReads,
+    anchors: anchorBindings(anchors, placed),
   });
 }
 

@@ -20,9 +20,14 @@ scripts/binaries/multiples/
                                     estimated-element backstops),
                                     wdsYearToJd.
   anchor-offsets-pure.ts (+ test)   computeAnchorOffsets: each system's
-                                    anchor letter and every reached
+                                    anchor choice (the anchor and every
+                                    kept primary it outranked, with the
+                                    rank step) and every reached
                                     component's offset from it;
                                     photocentreOffsets.
+  anchor-binding-pure.ts (+ test)   anchorBindings: whether each system's
+                                    anchor is a letter companion
+                                    promotion can anchor on.
   gaia-photometry-pure.ts (+ test)  gaiaPhotometryAbsmagCi: M_V and B−V from
                                     a component's own Gaia row.
   pair-photometry-pure.ts (+ test)  pairMagnitudes (WDS's, else the MSC's)
@@ -43,6 +48,18 @@ names the pairs whose magnitudes came from the MSC. `massReads` carries every
 row, in file order, with the spectral-type mass `orbitFields` read for it —
 the branch it came off and whether it fed the q backfill, the Kepler a or
 both — or null where it read none.
+
+`anchors` holds, per system with a kept pair, its anchor choice beside a
+binding. Promotion ranks only primaries a catalogue record holds
+([Re-basing a Stage 6 offset](../../catalog/companions/placement/README.md#re-basing-a-stage-6-offset)),
+so `anchorBindings` reads, over the pairs Stage 6 placed, whether the anchor
+is a primary binding a Gaia source or HIP (`bound`); else the most canonical
+primary that is, re-basable when the anchor's chain reached it and
+`promotion_anchor_unreached` when it did not; else `no_bound_primary` when
+only a secondary binds one, `nothing_bound` when nothing does, and
+`unplaced` when Stage 6 placed none of the system's pairs. A bound Gaia
+source or HIP stands in for promotion's own test, a record the catalogue
+holds.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,

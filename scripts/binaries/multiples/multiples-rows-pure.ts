@@ -197,7 +197,7 @@ function anchorFields(
 ): Pick<MultiplesRecord, 'anchorSepArcsec' | 'anchorPaDeg' | 'anchorComp'> {
   const offset = anchors.offsets.get(componentKey(wdsId, tok));
   return {
-    anchorSepArcsec: offset?.sepArcsec ?? null, anchorPaDeg: offset?.paDeg ?? null, anchorComp: anchors.anchorBySystem.get(wdsId) ?? null,
+    anchorSepArcsec: offset?.sepArcsec ?? null, anchorPaDeg: offset?.paDeg ?? null, anchorComp: anchors.choices.get(wdsId)?.pair.primary.component ?? null,
   };
 }
 

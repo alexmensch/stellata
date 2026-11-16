@@ -6,7 +6,8 @@ import { CATALOG_SCENE_EPOCH } from '../../../src/catalog-format/record/catalog-
 import { UNRESOLVED_ASTROMETRY } from '../astrometry/routes-pure';
 import { componentKey } from '../component-tokens-pure';
 import type { OrbitViaOnFile } from '../multiples-record-pure';
-import { indices, xid } from '../resolve/resolve-fixture';
+import { wdsPair } from '../../wds/wds-fixture';
+import { decomposed, indices, xid } from '../resolve/resolve-fixture';
 import {
   CIRCULAR_ORBIT_OMEGA_RAD, UNKNOWN_COMPANION_MASS_RATIO_Q, orbitFields, positionPc, standaloneRow, wdsYearToJd,
   type PairMassReads,
@@ -103,7 +104,8 @@ describe('standaloneRow', () => {
   it('carries its system\'s anchor letter and its offset from it', () => {
     const W = '99999+9999';
     const r = standaloneRow(xid(W, 'X', null), null, indices(), {
-      anchorBySystem: new Map([[W, 'Aa']]), offsets: new Map([[componentKey(W, 'X'), { sepArcsec: 12.0, paDeg: 30.0 }]]),
+      choices: new Map([[W, { pair: decomposed(wdsPair({ wdsId: W, components: 'Aa,Ab' })), rankedOut: [] }]]),
+      offsets: new Map([[componentKey(W, 'X'), { sepArcsec: 12.0, paDeg: 30.0 }]]),
     });
     expect([r.anchorComp, r.anchorSepArcsec, r.anchorPaDeg]).toEqual(['Aa', 12.0, 30.0]);
   });
