@@ -192,13 +192,13 @@ const MINTED = '6000000000000000001';
  *  row cites spine:99 only. */
 const PROMOTION = [
   'stage\tkey\trole\tcode\tparams\tevidence',
-  'promotion\tmultiples:S-AB/A\toutcome\tpromotion.pair-anchor\t{"via":"primary","record":"spine:3"}\tspine:3',
+  'promotion\tmultiples:S-AB/A\toutcome\tpromotion.pair-anchor.own-star\t{"via":"primary","record":"spine:3"}\tspine:3',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.brightness.dmag-imputed\t\t',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.colour.spectral-derived\t\t',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.dust.edenhofer2024.absmag-only\t{"av":"0.0123"}\t',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.minted.keyed\t{"via":"secondary"}\tspine:3',
   'promotion\tmultiples:S-AB/B\toutcome\tpromotion.size.mint\t{"route":"class-teff","absmag":"4.5600","class_index":"stated"}\t',
-  'promotion\tmultiples:S-CD/C\toutcome\tpromotion.pair-anchor\t{"via":"primary","record":"spine:9"}\tspine:9|spine:3',
+  'promotion\tmultiples:S-CD/C\toutcome\tpromotion.pair-anchor.own-star\t{"via":"primary","record":"spine:9"}\tspine:9|spine:3',
   'promotion\tmultiples:S-CD/D\toutcome\tpromotion.adopted.earlier-mint\t{"record":"spine:9","via":"secondary"}\tspine:9|spine:3',
   'promotion\tmultiples:T-AB/B\toutcome\tpromotion.minted.synthetic\t{"via":"secondary"}\tspine:99',
   'promotion\tspine:3\toutcome\tpromotion.existing.anchor-dimmed\t{"absmag":"1.4000"}\tmultiples:S-AB/B',
@@ -301,7 +301,7 @@ describe('traceRecords over a promoted system', () => {
     expect(a[0].rows.map((r) => `${r.role} ${r.code}`)).toEqual([
       'outcome component-binding.gaia.own', 'outcome component-binding.hip.unbound',
       'outcome resolve.tier.simbad-xid', 'refused resolve.audit.letter-sources.geometric.refused',
-      'outcome promotion.pair-anchor',
+      'outcome promotion.pair-anchor.own-star',
     ]);
   });
 

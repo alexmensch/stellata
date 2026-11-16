@@ -65,10 +65,14 @@ re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
 members whose light it lost, so trace reaches it from each) and `existing.anchor-re-split` (`params.record`,
 the dimmed anchor). A key's rows are a set, ordered as every stage file is
 ([SourceRowRef](../../lineage/README.md#sourcerowref)). A
-pair's primary that anchors its pair is `promotion.pair-anchor`, a merge into
-the record it resolved to: that record is the row's star, so a SID keyed on
-the row's synthetic key — the component it named when it was minted on its
-own — merges into the record's. A keyed mint
+pair's primary that anchors its pair on a record carrying the row's own Gaia
+source, HIP or synthetic key (`isRowStar`) is `promotion.pair-anchor.own-star`, a merge
+into that record: it is the row's star, so a SID keyed on the row's synthetic
+key — the component it named when it was minted on its own — merges into the
+record's. One anchoring on any other record (a shared slot's parent, a
+proper-name match) is `promotion.pair-anchor.other-record`, effect `none`:
+nothing says the record is the row's star, so a SID keyed on the row fails
+closed. A keyed mint
 carries its row's synthetic key too, the synth↔component same-as edge
 ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)):
 `mintSynthDesignations` names it per minted record, by origin key, and SID

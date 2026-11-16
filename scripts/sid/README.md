@@ -364,8 +364,8 @@ orphan, by the stage whose identity rows carry it:
   under that row's code. A component that now binds a Gaia source or HIP
   of its own keeps its SID: its minted record carries the row's synthetic
   key too (`mintSynthDesignations`), so the key stays live. A pair primary
-  that now resolves to a record merges
-  into it under `promotion.pair-anchor`
+  that now resolves to a record carrying its own HIP, Gaia source or synthetic key merges
+  into it under `promotion.pair-anchor.own-star`
   ([Promotion lineage](/scripts/catalog/companions/promotion-lineage/README.md#the-stage)).
 - **Pairs** (`build:binaries`), for a component every pair of which
   Stage 5 rejected as optical: the rejection never reaches

@@ -73,6 +73,7 @@ export type RowIdentity =
 
 type RowIds = Pick<MultiplesTsvRow, 'gaiaSourceId' | 'hip'>;
 type RecordIds = Pick<NamedStar, 'gaiaSourceId' | 'hip'>;
+type RecordKeys = RecordIds & Pick<NamedStar, 'syntheticId'>;
 
 const carriesRowGaia = (star: RecordIds | null, row: RowIds): boolean => (
   row.gaiaSourceId !== null && star !== null && star.gaiaSourceId === row.gaiaSourceId
@@ -80,6 +81,11 @@ const carriesRowGaia = (star: RecordIds | null, row: RowIds): boolean => (
 const carriesRowHip = (star: RecordIds | null, row: RowIds): boolean => (
   row.hip !== null && row.hip > 0 && star !== null && star.hip === row.hip
 );
+
+/** The record is the row's star: it carries the row's own Gaia source or HIP, or the row's synthetic key `synthKey`. */
+export function isRowStar(star: RecordKeys, row: RowIds, synthKey: string): boolean {
+  return carriesRowGaia(star, row) || carriesRowHip(star, row) || star.syntheticId === synthKey;
+}
 
 export function resolveRowIdentity(
   row: MultiplesTsvRow,

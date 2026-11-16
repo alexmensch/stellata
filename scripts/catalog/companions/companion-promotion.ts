@@ -45,7 +45,7 @@ import {
   hasIndependentFitRoute, resolveEscapePosition, resolvePosition, type CompanionPlacement, type ProjectionAnchor,
 } from './placement/placement';
 import { SystemIndex, type PairCursor, type SystemAnchor } from './identity/system-index';
-import { MintedIds, resolveRowIdentity } from './identity/row-identity';
+import { isRowStar, MintedIds, resolveRowIdentity } from './identity/row-identity';
 import type { ParkedRefusals } from './identity/parked-refusals';
 import { recordSpectralInfo, starDistPc } from './post-passes/held-record';
 import { splitBlends, type BlendSplitCandidate } from './post-passes/blend-split';
@@ -772,7 +772,8 @@ function walkCursors(
       record({
         row: cursor.primary,
         via: 'primary',
-        outcome: { kind: primaryCatalogIdx === null ? 'primary-unresolved' : 'pair-anchor' },
+        outcome: anchorStar === null
+          ? { kind: 'primary-unresolved' } : { kind: 'pair-anchor', ownStar: isRowStar(anchorStar, cursor.primary, primarySynthKey) },
         anchor: anchorKey, systemAnchor: systemAnchorKey,
         synthKey: primarySynthKey,
       });

@@ -527,7 +527,8 @@ promotion.minted.keyed	promotion	none	outcome	live		7.1.20	The row becomes a new
 promotion.minted.synthetic	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, addressed only by its synthetic key.
 promotion.not-applicable	promotion	none	outcome	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
 promotion.not-applicable.pair-anchor	promotion	none	outcome	retired	7.1.31	7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
-promotion.pair-anchor	promotion	merge	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair and is the row's star, so a SID keyed on the row's identifiers or synthetic key merges into that record's.
+promotion.pair-anchor.other-record	promotion	none	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair but carries none of the row's own Gaia source, HIP or synthetic key, so promotion decides nothing for a SID keyed on the row.
+promotion.pair-anchor.own-star	promotion	merge	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair and carries the row's own Gaia source, HIP or synthetic key, so it is the row's star and a SID keyed on the row's identifiers or synthetic key merges into that record's.
 promotion.parked.primary-unresolved	promotion	park	outcome	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
 promotion.parked.unpaired	promotion	park	outcome	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
 promotion.primary-unresolved	promotion	none	outcome	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.

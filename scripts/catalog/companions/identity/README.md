@@ -14,8 +14,10 @@ scripts/catalog/companions/identity/
   system-index.ts (+ test)    SystemIndex, built once over the rows and the
                               records held before promotion (#the-system-index).
   row-identity.ts (+ test)    resolveRowIdentity, the per-row gates below in
-                              their order, and MintedIds, the records this
-                              build minted by the ids they carry.
+                              their order; MintedIds, the records this
+                              build minted by the ids they carry; and
+                              isRowStar (a record carrying the row's own
+                              Gaia source, HIP or synthetic key).
   parked-refusals.ts          ParkedRefusals and refusalStated
                               (#refused-parallax-refusal).
 ```

@@ -3,7 +3,7 @@ import { makeStar } from '../../parse/star-fixture';
 import type { MultiplesTsvRow } from '../multiples-row';
 import { multiplesRow } from '../multiples-fixture';
 import { emptyParkedRefusals, parkedRefusals, type ParkedRefusals } from './parked-refusals';
-import { MintedIds, resolveRowIdentity, type RowIdentity } from './row-identity';
+import { isRowStar, MintedIds, resolveRowIdentity, type RowIdentity } from './row-identity';
 import { SystemIndex } from './system-index';
 
 const ANCHOR_ROW = multiplesRow({ systemId: '06451-1643-AB', comp: 'A', orbitRole: 'primary', hip: 32349, gaiaSourceId: '100' });
@@ -65,6 +65,17 @@ describe('resolveRowIdentity', () => {
   it('holds the record a same-as bridge names for an id-less row', () => {
     const bridges = new Map([['synth-06451-1643-B', '300']]);
     expect(resolve(multiplesRow(), { bridges })).toEqual({ kind: 'held', idx: 1, via: 'sameas-bridge' });
+  });
+});
+
+describe('isRowStar', () => {
+  const SYNTH = 'synth-06451-1643-B';
+  it('holds when the record carries the row\'s own Gaia source, HIP or synthetic key, and never on an absent id', () => {
+    expect(isRowStar(anchorStar, multiplesRow({ gaiaSourceId: '100', hip: null }), SYNTH)).toBe(true);
+    expect(isRowStar(anchorStar, multiplesRow({ gaiaSourceId: null, hip: 32349 }), SYNTH)).toBe(true);
+    expect(isRowStar(makeStar({ hip: null, gaiaSourceId: null, syntheticId: SYNTH }), multiplesRow({ gaiaSourceId: null, hip: null }), SYNTH)).toBe(true);
+    expect(isRowStar(anchorStar, multiplesRow({ gaiaSourceId: '999', hip: 7 }), SYNTH)).toBe(false);
+    expect(isRowStar(makeStar({ hip: null, gaiaSourceId: null, syntheticId: null }), multiplesRow({ gaiaSourceId: null, hip: null }), SYNTH)).toBe(false);
   });
 });
 

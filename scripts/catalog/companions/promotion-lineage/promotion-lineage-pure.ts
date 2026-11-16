@@ -124,7 +124,8 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   'parked.primary-unresolved': outcomeCode('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
   'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
   'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.', 'none', RETIRED_7_1_31),
-  'pair-anchor': outcomeCode('The row is a pair\'s primary resolved to the record params.record, which anchors the pair and is the row\'s star, so a SID keyed on the row\'s identifiers or synthetic key merges into that record\'s.', 'merge'),
+  'pair-anchor.own-star': outcomeCode('The row is a pair\'s primary resolved to the record params.record, which anchors the pair and carries the row\'s own Gaia source, HIP or synthetic key, so it is the row\'s star and a SID keyed on the row\'s identifiers or synthetic key merges into that record\'s.', 'merge'),
+  'pair-anchor.other-record': outcomeCode('The row is a pair\'s primary resolved to the record params.record, which anchors the pair but carries none of the row\'s own Gaia source, HIP or synthetic key, so promotion decides nothing for a SID keyed on the row.'),
   ...FACET_CODES,
   ...SIZE_CODES,
   ...HELD_CODES,
@@ -179,7 +180,7 @@ type Via = { via: PromotedRow['via'] };
 
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
-  B extends 'dropped.anchor-is-component' | 'adopted.earlier-mint' | 'pair-anchor' ? Via & { record: string }
+  B extends 'dropped.anchor-is-component' | 'adopted.earlier-mint' | `pair-anchor.${string}` ? Via & { record: string }
   : B extends `adopted.${string}` ? Via & { record: string; recurated?: string }
   : Via;
 
@@ -271,7 +272,7 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
       return decided(row('parked.unpaired', { via }));
     case 'pair-anchor':
       if (r.anchor === null) throw new Error(`${key}: a pair anchor with no record`);
-      return decided(row('pair-anchor', { via, record: r.anchor }));
+      return decided(row(o.ownStar ? 'pair-anchor.own-star' : 'pair-anchor.other-record', { via, record: r.anchor }));
     default: {
       const unmapped: never = o;
       throw new Error(`promotion outcome with no row mapping: ${JSON.stringify(unmapped)}`);

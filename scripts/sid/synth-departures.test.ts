@@ -100,8 +100,10 @@ describe('a synthetic SID whose component now resolves to a record of its own', 
   });
 
   it('merges into the record its row, now a pair\'s primary, resolves to', () => {
-    const stage = promotionStage({ kind: 'pair-anchor' }, multiplesRow({ systemId: '00010+0010-BC', comp: 'B', orbitRole: 'primary' }), []);
-    const a = allocateOver([anchor], upstreamOf([stage]));
-    expect(removalsOf(a)).toEqual([['merged', SYNTH_SID, 'promotion.pair-anchor', ANCHOR_SID]]);
+    const primary = multiplesRow({ systemId: '00010+0010-BC', comp: 'B', orbitRole: 'primary' });
+    const own = allocateOver([anchor], upstreamOf([promotionStage({ kind: 'pair-anchor', ownStar: true }, primary, [])]));
+    expect(removalsOf(own)).toEqual([['merged', SYNTH_SID, 'promotion.pair-anchor.own-star', ANCHOR_SID]]);
+    const other = allocateOver([anchor], upstreamOf([promotionStage({ kind: 'pair-anchor', ownStar: false }, primary, [])]));
+    expect(other.kind === 'failed' && other.unexplained).toEqual(['synth:00010+0010-B']);
   });
 });
