@@ -64,7 +64,7 @@ export function readNeighbourhoodRows(
   return [...readTable(spec, text)].map((row) => ({
     riskId: BigInt(row.requiredSourceId(riskCol)),
     candidateId: BigInt(row.requiredSourceId(candidateCol)),
-    angularDistanceMas: row.float('angular_distance') ?? row.fail('angular_distance is empty'),
+    angularDistanceMas: row.requiredFloat('angular_distance'),
     magnitudeDifference: row.float('magnitude_difference'),
   }));
 }

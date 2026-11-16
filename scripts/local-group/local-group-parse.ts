@@ -1,9 +1,7 @@
 // The LVDB snapshot, override and alias parsers behind build:local-group. See README.md.
 
-import { parse } from 'csv-parse/sync';
-
 import type { Declared } from '../util/sources/source';
-import { readTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
+import { readTable, type ColumnTable, type TableRow, type TableSpec } from '../util/tsv/table-pure';
 import {
   canonicalDesignation,
   type AliasRow,
@@ -11,39 +9,31 @@ import {
   type OverrideRow,
 } from './build-local-group-pure';
 
-/** Coerces strings to numbers / null per LVDB convention ("" = missing
- *  for numeric cols). */
-export function parseLvdb(csv: string): LvdbRow[] {
-  const records = parse(csv, {
-    columns: true,
-    skip_empty_lines: true,
-    trim: true,
-  }) as Record<string, string>[];
+const LVDB_COLUMNS = [
+  'key', 'name', 'ra', 'dec', 'distance', 'confirmed_real', 'confirmed_galaxy',
+  'rhalf_physical', 'ellipticity', 'position_angle', 'apparent_magnitude_v', 'n_sersic',
+] as const;
+const LVDB_FLAG = ['0', '1'] as const;
 
-  const num = (s: string | undefined): number | null => {
-    if (s === undefined || s === '') return null;
-    const v = Number(s);
-    return Number.isFinite(v) ? v : null;
-  };
-  const int = (s: string | undefined): number => {
-    const v = num(s);
-    return v === null ? 0 : v;
-  };
-
-  return records.map((r) => ({
-    key: r.key,
-    name: r.name || r.key,
-    ra: num(r.ra) ?? NaN,
-    dec: num(r.dec) ?? NaN,
-    distanceKpc: num(r.distance) ?? NaN,
-    confirmedReal: int(r.confirmed_real),
-    confirmedGalaxy: int(r.confirmed_galaxy),
-    rhalfPhysicalPc: num(r.rhalf_physical),
-    ellipticity: num(r.ellipticity),
-    positionAngle: num(r.position_angle),
-    apparentMagV: num(r.apparent_magnitude_v),
-    nSersic: num(r.n_sersic),
-  }));
+/** Position and the two confirmation flags are required; an empty structure or photometry cell is null. */
+export function parseLvdb(table: ColumnTable): LvdbRow[] {
+  return [...table(LVDB_COLUMNS)].map((row) => {
+    const key = row.requiredText('key');
+    return {
+      key,
+      name: row.text('name') ?? key,
+      ra: row.requiredFloat('ra'),
+      dec: row.requiredFloat('dec'),
+      distanceKpc: row.requiredFloat('distance'),
+      confirmedReal: row.oneOf('confirmed_real', LVDB_FLAG) === '1',
+      confirmedGalaxy: row.oneOf('confirmed_galaxy', LVDB_FLAG) === '1',
+      rhalfPhysicalPc: row.float('rhalf_physical'),
+      ellipticity: row.float('ellipticity'),
+      positionAngle: row.float('position_angle'),
+      apparentMagV: row.float('apparent_magnitude_v'),
+      nSersic: row.float('n_sersic'),
+    };
+  });
 }
 
 const OVERRIDES_REQUIRED = ['name', 'a_pc', 'b_pc', 'c_pc', 'orient', 'source'] as const;
@@ -68,7 +58,7 @@ export function parseOverrides(tsv: string, from: Declared): OverrideRow[] {
 function overrideRow(row: TableRow<OverridesColumn>): OverrideRow {
   const opt = (col: (typeof OVERRIDES_OPTIONAL)[number]): string | undefined => row.text(col) ?? undefined;
   const optNum = (col: (typeof OVERRIDES_OPTIONAL)[number]): number | undefined => row.float(col) ?? undefined;
-  const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.float(col) ?? row.fail(`${col} is empty`);
+  const axis = (col: 'a_pc' | 'b_pc' | 'c_pc'): number => row.requiredFloat(col);
   const name = row.text('name') ?? '';
   const result: OverrideRow = {
     name,
