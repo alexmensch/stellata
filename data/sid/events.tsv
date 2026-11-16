@@ -4107,3 +4107,22 @@ sid	date	event	code	params	successor	build_version
 984202	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6779762149123890688"}		7.1.30
 984203	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2307165348040488448"}		7.1.30
 984204	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5670715346059194112"}		7.1.30
+389062	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:49367"}	4042	7.2.1
+389167	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:283204"}	173155	7.2.1
+389265	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:87628"}	103452	7.2.1
+393292	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:98293"}	141310	7.2.1
+393758	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:225157"}	167153	7.2.1
+413930	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:170312"}	2878	7.2.1
+417601	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:47367"}	118996	7.2.1
+418011	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:286557"}	173322	7.2.1
+436658	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:158714"}	251907	7.2.1
+440859	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:73834"}	45860	7.2.1
+459251	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:151502"}	171557	7.2.1
+469253	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:87917"}	233968	7.2.1
+470548	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:83118"}	22131	7.2.1
+478953	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:309107"}	258435	7.2.1
+528270	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:4524"}	244475	7.2.1
+658966	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:19391"}	200830	7.2.1
+669162	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:27491"}	248085	7.2.1
+919893	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:309047"}	262474	7.2.1
+256255	2026-11-16	reinstate	promotion.minted.synthetic	{"key":"multiples:06583-3525-CD/D"}		7.2.1

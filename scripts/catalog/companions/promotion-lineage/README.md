@@ -89,7 +89,7 @@ membership's.
 Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
 59,713 facet rows (two of them, colour and dust, per minted record), 16,611
 size rows (one per record promotion sized, by its last pass:
-<!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
+<!-- count:build-catalog/promotion.size.mint -->12,661<!-- /count --> mint,
 <!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
 <!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> anchor-dimmed,
 <!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,

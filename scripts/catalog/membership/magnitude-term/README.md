@@ -134,9 +134,9 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | in both | 327,701 | 327,701 | 331,476 |
 | source_id union | 973,222 | 973,222 | 973,594 |
 | manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,779 |
-| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,169<!-- /count --> synthetic |
+| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,170<!-- /count --> synthetic |
 | rows parked, so never a record | − 10,429 | **− 10,748** | − 10,415 |
-| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,633<!-- /count -->** |
+| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,616<!-- /count -->** |
 
 The manifest side reproduced exactly: `build:membership` at the floor wrote
 979,160 rows and every primaries-side count held. Both build-side terms
