@@ -5,7 +5,7 @@ import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
 import {
   applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, settlePairRule, simbadRefusedMoves,
-  type MergeLinks,
+  type MergeDivergence, type MergeLinks, type PairDecision, type ShippedCells,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
 
@@ -44,6 +44,22 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     v70aByHd: new Map([[300, ['GJ 1234']]]),
     held: spineKeys(spine),
   };
+}
+
+const num = (cell: string): number | null => (cell === '' ? null : Number(cell));
+
+/** The row shipped with the labels it carries, as when the label merge moves none. */
+function shippedAsIs(r: SpineRow): ShippedCells {
+  return {
+    tyc: r.tyc === '' ? null : r.tyc, hip: num(r.hip), hd: num(r.hd), hr: num(r.hr),
+    gl: r.gl === '' ? null : r.gl, hdAlt: [], hrAlt: [],
+  };
+}
+
+function divergences(
+  r: SpineRow, m: MergeLinks, decided?: PairDecision, received = false, shipped = shippedAsIs(r),
+): MergeDivergence[] {
+  return mergeDivergences(r, shipped, m, decided, received);
 }
 
 describe('hdToHr', () => {
@@ -91,10 +107,10 @@ describe('applyPairRule', () => {
     const l = links({ [B]: 'S1' });
     const { rows, received } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), new Map());
     expect(received).toEqual(new Set([1]));
-    const pairKinds = (i: number) => mergeDivergences(rows[i], mergeLinks(l, rows), undefined, received.has(i))
+    const pairKinds = (i: number) => divergences(rows[i], mergeLinks(l, rows), undefined, received.has(i))
       .filter((d) => d.kind.startsWith('pair-'));
     expect(pairKinds(1)).toEqual([]);
-    expect(mergeDivergences(rows[1], mergeLinks(l, rows)).map((d) => d.kind)).toContain('pair-confirmed');
+    expect(divergences(rows[1], mergeLinks(l, rows)).map((d) => d.kind)).toContain('pair-confirmed');
   });
 
   it('refuses a move onto a spine record that already carries a HIP', () => {
@@ -117,7 +133,7 @@ describe('applyPairRule', () => {
     const { rows, decided } = applyPairRule(kept, mergeLinks(links({ [B]: 'S1' })), () => null, new Set(), new Map());
     expect(rows).toEqual(kept);
     expect(decided).toEqual(new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' }]]));
-    expect(mergeDivergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
+    expect(divergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
       .toContainEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
   });
 
@@ -148,7 +164,7 @@ describe('applyPairRule with dispositions', () => {
     expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100' })]);
     const settled = { kind: 'pair-disposed', hip: 10, keep: B, basis: 'tycho2_position', onto: 'entry' };
     expect(decided).toEqual(new Map([[0, settled]]));
-    expect(mergeDivergences(rows[0], mergeLinks(queued), decided.get(0))).toContainEqual(settled);
+    expect(divergences(rows[0], mergeLinks(queued), decided.get(0))).toContainEqual(settled);
   });
 
   it('keeps the row where it is when the disposition names its own entry', () => {
@@ -269,36 +285,36 @@ describe('applyEveryPairMove', () => {
 
 describe('mergeDivergences', () => {
   it('confirms a spine entry the HIP\'s Gaia source sits on', () => {
-    const d = mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
+    const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
     expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, sourceId: 'S1' }]);
   });
 
   it('refuses a row the pair rule would still move', () => {
-    expect(() => mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' }))))
+    expect(() => divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' }))))
       .toThrow(/pair rule not applied: HIP 10 still on Tycho-2 entry 1-1-1/);
   });
 
   it('reports the move applied to the row in place of its confirmation', () => {
     const move = { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' } as const;
-    const d = mergeDivergences(row({ tyc: B, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })), move);
+    const d = divergences(row({ tyc: B, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })), move);
     expect(d).toEqual([move]);
   });
 
   it('queues the pair for review when Gaia names no owner', () => {
-    const d = mergeDivergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({}, null)));
+    const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({}, null)));
     expect(d).toEqual([{ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'no_hip_source' }]);
   });
 
   it('derives a shared HIP onto a HIP-less spine entry only when the pair rule names it', () => {
-    const owned = mergeDivergences(row({ tyc: B }), mergeLinks(links({ [B]: 'S1' })));
+    const owned = divergences(row({ tyc: B }), mergeLinks(links({ [B]: 'S1' })));
     expect(owned).toContainEqual({ kind: 'derived-only', cell: 'hip', value: '10', held: 'free' });
-    const other = mergeDivergences(row({ tyc: A }), mergeLinks(links({ [B]: 'S1' })));
+    const other = divergences(row({ tyc: A }), mergeLinks(links({ [B]: 'S1' })));
     expect(other.filter((x) => x.kind === 'derived-only' && x.cell === 'hip')).toEqual([]);
   });
 
   it('reports each empty cell a primary fills, marking a value another spine row holds', () => {
     const spine = [row({ tyc: '9-9-9', hr: '9' })];
-    const d = mergeDivergences(row({ tyc: '2-2-2' }), mergeLinks(links({}), spine));
+    const d = divergences(row({ tyc: '2-2-2' }), mergeLinks(links({}), spine));
     expect(d).toEqual([
       { kind: 'derived-only', cell: 'hip', value: '20', held: 'free' },
       { kind: 'derived-only', cell: 'hd', value: '300', held: 'free' },
@@ -308,21 +324,59 @@ describe('mergeDivergences', () => {
   });
 
   it('reports the identifiers only AT-HYG associates', () => {
-    const d = mergeDivergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
+    const d = divergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
     expect(d[0]).toEqual({ kind: 'unlinked', cells: ['hd'], witnessed: 'tyc+hip | hd', published: 'tyc+hip | hd' });
   });
 
   it('reports a filled cell a primary\'s link fills with other values', () => {
-    const d = mergeDivergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
+    const d = divergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
     expect(d.filter((x) => x.kind === 'differs')).toEqual([
-      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, spine: '999', derived: ['300'] },
+      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: '999', derived: ['300'] },
     ]);
   });
 
   it('leaves a pair row\'s TYC-to-HD link to the pair rule, but not its HIP-to-HD link', () => {
-    const d = mergeDivergences(row({ tyc: B, hip: '10', hd: '555', hr: '7' }), mergeLinks(links({ [B]: 'S1' })));
+    const d = divergences(row({ tyc: B, hip: '10', hd: '555', hr: '7' }), mergeLinks(links({ [B]: 'S1' })));
     expect(d.filter((x) => x.kind === 'differs')).toEqual([
-      { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, spine: '555', derived: ['100'] },
+      { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, ships: '555', derived: ['100'] },
+    ]);
+  });
+
+  it('holds the links against the record the label merge ships, not the spine row', () => {
+    const spineRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    const relabelled = { ...shippedAsIs(spineRow), hd: 300 };
+    expect(divergences(spineRow, mergeLinks(links({})), undefined, false, relabelled)
+      .filter((x) => x.kind === 'differs')).toEqual([]);
+  });
+
+  it('reports a spine cell a label rule emptied, and leaves a cell the spine left empty to derived-only', () => {
+    const spineRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    const dropped = { ...shippedAsIs(spineRow), hd: null };
+    expect(divergences(spineRow, mergeLinks(links({})), undefined, false, dropped)
+      .filter((x) => x.kind === 'differs')).toEqual([
+      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: null, derived: ['300'] },
+    ]);
+    const empty = row({ tyc: '2-2-2', hip: '20' });
+    const filled = { ...shippedAsIs(empty), hd: 999 };
+    expect(divergences(empty, mergeLinks(links({})), undefined, false, filled)
+      .filter((x) => x.kind === 'differs')).toEqual([]);
+  });
+
+  it('counts an HD the record answers to as an alias as agreement', () => {
+    const spineRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    const aliased = { ...shippedAsIs(spineRow), hdAlt: [300] };
+    expect(divergences(spineRow, mergeLinks(links({})), undefined, false, aliased)
+      .filter((x) => x.kind === 'differs')).toEqual([]);
+  });
+
+  it('compares a GJ on the label merge\'s specificity rule: a system names its component, another component does not', () => {
+    const m = { ...mergeLinks(links({})), cns5ByHip: new Map([[20, ['GJ 1234A']]]) };
+    const gl = (cell: string) => divergences(row({ tyc: '2-2-2', hip: '20', hd: '300', gl: cell }), m)
+      .filter((x) => x.kind === 'differs' && x.link.key === 'gl<hip');
+    expect(gl('GJ 1234')).toEqual([]);
+    expect(gl('Gl 1234A')).toEqual([]);
+    expect(gl('GJ 1234B')).toEqual([
+      { kind: 'differs', link: { to: 'gl', from: 'hip', key: 'gl<hip' }, ships: 'GJ 1234B', derived: ['GJ 1234A'] },
     ]);
   });
 });

@@ -493,6 +493,11 @@ const confirmsValue = (spec: FieldSpec, candidate: string, spine: string): boole
     ? spec.same(candidate) === spec.same(spine)
     : spec.confirms(candidate, spine);
 
+/** Whether `candidate` names what the record's `held` value names, under the rule the merge applies to `field`. */
+export function confirmsLabel(field: LabelField, candidate: string, held: string): boolean {
+  return confirmsValue(LABEL_FIELD_SPECS.find((s) => s.field === field)!, candidate, held);
+}
+
 const tally = (values: Iterable<string>): Map<string, number> => {
   const out = new Map<string, number>();
   for (const v of values) out.set(v, (out.get(v) ?? 0) + 1);

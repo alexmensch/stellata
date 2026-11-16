@@ -326,7 +326,7 @@ const MERGE_BRANCHES: readonly {
   }))),
   ...DIFFERS_LINKS.map((l) => ({
     branch: differsBranch(l), of: 'differs' as const, ledger: 'differs' as const,
-    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`,
+    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule.`,
   })),
 ];
 
@@ -631,7 +631,7 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
     case 'differs':
       return row(key, differsBranch(d.link), {
-        cells: d.link.to, derived: d.derived.join('|'), evidence: `from ${d.link.from}; spine ${d.spine}`,
+        cells: d.link.to, derived: d.derived.join('|'), evidence: `from ${d.link.from}; ships ${d.ships ?? 'none'}`,
       });
     default: {
       const unmapped: never = d;

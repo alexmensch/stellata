@@ -967,7 +967,8 @@ describe('codecs', () => {
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
     const m = { ...pairLinksFrom(t), held: spineKeys(spine) };
-    const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
+    const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null };
+    const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
     expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
     expect(derivedOnly(spineRow({ tyc: '4-2-1' }))).toEqual(['hd:301:free', 'gl:GJ 3002:free']);

@@ -147,17 +147,22 @@ cells like the other ledgers, one row per divergence:
 | `unlinked` | the cells outside the row's largest connected group | the witnessed partition | the published partition |
 | `pair_moves` | `hip` | the entry the pair rule moved the HIP onto, another spine record's | the HIP's Gaia source |
 | `derived_only` | the cell | the value a primary's link puts there | `held` if another spine row carries it, else `free` |
-| `differs` | the filled cell | the values a primary's link puts there, none of them the spine's | the cell the link reads, and the spine's value |
+| `differs` | the cell the spine fills | the values a primary's link puts there, none of them one the record ships | the cell the link reads, and the value the record ships (`none` where a label rule emptied it) |
 
 `unlinked` is the association audit's `witnessed` residual over the corrected
 rows. `derived_only` covers a cell the spine leaves empty and a primary fills:
 a HIP through Tycho-2's column (only on the entry the pair rule names), an HD
 through IV/25 or the HIP's I/239 and IV/27A links, an HR through V/50, a GJ
 through CNS5's `hip` or V/70A's `HD`, each GJ written in the record's own
-form. `differs` is the filled-cell side of the same links, one row per link
-whose values leave out the spine's — HIP by Tycho-2's column, HD by IV/25 and
-by the HIP's I/239 and IV/27A rows, HR by V/50, GJ by CNS5 and by V/70A — so a
-pair of HDs the spine swapped between two records shows on both. On a pair
+form. `differs` is the filled-cell side of the same links — HIP by Tycho-2's
+column, HD by IV/25 and by the HIP's I/239 and IV/27A rows, HR by V/50, GJ by
+CNS5 and by V/70A — read off the spine row's cells, one row per link whose
+values name nothing the record ships in that cell once the label merge has
+run: its display value or an alias, a GJ compared on the merge's own
+[specificity rule](../../classic-ids/label-merge/README.md#the-gl-comparison-is-specificity-aware).
+A spine cell the merge already moved onto the primary's value therefore
+writes no row, its label flip being the decision; a pair of HDs swapped
+between two records shows on both. On a pair
 row IV/25's TYC→HD link does not count, since which entry the HD belongs to
 is the pair rule's verdict. Rows the pair rule confirms carry
 `merge.pair.confirmed` in lineage and no ledger row.

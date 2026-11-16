@@ -141,10 +141,10 @@
       "membership.merge.derived-only.gl.free": 229,
       "membership.merge.derived-only.gl.held": 7,
       "membership.merge.differs.hip.tyc": 0,
-      "membership.merge.differs.hd.tyc": 19,
-      "membership.merge.differs.hd.hip": 22,
-      "membership.merge.differs.hr.hd": 0,
-      "membership.merge.differs.gl.hip": 81,
+      "membership.merge.differs.hd.tyc": 3,
+      "membership.merge.differs.hd.hip": 71,
+      "membership.merge.differs.hr.hd": 30,
+      "membership.merge.differs.gl.hip": 4,
       "membership.merge.differs.gl.hd": 1
     },
     "membership-derived": {

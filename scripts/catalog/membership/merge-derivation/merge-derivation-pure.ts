@@ -7,7 +7,8 @@ import { rowIndexByTyc, spineIds, type SpineIds, type SpineRow } from '../../spi
 import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow } from '../../gliese-parse-pure';
-import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
+import { confirmsLabel, formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
+import type { ManifestRecord } from '../membership-manifest-tsv';
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
 import type { PairReviewReason } from '../ledger-rows-pure';
@@ -55,7 +56,13 @@ export type MergeDivergence =
     readonly onto: PairDisposedTarget;
   }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
-  | { readonly kind: 'differs'; readonly link: DiffersLink; readonly spine: string; readonly derived: readonly string[] };
+  | {
+    readonly kind: 'differs';
+    readonly link: DiffersLink;
+    /** The value the record ships in the cell; null where a label rule emptied the spine's. */
+    readonly ships: string | null;
+    readonly derived: readonly string[];
+  };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -349,8 +356,13 @@ function derivedOnlyCells(row: SpineRow, { hd }: SpineIds, hip: number | null, m
 
 type LinkKey = DiffersLink['key'];
 
+/** The record as the spine side ships it: what `differs` holds the primaries' links against. */
+export type ShippedCells = Pick<ManifestRecord, 'tyc' | 'hip' | 'hd' | 'hdAlt' | 'hr' | 'hrAlt' | 'gl'>;
+
 /** see README.md#the-divergence-ledger */
-function differsCells(row: SpineRow, { hip, hd, hr }: SpineIds, inPair: boolean, m: MergeLinks): MergeDivergence[] {
+function differsCells(
+  row: SpineRow, { hip, hd }: SpineIds, shipped: ShippedCells, inPair: boolean, m: MergeLinks,
+): MergeDivergence[] {
   const one = (v: number | undefined): number[] => (v === undefined ? [] : [v]);
   const derivedBy = {
     'hip<tyc': () => one(m.links.tycHip.get(row.tyc)),
@@ -360,14 +372,19 @@ function differsCells(row: SpineRow, { hip, hd, hr }: SpineIds, inPair: boolean,
     'gl<hip': () => (m.links.glHip(row.gl) === hip ? [] : m.cns5ByHip.get(hip!) ?? []),
     'gl<hd': () => (m.links.glHd(row.gl) === hd ? [] : m.v70aByHd.get(hd!) ?? []),
   } satisfies Record<LinkKey, () => readonly (number | string)[]>;
-  const spine = { hip, hd, hr, gl: row.gl === '' ? null : row.gl } satisfies Record<DiffersLink['to'], number | string | null>;
+  const answersTo = {
+    hip: shipped.hip === null ? [] : [String(shipped.hip)],
+    hd: [shipped.hd, ...shipped.hdAlt].filter((v) => v !== null).map(String),
+    hr: [shipped.hr, ...shipped.hrAlt].filter((v) => v !== null).map(String),
+    gl: shipped.gl === null ? [] : [shipped.gl],
+  } satisfies Record<DiffersLink['to'], readonly string[]>;
   const out: MergeDivergence[] = [];
   for (const link of DIFFERS_LINKS) {
-    const value = spine[link.to];
-    if (value === null || row[link.from] === '') continue;
-    const derived: readonly (number | string)[] = derivedBy[link.key]();
-    if (derived.length === 0 || derived.includes(value)) continue;
-    out.push({ kind: 'differs', link, spine: String(value), derived: [...new Set(derived.map(String))].sort() });
+    const held = answersTo[link.to];
+    if (row[link.from] === '' || row[link.to] === '') continue;
+    const derived = [...new Set(derivedBy[link.key]().map(String))].sort();
+    if (derived.length === 0 || derived.some((d) => held.some((h) => confirmsLabel(link.to, d, h)))) continue;
+    out.push({ kind: 'differs', link, ships: held[0] ?? null, derived });
   }
   return out;
 }
@@ -375,7 +392,7 @@ function differsCells(row: SpineRow, { hip, hd, hr }: SpineIds, inPair: boolean,
 /** `decided` is `applyPairRule`'s verdict on this row, which `row` already carries;
  *  `received`, whether a HIP moved onto it, whose verdict is on the row it left. */
 export function mergeDivergences(
-  row: SpineRow, m: MergeLinks, decided?: PairDecision, received = false,
+  row: SpineRow, shipped: ShippedCells, m: MergeLinks, decided?: PairDecision, received = false,
 ): MergeDivergence[] {
   const partition = partitionRow(row, m.links);
   const unlinked: MergeDivergence[] = partition !== null && partition.minority.witnessed.length > 0
@@ -396,6 +413,6 @@ export function mergeDivergences(
     ...unlinked,
     ...(verdict === null ? [] : [verdict]),
     ...derivedOnlyCells(row, ids, pair.hip, m),
-    ...differsCells(row, ids, received || verdict !== null, m),
+    ...differsCells(row, ids, shipped, received || verdict !== null, m),
   ];
 }
