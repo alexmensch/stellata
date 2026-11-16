@@ -38,8 +38,8 @@ at all) — a judgement about scope, not about effort.
 
 Every refresh script is **manually invoked**, never wired into
 `pnpm run build`. The freshness policy (above) drives the split: build
-reads committed files, refresh writes them. Each script lives under
-`scripts/refresh/`, takes no required arguments (a pull scoped by a request
+reads committed files, refresh writes them. Each pull in
+`scripts/refresh/` takes no required arguments (a pull scoped by a request
 reads a request file a build writes, or for the DR2 neighbourhood a frozen
 one), and atomically replaces its output TSV under `data/`.
 
