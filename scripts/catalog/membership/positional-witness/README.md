@@ -6,17 +6,20 @@ separation from it is tested against the source's tolerance. One helper for
 both settling surfaces — the unlinked GJ cells of
 `data/membership/merge-divergence.tsv` (`stellata-hooj.17.11.2`) and the
 `no_hip_source` HIPs of `data/membership/pair-review.tsv` (the
-`stellata-hooj.17.11.5` child). What a verdict leads to — a queue row, a
-ledger row, a disposition — is each consumer's call; this folder only
-measures.
+`stellata-hooj.17.11.5` child) — and, through the same Hipparcos tolerance,
+whether a HIP's position names one Gaia source: the binding derivation's
+identity witness ([A source against its HIP](#a-source-against-its-hip)).
+What a verdict leads to — a queue row, a ledger row, a disposition — is each
+consumer's call; this folder only measures.
 
 ## Files in this area
 
 ```
 scripts/catalog/membership/positional-witness/
   positional-witness-pure.ts      witnessV70a and witnessHipparcos, the two
-    (+ test)                      tolerances, and the WitnessVerdict union.
-                                  Pure.
+    (+ test)                      tolerances, the WitnessVerdict union, and
+                                  hipparcosSeparationFromSource for one Gaia
+                                  source. Pure.
   positional-witness-spread.test.ts
                                   The verdict counts below, recomputed over
                                   the committed queues and pinned.
@@ -92,3 +95,19 @@ What 15″ cannot separate: a neighbouring Tycho-2 entry inside it. Gl 369's
 V/70A place is 0.7″ from TYC 5483-418-1 and 410″ from the TYC its row carries;
 GJ 421 A's sits 5.4″ and 13.8″ from the two entries of the pair, so the
 witness returns `several`.
+
+## A source against its HIP
+
+`hipparcosSeparationFromSource` asks the reverse question of one Gaia source:
+**the source is carried back** to J1991.25 by Gaia's own proper motion and
+held against HIP2's position there, under the same
+`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC`. The direction is the point. The stars
+this serves are Hipparcos doubles — the binding derivation's identity witness
+([Identity outranks a blended magnitude](../binding/README.md#identity-outranks-a-blended-magnitude))
+— whose HIP2 position at its own epoch is sound while its proper motion
+carries the companion: θ¹ Ori A's reads 58.9 ± 32.7 mas/yr against Gaia's
+1.4. Measured 2026-11-16 over the 20 such HIPs with a HIP2 position, the
+source carried back lands within 0.22″ on 18 (median 0.03″); HIP2 carried
+forward misses eight of the same 18 by 0.75–2.8″. The two the tolerance
+refuses sit 1.37″ (HIP 39827) and 64″ (HIP 83369) away. A source Gaia
+publishes no proper motion for cannot be carried, so it is never named.

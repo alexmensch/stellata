@@ -106,3 +106,18 @@ export function witnessHipparcos(hip: HipparcosAstrometry, candidates: readonly 
   );
   return verdictOf((entry) => separationFromObserved(at, entry.observed), candidates, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC);
 }
+
+/** A Gaia source's position at its reference epoch, with the proper motion that carries it. */
+export interface SourceAstrometry extends SkyPosition {
+  refEpoch: number;
+  pmRaMasyr: number;
+  pmDecMasyr: number;
+}
+
+/** The source carried back to J1991.25, against HIP2's position there: README.md#a-source-against-its-hip. */
+export function hipparcosSeparationFromSource(hip: SkyPosition, source: SourceAstrometry): number {
+  return separationArcsec(skyPositionAtEpoch(source, source, source.refEpoch, HIPPARCOS_EPOCH_JYEAR), hip);
+}
+
+export const hipparcosNamesSource = (separationArcsec: number): boolean =>
+  separationArcsec <= HIPPARCOS_WITNESS_TOLERANCE_ARCSEC;
