@@ -8,7 +8,6 @@ import {
   stageFamilies, stagesOutputFiles,
 } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-/** Every lineage stage build:binaries writes, in LINEAGE_STAGES order. */
 export const BINARIES_LINEAGE = [
   BINDING_LINEAGE, RESOLVE_LINEAGE, ASTROMETRY_LINEAGE, ORBITS_LINEAGE, PAIRS_LINEAGE, ANCHORS_LINEAGE, MASSES_LINEAGE,
 ] as const;
