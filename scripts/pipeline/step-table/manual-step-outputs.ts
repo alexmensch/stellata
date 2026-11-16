@@ -94,7 +94,10 @@ export const MANUAL_STEPS: readonly ManualStep[] = [
     { kind: 'pull' }, 'refresh:simbad-values', 'scripts/refresh/simbad-values/refresh-simbad-values.ts',
     'scripts/refresh/simbad-values/simbad-values-outputs.ts', 'SIMBAD_VALUES_OUTPUTS',
   ),
-  pull('refresh:simbad-tyc-hd', 'refresh-simbad-tyc-hd.py', ['data/simbad/simbad_tyc_hd.tsv']),
+  tsManual(
+    { kind: 'pull' }, 'refresh:simbad-tyc-hd', 'scripts/refresh/simbad-tyc-hd/refresh-simbad-tyc-hd.ts',
+    'scripts/refresh/simbad-tyc-hd/simbad-tyc-hd-outputs.ts', 'SIMBAD_TYC_HD_OUTPUTS',
+  ),
   pull('refresh:edenhofer2024-main', 'refresh-edenhofer2024-main.py', ['data/dust/edenhofer2024-main.json']),
   pull('refresh:edenhofer2024-2kpc', 'refresh-edenhofer2024-2kpc.py', ['data/dust/edenhofer2024-2kpc.json']),
   tsManual({ kind: 'pull' }, 'fetch:probes', 'scripts/probes/fetch-probe-trajectories.ts', 'scripts/probes/probe-trajectory-outputs.ts', 'PROBE_OUTPUTS'),

@@ -11,7 +11,7 @@ import { recordedTableCases, type RecordedAsu } from '../pull/recorded-reply';
 import { VIZIER } from '../pull/tap-pure';
 import {
   MAIN, SUPPL1, TYC1_MAX, TYC1_MIN, bandPhase, keptBand, membershipCover, pairCarriedAsOneStar, parseTyc, requestLines,
-  tyc1Bands, tycho2Pull, tycho2Request, unscannable, type Tycho2Request,
+  tyc1Bands, tycho2Pull, tycho2Request, tycho2RequestLines, unscannable, type Tycho2Request,
 } from './tycho2-pure';
 
 const OUTPUTS = declareOutputs({ main: 'tycho2_main.tsv', suppl1: 'tycho2_suppl1.tsv' });
@@ -45,9 +45,10 @@ describe('the request set', () => {
     expect(requestLines(request)).toEqual(['1-2-1', '3-4-1', '5-6-1']);
   });
 
-  it('carries the manifest\'s HIPs, each once, after the TYCs', () => {
+  it('carries the manifest\'s HIPs, each once, after the TYCs, in the Tycho-2 record only', () => {
     const request = tycho2Request([{ tyc: '1-2-1', hip: 70 }, { tyc: null, hip: 8 }, { tyc: '3-4-1', hip: 70 }], []);
-    expect(requestLines(request)).toEqual(['1-2-1', '3-4-1', 'HIP 70', 'HIP 8']);
+    expect(requestLines(request)).toEqual(['1-2-1', '3-4-1']);
+    expect(tycho2RequestLines(request)).toEqual(['1-2-1', '3-4-1', 'HIP 70', 'HIP 8']);
   });
 });
 

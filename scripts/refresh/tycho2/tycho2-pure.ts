@@ -48,8 +48,10 @@ export function tycho2Request(manifest: Iterable<ManifestEntry>, iv25Tycs: Itera
   return { membership, mentioned, hips };
 }
 
-export const requestLines = (request: Tycho2Request): string[] => [
-  ...[...request.mentioned].sort(compareCodeUnits),
+export const requestLines = (request: Tycho2Request): string[] => [...request.mentioned].sort(compareCodeUnits);
+
+export const tycho2RequestLines = (request: Tycho2Request): string[] => [
+  ...requestLines(request),
   ...[...request.hips].sort(compareCodeUnits).map((hip) => `HIP ${hip}`),
 ];
 
@@ -194,7 +196,7 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
     phases: Object.fromEntries([...phases].map(([name, { phase }]) => [name, phase])),
     tables,
     release: vizierRelease(keys.map((key) => TABLES[key])),
-    request: { request: requestLines(request), requestFrom },
+    request: { request: tycho2RequestLines(request), requestFrom },
     async run(ask, log) {
       if (request.mentioned.size === 0) throw new Error(`${requestFrom.join(' and ')} name no TYC between them, so there is nothing to pull`);
       const outside = unscannable(request.mentioned);

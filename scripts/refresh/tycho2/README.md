@@ -12,9 +12,10 @@ What the tables are for and which position a consumer propagates from:
 - `tycho2-pure.ts` — the request set, the TYC1 bands, both tables' columns,
   formats and spot rows, the kept-share band, the cover gate and
   `tycho2Pull`.
-- `refresh-tycho2.ts` — the entry: reads the request off the manifest
+- `tyc-request.ts` — `readTycRequest`: the request read off the manifest
   (`MEMBERSHIP_MANIFEST`) and IV/25 (`TYC2_HD`), both named in the record's
-  `requestFrom`. `tycho2-outputs.ts`, its `declareOutputs`.
+  `requestFrom`. `refresh:simbad-tyc-hd` asks the same one.
+- `refresh-tycho2.ts` — the entry. `tycho2-outputs.ts`, its `declareOutputs`.
 - `{main,suppl1}.cfa.{tsv,fits}` — the [replies](#replies) recorded from CfA.
 - `tycho2.test.ts` — the request, bands, gates and run over a faked `ask`,
   and each table's [replies](#replies) replayed into its committed lines.
@@ -24,7 +25,8 @@ What the tables are for and which position a consumer propagates from:
 The manifest's `tyc` cells and IV/25's Tycho ids, each parsed to integers and
 written back as one key (`3694-2544-1`), so two spellings of one entry
 collapse. The manifest's own TYCs are kept apart as the set the cover gate
-holds to.
+holds to. `refresh:simbad-tyc-hd` asks the same TYCs
+([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
 
 A row is also kept when its `hip` names a manifest HIP. Tycho-2 gives one HIP
 to both entries of a resolved pair, and the pair rule
@@ -33,9 +35,8 @@ finds a pair only when both entries' rows are in the table. A move leaves the
 manifest naming one entry, so a TYC-keyed request alone would drop the other
 on the next pull, and the rule would no longer see the pair it moved. The
 recorded request lists the HIPs after the TYCs (`HIP 7751`), so a manifest HIP
-change makes the pull stale too. `refresh-simbad-tyc-hd.py` reads the same set through
-`refresh_lib.read_mentioned_tycs` until it ports
-([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
+change makes the pull stale too; `refresh:simbad-tyc-hd` asks and records the
+TYCs only.
 
 ## Bands, not a key filter
 

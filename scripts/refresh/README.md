@@ -45,13 +45,14 @@ one), and atomically replaces its output TSV under `data/`.
 
 ### One-time setup
 
-The Python pulls (the SIMBAD pulls, tyc-hd, Edenhofer) use astropy + numpy +
-pyvo + requests. Pin them to a
-local virtualenv so the system Python stays clean:
+The two Python pulls (Edenhofer) read the dust map through `dustmaps`, from
+`scripts/dust/requirements-dust.txt`
+([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)).
+Pin them to a local virtualenv so the system Python stays clean:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r scripts/refresh/requirements-refresh.txt
+.venv/bin/pip install -r scripts/dust/requirements-dust.txt
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
@@ -63,7 +64,7 @@ still fresh (`--force` re-pulls) and rewrites the record after every run
 ([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
-one dies on `ModuleNotFoundError: astropy` after resolving its paths
+one dies on `ModuleNotFoundError: dustmaps` after resolving its paths
 perfectly well, which reads like a code fault and is not one. Put the main
 checkout's venv first on `PATH` and run the target
 (`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
@@ -93,7 +94,7 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:gliese` | `vizier/refresh-gliese.ts` | `data/gliese/gliese_v70a.tsv` | [Gliese 1991](/data/papers/index.md#gliese1991) third catalogue of nearby stars (`V/70A`, whole table) — printed Johnson V + B−V, spectral type, parallax and rv, plus the B1950 position, proper motion and cross-names the binding review measures against. The V cascade's tier under Tycho-2, and the first-order source behind every `mag_src=GJ` cell (`data/gliese/README.md`). |
 | `refresh:simbad` | `simbad-sample/refresh-simbad-sample.ts` | `data/simbad/simbad_sample.tsv` | V-stratified seeded 50k SIMBAD sample (validation corpus). TypeScript, on `pull/`; own README. |
 | `refresh:simbad-values` | `simbad-values/refresh-simbad-values.ts` | `data/simbad/simbad_values.tsv` | Bibcoded rv / parallax / PM / coordinates + B/V fluxes for the [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) value cohort — the manifest rows a SIMBAD value tier can reach. Cohort predicate and coverage: [The values pull](/data/simbad/README.md#the-values-pull). The cohort is manifest rows less those Gaia's 5p tables (`gaia_dr3_astrometry.tsv`, `gaia_dr3_magnitude_pull.tsv`) already complete, and `build:membership` reads both, so it runs AFTER `refresh:gaia-astrometry`, `refresh:gaia-magnitude` and the `build:membership` that follows them. |
-| `refresh:simbad-tyc-hd` | `refresh-simbad-tyc-hd.py` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Request set is `refresh_lib.read_mentioned_tycs` — IV/25's Tycho ids union the manifest's — the set `refresh:tycho2` asks, derived the same way in TypeScript (`tycho2Request`). Composes the `simbad/` plumbing and states no ADQL of its own. |
+| `refresh:simbad-tyc-hd` | `simbad-tyc-hd/refresh-simbad-tyc-hd.ts` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Asks `refresh:tycho2`'s request — IV/25's Tycho ids union the manifest's — read once (`readTycRequest`, `tycho2/`). TypeScript, on `pull/`; own README. |
 | `refresh:simbad-wds-xids` | `simbad-wds-xids/refresh-simbad-wds-xids.ts` | `data/simbad/simbad_wds_xids.tsv` | Each WDS component's SIMBAD object, `main_id`, Gaia DR3 source_id and HIP — binaries Stage 2's `simbad_xid` tier. Keyed on `data/wds/wds_summ.txt` through `../wds/`, and on the curated `wds_xids_overrides.tsv`. TypeScript, on `pull/`; own README. |
 | `refresh:simbad-wds-sptype` | `simbad-wds-sptype/refresh-simbad-wds-sptype.ts` | `data/simbad/simbad_wds_sptype.tsv` | SIMBAD `sp_type` for every oid `simbad_wds_xids.tsv` binds a WDS component to — the rows `build:binaries` Stage 6 reads. Keyed on that file alone, never the manifest, so run it AFTER `refresh:simbad-wds-xids`. TypeScript, on `pull/`; own README. |
 | `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
@@ -104,9 +105,8 @@ script directly writes no record, so the build then stops on that pull.
 and the catalogue read. `refresh:msc` (`vizier/refresh-msc.ts`) pulls the
 three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into
 `data/msc/msc_*.tsv`, written together — source detail in
-`data/msc/README.md`. The TypeScript SIMBAD pulls share
-`scripts/refresh/simbad/`'s core, and the one Python one left (tyc-hd) its
-`specs.py` and `query.py`; that folder's own README carries the roster.
+`data/msc/README.md`. The SIMBAD pulls share `scripts/refresh/simbad/`'s
+core; that folder's own README carries the roster.
 
 ### Request sets are membership-derived
 
@@ -115,20 +115,17 @@ three Multiple Star Catalog (MSC) tables (VizieR `J/ApJS/235/6`) into
 Every catalog-scoped request set
 traces to the membership term
 ([§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)) by one of two routes: directly off
-`data/membership/membership-manifest.tsv`, through
-`refresh_lib.read_membership_source_ids` / `iter_membership_rows` (the
-SIMBAD pulls), or off the committed inputs `build:membership` derives the
+`data/membership/membership-manifest.tsv`, through its codec
+`MEMBERSHIP_MANIFEST` (the SIMBAD and Tycho-2 pulls), or off the committed inputs `build:membership` derives the
 manifest from, through the request file `export-astrometry-request.ts`
 builds (astrometry-catalog, GSPC,
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021), Apsis —
 see `readSourceIdRequest` below), whose coverage of the manifest's
 bindings the membership gate test holds.
-`refresh_lib.MEMBERSHIP_MANIFEST` is the one statement of where that table
-lives for the Python pulls, `refresh_lib.TYC2_HD_CROSS_INDEX` the same for
-IV/25, and `DATA_FILES.astrometryRequest` for the request file; a script
-naming any of these paths itself has drifted from it. The two pulls scoped to Tycho
-entries ask the same request set, derived once per language until tyc-hd ports:
-`tycho2Request` (`tycho2/`) and `refresh_lib.read_mentioned_tycs`, both over
+`DATA_FILES` (`src/catalog-format/pipeline-outputs/`) is the one statement of
+where the manifest, IV/25 and the request file live; a script naming any of
+these paths itself has drifted from it. The two pulls scoped to Tycho
+entries ask one request set, read once: `readTycRequest` (`tycho2/`), over
 integer triples ([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
 [Request sets come off the membership term](/data/simbad/README.md#request-sets-come-off-the-membership-term) carries
 the measured drop/gain of the SIMBAD rebase.
@@ -230,22 +227,10 @@ shares with the two astrometry pulls is the schema: all three project
 `ASTROMETRY_COLUMNS` (`gaia-request/`), so one parser reads all three
 outputs.
 
-Non-network dependency: `refresh-simbad-tyc-hd.test.py` covers that pull's
-request-set union, the space-padded ident join, its compose gates and the
-row-count / spot-row bands against an in-memory TAP backend. Run it with
-`python3 scripts/refresh/refresh-simbad-tyc-hd.test.py`. The in-memory TAP
-backend the Python suites use (`FakeTable`, `fake_tap_client`) lives in
-`scripts/test_helpers.py`.
+`scripts/refresh/refresh_lib.py` holds a Python pull's `--describe`
+(`description`) and entry point (`pull_main`), which the Edenhofer pulls call.
 
-`scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
-atomic-rename plumbing every Python pull imports — handles retry,
-schema validation, row-count and
-coverage gating (`assert_row_count`, `report_coverage`), spot-check
-pinning (`validate_spot_rows`), and
-partial-write protection so a mid-run failure never leaves a
-half-written TSV under `data/`.
-
-The pulls port onto `pull/`, the TypeScript runtime: one backend, TAP in CSV
+Every other pull is on `pull/`, the TypeScript runtime: one backend, TAP in CSV
 or FITS and VizieR's ASU on the CfA mirror, a query-keyed resume cache,
 required gates and an all-or-none write ([pull/README.md](pull/README.md)).
 
@@ -291,19 +276,6 @@ than it will accept and refuses by row count
 hard output limit from its `/capabilities` and routing around it; the
 whole-table and magnitude-bounded pulls are sliced to fit ESA's 50,000
 ([gaia-whole-table/](gaia-whole-table/README.md), [magnitude/](magnitude/README.md)).
-
-### The Python TAP client (SIMBAD)
-
-The Python `TapClient` moves whichever backend answered to the front, so a
-mirror that is down costs its retry schedule (about 5 min of connect
-timeouts) once per run, not once per batch. It reports each answering backend
-through `build_stamp.report_service`, and `client.services` is its declared
-service list, the one a pull's `--describe` states.
-
-`TapClient` takes `backends=` as a required argument — there is no
-default list, because which service can serve a query is a property of
-the table. SIMBAD gets `simbad_client()` for its divergent dialect — CDS primary, the
-Harvard CfA mirror as fallback, both serving the same database and oids.
 
 ### Magnitude-bounded pulls
 
