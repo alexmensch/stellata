@@ -165,11 +165,11 @@ export async function fetchIdents(
   return foldIdents<string>(await ask(phases.idents, oids.map(String)), namespaces, ledger, (into, ns, suffix) => { into.set(ns, suffix); });
 }
 
-/** Every Gaia release's ids per oid: corroboration asks whether an id is held at all, so it keeps every one. */
-export async function fetchReleaseIds(
-  ask: Ask, phases: SimbadPhases, oids: readonly number[], ledger: ParseLedger,
+/** Every id per namespace per oid, for a question about the whole set: corroboration asks whether an id is held at all, tyc-hd which HDs an object holds. */
+export async function fetchIdentSets(
+  ask: Ask, phase: Phase, namespaces: readonly Namespace[], oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, Set<string>>>> {
-  return foldIdents<Set<string>>(await ask(phases.releases, oids.map(String)), GAIA_RELEASES, ledger, (into, ns, suffix) => {
+  return foldIdents<Set<string>>(await ask(phase, oids.map(String)), namespaces, ledger, (into, ns, suffix) => {
     let held = into.get(ns);
     if (held === undefined) into.set(ns, held = new Set());
     held.add(suffix);
