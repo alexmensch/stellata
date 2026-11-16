@@ -40,7 +40,7 @@ import {
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { ASTROMETRY_REQUEST_OUTPUTS } from '../astrometry-request/astrometry-request-outputs';
 import { readSourceIdRequest, unrequestedBindings } from '../astrometry-request/export-astrometry-request-pure';
-import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding/binding-review-dispositions-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 import { MEMBERSHIP_COUNTS } from './membership-manifest-expected-json';
