@@ -4,6 +4,7 @@ import { DAYS_PER_JULIAN_YEAR } from '../../../src/astro-core/astronomy-constant
 import { jdOfJulianYear } from '../../../src/astro-core/precession';
 import { orb6Entry, wdsPair } from '../../wds/wds-fixture';
 import type { Orb6Entry } from '../../wds/wds-pure';
+import { measured } from '../astrometry/astrometry-fixture';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type PairAstrometry } from '../astrometry/routes-pure';
 import type { NssOrbitRow } from '../load/gaia-pure';
 import { mscOrbit } from '../load/load-fixture';
@@ -12,9 +13,7 @@ import { decomposed, type Side } from '../resolve/resolve-fixture';
 import { nssOrbitalRow } from './nss-fixture';
 import { keplerSemimajorAxisAu, nssSeparationConsistent, selectOrbit, type PairOrbit } from './select-orbit-pure';
 
-const ast = (parallaxMas: number | null = 10): ComponentAstrometry => ({
-  astrometryVia: 'gaia_5p', raDeg: 0, decDeg: 0, parallaxMas, parallaxErrorMas: 0.05, pmraMasyr: 0, pmdecMasyr: 0, refEpoch: 2016,
-});
+const ast = (parallaxMas: number | null = 10): ComponentAstrometry => measured({ raDeg: 0, parallaxMas, pmraMasyr: 0, pmdecMasyr: 0 });
 
 interface Case {
   primary?: Side;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
+import { measured } from '../astrometry/astrometry-fixture';
 import type { MeasuredAstrometry } from '../astrometry/routes-pure';
 import { gaia5pRow } from '../load/load-fixture';
 import { NO_ORBIT } from '../orbits/select-orbit-pure';
@@ -10,9 +11,7 @@ import { attachStage5, opticalTally, stage5Rates } from './attach-optical';
 import { stage5Report } from './stage5-report-pure';
 
 const W = '22039-2451';
-const astrometry = (parallaxMas: number): MeasuredAstrometry => ({
-  astrometryVia: 'gaia_5p', raDeg: 0, decDeg: 0, parallaxMas, parallaxErrorMas: 0.1, pmraMasyr: 0, pmdecMasyr: 0, refEpoch: 2016,
-});
+const astrometry = (parallaxMas: number): MeasuredAstrometry => measured({ raDeg: 0, parallaxMas, parallaxErrorMas: 0.1, pmraMasyr: 0, pmdecMasyr: 0 });
 
 function run(pairs: readonly DecomposedPair[], masses: readonly number[]) {
   const stage3: Stage3Result = {

@@ -27,14 +27,17 @@ scripts/binaries/astrometry/
                                carrier.
   system-anchors-pure.ts       Each WDS system's first measured parallax
     (+ test)                   (with its error) and proper motion.
+  astrometry-fixture.ts        Test-only: measured, one clean Gaia 5p
+                               component.
 ```
 
 ## The shape of a result
 
 `ComponentAstrometry` is either `unresolved`, carrying nothing, or a
 `MeasuredAstrometry`: a position, the measuring catalogue's own epoch
-(Gaia J2016.0, HIP2 and AT-HYG J1991.25), and the parallax and proper motion
-it states, each null where it states none. A position-only Gaia row with no
+(Gaia J2016.0, HIP2 and AT-HYG J1991.25), the parallax and proper motion
+it states, each null where it states none, and `from`, the row they are read
+off (`gaia-dr3-astrometry:`, `i311:` or `athyg:`). A position-only Gaia row with no
 HIP2 cover stays `gaia_5p` with a null parallax, so Stage 6 keeps its
 position. `routePairs` returns the pairs and a map from each to its
 `PairAstrometry`; the map's keys are the returned pairs, not Stage 2's.

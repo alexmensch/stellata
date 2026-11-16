@@ -3,6 +3,7 @@ import { AU_PER_PC } from '../../../src/astro-core/astronomy-constants';
 import { hip2AstrometryRow } from '../../catalog/sources/hip2-fixture';
 import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
+import { measured } from '../astrometry/astrometry-fixture';
 import { UNRESOLVED_ASTROMETRY, type ComponentAstrometry, type MeasuredAstrometry } from '../astrometry/routes-pure';
 import type { Parallax } from '../astrometry/system-anchors-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
@@ -22,10 +23,7 @@ import { orbitalPmBudgetKmS } from './pm-budget-pure';
 const DEFAULT_TOTAL_MASS = 2 * UNKNOWN_COMPONENT_MASS_MSUN;
 const plx = (parallaxMas: number, parallaxErrorMas: number | null): Parallax => ({ parallaxMas, parallaxErrorMas });
 const gaiaRow = (sourceId: string, over: Partial<GaiaAstrometryRow>): GaiaAstrometryRow => gaia5pRow({ sourceId, ...over });
-const measured = (over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry => ({
-  astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 10, parallaxErrorMas: 0.05, pmraMasyr: 4100, pmdecMasyr: -3200, refEpoch: 2016,
-  ...over,
-});
+const fastMoving = (over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry => measured({ pmraMasyr: 4100, pmdecMasyr: -3200, ...over });
 
 interface Case {
   notes?: string;
@@ -209,16 +207,16 @@ describe('cpmBaselineVerdict (61 Cyg: 5.2″/yr over a century)', () => {
   describe('as the cascade\'s tier', () => {
     const pair = (over: Partial<WdsPair> = {}) => cpm({ rhoLast: 300.0, ...over });
     const inherited = (via: 'unresolved' | 'athyg_position' | 'gaia_5p'): ComponentAstrometry =>
-      via === 'unresolved' ? UNRESOLVED_ASTROMETRY : measured({ astrometryVia: via, parallaxMas: null, parallaxErrorMas: null, pmraMasyr: null, pmdecMasyr: null });
+      via === 'unresolved' ? UNRESOLVED_ASTROMETRY : fastMoving({ astrometryVia: via, parallaxMas: null, parallaxErrorMas: null, pmraMasyr: null, pmdecMasyr: null });
 
     it('engages for a secondary with no parallax of its own', () => {
-      expect(classify({ pair: pair(), primaryAst: measured(), secondaryAst: inherited('unresolved') })).toBe('cpm_baseline_rejected');
-      expect(classify({ pair: pair({ rhoLast: 5.0 }), primaryAst: measured(), secondaryAst: inherited('unresolved') })).toBe('cpm_baseline_kept');
-      expect(classify({ pair: pair(), primaryAst: measured(), secondaryAst: inherited('athyg_position') })).toBe('cpm_baseline_rejected');
+      expect(classify({ pair: pair(), primaryAst: fastMoving(), secondaryAst: inherited('unresolved') })).toBe('cpm_baseline_rejected');
+      expect(classify({ pair: pair({ rhoLast: 5.0 }), primaryAst: fastMoving(), secondaryAst: inherited('unresolved') })).toBe('cpm_baseline_kept');
+      expect(classify({ pair: pair(), primaryAst: fastMoving(), secondaryAst: inherited('athyg_position') })).toBe('cpm_baseline_rejected');
     });
 
     it('is silent for a secondary with its own route, and with no primary PM', () => {
-      expect(classify({ pair: pair(), primaryAst: measured(), secondaryAst: inherited('gaia_5p') })).toBe('mag_heuristic_kept');
+      expect(classify({ pair: pair(), primaryAst: fastMoving(), secondaryAst: inherited('gaia_5p') })).toBe('mag_heuristic_kept');
       expect(classify({ pair: pair(), secondaryAst: inherited('unresolved') })).toBe('mag_heuristic_kept');
     });
 
