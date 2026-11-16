@@ -92,9 +92,9 @@ scripts/catalog/naming/
                                 tiers, aliases and designation
                                 constellation. Also loads the curated
                                 override table (`data/naming/`).
-  proper-dispositions-source.ts PROPER_DISPOSITIONS and NAME_OVERRIDES, the
-  name-overrides-source.ts      two curated tables, declared
-                                (../../util/sources/).
+  proper-dispositions-source.ts PROPER_DISPOSITIONS, NAME_OVERRIDES and
+  name-overrides-source.ts      BAYER_DROPS, the three curated tables,
+  bayer-drops-source.ts         declared (../../util/sources/).
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its naming
                                 outcome (`NamedRecord`), with the NAME

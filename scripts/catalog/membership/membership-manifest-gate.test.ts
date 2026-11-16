@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
 import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
+import { BAYER_DROPS } from '../naming/bayer-drops-source';
 import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
@@ -229,7 +230,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // is held here.
   describe('↔ the naming authority', () => {
     const designations = readArtifact(WGSN_DESIGNATIONS);
-    const { approvedNameKeys } = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
+    const index = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
+    const { approvedNameKeys } = index;
     const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
       rows, approvedNameKeys, designations, PROPER_DISPOSITIONS.read(),
     );
@@ -244,6 +246,17 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
         proper: 'Nonesuch', bayer: null, hip: null, hd: 999_999, isSol: false,
       };
       expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
+    });
+
+    it('ledgers Bayer drops only on records the build gives no Bayer designation', () => {
+      const drops = BAYER_DROPS.read();
+      expect(drops).toHaveLength(2);
+      for (const drop of drops) {
+        const rows = manifest.filter((r) => r.hd === drop.hd);
+        expect(rows, `hd ${drop.hd}`).toHaveLength(1);
+        const { hip, hd, hr, proper } = rows[0];
+        expect(index.bayerOf({ hip, hd, hr, proper })?.letter ?? null, `hd ${drop.hd}`).toBeNull();
+      }
     });
 
     it('matches the pinned naming counts', () => {

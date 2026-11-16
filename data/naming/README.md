@@ -16,6 +16,17 @@ name_overrides.tsv  Hand-curated, header-only today. Columns: sid,
                     published source can be re-read to check, so a
                     retired or mistyped SID must not pass review as an
                     applied row that displays nothing.
+bayer_drops.tsv     Hand-curated, frozen. Columns: hd, bayer, reason,
+                    evidence. The Bayer designations AT-HYG printed that
+                    the naming authority reaches no record with, so the
+                    catalogue ships them on no record: authority_omits
+                    (neither NEC nor IV/27A publishes it) or
+                    sibling_holds (the authority keys it on another
+                    component's record). Read by no build;
+                    ../../scripts/catalog/membership/membership-manifest-gate.test.ts
+                    holds that each row keys one manifest record and the
+                    build's Bayer join leaves it bare, so a refresh that
+                    reaches one fails until its row goes.
 ```
 
 ## What does NOT belong in it
