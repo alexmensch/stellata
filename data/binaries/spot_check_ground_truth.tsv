@@ -57,7 +57,7 @@ distant_supergiant	Antares B	16294-2626	B	unresolved		rescued secondary; system-
 distant_supergiant	Deneb	20414+4517	A	absent		position-only blank (no ORB6 orbit, no SIMBAD xid) — deferred to the full blank→AB ingest stellata-dch.83.9; SIMBAD * alf Cyg carries no DR3
 variable	Algol	03082+4057	Aa1	unresolved		SIMBAD * bet Per carries no DR3; Aa1,2 spectroscopic token
 variable	Mira A	02193-0259	A	position_pm	2493390319631956352	SIMBAD * omi Cet; Mira prototype
-variable	Mira B	02193-0259	Ab	position_pm	2493390319631956352	VZ Cet = SIMBAD * omi Cet B has no DR3 source of its own: Gaia fits one photocentre for the 0.4″ pair, which Ab's predicted position matches (the photocentre-blend shape, scripts/binaries/resolve/README.md#binding-integrity-audit-enforced)
+variable	Mira B	02193-0259	Ab	position_pm	2493390319631956352	VZ Cet = SIMBAD * omi Cet B has no DR3 source of its own: Gaia fits one photocentre for the 0.4″ pair, which Ab's predicted position matches (the photocentre-blend shape, /scripts/binaries/resolve/README.md#binding-integrity-audit-enforced)
 variable	del Cep A	22292+5825	A	simbad_xid	2200153454733285248	Cepheid prototype
 variable	del Cep B	22292+5825	B	simbad_xid	2200153420363770496	SIMBAD GCRV 73253
 variable	del Cep C	22292+5825	C	simbad_xid	2200153214212849024	SIMBAD main_id * del Cep B sits at WDS letter C — naming/letter trap
