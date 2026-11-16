@@ -78,7 +78,7 @@ tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescu
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,743<!-- /count --> oids, up
+Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,744<!-- /count --> oids, up
 from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
@@ -408,7 +408,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
   (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/placement.pm-rescue.simbad -->113<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->63<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->62<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.

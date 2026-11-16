@@ -185,7 +185,7 @@ belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
 cell): both drop their own Bayer (`namingBayerDropped`) and take their
 system's designation with their component letter instead, which is what
 the authority's coverage actually asserts. Over the whole record set the
-table reaches **<!-- count:build-catalog/namingBayer -->2,039<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->519<!-- /count --> of which the manifest carries no Bayer
+table reaches **<!-- count:build-catalog/namingBayer -->2,043<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->523<!-- /count --> of which the manifest carries no Bayer
 cell for at all.
 
 Three designation rows carry no key at all (`designationsKeyless`):
@@ -247,7 +247,7 @@ it, and it carries its own string.
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
 merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,039<!-- /count --> records render against the constellation of the
+so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,043<!-- /count --> records render against the constellation of the
 authority's Bayer designation and <!-- count:build-catalog/naming.dc.wgsn-gould -->936<!-- /count --> against its Gould one. One
 `uint8` serves one designation and the tier that COMPOSES the label owns
 it, so where the authority's Bayer names a different constellation from

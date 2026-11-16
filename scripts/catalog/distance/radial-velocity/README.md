@@ -231,7 +231,7 @@ extreme value can be real, and a filter tuned on nine stars would remove real
 ones. `placement.rv.gaia-dr3.error-*` bands the Gaia tier's rows by stated uncertainty and
 `rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
 distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/placement.rv.gaia-dr3.error-le1 -->660,140<!-- /count -->
-rows ≤ 1 km/s, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le5 -->165,340<!-- /count --> ≤ 5, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le10 -->30,901<!-- /count --> ≤ 10, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le20 -->10,183<!-- /count --> ≤ 20, **<!-- count:build-catalog/placement.rv.gaia-dr3.error-gt20 -->2,017<!-- /count -->** above 20, and a
+rows ≤ 1 km/s, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le5 -->165,339<!-- /count --> ≤ 5, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le10 -->30,901<!-- /count --> ≤ 10, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le20 -->10,183<!-- /count --> ≤ 20, **<!-- count:build-catalog/placement.rv.gaia-dr3.error-gt20 -->2,017<!-- /count -->** above 20, and a
 maximum of **<!-- count:build-catalog/rvGaiaErrorMaxKmS -->39.9898<!-- /count -->** — under DR3's own publication ceiling of 40, which no
 pulled row reaches. A Gaia `rv` with no stated error fails the build, naming
 its source: the published catalogue always pairs the two, so one alone is an

@@ -140,7 +140,7 @@ Display resolution order, first hit wins:
    uppercase, and the two halves are read differently: nobody writes `50 UMa`
    for α UMa, while atlases and observing lists print `15 UMa` rather than
    `f UMa`. Splitting the tier moves the Latin-letter records off tier 3:
-   those with a Flamsteed number take it back, and <!-- count:build-catalog/naming.name.own.bayer-latin -->201<!-- /count --> keep their own
+   those with a Flamsteed number take it back, and <!-- count:build-catalog/naming.name.own.bayer-latin -->202<!-- /count --> keep their own
    letter, having none to lose to (`naming.name.own.bayer-latin`; borrowed
    Latin-letter labels count under the borrowed `bayer-latin` codes). The
    Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,232<!-- /count --> displaying their own letter, are untouched.
@@ -175,7 +175,7 @@ designation, which is a stronger test than the label needing to be unique:
 a sibling that owns the designation and then borrows a higher tier
 displays a lettered form of it regardless, so δ Cep A keeps its letter
 beside δ Cep C/D/E even though nothing else displays the bare base.
-<!-- count:build-catalog/naming.letter.sibling-owns -->53<!-- /count --> own labels carry a letter because a sibling owns the designation,
+<!-- count:build-catalog/naming.letter.sibling-owns -->54<!-- /count --> own labels carry a letter because a sibling owns the designation,
 <!-- count:build-catalog/naming.letter.stated -->50<!-- /count --> because the authority attributes it to that component. Where the authority names a
 specific component, that name attaches to that record alone; siblings
 resolve down the ladder on their own.
