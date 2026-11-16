@@ -307,7 +307,7 @@ describe('emission over the committed catalog', () => {
     // derived mean surface brightness — a data-sanity check on the
     // committed snapshot, not a new physical constraint.
     const columns = ['key', 'apparent_magnitude_v', 'rhalf', 'ellipticity', 'surface_brightness_rhalf'] as const;
-    const byKey = new Map([...readTable({ ...LVDB, columns, csv: true }, csvText)].map((r) => [r.raw('key'), r]));
+    const byKey = new Map([...readTable({ ...LVDB, columns, delimiter: 'comma' }, csvText)].map((r) => [r.raw('key'), r]));
     const devs: number[] = [];
     let worstName = '';
     let worstDev = 0;

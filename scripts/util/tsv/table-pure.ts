@@ -15,8 +15,9 @@ export interface TableSpec<C extends string> {
    *  that many cells: the contract for a file this repo writes itself. */
   readonly exact?: boolean;
   readonly comments?: true;
-  /** Comma-separated with quoted cells (`splitCsvLine`) instead of tabs. */
-  readonly csv?: true;
+  /** Tab when omitted; `comma` splits quoted cells (`splitCsvLine`);
+   *  `whitespace` splits the trimmed line on any run of spaces or tabs. */
+  readonly delimiter?: 'tab' | 'comma' | 'whitespace';
 }
 
 /** One CSV record: handles quoted cells with doubled-quote escapes. Callers
@@ -42,7 +43,11 @@ export function splitCsvLine(line: string): string[] {
 }
 
 function splitCells(spec: TableSpec<string>, line: string): string[] {
-  return spec.csv ? splitCsvLine(line) : line.split('\t');
+  switch (spec.delimiter ?? 'tab') {
+    case 'tab': return line.split('\t');
+    case 'comma': return splitCsvLine(line);
+    case 'whitespace': return line.trim().split(/\s+/);
+  }
 }
 
 const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;

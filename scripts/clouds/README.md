@@ -19,10 +19,11 @@ the clouds both cover.
   display-name and alias tables, the merge, and both output payloads.
   Every rounded field goes through `../util/round-pure.ts`.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
-  and declarations (`../util/sources/`). Table A1 reads through `readTable`
-  (`../util/tsv/`), so a malformed or empty coordinate or distance fails the
-  build naming file, line and column; the VizieR units and dashes rows under
-  its header are the rows whose `recno` is not an integer.
+  and declarations (`../util/sources/`). All four read through `readTable`
+  (`../util/tsv/`; the Z2021 tables as `delimiter: 'whitespace'`), so a
+  malformed or empty coordinate, distance or fit cell fails the build naming
+  file, line and column. Table A1's VizieR units and dashes rows under its
+  header are the rows whose `recno` is not an integer.
 - `clouds-outputs.ts` — the emitArtifacts declaration.
 - `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
   (`../util/sources/README.md#a-json-artifact`): the writer serializes

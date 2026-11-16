@@ -1,7 +1,7 @@
 // Parsers for the Zucker 2020 (/data/papers/index.md#zucker2020) and Zucker 2021 (/data/papers/index.md#zucker2021) cloud tables. See README.md.
 
 import type { Declared } from '../util/sources/source';
-import { floatCell, readTable } from '../util/tsv/table-pure';
+import { readTable } from '../util/tsv/table-pure';
 
 export interface Sightline {
   readonly lDeg: number;
@@ -30,37 +30,16 @@ export function parseZ2020Sightlines(text: string, from: Declared): Map<string, 
   return out;
 }
 
-/** A whitespace-delimited table with one header row, read by column name. */
+/** A Zucker 2021 table: whitespace-delimited, a `cloud` column and the named number columns, each required. */
 function readWhitespaceTable<C extends string>(
   text: string,
   columns: readonly C[],
   from: Declared,
 ): { cloud: string; values: Record<C, number> }[] {
-  const [headerLine, ...lines] = text.split('\n');
-  const header = headerLine.trim().split(/\s+/);
-  const index = (name: string): number => {
-    const i = header.indexOf(name);
-    if (i < 0) throw new Error(`${from.file}: no "${name}" column. ${from.hint}`);
-    return i;
-  };
-  const cloudAt = index('cloud');
-  const at = columns.map(index);
-  return lines.map((l) => l.trim()).filter((l) => l !== '').map((l, row) => {
-    const parts = l.split(/\s+/);
-    const values = Object.fromEntries(columns.map((c, k) => {
-      const refuse = (why: string): never => {
-        throw new Error(`${from.file}: row ${row + 2} has no number in "${c}"${why}. ${from.hint}`);
-      };
-      let v: number | null;
-      try {
-        v = floatCell(parts[at[k]]);
-      } catch (e) {
-        return refuse(`: ${(e as Error).message}`);
-      }
-      return [c, v ?? refuse('')];
-    })) as Record<C, number>;
-    return { cloud: parts[cloudAt], values };
-  });
+  return [...readTable({ ...from, columns: ['cloud', ...columns], delimiter: 'whitespace' }, text)].map((row) => ({
+    cloud: row.requiredText('cloud'),
+    values: Object.fromEntries(columns.map((c) => [c, row.requiredFloat(c)])) as Record<C, number>,
+  }));
 }
 
 export interface Z2021Extent {

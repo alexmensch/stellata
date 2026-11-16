@@ -54,7 +54,7 @@ describe('the Zucker 2021 tables', () => {
   });
 
   it('refuses a missing column and a non-numeric cell', () => {
-    expect(() => parseZ2021PlummerFits('cloud n0 rflat\nPipe 1 2\n', FROM)).toThrow(/no "p" column/);
-    expect(() => parseZ2021PlummerFits('cloud n0 rflat p\nPipe 1 x 2\n', FROM)).toThrow(/row 2 has no number in "rflat"/);
+    expect(() => parseZ2021PlummerFits('cloud n0 rflat\nPipe 1 2\n', FROM)).toThrow('fixture/table.dat is missing required columns: p. fixture');
+    expect(() => parseZ2021PlummerFits('cloud n0 rflat p\nPipe 1 x 2\n', FROM)).toThrow('fixture/table.dat:2: rflat: "x" is not a decimal number. fixture');
   });
 });

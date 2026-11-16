@@ -16,7 +16,7 @@ const LVDB_COLUMNS = [
 
 /** Position and the two confirmation flags are required; an empty structure or photometry cell is null. */
 export function parseLvdb(csv: string, from: Declared): LvdbRow[] {
-  return [...readTable({ ...from, columns: LVDB_COLUMNS, csv: true }, csv)].map((row) => {
+  return [...readTable({ ...from, columns: LVDB_COLUMNS, delimiter: 'comma' }, csv)].map((row) => {
     const key = row.requiredText('key');
     return {
       key,

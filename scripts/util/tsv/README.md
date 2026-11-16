@@ -5,7 +5,9 @@ folder: an external input through `readTable`, a file this repo writes itself
 through its `defineArtifact` codec. A refresh pull's output is an external
 table, written by `../../refresh/pull/`'s `formatTsv` through the codec's own
 layout (`tsvLine`, `tsvText`) and read like any input. A comma-separated table
-reads through the same reader with `csv: true` (the AT-HYG classic-ID CSV).
+reads through the same reader with `delimiter: 'comma'` (the AT-HYG classic-ID CSV,
+the LVDB snapshot), a whitespace-aligned one with `delimiter: 'whitespace'`
+(the Zucker 2021 tables).
 Two places stand outside it, named so a
 third is a finding rather than precedent. The WGSN tables
 (`../../catalog/naming/wgsn-parse-pure.ts`) check their header against a
@@ -26,7 +28,7 @@ scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
                               readTableLines (each row's line as written,
                               checked but never split), splitCsvLine
-                              (the `csv: true` cell split), columnTable
+                              (the `comma` cell split), columnTable
                               (#reading-a-table), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,

@@ -14,7 +14,7 @@ import { parseMscOrbits, parseMscSystems } from './msc-pure';
 import { joinSimbadWdsSpectra, parseSimbadWdsXids, parseSptypeByOid } from './simbad-pure';
 
 const tsv = (text: string) => columnTable(FIXTURE, text);
-const csv = (text: string) => columnTable({ ...FIXTURE, csv: true }, text);
+const csv = (text: string) => columnTable({ ...FIXTURE, delimiter: 'comma' }, text);
 
 const ATHYG_HEADER = '"id","tyc","gaia","hyg","hip","hd","hr","gl","bayer","flam","con",'
   + '"proper","ra","dec","pos_src","dist","x0","y0","z0","dist_src",'
