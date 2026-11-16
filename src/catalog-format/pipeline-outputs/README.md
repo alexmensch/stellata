@@ -15,7 +15,7 @@ repo-relative, so an outputs module passes them as they are.
   step-table outputs modules declare: the membership manifest and its four
   ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
-  WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, SIMBAD's TYC → HD attributions, the label-merge
+  WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, SIMBAD's TYC → HD attributions and designation idents, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
   tables and the two WGSN files they are built from, the CDS pulls' tables
   (the four classic-designation cross indexes, Hipparcos' printed

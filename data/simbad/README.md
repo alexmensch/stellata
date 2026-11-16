@@ -1,4 +1,4 @@
-# SIMBAD — sample, sp_type, values, WDS↔Gaia and TYC↔HD cross-IDs
+# SIMBAD — sample, sp_type, values, designation idents, WDS↔Gaia and TYC↔HD cross-IDs
 
 Per-source SIMBAD pulls. Used as: a Tier-C validation corpus, the
 top-priority spectral classifier, the bibcoded bottom tier of the
@@ -29,6 +29,9 @@ simbad_wds_sptype.tsv      ~0.25 MB, LFS. 23,604 rows. sp_type per WDS
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
+simbad_idents.tsv          ~4 MB, LFS. 70,157 rows. Designation idents per
+                           object with its catalogue keys — see
+                           README.md#the-identifier-pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
                            for components no WDS-J ident or alias reaches.
 sptype_overrides.tsv       <1 KB, regular git. Hand-curated MK types by
@@ -164,6 +167,16 @@ and `build:binaries` reads it and nothing manifest-keyed. The two pulls
 overlap: an oid both requests reach has a row in each file. Pull and gates:
 [scripts/refresh/simbad-wds-sptype/](/scripts/refresh/simbad-wds-sptype/README.md).
 
+## The identifier pull
+
+`simbad_idents.tsv` is SIMBAD's designation idents per object — Bayer and
+numbered `* NN Con` idents, `NAME`, LAL, Ross and Wolf over all of SIMBAD;
+double-star (`**`), variable (`V*`) and `X` idents on the objects
+`simbad_sptype.tsv` resolved the manifest to — beside each object's HIP, HD,
+GJ and Gaia DR3 keys, so a record joins an object on an identifier it
+already owns. 70,157 objects at the 2026-11-16 pull.
+Pull and gates: [scripts/refresh/simbad-idents/](/scripts/refresh/simbad-idents/README.md).
+
 ## Provenance
 
 - **Citation**: [Wenger 2000](/data/papers/index.md#wenger2000). SIMBAD is
@@ -290,6 +303,8 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   [`scripts/refresh/simbad-values/`](../../scripts/refresh/simbad-values/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
   [`scripts/refresh/simbad-tyc-hd/`](../../scripts/refresh/simbad-tyc-hd/README.md).
+- `pnpm run refresh:simbad-idents` →
+  [`scripts/refresh/simbad-idents/`](../../scripts/refresh/simbad-idents/README.md).
 - `pnpm run refresh:simbad-sptype` →
   [`scripts/refresh/simbad-sptype/`](../../scripts/refresh/simbad-sptype/README.md).
 - `pnpm run refresh:simbad-wds-sptype` →

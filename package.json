@@ -50,6 +50,7 @@
     "refresh:simbad": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad",
     "refresh:simbad-values": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-values",
     "refresh:simbad-tyc-hd": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-tyc-hd",
+    "refresh:simbad-idents": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-idents",
     "refresh:simbad-sptype": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-sptype",
     "refresh:simbad-wds-sptype": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-wds-sptype",
     "refresh:simbad-wds-xids": "tsx scripts/util/launch.ts scripts/pipeline/record.ts refresh:simbad-wds-xids",
