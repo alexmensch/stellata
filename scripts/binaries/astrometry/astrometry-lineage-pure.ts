@@ -72,14 +72,14 @@ export function astrometryLineageLines(result: Pick<Stage3Result, 'pairs' | 'ast
 }
 
 /** The `astrometry_*` count-snapshot keys, one per route, from the stage's lines: both unresolved codes count as `unresolved`. */
-export function astrometryCounts(lines: readonly LineageLine[]): Record<`astrometry_${RoutedVia}`, number> {
+export type AstrometryCounts = Record<`astrometry_${RoutedVia}`, number>;
+
+export function astrometryCounts(lines: readonly LineageLine[]): AstrometryCounts {
   const perCode = foldStageLines(ASTROMETRY_CODES, lines);
   const count = (branch: Exclude<AstrometryBranch, 'refused.athyg-match-sibling-claimed'>): number => perCode[ASTROMETRY_CODES.liveCode(branch)];
   const counts = Object.fromEntries(MEASURED_VIA.map((via) => [`astrometry_${via}`, count(`route.${kebab(via)}`)])) as Record<`astrometry_${MeasuredVia}`, number>;
   return { ...counts, astrometry_unresolved: count('route.unresolved.nothing-bound') + count('route.unresolved.identifier-bound') };
 }
-
-export type AstrometryCounts = ReturnType<typeof astrometryCounts>;
 
 function unresolvedRows(what: string, rows: readonly (readonly [string, string, string])[]): [string, string][] {
   return rows.map(([wdsId, components, comp]) => [componentRowKey({ wdsId, components }, comp), what]);
