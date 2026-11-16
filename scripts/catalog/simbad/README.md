@@ -38,9 +38,8 @@ scripts/catalog/simbad/
     (+ test)                      idents count, indexed by HIP and HD, and the
                                   refused ones with their evidence. Pure.
   flamsteed-refusals-pure.ts      The refused numbers on catalogue stars as
-  flamsteed-refusals-source.ts    rows, their codec, and the frozen list
-  flamsteed-refusals.test.ts      declared; the test holds the list to the
-                                  rule over the committed tables.
+                                  ledger rows. Pure; tested through
+                                  ../membership/membership-manifest-pure.test.ts.
 ```
 
 ## Which SIMBAD numbers are Flamsteed numbers
@@ -79,10 +78,11 @@ SIMBAD ([SIMBAD attests a Flamsteed cell](../membership/README.md#simbad-attests
 `data/membership/flamsteed-refusals.tsv` is every number the rule refuses on
 an object whose HIP or HD names a catalogue record: the object, its keys, the
 designation, the reason (`beyond_iv27a_range`, `iv27a_names_another_star`) and
-IV/27A's evidence. 37 rows. Hand-curated in that a re-pull moving a row fails
-`flamsteed-refusals.test.ts` until the list is re-read and rewritten from the
-rule — the test derives the rows over the committed tables and holds the file
-to them byte for byte, so the list never drifts from the rule silently.
+IV/27A's evidence. `build:membership` writes it on every run, over the
+manifest's own HIP and HD keys, so a re-pull or an IV/27A change that moves a
+row shows in CI's regenerate-and-diff; its codec is
+`../membership/flamsteed-refusals-tsv.ts`.
+<!-- count:membership-manifest/flamsteedRefusals -->37<!-- /count --> rows (`flamsteedRefusals`).
 
 ## What the TYC → HD pull adjudicates
 

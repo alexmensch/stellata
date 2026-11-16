@@ -33,9 +33,10 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The five ledgers' codecs, one leaf each:
-  binding-review-tsv.ts           header check, decode and sort order.
-  label-drops-tsv.ts
+  additions-ledger-tsv.ts         The six ledgers' codecs, one leaf each:
+  binding-review-tsv.ts           header check, decode and sort order. The
+  flamsteed-refusals-tsv.ts       refusal ledger's rows are ../simbad/'s
+  label-drops-tsv.ts              (../simbad/README.md#the-refused-numbers).
   merge-divergence-tsv.ts
   pair-review-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,

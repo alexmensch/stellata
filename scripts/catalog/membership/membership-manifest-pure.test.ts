@@ -125,9 +125,12 @@ const IV27A: CrossIndexRow[] = [
   { hd: 60, hip: null, bayer: null, flamsteed: 7, cst: 'Cas' },
 ];
 
-/** SIMBAD's numbered idents within IV/27A's Cas range (to 7): HIP 20 (Gl 165A)
- *  carries one accepted number and no cell; HD 200500 two; HIP 40 one. */
+/** SIMBAD's numbered idents against IV/27A's Cas range (to 7): HIP 20 (Gl 165A)
+ *  carries one accepted number and no cell; HD 200500 two; HIP 40 one; HIP 10's
+ *  `9 Cas` lies past it, and HIP 99's on no catalogue star. */
 const SIMBAD_OBJECTS: SimbadIdentsObject[] = [
+  { oid: 1, hips: [10], hds: [], idents: ['* 9 Cas'] },
+  { oid: 5, hips: [99], hds: [], idents: ['* 8 Cas'] },
   { oid: 2, hips: [20], hds: [], idents: ['* 3 Cas'] },
   { oid: 3, hips: [], hds: [200500], idents: ['* 2 Cas', '* 4 Cas'] },
   { oid: 4, hips: [40], hds: [], idents: ['* 6 Cas'] },
@@ -494,6 +497,14 @@ describe('buildMembership — the spine side', () => {
     expect(result.rows.find((r) => r.hip === 20)).toMatchObject({ flam: null, routes: 'hip:i239|gl:cns5' });
     expect(result.rows.find((r) => r.hip === 40)!.flam).toBeNull();
     expect(result.rows.find((r) => r.hd === 200500)!.flam).toBeNull();
+  });
+
+  it('ledgers the SIMBAD numbers the rule refuses on a catalogue star, and only those', () => {
+    expect(result.flamsteedRefusals).toEqual([{
+      simbadOid: 1, hip: '10', hd: '', designation: '9 Cas',
+      reason: 'beyond_iv27a_range', evidence: 'IV/27A\'s highest Cas Flamsteed number is 7',
+    }]);
+    expect(result.derived.flamsteedRefusals).toBe(1);
   });
 
   it('refuses a row no source reaches, and queues nothing', () => {
