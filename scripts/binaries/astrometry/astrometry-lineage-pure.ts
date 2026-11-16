@@ -89,11 +89,7 @@ export const ASTROMETRY_INVARIANTS: readonly LineageInvariant[] = [
     'every component that binds a Gaia source, a HIP or an AT-HYG row gets astrometry, but the rows named',
     new Map([
       ...unresolvedRows('binds a HIP that HIP2 does not carry, with no Gaia source and no AT-HYG match', [
-        ['06323+5225', 'AB', 'A'], ['06393-3150', 'A,BC', 'BC'], ['07113-2148', 'A,BC', 'BC'], ['07322+1405', 'AB', 'A'],
-        ['08075-1212', 'AB', 'A'], ['09393-1013', 'AB', 'A'], ['16413+3006', 'AB', 'A'], ['18072-1854', 'A,BC', 'BC'],
-      ]),
-      ...unresolvedRows('binds an AT-HYG row whose position match the sibling guard refused: another letter binds its HIP', [
-        ['06096+0540', 'AB', 'B'], ['06460-6624', 'CD', 'D'], ['14040-4437', 'AC', 'A'],
+        ['18072-1854', 'A,BC', 'BC'],
       ]),
       ...unresolvedRows('Sirius B: binds a Gaia source the astrometry pull does not carry', [['06451-1643', 'AB', 'B']]),
     ]),

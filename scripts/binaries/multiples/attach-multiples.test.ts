@@ -24,11 +24,11 @@ describe('attachStage6 — the pair walk', () => {
 
   it('emits two rows per physical pair, primary first', () => {
     const { rows } = runStage6([{
-      primary: { gaiaSourceId: '1', resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: '2', resolveVia: 'athyg_gaia_native' },
+      primary: { gaiaSourceId: '1', resolveVia: 'orb6_hip' }, secondary: { gaiaSourceId: '2', resolveVia: 'manifest_hip' },
     }]);
     expect(rows.map((r) => [r.systemId, r.comp, r.orbitRole, r.resolveVia])).toEqual([
       ['WDS-1-AB', 'A', 'primary', 'orb6_hip'],
-      ['WDS-1-AB', 'B', 'secondary', 'athyg_gaia_native'],
+      ['WDS-1-AB', 'B', 'secondary', 'manifest_hip'],
     ]);
   });
 

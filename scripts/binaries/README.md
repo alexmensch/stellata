@@ -1,7 +1,8 @@
 # Catalogue cross-match — binary-system pipeline
 
-`build:binaries`: how WDS pairs cross-match against ORB6 + AT-HYG + CCDM +
-HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS cross-IDs + SIMBAD
+`build:binaries`: how WDS pairs cross-match against ORB6 + the membership
+manifest + AT-HYG + CCDM + HIP2 + Tycho-2 + Gaia (xmatches, NSS, 5p
+astrometry, the magnitude pull) + SIMBAD WDS cross-IDs + SIMBAD
 per-component spectra + Tokovinin's Multiple Star Catalog (MSC) to produce
 `data/binaries/multiples.tsv`, and how `build:binaries-runtime` turns that
 into `public/binaries.bin`. The science of *why* the choices are made (Gaia
@@ -237,7 +238,8 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
 `build/catalog-pair-ends.json` as hand-offs:
 
 1. **Binary-system pipeline** (`build-binaries.ts`). Reads WDS + ORB6 +
-   AT-HYG + CCDM + HIP2 + Gaia (xmatches, NSS, 5p astrometry) + SIMBAD WDS
+   the membership manifest + AT-HYG + CCDM + HIP2 + Tycho-2 + Gaia
+   (xmatches, NSS, 5p astrometry, the magnitude pull) + SIMBAD WDS
    cross-IDs + SIMBAD per-component spectra + the MSC. Emits
    `data/binaries/multiples.tsv` — two rows per kept physical pair, plus
    standalone rows for SIMBAD-known WDS components the pair walk didn't

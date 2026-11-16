@@ -51,16 +51,18 @@ describe('resolveLineageRows', () => {
 });
 
 describe('resolveCounts', () => {
-  it('counts each verdict once however many components it weighed, and each CCDM sibling refusal', () => {
+  it('counts each verdict once however many components it weighed, and each sibling refusal by gate', () => {
     const ab = biSystem([['AB', 3.0, 0.0, [SA, null], [SX, null]]])[0].pair;
     const r = geometric([
       { gate: 'ccdm_sibling_owned', pair: ab, component: 'B', hip: 7 },
       { gate: 'orb6_hip_off_coord', pair: ab, component: 'A', hip: 8 },
+      { gate: 'position_match_sibling_claimed', pair: ab, component: 'A', hip: 9 },
     ]);
     const c = castor();
     expect(c.touches).toHaveLength(3);
     expect(resolveCounts([...resolveLineageLines(r), ...resolveLineageLines(c)])).toEqual({
       ccdm_sibling_owned_rejected: 1,
+      position_match_sibling_claimed_rejected: 1,
       ...bindingIntegrityCounts([...r.verdicts, ...c.verdicts]),
     });
   });
@@ -74,7 +76,7 @@ describe('RESOLVE_INVARIANTS', () => {
     );
     const [letters, sources] = invariantViolations(RESOLVE_INVARIANTS, sortLineageLines(resolveLineageLines(ambiguous)));
     expect(sources.rows.map((row) => row.key)).toEqual([`multiples:${BI_WDS}-AB/B`, `multiples:${BI_WDS}-AC/C`]);
-    expect(letters.stale).toHaveLength(23);
-    expect(sources.stale).toHaveLength(8);
+    expect(letters.stale).toHaveLength(24);
+    expect(sources.stale).toHaveLength(14);
   });
 });

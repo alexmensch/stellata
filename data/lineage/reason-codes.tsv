@@ -543,12 +543,14 @@ resolve.audit.source-letters.identity-refuted.won	resolve	none	outcome	live		7.1
 resolve.audit.source-letters.skipped-no-reference.skipped	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, left as bound: no uncontested astrometric reference letter; this component keeps its source unchanged.
 resolve.audit.source-letters.skipped-photocentre-blend.skipped	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, left as bound: a photocentre blend; this component keeps its source unchanged.
 resolve.audit.source-letters.unbound-ambiguous.refused	resolve	none	refused	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, with no decisive candidate; this component's binding to the source is refused.
-resolve.refused.athyg-match-sibling-claimed	resolve	none	refused	live		7.1.30	An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
 resolve.refused.ccdm-sibling-owned	resolve	none	refused	live		7.1.30	A CCDM sibling HIP refused: another hierarchy-disjoint, non-partner letter of the system owns it, by geometry or by binding.
 resolve.refused.orb6-hip-off-coord	resolve	none	refused	live		7.1.30	An ORB6 HIP refused before any tier: its position sits over 5′ from the pair's WDS coordinate.
-resolve.tier.athyg-gaia-native	resolve	none	outcome	live		7.1.30	The component's Gaia source is an AT-HYG row's own gaia cell, reached through a HIP or a position match.
+resolve.refused.position-match-sibling-claimed	resolve	none	refused	live		7.1.31	A manifest position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
 resolve.tier.ccdm-hip	resolve	none	outcome	live		7.1.30	The component's Gaia source came through a CCDM sibling HIP near its WDS position.
+resolve.tier.manifest-hip	resolve	none	outcome	live		7.1.31	The component's Gaia source is the membership manifest's derived source for its pair's ORB6 HIP, which Gaia's HIP cross-walk misses.
 resolve.tier.orb6-hip	resolve	none	outcome	live		7.1.30	The component's Gaia source came through its pair's ORB6 HIP and Gaia's HIP cross-walk.
+resolve.tier.position-nopm	resolve	none	outcome	live		7.1.31	The component's WDS position matched a membership manifest star placed by an owned source stating no proper motion.
+resolve.tier.position-pm	resolve	none	outcome	live		7.1.31	The component's WDS position matched a membership manifest star placed by an owned source stating a proper motion, propagated to the WDS epoch.
 resolve.tier.simbad-xid	resolve	none	outcome	live		7.1.30	The component's Gaia source is SIMBAD's per-component cross-ID for it.
 resolve.tier.unresolved	resolve	none	outcome	live		7.1.30	The component has no Gaia source: every tier missed, or the audit unbound it.
 runtime-pairs.dropped.degenerate-idx	runtime-pairs	none	outcome	live		7.1.27	A pair whose two ends resolve to one catalogue record.

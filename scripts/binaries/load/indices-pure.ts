@@ -25,6 +25,8 @@ export interface IdentifierIndices {
   readonly tycToAthyg: ReadonlyMap<string, AthygRow>;
   readonly srcToAthyg: ReadonlyMap<string, AthygRow>;
   readonly hipToHip2: ReadonlyMap<number, Hip2AstrometryRow>;
+  /** The membership manifest's derived, gate-passed source per HIP. */
+  readonly hipToManifestGaia: ReadonlyMap<number, string>;
   /** The CCDM identifier anchors one multiple system; WDS ids match it for
    *  most systems, which is what the `ccdm_hip` tier keys on. */
   readonly hipToCcdm: ReadonlyMap<number, string>;
@@ -36,6 +38,11 @@ export interface IdentifierIndices {
   readonly xwalkMagRejected: readonly RejectedBinding[];
   readonly athygGaiaMagRejected: readonly RejectedBinding[];
   readonly msc: MscLookup;
+}
+
+/** Gaia's HIP cross-walk, else the membership manifest's derived source. */
+export function sourceForHip(hip: number, indices: Pick<IdentifierIndices, 'hipToGaia' | 'hipToManifestGaia'>): string | null {
+  return indices.hipToGaia.get(hip) ?? indices.hipToManifestGaia.get(hip) ?? null;
 }
 
 /** A bound source more than the threshold fainter in G than the star's V
@@ -92,6 +99,7 @@ export interface IndexInputs {
   readonly athyg: readonly AthygRow[];
   readonly hip2: ReadonlyMap<number, Hip2AstrometryRow>;
   readonly hipToGaia: ReadonlyMap<number, string>;
+  readonly hipToManifestGaia: ReadonlyMap<number, string>;
   readonly tycToGaia: ReadonlyMap<string, string>;
   readonly srcToNss: ReadonlyMap<string, NssOrbitRow>;
   readonly srcToAstrometry: ReadonlyMap<string, GaiaAstrometryRow>;
@@ -139,6 +147,7 @@ export function buildIndices(inputs: IndexInputs): IdentifierIndices {
     tycToAthyg,
     srcToAthyg,
     hipToHip2: inputs.hip2,
+    hipToManifestGaia: inputs.hipToManifestGaia,
     hipToCcdm: inputs.ccdm.hipToCcdm,
     ccdmToHips: inputs.ccdm.ccdmToHips,
     simbadWdsSpectra: inputs.simbadWdsSpectra,

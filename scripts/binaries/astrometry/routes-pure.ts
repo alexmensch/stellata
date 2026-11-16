@@ -7,11 +7,12 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
-import { athygMatchStars, pairPositionMatches, type SiblingClaimedMatch } from '../resolve/position-match-pure';
+import { pairPositionMatches, type MatchStar, type SiblingClaimedMatch } from '../resolve/position-match-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
-import { ATHYG_REFERENCE_EPOCH } from '../sky-geometry-pure';
+import { ATHYG_REFERENCE_EPOCH, WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
+import { directionAtEpoch, unitVectorFromRaDec, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import type { AnySourceRowRef } from '../../util/sources/row-ref-pure';
 
 /** The routes Stage 3 tags, in priority order: every `astrometry_via` but Stage 6's `system_inherited`. */
@@ -56,6 +57,22 @@ function fromHip2(row: Hip2AstrometryRow): MeasuredAstrometry {
     astrometryVia: 'hip2_long_baseline', raDeg: row.raDeg, decDeg: row.decDeg, parallaxMas: row.plxMas, parallaxErrorMas: row.plxErrorMas,
     pmraMasyr: row.pmRaMasyr, pmdecMasyr: row.pmDeMasyr, refEpoch: HIP2_REF_EPOCH, from: row.ref,
   });
+}
+
+export function athygDirectionAtEpoch(row: AthygRow, targetEpoch: number): UnitVector {
+  return directionAtEpoch(
+    { raDeg: row.raDeg, decDeg: row.decDeg },
+    { pmRaMasyr: row.pmRaMasyr, pmDecMasyr: row.pmDecMasyr },
+    ATHYG_REFERENCE_EPOCH, targetEpoch,
+  );
+}
+
+/** README.md#the-at-hyg-position-fallback: propagated to the WDS epoch, then as stored. */
+export function athygMatchStars(athyg: readonly AthygRow[]): readonly MatchStar[] {
+  return athyg.map((row) => ({
+    raDeg: row.raDeg, decDeg: row.decDeg, hip: row.hip,
+    readings: [athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH), unitVectorFromRaDec(row.raDeg, row.decDeg)],
+  }));
 }
 
 /** Null for a row with no positive distance: it carries no parallax. */

@@ -3,13 +3,12 @@
 import { formatShare, prefixed } from '../../util/counts/tally-pure';
 import { count, countsListed } from '../build-log-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
-import type { Stage2Result } from '../resolve/resolve-pairs';
 import { nssTally, resolutionTally, routeTally, stage3Counts, stage3Rates, type Stage3Result } from './attach-astrometry';
 
-export function stage3Report(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): string[] {
+export function stage3Report(reference: ReferenceCatalogs, result: Stage3Result): string[] {
   const { synthesized, ...skipped } = nssTally(result);
   const routes = routeTally(result);
-  const rates = stage3Rates({ ...stage3Counts(reference, resolved, result), ...prefixed('astrometry_', routes) });
+  const rates = stage3Rates({ ...stage3Counts(reference, result), ...prefixed('astrometry_', routes) });
   return [
     `synthesized ${count(synthesized)} NSS inner pairs (skipped: ${countsListed(skipped)})`,
     `AT-HYG position fallback: ${count(result.siblingClaimed.length)} matches onto a row another letter already binds`,

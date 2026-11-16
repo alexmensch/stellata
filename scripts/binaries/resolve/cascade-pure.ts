@@ -1,4 +1,4 @@
-// The Stage 2 cascade's tiers: ORB6 HIP, AT-HYG-native, SIMBAD cross-ID, CCDM sibling, AT-HYG position. See README.md.
+// The Stage 2 cascade's tiers: ORB6 HIP, manifest HIP, SIMBAD cross-ID, CCDM sibling, manifest position. See README.md.
 
 import {
   directionAtEpoch, unitVectorFromRaDec, type SkyPosition, type UnitVector,
@@ -6,14 +6,15 @@ import {
 import {
   canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, type ComponentKey, type PairRowKey,
 } from '../component-tokens-pure';
-import type { AthygRow } from '../load/athyg-pure';
-import type { IdentifierIndices } from '../load/indices-pure';
+import { HIP2_REF_EPOCH } from '../../catalog/distance/direction-cascade';
+import { sourceForHip, type IdentifierIndices } from '../load/indices-pure';
+import type { ManifestStar } from '../load/manifest-stars-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '../../wds/wds-pure';
 import {
   WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, directionsWithin, predictSecondaryPosition, unitChordSq,
 } from '../sky-geometry-pure';
-import { athygDirectionAtEpoch, athygMatchStars, pairPositionMatches } from './position-match-pure';
+import { pairPositionMatches } from './position-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
   componentSides, findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
@@ -24,7 +25,7 @@ import {
 } from './sibling-identity-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
-export const CASCADE_GATES = ['orb6_hip_off_coord', 'ccdm_sibling_owned', 'athyg_match_sibling_claimed'] as const;
+export const CASCADE_GATES = ['orb6_hip_off_coord', 'ccdm_sibling_owned', 'position_match_sibling_claimed'] as const;
 export type CascadeGate = (typeof CASCADE_GATES)[number];
 
 /** A candidate HIP a cascade gate refused for one side of one pair row. */
@@ -40,18 +41,24 @@ export function groupOrb6ByPair(orb6: readonly Orb6Entry[]): ReadonlyMap<PairRow
   return groupBy(orb6, (e) => pairRowKey(e.wdsId, e.components));
 }
 
-function gaiaFromAthygViaHip(hip: number, indices: IdentifierIndices): string | null {
-  return indices.hipToAthyg.get(hip)?.gaia ?? null;
+function manifestGaiaViaHip(hip: number, indices: IdentifierIndices): string | null {
+  return indices.hipToManifestGaia.get(hip) ?? null;
 }
 
 /** ε Equ's ORB6 row lists HIP 103579, ~40° away, for its HIP 103569: 5′
  *  clears any PM / epoch residual and is far inside the smallest such typo. */
 export const ORB6_HIP_COORD_SANITY_TOLERANCE_ARCSEC = 300.0;
 
-/** The HIP's AT-HYG row, else its Gaia source, at the WDS coordinate epoch. */
+/** The HIP's Hipparcos-2 position, else its Gaia source's, at the WDS coordinate epoch. */
 function hipDirection(hip: number, indices: IdentifierIndices): UnitVector | null {
-  const row = indices.hipToAthyg.get(hip);
-  if (row !== undefined) return athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+  const hip2 = indices.hipToHip2.get(hip);
+  if (hip2 !== undefined) {
+    return directionAtEpoch(
+      { raDeg: hip2.raDeg, decDeg: hip2.decDeg },
+      { pmRaMasyr: hip2.pmRaMasyr, pmDecMasyr: hip2.pmDeMasyr },
+      HIP2_REF_EPOCH, WDS_PRECISE_COORD_EPOCH,
+    );
+  }
   const gaia = indices.hipToGaia.get(hip);
   const astro = gaia === undefined ? undefined : indices.srcToAstrometry.get(gaia);
   if (astro === undefined) return null;
@@ -72,7 +79,7 @@ function orb6HipMatchesPairCoord(hip: number, pair: WdsPair, indices: Identifier
 }
 
 /** The HIP-anchored prefix: `orb6_hip` (primaries only — ORB6's one HIP per
- *  row is the primary's), then `athyg_gaia_native` through the HIP. A HIP
+ *  row is the primary's), then `manifest_hip` through the HIP. A HIP
  *  failing the coordinate check is dropped outright, so it rides no later
  *  tier either. Unresolved keeps the first surviving HIP for Stage 3. */
 export function resolveComponent(
@@ -98,8 +105,8 @@ export function resolveComponent(
     }
   }
   for (const hip of candidates) {
-    const gaia = gaiaFromAthygViaHip(hip, indices);
-    if (gaia !== null) return bound({ ...base, gaia: ownGaia(gaia, 'athyg_gaia_native'), hip: own(hip), hd: hdByHip.get(hip)! });
+    const gaia = manifestGaiaViaHip(hip, indices);
+    if (gaia !== null) return bound({ ...base, gaia: ownGaia(gaia, 'manifest_hip'), hip: own(hip), hd: hdByHip.get(hip)! });
   }
   return bound(candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! });
 }
@@ -123,7 +130,7 @@ export function resolveViaSimbad(
 }
 
 /** CCDM's candidates are a system's few HIPs, so a window wider than the
- *  position tier's stays unambiguous and absorbs AT-HYG's residual PM error. */
+ *  position tier's stays unambiguous. */
 export const CCDM_POSITION_MATCH_TOLERANCE_ARCSEC = 10.0;
 
 export const CCDM_SIBLING_OWNERSHIP_DECISIVENESS = 1 / ARBITRATION_RUNNERUP_FACTOR;
@@ -188,9 +195,8 @@ function ccdmCandidateHip(
   let bestHip: number | null = null;
   let best = Infinity;
   for (const hip of q.candidates) {
-    const row = indices.hipToAthyg.get(hip);
-    if (row === undefined) continue;
-    const cand = athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH);
+    const cand = hipDirection(hip, indices);
+    if (cand === null) continue;
     const d = unitChordSq(cand, target);
     if (d > threshold) continue;
     const owned = (letterPositions !== undefined && siblingLetterOwnsCandidate(cand, d, q.token, q.partner, letterPositions))
@@ -210,7 +216,7 @@ function ccdmCandidateHip(
 /** Binds the HIP if none is bound yet; a Gaia source through it tags `ccdm_hip`. */
 function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
   if (c.hip === null) c.hip = own(hip);
-  const gaia = indices.hipToGaia.get(hip) ?? gaiaFromAthygViaHip(hip, indices);
+  const gaia = sourceForHip(hip, indices);
   if (gaia !== null) {
     c.gaia = ownGaia(gaia, 'ccdm_hip');
   }
@@ -286,24 +292,21 @@ export function resolveViaCcdm(
 }
 
 export function resolveViaPosition(
-  pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
+  pairs: readonly DecomposedPair[], stars: readonly ManifestStar[],
 ): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
-  const { matches, siblingClaimed } = pairPositionMatches(pairs, athygMatchStars(athyg), { skip: (_i, c) => c.gaia !== null });
+  const { matches, siblingClaimed } = pairPositionMatches(pairs, stars, { skip: (_i, c) => c.gaia !== null });
   const sides = componentSides(pairs);
   const w = working(pairs);
   const out = w.components;
   for (const m of matches) {
     if (m.origin.kind !== 'own') continue;
     const c = out[m.componentIdx];
-    const row = athyg[m.starIdx];
-    if (c.athyg === null) c.athyg = own(row);
-    if (c.hip === null && row.hip !== null) c.hip = own(row.hip);
-    if (row.gaia !== null) {
-      c.gaia = ownGaia(row.gaia, 'athyg_gaia_native');
-    }
+    const star = stars[m.starIdx];
+    if (c.hip === null && star.hip !== null) c.hip = own(star.hip);
+    if (star.gaia !== null) c.gaia = ownGaia(star.gaia, star.hasPm ? 'position_pm' : 'position_nopm');
   }
   const rejected = siblingClaimed.map((s): CascadeRefusal => ({
-    gate: 'athyg_match_sibling_claimed', pair: sides[s.componentIdx].row, component: out[s.componentIdx].component, hip: s.hip,
+    gate: 'position_match_sibling_claimed', pair: sides[s.componentIdx].row, component: out[s.componentIdx].component, hip: s.hip,
   }));
   return { pairs: w.pairs, rejected };
 }

@@ -9,7 +9,7 @@ import {
 } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
 import { hipDesignation } from '../../sid/sid-pure';
-import { RESOLVE_VIA, isReservedResolveVia } from '../multiples-record-pure';
+import { RESOLVE_VIA } from '../multiples-record-pure';
 import { componentRowKey as rowKey } from '../multiples-row-key-pure';
 import {
   BINDING_SHAPES, BINDING_VERDICTS, VERDICT_PARTS, bindingIntegrityCounts,
@@ -23,20 +23,21 @@ import { RESOLVE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/li
 export const RESOLVE_LINEAGE_BUDGET = { gzipBytes: 1_200_000, writeMs: 2_000 };
 
 type BoundTier = ReturnType<typeof resolveViaOf>;
-const TIERS = RESOLVE_VIA.filter((v): v is BoundTier => !isReservedResolveVia(v));
 
 const TIER_DESCRIPTIONS: Record<BoundTier, string> = {
   orb6_hip: 'The component\'s Gaia source came through its pair\'s ORB6 HIP and Gaia\'s HIP cross-walk.',
-  athyg_gaia_native: 'The component\'s Gaia source is an AT-HYG row\'s own gaia cell, reached through a HIP or a position match.',
+  manifest_hip: 'The component\'s Gaia source is the membership manifest\'s derived source for its pair\'s ORB6 HIP, which Gaia\'s HIP cross-walk misses.',
   simbad_xid: 'The component\'s Gaia source is SIMBAD\'s per-component cross-ID for it.',
   ccdm_hip: 'The component\'s Gaia source came through a CCDM sibling HIP near its WDS position.',
+  position_pm: 'The component\'s WDS position matched a membership manifest star placed by an owned source stating a proper motion, propagated to the WDS epoch.',
+  position_nopm: 'The component\'s WDS position matched a membership manifest star placed by an owned source stating no proper motion.',
   unresolved: 'The component has no Gaia source: every tier missed, or the audit unbound it.',
 };
 
 const GATE_DESCRIPTIONS: Record<CascadeGate, string> = {
   orb6_hip_off_coord: 'An ORB6 HIP refused before any tier: its position sits over 5′ from the pair\'s WDS coordinate.',
   ccdm_sibling_owned: 'A CCDM sibling HIP refused: another hierarchy-disjoint, non-partner letter of the system owns it, by geometry or by binding.',
-  athyg_match_sibling_claimed: 'An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.',
+  position_match_sibling_claimed: 'A manifest position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.',
 };
 
 const SHAPE_TEXT: Record<BindingShape, string> = {
@@ -84,7 +85,7 @@ function auditDeclaration(branch: AuditBranch): CodeDeclaration {
 }
 
 export const RESOLVE_CODES = stageCodes(RESOLVE_LINEAGE.stage, {
-  ...taggedCodes('tier.', TIERS, (tier) => outcomeCode(TIER_DESCRIPTIONS[tier])),
+  ...taggedCodes('tier.', RESOLVE_VIA, (tier) => outcomeCode(TIER_DESCRIPTIONS[tier])),
   ...taggedCodes('refused.', CASCADE_GATES, (gate) => refusalCode(GATE_DESCRIPTIONS[gate])),
   ...Object.fromEntries([...AUDIT_CODES.keys()].map((b) => [b, auditDeclaration(b)])) as Record<AuditBranch, CodeDeclaration>,
 });
@@ -148,6 +149,7 @@ export function resolveCounts(lines: readonly LineageLine[]) {
   }
   return {
     ccdm_sibling_owned_rejected: perCode[RESOLVE_CODES.liveCode('refused.ccdm-sibling-owned')],
+    position_match_sibling_claimed_rejected: perCode[RESOLVE_CODES.liveCode('refused.position-match-sibling-claimed')],
     ...bindingIntegrityCounts([...verdicts.values()]),
   };
 }
@@ -163,7 +165,8 @@ const AMBIGUOUS_LETTER_SOURCES = new Map([
     'Aa,Ab', 'Aa,Ac', 'Aa,Ad', 'Aa,E', 'Aa,F', 'Aa,G', 'Aa,H', 'Aa,I', 'Aa,J', 'Aa,K',
     'Aa,L', 'Aa,M', 'Aa,N', 'Aa,O', 'Aa,P', 'Aa,Q', 'Aa,R', 'Aa,S', 'Aa,T', 'Aa,U',
   ].map((components) => [components, 'Aa'] as const)),
-  ...conflictRows('20450+1244', 'A on two Gaia sources, neither decisive against its offset from C', [['AB', 'A'], ['AC', 'A'], ['AD', 'A']]),
+  ...conflictRows('06156+6609', 'BC on two Gaia sources, neither decisive against its offset from A', [['A,BC', 'BC'], ['BC,D', 'BC']]),
+  ...conflictRows('18386+3046', 'C on two Gaia sources, neither decisive against its offset from A', [['AC', 'C'], ['CD', 'C']]),
 ]);
 
 const AMBIGUOUS_SOURCE_LETTERS = new Map([
@@ -173,6 +176,9 @@ const AMBIGUOUS_SOURCE_LETTERS = new Map([
   ...conflictRows('20588-0921', 'C and D on one Gaia source, neither decisive against its offset from A', [
     ['AB,C', 'C'], ['CE', 'C'], ['AB,D', 'D'], ['DE', 'D'], ['DF', 'D'],
   ]),
+  ...conflictRows('01516+8022', 'B and C on one Gaia source, neither decisive against its offset from A', [['AB', 'B'], ['AC', 'C']]),
+  ...conflictRows('07366-1429', 'O and T on one Gaia source, neither decisive against its offset from A', [['AT', 'T'], ['GO', 'O']]),
+  ...conflictRows('20401-2852', 'B and C on one Gaia source, neither decisive against its offset from A', [['AB', 'B'], ['BC', 'C']]),
 ]);
 
 const AMBIGUOUS_HOLDS = 'no component loses its Gaia source to an ambiguous binding-integrity verdict but the rows named';

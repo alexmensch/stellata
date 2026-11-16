@@ -125,7 +125,7 @@ is cited as evidence, so trace reaches the system from any primary it names.
 | `anchors.binding.<kind>` | every system, once, one code per `anchorBindings` kind ([The shape of a result](#the-shape-of-a-result)); `re-basable` and `promotion-anchor-unreached` name the bound primary |
 
 `ANCHORS_INVARIANTS` allows a `binding.promotion-anchor-unreached` row only
-for the 19 systems it names, where no measured edge links the anchor to the
+for the 12 systems it names, where no measured edge links the anchor to the
 primary promotion anchors on, so promotion refuses every member's offset
 ([Invariants](/scripts/catalog/lineage/README.md#invariants)). Making Stage 6
 rank bound primaries first, as promotion does, is `stellata-hooj.43.4`.
@@ -151,7 +151,7 @@ spectral type, and the read's `q` and `a`
 | `masses.read.no-type` / `.unparsed` | a row whose mass it read and found none: no spectral type, or one the parser cannot read |
 | `masses.not-read` | a row it read no mass for: no orbit, or one whose q is published and whose a is published or not estimated, and every standalone row |
 
-`MASSES_INVARIANTS` allows a `read.unparsed` row only for the 19 it names:
+`MASSES_INVARIANTS` allows a `read.unparsed` row only for the 24 it names:
 L and T dwarfs and types whose class sits in parentheses. Moving to the
 catalogue's spectral parser is `stellata-hhaw.45.17.12`, which strikes each
 row it fixes off the list.

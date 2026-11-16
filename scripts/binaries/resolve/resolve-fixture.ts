@@ -2,7 +2,11 @@
 
 import type { AthygRow } from '../load/athyg-pure';
 import type { NssOrbitRow } from '../load/gaia-pure';
-import type { Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
+import { HIP2, type Hip2AstrometryRow } from '../../catalog/sources/hip2-source';
+import { hip2AstrometryRow } from '../../catalog/sources/hip2-fixture';
+import { sourceRowRef } from '../../util/sources/row-ref-pure';
+import type { ManifestStar } from '../load/manifest-stars-pure';
+import { unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import { buildIndices, type CcdmIndex, type IdentifierIndices } from '../load/indices-pure';
 import { wdsPair } from '../../wds/wds-fixture';
 import { athygRow, gaia5pRow } from '../load/load-fixture';
@@ -29,6 +33,7 @@ export function ccdmIndex(rows: readonly { hip: number; ccdm: string }[]): CcdmI
 export function indices(over: {
   athyg?: readonly AthygRow[];
   hipToGaia?: ReadonlyMap<number, string>;
+  hipToManifestGaia?: ReadonlyMap<number, string>;
   srcToAstrometry?: ReadonlyMap<string, GaiaAstrometryRow>;
   ccdm?: readonly { hip: number; ccdm: string }[];
   hip2?: ReadonlyMap<number, Hip2AstrometryRow>;
@@ -42,6 +47,7 @@ export function indices(over: {
     athyg: over.athyg ?? [],
     hip2: over.hip2 ?? new Map(),
     hipToGaia: over.hipToGaia ?? new Map(),
+    hipToManifestGaia: over.hipToManifestGaia ?? new Map(),
     tycToGaia: new Map(),
     srcToNss: over.srcToNss ?? new Map(),
     srcToAstrometry: over.srcToAstrometry ?? new Map(),
@@ -114,6 +120,17 @@ export function pairAt(over: Partial<WdsPair> & { ra?: number; dec?: number }): 
 export function athygAt(over: Partial<AthygRow> & { ra: number; dec: number }): AthygRow {
   const { ra, dec, ...rest } = over;
   return athygRow({ raDeg: ra, decDeg: dec, ...rest });
+}
+
+/** HIP2 rows at their J1991.25 positions, each keyed on its HIP. */
+export function hip2At(...rows: readonly (Partial<Hip2AstrometryRow> & { hip: number; ra: number; dec: number })[]): Map<number, Hip2AstrometryRow> {
+  return new Map(rows.map(({ hip, ra, dec, ...over }) => [hip, hip2AstrometryRow({ raDeg: ra, decDeg: dec, ref: sourceRowRef(HIP2, hip), ...over })]));
+}
+
+/** A manifest star already at the WDS epoch, with a proper motion unless `hasPm` says not. */
+export function starAt(over: Partial<Omit<ManifestStar, 'raDeg' | 'decDeg' | 'readings'>> & { ra: number; dec: number }): ManifestStar {
+  const { ra, dec, ...rest } = over;
+  return { raDeg: ra, decDeg: dec, readings: [unitVectorFromRaDec(ra, dec)], hip: null, gaia: null, hasPm: true, ...rest };
 }
 
 export function xid(wdsId: string, component: string, gaiaSourceId: string | null, hip: number | null = null): SimbadWdsXid {

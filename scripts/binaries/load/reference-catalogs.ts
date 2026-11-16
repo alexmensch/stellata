@@ -38,6 +38,12 @@ import {
 } from '../../wds/wds-pure';
 import { ORB6, WDS_SUMM } from '../../wds/wds-source';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
+import { MEMBERSHIP_MANIFEST, type ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
+import { addMagnitudeTermAstrometry } from '../../catalog/membership/magnitude-term/magnitude-term';
+import { TYCHO2 } from '../../catalog/tycho2-source';
+import type { Tycho2Row } from '../../catalog/tycho2-parse';
+import { artifactRows } from '../../util/sources/source';
+import { WITHHELD_MANIFEST, buildManifestIndex, type ManifestStar } from './manifest-stars-pure';
 
 /** Expected parse cardinalities, about 10% either side of the frozen
  *  catalogues; a new upstream release re-pins them deliberately. CCDM is the
@@ -49,6 +55,11 @@ export const ROW_BANDS = {
   ccdm: { min: 100_000, max: 140_000 },
   hip2: { min: 106_000, max: 130_000 },
 } as const satisfies Record<string, RowBand>;
+
+/** README.md#the-manifest */
+export type ManifestInput =
+  | { readonly kind: 'read'; readonly records: Iterable<ManifestRecord>; readonly tycho2: ReadonlyMap<string, Tycho2Row> }
+  | { readonly kind: 'withheld' };
 
 /** Everything Stage 1 read, before any of it is combined. */
 export interface Stage1Inputs {
@@ -66,6 +77,7 @@ export interface Stage1Inputs {
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly simbadSptypeByOid: ReadonlyMap<number, string>;
   readonly componentSptypeOverrides: ReadonlyMap<ComponentKey, string>;
+  readonly manifest: ManifestInput;
   readonly msc: {
     readonly systems: readonly MscSystemRow[];
     readonly orbits: readonly MscOrbitRow[];
@@ -84,6 +96,8 @@ export interface ReferenceCatalogs {
   /** `gaia` emptied where the magnitude gate refused it. */
   readonly athyg: readonly AthygRow[];
   readonly indices: IdentifierIndices;
+  /** README.md#the-manifest */
+  readonly manifestStars: readonly ManifestStar[];
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
   readonly wdsDedup: readonly WdsDedupDecision[];
   readonly orb6Grades: readonly Orb6GradeOutcome[];
@@ -110,11 +124,19 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
   const exclusion = applyAstrometryExclusions(inputs.astrometry, inputs.astrometryExclusions);
   const srcToAstrometry = exclusion.kept;
   const scrubbed = scrubAthygGaia(inputs.athyg, srcToAstrometry);
+  const manifest = inputs.manifest.kind === 'withheld' ? WITHHELD_MANIFEST : buildManifestIndex(inputs.manifest.records, {
+    gaiaAstrometry: srcToAstrometry,
+    hip2: inputs.hip2,
+    nss: new Map([...inputs.nss].map(([sourceId, row]) => [sourceId, row.origin])),
+    tycho2: inputs.manifest.tycho2,
+  });
+
   const msc = buildMscLookup(inputs.msc.systems, inputs.msc.orbits, inputs.msc.components);
   const indices = buildIndices({
     athyg: scrubbed.rows,
     hip2: inputs.hip2,
     hipToGaia: inputs.hipToGaia,
+    hipToManifestGaia: manifest.hipToGaia,
     tycToGaia: inputs.tycToGaia,
     srcToNss: inputs.nss,
     srcToAstrometry,
@@ -136,6 +158,7 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
     orb6: freezeAll([...rescue.orb6]),
     athyg: freezeAll([...scrubbed.rows]),
     indices: Object.freeze(indices),
+    manifestStars: manifest.stars,
     simbadWdsXids: inputs.simbadWdsXids,
     wdsDedup: Object.freeze([...deduped.decisions]),
     orb6Grades: Object.freeze([...inputs.orb6.grades]),
@@ -153,9 +176,12 @@ export function assembleReferenceCatalogs(inputs: Stage1Inputs): ReferenceCatalo
   });
 }
 
-/** Reads every Stage 1 input through its declaration, then assembles. */
-export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
+/** Reads every Stage 1 input through its declaration, then assembles. A
+ *  withheld manifest reads neither it nor the astrometry only it selects. */
+export async function loadReferenceCatalogs(manifest: ManifestInput['kind']): Promise<ReferenceCatalogs> {
   const simbadXids = parseSimbadWdsXids(SIMBAD_WDS_XIDS.read());
+  const astrometry = GAIA_ASTROMETRY.read();
+  if (manifest === 'read') await addMagnitudeTermAstrometry(astrometry);
   return assembleReferenceCatalogs({
     wdsSumm: WDS_SUMM.read(),
     orb6: ORB6.read(),
@@ -166,12 +192,15 @@ export async function loadReferenceCatalogs(): Promise<ReferenceCatalogs> {
     hipToGaia: GAIA_HIP_XMATCH.read(),
     tycToGaia: await GAIA_TYC_XMATCH.read(),
     nss: parseNssOrbits(GAIA_NSS.read(), GAIA_NSS),
-    astrometry: GAIA_ASTROMETRY.read(),
+    astrometry,
     astrometryExclusions: ASTROMETRY_EXCLUSIONS.read(),
     simbadWdsXids: simbadXids,
     simbadSptypeByOid: SIMBAD_WDS_SPTYPE.read(),
     componentSptypeOverrides: COMPONENT_SPTYPE_OVERRIDES.read(),
     msc: { systems: MSC_SYSTEMS.read(), orbits: MSC_ORBITS.read(), components: MSC_COMPONENTS.read() },
+    manifest: manifest === 'read'
+      ? { kind: 'read', records: artifactRows(MEMBERSHIP_MANIFEST), tycho2: TYCHO2.read() }
+      : { kind: 'withheld' },
   });
 }
 

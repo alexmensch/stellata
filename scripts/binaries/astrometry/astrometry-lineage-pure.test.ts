@@ -71,9 +71,9 @@ describe('astrometryCounts', () => {
 
 describe('ASTROMETRY_INVARIANTS', () => {
   it('fails a component that binds an identifier yet gets no astrometry, unless named', () => {
-    const r = stage3([['AB', { hip: 31157 }, UNRESOLVED_ASTROMETRY, { hip: 9 }, UNRESOLVED_ASTROMETRY]], undefined, '06323+5225');
+    const r = stage3([['A,BC', { hip: 9 }, UNRESOLVED_ASTROMETRY, { hip: 31157 }, UNRESOLVED_ASTROMETRY]], undefined, '18072-1854');
     const [held] = invariantViolations(ASTROMETRY_INVARIANTS, sortLineageLines(astrometryLineageLines(r)));
-    expect(held.rows.map((row) => row.key)).toEqual(['multiples:06323+5225-AB/B']);
-    expect(held.stale).toHaveLength(11);
+    expect(held.rows.map((row) => row.key)).toEqual(['multiples:18072-1854-A,BC/A']);
+    expect(held.stale).toHaveLength(1);
   });
 });

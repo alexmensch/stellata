@@ -2,8 +2,8 @@
 
 import type { ComponentKey } from '../component-tokens-pure';
 import { pairRowKey } from '../component-tokens-pure';
-import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
+import type { ManifestStar } from '../load/manifest-stars-pure';
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import type { Orb6Entry, WdsPair } from '../../wds/wds-pure';
@@ -23,7 +23,7 @@ export interface CascadeInputs {
   readonly pairs: readonly WdsPair[];
   readonly orb6: readonly Orb6Entry[];
   readonly indices: IdentifierIndices;
-  readonly athyg: readonly AthygRow[];
+  readonly manifestStars: readonly ManifestStar[];
   readonly simbadWdsXids: ReadonlyMap<ComponentKey, SimbadWdsXid>;
 }
 
@@ -41,7 +41,7 @@ export function resolveCascade(
   });
   const simbad = resolveViaSimbad(first, inputs.simbadWdsXids);
   const ccdm = resolveViaCcdm(simbad, inputs.indices);
-  const position = resolveViaPosition(ccdm.pairs, inputs.athyg);
+  const position = resolveViaPosition(ccdm.pairs, inputs.manifestStars);
   return {
     pairs: propagateIdentities(position.pairs),
     refusals: [...offCoord, ...ccdm.rejected, ...position.rejected],

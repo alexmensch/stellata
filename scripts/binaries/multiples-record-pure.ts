@@ -4,7 +4,7 @@ import { isComponentToken } from './component-tokens-pure';
 
 export const MULTIPLES_SOURCES = ['athyg', 'wds', 'simbad'] as const;
 export const RESOLVE_VIA = [
-  'orb6_hip', 'athyg_gaia_native', 'simbad_xid', 'ccdm_hip', 'position_pm', 'position_nopm', 'unresolved',
+  'orb6_hip', 'manifest_hip', 'simbad_xid', 'ccdm_hip', 'position_pm', 'position_nopm', 'unresolved',
 ] as const;
 export const ASTROMETRY_VIA = [
   'gaia_nss_systemic', 'hip2_long_baseline', 'gaia_5p', 'athyg_position', 'unresolved', 'system_inherited',
@@ -16,14 +16,8 @@ export const A_VIA = ['catalog', 'kepler_mass_estimate', 'none'] as const;
 export const ORBIT_ROLES = ['primary', 'secondary', 'standalone'] as const;
 
 export type ResolveVia = (typeof RESOLVE_VIA)[number];
-/** Tags no tier binds yet: resolve/README.md#what-each-tier-decides */
-export const RESERVED_RESOLVE_VIA = ['position_pm', 'position_nopm'] as const satisfies readonly ResolveVia[];
-export type ReservedResolveVia = (typeof RESERVED_RESOLVE_VIA)[number];
-export function isReservedResolveVia(via: ResolveVia): via is ReservedResolveVia {
-  return (RESERVED_RESOLVE_VIA as readonly ResolveVia[]).includes(via);
-}
-/** The tier of a bound Gaia source: every tag but `unresolved` and the reserved ones. */
-export type GaiaVia = Exclude<ResolveVia, 'unresolved' | ReservedResolveVia>;
+/** The tier of a bound Gaia source: every tag but `unresolved`. */
+export type GaiaVia = Exclude<ResolveVia, 'unresolved'>;
 export type AstrometryVia = (typeof ASTROMETRY_VIA)[number];
 
 export type OrbitVia = (typeof ORBIT_VIA)[number];

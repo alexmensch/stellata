@@ -37,11 +37,15 @@ import { spotCheckProblems, strongestComponents } from './resolve/spot-check-pur
 import { SPOT_CHECK_GROUND_TRUTH } from './resolve/spot-check-source';
 import { SIMBAD_WDS_SPTYPE } from './load/simbad-wds-sptype-source';
 import { ORB6, WDS_SUMM } from '../wds/wds-source';
+import { MEMBERSHIP_MANIFEST } from '../catalog/membership/membership-manifest-tsv';
+import { MAGNITUDE_PULL } from '../catalog/membership/magnitude-term/magnitude-pull-source';
+import { readMagnitudeTermSourceIds } from '../catalog/membership/magnitude-term/magnitude-term';
+import { TYCHO2 } from '../catalog/tycho2-source';
 
 const INPUTS = [
   WDS_SUMM, ORB6, ORB6_COMPONENT_OVERRIDES, COMPONENT_SPTYPE_OVERRIDES, ASTROMETRY_EXCLUSIONS,
   MSC_SYSTEMS, MSC_ORBITS, MSC_COMPONENTS, GAIA_ASTROMETRY, SIMBAD_WDS_SPTYPE, SIMBAD_WDS_XIDS,
-  ATHYG_CLASSIC_IDS, HIP_CCDM, HIP2, GAIA_HIP_XMATCH, GAIA_TYC_XMATCH, GAIA_NSS,
+  ATHYG_CLASSIC_IDS, HIP_CCDM, HIP2, GAIA_HIP_XMATCH, GAIA_TYC_XMATCH, GAIA_NSS, MEMBERSHIP_MANIFEST, MAGNITUDE_PULL, TYCHO2,
 ];
 
 const readRepoFile = (file: string): string => readFileSync(resolve(__dirname, '../..', file), 'utf8');
@@ -86,8 +90,8 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
     expect(c.indices.msc.orbitsByPair.get(mscPairKey('23300+5833', 'Aa', 'Ab'))?.rows.map((r) => r.per)).toEqual([6.0663]);
   });
 
-  it('finds every id it would weigh in the committed astrometry request', () => {
-    const requested = new Set(ASTROMETRY_REQUEST.read().map(String));
+  it('finds every id it would weigh in the committed astrometry request or the magnitude pull', async () => {
+    const requested = new Set([...ASTROMETRY_REQUEST.read().map(String), ...await readMagnitudeTermSourceIds()]);
     expect([...astrometryRequestIds(r, c.indices)].filter((id) => !requested.has(id))).toEqual([]);
   });
 

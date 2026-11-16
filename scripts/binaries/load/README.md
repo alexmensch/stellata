@@ -41,7 +41,11 @@ scripts/binaries/load/
                                readers.
   indices-pure.ts (+ test)     IdentifierIndices, the CCDM index, and the
                                magnitude gate (scrubAthygGaia, and the HIP
-                               cross-walk's inside buildIndices).
+                               cross-walk's inside buildIndices);
+                               sourceForHip, a HIP's Gaia source.
+  manifest-stars-pure.ts       buildManifestIndex: each HIP's derived
+    (+ test)                   source and every placed manifest star
+                               (#the-manifest); WITHHELD_MANIFEST.
   subdivide-pure.ts (+ test)   The curated ORB6 letters, the ORB6 orphan
                                pairs, the MSC inner pairs; subResolutionPair,
                                the row every synthesized pair is, Stage 3's
@@ -56,14 +60,16 @@ The real-data case is the parent folder's `build-binaries.test.ts`.
 
 ## Where each input comes from
 
-Seventeen inputs. Seven are declared here. The WDS summary and ORB6 are
+Twenty inputs. Seven are declared here. The WDS summary and ORB6 are
 declared in [`../../wds/`](../../wds/README.md), which the SIMBAD WDS cross-ID
 pull reads too, with the duplicate-row collapse and `measuredOffset`. Eight are files the catalogue build
 reads too, read through **its** declaration, never a second one: AT-HYG
 (`../../catalog/spine/`), HIP↔CCDM (`../../catalog/multiplicity/`), HIP2,
 the Gaia astrometry pull and the NSS table (`../../catalog/sources/`), the two Gaia best-neighbour walks
-(`../../catalog/parse/`), and SIMBAD's WDS cross-IDs
-(`../../catalog/membership/binding/`). Where the two builds want different
+(`../../catalog/parse/`), SIMBAD's WDS cross-IDs
+(`../../catalog/membership/binding/`), and the three the manifest's
+positions take: the membership manifest itself, the Gaia magnitude pull and
+Tycho-2 ([The manifest](#the-manifest)). Where the two builds want different
 columns of one file, the declaration returns a column table and each reader
 keeps its own parse ([Reading a table](../../util/tsv/README.md#reading-a-table)).
 
@@ -75,7 +81,8 @@ one before:
 1. Collapse duplicate WDS rows; stamp the curated ORB6 letters.
 2. Synthesize the ORB6 orphan pairs, from the curated ORB6.
 3. Drop the curated astrometry exclusions, then the magnitude gate empties
-   refused AT-HYG `gaia` cells; the indices are built from the scrubbed rows.
+   refused AT-HYG `gaia` cells; place the manifest's stars; the indices are
+   built from the scrubbed rows and the manifest's HIP → source map.
 4. Rescue blank-components rows, over the WDS rows and the orphans (an orphan's
    donor row is not rescued), and align blank ORB6 rows to AB.
 5. Synthesize the MSC inner pairs, which see the rescued AB rows.
@@ -107,6 +114,31 @@ rule in HIP↔CCDM, read as a format change
 rows, 0 included, since which was meant is not the reader's to guess. Skipped instead:
 HIP↔CCDM's dash rule line, and a HIP2 row with `hip <= 0` or no position;
 HIP2's row band counts the positioned stars that remain.
+
+## The manifest
+
+Stage 2 reads the membership manifest
+([The membership manifest](/scripts/catalog/membership/README.md)) twice:
+each HIP's `gaia_source_id`, already derived and gate-passed
+(`hipToManifestGaia`, the `manifest_hip` tier), and every record, both
+terms, as a star the position tier matches (`manifestStars`,
+[What each tier decides](../resolve/README.md#what-each-tier-decides)).
+`buildManifestIndex` places each record through the record build's own
+`resolveDirection` (`/scripts/catalog/distance/`) over Gaia's astrometry,
+Hipparcos-2 and Tycho-2, then advances it to the WDS epoch on the motion
+that solution states; a record none of them places is no star. The Gaia
+map is the post-exclusion pull with the magnitude term's rows added where
+the pull holds none (`addMagnitudeTermAstrometry`), the record build's
+same two files, so Stage 3 routes a source the term admitted. A HIP on two
+records stops the build.
+
+`build:astrometry-request` runs Stages 1–2 with the manifest withheld
+(`WITHHELD_MANIFEST`): a step may not read the manifest
+([Loops through committed files](/scripts/pipeline/README.md#loops-through-committed-files)),
+so its two tiers bind nothing there and the magnitude term's rows are not
+added. Every source they bind is a manifest `gaia_source_id`, covered by
+the request or the magnitude pull, which `../build-binaries.test.ts`
+measures.
 
 ## Gaia NSS: one solution per source
 

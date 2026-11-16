@@ -2,7 +2,7 @@
 
 import { canonicalCompLetter, componentKey, compoundContains, relatedHier, type ComponentKey } from '../component-tokens-pure';
 import { polarToTangent, skyPositionAtEpoch, type TangentOffset } from '../../../src/astro-core/equatorial-basis';
-import type { IdentifierIndices } from '../load/indices-pure';
+import { sourceForHip, type IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, type WdsPair } from '../../wds/wds-pure';
 import { fold } from '../../util/counts/tally-pure';
@@ -352,7 +352,7 @@ function xidOwnSource(
   if (xid === undefined) return null;
   if (xid.gaiaSourceId !== null) return xid.gaiaSourceId;
   if (xid.hip === null) return null;
-  return indices.hipToGaia.get(xid.hip) ?? indices.hipToAthyg.get(xid.hip)?.gaia ?? null;
+  return sourceForHip(xid.hip, indices);
 }
 
 /** A measured-pair "blend" where SIMBAD gives exactly one side the contested

@@ -36,6 +36,7 @@ function inputs(over: Partial<Stage1Inputs> = {}): Stage1Inputs {
     simbadWdsXids: new Map(),
     simbadSptypeByOid: new Map(),
     componentSptypeOverrides: new Map(),
+    manifest: { kind: 'withheld' },
     msc: { systems: [mscSystem(), mscSystem({ prim: 'Aa', sec: 'Ab', parent: 'A' })], orbits: [mscOrbit()], components: [] },
     ...over,
   };

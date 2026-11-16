@@ -27,15 +27,15 @@ scripts/binaries/resolve/
                                order), findOwningPair,
                                RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
-                               AT-HYG-native), resolveViaSimbad,
+                               manifest HIP), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
                                CascadeRefusal each gate records (the ORB6
                                HIP's coordinate check, the two
                                sibling-identity guards).
-  position-match-pure.ts       The position match Stage 3 reuses, over
-                               any MatchStar list: the 1° grid, the
-                               nearest-star search by reading,
-                               pairPositionMatches; athygMatchStars.
+  position-match-pure.ts       The position match, over any MatchStar
+                               list: the 1° grid, the nearest-star search
+                               by reading, pairPositionMatches. Stage 2
+                               matches manifest stars; Stage 3, AT-HYG.
   sibling-identity-pure.ts     HipClaims and the disjoint-letter test the
                                CCDM and position tiers both apply.
   propagate-pure.ts            propagateWithinSystem,
@@ -100,7 +100,8 @@ order, primary then secondary, so pairing never rests on position.
 
 Each of a component's Gaia source, HIP and AT-HYG row is a `Bound`: the value
 and its `IdOrigin` (`../multiples-record-pure.ts`), `own` or inherited from a named
-token of the same system. Every tier binds `own`; a rebind by the audit is
+token of the same system. Stage 2 binds no AT-HYG row; Stage 3's fallback
+does. Every tier binds `own`; a rebind by the audit is
 `own`. The passes that copy record the kind:
 
 | Kind | Copied by | From |
@@ -129,10 +130,11 @@ twice. The stage covers Gaia and HIP only, since the binaries pipeline's
 AT-HYG binding retires with its AT-HYG read (stellata-hooj.17). The counts
 fold into the snapshot's `component-binding` stage ([Composition, not counting](../counts/README.md#composition-not-counting)).
 
-`BINDING_LINEAGE_BUDGET` pins 1.0 MB and 2 s for two rows per component,
+`BINDING_LINEAGE_BUDGET` pins 1.1 MB and 2 s for two rows per component,
 over the stage's <!-- count:build-binaries/multiples_rows_emitted -->47,021<!-- /count --> components.
-On 2026-11-14, 94,042 rows came to 898 KB gzipped in 386–752 ms across two
-runs, neither diffing against a baseline. A branch that changes this stage's
+On 2026-11-16, with the manifest's position tier binding more sources, the
+stage came to 1,000,943 bytes gzipped in 531–585 ms across two runs, neither
+diffing against a baseline. A branch that changes this stage's
 inputs re-reads each changed file at the merge-base in one batched git read
 to refuse the baseline: 622 ms for the whole window on CI, 269 of it the
 baseline (f7a87137, 2026-11-15).
@@ -151,13 +153,11 @@ joins the stage to component-binding and promotion on the key.
 | Code | Written for |
 | --- | --- |
 | `resolve.tier.<tag>` | every component of every decomposing pair row, once: its `resolve_via` ([What each tier decides](#what-each-tier-decides)), underscores as dashes, with its Gaia source and `hip:` in `params`; a rebound component carries its donor's tier |
-| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `athyg-match-sibling-claimed` |
+| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `position-match-sibling-claimed` |
 | `resolve.audit.<shape>.<verdict>.<part>` | each component holding a binding an audit verdict weighed (`verdictTouches`), as `won` (it keeps the source), `refused` (it loses it) or `skipped` (unchanged); `params` carry the verdict's `wds`, `contested` label, `reference` letter and `reference_gaia`, `winner`, and the component's own `gaia` |
 
-A `refused` part and every gate code are in the refusal role. No tier binds
-`position_pm` or `position_nopm` (`RESERVED_RESOLVE_VIA`), so they have no code
-and no component can carry one ([the reserved tags](#what-each-tier-decides)).
-The stage writes no identity rows.
+A `refused` part and every gate code are in the refusal role. The stage
+writes no identity rows.
 
 `resolveCounts` folds the snapshot keys this stage's code alone produces from
 the stage's lines, inside the timed window (`foldedStageLineage`): a
@@ -166,7 +166,7 @@ and `contested` label however many components it weighed. The keys keep their
 names in the snapshot's `resolve` block ([Counts](#counts)).
 
 `RESOLVE_INVARIANTS` allows an `audit.*.unbound-ambiguous.refused` row only
-for the 31 rows it names, from 4 conflicts, 20 of them 10444-6000's Aa across
+for the 38 rows it names, from 8 conflicts, 20 of them 10444-6000's Aa across
 its pair rows ([Invariants](/scripts/catalog/lineage/README.md#invariants)): a
 new ambiguous unbinding fails the build by key, and a fix that clears one
 fails until it is struck off the list.
@@ -224,14 +224,15 @@ explains the expectation, it does not excuse a miss.
 
 `pairPositionMatches` takes any list of `MatchStar`s, each with its
 readings: directions tried in order, every star's first reading before any
-star's second. `athygMatchStars` gives an AT-HYG row two — PM-propagated
-from AT-HYG's J1991.25 to the WDS coordinate epoch, then as stored: AT-HYG's
-HIP rows sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under
-propagation). The grid search reaches a cell past the query's neighbours
-each way, so a high-PM star gridded in a neighbouring cell is still a
-candidate. A secondary whose own
-match misses rides its primary's row, inherited from it (`blend` at ρ = 0,
-else `partner`); Stage 2 binds only `own` matches, Stage 3 takes both.
+star's second, nearest within 2″ (`POSITION_MATCH_TOLERANCE_ARCSEC`). Stage
+2's stars are the membership manifest's, one reading each at the WDS epoch
+([The manifest](../load/README.md#the-manifest)); Stage 3's AT-HYG rows
+carry two ([The AT-HYG position fallback](../astrometry/README.md#the-at-hyg-position-fallback)).
+The grid search reaches a cell past the query's neighbours each way, so a
+high-PM star gridded in a neighbouring cell is still a candidate. A
+secondary whose own match misses rides its primary's star, inherited from it
+(`blend` at ρ = 0, else `partner`); Stage 2 binds only `own` matches, Stage 3
+takes both.
 
 ## The binding-integrity audit
 
@@ -255,10 +256,10 @@ component carries a source without a tier, and `gaia_resolve_rate`
 | Tag | When it fires |
 | --- | --- |
 | `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated — but gated on a WDS-coordinate sanity check (`orb6HipMatchesPairCoord`): ORB6 occasionally carries a typo'd HIP that points at an unrelated star tens of degrees away (ε Equ STF2737 lists HIP 103579 for the true HIP 103569), so a HIP whose known position sits >5′ from the pair's WDS precise coord is dropped entirely and the component falls through to the coordinate-validated tiers below. |
-| `athyg_gaia_native` | ORB6's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). The position-match pass below tags it too, binding the matched AT-HYG row's `gaia` directly, with no HIP involved. A CCDM sibling's HIP that falls through to AT-HYG's `gaia` column tags `ccdm_hip`. |
+| `manifest_hip` | ORB6's HIP routes through the membership manifest's `gaia_source_id` for that HIP when Gaia's published HIP→DR3 cross-walk misses. The manifest's binding is derived from four committed sources and has passed both binding gates ([The binding derivation](/scripts/catalog/membership/binding/README.md)). A CCDM sibling's HIP that falls through to the manifest tags `ccdm_hip`. |
 | `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
-| `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
-| `position_pm` / `position_nopm` | Reserved in `RESOLVE_VIA` (`RESERVED_RESOLVE_VIA`) for a PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`; no tier binds them. `GaiaVia` leaves them out, so no pass can bind one, and the `multiples.tsv` codec refuses a row carrying one. |
+| `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord, each HIP placed by its Hipparcos-2 row (PM-propagated from J1991.25), else its cross-walked Gaia source. Routes that HIP through Gaia's HIP cross-walk, then the manifest (`sourceForHip`). A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
+| `position_pm` / `position_nopm` | The component's WDS position (a primary's precise coord, a secondary's (ρ, θ) prediction) matches a membership manifest star within 2″ ([The position match](#the-position-match)); the star's `gaia_source_id` binds, and its HIP when the component has none. `position_pm` when the source that placed the star states a proper motion, `position_nopm` when it does not. A matched star with no Gaia source binds only its HIP. |
 | `unresolved` | All strategies missed. The component still binds a HIP whenever any tier surfaced one — Stage 3's HIP2 long-baseline fallback can attach astrometry to a Gaia-source-less Sirius A or α Cen B from the bare HIP. |
 
 Before any tier runs, Stage 1's `buildIndices` applies a one-sided
@@ -278,44 +279,34 @@ HIP2 fallback. Unverifiable bindings (no V, source outside the
 astrometry pull, no G) are trusted. Counted `xwalk_hip_mag_rejected` /
 `athyg_gaia_mag_rejected` in the Stage-7 snapshot.
 
-The position-match pass deserves its own note. AT-HYG's stored
-ra/dec is documented as J2000 but HIP-sourced rows are empirically at
-J1991.25 (the HIP1 native epoch), while GJ / Tycho-sourced rows are
-closer to J2000. Stage 2 and Stage 3 share `pairPositionMatches`
-to walk the pair-iteration cascade (primary match against the WDS
-precise_coord, then predicted-secondary match with primary-row
-exclusion, with the wide-pair short-circuit at the WDS overflow
-sentinel `999.9″` — `parseWdsSumm` collapses that ρ to None, and
-the predicted-secondary match skips a None ρ). `athygMatchStars`' two
-readings try the row PM-propagated
-J1991.25→J2000 first, then the unpropagated stored coord — propagated
-wins on tie, the unpropagated retry covers high-PM GJ-anchored rows
-(ξ UMa at -425/-581 mas/yr drifts ~5″ off under propagation, beyond
-the 2″ tolerance).
+Stage 2 and Stage 3 share `pairPositionMatches` to walk the
+pair-iteration cascade (primary match against the WDS precise_coord, then
+predicted-secondary match with the primary's star excluded, with the
+wide-pair short-circuit at the WDS overflow sentinel `999.9″` —
+`parseWdsSumm` collapses that ρ to None, and the predicted-secondary match
+skips a None ρ).
 
-The position-match cascade carries the same sibling-identity guard:
-a matched AT-HYG row whose HIP is already bound to a hierarchy-disjoint,
-non-partner letter of the same system is dropped (WDS stamps some pair
-rows with the SYSTEM coordinate — Rigel's BC row carries A's coord, so
-B's primary match landed on A's row at ~0″ and wore A's photometry).
-The gate lives in `pairPositionMatches`, so Stage 2's identifier
-binding and Stage 3's astrometry fallback both honour it; the
-inherited branch (a secondary riding its pair primary's row) is
-exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
-(both stages summed).
+The match carries the same sibling-identity guard: a matched star whose HIP
+is already bound to a hierarchy-disjoint, non-partner letter of the same
+system is dropped (WDS stamps some pair rows with the SYSTEM coordinate —
+Rigel's BC row carries A's coord, so B's primary match landed on A's star
+at ~0″ and wore A's photometry). The gate lives in `pairPositionMatches`,
+so Stage 2's identifier binding and Stage 3's astrometry fallback both
+honour it; the inherited branch (a secondary riding its pair primary's
+star) is exempt by construction. Counted per stage:
+`position_match_sibling_claimed_rejected` (Stage 2) and
+`athyg_match_sibling_claimed_rejected` (Stage 3).
 
 The two stages compose:
 
-- **Stage 2** binds identifiers — sets `athyg` always on match,
-  and surfaces `gaia` / `hip` from the row when the row carries them
-  (tagging `resolve_via=athyg_gaia_native` when a Gaia source binds).
-  Binds only `own` matches: an inherited match would carry the primary's
-  AT-HYG row, and with it the primary's Gaia source, onto the secondary.
+- **Stage 2** binds identifiers — the matched manifest star's `gaia` and
+  `hip`. Binds only `own` matches: an inherited match would carry the
+  primary's Gaia source onto the secondary.
 - **Stage 3** synthesizes astrometry — `routePairs`
   routes any remaining `unresolved` component through the same
-  cascade, taking inherited matches too, so Hipparcos-unresolved
-  pairs (A, B sharing one AT-HYG row at sub-AU separation) both
-  emit `astrometry_via=athyg_position`.
+  match against AT-HYG, taking inherited matches too, so
+  Hipparcos-unresolved pairs (A, B sharing one AT-HYG row at sub-AU
+  separation) both emit `astrometry_via=athyg_position`.
 
 After the cascade, `propagateWithinSystem` (same file) smears each
 letter binding across every WDS pair row in the same system that
@@ -326,7 +317,7 @@ the spectroscopic sub-components; the brighter `Aa` carries the system
 flux and is the single Gaia source the renderer ever sees.
 
 ρ = 0 sub-resolution pairs get two special rules. Every positional
-match (CCDM sibling pick, predicted-secondary AT-HYG match) is
+match (CCDM sibling pick, predicted-secondary star match) is
 SKIPPED for them — the (ρ, θ) prediction degenerates onto the
 primary's own coordinate, so a nearest-neighbour pick can only
 coin-flip onto a sibling component's identity (1 Equ Ab once bound
@@ -412,8 +403,7 @@ two stars at measured different separations.
 - **α Cen A** → no Gaia source; SIMBAD has the HIP, no DR3 source_id;
   `resolve_via=unresolved` + HIP bound. HIP2 long-baseline path.
 - **α Cen B** → same shape as α Cen A.
-- **Proxima** → `athyg_gaia_native` via the AT-HYG row's `gaia` cell
-  (HIP-mediated lookup through HIP 70890).
+- **Proxima** → `simbad_xid` (the SIMBAD WDS xids side-file).
 - **Castor STF1110 A** → inherits from CIA 29 Aa via the sub-letter
   hierarchy pass; tagged with Aa's `resolve_via` value.
 - **40 Eri B/C** (a tight inner binary inside the BC pair) → both

@@ -9,7 +9,7 @@ import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-so
 
 function indices(over: Partial<IndexInputs> = {}) {
   return buildIndices({
-    athyg: [], hip2: new Map(), hipToGaia: new Map(), tycToGaia: new Map(), srcToNss: new Map(),
+    athyg: [], hip2: new Map(), hipToGaia: new Map(), hipToManifestGaia: new Map(), tycToGaia: new Map(), srcToNss: new Map(),
     srcToAstrometry: new Map(), ccdm: { hipToCcdm: new Map(), ccdmToHips: new Map(), rows: 0 },
     simbadWdsSpectra: new Map(), componentSptypeOverrides: new Map(), athygGaiaMagRejected: [],
     msc: buildMscLookup([], [], []),

@@ -56,7 +56,7 @@ async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set
 }
 
 async function binariesCandidates(): Promise<Set<string>> {
-  const reference = await loadReferenceCatalogs();
+  const reference = await loadReferenceCatalogs('withheld');
   return astrometryRequestIds(resolveStage2(reference), reference.indices);
 }
 

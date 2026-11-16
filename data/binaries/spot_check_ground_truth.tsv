@@ -4,10 +4,10 @@ naked_eye_double	Albireo B	19307+2758	B	simbad_xid	2026113339752723456	SIMBAD * 
 naked_eye_double	Mizar A	13239+5456	A	simbad_xid	1563590579347125632	SIMBAD * zet01 UMa
 naked_eye_double	Mizar Aa	13239+5456	Aa	orb6_hip	1563590579347125632	sub-letter carries the letter-A source; ORB6 spectroscopic pair
 naked_eye_double	Mizar B	13239+5456	B	simbad_xid	1563590510627624064	SIMBAD * zet02 UMa
-naked_eye_double	Alcor	13239+5456	C	unresolved		SIMBAD * g UMa carries Gaia DR3 1565090003967879424 but stores no WDS J13239+5456C ident, and position tiers are unwired — expect this row to flip when position_pm lands
-naked_eye_double	ksi UMa A	11182+3132	A	simbad_xid	756853643638639104	SIMBAD * ksi UMa A; stellata-dch.74 cascade showcase
+naked_eye_double	Alcor	13239+5456	C	position_pm	1565090003967879424	SIMBAD * g UMa: SIMBAD stores no WDS J13239+5456C ident, so the manifest's position tier binds it
+naked_eye_double	ksi UMa A	11182+3132	A	manifest_hip	756853643638639104	SIMBAD * ksi UMa A; stellata-dch.74 cascade showcase
 naked_eye_double	ksi UMa B	11182+3132	B	simbad_xid	756853643637996160	SIMBAD * ksi UMa B
-naked_eye_double	gam Vir A	12417-0127	A	athyg_gaia_native	3683687763520080384	Porrima; SIMBAD * gam Vir
+naked_eye_double	gam Vir A	12417-0127	A	manifest_hip	3683687763520080384	Porrima; SIMBAD * gam Vir
 naked_eye_double	gam Vir B	12417-0127	B	simbad_xid	3683687763520080256	SIMBAD * gam Vir B
 naked_eye_double	gam01 Leo	10200+1950	A	unresolved		Algieba; SIMBAD * gam01 Leo carries no DR3 (saturated giant)
 naked_eye_double	gam02 Leo	10200+1950	B	unresolved		SIMBAD * gam02 Leo carries no DR3
@@ -56,18 +56,18 @@ distant_supergiant	Antares A	16294-2626	A	unresolved		blank WDS components rescu
 distant_supergiant	Antares B	16294-2626	B	unresolved		rescued secondary; system-inherited astrometry, orbit_via=orb6
 distant_supergiant	Deneb	20414+4517	A	absent		position-only blank (no ORB6 orbit, no SIMBAD xid) — deferred to the full blank→AB ingest stellata-dch.83.9; SIMBAD * alf Cyg carries no DR3
 variable	Algol	03082+4057	Aa1	unresolved		SIMBAD * bet Per carries no DR3; Aa1,2 spectroscopic token
-variable	Mira A	02193-0259	A	simbad_xid	2493390319631956352	SIMBAD * omi Cet; Mira prototype
-variable	Mira B	02193-0259	Ab	unresolved		VZ Cet = SIMBAD * omi Cet B has an entry but no DR3; sub-letter idents not stored by SIMBAD
+variable	Mira A	02193-0259	A	position_pm	2493390319631956352	SIMBAD * omi Cet; Mira prototype
+variable	Mira B	02193-0259	Ab	position_pm	2493390319631956352	VZ Cet = SIMBAD * omi Cet B has no DR3 source of its own: Gaia fits one photocentre for the 0.4″ pair, which Ab's predicted position matches (the photocentre-blend shape, scripts/binaries/resolve/README.md#binding-integrity-audit-enforced)
 variable	del Cep A	22292+5825	A	simbad_xid	2200153454733285248	Cepheid prototype
 variable	del Cep B	22292+5825	B	simbad_xid	2200153420363770496	SIMBAD GCRV 73253
 variable	del Cep C	22292+5825	C	simbad_xid	2200153214212849024	SIMBAD main_id * del Cep B sits at WDS letter C — naming/letter trap
 variable	bet Lyr Aa1	18501+3322	Aa1	orb6_hip	2090687795056051328	Sheliak; semidetached eclipsing prototype; Aa1,2 token
 variable	bet Lyr B	18501+3322	B	simbad_xid	2090687726329643392	SIMBAD * bet Lyr B
 variable	AR Cas A	23300+5833	A	simbad_xid	2011150635728091648	eclipsing; anchor of the multi_component AR Cas set below
-multi_component	eta Cas A	00491+5749	A	athyg_gaia_native	425040000962559616	Achird; SIMBAD * eta Cas
+multi_component	eta Cas A	00491+5749	A	manifest_hip	425040000962559616	Achird; SIMBAD * eta Cas
 multi_component	eta Cas B	00491+5749	B	simbad_xid	425040000962497792	SIMBAD * eta Cas B
 multi_component	eta Cas H	00491+5749	H	simbad_xid	425066217440416128	unpaired standalone letter with its own HIP 3809; SIMBAD HD 236533
-multi_component	zet Cnc A	08122+1739	A	simbad_xid	657244586015485440	Tegmine; SIMBAD * zet01 Cnc A
+multi_component	zet Cnc A	08122+1739	A	manifest_hip	657244586015485440	Tegmine; SIMBAD * zet01 Cnc A
 multi_component	zet Cnc B	08122+1739	B	simbad_xid	657244521593509376	SIMBAD * zet01 Cnc B
 multi_component	zet Cnc C	08122+1739	C	simbad_xid	657244521593508992	SIMBAD * zet02 Cnc
 multi_component	nu Sco Aa	16120-1928	Aa	orb6_hip	6245697981070158080	Jabbah; e=0.92 ORB6 inner pair (stellata-dch.73 showcase)

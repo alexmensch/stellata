@@ -73,11 +73,6 @@ describe('multiples.tsv codec', () => {
       .toThrow(/resolve_via simbad_xid with no gaia_source_id/);
   });
 
-  it('rejects a reserved tier no pass binds', () => {
-    expect(() => MULTIPLES_TSV.parse(`${MULTIPLES_HEADER}\n${multiplesLine({ gaia_source_id: '42', resolve_via: 'position_pm' })}\n`))
-      .toThrow(/resolve_via position_pm is reserved/);
-  });
-
   it('rejects an origin without its identifier, an identifier without its origin, and an unknown kind', () => {
     for (const [over, message] of [
       [{ hip_origin: 'own' }, /hip_origin "own" names the origin of no identifier/],

@@ -4,7 +4,7 @@ import { fold, prefixed, share, type Share } from '../../util/counts/tally-pure'
 import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { RESOLVE_VIA, type ResolveVia } from '../multiples-record-pure';
 import { componentsOf, resolveViaOf, type DecomposedPair } from '../resolve/components-pure';
-import { refusalTally, type Stage2Result } from '../resolve/resolve-pairs';
+import type { Stage2Result } from '../resolve/resolve-pairs';
 import { NSS_SYNTHESIS_OUTCOMES, synthesizeNssInnerPairs, type NssSynthesisOutcome } from './nss-inner-pairs-pure';
 import type { AstrometryCounts } from './astrometry-lineage-pure';
 import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia, type SiblingClaimedComponent } from './routes-pure';
@@ -60,13 +60,12 @@ export type Stage3Counts = Record<
 >;
 
 /** README.md#counts */
-export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): Stage3Counts {
+export function stage3Counts(reference: ReferenceCatalogs, result: Stage3Result): Stage3Counts {
   const synthesized = nssTally(result).synthesized;
-  const stage2SiblingClaimed = refusalTally(resolved).athyg_match_sibling_claimed;
   return {
     wds_pairs_total: reference.pairs.length + synthesized,
     synthesized_nss_inner_pairs: synthesized,
-    athyg_match_sibling_claimed_rejected: stage2SiblingClaimed + result.siblingClaimed.length,
+    athyg_match_sibling_claimed_rejected: result.siblingClaimed.length,
     decomposing_pairs: result.pairs.length,
     components_total: 2 * result.pairs.length,
     ...prefixed('resolution_', resolutionTally(result)),

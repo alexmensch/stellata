@@ -60,11 +60,9 @@ export function anchorsLineageLines(anchors: ReadonlyMap<string, SystemAnchor>):
 }
 
 const UNREACHED: readonly (readonly [wdsId: string, components: string, anchor: string, boundPrimary: string])[] = [
-  ['00108+5846', 'AB', 'A', 'Ca'], ['01155-4549', 'AB', 'A', 'Ca'], ['02007+0456', 'AB', 'A', 'Da'], ['04327+2553', 'Aa,Ab', 'Aa', 'Ba'],
-  ['05154+3241', 'BC', 'B', 'Ca'], ['05352-0523', 'AB', 'A', 'D'], ['05353-0521', 'AB', 'A', 'H'], ['05353-0524', 'AB', 'A', 'Ia'],
-  ['05354-0517', 'AB', 'A', 'C'], ['05354-0522', 'Aa,Ab', 'Aa', 'Ba'], ['05407-4327', 'A,BC', 'A', 'Ba'], ['05416-0153', 'AB', 'A', 'C'],
-  ['08399+1933', 'AB', 'A', 'Ca'], ['13122+3214', 'Aa,Ab', 'Aa', 'Ba'], ['16509+3556', 'AB', 'A', 'Ca'], ['18274-1838', 'AB', 'A', 'D'],
-  ['19306+2817', 'Aa,Ab', 'Aa', 'Ba'], ['21065+2655', 'AB', 'A', 'Ba'], ['22545+1517', 'AB', 'A', 'Ca'],
+  ['04327+2553', 'Aa,Ab', 'Aa', 'Ba'], ['05352-0523', 'AB', 'A', 'D'], ['05353-0521', 'AB', 'A', 'H'], ['05353-0524', 'AB', 'A', 'Ia'],
+  ['05354-0517', 'AB', 'A', 'C'], ['05354-0522', 'Aa,Ab', 'Aa', 'Ba'], ['05416-0153', 'AB', 'A', 'C'], ['10379+4407', 'BE', 'B', 'Ca'],
+  ['13122+3214', 'Aa,Ab', 'Aa', 'Ba'], ['16509+3556', 'AB', 'A', 'Ca'], ['18274-1838', 'AB', 'A', 'D'], ['22545+1517', 'AB', 'A', 'Ca'],
 ];
 
 export const ANCHORS_INVARIANTS: readonly LineageInvariant[] = [

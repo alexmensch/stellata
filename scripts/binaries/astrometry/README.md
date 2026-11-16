@@ -142,10 +142,10 @@ both unresolved codes into `astrometry_unresolved`. The fallback's refusals
 stay in `stage3Counts`' `athyg_match_sibling_claimed_rejected`, a `resolve`
 key that sums Stage 2's refusals with them.
 
-`ASTROMETRY_INVARIANTS` allows an `identifier-bound` row only for the 12 it
-names ([Invariants](/scripts/catalog/lineage/README.md#invariants)): 8 bind a
-HIP that HIP2 does not carry, 3 an AT-HYG row whose match the sibling guard
-refused, and Sirius B a Gaia source the astrometry pull lacks. A new one fails
+`ASTROMETRY_INVARIANTS` allows an `identifier-bound` row only for the 2 it
+names ([Invariants](/scripts/catalog/lineage/README.md#invariants)): one binds
+a HIP that HIP2 does not carry, and Sirius B a Gaia source the astrometry pull
+lacks. A new one fails
 the build by key, and a fix that clears one fails until it is struck off.
 
 `ASTROMETRY_LINEAGE_BUDGET` pins 1.3 MB and 2 s: 91,172 rows came to

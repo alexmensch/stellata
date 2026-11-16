@@ -1,12 +1,11 @@
 // The WDS-pair → catalogue-star position match Stages 2 and 3 share. See README.md#the-position-match.
 
-import { directionAtEpoch, unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../../src/astro-core/equatorial-basis';
+import { unitVectorFromRaDec, type SkyPosition, type UnitVector } from '../../../src/astro-core/equatorial-basis';
 import { DEG_TO_RAD } from '../../../src/astro-core/astronomy-constants';
 import { canonicalCompLetter, pairComponentTokens } from '../component-tokens-pure';
-import type { AthygRow } from '../load/athyg-pure';
 import { pyMod } from '../../../src/astro-core/angles';
 import {
-  ATHYG_REFERENCE_EPOCH, COS_DEC_FLOOR, WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, unitChordSq, predictSecondaryPosition,
+  COS_DEC_FLOOR, chordSqForTolerance, unitChordSq, predictSecondaryPosition,
 } from '../sky-geometry-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, type DecomposedPair, type ResolvedComponent,
@@ -25,22 +24,6 @@ export interface MatchStar {
   readonly decDeg: number;
   readonly hip: number | null;
   readonly readings: readonly UnitVector[];
-}
-
-export function athygDirectionAtEpoch(row: AthygRow, targetEpoch: number): UnitVector {
-  return directionAtEpoch(
-    { raDeg: row.raDeg, decDeg: row.decDeg },
-    { pmRaMasyr: row.pmRaMasyr, pmDecMasyr: row.pmDecMasyr },
-    ATHYG_REFERENCE_EPOCH, targetEpoch,
-  );
-}
-
-/** README.md#the-position-match: propagated to the WDS epoch, then as stored. */
-export function athygMatchStars(athyg: readonly AthygRow[]): readonly MatchStar[] {
-  return athyg.map((row) => ({
-    raDeg: row.raDeg, decDeg: row.decDeg, hip: row.hip,
-    readings: [athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH), unitVectorFromRaDec(row.raDeg, row.decDeg)],
-  }));
 }
 
 /** Star indices in 1°×1° cells, Dec shifted to non-negative. */

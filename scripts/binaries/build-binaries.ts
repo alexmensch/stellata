@@ -53,12 +53,12 @@ export interface StageResults {
 }
 
 export async function runStages(log: (line: string) => void): Promise<StageResults> {
-  const reference = await loadReferenceCatalogs();
+  const reference = await loadReferenceCatalogs('read');
   for (const line of stage1Report(reference)) log(line);
   const resolved = resolveStage2(reference);
   for (const line of stage2Report(resolved)) log(line);
   const astrometry = attachStage3(resolved, reference);
-  for (const line of stage3Report(reference, resolved, astrometry)) log(line);
+  for (const line of stage3Report(reference, astrometry)) log(line);
   const orbits = attachStage4(astrometry, reference);
   for (const line of stage4Report(orbits)) log(line);
   const masses = pairMasses(astrometry.pairs, reference.indices);

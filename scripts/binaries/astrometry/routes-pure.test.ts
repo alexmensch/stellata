@@ -13,7 +13,9 @@ import type { DecomposedPair } from '../resolve/components-pure';
 import { OWN } from '../multiples-record-pure';
 import { astrometryMap, athygAt, decomposed, indices, pairAt, resolved, type Side } from '../resolve/resolve-fixture';
 import { nssRow } from '../orbits/nss-fixture';
-import { minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
+import { athygDirectionAtEpoch, minRhoPerSource, routeAstrometry, routePairs, type ComponentAstrometry, type MeasuredAstrometry } from './routes-pure';
+import { angularSeparationArcsec, raDecFromUnitVector, unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
+import { WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
 
 const hip2Map = (rows: readonly (readonly [number, Partial<Hip2AstrometryRow>])[]): Map<number, Hip2AstrometryRow> =>
   new Map(rows.map(([hip, over]) => [hip, hip2AstrometryRow({ ref: sourceRowRef(HIP2, hip), ...over })]));
@@ -147,6 +149,24 @@ describe('routePairs', () => {
     });
     const r = routePairs([ab('AB', 2, { gaiaSourceId: '42' }), ab('AC', 50, { gaiaSourceId: '42' })], idx, []);
     expect(r.pairs.map((p) => r.astrometry.get(p)!.primary.astrometryVia)).toEqual(['hip2_long_baseline', 'hip2_long_baseline']);
+  });
+});
+
+describe('athygDirectionAtEpoch', () => {
+  it('carries α Cen A\'s J1991.25 row to the WDS J2000 coord', () => {
+    const row = athygAt({ ra: 219.92041, dec: -60.83515, hip: 71683, pmRaMasyr: -3678.19, pmDecMasyr: 481.84 });
+    const { raDeg, decDeg } = raDecFromUnitVector(athygDirectionAtEpoch(row, WDS_PRECISE_COORD_EPOCH));
+    expect(raDeg).toBeCloseTo(219.9021, 3);
+    expect(decDeg).toBeCloseTo(-60.834, 3);
+  });
+
+  it('leaves a row with no PM where it is', () => {
+    expect(athygDirectionAtEpoch(athygAt({ ra: 100, dec: 20 }), 2000)).toEqual(unitVectorFromRaDec(100, 20));
+  });
+
+  it('moves a low-PM row far less than the match tolerance', () => {
+    const moved = athygDirectionAtEpoch(athygAt({ ra: 100, dec: 0, pmRaMasyr: 10, pmDecMasyr: 10 }), 2000);
+    expect(angularSeparationArcsec(moved, unitVectorFromRaDec(100, 0))).toBeLessThan(0.5);
   });
 });
 
