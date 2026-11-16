@@ -6,6 +6,6 @@ import { parseRefusals } from './flamsteed-refusals-pure';
 
 export const FLAMSTEED_REFUSALS_LIST = defineSource({
   file: DATA_FILES.flamsteedRefusals,
-  hint: 'Hand-curated: scripts/catalog/simbad/README.md#the-refused-numbers says when a row changes.',
+  hint: 'Hand-curated: /scripts/catalog/simbad/README.md#the-refused-numbers says when a row changes.',
   parse: (input) => parseRefusals(input.text(), input),
 });
