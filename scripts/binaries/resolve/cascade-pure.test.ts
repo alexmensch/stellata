@@ -56,7 +56,8 @@ describe('resolveComponent', () => {
     expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
     expect(r.hip).toBeNull();
-    expect(resolveComponent(pair, 'Aa', true, [orb6(pair.wdsId, 'Aa,Ab', 103579)], idx).refused)
+    const twice = [orb6(pair.wdsId, 'Aa,Ab', 103579), orb6(pair.wdsId, 'Aa,Ab', 103579)];
+    expect(resolveComponent(pair, 'Aa', true, twice, idx).refused)
       .toEqual([{ gate: 'orb6_hip_off_coord', pair, component: 'Aa', hip: 103579 }]);
   });
 

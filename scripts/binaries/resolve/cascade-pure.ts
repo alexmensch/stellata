@@ -88,7 +88,7 @@ export function resolveComponent(
     for (const e of orb6ForPair) {
       if (e.hip === null) continue;
       if (!orb6HipMatchesPairCoord(e.hip, pair, indices)) {
-        refused.push({ gate: 'orb6_hip_off_coord', pair, component, hip: e.hip });
+        if (!refused.some((r) => r.hip === e.hip)) refused.push({ gate: 'orb6_hip_off_coord', pair, component, hip: e.hip });
         continue;
       }
       candidates.push(e.hip);
