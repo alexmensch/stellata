@@ -262,7 +262,7 @@ questions, one pass over the rows:
 **The unverified residual is zero, not small.** The 34 bindings the Identity
 bullet leaves uncorroborated — its 16 + 12 + 6 — each carry a committed
 review disposition with the measurement behind it
-([The spine side](../membership/README.md#the-spine-side)), and the Attestation bullet's
+([A disposition is the authority](../membership/binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row)), and the Attestation bullet's
 **0 rows** says the same of the classical cells. So no row of this file exists
 on AT-HYG's authority alone, on either question the pass asks — frozen here
 means examined and then held, not taken on trust.
@@ -436,5 +436,5 @@ Pins: the `membership.binding.*` and `membership.disposition.*` codes in
   the V transform (HIP 35261, `ipd` 84, |ΔV| 1.34). Neither cascade gates its
   Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
   rows as its corpus.
-- **The review queue is disposed** — 54 rows, [The spine side](/scripts/catalog/membership/README.md#the-spine-side) of
-  `../membership/README.md` — and SID allocation writes no event.
+- **The review queue is disposed** — 54 rows, [A disposition is the authority](/scripts/catalog/membership/binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row) in
+  `../membership/binding/README.md` — and SID allocation writes no event.

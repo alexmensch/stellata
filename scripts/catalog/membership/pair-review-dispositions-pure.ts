@@ -3,7 +3,7 @@
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
-import { BINDING_DISPOSITION_BASES, type BindingDispositionBasis } from './binding-review-dispositions-pure';
+import { BINDING_DISPOSITION_BASES, type BindingDispositionBasis } from './binding/binding-review-dispositions-pure';
 
 export const PAIR_DISPOSITION_COLUMNS = ['hip', 'entries', 'keep_entry', 'basis', 'evidence'] as const;
 
