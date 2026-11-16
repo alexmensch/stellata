@@ -433,14 +433,14 @@ merge-decision surface, which the next paragraph widens. Today's tables leave
 Of the 132 GJ cells, 112 are attested by V/70A alone and 20 by CNS5.
 
 **Connected is not unique, so the 136 is not the whole surface.** Tycho-2's
-own `hip` column gives 539 spine HIPs (the sum of the `membership.merge.pair.*`
-codes) to two entries of a resolved pair, so a row carrying either entry
+own `hip` column gives 5,961 spine HIPs (the sum of the `membership.merge.pair.*`
+codes; the pull keeps every entry a manifest HIP names, [The request set](/scripts/refresh/tycho2/README.md#the-request-set)) to two entries of a resolved pair, so a row carrying either entry
 connects, and only the spine says which entry is the HIP's record. The
 primaries disagree with it there: IV/25 gives the HD to the other entry on 451
 (a one-off measurement over the uncorrected spine, 2026-11-14, not
 regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
-entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->274<!-- /count -->, on the other entry for the <!-- count:membership-manifest/membership.merge.pair.moves -->163<!-- /count --> the rule moves (plus the
+entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->4,603<!-- /count -->, on the other entry for the <!-- count:membership-manifest/membership.merge.pair.moves -->163<!-- /count --> the rule moves (plus the
 one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused -->6<!-- /count --> SIMBAD contradict, below), and on no
 single entry for the rest. The rule
 (the owner's, 2026-11-14): **Gaia decides, else review** — the entry the HIP's
