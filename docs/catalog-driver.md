@@ -423,19 +423,19 @@ and `hr` rows below carry the `published` verdict unchanged rather than one
 the witnesses reached; `simbad_idents.tsv` carries each object's HD beside
 its HIP, so a witness reading it would reach them. Those 136 are the **connectivity**
 residual — rows whose cells nothing but AT-HYG joins — not the whole
-merge-decision surface, which the next paragraph widens. Today's tables leave
-135 of them over the corrected rows, one unlinked cell each, and
+merge-decision surface, which the next paragraph widens. Over the corrected
+rows each carries one unlinked cell, and
 `build:membership` settles each on the rule that decides that cell elsewhere,
 queueing the rest with the shipped value standing
 ([Settling an unlinked cell](/scripts/catalog/membership/merge-derivation/README.md#settling-an-unlinked-cell)):
 
-| Pattern | Rows | Settled | Queued |
-|---|---|---|---|
-| `gl` off a TYC+HIP row (no HD) | 130 | <!-- count:membership-manifest/membership.merge.unlinked.gl.not-shipped -->28<!-- /count --> the label merge already relabelled (CNS5 renumberings, and the A/B swaps of Gl 150.1, 421 and 563.2); <!-- count:membership-manifest/membership.merge.unlinked.gl.cns5-source -->1<!-- /count --> by CNS5's row for the record's source; <!-- count:membership-manifest/membership.merge.unlinked.gl.v70a-position -->77<!-- /count --> by the [positional witness](/scripts/catalog/membership/positional-witness/README.md) against the record's own Tycho-2 entry | <!-- count:membership-manifest/membership.merge.unlinked.gl.queued -->24<!-- /count -->: 23 the witness puts outside its 15″ (20.7″–652″), 1 with no V/70A position |
-| `hip` with a GJ only | 1 | — | Gl 863.1A / HIP 111293: no Tycho-2 entry and no Gaia source; SIMBAD's object is the GJ 863.1 pair, which Gaia DR3 resolves into two 2-parameter sources 0.44″ apart |
-| `hd` off TYC+HIP | 2 | <!-- count:membership-manifest/membership.merge.unlinked.hd.not-shipped -->2<!-- /count --> already off the record: HD 96600 on HIP 54335 as another HIP's ([The unattested labels leave the row](/scripts/catalog/membership/README.md#the-unattested-labels-leave-the-row)), HD 336196 on HIP 90265 as [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s transcription | — |
-| `hr` off TYC+HIP+HD | 1 | <!-- count:membership-manifest/membership.merge.unlinked.hr.v50-pair -->1<!-- /count -->: HR 4401, which V/50 pairs with the HD 99104 the record ships | — |
-| `hip` off TYC+HD+HR+GJ | 1 | — | HIP 55203 on ξ UMa A, the pair Hipparcos measured as one: I/239 and IV/27A give its HD to B, SIMBAD the HIP to the system ([The identifier columns are read, never re-derived](/scripts/catalog/spine/README.md#the-identifier-columns-are-read-never-re-derived)) |
+| Pattern | Settled | Queued |
+|---|---|---|
+| `gl` off a TYC+HIP row (no HD) | <!-- count:membership-manifest/membership.merge.unlinked.gl.not-shipped -->28<!-- /count --> the label merge already relabelled (CNS5 renumberings, and the A/B swaps of Gl 150.1, 421 and 563.2); <!-- count:membership-manifest/membership.merge.unlinked.gl.cns5-source -->1<!-- /count --> by CNS5's row for the record's source; <!-- count:membership-manifest/membership.merge.unlinked.gl.v70a-position -->77<!-- /count --> by the [positional witness](/scripts/catalog/membership/positional-witness/README.md) against the record's own Tycho-2 entry | <!-- count:membership-manifest/membership.merge.unlinked.gl.queued -->24<!-- /count -->: 23 the witness puts outside its 15″ (20.7″–652″), 1 with no V/70A position |
+| `hip` with a GJ only | — | Gl 863.1A / HIP 111293: no Tycho-2 entry and no Gaia source; SIMBAD's object is the GJ 863.1 pair, which Gaia DR3 resolves into two 2-parameter sources 0.44″ apart |
+| `hd` off TYC+HIP | <!-- count:membership-manifest/membership.merge.unlinked.hd.not-shipped -->2<!-- /count --> already off the record: HD 96600 on HIP 54335 as another HIP's ([The unattested labels leave the row](/scripts/catalog/membership/README.md#the-unattested-labels-leave-the-row)), HD 336196 on HIP 90265 as [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries)'s transcription | — |
+| `hr` off TYC+HIP+HD | <!-- count:membership-manifest/membership.merge.unlinked.hr.v50-pair -->1<!-- /count -->: HR 4401, which V/50 pairs with the HD 99104 the record ships | — |
+| `hip` off TYC+HD+HR+GJ | — | HIP 55203 on ξ UMa A, the pair Hipparcos measured as one: I/239 and IV/27A give its HD to B, SIMBAD the HIP to the system ([The identifier columns are read, never re-derived](/scripts/catalog/spine/README.md#the-identifier-columns-are-read-never-re-derived)) |
 
 The two `hip` rows are the <!-- count:membership-manifest/membership.merge.unlinked.hip.queued -->2<!-- /count --> of `membership.merge.unlinked.hip.queued`.
 
@@ -516,7 +516,7 @@ step — [§ 3.1](#31-retiring-the-spine--the-membership-rule-measured-against-t
 (376,909) and their binding classes hold across the epic except as this
 paragraph enumerates. `17.6` moved none of them, as predicted. Merge
 decisions: `17.2` moves nothing; `17.11` moves exactly the rows of
-`merge-divergence.tsv` it settles — the 135 unlinked cells each settled by a
+`merge-divergence.tsv` it settles — the unlinked cells each settled by a
 coded rule or queued (the table above), and the
 records the pair rule moves onto the other entry of their Tycho-2 pair, each
 keeping its SID (they key on HIP or HD) while its TYC, position, V, proper
