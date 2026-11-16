@@ -40,7 +40,7 @@ import {
   buildRegressionReport, compareRegressionReports, formatRegressionDiff, mergeReasonsFromSnapshot, simbadSampleDistances,
 } from '../distance/refinement/distance-regression-check';
 import { identityText } from '../lineage/identity/identity-pure';
-import type { StageLineageEmission } from '../lineage/stage-lineage';
+import { mergedEmissions, type StageLineageEmission } from '../lineage/stage-lineage';
 import type { NamingDerivedCounts } from '../naming/display-names';
 import { namingSummary, type NamingCounts } from '../naming/naming-lineage-pure';
 import {
@@ -259,7 +259,7 @@ function assembleEmission({
   console.log(`Sol at record index ${SOL_RECORD_INDEX} (absmag=${sol.absmag}, R=${sol.physicalRadius.toFixed(3)} R☉)`);
   console.log(apsisCoverageSummary(records));
 
-  const stages = Object.values(lineage);
+  const stages = mergedEmissions(Object.values(lineage));
   return {
     outputs: CATALOG_OUTPUTS,
     files: {
@@ -271,18 +271,11 @@ function assembleEmission({
       pairEnds: pairEndsJson,
       systemMembership,
       ...ledgers,
-      ...lineage.placement.files,
-      ...lineage.brightnessColour.files,
-      ...lineage.size.files,
-      ...lineage.coherence.files,
-      ...lineage.promotion.files,
-      ...lineage.overlap.files,
-      ...lineage.allocation.files,
-      ...lineage.naming.files,
+      ...stages.files,
     },
-    members: new Map([...chunks, ...stages.flatMap((e) => [...e.members])]),
+    members: new Map([...chunks, ...stages.members]),
     checks: [
-      ...stages.flatMap((e) => e.checks),
+      ...stages.checks,
       buildCountsCheck([
         ...stageCounts,
         { stage: 'records', block: { kind: 'counted', counts: records } },
