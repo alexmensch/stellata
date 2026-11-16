@@ -7,3 +7,7 @@ export const MULTIPLES_ROW_KEY: RowKey<{ readonly systemId: string; readonly com
   cardinality: 'one',
   text: ({ systemId, comp }) => `${systemId}/${comp}`,
 };
+
+export function pairSystemId(pair: { readonly wdsId: string; readonly components: string }): string {
+  return `${pair.wdsId}-${pair.components}`;
+}

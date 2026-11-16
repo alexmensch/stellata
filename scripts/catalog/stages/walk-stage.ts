@@ -12,7 +12,7 @@ import { placementSummary } from '../distance/placement-counts-pure';
 import {
   PLACEMENT_CODES, PLACEMENT_INVARIANTS, PLACEMENT_LINEAGE_BUDGET, parkedLedgerView, placementLineageLines,
 } from '../distance/placement-lineage-pure';
-import { LineSpill } from '../lineage/line-spill';
+import { LineSpill } from '../lineage/storage/line-spill';
 import { lineageLineCode, type LineageLine } from '../lineage/lineage-row-pure';
 import { codeEffects } from '../lineage/reason-codes/reason-codes-pure';
 import { MEMBERSHIP_MANIFEST, manifestDesignations } from '../membership/membership-manifest-tsv';

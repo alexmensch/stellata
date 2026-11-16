@@ -1,7 +1,7 @@
 // Every WDS pair row the binaries pipeline decides, keyed on its founding row, as the `pairs` lineage stage. See README.md#pairs-lineage.
 
 import { stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
-import { outcomeCode, stageCodes, type CodeDeclaration, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { kebab, outcomeCode, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { hipDesignation } from '../sid/sid-pure';
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { BlankRescueOutcome } from './load/blank-rescue-pure';
@@ -22,25 +22,10 @@ const UNPAIRED_BLANKS: Record<UnpairedBlank, string> = {
   enumerated: 'A blank-components row of a system that already has an AB pair, so promoting it would write the pair twice.',
 };
 
-/** A snake_case tag as a code branch's dash-separated word. */
-type Kebab<T extends string> = T extends `${infer A}_${infer B}` ? `${A}-${Kebab<B>}` : T;
-
-function kebab<T extends string>(tag: T): Kebab<T> {
-  return tag.replaceAll('_', '-') as Kebab<T>;
-}
-
-function codesOf<T extends string, P extends string>(
-  prefix: P, tags: readonly T[], description: (tag: T) => string,
-): Record<`${P}${Kebab<T>}`, CodeDeclaration> {
-  return Object.fromEntries(
-    tags.map((tag) => [`${prefix}${kebab(tag)}`, outcomeCode(description(tag))]),
-  ) as Record<`${P}${Kebab<T>}`, CodeDeclaration>;
-}
-
 export const PAIRS_CODES = stageCodes(PAIRS_LINEAGE.stage, {
   'duplicate-row': outcomeCode('A WDS summary row repeating another\'s wds_id, discoverer and components; the more-observed row is kept.'),
-  ...codesOf('blank-', Object.keys(UNPAIRED_BLANKS) as UnpairedBlank[], (b) => UNPAIRED_BLANKS[b]),
-  ...codesOf('optical.', OPTICAL_VIA, (via) => OPTICAL_VIA_PROPERTIES[via].description),
+  ...taggedCodes('blank-', Object.keys(UNPAIRED_BLANKS) as UnpairedBlank[], (b) => outcomeCode(UNPAIRED_BLANKS[b])),
+  ...taggedCodes('optical.', OPTICAL_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description)),
   'no-position': outcomeCode('A pair Stage 5 kept with no position on either side and no system anchor, so it never reaches multiples.tsv.'),
 });
 

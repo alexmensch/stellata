@@ -484,6 +484,26 @@ promotion.size.blend-split	promotion	none	outcome	live		7.1.27	Blend split re-de
 promotion.size.mint	promotion	none	outcome	live		7.1.27	Promotion sized the minted record from its absolute magnitude and spectral class, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.size.recurated	promotion	none	outcome	live		7.1.27	Re-curation re-derived the held record's radius from its new absolute magnitude, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.spectral.ms-from-own-absmag	promotion	none	outcome	live		7.1.20	The minted record's spectral class is a main-sequence estimate from its own absolute magnitude, the row's type being its primary's or blank.
+resolve.audit.letter-sources.geometric.refused	resolve	none	refused	live		7.1.30	One letter bound to different Gaia sources on different rows, arbitrated by WDS pair geometry; this component's binding to the source is refused.
+resolve.audit.letter-sources.geometric.won	resolve	none	outcome	live		7.1.30	One letter bound to different Gaia sources on different rows, arbitrated by WDS pair geometry; this component keeps its source.
+resolve.audit.letter-sources.skipped-no-reference.skipped	resolve	none	outcome	live		7.1.30	One letter bound to different Gaia sources on different rows, left as bound: no uncontested astrometric reference letter; this component keeps its source unchanged.
+resolve.audit.letter-sources.skipped-photocentre-blend.skipped	resolve	none	outcome	live		7.1.30	One letter bound to different Gaia sources on different rows, left as bound: a photocentre blend; this component keeps its source unchanged.
+resolve.audit.letter-sources.unbound-ambiguous.refused	resolve	none	refused	live		7.1.30	One letter bound to different Gaia sources on different rows, with no decisive candidate; this component's binding to the source is refused.
+resolve.audit.source-letters.geometric.refused	resolve	none	refused	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, arbitrated by WDS pair geometry; this component's binding to the source is refused.
+resolve.audit.source-letters.geometric.won	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, arbitrated by WDS pair geometry; this component keeps its source.
+resolve.audit.source-letters.identity-refuted.refused	resolve	none	refused	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, settled by SIMBAD's per-component cross-IDs; this component's binding to the source is refused.
+resolve.audit.source-letters.identity-refuted.won	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, settled by SIMBAD's per-component cross-IDs; this component keeps its source.
+resolve.audit.source-letters.skipped-no-reference.skipped	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, left as bound: no uncontested astrometric reference letter; this component keeps its source unchanged.
+resolve.audit.source-letters.skipped-photocentre-blend.skipped	resolve	none	outcome	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, left as bound: a photocentre blend; this component keeps its source unchanged.
+resolve.audit.source-letters.unbound-ambiguous.refused	resolve	none	refused	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, with no decisive candidate; this component's binding to the source is refused.
+resolve.refused.athyg-match-sibling-claimed	resolve	none	refused	live		7.1.30	An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
+resolve.refused.ccdm-sibling-owned	resolve	none	refused	live		7.1.30	A CCDM sibling HIP refused: another hierarchy-disjoint, non-partner letter of the system owns it, by geometry or by binding.
+resolve.refused.orb6-hip-off-coord	resolve	none	refused	live		7.1.30	An ORB6 HIP refused before any tier: its position sits over 5′ from the pair's WDS coordinate.
+resolve.tier.athyg-gaia-native	resolve	none	outcome	live		7.1.30	The component's Gaia source is an AT-HYG row's own gaia cell, reached through a HIP or a position match.
+resolve.tier.ccdm-hip	resolve	none	outcome	live		7.1.30	The component's Gaia source came through a CCDM sibling HIP near its WDS position.
+resolve.tier.orb6-hip	resolve	none	outcome	live		7.1.30	The component's Gaia source came through its pair's ORB6 HIP and Gaia's HIP cross-walk.
+resolve.tier.simbad-xid	resolve	none	outcome	live		7.1.30	The component's Gaia source is SIMBAD's per-component cross-ID for it.
+resolve.tier.unresolved	resolve	none	outcome	live		7.1.30	The component has no Gaia source: every tier missed, or the audit unbound it.
 runtime-pairs.dropped.degenerate-idx	runtime-pairs	none	outcome	live		7.1.27	A pair whose two ends resolve to one catalogue record.
 runtime-pairs.dropped.duplicate-relation	runtime-pairs	none	outcome	live		7.1.27	A pair whose distinct star collapsed onto the records of another pair, the one kept: a missing minted slot.
 runtime-pairs.dropped.primary-unresolved	runtime-pairs	none	outcome	live		7.1.27	A pair whose primary resolves to no catalogue record.

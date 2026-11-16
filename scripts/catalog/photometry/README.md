@@ -422,7 +422,7 @@ measured; placement's, over a file of similar size, takes 12.5 s in CI
 ([Placement lineage](../distance/README.md#placement-lineage)), which puts it near 38 s. Held in memory beside placement's, these
 lines took `build:catalog` past its 3,481 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
-to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)).
+to a `LineSpill` ([Storage and cost](../lineage/storage/README.md)).
 
 ## Citation
 

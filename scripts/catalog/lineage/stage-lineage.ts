@@ -226,19 +226,26 @@ export function stageLineage<F extends string, S extends string>(
   return { files, members, checks, changes };
 }
 
-/** stageLineage, plus the stage's count block folded from the same lines inside the timed window. See README.md#counts-fold-from-lineage. */
-export function countedStageLineage<F extends string, S extends string, B extends string, L extends B>(
-  run: StageLineageRun<F, S>, codes: StageCodes<B, S, L>,
-): StageLineageEmission<F, S> & { readonly counts: StageCounts<StageCodes<B, S, L>> } {
-  let counts: StageCounts<StageCodes<B, S, L>> | undefined;
+/** stageLineage, plus `fold` over the same lines inside the timed window. See README.md#counts-fold-from-lineage. */
+export function foldedStageLineage<F extends string, S extends string, T>(
+  run: StageLineageRun<F, S>, fold: (lines: readonly LineageLine[]) => T,
+): StageLineageEmission<F, S> & { readonly counts: T } {
+  let counts: { readonly value: T } | undefined;
   const emission = stageLineage({
     ...run,
     lines: () => {
       const lines = run.lines();
-      counts = foldStageLines(codes, lines);
+      counts = { value: fold(lines) };
       return lines;
     },
   });
   if (counts === undefined) throw new Error(`lineage: ${run.spec.stage}'s lines were never produced, so nothing was counted`);
-  return { ...emission, counts };
+  return { ...emission, counts: counts.value };
+}
+
+/** foldedStageLineage over the stage's codes: its count block. */
+export function countedStageLineage<F extends string, S extends string, B extends string, L extends B>(
+  run: StageLineageRun<F, S>, codes: StageCodes<B, S, L>,
+): StageLineageEmission<F, S> & { readonly counts: StageCounts<StageCodes<B, S, L>> } {
+  return foldedStageLineage(run, (lines) => foldStageLines(codes, lines));
 }

@@ -51,7 +51,7 @@ steps locally under the pinned Node.
 
 When a step is legitimately bigger, shrink what it holds first — the
 placement lineage keeps lines, not objects
-([Storage and cost](../../catalog/lineage/README.md#storage-and-cost)). Raising
+([Storage and cost](../../catalog/lineage/storage/README.md)). Raising
 the runner's heap (`--max-old-space-size` in CI) is the owner's call, and
 moves `CI_HEAP_LIMIT_MIB` with it.
 

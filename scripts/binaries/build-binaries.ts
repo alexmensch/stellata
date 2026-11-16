@@ -6,7 +6,7 @@ import { BUILD_BINARIES_COUNTS } from './build-binaries-expected-json';
 import { stepInputHashes } from '../util/step-input-hashes';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { countedStageLineage, namedStageRun, type LineageBudget } from '../catalog/lineage/stage-lineage';
+import { countedStageLineage, foldedStageLineage, namedStageRun, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
 import { PAIRS_CODES, PAIRS_LINEAGE_BUDGET, pairsLineageLines } from './pairs-lineage-pure';
 import { binariesCounts } from './counts/binaries-counts';
@@ -23,10 +23,13 @@ import { attachStage5, type Stage5Result } from './optical/attach-optical';
 import { stage5Report } from './optical/stage5-report-pure';
 import { resolveStage2, type Stage2Result } from './resolve/resolve-pairs';
 import { BINDING_CODES, BINDING_LINEAGE_BUDGET, bindingLineageLines } from './resolve/binding-lineage-pure';
+import {
+  RESOLVE_CODES, RESOLVE_INVARIANTS, RESOLVE_LINEAGE_BUDGET, resolveCounts, resolveLineageLines,
+} from './resolve/resolve-lineage-pure';
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
 import { stage4Report } from './orbits/stage4-report-pure';
-import { BINDING_LINEAGE, PAIRS_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import { BINDING_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
@@ -68,6 +71,10 @@ export async function main(): Promise<void> {
   const binding = binariesStageLineage(
     BINDING_LINEAGE, BINDING_CODES, () => bindingLineageLines(multiples.rows), BINDING_LINEAGE_BUDGET,
   );
+  const resolve = foldedStageLineage(namedStageRun({
+    spec: RESOLVE_LINEAGE, codes: RESOLVE_CODES, lines: () => resolveLineageLines(resolved), budget: RESOLVE_LINEAGE_BUDGET,
+    invariants: RESOLVE_INVARIANTS, inputs: stepInputHashes(),
+  }), resolveCounts);
   const pairs = binariesStageLineage(
     PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
   );
@@ -77,15 +84,17 @@ export async function main(): Promise<void> {
       multiples: MULTIPLES_TSV.serialize(multiples.rows),
       bindingVerdicts: BINDING_VERDICTS_TSV.serialize(resolved.verdicts.map(bindingVerdictRow)),
       ...binding.files,
+      ...resolve.files,
       ...pairs.files,
     },
-    members: new Map([...binding.members, ...pairs.members]),
+    members: new Map([...binding.members, ...resolve.members, ...pairs.members]),
     checks: [
       ...reference.checks,
       ...binding.checks,
+      ...resolve.checks,
       ...pairs.checks,
       countSnapshotCheck(BUILD_BINARIES_COUNTS, {
-        actual: binariesCounts(results, { binding: binding.counts, pairs: pairs.counts }),
+        actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',
       }),
     ],

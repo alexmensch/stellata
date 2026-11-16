@@ -26,6 +26,11 @@ export const BINDING_LINEAGE: StageLineageSpec<'component-binding', 'component-b
   files: ['component-binding'],
 };
 
+export const RESOLVE_LINEAGE: StageLineageSpec<'resolve', 'resolve'> = {
+  stage: 'resolve',
+  files: ['resolve'],
+};
+
 export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
   stage: 'pairs',
   files: ['pairs'],
