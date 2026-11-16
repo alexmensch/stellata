@@ -198,24 +198,57 @@ export interface TokenBinding {
   readonly sourceId: string;
 }
 
-export interface BindingVerdict {
+/** Every instance of the letter: README.md#choices-the-outputs-rest-on */
+type RebindAction = { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia };
+type UnbindAction = { readonly kind: 'unbind'; readonly targets: readonly TokenBinding[] };
+export type VerdictAction = RebindAction | UnbindAction;
+
+/** What enforcement does on each verdict; null for a skipped conflict. */
+interface ActionOf {
+  geometric: VerdictAction;
+  identity_refuted: RebindAction;
+  unbound_ambiguous: UnbindAction;
+  skipped_no_reference: null;
+  skipped_photocentre_blend: null;
+}
+
+export type VerdictPart = 'won' | 'refused' | 'skipped';
+
+/** The verdicts each shape reaches, and the parts each verdict gives the
+ *  components holding a binding it weighed (`partOf`). */
+export const VERDICT_PARTS = {
+  source_letters: {
+    geometric: ['won', 'refused'],
+    identity_refuted: ['won', 'refused'],
+    unbound_ambiguous: ['refused'],
+    skipped_no_reference: ['skipped'],
+    skipped_photocentre_blend: ['skipped'],
+  },
+  letter_sources: {
+    geometric: ['won', 'refused'],
+    unbound_ambiguous: ['refused'],
+    skipped_no_reference: ['skipped'],
+    skipped_photocentre_blend: ['skipped'],
+  },
+} as const satisfies Record<BindingShape, Partial<Record<BindingVerdictKind, readonly VerdictPart[]>>>;
+
+type VerdictOf<S extends BindingShape> = keyof (typeof VERDICT_PARTS)[S] & BindingVerdictKind;
+
+interface VerdictFields {
   readonly wdsId: string;
-  readonly shape: BindingShape;
-  readonly verdict: BindingVerdictKind;
   readonly contested: string;
   /** Every token and source the contradiction holds, before enforcement. */
   readonly weighed: readonly TokenBinding[];
   readonly reference: { readonly token: string; readonly sourceId: string } | null;
   readonly winner: BindingCandidate | null;
   readonly candidates: readonly BindingCandidate[];
-  /** What enforcement does; null for a skipped conflict. */
-  readonly action: VerdictAction | null;
 }
 
-export type VerdictAction =
-  /** Every instance of the letter: README.md#choices-the-outputs-rest-on */
-  | { readonly kind: 'rebind'; readonly letter: string; readonly sourceId: string; readonly via: GaiaVia }
-  | { readonly kind: 'unbind'; readonly targets: readonly TokenBinding[] };
+export type BindingVerdict = {
+  [S in BindingShape]: {
+    [K in VerdictOf<S>]: VerdictFields & { readonly shape: S; readonly verdict: K; readonly action: ActionOf[K] }
+  }[VerdictOf<S>]
+}[BindingShape];
 
 interface Reference {
   readonly token: string;
@@ -322,8 +355,6 @@ function xidOwnSource(
   return indices.hipToGaia.get(xid.hip) ?? indices.hipToAthyg.get(xid.hip)?.gaia ?? null;
 }
 
-type RebindAction = Extract<VerdictAction, { kind: 'rebind' }>;
-
 /** A measured-pair "blend" where SIMBAD gives exactly one side the contested
  *  source and the other side a different one is a cross-walk mis-match. The
  *  loser must be one token: rebinding re-homes one letter. */
@@ -350,15 +381,15 @@ function auditSystem(
   ctx: SystemContext, indices: IdentifierIndices, xids: ReadonlyMap<ComponentKey, SimbadWdsXid>,
 ): BindingVerdict[] {
   const verdicts: BindingVerdict[] = [];
-  const verdict = (
-    shape: BindingShape, kind: BindingVerdictKind, contested: string, weighed: readonly TokenBinding[], ref: Reference | null,
-    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], action: VerdictAction | null,
+  const verdict = <S extends BindingShape, K extends VerdictOf<S>>(
+    shape: S, kind: K, contested: string, weighed: readonly TokenBinding[], ref: Reference | null,
+    winner: BindingCandidate | null, candidates: readonly BindingCandidate[], action: ActionOf[K],
   ): void => {
     verdicts.push({
       wdsId: ctx.wdsId, shape, verdict: kind, contested, weighed,
       reference: ref === null ? null : { token: ref.token, sourceId: ref.sourceId },
       winner, candidates, action,
-    });
+    } as BindingVerdict);
   };
   const blendLetters = new Set<string>();
   const identityRebound = new Set<string>();
@@ -507,9 +538,6 @@ export function enforceBindingVerdicts(
   if (enforced.size === 0) return out;
   return smearIfSeeded(inheritDownwardParentBindings(propagateIdentities(out), enforced));
 }
-
-export const VERDICT_PARTS = ['won', 'refused', 'skipped'] as const;
-export type VerdictPart = (typeof VERDICT_PARTS)[number];
 
 /** One component holding a binding a verdict weighed, and what the verdict made of it. */
 export interface VerdictTouch {

@@ -347,14 +347,10 @@ describe('verdictTouches', () => {
 const blendRowsForTouches: BiRow[] = [['AB', 5.0, 0.0, [SX, null], [SX, null]], ['AC', 10.0, 0.0, [SX, null], [SC, null]]];
 
 describe('bindingIntegrityCounts', () => {
-  const v = (shape: BindingVerdict['shape'], verdict: BindingVerdict['verdict']): BindingVerdict => ({
-    wdsId: 'w', shape, verdict, contested: 'c', weighed: [], reference: null, winner: null, candidates: [], action: null,
-  });
-
   it('counts each shape and each outcome', () => {
     const counts = bindingIntegrityCounts([
-      v('source_letters', 'geometric'), v('source_letters', 'unbound_ambiguous'),
-      v('letter_sources', 'skipped_no_reference'), v('source_letters', 'skipped_photocentre_blend'),
+      { shape: 'source_letters', verdict: 'geometric' }, { shape: 'source_letters', verdict: 'unbound_ambiguous' },
+      { shape: 'letter_sources', verdict: 'skipped_no_reference' }, { shape: 'source_letters', verdict: 'skipped_photocentre_blend' },
     ]);
     expect(counts).toEqual({
       binding_conflicts_source_letters: 3,
@@ -380,7 +376,7 @@ describe('bindingAuditSourceIds', () => {
       },
       {
         wdsId: 'Y', shape: 'source_letters', verdict: 'geometric', contested: '666', weighed: [], reference: { token: 'A', sourceId: '777' },
-        winner: cand('666'), candidates: [cand('666')], action: null,
+        winner: cand('666'), candidates: [cand('666')], action: { kind: 'unbind', targets: [] },
       },
     ];
     expect(bindingAuditSourceIds(verdicts)).toEqual(new Set(['444', '555', '666']));

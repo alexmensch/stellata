@@ -45,6 +45,9 @@ scripts/binaries/resolve/
                                enforceBindingVerdicts (applying them),
                                verdictTouches (each instance holding a
                                binding a verdict weighed, and its part),
+                               VERDICT_PARTS (the verdicts each shape
+                               reaches and the parts each gives; the
+                               BindingVerdict union is typed from it),
                                bindingIntegrityCounts, addNewestEdge (the
                                pair-geometry graph Stage 6's anchor offsets
                                build too).

@@ -14,7 +14,7 @@ import type { WdsPair } from '../../wds/wds-pure';
 import { RESOLVE_VIA, isReservedResolveVia } from '../multiples-record-pure';
 import { MULTIPLES_ROW_KEY, pairSystemId } from '../multiples-row-key-pure';
 import {
-  BINDING_SHAPES, BINDING_VERDICTS, bindingIntegrityCounts,
+  BINDING_SHAPES, BINDING_VERDICTS, VERDICT_PARTS, bindingIntegrityCounts,
   type BindingShape, type BindingVerdictKind, type VerdictPart, type VerdictTouch,
 } from './binding-audit-pure';
 import { CASCADE_GATES, type CascadeGate } from './cascade-pure';
@@ -60,19 +60,6 @@ const PART_TEXT: Record<VerdictPart, string> = {
   skipped: 'this component keeps its source unchanged.',
 };
 
-/** Mirrors auditSystem's branches; a part or verdict missing here fails the build at stageLineageLine. */
-const VERDICT_PARTS = {
-  geometric: ['won', 'refused'],
-  identity_refuted: ['won', 'refused'],
-  unbound_ambiguous: ['refused'],
-  skipped_no_reference: ['skipped'],
-  skipped_photocentre_blend: ['skipped'],
-} as const satisfies Record<BindingVerdictKind, readonly VerdictPart[]>;
-
-function verdictsOf(shape: BindingShape): readonly BindingVerdictKind[] {
-  return shape === 'letter_sources' ? BINDING_VERDICTS.filter((v) => v !== 'identity_refuted') : BINDING_VERDICTS;
-}
-
 type AuditBranch = `audit.${Kebab<BindingShape>}.${Kebab<BindingVerdictKind>}.${VerdictPart}`;
 
 function auditBranch(shape: BindingShape, verdict: BindingVerdictKind, part: VerdictPart): AuditBranch {
@@ -84,9 +71,12 @@ interface AuditCode {
   readonly verdict: BindingVerdictKind;
 }
 
-const AUDIT_CODES: ReadonlyMap<AuditBranch, AuditCode> = new Map(BINDING_SHAPES.flatMap((shape) => verdictsOf(shape).flatMap(
-  (verdict) => VERDICT_PARTS[verdict].map((part): [AuditBranch, AuditCode] => [auditBranch(shape, verdict, part), { shape, verdict }]),
-)));
+const AUDIT_CODES: ReadonlyMap<AuditBranch, AuditCode> = new Map(BINDING_SHAPES.flatMap((shape) => {
+  const parts: Partial<Record<BindingVerdictKind, readonly VerdictPart[]>> = VERDICT_PARTS[shape];
+  return BINDING_VERDICTS.flatMap((verdict) => (parts[verdict] ?? []).map(
+    (part): [AuditBranch, AuditCode] => [auditBranch(shape, verdict, part), { shape, verdict }],
+  ));
+}));
 
 function auditDeclaration(branch: AuditBranch): CodeDeclaration {
   const { shape, verdict } = AUDIT_CODES.get(branch)!;
