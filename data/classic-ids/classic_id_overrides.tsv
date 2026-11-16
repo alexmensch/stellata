@@ -93,7 +93,7 @@ gaia_source_id	field	value
 # Hipparcos), while the HIP walk carries no row either, so no overlay entry
 # keys it. Each record binds through SIMBAD and keys on its HIP, so the rename
 # moves no canonical key and needs no same-as bridge
-# (/scripts/catalog/membership/merge-derivation/README.md#settling-a-differs-cell).
+# (/scripts/catalog/classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them).
 6165699748417797504	gl	GJ 9441
 # ^ HIP 65109. Ships Gl 508.1.
 3639984066101401344	gl	GJ 9477

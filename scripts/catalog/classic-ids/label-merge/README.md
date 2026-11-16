@@ -190,11 +190,12 @@ manifest `gl` cell ends in punctuation, so a second such cell fails there
 rather than shipping.
 
 **Three are CNS5 renumberings no overlay entry reaches** (HIP 65109 → GJ 9441,
-HIP 69962 → GJ 9477, HIP 107522 → GJ 9753): CNS5's row carries the record's
-HIP and no Gaia source, and the HIP walk has no row for it, so nothing keys
-the renumbered GJ onto the record's source. Each keys its SID on its HIP, so
-the rename needs no same-as bridge
-([Settling a differs cell](../../membership/merge-derivation/README.md#settling-a-differs-cell)).
+HIP 69962 → GJ 9477, HIP 107522 → GJ 9753). The rule is the overlay's own,
+the one that renames ψ Ser's `Gl 596.1A` to `GJ 9527`: CNS5's number for the
+star wins. CNS5's row carries the record's HIP and no Gaia source, and the HIP
+walk has no row for it, so nothing keys the renumbered GJ onto the record's
+source; widening that route retires the three rows (`stellata-hooj.17.11.3.5`).
+Each keys its SID on its HIP, so the rename needs no same-as bridge.
 
 An override is applied before the collision guard and before the extras
 partition, so a curated value neither suppresses nor aliases: it is what the
