@@ -1,7 +1,7 @@
 // Each component's WDS offset from its system's anchor letter, composed over the system's pair geometry. See README.md#what-each-column-carries.
 
 import {
-  anchorRankStep, canonicalCompLetter, compareAnchorRank, componentKey, isComponentToken, isMoreCanonicalAnchor, parentComponentToken, tokenLetters,
+  anchorRankStep, canonicalCompLetter, compareAnchorRank, componentKey, isComponentToken, parentComponentToken, tokenLetters,
   type AnchorRankStep, type ComponentKey,
 } from '../component-tokens-pure';
 import type { MscLookup } from '../load/msc-pure';
@@ -43,7 +43,7 @@ export function firstByPrimary(pairs: Iterable<DecomposedPair>): Map<string, Dec
 /** The most canonical token: the order the anchor and the photocentre's reference share. */
 export function mostCanonical(tokens: Iterable<string>): string {
   let best: string | null = null;
-  for (const t of tokens) if (best === null || isMoreCanonicalAnchor(t, best)) best = t;
+  for (const t of tokens) if (best === null || compareAnchorRank(t, best) < 0) best = t;
   if (best === null) throw new Error('mostCanonical: no tokens');
   return best;
 }
@@ -161,11 +161,10 @@ export function computeAnchorOffsets(
   const out = new Map<ComponentKey, PolarOffset>();
   for (const [wdsId, keptPairs] of keptBySystem) {
     const firstPairs = firstByPrimary(keptPairs);
-    const anchor = mostCanonical(firstPairs.keys());
+    const [anchor, ...below] = [...firstPairs.keys()].sort(compareAnchorRank);
     choices.set(wdsId, {
       pair: firstPairs.get(anchor)!,
-      rankedOut: [...firstPairs.keys()].filter((t) => t !== anchor).sort(compareAnchorRank)
-        .map((t) => ({ pair: firstPairs.get(t)!, step: anchorRankStep(anchor, t)! })),
+      rankedOut: below.map((t) => ({ pair: firstPairs.get(t)!, step: anchorRankStep(anchor, t)! })),
     });
     const links: GeomAdj = new Map();
     let tok = anchor;
