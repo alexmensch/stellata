@@ -9,24 +9,22 @@ Three services, three dialects, one query language they only mostly share. A
 rejected query costs a round trip and an opaque error, and the differences
 below are not guessable — every one is verified against the live service.
 
-Plumbing reference: [Gaia TAP](/scripts/refresh/README.md#gaia-tap-synchronous-endpoints-only) and the
-`refresh_lib` docstrings. This file is the query-language layer above it.
+Plumbing reference: [The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend).
+This file is the query-language layer above it.
 
 ## Reach the services through a client, never a bare POST
 
-`gaiadr3.*` goes through the TypeScript backend: `tapClient` over `GAIA` (ESA,
-ARI Heidelberg fallback) in `scripts/refresh/pull/tap-pure.ts`, which refuses
-overflow by row count and a query fault by the archive's message
-([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
-VizieR goes through the same backend over `VIZIER`.
-`rl.simbad_client()` for SIMBAD (CDS, Harvard CfA fallback) retries and
-surfaces the archive's `QUERY_STATUS` message. An ad-hoc Python probe gets them by adding `scripts/refresh` to `sys.path` and
-importing `refresh_lib` — cheaper than re-deriving any of it, and a probe that
-works becomes a pull without a rewrite.
+Every query goes through the TypeScript backend: `tapClient` in
+`scripts/refresh/pull/tap-pure.ts`, over `GAIA` (ESA, ARI Heidelberg
+fallback), `VIZIER` or `SIMBAD` (CDS, Harvard CfA fallback). It retries,
+refuses overflow by row count and a query fault by the archive's message
+([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)). An
+ad-hoc probe is a `tsx` script calling it — cheaper than re-deriving any of
+it, and a probe that works becomes a pull without a rewrite.
 
 **Which service hosts what is a property of the table, not a preference** —
 an ESA→CDS fallback on `gaiadr3.*` reports "table not found" and hides the
-real fault, which is why `TapClient` takes `backends=` with no default.
+real fault, which is why each archive names its own mirrors.
 
 It runs the other way too: ESA carries `external.*` copies of catalogues you
 may reach for on VizieR, and the copy you pick decides what you can ASK. The
@@ -105,12 +103,7 @@ INFO; **a `FORMAT=csv` reply carries no status at all**, just MAXREC rows
 So every query that cannot read the flag checks its own row count: ask for
 `limit + 1` rows and refuse more than `limit`. The TS backend does this on
 every query ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
-In `refresh_lib`, only `gaia_sync_client` reads the flag, raising
-`SyncOverflowError`, which is deliberately not transient; `simbad_client` runs
-through pyvo, which demotes it to a `DALOverflowWarning`
-and returns the truncated table. A raw POST, or pyvo's `search(maxrec=)`, asks
-with `MAXREC = limit + 1` — pyvo gives no warning for a result exactly at its
-`maxrec`. `simbad_client` takes no MAXREC and runs at the server default, so ask with `TOP limit + 1` in the ADQL.
+A raw POST asks with `MAXREC = limit + 1` the same way.
 
 **A mirror also truncates at its own hard output limit**, whatever MAXREC asks:
 read `<outputLimit><hard>` from `<url>/capabilities` before trusting a count.
@@ -122,8 +115,7 @@ a 24,000-row range of `tycho2tdsc_merge_best_neighbour` in 75 s
 
 MAXREC is not load-bearing on CDS, whose default is ~1e9; there the row-count
 band is what catches an upstream row loss. SIMBAD's is: its default is 50,000
-rows, so a `simbad_client` query over 50,000 rows comes back truncated with
-only a warning.
+rows, so a query that sends no MAXREC comes back truncated at 50,000.
 
 ## Batching a selection with no request set
 
@@ -157,15 +149,12 @@ coverage fraction does not need the whole table to be trustworthy.
 
 ## Reading the real error
 
-The TS backend, and `refresh_lib` on the Gaia sync path, lift the VOTable
-`QUERY_STATUS` message into the raised error for any non-2xx response, so a
-pull names the rejected clause — and a complaint naming one fails fast instead
-of spending the backoff schedule on every mirror. Only the parsed message is
-read that way: a proxy's HTML page saying "not found" must still fail over to
-the next mirror. On `refresh_lib`'s CDS and SIMBAD clients, pyvo raises
-`DALQueryError` carrying the same message, but `is_transient_http_error`
-counts it transient, so it arrives only after every backend's retries are
-spent. Code that bypasses all of these POSTs directly and prints `resp.text`:
+The TS backend lifts the VOTable `QUERY_STATUS` message into the raised
+error for any non-2xx response, so a pull names the rejected clause — and a
+complaint naming one fails fast instead of spending the backoff schedule on
+every mirror. Only the parsed message is read that way: a proxy's HTML page
+saying "not found" must still fail over to the next mirror. Code that
+bypasses the backend POSTs directly and prints `resp.text`:
 the status line never names the fault, and `raise_for_status()` discards the
 body that does.
 

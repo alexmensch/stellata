@@ -11,7 +11,10 @@ import { cellReader, checkedRows, formatTsv, sortRows, type Column, type Row } f
 import { spotRowCheck } from './gates-pure';
 import type { WrittenTable } from './pull';
 import { cutEdges, sliceCounts, type SliceKey } from './slices-pure';
-import { readCsv, tapClient, type AsuQuery, type TapArchive } from './tap-pure';
+import { readCsv, tapClient, type AsuQuery, type TapArchive, type TapClientDeps } from './tap-pure';
+
+/** A test's client deps besides its transport: no backoff, no reporting, no log. */
+export const QUIET_DEPS: Omit<TapClientDeps, 'transport'> = { sleep: async () => {}, report: () => {}, log: () => {} };
 
 export const committedText = (file: string): string => readFileSync(join(REPO_ROOT, file), 'utf8');
 
@@ -44,7 +47,7 @@ export async function asuReplyRows(label: string, columns: readonly Column[], { 
   const fits = { status: 200, contentType: 'application/fits', body: new Uint8Array(readFileSync(`${stem}.fits`)) };
   const archive: TapArchive = { mirrors: [{ name: 'recorded', protocol: 'asu', verified: true, url: 'recorded' }], format: 'fits', retryDelaysMs: [], quote: (id) => id };
   const client = tapClient(archive, {
-    transport: async (url) => (url.includes('/asu-tsv?') ? tsv : fits), sleep: async () => {}, report: () => {}, log: () => {},
+    ...QUIET_DEPS, transport: async (url) => (url.includes('/asu-tsv?') ? tsv : fits),
   });
   return checkedRows(columns, (await client.query({ adql: label, asu }, RECORDED_ROWS)).result, label);
 }

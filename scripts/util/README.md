@@ -104,8 +104,8 @@ same thing — single-use helpers stay with their consumer.
   step), nothing under `.venv` or `__pycache__` included, into a JSON
   record `record.ts` turns into the step's committed record. An existence check opens nothing, so a step probes
   through `probe(path)`, which records the answer. `report_service(name)`
-  records which network service answered, once each in first-answer order
-  (`refresh_lib.TapClient` calls it); `record.ts` copies the list into a
+  records which network service answered, once each in first-answer order;
+  `record.ts` copies the list into a
   pull's committed record as `answeredBy`.
 - `stamp-hash.ts` / `stamp_hash.py` (+ tests) — the stamp hash, sha1, and its
   only spelling in each language: `hashFile` / `hash_file` over a file's bytes

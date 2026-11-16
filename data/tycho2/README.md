@@ -96,10 +96,9 @@ membership manifest's `tyc` column (372,147) unioned with IV/25's own TYCs
 is unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
 
-`refresh-simbad-tyc-hd.py` asks the same question of the same two tables,
-through `refresh_lib.read_mentioned_tycs`. Both parse each side into integer
-triples, so the two pulls cover the same entries and a differently-spelled
-cell cannot drift them apart.
+`refresh:simbad-tyc-hd` asks the same set: both pulls read it through
+`readTycRequest`, which parses each side into integer triples, so they cover
+the same entries and a differently-spelled cell cannot drift them apart.
 
 Coverage, re-measured 2026-09-07 against the committed tables:
 

@@ -1,7 +1,14 @@
-// Fixtures the SIMBAD suites share: a manifest record with named cells set, and a fake SIMBAD built from per-object ids.
+// Fixtures the SIMBAD suites share: a manifest record with named cells set, a fake SIMBAD built from per-object ids, and a committed table's replay.
+
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { ManifestRecord } from '../../catalog/membership/membership-manifest-tsv';
-import type { FakeSimbad } from './simbad-fake-pure';
+import { runPhasedPull, type PhasedPull } from '../pull/pull';
+import { QUIET_DEPS } from '../pull/recorded-reply';
+import { SIMBAD } from '../pull/tap-pure';
+import { fakeTransport, type FakeSimbad } from './simbad-fake-pure';
 
 export function record(cells: Partial<ManifestRecord> = {}): ManifestRecord {
   return {
@@ -18,4 +25,20 @@ export function simbad(
     idents: Object.entries(ids).flatMap(([oid, list]) => list.map((id) => ({ oid: Number(oid), id }))),
     basic: new Map(Object.entries(basic).map(([oid, cells]) => [Number(oid), cells])),
   };
+}
+
+/** A replay's ceiling: every committed-table replay runs in under 4 s alone. */
+export const REPLAY_TIMEOUT_MS = 30_000;
+
+/** What the pull `build` makes writes to `file`, its one output, run against `fake`. */
+export async function replayedTable<K extends string>(build: (file: string) => PhasedPull<K>, fake: FakeSimbad): Promise<string> {
+  const dir = mkdtempSync(join(tmpdir(), 'simbad-replay-'));
+  try {
+    const file = join(dir, 'replayed.tsv');
+    const pull = build(file);
+    await runPhasedPull(pull, { ...QUIET_DEPS, transport: fakeTransport(fake, pull.phases, SIMBAD.quote) });
+    return readFileSync(file, 'utf8');
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 }
