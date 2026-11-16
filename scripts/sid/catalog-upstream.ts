@@ -5,11 +5,13 @@ import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
 import { LINEAGE_STAGES } from '../catalog/lineage/lineage-stages';
 import { codeEffects } from '../catalog/lineage/reason-codes/reason-codes-pure';
+import { stageLineageSources } from '../catalog/lineage/stage-lineage-sources';
 import { MEMBERSHIP_ADMISSION_CODES } from '../catalog/membership/membership-lineage-pure';
-import { MEMBERSHIP_IDENTITY, MEMBERSHIP_STAGE_LINES } from '../catalog/membership/membership-lineage-source';
 import type { Upstream } from './allocate-pure';
 import { lineageAdmissions, lineageCauses } from './lineage-upstream-pure';
-import { MEMBERSHIP_LINEAGE, ALLOCATION_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import {
+  ALLOCATION_LINEAGE, MEMBERSHIP_LINEAGE,
+} from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface CatalogLineage {
   /** Placement's rows whose code removes or re-binds a record; the rest decide nothing for a SID. */
@@ -18,13 +20,15 @@ export interface CatalogLineage {
   readonly promotionIdentity: readonly IdentityRow[];
 }
 
+const MEMBERSHIP = stageLineageSources(MEMBERSHIP_LINEAGE, 'Run pnpm run build:membership.');
+
 const UPSTREAM_ORDER = LINEAGE_STAGES.map((s) => s.codes.stage).filter((stage) => stage !== ALLOCATION_LINEAGE.stage);
 const EFFECTS = codeEffects(LINEAGE_STAGES.map((s) => s.codes));
 const ADMISSIONS = new Set([...MEMBERSHIP_ADMISSION_CODES, ...PROMOTION_ADMISSION_CODES]);
 
 export function catalogUpstream(local: CatalogLineage): Upstream {
   function* lines(): Generator<LineageLine> {
-    yield* MEMBERSHIP_STAGE_LINES.read();
+    yield* MEMBERSHIP.lines.read();
     yield* local.placementRemovals;
     yield* local.promotion;
   }
@@ -32,7 +36,7 @@ export function catalogUpstream(local: CatalogLineage): Upstream {
     causes: (keys) => lineageCauses(
       keys,
       [
-        { stage: MEMBERSHIP_LINEAGE.stage, rows: MEMBERSHIP_IDENTITY.read() },
+        { stage: MEMBERSHIP_LINEAGE.stage, rows: MEMBERSHIP.identity.read() },
         { stage: PROMOTION_CODES.stage, rows: local.promotionIdentity },
       ],
       lines(), EFFECTS, UPSTREAM_ORDER,

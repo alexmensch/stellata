@@ -217,7 +217,7 @@ the clouds' and Local Group's included — under the code of the lineage decisio
 admitted it, and settles every SID no record keeps by its upstream
 decision ([SID events](../sid/README.md#sid-events)). Membership's lineage
 comes from the last `build:membership` (`build/lineage/`, declared in
-`membership/membership-lineage-source.ts`, so this build keys on it);
+`scripts/sid/catalog-upstream.ts`, so this build keys on it);
 placement's and promotion's from this run.
 
 New ledger rows and events land in the catalogue's partition with the rest
