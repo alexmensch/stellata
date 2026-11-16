@@ -209,7 +209,7 @@ value standing while it waits.
 
 | Cell | Settles as |
 |---|---|
-| any | `not-shipped`: the label merge or a label drop already moved the spine's value off the record, and that label row is the decision |
+| any | `not-shipped`: an earlier rule — the pair rule, the label merge or a label drop — already moved the spine's value off the record, and that rule's row is the decision |
 | `hd`, `hr` | the `differs` rule for the cell, above |
 | `gl` | `cns5-source`, else `v70a-position`: the [positional witness](../positional-witness/README.md) puts V/70A's position for the shipped GJ inside its tolerance of the record's own Tycho-2 entry |
 | `tyc`, `hip` | no rule |

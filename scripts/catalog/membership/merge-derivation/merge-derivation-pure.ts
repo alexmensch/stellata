@@ -56,7 +56,7 @@ export type DiffersVerdict<C extends DiffersCell = DiffersCell> =
   | { readonly settled: DiffersSettlement<C> }
   | { readonly queued: DiffersQueueReason };
 
-/** What settles an unlinked cell without review, per cell: `not-shipped` where the label rules already
+/** What settles an unlinked cell without review, per cell: `not-shipped` where an earlier rule already
  *  moved the spine's value off the record, else the differs rule for that cell, and for a GJ the positional
  *  witness. see README.md#settling-an-unlinked-cell */
 export const UNLINKED_SETTLEMENTS_BY_CELL = {

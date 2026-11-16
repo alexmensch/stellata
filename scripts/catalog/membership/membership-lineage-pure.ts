@@ -312,7 +312,7 @@ const unlinkedSettledBranch = <C extends KeyCell>(c: C, s: UnlinkedSettlement<C>
 
 const UNLINKED_SETTLEMENT_DESCRIPTIONS = {
   ...DIFFERS_SETTLEMENT_DESCRIPTIONS,
-  'not-shipped': 'the label rules already moved the spine\'s value off the record, so that label row is the decision',
+  'not-shipped': 'an earlier rule — the pair rule, the label merge or a label drop — already moved the spine\'s value off the record, and that rule\'s row is the decision',
   'v70a-position': 'V/70A\'s position for the shipped GJ, carried to the record\'s own Tycho-2 entry, lands inside the witness tolerance',
 } as const satisfies Record<UnlinkedSettlement, string>;
 
