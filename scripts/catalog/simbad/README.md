@@ -33,7 +33,9 @@ scripts/catalog/simbad/
                                   below as one function: the adjudication
                                   test and build:membership's divergence
                                   ledger both call it
-                                  (../membership/merge-derivation/README.md#settling-a-differs-cell).
+                                  (../membership/merge-derivation/README.md#settling-a-differs-cell);
+                                  iv25HdSets, IV/25's HD set per Tycho entry,
+                                  which the spine's link tables read too.
                                   Pure.
 ```
 

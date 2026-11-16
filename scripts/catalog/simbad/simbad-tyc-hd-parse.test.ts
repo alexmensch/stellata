@@ -15,7 +15,7 @@ import {
   type SimbadTycHdRow,
 } from './simbad-tyc-hd-parse';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
-import { closePairHdVerdict, type ClosePairWitnesses } from './close-pair-hd-pure';
+import { closePairHdVerdict, iv25HdSets, type ClosePairWitnesses } from './close-pair-hd-pure';
 
 const TYC_HD_FROM = { file: 'simbad_tyc_hd.tsv', hint: 'h' };
 const HEADER = ['tyc', 'simbad_oid', 'simbad_main_id', 'hd'].join('\t');
@@ -116,13 +116,9 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
       // IV/25 gives an `n_hd=2` entry ONE ROW PER HD, so the authority for a
       // TYC is the SET of its rows. Keying single-valued drops one and reads
       // SIMBAD's agreement with the other as a dissent — 7 phantom rows.
-      const iv = new Map<string, { hd: Set<number>; consistent: boolean }>();
-      for (const row of TYC2_HD.read()) {
-        const entry = iv.get(row.tyc) ?? { hd: new Set<number>(), consistent: true };
-        entry.hd.add(row.hd);
-        entry.consistent = entry.consistent && row.nHd === 1 && row.nTyc === 1;
-        iv.set(row.tyc, entry);
-      }
+      const ivRows = TYC2_HD.read();
+      const iv = iv25HdSets(ivRows);
+      const inconsistent = new Set(ivRows.filter((r) => r.nHd !== 1 || r.nTyc !== 1).map((r) => r.tyc));
       simbad = SIMBAD_TYC_HD.read();
 
       counts = {
@@ -139,12 +135,12 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
         const printed = iv.get(tyc);
         if (printed === undefined) continue;
         const stated = hdNumbers(answer);
-        if (!stated.some((hd) => printed.hd.has(hd))) {
+        if (!stated.some((hd) => printed.has(hd))) {
           counts.dissent += 1;
-          if (!printed.consistent) counts.dissentInconsistent += 1;
+          if (inconsistent.has(tyc)) counts.dissentInconsistent += 1;
           else if (stated.includes(shipped)) counts.vindicating += 1;
-          else if (printed.hd.has(shipped)) counts.faithful += 1;
-        } else if (!stated.includes(shipped) && !printed.hd.has(shipped)) {
+          else if (printed.has(shipped)) counts.faithful += 1;
+        } else if (!stated.includes(shipped) && !printed.has(shipped)) {
           counts.bothAgainst += 1;
         }
       }
@@ -210,12 +206,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
   let silent: string[];
 
   beforeAll(() => {
-    const iv = new Map<string, Set<number>>();
-    for (const row of TYC2_HD.read()) {
-      const at = iv.get(row.tyc);
-      if (at === undefined) iv.set(row.tyc, new Set([row.hd]));
-      else at.add(row.hd);
-    }
+    const iv = iv25HdSets(TYC2_HD.read());
     const w: ClosePairWitnesses = {
       iv25Hds: (tyc) => iv.get(tyc),
       simbadTycHd: SIMBAD_TYC_HD.read(),
@@ -276,12 +267,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
     let hdOfHr: Map<number, number | null>;
 
     beforeAll(() => {
-      ivHd = new Map();
-      for (const row of TYC2_HD.read()) {
-        const at = ivHd.get(row.tyc);
-        if (at === undefined) ivHd.set(row.tyc, new Set([row.hd]));
-        else at.add(row.hd);
-      }
+      ivHd = iv25HdSets(TYC2_HD.read());
       simbad = SIMBAD_TYC_HD.read();
       hdOfHr = new Map(
         BSC5.read().map((r) => [r.hr, r.hd]),

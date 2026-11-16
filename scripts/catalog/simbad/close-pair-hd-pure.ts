@@ -15,7 +15,18 @@ export interface ClosePairWitnesses {
  *  and the fourth witness — SIMBAD's object for the record's own source — says
  *  whether that HD is the record's (`move`), the TYC cell is the crossed one
  *  (`refuse`), or nothing (`source-silent`). */
-export type ClosePairVerdict = 'unanswered' | 'split' | 'uncontested' | 'move' | 'refuse' | 'source-silent';
+/** IV/25's HD set per Tycho entry: an `n_hd=2` entry prints one row per HD. */
+export function iv25HdSets(rows: Iterable<{ readonly tyc: string; readonly hd: number }>): Map<string, Set<number>> {
+  const sets = new Map<string, Set<number>>();
+  for (const { tyc, hd } of rows) {
+    const at = sets.get(tyc);
+    if (at === undefined) sets.set(tyc, new Set([hd]));
+    else at.add(hd);
+  }
+  return sets;
+}
+
+export type ClosePairVerdict ='unanswered' | 'split' | 'uncontested' | 'move' | 'refuse' | 'source-silent';
 
 export function closePairHdVerdict(
   record: { tyc: string | null; gaiaSourceId: string | null; hd: number | null },

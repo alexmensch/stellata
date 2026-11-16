@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { closePairHdVerdict, type ClosePairWitnesses } from './close-pair-hd-pure';
+import { closePairHdVerdict, iv25HdSets, type ClosePairWitnesses } from './close-pair-hd-pure';
 
 const TYC = '1-1-1';
 const OWN = 7;
@@ -14,6 +14,14 @@ function witnesses(iv25: number[] | null, simbad: number[] | null, objectOfSourc
 }
 
 const record = (hd: number | null, tyc: string | null = TYC) => ({ tyc, gaiaSourceId: 'S', hd });
+
+describe('iv25HdSets', () => {
+  it('collects every row an n_hd=2 entry prints into one set', () => {
+    const sets = iv25HdSets([{ tyc: TYC, hd: 1 }, { tyc: TYC, hd: 2 }, { tyc: '2-2-2', hd: 3 }]);
+    expect([...sets.get(TYC)!]).toEqual([1, 2]);
+    expect([...sets.get('2-2-2')!]).toEqual([3]);
+  });
+});
 
 describe('closePairHdVerdict', () => {
   it('is unanswered without a Tycho entry or either TYC witness', () => {
