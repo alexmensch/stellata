@@ -19,7 +19,7 @@ import {
   multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { countSnapshotCheck } from '../../util/snapshot-check';
-import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
+import { loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import { CLASSIC_ID_OVERLAY, overlayMap } from '../classic-ids/classic-id-overlay-tsv';
@@ -66,6 +66,7 @@ export async function main(): Promise<void> {
     overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(multiples),
     evidence,
+    positions: positionEvidence(gaiaAstrometry),
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
     simbadTycHd: SIMBAD_TYC_HD.read(),

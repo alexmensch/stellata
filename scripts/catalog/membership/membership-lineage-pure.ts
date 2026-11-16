@@ -94,23 +94,25 @@ function classCodes<P extends string, C extends PrimariesBindingClass>(
   )) as Record<`${P}.${ClassBranch<C>}`, CodeDeclaration<typeof LIVE>>;
 }
 
-export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
+export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision', 'unconfirmed'] as const;
 export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
 export const isQueuedOutcome = (o: string): o is QueuedBindingOutcome => (QUEUED_BINDING_OUTCOMES as readonly string[]).includes(o);
-export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'refused', 'sol'] as const;
+export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'sol'] as const;
 export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
 
 /** The binding outcomes with a winner, whose code names the highest-precedence source proposing it. */
-export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'contested'] as const;
-export const LED_ADDITION_OUTCOMES = ['bound', 'rescued'] as const;
+export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'identified', 'contested'] as const;
+export const LED_ADDITION_OUTCOMES = ['bound', 'rescued', 'identified'] as const;
 type LedSpineOutcome = (typeof LED_SPINE_OUTCOMES)[number];
 /** A winner SIMBAD alone proposes ranks below every other passing candidate, so it is never contested. */
 export const CONTESTED_LEADS = ['tyc', 'hip', 'cns5'] as const satisfies readonly BindingSource[];
 type ContestedLead = (typeof CONTESTED_LEADS)[number];
-type QueuedBranch = `binding.contested.${ContestedLead}` | 'binding.collision';
+type QueuedBranch = `binding.contested.${ContestedLead}` | 'binding.collision' | 'binding.unconfirmed' | 'addition-binding.unconfirmed';
 const QUEUED_BRANCHES: readonly (readonly [QueuedBindingOutcome, QueuedBranch])[] = [
   ...CONTESTED_LEADS.map((lead) => ['contested', `binding.contested.${lead}`] as const),
   ['collision', 'binding.collision'],
+  ['unconfirmed', 'binding.unconfirmed'],
+  ['unconfirmed', 'addition-binding.unconfirmed'],
 ];
 type LedAdditionOutcome = (typeof LED_ADDITION_OUTCOMES)[number];
 
@@ -131,7 +133,7 @@ export function withLead<O extends string, L extends string, S extends BindingSo
 }
 
 export const ADDITION_BINDING_OUTCOMES = [
-  'bound', 'rescued', 'on-spine', 'shared', 'refused', 'no-candidate',
+  'bound', 'rescued', 'identified', 'on-spine', 'shared', 'refused', 'no-candidate',
 ] as const;
 export type AdditionBindingOutcome = (typeof ADDITION_BINDING_OUTCOMES)[number];
 
@@ -229,9 +231,14 @@ const OWN_CANDIDATE_BRANCHES = {
   component: 'admit.magnitude.component',
 } as const satisfies Record<OwnCandidateReason, string>;
 
+const IDENTIFIED = 'Every candidate failed a gate, and SIMBAD\'s one object for the HIP and the HIP\'s own position both name a refused one, so that one binds.';
+const UNCONFIRMED = 'Every candidate failed a gate, and SIMBAD\'s one object for the HIP names a refused one its position does not confirm; the row is queued for review.';
+const IDENTITY_WITNESS = 'The source SIMBAD\'s one object for the HIP carries, a refused candidate, and its distance from the HIP\'s position at J1991.25 (empty where either position is missing).';
+
 const SPINE_LED_DESCRIPTIONS = {
   bound: 'One Gaia source survives both binding gates with no passing rival, and the record binds to it.',
   rescued: 'Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.',
+  identified: IDENTIFIED,
   contested: 'The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.',
 } as const satisfies Record<LedSpineOutcome, string>;
 
@@ -239,11 +246,13 @@ const SPINE_LED_DESCRIPTIONS = {
 const ADDITION_GROUP_LED_DESCRIPTIONS = {
   bound: 'The addition group\'s own Gaia source survives both gates and is no other record\'s.',
   rescued: 'The addition group\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+  identified: IDENTIFIED,
 } as const satisfies Record<LedAdditionOutcome, string>;
 
 const ADDITION_LED_DESCRIPTIONS = {
   bound: 'The admitted star\'s own Gaia source survives both gates and is no other record\'s.',
   rescued: 'The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+  identified: IDENTIFIED,
 } as const satisfies Record<LedAdditionOutcome, string>;
 
 const LEAD_DESCRIPTIONS = {
@@ -399,7 +408,11 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'binding.bound': outcomeCode(SPINE_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
   'binding.rescued': outcomeCode(SPINE_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
   'binding.contested': outcomeCode(SPINE_LED_DESCRIPTIONS.contested, 'none', RETIRED_7_1_20),
-  ...ledCodes('binding', { bound: SPINE_LED_DESCRIPTIONS.bound, rescued: SPINE_LED_DESCRIPTIONS.rescued }, BINDING_SOURCES),
+  ...ledCodes('binding', {
+    bound: SPINE_LED_DESCRIPTIONS.bound, rescued: SPINE_LED_DESCRIPTIONS.rescued, identified: SPINE_LED_DESCRIPTIONS.identified,
+  }, BINDING_SOURCES),
+  'binding.unconfirmed': outcomeCode(UNCONFIRMED),
+  'binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
   ...ledCodes('binding', { contested: SPINE_LED_DESCRIPTIONS.contested }, CONTESTED_LEADS),
   'binding.refused': outcomeCode('No Gaia source survives the binding gates; the record ships unbound.'),
   'binding.collision': outcomeCode('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
@@ -431,6 +444,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
+  'addition-binding.unconfirmed': outcomeCode(UNCONFIRMED),
+  'addition-binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
   'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.'),
   'addition-binding.route-disagree': outcomeCode('The addition group\'s TYC route and HIP route propose different Gaia sources.'),
   'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
@@ -477,6 +492,19 @@ export type MembershipOutcome =
     readonly sourceLetters: string;
     readonly hipLetters: string;
   } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome, ContestedLead>)
+  | ({
+    readonly kind: 'addition-binding-queued';
+    readonly outcome: 'unconfirmed';
+    readonly review: BindingReviewCells;
+    readonly sourceLetters: string;
+    readonly hipLetters: string;
+  })
+  | {
+    readonly kind: 'identity-witness';
+    readonly subject: RefusalSubject;
+    readonly sourceId: string;
+    readonly separationArcsec: number | null;
+  }
   | {
     readonly kind: 'candidate-refused';
     readonly subject: RefusalSubject;
@@ -546,7 +574,8 @@ type Candidate = { source_id: string; via: string };
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
   : B extends QueuedBranch ? BindingReviewCells & Letters
-  : B extends `binding.${'bound' | 'rescued'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
+  : B extends 'binding.identity-witness' | 'addition-binding.identity-witness' ? { source_id: string; separation_arcsec: string }
+  : B extends `binding.${'bound' | 'rescued' | 'identified'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
@@ -605,6 +634,12 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'spine-binding-queued':
       return row(key, 'lead' in o ? `binding.${o.outcome}.${o.lead}` : `binding.${o.outcome}`, {
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
+      });
+    case 'addition-binding-queued':
+      return row(key, 'addition-binding.unconfirmed', { ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters });
+    case 'identity-witness':
+      return row(key, o.subject === 'spine' ? 'binding.identity-witness' : 'addition-binding.identity-witness', {
+        source_id: o.sourceId, separation_arcsec: o.separationArcsec === null ? '' : o.separationArcsec.toFixed(3),
       });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.subject][o.refusal], { source_id: o.sourceId, via: o.via });
@@ -789,7 +824,7 @@ export type MembershipDerivedCounts = Readonly<Record<
 
 type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
 
-const DERIVATION_OUTCOMES = ['bound', 'rescued', 'refused', 'contested', 'collision', 'sol'] as const;
+const DERIVATION_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'contested', 'collision', 'unconfirmed', 'sol'] as const;
 const STAGE_PREFIX = `${MEMBERSHIP_CODES.stage}.` as const;
 const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[MEMBERSHIP_CODES.liveCode(branch)];
 const sumOver = (counts: MembershipCounts) => (branches: readonly LiveBranch[]): number => sumOf(counts, STAGE_PREFIX, branches);
@@ -818,23 +853,26 @@ export function membershipTotals(counts: MembershipCounts) {
   const reviewByVerdict: Record<BindingReviewVerdict, number> = {
     contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
     collision: n('binding.collision'),
+    unconfirmed: n('binding.unconfirmed') + n('addition-binding.unconfirmed'),
     disposed: disposed('settled'),
   };
   const isContestedLead = (l: BindingSource): l is ContestedLead => (CONTESTED_LEADS as readonly string[]).includes(l);
-  const led = (o: 'bound' | 'rescued'): number => sum(BINDING_SOURCES.map((l): LiveBranch => `binding.${o}.${l}`));
+  const led = (o: 'bound' | 'rescued' | 'identified'): number => sum(BINDING_SOURCES.map((l): LiveBranch => `binding.${o}.${l}`));
   const derivation = {
     bound: led('bound'),
     rescued: led('rescued'),
+    identified: led('identified'),
     refused: n('binding.refused'),
     contested: reviewByVerdict.contested,
     collision: n('binding.collision'),
+    unconfirmed: n('binding.unconfirmed'),
     sol: n('binding.sol'),
   };
   const spineLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
-    n(`binding.bound.${l}`) + n(`binding.rescued.${l}`) + (isContestedLead(l) ? n(`binding.contested.${l}`) : 0),
+    n(`binding.bound.${l}`) + n(`binding.rescued.${l}`) + n(`binding.identified.${l}`) + (isContestedLead(l) ? n(`binding.contested.${l}`) : 0),
   ])) as Record<BindingSource, number>;
   const additionLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
-    n(`addition-binding.bound.${l}`) + n(`addition-binding.rescued.${l}`),
+    n(`addition-binding.bound.${l}`) + n(`addition-binding.rescued.${l}`) + n(`addition-binding.identified.${l}`),
   ])) as Record<BindingSource, number>;
   return {
     manifestRows: spineAdmits + additions + magnitudeRows,
@@ -849,7 +887,7 @@ export function membershipTotals(counts: MembershipCounts) {
     additions,
     magnitudeRows,
     reviewByVerdict,
-    reviewRows: reviewByVerdict.contested + reviewByVerdict.collision + reviewByVerdict.disposed,
+    reviewRows: BINDING_REVIEW_VERDICTS.reduce((total, v) => total + reviewByVerdict[v], 0),
     dispositions: Object.fromEntries(BINDING_DISPOSITIONS.map(
       (d) => [d, sum(DISPOSITION_QUEUES.map((q): LiveBranch => `disposition.${d}.${q}`))],
     )) as Record<BindingDisposition, number>,

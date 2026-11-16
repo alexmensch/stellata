@@ -1,21 +1,24 @@
 // Each spine row's binding settled: the derivation, the collision rule, the review queue and the dispositions that settle it. See README.md#what-the-derivation-cannot-settle-alone.
 
-import { intCell } from '../../../util/tsv/table-pure';
-import type { SimbadXids } from '../../spectral/spectral-resolve';
 import type { PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   BINDING_SOURCES,
+  isUnconfirmed,
   type DerivedBinding,
   type RowGateEvidence,
 } from './binding-derivation-pure';
 import type {
-  BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution,
+  BindingEvidence, SimbadWdsXidIndex,
 } from './binding-gate-pure';
 import {
+  bindingReviewCells,
+  boundOutcome,
   heldMoreThanOnce,
+  identityWitnessed,
   passingRunnersUp,
   refusedCandidates,
+  reviewLetters,
   unshippedCandidates,
   unweighedCandidates,
   type RowDeriver,
@@ -28,14 +31,13 @@ import {
   isQueuedOutcome,
   LED_SPINE_OUTCOMES,
   withLead,
-  type BindingReviewCells,
   type KeyedOutcome,
   type MembershipOutcome,
   type PrimariesBindingClass,
 } from '../membership-lineage-pure';
-import { isSolProper, joinManifestValues } from '../membership-manifest-tsv';
+import { isSolProper } from '../membership-manifest-tsv';
 
-type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'sol';
+type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'unconfirmed' | 'sol';
 
 /** What the derivation reached for one spine row. Sol derives nothing. */
 export type SpineBinding =
@@ -69,7 +71,7 @@ export interface SpineSettlement {
 
 function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutcome {
   if (withheld) return 'collision';
-  if (derived.sourceId === null) return 'refused';
+  if (derived.sourceId === null) return isUnconfirmed(derived) ? 'unconfirmed' : 'refused';
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
@@ -84,46 +86,10 @@ function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): Sp
   });
 }
 
-function xidsCell(xids: SimbadXids | undefined): string {
-  if (xids === undefined) return '';
-  const parts: string[] = [];
-  if (xids.hip !== null) parts.push(`hip:${xids.hip}`);
-  if (xids.tyc !== null) parts.push(`tyc:${xids.tyc}`);
-  if (xids.gj !== null) parts.push(`gj:${xids.gj}`);
-  return joinManifestValues(parts);
-}
-
-function magCell(value: number | null): string {
-  return value === null ? '' : value.toFixed(3);
-}
-
-function bindingReviewCells(row: SpineRow, b: DerivedSpineBinding, tables: PrimaryTables): BindingReviewCells {
-  const spine = { tyc: row.tyc, hip: row.hip, hd: row.hd, hr: row.hr, gl: row.gl };
-  const { derived, gate } = b;
-  const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
-  const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
-  const candidates = derived.ranked.flatMap((c) => c.via.map((v) => `${v}:${c.sourceId}`));
-  return {
-    ...spine,
-    derived_source_id: derived.sourceId ?? '',
-    derived_via: derived.via.join('+'),
-    candidates: joinManifestValues(candidates),
-    rejected: joinManifestValues(derived.rejected.map((r) => `${r.sourceId}:${r.reason}`)),
-    v_mag: magCell(gate.printedV?.vMag ?? null),
-    v_via: gate.printedV?.vVia ?? '',
-    derived_g: gOf(derived.sourceId),
-    derived_simbad: xidsOf(derived.sourceId),
-  };
-}
-
-function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined): string {
-  return joinManifestValues((attributions ?? []).map((a) => `${a.wdsId}:${a.component}`));
-}
-
 function spineBindingOutcome(
   row: SpineRow, b: SpineBinding, tables: PrimaryTables, xids: SimbadWdsXidIndex | null,
 ): MembershipOutcome {
-  const hipLetters = wdsLetters(xids?.byHip.get(intCell(row.hip) ?? -1));
+  const { sourceLetters, hipLetters } = reviewLetters(b.outcome === 'sol' ? null : b.derived.sourceId, row.hip, xids);
   if (b.outcome === 'sol') {
     return {
       kind: 'spine-binding', ...withLead('sol', LED_SPINE_OUTCOMES, [], BINDING_SOURCES),
@@ -132,19 +98,16 @@ function spineBindingOutcome(
   }
   const { derived } = b;
   const sourceId = derived.sourceId;
-  const letters = {
-    sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
-    hipLetters,
-  };
+  const letters = { sourceLetters, hipLetters };
   if (isQueuedOutcome(b.outcome)) {
     return {
       kind: 'spine-binding-queued', ...withLead(b.outcome, LED_SPINE_OUTCOMES, derived.via, CONTESTED_LEADS),
-      review: bindingReviewCells(row, b, tables), ...letters,
+      review: bindingReviewCells(row, b.derived, b.gate, tables), ...letters,
     };
   }
   return {
     kind: 'spine-binding',
-    ...withLead(b.outcome === 'bound' && derived.rescued ? 'rescued' : b.outcome, LED_SPINE_OUTCOMES, derived.via, BINDING_SOURCES),
+    ...withLead(b.outcome === 'bound' ? boundOutcome(derived) : b.outcome, LED_SPINE_OUTCOMES, derived.via, BINDING_SOURCES),
     sourceId: sourceId ?? '',
     via: derived.via.join('+'),
     ...letters,
@@ -192,6 +155,7 @@ function settleRow(
   const d = b.derived;
   const outcomes: KeyedOutcome[] = [
     ...refusedCandidates(key, 'spine', d),
+    ...identityWitnessed(key, 'spine', d),
     ...unweighedCandidates(key, [{ d, cites: [] }]),
     ...d.weighedNullGMag.map((c): KeyedOutcome => ({
       key, outcome: { kind: 'weighed-null-g', sourceId: c.sourceId, via: c.via.join('+') },
@@ -209,7 +173,7 @@ function settleRow(
         kind: 'disposition', outcome: dispositionOf(disposition),
         queue: isQueuedOutcome(b.outcome) ? 'queued' : 'settled',
         keep: disposition.keep_source_id, basis: disposition.basis,
-        review: bindingReviewCells(row, b, tables),
+        review: bindingReviewCells(row, b.derived, b.gate, tables),
       },
     });
   }

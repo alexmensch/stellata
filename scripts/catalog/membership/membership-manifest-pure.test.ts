@@ -236,6 +236,7 @@ function gateEvidence(
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: gateEvidence(tables),
+  positions: { hipparcos: () => null, gaia: () => null },
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   simbadTycHd: new Map<string, SimbadTycHdRow>(),
@@ -258,7 +259,7 @@ describe('buildMembership — the spine side', () => {
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(derivation(result)).toEqual({
-      bound: 3, rescued: 0, refused: 2, contested: 0, collision: 0, sol: 1,
+      bound: 3, rescued: 0, identified: 0, refused: 2, contested: 0, collision: 0, unconfirmed: 0, sol: 1,
     });
     expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
     expect(codes(result)['binding.consensus']).toBe(1);
@@ -513,7 +514,7 @@ describe('buildMembership — the spine side', () => {
     expect(row.binding).toBe('none');
     expect(result.bindingReview).toEqual([]);
     expect(totals(result).reviewRows).toBe(0);
-    expect(totals(result).reviewByVerdict).toEqual({ contested: 0, collision: 0, disposed: 0 });
+    expect(totals(result).reviewByVerdict).toEqual({ contested: 0, collision: 0, unconfirmed: 0, disposed: 0 });
   });
 
   it('carries the label merge onto the row and attests the merged cells', () => {
@@ -1204,7 +1205,7 @@ describe('membership lineage', () => {
     const summary = membershipSummary(folded(result), result.derived);
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
-    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
+    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, identified ${d.identified}, refused ${d.refused}`);
     const fieldLines = summary.split('\n').filter((l) => /^  \S/.test(l)).map((l) => l.trim().split(' ')[0]);
     expect(fieldLines).toEqual([...LABEL_FIELDS]);
   });

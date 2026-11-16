@@ -7,23 +7,41 @@ import {
   rowGateEvidence,
   type BindingCells,
   type DerivedBinding,
+  type PositionEvidence,
   type RankedCandidate,
   type RowGateEvidence,
 } from './binding-derivation-pure';
-import type { BindingEvidence } from './binding-gate-pure';
+import type { BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution } from './binding-gate-pure';
+import type { SimbadXids } from '../../spectral/spectral-resolve';
+import { intCell } from '../../../util/tsv/table-pure';
+import { joinManifestValues } from '../membership-manifest-tsv';
 import type { PrimaryIndex, PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { OwnCandidate, OwnCandidateReason } from '../ledger-rows-pure';
-import type { KeyedOutcome, RefusalSubject } from '../membership-lineage-pure';
+import type { BindingReviewCells, KeyedOutcome, RefusalSubject } from '../membership-lineage-pure';
 
 export type RowDeriver = (row: BindingCells) => { derived: DerivedBinding; gate: RowGateEvidence };
 
 /** The one derivation every primaries row — spine or addition — binds through. */
-export function rowDeriver(tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence): RowDeriver {
+export function rowDeriver(
+  tables: PrimaryTables, idx: PrimaryIndex, evidence: BindingEvidence, positions: PositionEvidence,
+): RowDeriver {
   const simbad = indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless);
   return (row) => {
-    const gate = rowGateEvidence(row, evidence, simbad);
+    const gate = rowGateEvidence(row, evidence, simbad, positions);
     return { derived: deriveBinding(bindingCandidates(row, tables, idx.cns5ByOwnKey, simbad), gate), gate };
   };
+}
+
+/** A winning derivation's outcome: bound outright, or by the witness that rescued it. */
+export function boundOutcome(d: DerivedBinding): 'bound' | 'rescued' | 'identified' {
+  if (d.rescue === null) return 'bound';
+  return d.rescue === 'component' ? 'rescued' : 'identified';
+}
+
+/** The identity witness's evidence, wherever it named a refused candidate. */
+export function identityWitnessed(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
+  if (d.identity === null) return [];
+  return [{ key, outcome: { kind: 'identity-witness', subject, ...d.identity } }];
 }
 
 /** The sources more than one row or group reaches. */
@@ -107,4 +125,54 @@ export function unweighedCandidates(
   return [...bySource].map(([sourceId, { via, items }]): KeyedOutcome => ({
     key, outcome: { kind: 'candidate-unweighed', sourceId, via, items: [...items].sort() },
   }));
+}
+
+function xidsCell(xids: SimbadXids | undefined): string {
+  if (xids === undefined) return '';
+  const parts: string[] = [];
+  if (xids.hip !== null) parts.push(`hip:${xids.hip}`);
+  if (xids.tyc !== null) parts.push(`tyc:${xids.tyc}`);
+  if (xids.gj !== null) parts.push(`gj:${xids.gj}`);
+  return joinManifestValues(parts);
+}
+
+function magCell(value: number | null): string {
+  return value === null ? '' : value.toFixed(3);
+}
+
+/** The designations a review row is keyed and read on. */
+export type ReviewKeyCells = Pick<BindingReviewCells, 'tyc' | 'hip' | 'hd' | 'hr' | 'gl'>;
+
+/** A review-queue row's evidence: what the derivation weighed, refused and reached. */
+export function bindingReviewCells(
+  cells: ReviewKeyCells, derived: DerivedBinding, gate: RowGateEvidence, tables: PrimaryTables,
+): BindingReviewCells {
+  const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
+  const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
+  const candidates = derived.ranked.flatMap((c) => c.via.map((v) => `${v}:${c.sourceId}`));
+  return {
+    tyc: cells.tyc, hip: cells.hip, hd: cells.hd, hr: cells.hr, gl: cells.gl,
+    derived_source_id: derived.sourceId ?? '',
+    derived_via: derived.via.join('+'),
+    candidates: joinManifestValues(candidates),
+    rejected: joinManifestValues(derived.rejected.map((r) => `${r.sourceId}:${r.reason}`)),
+    v_mag: magCell(gate.printedV?.vMag ?? null),
+    v_via: gate.printedV?.vVia ?? '',
+    derived_g: gOf(derived.sourceId),
+    derived_simbad: xidsOf(derived.sourceId),
+  };
+}
+
+function wdsLetters(attributions: readonly WdsComponentAttribution[] | undefined): string {
+  return joinManifestValues((attributions ?? []).map((a) => `${a.wdsId}:${a.component}`));
+}
+
+/** SIMBAD's WDS component letters for the derived source and for the row's HIP. */
+export function reviewLetters(
+  sourceId: string | null, hip: string, xids: SimbadWdsXidIndex | null,
+): { sourceLetters: string; hipLetters: string } {
+  return {
+    sourceLetters: sourceId === null ? '' : wdsLetters(xids?.bySource.get(sourceId)),
+    hipLetters: wdsLetters(xids?.byHip.get(intCell(hip) ?? -1)),
+  };
 }

@@ -34,7 +34,7 @@ export interface AdditionLedgerRow extends RecordIdentifiers {
   reason: AdditionReason | ComponentReason;
 }
 
-export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
+export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'unconfirmed', 'disposed'] as const;
 export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
 export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
 
