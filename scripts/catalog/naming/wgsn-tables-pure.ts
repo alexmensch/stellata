@@ -1,12 +1,12 @@
-// The WGSN tables' row shaping and the IV/27A Bayer union. See README.md.
+// The WGSN tables' row shaping and the Bayer tail unions, IV/27A then V/50. See README.md.
 
-import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
-import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
+import { crossIndexHipsByHd, type Bsc5Row, type CrossIndexRow } from '../classic-ids/classic-ids-parse';
+import { normaliseBsc5Bayer, normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export const DESIGNATION_KINDS = ['bayer', 'flamsteed', 'gould'] as const;
-export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a'] as const;
+export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a', 'v50'] as const;
 
 export interface DesignationRow {
   kind: (typeof DESIGNATION_KINDS)[number];
@@ -55,25 +55,39 @@ export function designationFromCell(
   return null;
 }
 
-/** Built once before the IV/27A union to decide what the tail adds, and
- *  again after it to measure spine coverage. */
+type StarKeys = Pick<DesignationRow, 'hip' | 'hr' | 'hd'>;
+const STAR_KEYS = ['hip', 'hr', 'hd'] as const;
+
+/** Which stars a set of Bayer rows already reaches, by any of their keys. */
 export function bayerKeySets(rows: DesignationRow[]): {
-  reaches: (hip: number | null, hd: number | null) => boolean;
+  reaches: (keys: StarKeys) => boolean;
 } {
-  const hips = new Set<number>();
-  const hds = new Set<number>();
+  const reached = { hip: new Set<number>(), hr: new Set<number>(), hd: new Set<number>() };
   for (const d of rows) {
     if (d.kind !== 'bayer') continue;
-    if (d.hip !== null) hips.add(d.hip);
-    if (d.hd !== null) hds.add(d.hd);
+    for (const k of STAR_KEYS) {
+      const v = d[k];
+      if (v !== null) reached[k].add(v);
+    }
   }
   return {
-    reaches: (hip, hd) =>
-      (hd !== null && hds.has(hd)) || (hip !== null && hips.has(hip)),
+    reaches: (keys) => STAR_KEYS.some((k) => {
+      const v = keys[k];
+      return v !== null && reached[k].has(v);
+    }),
   };
 }
 
-export interface Iv27aUnion {
+/** One tail source's Bayer cell, normalised. `reach` is every key set a
+ *  primary links the star to, which can be wider than the keys the row ships
+ *  under; the cell is covered if any of them is reached. */
+export interface BayerTailCell {
+  cell: NormalisedCell;
+  keys: StarKeys;
+  reach: readonly StarKeys[];
+}
+
+export interface BayerTail {
   added: DesignationRow[];
   cells: number;
   covered: number;
@@ -81,28 +95,47 @@ export interface Iv27aUnion {
   unparsed: number;
 }
 
-export function unionIv27aBayer(
-  wgsnDesignations: DesignationRow[],
-  crossIndex: CrossIndexRow[],
-): Iv27aUnion {
-  const reached = bayerKeySets(wgsnDesignations);
-  const union: Iv27aUnion = {
+/** A tail row is added only where no Bayer row above it reaches the star. */
+export function unionBayerTail(
+  above: DesignationRow[],
+  cells: Iterable<BayerTailCell>,
+  source: Exclude<DesignationRow['source'], 'nec' | 'faints'>,
+): BayerTail {
+  const reached = bayerKeySets(above);
+  const tail: BayerTail = {
     added: [], cells: 0, covered: 0, variableRejected: 0, unparsed: 0,
   };
-  for (const row of crossIndex) {
-    if (row.bayer === null || row.cst === null) continue;
-    union.cells++;
-    const n = normaliseIv27aBayer(row.bayer, row.cst);
-    if (n.class === 'variable') { union.variableRejected++; continue; }
-    if (n.class !== 'bayer') { union.unparsed++; continue; }
-    if (reached.reaches(row.hip, row.hd)) { union.covered++; continue; }
-    union.added.push(designationRow(
-      'bayer',
-      { ...n.bayer, dc: row.cst, component: null },
-      { hip: row.hip, hr: null, hd: row.hd, source: 'iv27a' },
-    ));
+  for (const { cell, keys, reach } of cells) {
+    if (cell.class === 'empty') continue;
+    tail.cells++;
+    if (cell.class === 'variable') { tail.variableRejected++; continue; }
+    if (cell.class !== 'bayer') { tail.unparsed++; continue; }
+    if (reach.some(reached.reaches)) { tail.covered++; continue; }
+    tail.added.push(designationRow('bayer', { ...cell.bayer, component: null }, { ...keys, source }));
   }
-  return union;
+  return tail;
+}
+
+export function iv27aBayerCells(crossIndex: readonly CrossIndexRow[]): BayerTailCell[] {
+  return crossIndex.flatMap((row) => {
+    if (row.bayer === null || row.cst === null) return [];
+    const keys = { hip: row.hip, hr: null, hd: row.hd };
+    return [{ cell: normaliseIv27aBayer(row.bayer, row.cst), keys, reach: [keys] }];
+  });
+}
+
+/** README.md#the-union-policy: a V/50 row reaches through IV/27A's HIP. */
+export function bsc5BayerCells(
+  bsc5: readonly Bsc5Row[],
+  crossIndex: readonly CrossIndexRow[],
+): BayerTailCell[] {
+  const hipsByHd = crossIndexHipsByHd(crossIndex);
+  return bsc5.flatMap((row) => {
+    if (row.name === null) return [];
+    const keys = { hip: null, hr: row.hr, hd: row.hd };
+    const linked = row.hd === null ? [] : hipsByHd.get(row.hd) ?? [];
+    return [{ cell: normaliseBsc5Bayer(row.name), keys, reach: [keys, ...linked.map((hip) => ({ ...keys, hip }))] }];
+  });
 }
 
 /** Every field participates: a comparator that ties leaves the committed

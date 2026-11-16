@@ -1746,7 +1746,6 @@ gaia:6071671369457586688	HD 108925	γ Cru	yes
 gaia:6073719656523326848	HIP 62861	148 G. Cen	yes
 gaia:6073847509116962944	V823 Cen	155 G. Cen	yes
 gaia:6074161385328709120	HIP 62821	147 G. Cen	yes
-gaia:607464716759460480	π¹ Cnc	81 Cnc	no
 gaia:6075027731770280960	HIP 62703	142 G. Cen	yes
 gaia:6075953898506794496	NSV 05544	F Cen	yes
 gaia:6077604196752635648	HIP 60710	G Cen	yes
@@ -2694,9 +2693,9 @@ synth:synth-09099+5429-B	HIP 44998 B	XY UMa B	no
 synth:synth-09099-3022-B	Eps Pyx B	ε Pyx B	yes
 synth:synth-09099-3022-C	Eps Pyx C	ε Pyx C	yes
 synth:synth-09109+6331-Ab	Tau UMa Ab	τ UMa Ab	yes
-synth:synth-09123+1500-Ab	Pi-1 Cnc Ab	81 Cnc Ab	no
-synth:synth-09123+1500-E	Pi-1 Cnc E	81 Cnc E	no
-synth:synth-09123+1500-Eb	Pi-1 Cnc Eb	81 Cnc Eb	no
+synth:synth-09123+1500-Ab	Pi-1 Cnc Ab	π¹ Cnc Ab	no
+synth:synth-09123+1500-E	Pi-1 Cnc E	π¹ Cnc E	no
+synth:synth-09123+1500-Eb	Pi-1 Cnc Eb	π¹ Cnc Eb	no
 synth:synth-09125-4337-Ab	HIP 45189 Ab	KL Vel Ab	no
 synth:synth-09150-3736-B	HIP 45386 B	k¹ Vel B	no
 synth:synth-09156-5458-C	HIP 45434 C	NSV 18165 C	no
