@@ -129,6 +129,12 @@ export function stageLineageLine(codes: StageCodes<string>, row: LineageRow): Li
   return encodeLineageLine(row) as LineageLine;
 }
 
+export function stageLines(codes: StageCodes<string>, rows: Iterable<LineageRow>): LineageLine[] {
+  const lines: LineageLine[] = [];
+  for (const row of rows) lines.push(stageLineageLine(codes, row));
+  return lines;
+}
+
 function assertDeclaredRole(codes: StageCodes<string>, code: string, role: string, key: string): void {
   const declared = codes.roleOf(code);
   if (role !== declared) throw new Error(`lineage: ${code} is declared ${declared}, written ${role} (key ${key})`);

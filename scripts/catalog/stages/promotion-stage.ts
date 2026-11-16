@@ -7,7 +7,7 @@ import { recuratedRecords } from '../companions/promotion-outcome';
 import {
   PROMOTION_CODES, promotionLineage, promotionSummary,
 } from '../companions/promotion-lineage/promotion-lineage-pure';
-import { foldStageLines, stageLineageLine } from '../lineage/lineage-row-pure';
+import { foldStageLines, stageLines } from '../lineage/lineage-row-pure';
 import type { SystemVerdict } from '../multiplicity/system-coherence';
 import { enterPhase, type Records } from '../record/record-phase';
 import { anchorMovedRecords } from '../system-membership/system-membership-pure';
@@ -28,7 +28,7 @@ export function promotionStage(
   const { newStars, stats, rows, rewrites } = promoteCompanions(multiplesRows, named, inputs);
   const promoted = enterPhase('promoted', [...named, ...newStars]);
   const { lineage, identity } = promotionLineage(rows, promoted, founded, rewrites);
-  const lines = lineage.map((row) => stageLineageLine(PROMOTION_CODES, row));
+  const lines = stageLines(PROMOTION_CODES, lineage);
   const counts = foldStageLines(PROMOTION_CODES, lines);
   console.log(`  promotion decided ${rows.length} rows in ${Date.now() - t0}ms`);
   console.log(promotionSummary(counts, stats, rows.filter((r) => r.via === 'secondary').length));

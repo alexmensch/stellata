@@ -66,8 +66,12 @@ scripts/binaries/
                                   resolve (resolve/README.md#resolve-lineage),
                                   astrometry
                                   (astrometry/README.md#astrometry-lineage),
-                                  orbits (orbits/README.md#orbits-lineage)
-                                  and pairs (#pairs-lineage) lineage stages
+                                  orbits (orbits/README.md#orbits-lineage),
+                                  pairs (#pairs-lineage), anchors
+                                  (multiples/README.md#anchors-lineage)
+                                  and masses
+                                  (multiples/README.md#masses-lineage)
+                                  lineage stages
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
                                   runs the stages over the committed
@@ -77,7 +81,9 @@ scripts/binaries/
                                   byte, and runs the spot-check
                                   (pnpm run test:spotcheck,
                                   resolve/README.md#the-spot-check).
-  binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
+  binaries-outputs.ts             BINARIES_LINEAGE, the lineage stages it
+                                  writes, and BINARIES_OUTPUTS, its
+                                  declaration, derived from that list.
   pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
                                   pair row the stages decide, as the pairs
                                   lineage stage (#pairs-lineage); pairParams,
@@ -132,9 +138,12 @@ scripts/binaries/
                                   tokenLetters and subcomponentTopLetter
                                   (the root letter, where
                                   parentComponentToken is the immediate
-                                  parent); isMoreCanonicalAnchor, the
-                                  order Stage 6 and companion promotion
-                                  rank a root's anchor letter by. And the
+                                  parent); compareAnchorRank and
+                                  isMoreCanonicalAnchor, the order Stage 6
+                                  and companion promotion rank a root's
+                                  anchor letter by, and anchorRankStep,
+                                  the step of that order two tokens first
+                                  differ on. And the
                                   map keys, one branded
                                   type per key space so one cannot look up
                                   another's map: componentKey
@@ -243,8 +252,12 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    (`build/lineage/astrometry.tsv.gz`, [Astrometry lineage](astrometry/README.md#astrometry-lineage)),
    Stage 4's orbit source and passed-over candidates per pair as the `orbits`
    stage (`build/lineage/orbits.tsv.gz`, [Orbits lineage](orbits/README.md#orbits-lineage)),
-   and every pair row's fate as
-   the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
+   every pair row's fate as
+   the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)),
+   Stage 6's anchor per system as the `anchors` stage
+   (`build/lineage/anchors.tsv.gz`, [Anchors lineage](multiples/README.md#anchors-lineage))
+   and its mass source per row as the `masses` stage
+   (`build/lineage/masses.tsv.gz`, [Masses lineage](multiples/README.md#masses-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
    runs Stages 1–2 itself and unions them into the one astrometry request
    (`../catalog/astrometry-request/`). Every output lands through `emitArtifacts`

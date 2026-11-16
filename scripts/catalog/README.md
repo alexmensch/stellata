@@ -129,10 +129,10 @@ scripts/catalog/
                                   (system-membership.json among them),
                                   the row-index map, the two committed
                                   ledgers, the catalogue's SID registry
-                                  partition (registryFiles), placement's,
-                                  brightness-colour's, size's, coherence's,
-                                  promotion's, allocation's and naming's
-                                  lineage files, and
+                                  partition (registryFiles), the files of
+                                  CATALOG_LINEAGE, the one list of its
+                                  eight lineage stages
+                                  (stagesOutputFiles), and
                                   the transport chunks and the lineage
                                   baseline and diff as families, the last
                                   two unstamped. Side-effect free, so a reader can

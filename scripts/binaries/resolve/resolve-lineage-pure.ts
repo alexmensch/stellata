@@ -1,7 +1,7 @@
 // Stage 2's decisions per WDS component as the resolve lineage stage: its tier, each candidate a cascade gate refused, its part in each audit verdict. See README.md#resolve-lineage.
 
 import {
-  foldStageLines, lineageLineCode, lineageLineParams, parseParams, stageLineageLine, stageRow,
+  foldStageLines, lineageLineCode, lineageLineParams, parseParams, stageLines, stageRow,
   type LineageLine, type LineageParams, type LineageRow,
 } from '../../catalog/lineage/lineage-row-pure';
 import {
@@ -103,14 +103,16 @@ function touchParams({ verdict, sourceId }: VerdictTouch): LineageParams {
   };
 }
 
-/** A component's Gaia source bare and its HIP as `hip:`, where bound: the forms trace matches a query on. */
-export function componentIdParams(c: Pick<ResolvedComponent, 'gaia' | 'hip'>): LineageParams {
-  const gaia = valueOf(c.gaia);
-  const hip = valueOf(c.hip);
+/** A Gaia source bare and a HIP as `hip:`, where bound: the forms trace matches a query on. */
+export function idParams(gaia: string | null, hip: number | null): LineageParams {
   return {
     ...(gaia === null ? {} : { gaia }),
     ...(hip === null ? {} : { hip: hipDesignation(hip) }),
   };
+}
+
+export function componentIdParams(c: Pick<ResolvedComponent, 'gaia' | 'hip'>): LineageParams {
+  return idParams(valueOf(c.gaia), valueOf(c.hip));
 }
 
 export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): Generator<LineageRow> {
@@ -127,9 +129,7 @@ export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusa
 }
 
 export function resolveLineageLines(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of resolveLineageRows(result)) lines.push(stageLineageLine(RESOLVE_CODES, row));
-  return lines;
+  return stageLines(RESOLVE_CODES, resolveLineageRows(result));
 }
 
 const AUDIT_BY_CODE: ReadonlyMap<string, AuditCode> = new Map(

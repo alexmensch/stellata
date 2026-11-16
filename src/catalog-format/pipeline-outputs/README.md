@@ -47,13 +47,15 @@ repo-relative, so an outputs module passes them as they are.
   row-index map and pair ends, and the binaries binding audit's verdicts.
 - `lineage-files.ts` — the lineage layout under a build folder
   (`lineage/`, `lineage.previous/`, `lineage-diff/`; `LINEAGE_REPO_LAYOUT`
-  is the checkout's own), each stage's spec (`BINDING_LINEAGE`, `RESOLVE_LINEAGE`, `ASTROMETRY_LINEAGE`, `ORBITS_LINEAGE`, `PAIRS_LINEAGE`, `CLASSIC_IDS_LINEAGE`, `MEMBERSHIP_LINEAGE`,
+  is the checkout's own), each stage's spec (`BINDING_LINEAGE`, `RESOLVE_LINEAGE`, `ASTROMETRY_LINEAGE`, `ORBITS_LINEAGE`, `PAIRS_LINEAGE`, `ANCHORS_LINEAGE`, `MASSES_LINEAGE`, `CLASSIC_IDS_LINEAGE`, `MEMBERSHIP_LINEAGE`,
   `PLACEMENT_LINEAGE`, `BRIGHTNESS_COLOUR_LINEAGE`, `SIZE_LINEAGE`, `COHERENCE_LINEAGE`, `PROMOTION_LINEAGE`, `OVERLAP_LINEAGE`,
   `ALLOCATION_LINEAGE`, `NAMING_LINEAGE`, `RUNTIME_PAIRS_LINEAGE`, and the
   sibling builds' `CLOUDS_ALLOCATION_LINEAGE` and
   `LOCAL_GROUP_ALLOCATION_LINEAGE` from `siblingAllocationLineage`: the stage
   name and its file stems), the file names, and `stageOutputFiles` /
-  `stageFamilies`, a stage's files as output declarations. Each stage's codes
+  `stageFamilies`, a stage's files as output declarations, with
+  `stagesOutputFiles` for a list of stages, typed so a build that writes the
+  list's emissions fails to compile when one is left out. Each stage's codes
   stay with its stage module; the absolute layout the readers and writers use
   is `/scripts/catalog/lineage/lineage-layout-pure.ts`'s. The contract is
   [Run-to-run diff](/scripts/catalog/lineage/README.md#run-to-run-diff).

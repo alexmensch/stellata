@@ -1,6 +1,6 @@
 // Display naming as a lineage stage: its reason codes and the one serialiser over each record's naming outcome. See README.md#naming-lineage.
 
-import { paramsOf, stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow } from '../lineage/lineage-row-pure';
+import { paramsOf, stageLines, type LineageLine, type LineageParams, type LineageRow, stageRow } from '../lineage/lineage-row-pure';
 import {
   outcomeCode, refusalCode, retired, stageCodes, type CodeDeclaration, type LIVE, type StageCounts,
 } from '../lineage/reason-codes/reason-codes-pure';
@@ -240,7 +240,5 @@ export function namingLineageLines(
   stars: Sorted<NamingLineageRecord>,
   constellations: readonly { code: string }[],
 ): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of namingLineageRows(records, stars, constellations)) lines.push(stageLineageLine(NAMING_CODES, row));
-  return lines;
+  return stageLines(NAMING_CODES, namingLineageRows(records, stars, constellations));
 }

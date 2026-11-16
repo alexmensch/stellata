@@ -1,6 +1,6 @@
 // Each multiples.tsv component's Gaia and HIP binding provenance as a lineage stage: its reason codes and the one serialiser. See README.md#binding-lineage.
 
-import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
+import { stageLines, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, type CodeDeclaration, type StageCounts } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { hipDesignation } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
@@ -57,7 +57,5 @@ export function* bindingLineageRows(records: readonly MultiplesRecord[]): Genera
 }
 
 export function bindingLineageLines(records: readonly MultiplesRecord[]): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of bindingLineageRows(records)) lines.push(stageLineageLine(BINDING_CODES, row));
-  return lines;
+  return stageLines(BINDING_CODES, bindingLineageRows(records));
 }

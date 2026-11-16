@@ -47,6 +47,19 @@ allocation.parked	allocation	park	outcome	live		7.1.8	A SID no object keeps any 
 allocation.reinstated	allocation	none	outcome	live		7.1.8	The object's same-as class reaches only one retired SID, which returns to service.
 allocation.resolved	allocation	none	outcome	live		7.1.8	The object's same-as class reaches one SID in service, which it keeps.
 allocation.retired	allocation	retire	outcome	live		7.1.8	A SID no object keeps any more leaves service under its upstream decision's code.
+anchors.binding.bound	anchors	none	outcome	live		7.1.30	The anchor is a primary binding a Gaia source or HIP, so companion promotion can anchor on it.
+anchors.binding.no-bound-primary	anchors	none	outcome	live		7.1.30	No primary of the system binds a Gaia source or HIP, though a secondary does, so promotion has no anchor for it.
+anchors.binding.nothing-bound	anchors	none	outcome	live		7.1.30	No component of the system binds a Gaia source or HIP.
+anchors.binding.promotion-anchor-unreached	anchors	none	outcome	live		7.1.30	The anchor binds no Gaia source or HIP, and the anchor's chain never reaches the most canonical primary that does, so promotion refuses every offset of the system.
+anchors.binding.re-basable	anchors	none	outcome	live		7.1.30	The anchor binds no Gaia source or HIP; the most canonical primary that does, which promotion anchors on, is reached by the anchor's chain, so promotion re-bases every offset onto it.
+anchors.binding.unplaced	anchors	none	outcome	live		7.1.30	Stage 6 placed none of the system's kept pairs, so it has no rows.
+anchors.chosen.alphabetical	anchors	none	outcome	live		7.1.30	The system's anchor: its most canonical kept-pair primary, ahead of the next on alphabetical order.
+anchors.chosen.length	anchors	none	outcome	live		7.1.30	The system's anchor: its most canonical kept-pair primary, ahead of the next on its token length, a shallower component.
+anchors.chosen.letter	anchors	none	outcome	live		7.1.30	The system's anchor: its most canonical kept-pair primary, ahead of the next on its top-level letter.
+anchors.chosen.sole	anchors	none	outcome	live		7.1.30	The system's anchor: its only kept-pair primary.
+anchors.ranked-out.alphabetical	anchors	none	refused	live		7.1.30	A kept-pair primary the anchor outranked on alphabetical order.
+anchors.ranked-out.length	anchors	none	refused	live		7.1.30	A kept-pair primary the anchor outranked on its token length, a shallower component.
+anchors.ranked-out.letter	anchors	none	refused	live		7.1.30	A kept-pair primary the anchor outranked on its top-level letter.
 astrometry.refused.athyg-match-sibling-claimed	astrometry	none	refused	live		7.1.30	An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
 astrometry.route.athyg-position	astrometry	none	outcome	live		7.1.30	An AT-HYG row matched on position, the Gaia / HIP2 cascade having reached nothing.
 astrometry.route.gaia-5p	astrometry	none	outcome	live		7.1.30	The component's own Gaia 5p row.
@@ -149,6 +162,16 @@ component-binding.hip.inherited.parent	component-binding	none	outcome	live		7.1.
 component-binding.hip.inherited.partner	component-binding	none	outcome	live		7.1.23	The component's HIP number is copied from its pair's primary at a measured or unmeasured ρ.
 component-binding.hip.own	component-binding	none	outcome	live		7.1.23	The component bound its HIP number itself.
 component-binding.hip.unbound	component-binding	none	outcome	live		7.1.23	The component has no HIP number.
+masses.not-read	masses	none	outcome	live		7.1.30	Stage 6 read no mass for the component: no orbit, or one whose q is published and whose a is published or not estimated.
+masses.read.carbon-wr	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the carbon / S / Wolf-Rayet default mass.
+masses.read.giant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the giant table of Cox 2000 (/data/papers/index.md#cox2000).
+masses.read.main-sequence	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type a dwarf or subdwarf.
+masses.read.main-sequence-assumed	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type stating no luminosity class.
+masses.read.no-type	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass and found no spectral type, so none: no q comes from spectra, and a Kepler a takes the default primary mass.
+masses.read.subgiant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the subgiant weighting of the giant and main-sequence tables.
+masses.read.supergiant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the supergiant table of Cox 2000 (/data/papers/index.md#cox2000).
+masses.read.unparsed	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass and found a spectral type the parser cannot read, so none: no q comes from spectra, and a Kepler a takes the default primary mass.
+masses.read.white-dwarf	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the white-dwarf default mass.
 membership.addition-binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
 membership.addition-binding.bound.cns5	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is CNS5.
 membership.addition-binding.bound.hip	membership	none	outcome	live		7.1.20	The addition group's own Gaia source survives both gates and is no other record's. The highest-precedence source proposing the winner is the Gaia HIP cross-match.

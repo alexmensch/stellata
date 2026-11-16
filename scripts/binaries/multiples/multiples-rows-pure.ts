@@ -10,7 +10,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { pairSystemId } from '../multiples-row-key-pure';
-import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
+import { massOf, massRatio, spectralMass, type SpectralMass } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
 import { ownGaia, valueOf, type DecomposedPair, type ResolvedComponent } from '../resolve/components-pure';
@@ -123,13 +123,43 @@ const NO_ORBIT_FIELDS: OrbitFields = {
   pDays: null, tJd: null, e: null, aAU: null, iRad: null, omegaRad: null, OmegaRad: null, q: null, aVia: 'none',
 };
 
+/** A component's spectral-type mass as Stage 6 read it, and what became of it. */
+export interface MassRead {
+  readonly mass: SpectralMass;
+  /** Read for the q backfill: `fed` when both sides had a mass, so q came from them. */
+  readonly q: 'fed' | 'unfed' | null;
+  /** Read for a Kepler a that was written: `default` when the primary mass default stood in. */
+  readonly a: 'fed' | 'default' | null;
+}
+
+/** Each side's mass as Stage 6 read it; null where it read none. */
+export interface PairMassReads {
+  readonly primary: MassRead | null;
+  readonly secondary: MassRead | null;
+}
+
+const NO_MASS_READS: PairMassReads = { primary: null, secondary: null };
+
+export interface PairOrbitFields {
+  readonly fields: OrbitFields;
+  readonly masses: PairMassReads;
+}
+
 /** The orbit's elements, q backfilled from both spectral types, then — on
  *  the estimated-element routes only — q, a circular ω and a Kepler a
  *  backstopped: README.md#what-each-column-carries */
-export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpect: string): OrbitFields {
-  if (orbit.orbitVia === 'none') return NO_ORBIT_FIELDS;
+export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpect: string): PairOrbitFields {
+  if (orbit.orbitVia === 'none') return { fields: NO_ORBIT_FIELDS, masses: NO_MASS_READS };
   const el = orbit.elements;
-  let q = el.q ?? massRatioFromComponents(primarySpect, secondarySpect);
+  const primaryMass = spectralMass(primarySpect);
+  const secondaryMass = spectralMass(secondarySpect);
+  let qUse: MassRead['q'] = null;
+  let aUse: MassRead['a'] = null;
+  let q = el.q;
+  if (q === null) {
+    q = massRatio(primaryMass, secondaryMass);
+    qUse = q === null ? 'unfed' : 'fed';
+  }
   let omegaRad = el.periastronRad;
   let aAU = el.aAu;
   let aVia: MultiplesRecord['aVia'] = aAU === null ? 'none' : 'catalog';
@@ -137,15 +167,21 @@ export function orbitFields(orbit: PairOrbit, primarySpect: string, secondarySpe
     q ??= UNKNOWN_COMPANION_MASS_RATIO_Q;
     if (omegaRad === null && el.e === 0) omegaRad = CIRCULAR_ORBIT_OMEGA_RAD;
     if (aAU === null && el.pDays !== null) {
-      const mPrimary = massFromSpectralClass(primarySpect) ?? DEFAULT_PRIMARY_MASS_MSUN;
-      const kepler = keplerSemimajorAxisAu(el.pDays, mPrimary / (1.0 - q));
+      const own = massOf(primaryMass);
+      const kepler = keplerSemimajorAxisAu(el.pDays, (own ?? DEFAULT_PRIMARY_MASS_MSUN) / (1.0 - q));
       if (kepler !== null) {
         aAU = kepler;
         aVia = 'kepler_mass_estimate';
+        aUse = own === null ? 'default' : 'fed';
       }
     }
   }
-  return { pDays: el.pDays, tJd: el.tJd, e: el.e, aAU, iRad: el.iRad, omegaRad, OmegaRad: el.nodeRad, q, aVia };
+  const read = (mass: SpectralMass, uses: Pick<MassRead, 'q' | 'a'>): MassRead | null =>
+    (uses.q === null && uses.a === null ? null : { mass, ...uses });
+  return {
+    fields: { pDays: el.pDays, tJd: el.tJd, e: el.e, aAU, iRad: el.iRad, omegaRad, OmegaRad: el.nodeRad, q, aVia },
+    masses: { primary: read(primaryMass, { q: qUse, a: aUse }), secondary: read(secondaryMass, { q: qUse, a: null }) },
+  };
 }
 
 function geometryFields(p: DecomposedPair, mags: PairMagnitudes): Pick<
@@ -162,7 +198,7 @@ function anchorFields(
 ): Pick<MultiplesRecord, 'anchorSepArcsec' | 'anchorPaDeg' | 'anchorComp'> {
   const offset = anchors.offsets.get(componentKey(wdsId, tok));
   return {
-    anchorSepArcsec: offset?.sepArcsec ?? null, anchorPaDeg: offset?.paDeg ?? null, anchorComp: anchors.anchorBySystem.get(wdsId) ?? null,
+    anchorSepArcsec: offset?.sepArcsec ?? null, anchorPaDeg: offset?.paDeg ?? null, anchorComp: anchors.choices.get(wdsId)?.pair.primary.component ?? null,
   };
 }
 
@@ -175,6 +211,7 @@ export interface PairRows {
   readonly rows: readonly [MultiplesRecord, MultiplesRecord];
   /** The pair's magnitudes came from the MSC: WDS printed none. */
   readonly mscMags: boolean;
+  readonly masses: PairMassReads;
 }
 
 /** A kept pair's two records; null when neither side nor the system has a position. */
@@ -194,11 +231,12 @@ export function pairRows(
   }, indices);
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);
+  const { fields, masses } = orbitFields(orbit, pri.spect, sec.spect);
   const shared = {
     systemId: pairSystemId(p.pair),
     regime: ORBIT_VIA_PROPERTIES[orbit.orbitVia].regime,
     orbitVia: orbit.orbitVia,
-    ...orbitFields(orbit, pri.spect, sec.spect),
+    ...fields,
     ...geometryFields(p, mags),
   };
   return {
@@ -207,6 +245,7 @@ export function pairRows(
       { ...shared, ...sec, orbitRole: 'secondary', ...anchorFields(wdsId, sTok, anchors) },
     ],
     mscMags: mags.source === 'msc',
+    masses,
   };
 }
 

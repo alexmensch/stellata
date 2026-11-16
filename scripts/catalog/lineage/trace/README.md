@@ -60,5 +60,6 @@ refused a source no identity row carries, every component row of a promoted syst
 designation, each component's binding provenance (its own, or copied from a
 named token), a rebound component's resolve tier and the candidate the audit
 refused it, a component's astrometry route, a pair's orbit source and the
-candidate it passed over, the components holding a Gaia source no identity row carries, a
+candidate it passed over, a system's anchor and the primary it outranked from
+that primary's Gaia source, a component's mass source, the components holding a Gaia source no identity row carries, a
 WDS pair the binaries pipeline rejected from a Gaia source one side carries, a minted companion's absmag-source, colour and A_V rows, the pass that set a snapped member's, a dimmed anchor's and a minted companion's shipped radius and absmag, and a cloud from its `cloud:` slug.

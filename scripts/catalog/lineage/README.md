@@ -37,7 +37,8 @@ scripts/catalog/lineage/
                                  a row's stage and role from its codes;
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare
-                                 or a row in another role than its code's;
+                                 or a row in another role than its code's,
+                                 and stageLines, it over a stage's rows;
                                  sortUtf8, the one order the stage lines,
                                  identity and SID files, reason-code list
                                  and trace keys sort by; and
@@ -67,7 +68,9 @@ scripts/catalog/lineage/
                                  count block; namedStageRun, the run of
                                  a stage whose lines file is named for it,
                                  which build:catalog and build:binaries
-                                 build their stages with.
+                                 build their stages with; mergedEmissions,
+                                 several stages' emissions as one
+                                 emitArtifacts part.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -86,6 +89,7 @@ scripts/catalog/lineage/
                                  a code is seeded, so each counted stage pins
                                  that a new code reaches the snapshot.
   lineage-core-pure.test.ts      Order, writer refusal, diff.
+  stage-merge.test.ts            stagesOutputFiles and mergedEmissions.
   lineage-rotation.test.ts       Rotation over a scratch build/: a failed or
                                  absent emission moves nothing, another
                                  stage's files are never touched.
@@ -191,6 +195,11 @@ Astrometry's (`ASTROMETRY_INVARIANTS`): named rows alone for
 Orbits' (`ORBITS_INVARIANTS`): named rows alone for the four
 `passed.*.unreadable` codes
 ([Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage)).
+Anchors' (`ANCHORS_INVARIANTS`): named rows alone for
+`binding.promotion-anchor-unreached`
+([Anchors lineage](/scripts/binaries/multiples/README.md#anchors-lineage)).
+Masses' (`MASSES_INVARIANTS`): named rows alone for `read.unparsed`
+([Masses lineage](/scripts/binaries/multiples/README.md#masses-lineage)).
 Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
 `dropped.duplicate-relation`
 ([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
@@ -351,9 +360,24 @@ verdict, a position-less drop — keyed on the row that founded the pair. Its
 contract lives beside its module, in
 [Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
 
+## The anchors stage
+
+`build:binaries` writes it after pairs: each system's Stage 6 anchor, the
+kept primaries it outranked with the rank step, and whether promotion can
+anchor on it, keyed on the anchor's `multiples.tsv` row. Its contract lives
+beside its module, in
+[Anchors lineage](/scripts/binaries/multiples/README.md#anchors-lineage).
+
+## The masses stage
+
+`build:binaries` writes it after anchors: each `multiples.tsv` row's
+spectral-type mass, the branch it was read off and what it fed, keyed on the
+row. Its contract lives beside its module, in
+[Masses lineage](/scripts/binaries/multiples/README.md#masses-lineage).
+
 ## The classic-ids stage
 
-`build:classic-ids` is the stage after pairs, run before membership; its contract
+`build:classic-ids` is the stage after masses, run before membership; its contract
 lives beside its module, in [Classic-ID lineage](../classic-ids/README.md#classic-id-lineage).
 
 ## The membership stage

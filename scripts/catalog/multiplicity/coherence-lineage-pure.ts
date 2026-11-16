@@ -1,7 +1,7 @@
 // System distance coherence as a lineage stage: its reason codes and the one serialiser over its verdicts. See README.md#coherence-lineage.
 
 import {
-  stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow,
+  stageLines, stageRow, type LineageLine, type LineageParams, type LineageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, stageCodes, retired, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { emptyTallyPartition } from '../../util/counts/tally-pure';
@@ -203,7 +203,5 @@ export function* coherenceLineageRows(verdicts: readonly SystemVerdict[], stars:
 
 /** Lines, never rows: the stage covers every record, so its rows are not held as objects. */
 export function coherenceLineageLines(verdicts: readonly SystemVerdict[], stars: Unsorted): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of coherenceLineageRows(verdicts, stars)) lines.push(stageLineageLine(COHERENCE_CODES, row));
-  return lines;
+  return stageLines(COHERENCE_CODES, coherenceLineageRows(verdicts, stars));
 }

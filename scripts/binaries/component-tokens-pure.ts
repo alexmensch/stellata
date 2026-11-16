@@ -1,5 +1,6 @@
 // WDS component-letter tokens on the TypeScript side. See README.md#files-in-this-area.
 
+import { ascending } from '../../src/astro-core/order-pure';
 import { splitComponents } from '../wds/wds-pure';
 
 /** The WDS id of a Stage 6 `system_id` (`<wds_id>-<components>`), or of a
@@ -77,14 +78,31 @@ export function compoundContains(a: string, b: string): boolean {
   return within(lb, la) || within(la, lb);
 }
 
-/** The more canonical of two pair primaries under one WDS root: the
- *  top-level letter decides, then token length, then alphabetical order. */
+/** The steps that rank two pair primaries under one WDS root, in order. */
+export const ANCHOR_RANK_STEPS = ['letter', 'length', 'alphabetical'] as const;
+export type AnchorRankStep = (typeof ANCHOR_RANK_STEPS)[number];
+
+/** The first rank step on which two tokens differ; null for one token. */
+export function anchorRankStep(a: string, b: string): AnchorRankStep | null {
+  if (a === b) return null;
+  if (a.charAt(0) !== b.charAt(0)) return 'letter';
+  if (a.length !== b.length) return 'length';
+  return 'alphabetical';
+}
+
+/** Pair primaries under one WDS root, most canonical first: the top-level
+ *  letter decides, then token length, then alphabetical order. */
+export function compareAnchorRank(a: string, b: string): number {
+  switch (anchorRankStep(a, b)) {
+    case null: return 0;
+    case 'letter': return ascending(a.charAt(0), b.charAt(0));
+    case 'length': return ascending(a.length, b.length);
+    case 'alphabetical': return ascending(a, b);
+  }
+}
+
 export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
-  if (candidateComp === incumbentComp) return false;
-  const branch = (comp: string) => comp.charAt(0);
-  if (branch(candidateComp) !== branch(incumbentComp)) return branch(candidateComp) < branch(incumbentComp);
-  if (candidateComp.length !== incumbentComp.length) return candidateComp.length < incumbentComp.length;
-  return candidateComp < incumbentComp;
+  return compareAnchorRank(candidateComp, incumbentComp) < 0;
 }
 
 declare const KEY_SPACE: unique symbol;

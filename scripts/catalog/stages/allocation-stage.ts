@@ -15,7 +15,7 @@ import { synthChurnReport } from '../../sid/synth-churn-pure';
 import { CATALOG_PARTITION } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import type { FileHashes } from '../../util/build-stamp';
 import type { MultiplesTsvRow } from '../companions/multiples-row';
-import { stageLineageLine } from '../lineage/lineage-row-pure';
+import { stageLines } from '../lineage/lineage-row-pure';
 import { allocatedSids, type AllocatedSids, type Sorted } from '../record/record-phase';
 import type { Star } from '../parse/stars-parse';
 import { catalogCountedStageLineage } from './catalog-stage-lineage';
@@ -72,7 +72,7 @@ function allocationFailure(
 function allocationLineage(sidObjects: readonly SidObject[], allocation: Allocated, stepInputs: FileHashes) {
   return catalogCountedStageLineage({
     spec: ALLOCATION_LINEAGE, codes: ALLOCATION_CODES,
-    lines: () => allocationLineageRows(sidObjects, allocation).map((row) => stageLineageLine(ALLOCATION_CODES, row)),
+    lines: () => stageLines(ALLOCATION_CODES, allocationLineageRows(sidObjects, allocation)),
     siblings: () => ({ [ALLOCATION_SIDS_STEM]: allocationSidsText(allocationSidRows(sidObjects, allocation.outcomes)) }),
     budget: ALLOCATION_LINEAGE_BUDGET, invariants: [], inputs: stepInputs,
   });

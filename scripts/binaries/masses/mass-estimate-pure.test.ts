@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatioFromComponents, parseSpectralType, WD_MASS_DEFAULT,
+  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatio, parseSpectralType, spectralMass, spectralText, WD_MASS_DEFAULT,
 } from './mass-estimate-pure';
+
+const qFromTypes = (a: string, b: string) => massRatio(spectralMass(a), spectralMass(b));
 
 const triple = (s: string) => {
   const p = parseSpectralType(s)!;
@@ -48,8 +50,14 @@ describe('parseSpectralType', () => {
     expect(triple('kA5hA8mF1(III)')).toEqual([3, 1, 4]);
   });
 
-  it('is null for an empty string and an unknown first letter', () => {
-    for (const s of ['', null, '   ', 'XYZ']) expect(parseSpectralType(s)).toBeNull();
+  it('is null for an unknown first letter', () => {
+    expect(parseSpectralType('XYZ')).toBeNull();
+  });
+});
+
+describe('spectralText', () => {
+  it('strips whitespace, and states no type when nothing is left', () => {
+    expect(['', null, '   ', ' K0 III '].map(spectralText)).toEqual([null, null, null, 'K0III']);
   });
 });
 
@@ -88,22 +96,33 @@ describe('massFromSpectralClass', () => {
   });
 });
 
-describe('massRatioFromComponents', () => {
+describe('spectralMass', () => {
+  it('names the branch each type is read off', () => {
+    const kinds = ['G2V', 'G2', 'G2IV', 'K0III', 'B0Ia', 'DA1.9', 'sdK5', 'WN5', 'L4', '(B8)III', '', ' ', null]
+      .map((s) => spectralMass(s).kind);
+    expect(kinds).toEqual([
+      'main_sequence', 'main_sequence_assumed', 'subgiant', 'giant', 'supergiant', 'white_dwarf', 'main_sequence',
+      'carbon_wr', 'unparsed', 'unparsed', 'no_type', 'no_type', 'no_type',
+    ]);
+  });
+});
+
+describe('massRatio', () => {
   it('reads Sirius (A1V + DA1.9) at 0.6 / (2.6 + 0.6)', () => {
-    expect(massRatioFromComponents('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
+    expect(qFromTypes('A1V', 'DA1.9')).toBeCloseTo(0.1875, 3);
   });
 
   it('reads Procyon (F5IV-V + DQZ) with the subgiant weighting', () => {
-    expect(massRatioFromComponents('F5IV-V', 'DQZ')).toBeCloseTo(0.2703, 4);
+    expect(qFromTypes('F5IV-V', 'DQZ')).toBeCloseTo(0.2703, 4);
   });
 
   it('reads α Cen (G2V + K1V)', () => {
     // The tables' value, not the truth: Pourbaix 2016 (/data/papers/index.md#pourbaix2016) measures κ = 0.4617.
-    expect(massRatioFromComponents('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
+    expect(qFromTypes('G2V', 'K1V')).toBeCloseTo(0.4318, 4);
   });
 
   it('is null when either type is unparseable', () => {
-    expect(massRatioFromComponents('', 'K1V')).toBeNull();
-    expect(massRatioFromComponents('G2V', '')).toBeNull();
+    expect(qFromTypes('', 'K1V')).toBeNull();
+    expect(qFromTypes('G2V', '')).toBeNull();
   });
 });

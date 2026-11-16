@@ -20,9 +20,18 @@ scripts/binaries/multiples/
                                     estimated-element backstops),
                                     wdsYearToJd.
   anchor-offsets-pure.ts (+ test)   computeAnchorOffsets: each system's
-                                    anchor letter and every reached
+                                    anchor choice (the anchor and every
+                                    kept primary it outranked, with the
+                                    rank step) and every reached
                                     component's offset from it;
                                     photocentreOffsets.
+  anchor-binding-pure.ts (+ test)   anchorBindings: whether each system's
+                                    anchor is a letter companion
+                                    promotion can anchor on.
+  anchors-lineage-pure.ts (+ test)  ANCHORS_CODES, anchorsLineageLines and
+                                    ANCHORS_INVARIANTS (#anchors-lineage).
+  masses-lineage-pure.ts (+ test)   MASSES_CODES, massesLineageLines and
+                                    MASSES_INVARIANTS (#masses-lineage).
   gaia-photometry-pure.ts (+ test)  gaiaPhotometryAbsmagCi: M_V and B−V from
                                     a component's own Gaia row.
   pair-photometry-pure.ts (+ test)  pairMagnitudes (WDS's, else the MSC's)
@@ -39,7 +48,25 @@ Stage 3's pair order, then the standalone rows in the SIMBAD cross-ID file's
 order. A kept pair with no position on either side and no system anchor is not
 a row; the pair itself is in `droppedNoPosition`, which the `pairs` lineage
 stage reads ([Pairs lineage](../README.md#pairs-lineage)). `mscMagFills`
-names the pairs whose magnitudes came from the MSC.
+names the pairs whose magnitudes came from the MSC. `massReads` carries every
+row, in file order, with the spectral-type mass `orbitFields` read for it and
+what became of it — or null where it read none. Read for the q backfill, `q`
+is `fed` when both sides had a mass and `unfed` when either had none (q then
+stays blank, or takes the default ⅓ on the estimated routes). Read for a
+Kepler a that was written, `a` is `fed`, or `default` when the primary had no
+mass and `DEFAULT_PRIMARY_MASS_MSUN` stood in.
+
+`anchors` holds, per system with a kept pair, its anchor choice beside a
+binding. Promotion ranks only primaries a catalogue record holds
+([Re-basing a Stage 6 offset](../../catalog/companions/placement/README.md#re-basing-a-stage-6-offset)),
+so `anchorBindings` reads, over the pairs Stage 6 placed, whether the anchor
+is a primary binding a Gaia source or HIP (`bound`); else the most canonical
+primary that is, re-basable when the anchor's chain reached it and
+`promotion_anchor_unreached` when it did not; else `no_bound_primary` when
+only a secondary binds one, `nothing_bound` when nothing does, and
+`unplaced` when Stage 6 placed none of the system's pairs. A bound Gaia
+source or HIP stands in for promotion's own test, a record the catalogue
+holds.
 
 Each record is built whole, never patched: `pairRows` composes the two
 components' own fields, the fields the pair shares (orbit, q, the backstops,
@@ -76,7 +103,62 @@ most rows; adopting the catalogue's is `stellata-hooj.43.1`.
 `../build-binaries-expected.json`, each folded through the one tally helper
 (`/scripts/util/counts/tally-pure.ts`); a populated count is the `populated`
 bucket of a two-variant fold. `../build-binaries.test.ts` holds them to the
-committed snapshot.
+committed snapshot. The anchors and masses lineage stages add no key: no
+`multiples` key counts what their codes record.
+
+## Anchors lineage
+
+`build:binaries` writes each system's anchor as the `anchors` lineage stage,
+after `pairs` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-anchors-stage)), from
+`anchors-lineage-pure.ts` over `Stage6Result.anchors`. A system founds no
+row, so its rows are keyed on the anchor's own row
+(`multiples:<system_id>/<comp>`, the first kept pair naming it primary), where
+trace already finds that component's resolve and astrometry rows; `params`
+carry each named letter's Gaia source and `hip:`, and each other letter's row
+is cited as evidence, so trace reaches the system from any primary it names.
+
+| Code | Written for |
+| --- | --- |
+| `anchors.chosen.sole` / `.letter` / `.length` / `.alphabetical` | every system, once: its anchor, and the rank step that put it ahead of the next candidate |
+| `anchors.ranked-out.<step>` | each other kept primary, with the step that put it below the anchor |
+| `anchors.binding.<kind>` | every system, once, one code per `anchorBindings` kind ([The shape of a result](#the-shape-of-a-result)); `re-basable` and `promotion-anchor-unreached` name the bound primary |
+
+`ANCHORS_INVARIANTS` allows a `binding.promotion-anchor-unreached` row only
+for the 19 systems it names, where no measured edge links the anchor to the
+primary promotion anchors on, so promotion refuses every member's offset
+([Invariants](/scripts/catalog/lineage/README.md#invariants)). Making Stage 6
+rank bound primaries first, as promotion does, is `stellata-hooj.43.4`.
+
+`ANCHORS_LINEAGE_BUDGET` pins 600 kB and 1 s: 38,430 rows came to 509,980
+bytes gzipped in 163–249 ms across three runs, none diffing against a
+baseline (2026-11-16). A diff is the one phase unmeasured: the `pairs`
+stage's took 58–99 ms over 2.4 MB in the same runs, so about 20–40 ms here.
+
+## Masses lineage
+
+`build:binaries` writes each row's spectral-type mass as the `masses` lineage
+stage, after `anchors`
+([Record lineage](/scripts/catalog/lineage/README.md#the-masses-stage)), from
+`masses-lineage-pure.ts` over `Stage6Result.massReads`. Rows are keyed on the
+row (`multiples:<system_id>/<comp>`); `params` carry its Gaia source, `hip:`,
+spectral type, and the read's `q` and `a`
+([The shape of a result](#the-shape-of-a-result)).
+
+| Code | Written for |
+| --- | --- |
+| `masses.read.<branch>` | a row whose mass `orbitFields` read, one code per `MASS_BRANCHES` branch (`../masses/`), underscores as dashes |
+| `masses.read.no-type` / `.unparsed` | a row whose mass it read and found none: no spectral type, or one the parser cannot read |
+| `masses.not-read` | a row it read no mass for: no orbit, or one whose q is published and whose a is published or not estimated, and every standalone row |
+
+`MASSES_INVARIANTS` allows a `read.unparsed` row only for the 19 it names:
+L and T dwarfs and types whose class sits in parentheses. Moving to the
+catalogue's spectral parser is `stellata-hhaw.45.17.12`, which strikes each
+row it fixes off the list.
+
+`MASSES_LINEAGE_BUDGET` pins 800 kB and 1 s: 47,021 rows came to 701,239
+bytes gzipped in 164 ms, not diffing against a baseline (2026-11-16); its
+diff, scaled from `pairs`' as for anchors, adds about 30–40 ms.
 
 ## Choices the outputs rest on
 
@@ -230,11 +312,11 @@ Three system-level mechanisms run at emit time:
   `unresolved` (a HIP alone binds no tier, as on a pair row).
 - **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
   no `q` (visual ORB6 with no spectroscopic counterpart),
-  `massRatioFromComponents` in `../masses/mass-estimate-pure.ts`
-  parses both components' spectral strings (SIMBAD per-component
-  preferred, AT-HYG inherited fallback) into class / subclass / lum
-  class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I
+  `spectralMass` in `../masses/mass-estimate-pure.ts` parses each
+  component's spectral string (SIMBAD per-component preferred, AT-HYG
+  inherited fallback) into class / subclass / lum class and reads its
+  mass off per-class tables for MS / III / IV / I, and `massRatio` reads
+  `q = M_secondary / (M_primary + M_secondary)` off the two masses
   ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
   main-sequence anchors, checked against the online table of
   [Mamajek 2022](/data/papers/index.md#mamajek2022) (v2022.04.16), disagree

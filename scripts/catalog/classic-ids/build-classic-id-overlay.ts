@@ -27,7 +27,7 @@ import { derivedStage, nestByStage, type CountValue } from '../../util/counts/co
 import { CLASSIC_ID_OVERLAY_COUNTS } from './classic-id-overlay-expected-json';
 import { codeCount, type StageCounts } from '../lineage/reason-codes/reason-codes-pure';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
-import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
+import { stageLines, stageLineageText } from '../lineage/lineage-row-pure';
 import { countedStageLineage } from '../lineage/stage-lineage';
 import { CLASSIC_IDS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -74,7 +74,7 @@ export async function main(): Promise<void> {
     spec: CLASSIC_IDS_LINEAGE,
     inputs: stepInputHashes(),
     diffed: 'classic-ids',
-    lines: () => rows.map((row) => stageLineageLine(CLASSIC_ID_CODES, row)),
+    lines: () => stageLines(CLASSIC_ID_CODES, rows),
     render: (sorted) => ({ 'classic-ids': stageLineageText(CLASSIC_ID_CODES, sorted) }),
     joins: () => [],
     budget: CLASSIC_ID_LINEAGE_BUDGET,

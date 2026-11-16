@@ -11,8 +11,9 @@ import { OPTICAL_VIA_PROPERTIES } from '../optical/optical-tiers-pure';
 import type { Stage5Result } from '../optical/attach-optical';
 import { orbitOf, type Stage4Result } from '../orbits/attach-orbits';
 import type { DecomposedPair } from '../resolve/components-pure';
+import { anchorBindings, type SystemAnchor } from './anchor-binding-pure';
 import { computeAnchorOffsets } from './anchor-offsets-pure';
-import { pairRows, positionPc, standaloneRow } from './multiples-rows-pure';
+import { pairRows, positionPc, standaloneRow, type MassRead } from './multiples-rows-pure';
 
 export interface Stage6Result {
   /** Two per kept, placed pair in Stage 3's order, then one per standalone component. */
@@ -21,6 +22,10 @@ export interface Stage6Result {
   readonly droppedNoPosition: readonly DecomposedPair[];
   /** `<wds_id><components>` of each pair whose magnitudes the MSC filled. */
   readonly mscMagFills: readonly string[];
+  /** Every row, in `rows` order, with the mass Stage 6 read for it; null where it read none. */
+  readonly massReads: ReadonlyMap<MultiplesRecord, MassRead | null>;
+  /** Each system with a kept pair: its anchor, the candidates it outranked, and whether promotion can anchor on it. */
+  readonly anchors: ReadonlyMap<string, SystemAnchor>;
 }
 
 export function attachStage6(
@@ -30,10 +35,11 @@ export function attachStage6(
   const { indices } = reference;
   const systemAnchors = firstPerSystem(stage3.pairs, stage3.astrometry, positionPc);
   const anchors = computeAnchorOffsets(stage3.pairs, stage5.optical, indices.msc);
-  const rows: MultiplesRecord[] = [];
+  const massReads = new Map<MultiplesRecord, MassRead | null>();
   const droppedNoPosition: DecomposedPair[] = [];
   const mscMagFills: string[] = [];
   const emitted = new Set<ComponentKey>();
+  const placed: DecomposedPair[] = [];
   for (const p of stage3.pairs) {
     if (!OPTICAL_VIA_PROPERTIES[stage5.optical.get(p)!].physical) continue;
     const built = pairRows(
@@ -43,18 +49,23 @@ export function attachStage6(
       droppedNoPosition.push(p);
       continue;
     }
-    rows.push(...built.rows);
+    placed.push(p);
+    const [primary, secondary] = built.rows;
+    massReads.set(Object.freeze(primary), built.masses.primary);
+    massReads.set(Object.freeze(secondary), built.masses.secondary);
     if (built.mscMags) mscMagFills.push(pairLabel(p));
     emitted.add(componentKey(p.pair.wdsId, p.primary.component));
     emitted.add(componentKey(p.pair.wdsId, p.secondary.component));
   }
   for (const [key, xid] of reference.simbadWdsXids) {
-    if (!emitted.has(key)) rows.push(standaloneRow(xid, systemAnchors.get(xid.wdsId) ?? null, indices, anchors));
+    if (!emitted.has(key)) massReads.set(Object.freeze(standaloneRow(xid, systemAnchors.get(xid.wdsId) ?? null, indices, anchors)), null);
   }
   return Object.freeze({
-    rows: Object.freeze(rows.map((r) => Object.freeze(r))),
+    rows: Object.freeze([...massReads.keys()]),
     droppedNoPosition: Object.freeze(droppedNoPosition),
     mscMagFills: Object.freeze(mscMagFills),
+    massReads,
+    anchors: anchorBindings(anchors, placed),
   });
 }
 

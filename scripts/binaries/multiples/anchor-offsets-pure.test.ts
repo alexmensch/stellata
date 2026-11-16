@@ -176,7 +176,16 @@ describe('computeAnchorOffsets', () => {
     const one = system([['Aa,Ab', 1.0, 0.0, true], ['BC', 1.0, 0.0, true]]);
     const two = system([['AB', 1.0, 0.0, false]], {}, 'WDS-2');
     const result = computeAnchorOffsets([...one.pairs, ...two.pairs], new Map([...one.optical, ...two.optical]), msc());
-    expect(result.anchorBySystem).toEqual(new Map([[W, 'Aa']]));
+    expect([...result.choices].map(([w, c]) => [w, c.pair.primary.component])).toEqual([[W, 'Aa']]);
+  });
+
+  it('records each kept primary the anchor outranked, most canonical first, with the step that ranked it out', () => {
+    const { pairs, optical } = system([
+      ['BC', 1.0, 0.0, true], ['Aa,Ab', 1.0, 0.0, true], ['A,D', 1.0, 0.0, true], ['A,E', 1.0, 0.0, true], ['F,G', 1.0, 0.0, false],
+    ]);
+    const choice = computeAnchorOffsets(pairs, optical, msc()).choices.get(W)!;
+    expect(choice.pair).toBe(pairs[2]);
+    expect(choice.rankedOut.map((r) => [r.pair.pair.components, r.step])).toEqual([['Aa,Ab', 'length'], ['BC', 'letter']]);
   });
 });
 

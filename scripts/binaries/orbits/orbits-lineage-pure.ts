@@ -1,7 +1,7 @@
 // Stage 4's decision per pair as the orbits lineage stage: the orbit source chosen, and each candidate row passed over with its rule. See README.md#orbits-lineage.
 
 import { lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
-import { foldStageLines, stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
+import { foldStageLines, stageLines, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import {
   kebab, outcomeCode, refusalCode, stageCodes, taggedCodes, type CodeDeclaration, type Kebab,
 } from '../../catalog/lineage/reason-codes/reason-codes-pure';
@@ -67,9 +67,7 @@ export function* orbitsLineageRows(result: Stage4Result): Generator<LineageRow> 
 }
 
 export function orbitsLineageLines(result: Stage4Result): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of orbitsLineageRows(result)) lines.push(stageLineageLine(ORBITS_CODES, row));
-  return lines;
+  return stageLines(ORBITS_CODES, orbitsLineageRows(result));
 }
 
 /** The `orbit_*` count-snapshot keys, one per source, from the stage's lines. */

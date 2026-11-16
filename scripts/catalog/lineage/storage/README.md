@@ -59,6 +59,8 @@ measured budget sits beside its contract: [component-binding's](/scripts/binarie
 [astrometry's](/scripts/binaries/astrometry/README.md#astrometry-lineage),
 [orbits'](/scripts/binaries/orbits/README.md#orbits-lineage),
 [pairs'](/scripts/binaries/README.md#pairs-lineage),
+[anchors'](/scripts/binaries/multiples/README.md#anchors-lineage),
+[masses'](/scripts/binaries/multiples/README.md#masses-lineage),
 [runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
 [classic-ids'](../../classic-ids/README.md#classic-id-lineage),
 [allocation's](/scripts/sid/README.md#sid-events),

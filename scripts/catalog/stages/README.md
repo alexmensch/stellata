@@ -34,7 +34,8 @@ scripts/catalog/stages/
                            lineage.
   catalog-emission.ts      catalogEmission: promotion's lineage, the
                            encoded binary and every CATALOG_OUTPUTS file,
-                           family member and check, for emitArtifacts; and
+                           family member and check, for emitArtifacts, the
+                           stages' lineage merged by mergedEmissions; and
                            startCatalogBuild, the staged-output sweep and
                            the input hashes taken before any stage runs.
   catalog-stage-lineage.ts The lineage stages' shared declaration against

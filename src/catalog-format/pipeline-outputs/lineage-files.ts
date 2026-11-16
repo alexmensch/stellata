@@ -46,6 +46,16 @@ export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
   files: ['pairs'],
 };
 
+export const ANCHORS_LINEAGE: StageLineageSpec<'anchors', 'anchors'> = {
+  stage: 'anchors',
+  files: ['anchors'],
+};
+
+export const MASSES_LINEAGE: StageLineageSpec<'masses', 'masses'> = {
+  stage: 'masses',
+  files: ['masses'],
+};
+
 export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'> = {
   stage: 'classic-ids',
   files: ['classic-ids'],
@@ -138,6 +148,15 @@ export function stageOutputFiles<F extends string, S extends string>(
   ) as Record<StageOutputKey<F, S>, string>;
   files[`lineage:${spec.stage}.header`] = `${layout.current}/${stageHeaderName(spec.stage)}`;
   return files;
+}
+
+type SpecOutputKey<T> = T extends StageLineageSpec<infer F, infer S> ? StageOutputKey<F, S> : never;
+
+/** Several stages' current files as one set of `declareOutputs` keys, typed so a stage left out of the emission fails to compile. */
+export function stagesOutputFiles<const T extends readonly StageLineageSpec<string>[]>(
+  layout: LineageLayout, specs: T,
+): Record<SpecOutputKey<T[number]>, string> {
+  return Object.assign({}, ...specs.map((spec) => stageOutputFiles(layout, spec)));
 }
 
 /** The baseline copies and the stage diff, as `declareOutputs` families: emitted
