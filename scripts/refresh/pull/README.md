@@ -28,7 +28,8 @@ SIMBAD, over TAP and, for VizieR's CfA mirror, ASU. A pull is a `pull` step on t
 - `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
   archive, CSV lines or an ASU mirror's TSV and FITS pair read through
   `tapClient` (`RecordedAsu`), replayed into a committed table's lines, the committed
-  table's rows, and its slices measured against `sliceRows`.
+  table's rows, and its slices measured against `sliceRows`; `QUIET_DEPS`, a
+  test's client deps besides its transport.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
   `runPhasedPull`, and `LIVE`, the network transport.

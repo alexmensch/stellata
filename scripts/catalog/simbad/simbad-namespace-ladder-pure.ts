@@ -1,18 +1,6 @@
 // The SIMBAD namespace ladder both SIMBAD pulls index and join through. See README.md.
 
-/** The namespaces every SIMBAD pull is keyed under. This order IS the record
- *  side's walk order — `walkSimbadNamespaces` iterates this array — so
- *  reordering here reorders both SIMBAD joins. Doubles as the build-counts
- *  partition over the SIMBAD tier.
- *
- *  **Ordered by what an identifier names, not by how many keys it holds.** A GJ
- *  number carries its component letter (`Gl 165A`) and so names one star; a TYC
- *  names the Tycho-2 entry, which for a close pair is the system. Where both
- *  reach a row the component-naming one wins, so a system blend never displaces
- *  a component value. This deliberately no longer mirrors the request order
- *  `WIDENING_LADDER` (`scripts/refresh/simbad/specs.py`) sets — see `../../../scripts/catalog/spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names`
- * for why the pull's order is the
- *  load-bearing one. */
+/** The namespaces every SIMBAD pull is keyed under, in both joins' walk order and the build-counts partition over the SIMBAD tier: ../spectral/README.md#the-ladder-is-ordered-by-what-an-identifier-names. */
 export const SIMBAD_NAMESPACE_VALUES = ['source_id', 'hip', 'gj', 'tyc'] as const;
 export type SimbadNamespace = (typeof SIMBAD_NAMESPACE_VALUES)[number];
 

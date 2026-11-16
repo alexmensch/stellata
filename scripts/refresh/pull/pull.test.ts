@@ -11,6 +11,7 @@ import {
   phaseQueries, queryLimit, runPhasedPull, runPull, type Phase, type PhasedPull, type Pull, type PullTable, type WrittenTable,
 } from './pull';
 import { checkpoint } from './checkpoint';
+import { QUIET_DEPS } from './recorded-reply';
 import { GAIA, SIMBAD, TapOverflow, VIZIER, textReply, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
@@ -58,9 +59,8 @@ function deps(answer: (adql: string) => string | Error) {
       if (body instanceof Error) throw body;
       return textReply(200, 'text/csv', body);
     },
-    sleep: async () => {},
+    ...QUIET_DEPS,
     report: (service) => reported.push(service),
-    log: () => {},
   };
   return { deps: d, asked, reported };
 }

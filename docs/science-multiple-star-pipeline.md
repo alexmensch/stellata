@@ -103,9 +103,9 @@ freshness policy in [Frozen external data](/data/README.md#frozen-external-data)
 catalogues update on their own clock (Gaia DR3 → DR4 transition window;
 WDS rolling daily; HIP2 frozen; SIMBAD rolling continuously), and
 freezing the inputs at commit time keeps the build reproducible long-
-term. All scripts share `scripts/refresh/refresh_lib.py` (TAP client
-+ retry + batching + schema validation); SIMBAD pulls share
-`scripts/refresh/simbad/` (specs / inputs / query / TSV plumbing).
+term. The pulls share `scripts/refresh/pull/` (TAP client, retry,
+checkpointed batching, schema and row gates); SIMBAD pulls share
+`scripts/refresh/simbad/` (namespaces, query phases, fetchers).
 
 **Layer 3 — catalogue builder.** `scripts/binaries/build-binaries.ts`
 orchestrates seven stages with explicit per-component provenance.
