@@ -86,7 +86,7 @@ flamsteed-refusals.tsv   Regular git. Hand-curated, held to its rule by a
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
-                         flamsteed_unattested (119) · hd_unattested (1).
+                         flamsteed_unattested (3) · hd_unattested (1).
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·

@@ -106,7 +106,9 @@ term; the record count is that term less the parks.
 
 An addition's other labels come by **designation-keyed** joins over the same
 primaries — HR from V/50 by HD, HIP and Flamsteed from IV/27A by HD, HIP from
-Tycho-2's own column — never through the source-keyed overlay.
+Tycho-2's own column — never through the source-keyed overlay. An addition
+IV/27A gives no Flamsteed number takes SIMBAD's, as a spine row does
+([SIMBAD fills an empty Flamsteed cell](../README.md#simbad-fills-an-empty-flamsteed-cell)).
 
 **An addition binds through the spine's own derivation** — the same four
 sources, consensus ranking and both gates

@@ -59,6 +59,8 @@ import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import { classifySimbadFlamsteed, type SimbadIdentsObject } from '../simbad/simbad-flamsteed-pure';
+import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -125,6 +127,21 @@ function disposition(cells: Partial<BindingDispositionRow>): BindingDispositionR
   };
 }
 
+const IV27A: CrossIndexRow[] = [
+  { hd: 100001, hip: 10, bayer: 'alf', flamsteed: 1, cst: 'And' },
+  { hd: 60, hip: null, bayer: null, flamsteed: 7, cst: 'Cas' },
+];
+
+/** SIMBAD's numbered idents against IV/27A's Cas range (to 7): HIP 70's `9 Cas`
+ *  lies past it; HIP 20 (Gl 165A) carries one accepted number and no cell;
+ *  HD 200500 two; HIP 40 one. */
+const SIMBAD_OBJECTS: SimbadIdentsObject[] = [
+  { oid: 1, hips: [70], hds: [70000], idents: ['* 9 Cas'] },
+  { oid: 2, hips: [20], hds: [], idents: ['* 3 Cas'] },
+  { oid: 3, hips: [], hds: [200500], idents: ['* 2 Cas', '* 4 Cas'] },
+  { oid: 4, hips: [40], hds: [], idents: ['* 6 Cas'] },
+];
+
 /** Primaries admitting, beyond the spine: TYC 2-1-1 (HD 60, below the link
  *  floor, with HIP 30 through Tycho-2's own column); TYC 2-2-1 (HD 200500);
  *  TYC 2-3-1 carrying only HD 100001, a spine record's; TYC 2-4-1 (HD 61)
@@ -158,10 +175,7 @@ const tables: PrimaryTables = {
     { hr: 1, hd: 100001, name: null },
     { hr: 2, hd: 60, name: null },
   ],
-  iv27a: [
-    { hd: 100001, hip: 10, bayer: 'alf', flamsteed: 1, cst: 'And' },
-    { hd: 60, hip: null, bayer: null, flamsteed: 7, cst: 'Cas' },
-  ],
+  iv27a: IV27A,
   cns5: [
     { cns5: 1, gj: '165', gjComp: 'AB', gaiaSourceId: null, hip: 20, astrometry: null },
     { cns5: 2, gj: '10001', gjComp: null, gaiaSourceId: '555', hip: null, astrometry: null },
@@ -189,6 +203,7 @@ const tables: PrimaryTables = {
     ['3-1-1', tycho2(11)], ['3-2-1', tycho2(11)], ['3-3-1', tycho2(11, 50)],
     ['3-4-1', tycho2(11)],
   ]),
+  simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_OBJECTS, IV27A),
   tycToSource: new Map([
     ['1-1-1', '111'], ['2-1-1', '444'], ['2-2-1', '666'], ['2-4-1', '111'], ['2-5-1', '777'],
     ['2-8-1', '1010'], ['3-1-1', '1212'], ['3-2-1', '1212'], ['3-3-1', '1313'],
@@ -482,6 +497,15 @@ describe('buildMembership — the spine side', () => {
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
     expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
+  });
+
+  it('fills an empty Flamsteed cell from the one number SIMBAD gives the star', () => {
+    const fills = (code: string) => result.lineage.filter((r) => r.code === code).map((r) => [r.key, paramsOf(r)]);
+    expect(result.rows.find((r) => r.hip === 20)).toMatchObject({ flam: 3, routes: 'hip:i239|gl:cns5|flam:simbad' });
+    expect(result.rows.find((r) => r.hip === 40)).toMatchObject({ flam: 6 });
+    expect(fills('membership.label-fill.flamsteed-simbad').map(([, p]) => p)).toEqual([{ designation: '3 Cas' }, { designation: '6 Cas' }]);
+    expect(result.rows.find((r) => r.hd === 200500)!.flam).toBeNull();
+    expect(fills('membership.label-fill.flamsteed-two-numbers').map(([, p]) => p)).toEqual([{ designations: '2 Cas|4 Cas' }]);
   });
 
   it('refuses a row no source reaches, and queues nothing', () => {

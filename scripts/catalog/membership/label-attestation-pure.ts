@@ -8,8 +8,9 @@ import {
   type PrimaryTables,
   type RowAttestation,
 } from '../spine/primaries-audit-pure';
+import { designationText, flamsteedFor } from '../simbad/simbad-flamsteed-pure';
 import type { LabelDropCell, LabelDropReason } from './ledger-rows-pure';
-import type { KeyedOutcome } from './membership-lineage-pure';
+import type { KeyedOutcome, MembershipOutcome } from './membership-lineage-pure';
 import { MEMBERSHIP_MANIFEST, joinManifestValues, type ManifestRecord } from './membership-manifest-tsv';
 
 export interface LabelDrop {
@@ -47,6 +48,16 @@ export function attestedLabels(
   if (row.flam === null || hdKept.attestation.attestation.flam !== null) return { ...hdKept, drops };
   drops.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
   return { ...attestRow({ ...hdKept.row, flam: null }, tables, idx), drops };
+}
+
+/** See README.md#simbad-fills-an-empty-flamsteed-cell. */
+export function simbadFlamsteedFill(row: ManifestRecord, tables: PrimaryTables): { row: ManifestRecord; outcome: MembershipOutcome | null } {
+  if (row.flam !== null) return { row, outcome: null };
+  const offered = flamsteedFor(tables.simbadFlamsteed, row.hd, row.hip);
+  if (offered.length === 0) return { row, outcome: null };
+  const designations = offered.map(designationText);
+  if (offered.length > 1) return { row, outcome: { kind: 'flamsteed-unfilled', designations } };
+  return { row: { ...row, flam: offered[0].number }, outcome: { kind: 'flamsteed-fill', designation: designations[0] } };
 }
 
 /** The row with its routes column, and an `unattested` outcome per cell no

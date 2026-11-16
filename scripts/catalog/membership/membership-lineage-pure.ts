@@ -417,6 +417,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
+  'label-fill.flamsteed-simbad': outcomeCode('The record carried no Flamsteed number, and SIMBAD gives the star one the Flamsteed rule accepts.'),
+  'label-fill.flamsteed-two-numbers': outcomeCode('The record carries no Flamsteed number, and SIMBAD gives the star two the Flamsteed rule accepts, so neither is filled.'),
   ...MERGE_CODES,
 });
 
@@ -490,7 +492,9 @@ export type MembershipOutcome =
     readonly reason: LabelDropReason;
     readonly cell: LabelDropCell;
     readonly value: string;
-  };
+  }
+  | { readonly kind: 'flamsteed-fill'; readonly designation: string }
+  | { readonly kind: 'flamsteed-unfilled'; readonly designations: readonly string[] };
 
 export interface KeyedOutcome {
   readonly key: string;
@@ -525,6 +529,8 @@ type ParamsOf<B extends Branch> =
   : B extends 'addition.blocked-designation' ? { designations: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
+  : B extends 'label-fill.flamsteed-simbad' ? { designation: string }
+  : B extends 'label-fill.flamsteed-two-numbers' ? { designations: string }
   : B extends `unattested.${UnattestedCell}` ? { value: string }
   : B extends MergeBranch ? Pick<MergeDivergenceRow, 'cells' | 'derived' | 'evidence'>
   : B extends LabelBranch ? Pick<LabelFlip, 'label' | 'spine' | 'overlay' | 'applied'>
@@ -603,6 +609,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'label-drop':
       return row(key, LABEL_DROP_BRANCHES[o.reason], { cell: o.cell, value: o.value });
+    case 'flamsteed-fill': return row(key, 'label-fill.flamsteed-simbad', { designation: o.designation });
+    case 'flamsteed-unfilled': return row(key, 'label-fill.flamsteed-two-numbers', { designations: o.designations.join('|') });
     case 'merge': return mergeRow(key, o.divergence);
     default: {
       const unmapped: never = o;

@@ -11,6 +11,8 @@ import { CNS5 } from '../classic-ids/cns5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { GLIESE } from '../gliese-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
+import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
 import { HIP2 } from '../sources/hip2-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
 import { artifactRows } from '../../util/sources/source';
@@ -64,11 +66,12 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   const keep = new Set<string>(iv25.map((r) => r.tyc));
   for (const tyc of keepTycs) keep.add(tyc);
   const i239 = HIP_PHOTOMETRY.read();
+  const iv27a = CROSS_INDEX.read();
   return {
     ...await loadBindingTables(keep),
     iv25,
     v50: BSC5.read(),
-    iv27a: CROSS_INDEX.read(),
+    iv27a,
     gliese: GLIESE.read(),
     hipI239: i239.hips,
     hdI239: i239.hds,
@@ -76,5 +79,6 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     hip2: HIP2.read().hips,
     wgsn: readWgsn(),
     tycho2: TYCHO2.read(),
+    simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_IDENTS.read(), iv27a),
   };
 }

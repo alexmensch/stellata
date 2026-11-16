@@ -289,21 +289,23 @@ precedence and consensus ranking, both gates, and the `contested` /
 
 **A label no primary attests leaves the row.** After the merge, an HD —
 display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
-lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
-are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
-the manifest row as it stands afterwards, under `hd_unattested` or
-`flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
-I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are real
-designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table (<!-- count:classic-id-overlay/crossIndexRows -->3,688<!-- /count --> after its curated corrections) and publishes 2,755
-Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
-(measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
-the open option; until one exists the manifest ships without them and the
-ledger says which.
+lack, and a Flamsteed number IV/27A, WGSN and SIMBAD's accepted numbers
+([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers))
+all lack for the star, are emptied into `data/membership/label-drops.tsv`: one
+row per cell, keyed on the manifest row as it stands afterwards, under
+`hd_unattested` or `flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196
+on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
+rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
-**No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
+<a id="simbad-fills-an-empty-flamsteed-cell"></a>**SIMBAD fills an empty
+Flamsteed cell** where the rule accepts exactly one number for the star, on
+spine rows and additions alike (`simbadFlamsteedFill`): <!-- count:membership-manifest/membership.label-fill.flamsteed-simbad -->103<!-- /count --> rows
+(`label-fill.flamsteed-simbad`). A star given two keeps its cell empty
+(`label-fill.flamsteed-two-numbers`, <!-- count:membership-manifest/membership.label-fill.flamsteed-two-numbers -->0<!-- /count -->).
+
+**No dropped or filled label keys its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
-Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> cannot move a key. An
+Flamsteed number is not a designation at all, so it cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
 the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record

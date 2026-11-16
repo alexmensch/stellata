@@ -28,7 +28,7 @@ import {
   type RowDeriver,
   type UnshippedCandidate,
 } from '../binding/binding-outcomes-pure';
-import { attestRow, routedRow } from '../label-attestation-pure';
+import { attestRow, routedRow, simbadFlamsteedFill } from '../label-attestation-pure';
 import type { AdditionReason } from '../ledger-rows-pure';
 import {
   LED_ADDITION_OUTCOMES,
@@ -467,7 +467,9 @@ export function admitAdditions(input: {
       );
     }
     claimRecord(claims, a.verdict.record);
-    const attested = routedRow(attestRow(a.verdict.row, tables, idx));
+    const fill = simbadFlamsteedFill(a.verdict.row, tables);
+    if (fill.outcome !== null) out.outcomes.push({ key: g.origin, outcome: fill.outcome });
+    const attested = routedRow(attestRow(fill.row, tables, idx));
     out.outcomes.push(...attested.outcomes);
     out.rows.push(attested.row);
   }
