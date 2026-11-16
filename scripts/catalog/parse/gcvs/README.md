@@ -41,10 +41,10 @@ looks up the period+amp. Two independent gates:
   `gcvsName` whenever a name resolves (~<!-- count:build-catalog/gcvsNamed k3 -->15.2k<!-- /count --> stars, `gcvsNamed`). This
   is the `search-index.json` `g` field. The designation's trailing
   abbreviation also **supplies** `desigCon`, but only where IV/27A's
-  Bayer/Flamsteed cross index left it empty
+  Bayer/Flamsteed cross index and SIMBAD's Flamsteed constellation left it empty
   ([Positional constellation membership](../constellations/README.md#positional-constellation-membership));
   only a record that also carries a Bayer, Flamsteed or Gould designation
-  renders against it (`naming.dc.gcvs`, <!-- count:build-catalog/naming.dc.gcvs -->1<!-- /count -->). On the 8 records where
+  renders against it (`naming.dc.gcvs`, <!-- count:build-catalog/naming.dc.gcvs -->0<!-- /count -->). On the 8 records where
   the two disagree the star carries both kinds of designation in different
   constellations and IV/27A wins — a GCVS label reads its constellation out of
   the designation string itself and loses only its expanded alias, while a

@@ -100,7 +100,9 @@ export const MAIN: Tycho2Table = {
     ...tycColumns, vizierColumn('pflag', 'pflag'),
     vizierColumn('RAmdeg', 'ra_mdeg', DOUBLE), vizierColumn('DEmdeg', 'de_mdeg', DOUBLE),
     vizierColumn('EpRAm', 'ep_ra', FLOAT), vizierColumn('EpDEm', 'ep_de', FLOAT),
-    ...motion, ...icrs, ...photometry,
+    ...motion, ...icrs,
+    vizierColumn('EpRA-1990', 'ep_ra_icrs_since_1990', FLOAT), vizierColumn('EpDE-1990', 'ep_de_icrs_since_1990', FLOAT),
+    ...photometry,
   ],
   keptShare: { min: 0.98, max: 1.01 },
   spotRows: [{
@@ -108,6 +110,7 @@ export const MAIN: Tycho2Table = {
     value: '34.60250679',
     cells: {
       tyc1: '3694', tyc2: '2544', tyc3: '1', de_mdeg: near(56.55991447, 1e-6), ep_ra: near(1991.07, 0.01), ep_de: near(1991, 0.01),
+      ep_ra_icrs_since_1990: near(1.71, 0.005),
       pm_ra: near(341.5, 0.05), pm_de: near(-223.6, 0.05), vt_mag: near(8.354, 0.001),
     },
   }, {

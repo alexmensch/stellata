@@ -13,7 +13,7 @@ import {
   outcomeCode, refusalCode, retired, stageCodes, LIVE, type CodeDeclaration, type StageCodes, type StageCounts,
 } from '../lineage/reason-codes/reason-codes-pure';
 import type { GateReason } from './binding/binding-gate-pure';
-import type { ClassicalCell } from '../spine/primaries-audit-pure';
+import type { IdentifierCell } from '../spine/primaries-audit-pure';
 import { SPINE_CORRECTION_CELLS, type SpineCorrectionCell } from './spine-corrections/spine-corrections-pure';
 import { BRIGHT_TIER_MAG_CEILING } from '../classic-ids/classic-id-overlay-pure';
 import { BINDING_SOURCES, type BindingSource } from './binding/binding-derivation-pure';
@@ -24,11 +24,11 @@ import {
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropCell, type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
-import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
+import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding/binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES,
-  type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES,
+  type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
 } from './merge-derivation/merge-derivation-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
@@ -49,6 +49,7 @@ export interface OriginKeys {
 }
 
 const RETIRED_7_1_20 = retired('7.1.20');
+const RETIRED_7_1_31 = retired('7.1.31');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -157,14 +158,13 @@ export type DispositionQueue = (typeof DISPOSITION_QUEUES)[number];
 type DispositionBranch = `disposition.${BindingDisposition}.${DispositionQueue}`;
 
 /** The classical cells a manifest row can ship unattested: `hd` and `flam` leave the row instead (README.md#the-unattested-labels-leave-the-row). */
-export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'bayer', 'proper'] as const satisfies readonly ClassicalCell[];
+export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'proper'] as const satisfies readonly IdentifierCell[];
 export type UnattestedCell = (typeof UNATTESTED_CELLS)[number];
 
 const UNATTESTED_BRANCHES = {
   hip: 'unattested.hip',
   hr: 'unattested.hr',
   gl: 'unattested.gl',
-  bayer: 'unattested.bayer',
   proper: 'unattested.proper',
 } as const satisfies Record<UnattestedCell, string>;
 
@@ -278,10 +278,30 @@ type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
 const derivedOnlyBranch = (c: DerivedOnlyCell, h: HeldState): DerivedOnlyBranch => `merge.derived-only.${c}.${h}`;
 type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`;
 const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
+type DiffersSettledBranch = {
+  [K in DiffersLink['key']]: Extract<DiffersLink, { key: K }> extends infer L extends DiffersLink
+    ? `merge.differs.${L['to']}.${L['from']}.${DiffersSettlement<L['to']>}` : never;
+}[DiffersLink['key']];
+const differsSettledBranch = <L extends DiffersLink>(l: L, s: DiffersSettlement<L['to']>): DiffersSettledBranch =>
+  `${differsBranch(l)}.${s}` as DiffersSettledBranch;
+
+const DIFFERS_SETTLEMENT_DESCRIPTIONS = {
+  'close-pair-uncontested': 'the close-pair rule\'s two TYC witnesses agree, and one names the HD the record ships',
+  'close-pair-refuse': 'the close-pair rule finds the record\'s Gaia source is another SIMBAD object than its TYC\'s, so the TYC cell is the crossed one and the HD stands',
+  'v50-pair': 'V/50 pairs the shipped HR with the shipped HD',
+  'cns5-source': 'CNS5\'s row for the record\'s own Gaia source names the shipped GJ',
+} as const satisfies Record<DiffersSettlement, string>;
+
+const differsPrefix = (l: DiffersLink): string =>
+  `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule`;
+
+type DiffersQueuedBranch =`${DiffersBranch}.queued`;
+const differsQueuedBranch = (l: DiffersLink): DiffersQueuedBranch => `${differsBranch(l)}.queued`;
+
 type MergeBranch =
   | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
-  | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
+  | PairReviewBranch | DerivedOnlyBranch | DiffersQueuedBranch | DiffersSettledBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
 
@@ -325,9 +345,13 @@ const MERGE_BRANCHES: readonly {
     description: `A primary's own link puts a ${c} value on the spine row where the spine leaves the cell empty; ${HELD_DESCRIPTIONS[h]}.`,
   }))),
   ...DIFFERS_LINKS.map((l) => ({
-    branch: differsBranch(l), of: 'differs' as const, ledger: 'differs' as const,
-    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`,
+    branch: differsQueuedBranch(l), of: 'differs' as const, ledger: 'differs' as const,
+    description: `${differsPrefix(l)}, and no rule settles the cell: it is queued for review and the shipped value stands.`,
   })),
+  ...DIFFERS_LINKS.flatMap((l) => (DIFFERS_SETTLEMENTS_BY_CELL[l.to] as readonly DiffersSettlement[]).map((s) => ({
+    branch: differsSettledBranch(l, s), of: 'differs' as const, ledger: null,
+    description: `${differsPrefix(l)}, and ${DIFFERS_SETTLEMENT_DESCRIPTIONS[s]}: the shipped value stands.`,
+  }))),
 ];
 
 /** The merge codes whose rows `merge-divergence.tsv` records as `kind`. */
@@ -338,6 +362,11 @@ export function mergeBranchesLedgeredAs(kind: MergeDivergenceKind): MergeBranch[
 const MERGE_CODES = Object.fromEntries(
   MERGE_BRANCHES.map((d) => [d.branch, outcomeCode(d.description)]),
 ) as Record<MergeBranch, CodeDeclaration<typeof LIVE>>;
+
+const RETIRED_DIFFERS_CODES = Object.fromEntries(DIFFERS_LINKS.map((l) => [
+  differsBranch(l),
+  outcomeCode(`A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`, 'none', RETIRED_7_1_31),
+])) as Record<DiffersBranch, CodeDeclaration<typeof RETIRED_7_1_31>>;
 
 function ledCodes<P extends string, O extends string, S extends BindingSource>(
   prefix: P, descriptions: Readonly<Record<O, string>>, leads: readonly S[],
@@ -412,12 +441,13 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   ...LABEL_CODES,
   'unattested.hip': outcomeCode('The record ships a HIP no primary attests for it.'),
   'unattested.hr': outcomeCode('The record ships an HR number no primary attests for it.'),
+  'unattested.bayer': outcomeCode('The record ships a Bayer designation no primary attests for it.', 'none', RETIRED_7_1_31),
   'unattested.gl': outcomeCode('The record ships a GJ designation no primary attests for it.'),
-  'unattested.bayer': outcomeCode('The record ships a Bayer designation no primary attests for it.'),
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
   ...MERGE_CODES,
+  ...RETIRED_DIFFERS_CODES,
 });
 
 
@@ -629,10 +659,14 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
     case 'derived-only':
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
-    case 'differs':
-      return row(key, differsBranch(d.link), {
-        cells: d.link.to, derived: d.derived.join('|'), evidence: `from ${d.link.from}; spine ${d.spine}`,
-      });
+    case 'differs': {
+      const evidence = `from ${d.link.from}; ships ${d.ships ?? 'none'}`;
+      const params = { cells: d.link.to, derived: d.derived.join('|') };
+      if ('settled' in d.verdict) {
+        return row(key, differsSettledBranch(d.link, d.verdict.settled), { ...params, evidence });
+      }
+      return row(key, differsQueuedBranch(d.link), { ...params, evidence: `${evidence}; ${d.verdict.queued}` });
+    }
     default: {
       const unmapped: never = d;
       throw new Error(`merge divergence with no row mapping: ${JSON.stringify(unmapped)}`);
@@ -748,6 +782,7 @@ export type MembershipDerivedCounts = Readonly<Record<
   | 'sharedDesignations'
   | 'rowsWithHdAlt'
   | 'rowsWithHrAlt'
+  | 'flamsteedRefusals'
   | `spineCellsCorrected.${SpineCorrectionCell}`,
   number
 >>;

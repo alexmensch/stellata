@@ -4,7 +4,7 @@
 
 import { GREEK_GLYPHS } from '../../../src/catalog-format/naming/greek-forms';
 import { foldNameKey } from './wgsn-normalise-pure';
-import { bayerKeySets, type DesignationRow } from './wgsn-tables-pure';
+import type { DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
@@ -256,7 +256,6 @@ export function diffDispositions(
 
 export interface ManifestNamingRow {
   proper: string | null;
-  bayer: string | null;
   hip: number | null;
   hd: number | null;
   isSol: boolean;
@@ -266,26 +265,17 @@ export interface ManifestNamingCounts {
   membershipPropers: number;
   membershipProperMatched: number;
   membershipProperResiduals: number;
-  membershipBayerRows: number;
-  membershipBayerRowsCovered: number;
 }
 
 /** README.md#the-residual-gate. */
 export function manifestNaming(
   rows: Iterable<ManifestNamingRow>,
   approvedNameKeys: WgsnIndex['approvedNameKeys'],
-  designations: DesignationRow[],
   disposed: readonly Pick<ProperDispositionRow, 'proper' | 'hip' | 'hd'>[],
 ): { counts: ManifestNamingCounts; missing: string[]; stale: string[] } {
-  const reached = bayerKeySets(designations);
   const propers = new Map<string, string>();
-  let bayerRows = 0;
-  let bayerRowsCovered = 0;
   for (const r of rows) {
     if (r.proper !== null && !r.isSol) propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
-    if (r.bayer === null) continue;
-    bayerRows++;
-    if (reached.reaches(r.hip, r.hd)) bayerRowsCovered++;
   }
   const unmatched = new Set([...propers].filter(([, p]) => !approvedNameKeys.has(foldNameKey(p))).map(([k]) => k));
   return {
@@ -293,8 +283,6 @@ export function manifestNaming(
       membershipPropers: propers.size,
       membershipProperMatched: propers.size - unmatched.size,
       membershipProperResiduals: unmatched.size,
-      membershipBayerRows: bayerRows,
-      membershipBayerRowsCovered: bayerRowsCovered,
     },
     ...diffDispositions(
       unmatched,

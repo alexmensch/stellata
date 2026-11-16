@@ -29,7 +29,68 @@ scripts/catalog/simbad/
                                   dropped, for the integer comparison against
                                   IV/25. The test carries the adjudication
                                   below, pinned over the committed tables.
+  close-pair-hd-pure.ts (+ test)  closePairHdVerdict, the four-witness rule
+                                  below as one function: the adjudication
+                                  test and build:membership's divergence
+                                  ledger both call it
+                                  (../membership/merge-derivation/README.md#settling-a-differs-cell);
+                                  iv25HdSets, IV/25's HD set per Tycho entry,
+                                  which the spine's link tables read too.
+                                  Pure.
+  simbad-idents-source.ts         SIMBAD_IDENTS, data/simbad/simbad_idents.tsv
+  simbad-idents-parse.ts          declared and read as one object per row.
+  simbad-flamsteed.ts             readSimbadFlamsteed: that table classified
+                                  against IV/27A, for the audit and the naming
+                                  pass.
+  simbad-flamsteed-pure.ts        The Flamsteed rule below: which `* NN Con`
+    (+ test)                      idents count, indexed by HIP and HD, and the
+                                  refused ones with their evidence. Pure.
+  flamsteed-refusals-pure.ts      The refused numbers on catalogue stars as
+                                  ledger rows. Pure; tested through
+                                  ../membership/membership-manifest-pure.test.ts.
 ```
+
+## Which SIMBAD numbers are Flamsteed numbers
+
+SIMBAD writes every numbered designation as `* NN Con` and does not say which
+catalogue the number is from, so the ident alone cannot attest a Flamsteed
+cell. SIMBAD carries `* NN Con` idents in constellations where IV/27A
+publishes no Flamsteed number at all (Ara, Cir, Gru, Hor, Mus, Sct, Tuc) and
+past IV/27A's highest number in others (Car, Vel, Lup, Cen).
+
+**The rule: a number counts where it lies within IV/27A's Flamsteed range for
+its constellation and IV/27A gives it to no other star.** IV/27A
+([Kostjuk 2002](/data/papers/index.md#kostjuk2002)) is the whole Bayer- and
+Flamsteed-bearing cross index, so its highest number per constellation bounds
+what a Flamsteed number there can be; a number IV/27A gives to a different
+star — by HD and HIP both — is that star's. `classifySimbadFlamsteed` applies
+it to every object; the accepted numbers index by the object's HIP and HD.
+
+A star SIMBAD numbers in two neighbouring constellations (β Tau carries both
+`112 Tau` and `23 Aur`) keeps the number IV/27A publishes:
+IV/27A gives one per star, and the number a record already carries is never
+replaced.
+
+**The rule errs both ways, so an accepted number only attests a cell a record
+already carries.** It refuses some numbers SIMBAD gives a star as its own —
+`51 Lib` on ξ Sco lies past IV/27A's highest Lib number, 50 — and it admits
+some that another authority names differently: IV/27A's own Flamsteed column
+reaches 212 in Puppis, 89 in Centaurus and two numbers in Dorado, so SIMBAD's
+`171 Pup` on HIP 37853 passes where the IAU WGSN designates the star
+`171 G. Pup`, a Gould number. Both wait for a primary edition of the catalogue
+(`stellata-hooj.46.3`); `build:membership` never fills an empty cell from
+SIMBAD ([SIMBAD attests a Flamsteed cell](../membership/README.md#simbad-attests-it-never-fills)).
+
+## The refused numbers
+
+`data/membership/flamsteed-refusals.tsv` is every number the rule refuses on
+an object whose HIP or HD names a catalogue record: the object, its keys, the
+designation, the reason (`beyond_iv27a_range`, `iv27a_names_another_star`) and
+IV/27A's evidence. `build:membership` writes it on every run, over the
+manifest's own HIP and HD keys, so a re-pull or an IV/27A change that moves a
+row shows in CI's regenerate-and-diff; its codec is
+`../membership/flamsteed-refusals-tsv.ts`.
+<!-- count:membership-manifest/flamsteedRefusals -->37<!-- /count --> rows (`flamsteedRefusals`).
 
 ## What the TYC → HD pull adjudicates
 
@@ -90,12 +151,15 @@ A consumer therefore has three verdicts to handle, not two — agrees, dissents,
 and silent, the last being the rows the pull answers for at all ([Which
 witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd), Silence is silence).
 
-**One build step reads it**: `build:membership`'s pair rule queues a move
+**`build:membership` reads it twice.** Its pair rule queues a move
 onto the other entry of a Tycho-2 pair wherever SIMBAD names that entry by
 HDs the moved record does not ship
-([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
-The rule the next section settles reaches the build through curation rather
-than a join: eight of the
+([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)),
+and its divergence ledger joins the next section's rule to settle or queue an
+HD cell a primary contradicts
+([Settling a differs cell](../membership/merge-derivation/README.md#settling-a-differs-cell)).
+That rule's moves reach the build through curation rather than the join:
+eight of the
 nine records it licenses are asserted as rows of
 `data/classic-ids/classic_id_overrides.tsv` (`stellata-hooj.14`), each carrying
 the component the witnesses named. α Psc is the ninth, held back on
@@ -118,7 +182,8 @@ it can be the sibling's — that is the crossed-cell case, and it cannot move
 an HD on its own however many printed indexes agree with it.
 
 So the rule takes **four witnesses**, and only moves a cell where they all
-name the record's own component:
+name the record's own component (`closePairHdVerdict`; two objects are the
+same component when their SIMBAD oids are equal):
 
 ```
 IV/25 for the row's own TYC, read as a SET  ┐

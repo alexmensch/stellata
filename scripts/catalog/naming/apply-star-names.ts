@@ -10,6 +10,8 @@ import {
   buildDesignationConIndex, designationConstellation, type DesignationConIndex,
 } from '../classic-ids/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
+import type { SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { readSimbadFlamsteed } from '../simbad/simbad-flamsteed';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -29,19 +31,23 @@ export interface StarNamingInputs {
   dispositions: Map<string, ProperDisposition>;
   /** IV/27A's designation constellations, the tier below the authority's. */
   designationCons: DesignationConIndex;
+  /** SIMBAD's Flamsteed numbers the rule accepts, the tier below IV/27A's. */
+  simbadFlamsteed: SimbadFlamsteed;
 }
 
 export function loadStarNamingInputs(): StarNamingInputs {
+  const crossIndex = CROSS_INDEX.read();
   return {
     names: readArtifact(WGSN_NAMES),
     designations: readArtifact(WGSN_DESIGNATIONS),
     dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
-    designationCons: buildDesignationConIndex(CROSS_INDEX.read()),
+    designationCons: buildDesignationConIndex(crossIndex),
+    simbadFlamsteed: readSimbadFlamsteed(crossIndex),
   };
 }
 
 /** The walked fields the ladder reads. */
-export type NamingSource = Pick<WalkedStar, 'flags' | 'printedName' | 'printedBayer' | 'hip' | 'hd' | 'hr' | 'flam'>;
+export type NamingSource = Pick<WalkedStar, 'flags' | 'printedName' | 'hip' | 'hd' | 'hr' | 'flam'>;
 
 /** The authority pass's share of naming's count block. */
 export interface StarNamingCounts {
@@ -55,16 +61,10 @@ export interface StarNamingCounts {
   namingIauUnreached: number;
   /** Records carrying a string designation (`Ross 128`; /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
   namingEponym: number;
-  /** Records the authority gives a glyph-bearing Bayer designation, of
-   *  which `Added` had no spine Bayer cell at all. */
+  /** Records the authority gives a glyph-bearing Bayer designation. */
   namingBayer: number;
-  namingBayerAdded: number;
   /** Bayer designations the authority attributes to a named component. */
   namingBayerComponent: number;
-  /** Spine Bayer cells the authority does not reach — the designation
-   *  belongs to a sibling record, so the record drops it and borrows the
-   *  system's instead. */
-  namingBayerDropped: number;
   namingGould: number;
   /** Published spellings shipped as search-only aliases (`al`), and the
    *  records carrying them. */
@@ -77,9 +77,7 @@ export function starNamingSummary(counts: StarNamingCounts): string {
     + `(${counts.namingIauNamedByProper} via the record's own spelling, `
     + `${counts.namingIauUnreached} approved names unreached), `
     + `${counts.namingEponym} string designations\n`
-    + `  ${counts.namingBayer} Bayer designations `
-    + `(${counts.namingBayerAdded} added, `
-    + `${counts.namingBayerDropped} spine cells the authority does not reach), `
+    + `  ${counts.namingBayer} Bayer designations, `
     + `${counts.namingGould} Gould, `
     + `${counts.namingAliases} aliases on ${counts.namingAliasRecords} records`;
 }
@@ -97,9 +95,7 @@ export function applyStarNames<S extends NamingSource>(
     namingIauUnreached: 0,
     namingEponym: 0,
     namingBayer: 0,
-    namingBayerAdded: 0,
     namingBayerComponent: 0,
-    namingBayerDropped: 0,
     namingGould: 0,
     namingAliases: 0,
     namingAliasRecords: 0,
@@ -108,7 +104,7 @@ export function applyStarNames<S extends NamingSource>(
 
   const named = attach(stars, (star): NamingFields => {
     const fields: NamingFields = {
-      desigCon: designationConstellation(inputs.designationCons, star),
+      desigCon: designationConstellation(inputs.designationCons, inputs.simbadFlamsteed, star),
       iauName: null,
       eponym: null,
       bayer: null,
@@ -155,10 +151,7 @@ export function applyStarNames<S extends NamingSource>(
       fields.bayerComponent = bayer.component;
       if (bayer.component !== null) counts.namingBayerComponent++;
       counts.namingBayer++;
-      if (star.printedBayer === null) counts.namingBayerAdded++;
       authorityDesignationConstellation(fields, star.flam, bayer.dc, 'wgsn-bayer', constellations);
-    } else if (star.printedBayer !== null) {
-      counts.namingBayerDropped++;
     }
 
     const gould = index.gouldOf(keys);

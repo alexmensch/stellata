@@ -240,9 +240,10 @@ questions, one pass over the rows:
 - **Attestation** — for each classical cell (`hd` `hr` `hip` `gl` `bayer`
   `flam` `proper`), which primary publishes it: HD by IV/25, then V/50, then
   I/239's own `HD` column. A row none of whose carried cells is attested
-  exists on AT-HYG's authority alone. **0 rows** do; 167 carry one
-  unattested *label* (1 HDE number, 120 Flamsteed cells, the 46 disposed
-  proper names — [The spine side](../membership/README.md#the-spine-side) disposes them).
+  exists on AT-HYG's authority alone. **0 rows** do; 51 carry one
+  unattested *label* (1 HDE number, 4 Flamsteed cells, the 46 disposed
+  proper names — [The spine side](../membership/README.md#the-spine-side) disposes them;
+  measured 2026-11-16, SIMBAD's accepted numbers attesting 116 Flamsteed cells).
 - **Identity** — the spine's `gaia_source_id` against what the raw TYC / HIP /
   CNS5 walks bind, pre-gate. 300,155 agree, 11,721 no walk reaches, 10 a walk
   contradicts; on 11,697 of those 11,731 SIMBAD's object for the same id
@@ -261,18 +262,19 @@ questions, one pass over the rows:
 **The unverified residual is zero, not small.** The 34 bindings the Identity
 bullet leaves uncorroborated — its 16 + 12 + 6 — each carry a committed
 review disposition with the measurement behind it
-([The spine side](../membership/README.md#the-spine-side)), and the Attestation bullet's
+([A disposition is the authority](../membership/binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row)), and the Attestation bullet's
 **0 rows** says the same of the classical cells. So no row of this file exists
 on AT-HYG's authority alone, on either question the pass asks — frozen here
 means examined and then held, not taken on trust.
 
 **`flam` is compared by value, `bayer` only by star.** A Flamsteed cell
-counts as sourced only where IV/27A or WGSN publishes *that number* for the
-record's HD/HIP; a Bayer cell counts where those tables publish *any* Bayer
+counts as sourced only where IV/27A, WGSN or a SIMBAD number the Flamsteed
+rule accepts ([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers))
+gives *that number* to the record's HD/HIP; a Bayer cell counts where those tables publish *any* Bayer
 designation for the star, because HYG's `Alp-1` and IV/27A's `alf01` meet
 only through the naming ladder's normalisers, which are `../naming/`'s to
-own. The value check is what makes the Flamsteed residual 120 rather than
-115 — [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) names the five it separates.
+own. Against IV/27A and WGSN alone the value check is what made the
+Flamsteed residual 120 rather than 115 — [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries) names the five it separates.
 
 The audit also reads `data/athyg/athyg_33_classic_ids.csv` for one
 measurement, the HD-provenance split behind the link defect. It is not on the
@@ -434,5 +436,5 @@ Pins: the `membership.binding.*` and `membership.disposition.*` codes in
   the V transform (HIP 35261, `ipd` 84, |ΔV| 1.34). Neither cascade gates its
   Gaia tier on fit quality; that is `stellata-3bsf.49`'s question, with these
   rows as its corpus.
-- **The review queue is disposed** — 54 rows, [The spine side](/scripts/catalog/membership/README.md#the-spine-side) of
-  `../membership/README.md` — and SID allocation writes no event.
+- **The review queue is disposed** — 54 rows, [A disposition is the authority](/scripts/catalog/membership/binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row) in
+  `../membership/binding/README.md` — and SID allocation writes no event.

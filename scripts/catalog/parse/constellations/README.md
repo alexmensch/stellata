@@ -52,13 +52,13 @@ so the walk leaves `desigCon` (search-index `dc`) at
 `{ via: 'none' }` and three later passes fill it — the IAU WGSN
 designation the naming ladder resolves states its own constellation and wins
 ([The designation constellation](../../naming/README.md#the-designation-constellation)), else the classic-ID
-label pass fills it from IV/27A keyed on the record's own HD/HIP, else a GCVS
+label pass fills it from IV/27A keyed on the record's own HD/HIP, else SIMBAD's
+constellation for the record's own Flamsteed number, else a GCVS
 designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
 [The designation constellation](../../classic-ids/README.md#the-designation-constellation).
 `designationConIndex(dc, c)` in `../../../../src/catalog-format/record/catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
-positional `conIndex` is still the last fallback (123 faint Flamsteed-only
-records IV/27A's TAP subset omits).
+positional `conIndex` is still the last fallback (`naming.dc.positional`).
 
 The population that fallback would silence is not small: the search entries
 carrying a `dc` are dominated by Flamsteed numbers assigned under Ptolemaic
@@ -70,9 +70,9 @@ designation (Fomalhaut C is α PsA C while sitting in Aquarius).
 **A GCVS designation names its own constellation.** "LT Vul" names Vulpecula
 whatever any catalogue column says, so `applyVariability` (`../gcvs/gcvs-parse.ts`)
 sets `desigCon` from the designation's trailing abbreviation wherever
-IV/27A left it empty; on a record carrying a Bayer, Flamsteed or Gould
+IV/27A and SIMBAD left it empty; on a record carrying a Bayer, Flamsteed or Gould
 designation that is the constellation it renders against, and
-`naming.dc.gcvs` pins **<!-- count:build-catalog/naming.dc.gcvs -->1<!-- /count -->** such record. Its authority is
+`naming.dc.gcvs` pins **<!-- count:build-catalog/naming.dc.gcvs -->0<!-- /count -->** such record. Its authority is
 not a fallback position: the cell it used to correct was untrustworthy both
 ways —
 

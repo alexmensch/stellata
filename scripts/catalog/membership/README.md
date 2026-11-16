@@ -33,9 +33,10 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The five ledgers' codecs, one leaf each:
-  binding-review-tsv.ts           header check, decode and sort order.
-  label-drops-tsv.ts
+  additions-ledger-tsv.ts         The six ledgers' codecs, one leaf each:
+  binding-review-tsv.ts           header check, decode and sort order. The
+  flamsteed-refusals-tsv.ts       refusal ledger's rows are ../simbad/'s
+  label-drops-tsv.ts              (../simbad/README.md#the-refused-numbers).
   merge-divergence-tsv.ts
   pair-review-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,
@@ -86,11 +87,6 @@ scripts/catalog/membership/
                                   spine ↔ manifest matcher, and
                                   withRecordMoves, the spine rows as the
                                   pair rule's HIP moves leave them. Pure.
-  binding-review-dispositions-    The dispositions' columns, closed bases and
-    pure.ts                       reader, on the same terms.
-  binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated
-    source.ts                     dispositions' declaration
-                                  (../../util/sources/).
   pair-review-dispositions-       The pair-review queue's dispositions:
     pure.ts (+ test)              columns, reader and its checks, and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
@@ -134,8 +130,9 @@ scripts/catalog/membership/
                                   Own README.
   binding/                        A row's gaia_source_id from committed
                                   evidence alone: the four sources, both
-                                  gates, and the outcomes the derivation
-                                  cannot settle by itself. Own README.
+                                  gates, the outcomes the derivation
+                                  cannot settle by itself and the reviewed
+                                  dispositions that settle them. Own README.
   magnitude-term/                 The union's second term — the V floor, its
                                   filter over the Gaia pull and the 5p
                                   astrometry that comes with it. Own README.
@@ -143,6 +140,9 @@ scripts/catalog/membership/
                                   against what the primaries' own links
                                   derive, the pair rule it applies, and the
                                   divergence ledger it writes. Own README.
+  positional-witness/             Whether a V/70A or Hipparcos position
+                                  names one of a set of Tycho-2 entries,
+                                  and the measured tolerances. Own README.
   spine-corrections/              The curated corrections to AT-HYG's merge
                                   decisions, and the spine they leave. Own
                                   README.
@@ -154,17 +154,17 @@ audit, so the two instruments read one table set.
 ## Columns
 
 ```
-tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  bayer  proper
+tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  proper
 gaia_source_id  binding  routes  term  origin_key
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
   the classic-ID label merge has already run
   (`../classic-ids/label-merge/README.md`), so `hd_alt` / `hr_alt` hold the
-  alias lists and there is no second designation set to flip against. `bayer` and `proper` are the
-  spine's printed cells on spine rows and empty on additions — the naming
-  ladder resolves both from HD / HIP at build time and reads the cell only as
-  a counter (`../naming/README.md`).
+  alias lists and there is no second designation set to flip against. `proper`
+  is the spine's printed cell on spine rows and empty on additions. Bayer
+  designations are the naming ladder's, from the authority's tables by
+  HR / HD / HIP (`../naming/README.md`).
 - `binding` says how `gaia_source_id` is justified: `crosswalk_gated` (a TYC,
   HIP or CNS5 candidate the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gates passed), `simbad_corroborated` (the
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
@@ -243,67 +243,35 @@ derivation moving. That is what replaced the frozen comparison: the `binding.*`
 and `disposition.*` codes are the pins a binding change has to get past, in
 place of a diff against a cell AT-HYG wrote.
 
-**A disposition is the authority wherever one keys a row**, whatever the
-derivation reached — `data/membership/binding-review-dispositions.tsv`, keyed on
-the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
-was taken over, so a re-pull that moves the derivation re-opens the review
-rather than carrying a stale verdict forward. `keep_source_id` is what the row
-ships: the derived id, any other candidate the queue row lists, an id **no
-committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> of
-the 53 today (`disposition.asserted`) and is why the file exists — the review
-reached evidence the derivation cannot, and the count is what keeps the number
-of ids resting on it visible.
-
-**An asserted id still needs a second witness**, because the count cannot
-supply one: a mistyped digit leaves every `disposition.*` code reading what it
-read before, so nothing but the value itself says it is wrong. The generator therefore requires every asserted
-id to be a source `data/gaia/gaia_dr3_astrometry.tsv` carries, and
-fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
-whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
-a gap in what SIMBAD publishes for two objects, not a rule
-(`stellata-hooj.17.10`).
-
-`basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
-position against the source), `v70a_astrometry` (V/70A's B1950 position and
-proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
-namespace), `gaia_photometry` (G against the record's printed V on each
-candidate), `pair_component` (a resolved pair's components bound crosswise,
-the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Each disposition's code says what it kept and whether the derivation
-had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
-9 keep the derived id and 44 another. The nine
-are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
-record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
-(SIMBAD names the brighter of a blended pair whose fainter member the TYC
-cross-match picks), and GJ 1001 and GJ 3527 — bare cells the SIMBAD route
-binds to component A only while `simbad_sptype.tsv` holds no companion
-object under the number, so the review stays the authority should a pull
-bring one back. A kept value ships as `reviewed`.
-
 How a row reaches its `gaia_source_id` — the four committed sources, the
-precedence and consensus ranking, both gates, and the `contested` /
-`collision` outcomes the derivation cannot settle alone — is
-[What the derivation cannot settle alone](binding/README.md#what-the-derivation-cannot-settle-alone), which owns it.
+precedence and consensus ranking, both gates, the `contested` /
+`collision` outcomes the derivation cannot settle alone, and the reviewed
+dispositions that settle them and outrank it wherever one keys a row — is
+[the binding derivation](binding/README.md), which owns it.
 
 ## The unattested labels leave the row
 
 **A label no primary attests leaves the row.** After the merge, an HD —
 display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
-lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
-are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
-the manifest row as it stands afterwards, under `hd_unattested` or
-`flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
-I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are real
-designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table (<!-- count:classic-id-overlay/crossIndexRows -->3,688<!-- /count --> after its curated corrections) and publishes 2,755
-Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
-(measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
-the open option; until one exists the manifest ships without them and the
-ledger says which.
+lack, and a Flamsteed number IV/27A, WGSN and SIMBAD's accepted numbers
+([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers))
+all lack for the star, are emptied into `data/membership/label-drops.tsv`: one
+row per cell, keyed on the manifest row as it stands afterwards, under
+`hd_unattested` or `flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196
+on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
+rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
-**No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
+<a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
+cell; it never supplies one.** IV/27A's own Flamsteed column reaches 212 in
+Puppis and 89 in Centaurus, so the rule's range admits numbers the IAU WGSN
+designates as Gould numbers (`171 G. Pup`) and cannot tell the two apart; a
+SIMBAD number agreeing with a cell the record already carries is two
+witnesses, a SIMBAD number alone is one. Filling an empty cell waits on a
+primary Flamsteed edition (`stellata-hooj.46.3`).
+
+**No dropped label keys its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
-Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> cannot move a key. An
+Flamsteed number is not a designation at all, so it cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
 the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record
@@ -369,7 +337,9 @@ arithmetic and label-flips replay:
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
 - **The naming authority's residual**: the manifest propers no WGSN name
   matches are exactly the disposed ones, with the counts pinned in
-  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)).
+  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)),
+  and each `data/naming/bayer_drops.tsv` row keys one record the Bayer join
+  leaves bare, while exactly one other record holds its designation.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin

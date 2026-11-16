@@ -20,8 +20,8 @@ import { TYCHO2_ICRS_EPOCH } from '../tycho2-parse';
 import { emptySimbadValueIndex, type SimbadValueIndex } from '../simbad/simbad-values-parse';
 import { angularSeparationArcsec, directionAtEpoch, unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import type { GlieseIndex } from '../gliese-parse-pure';
-import { GLIESE } from '../gliese-source';
-import { TYCHO2 } from '../tycho2-source';
+import { glieseRow } from '../gliese-fixture';
+import { tycho2Row } from '../tycho2-fixture';
 import { CNS5 } from '../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../simbad/simbad-values-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
@@ -87,12 +87,9 @@ function glieseParallaxes(
   rows: ReadonlyArray<{ gl: string; distPc: number }>,
 ): GlieseIndex {
   return {
-    byKey: new Map(rows.map((r) => [r.gl, {
-      name: `Gl ${r.gl}`, comp: '',
-      vMag: null, bMinusV: null, spectral: null, hd: null,
+    byKey: new Map(rows.map((r) => [r.gl, glieseRow(r.gl, {
       parallax: { mas: 1000 / r.distPc, errMas: 0.001, trigonometric: true },
-      ref: sourceRowRef(GLIESE, r.gl),
-    }])),
+    })])),
     rowCount: rows.length,
   };
 }
@@ -106,14 +103,12 @@ function tycho2Sources(
     hip2: new Map(),
     nss: new Map(),
     cns5: new Map(),
-    tycho2: new Map(rows.map((r) => [r.tyc, {
+    tycho2: new Map(rows.map((r) => [r.tyc, tycho2Row(r.tyc, {
       raDeg: r.raDeg, decDeg: r.decDeg,
       epoch: CATALOG_SCENE_EPOCH,
       pmRaMasyr: 0, pmDecMasyr: 0,
       btMag: r.vMag, vtMag: r.vMag,
-      fromIcrs: false, isPhotocentre: false, hip: null,
-      ref: sourceRowRef(TYCHO2, r.tyc),
-    }])),
+    })])),
     ...overrides,
   };
 }
@@ -377,7 +372,7 @@ describe('readStars constellation assignment', () => {
   // proper motion is the whole reason the two constellations are separate
   // fields. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   const RHO_AQL: ManifestRow = {
-    bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
+    flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
   // 20.23796 h × 15 = 303.5694°.
@@ -479,13 +474,11 @@ describe('readStars PM rescue', () => {
       hip2: new Map(),
       nss: new Map(),
       cns5: new Map(),
-      tycho2: new Map([[RESCUE_TYC, {
-        raDeg: 0, decDeg: 0,
+      tycho2: new Map([[RESCUE_TYC, tycho2Row(RESCUE_TYC, {
         epoch: CATALOG_SCENE_EPOCH,
         pmRaMasyr: pm.pmRaMasyr, pmDecMasyr: pm.pmDecMasyr,
-        btMag: 10, vtMag: 10, fromIcrs: false, isPhotocentre: false, hip: null,
-        ref: sourceRowRef(TYCHO2, RESCUE_TYC),
-      }]]),
+        btMag: 10, vtMag: 10,
+      })]]),
       ...overrides,
     };
   }
@@ -640,14 +633,12 @@ describe('readStars advances the position on a rescued PM', () => {
         hip2: new Map(),
         nss: new Map(),
         cns5: new Map(),
-        tycho2: new Map([[NO_MEAN_TYC, {
+        tycho2: new Map([[NO_MEAN_TYC, tycho2Row(NO_MEAN_TYC, {
           raDeg: OBSERVED_RA, decDeg: OBSERVED_DEC,
           epoch: TYCHO2_ICRS_EPOCH,
-          pmRaMasyr: null, pmDecMasyr: null,
           btMag: 10.0, vtMag: 10.0,
-          fromIcrs: true, isPhotocentre: false, hip: null,
-          ref: sourceRowRef(TYCHO2, NO_MEAN_TYC),
-        }]]),
+          fromIcrs: true,
+        })]]),
       },
     },
   );

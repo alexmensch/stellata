@@ -13,7 +13,7 @@ import {
   derivationCandidateSourceIds,
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
-import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding-review-dispositions-source';
+import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding/binding-review-dispositions-source';
 import { PAIR_REVIEW_DISPOSITIONS } from '../membership/pair-review-dispositions-source';
 import { additionItemCells } from '../membership/additions/addition-items-pure';
 import { applyEveryPairMove, pairLinksFrom } from '../membership/merge-derivation/merge-derivation-pure';

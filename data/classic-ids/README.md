@@ -47,13 +47,15 @@ label_flips.tsv                    Pipeline-derived, and by
                                    `/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change` requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
+classic_id_overrides.tsv           Hand-curated. 20 rows; the escape
                                    hatch for a CDS join review finds wrong
                                    (/scripts/catalog/classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them).
                                    Fifteen are the eight
                                    close-pair records whose hd and hr the
                                    four-witness rule moves together
-                                   (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd).
+                                   (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd),
+                                   three CNS5 renumberings no overlay entry
+                                   reaches.
 ```
 
 ## Provenance
@@ -98,8 +100,9 @@ all four; cite the paper per table.
   names novae/SNe, four clusters and M 31, though the ReadMe (l. 35–37)
   calls all 14 "novae or extragalactic objects" — so none needs a route and no record carries one,
   both pinned by `scripts/catalog/classic-ids/parity-ledger.test.ts`).
-  `name` is the BSC's own designation string (`"3Alp Lyr"`), committed
-  for the naming ladder and read by nothing today.
+  `name` is the BSC's own designation string (`"3Alp Lyr"`); `build:wgsn`
+  reads its Bayer field as the last tail of the naming authority's Bayer
+  union ([The union policy](/scripts/catalog/naming/README.md#the-union-policy)).
 - **`cns5.tsv`** ← VizieR `J/A+A/670/A19/cns5`, the 2023-12-13 corrected
   version. [Golovin 2023](/data/papers/index.md#golovin2023) —
   the fifth Catalogue of Nearby Stars. Carries

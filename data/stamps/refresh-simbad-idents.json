@@ -1,0 +1,14 @@
+{
+  "inputs": {},
+  "outputs": {
+    "data/simbad/simbad_idents.tsv": "37d5031bc867c18c3e73e5fa6a13901cef3175f4"
+  },
+  "query": "70128129112e59e91ad73eeafbef8271ac745888",
+  "answeredBy": [
+    "SIMBAD-Harvard"
+  ],
+  "request": "e912015060b0936c7cdd4a0809018d3c9898da8f",
+  "requestFrom": [
+    "data/simbad/simbad_sptype.tsv"
+  ]
+}

@@ -5,6 +5,7 @@ import { makeStar } from '../parse/star-fixture';
 import { applyStarNames, starNamingSummary } from './apply-star-names';
 import type { DesignationRow } from './wgsn-tables-pure';
 import { enterPhase } from '../record/record-phase';
+import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 
 const con = (code: string): number => CON_INDEX.get(code.toLowerCase())!;
 
@@ -18,6 +19,7 @@ const apply = (
 ) => applyStarNames(enterPhase('walked', stars), {
   names: [], designations, dispositions: new Map(),
   designationCons: { byHd: new Map(iv27aByHd.map(([hd, code]) => [hd, con(code)])), byHip: new Map() },
+  simbadFlamsteed: classifySimbadFlamsteed([], []),
 }, CONSTELLATIONS);
 
 describe('applyStarNames: the designation constellation', () => {
@@ -48,13 +50,13 @@ describe('applyStarNames: the designation constellation', () => {
   });
 });
 
-describe('applyStarNames: the printed Bayer cell', () => {
-  it('counts a letter the authority adds over no printed cell, and a printed cell it does not reach', () => {
-    const added = makeStar({ hd: 1 });
-    const dropped = makeStar({ hd: 2, printedBayer: 'Pi-1' });
-    const { counts } = apply([added, dropped], [row({ letter: 'μ', dc: 'Dra', hd: 1 })]);
-    expect([counts.namingBayerAdded, counts.namingBayerDropped]).toEqual([1, 1]);
-    expect([added.bayer, dropped.bayer]).toEqual(['μ', null]);
+describe('applyStarNames: Bayer designations', () => {
+  it('gives a letter only to a record the authority reaches', () => {
+    const reached = makeStar({ hd: 1 });
+    const bare = makeStar({ hd: 2 });
+    const { counts } = apply([reached, bare], [row({ letter: 'μ', dc: 'Dra', hd: 1 })]);
+    expect(counts.namingBayer).toBe(1);
+    expect([reached.bayer, bare.bayer]).toEqual(['μ', null]);
   });
 });
 
@@ -62,11 +64,11 @@ describe('starNamingSummary', () => {
   it('logs the authority pass\'s names, designations and aliases', () => {
     expect(starNamingSummary({
       namingIauNamed: 450, namingIauNamedByProper: 3, namingIauUnreached: 61, namingEponym: 27,
-      namingBayer: 2039, namingBayerAdded: 519, namingBayerComponent: 68, namingBayerDropped: 2,
+      namingBayer: 2039, namingBayerComponent: 68,
       namingGould: 937, namingAliases: 24, namingAliasRecords: 24,
     })).toBe(
       '  450 IAU names (3 via the record\'s own spelling, 61 approved names unreached), 27 string designations\n'
-        + '  2039 Bayer designations (519 added, 2 spine cells the authority does not reach), 937 Gould, 24 aliases on 24 records',
+        + '  2039 Bayer designations, 937 Gould, 24 aliases on 24 records',
     );
   });
 });

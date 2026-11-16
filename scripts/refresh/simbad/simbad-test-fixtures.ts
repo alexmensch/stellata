@@ -12,7 +12,7 @@ import { fakeTransport, type FakeSimbad } from './simbad-fake-pure';
 
 export function record(cells: Partial<ManifestRecord> = {}): ManifestRecord {
   return {
-    tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null, bayer: null, proper: null,
+    tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null, proper: null,
     gaiaSourceId: null, binding: 'none', routes: '', term: 'primaries', originKey: 'test', isSol: false, ...cells,
   };
 }
