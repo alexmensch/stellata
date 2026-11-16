@@ -70,8 +70,8 @@ entry sits a median 2.81″ away and as close as 0.12″. 0.4″ is the tightest
 value above every right entry but the two blends: **1,034 match, 2 none
 (those two), 10 several** — close pairs whose other entry is inside it too.
 At 0.3″ HIP 30953's right entry (0.36″) would read `none`; at 0.5″ six more
-pairs read `several`, at 1.0″ 141 do, and at any value the V/70A witness needs
-(≥ 12″) 1,005 do, which is why one tolerance cannot serve both sources.
+pairs read `several`, at 1.0″ 141 do, and at the V/70A witness's 15″ 1,024
+do, which is why one tolerance cannot serve both sources.
 
 **`V70A_WITNESS_TOLERANCE_ARCSEC = 15`.** The 22 `v70a_astrometry`
 dispositions (`data/membership/binding-review-dispositions.tsv`) put V/70A
@@ -79,8 +79,8 @@ dispositions (`data/membership/binding-review-dispositions.tsv`) put V/70A
 own coordinates: Gl 629.3 at 99.9″ and GJ 1001 at 117.2″, both kept on proper
 motion rather than position. Against the merge-divergence ledger's unlinked
 GJ cells, the cell's own TYC lands a median 5.3″ away. The separations run
-continuously to 13.8″ and then jump to 20.6″, and 15″ sits in that gap,
-above every known match. The seven from 20.6″ to 48.7″ are not known either
+continuously to 13.8″ and then jump to 20.7″, and 15″ sits in that gap,
+above every known match. The seven from 20.7″ to 48.7″ are not known either
 way — Gl 533.1, GJ 421 B, GJ 4327, GJ 1100, GJ 1141 A, GJ 9350, GJ 1141 B,
 three of them members of a close pair — and come back `none` with their
 separations for the consumer's review; beyond them the separations run

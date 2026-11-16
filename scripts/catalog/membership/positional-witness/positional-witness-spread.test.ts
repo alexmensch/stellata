@@ -13,12 +13,22 @@ import { TYCHO2 } from '../../tycho2-source';
 import { MERGE_DIVERGENCE } from '../merge-divergence-tsv';
 import { PAIR_REVIEW } from '../pair-review-tsv';
 import {
+  HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
   hipparcosAstrometry, witnessHipparcos, witnessV70a, type WitnessVerdict,
 } from './positional-witness-pure';
 
 const readable = [
   DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1, DATA_FILES.gliese, DATA_FILES.hip2,
 ].every((f) => lfsContentReadable(resolve(REPO_ROOT, f)));
+
+/** The largest separation at or under the tolerance and the smallest above it: the gap the constant sits in. */
+function gapAround(separations: readonly number[], toleranceArcsec: number, digits: number): [number, number] {
+  const round = (x: number) => Number(x.toFixed(digits));
+  return [
+    round(Math.max(...separations.filter((x) => x <= toleranceArcsec))),
+    round(Math.min(...separations.filter((x) => x > toleranceArcsec))),
+  ];
+}
 
 function tallyKinds(verdicts: readonly WitnessVerdict[]): Record<WitnessVerdict['kind'], number> {
   const out = { match: 0, none: 0, several: 0 };
@@ -46,6 +56,12 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     });
     expect(rows.length).toBe(1046);
     expect(tallyKinds(verdicts)).toEqual({ match: 1034, none: 2, several: 10 });
+    const nearest = verdicts.map((v) => v.separations[0].separationArcsec);
+    expect(gapAround(nearest, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, 2)).toEqual([0.36, 1.05]);
+    const insideV70aTolerance = verdicts.filter(
+      (v) => v.separations.filter((s) => s.separationArcsec <= V70A_WITNESS_TOLERANCE_ARCSEC).length > 1,
+    );
+    expect(insideV70aTolerance.length).toBe(1024);
   });
 
   it("tests each unlinked GJ cell's V/70A position against the row's own TYC", () => {
@@ -56,6 +72,9 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     const witnessed = astrometry.flatMap(({ r, a }) => (a === null ? [] : [witnessV70a(a, candidates([r.tyc!]))]));
     expect(rows.length).toBe(132);
     expect(astrometry.length - witnessed.length).toBe(23);
-    expect(tallyKinds(witnessed)).toEqual({ match: 84, none: 25, several: 0 });
+    const { match, none } = tallyKinds(witnessed);
+    expect({ match, none }).toEqual({ match: 84, none: 25 });
+    const own = witnessed.map((v) => v.separations[0].separationArcsec);
+    expect(gapAround(own, V70A_WITNESS_TOLERANCE_ARCSEC, 1)).toEqual([13.8, 20.7]);
   });
 });
