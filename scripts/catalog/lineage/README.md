@@ -71,9 +71,9 @@ scripts/catalog/lineage/
                                  build their stages with; mergedEmissions,
                                  several stages' emissions as one
                                  emitArtifacts part.
-  stage-lineage-sources.ts       stageLineageSources: a stage's current
-                                 lines and identity files as the sources a
-                                 later step reads.
+  stage-lineage-source.ts        Membership's and pairs' current lines and
+                                 identity files, declared as the sources
+                                 build:catalog's allocation reads.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).

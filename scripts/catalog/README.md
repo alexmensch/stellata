@@ -216,8 +216,9 @@ ledger, mints what is new — past the highest SID in any registry partition,
 the clouds' and Local Group's included — under the code of the lineage decision that
 admitted it, and settles every SID no record keeps by its upstream
 decision ([SID events](../sid/README.md#sid-events)). Membership's lineage
-comes from the last `build:membership` (`build/lineage/`, declared in
-`scripts/sid/catalog-upstream.ts`, so this build keys on it);
+comes from the last `build:membership` and pairs' from the last
+`build:binaries` (`build/lineage/`, declared in
+`lineage/stage-lineage-source.ts`, so this build keys on them);
 placement's and promotion's from this run.
 
 New ledger rows and events land in the catalogue's partition with the rest
