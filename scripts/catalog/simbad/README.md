@@ -39,9 +39,6 @@ scripts/catalog/simbad/
                                   Pure.
   simbad-idents-source.ts         SIMBAD_IDENTS, data/simbad/simbad_idents.tsv
   simbad-idents-parse.ts          declared and read as one object per row.
-  simbad-flamsteed.ts             readSimbadFlamsteed: that table classified
-                                  against IV/27A, for the audit and the naming
-                                  pass.
   simbad-flamsteed-pure.ts        The Flamsteed rule below: which `* NN Con`
     (+ test)                      idents count, indexed by HIP and HD, and the
                                   refused ones with their evidence. Pure.
