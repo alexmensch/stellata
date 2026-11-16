@@ -45,13 +45,17 @@ simbad_sourced_distances.tsv
                          record, <!-- count:build-catalog/distSimbadPlx -->404<!-- /count -->; a row
                          carrying neither cell addresses no record
                          (`stellata-hooj.15`).
-binding-review.tsv       Regular git. The 375 spine rows the derivation
-                         cannot settle alone or a review already settled —
-                         contested · collision · disposed — with every
-                         source's candidate, the gate rejections, the printed V
-                         and the derived candidate's G and SIMBAD cross-IDs.
+binding-review.tsv       Regular git. The 353 spine rows and addition
+                         groups the derivation cannot settle alone or a
+                         review already settled — contested · collision ·
+                         unconfirmed · disposed — with every source's
+                         candidate, the gate rejections, the printed V and
+                         the derived candidate's G and SIMBAD cross-IDs.
                          A contested row ships its winner while it waits, so
-                         being queued is a flag, not a withhold.
+                         being queued is a flag, not a withhold; an
+                         unconfirmed one ships no source, and its SIMBAD-named
+                         source stays a magnitude-term row
+                         (/scripts/catalog/membership/binding/README.md#identity-outranks-a-blended-magnitude).
                          Pipeline-derived.
 binding-review-dispositions.tsv
                          Regular git. Hand-curated, and AUTHORITATIVE
