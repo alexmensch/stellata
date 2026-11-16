@@ -14,7 +14,7 @@ import { parseMscOrbits, parseMscSystems } from './msc-pure';
 import { joinSimbadWdsSpectra, parseSimbadWdsXids, parseSptypeByOid } from './simbad-pure';
 
 const tsv = (text: string) => columnTable(FIXTURE, text);
-const csv = (text: string) => columnTable({ ...FIXTURE, csv: true }, text);
+const csv = (text: string) => columnTable({ ...FIXTURE, delimiter: 'comma' }, text);
 
 const ATHYG_HEADER = '"id","tyc","gaia","hyg","hip","hd","hr","gl","bayer","flam","con",'
   + '"proper","ra","dec","pos_src","dist","x0","y0","z0","dist_src",'
@@ -76,7 +76,7 @@ describe('curated tables', () => {
 
   it('refuses a curated row missing a cell it exists to state', () => {
     expect(() => parseComponentSptypeOverrides('wds_id\tcomponent\tsp_type\nX\tA\t\n', FIXTURE))
-      .toThrow(/fixture\/binaries\.tsv:2: sp_type is empty/);
+      .toThrow(/fixture\/binaries\.tsv:2: sp_type: is empty/);
     expect(() => parseAstrometryExclusions('gaia_source_id\treason\n\tblank\n', FIXTURE))
       .toThrow(/fixture\/binaries\.tsv:2: gaia_source_id: is empty/);
   });
@@ -153,7 +153,7 @@ describe('parseNssOrbits', () => {
   });
 
   it('refuses a row with no solution type, naming the line', () => {
-    expect(() => pick(solution('', 1, '5'))).toThrow(/:2: nss_solution_type is empty/);
+    expect(() => pick(solution('', 1, '5'))).toThrow(/:2: nss_solution_type: is empty/);
   });
 
   it('reads a lone solution of a type it does not know, for Stage 4 to convert to nothing', () => {

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import { runPull } from '../pull/pull';
+import { QUIET_DEPS } from '../pull/recorded-reply';
 import { SIMBAD, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { wdsSptypeTable } from './simbad-wds-sptype-pure';
 
@@ -15,12 +16,10 @@ describe('the pull', () => {
   afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
   const deps = (body: string): TapClientDeps => ({
+    ...QUIET_DEPS,
     transport: async (_url, form) => (form
       ? textReply(200, 'text/csv', body)
       : textReply(200, 'text/xml', '<capabilities/>')),
-    sleep: async () => {},
-    report: () => {},
-    log: () => {},
   });
 
   const pullOf = (oids: readonly number[]) => ({

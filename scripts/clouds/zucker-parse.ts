@@ -1,6 +1,7 @@
 // Parsers for the Zucker 2020 (/data/papers/index.md#zucker2020) and Zucker 2021 (/data/papers/index.md#zucker2021) cloud tables. See README.md.
 
 import type { Declared } from '../util/sources/source';
+import { readTable } from '../util/tsv/table-pure';
 
 export interface Sightline {
   readonly lDeg: number;
@@ -9,54 +10,42 @@ export interface Sightline {
   readonly dPc: number;
 }
 
-/** Sightlines grouped by raw cloud name, in first-appearance order. The VizieR
- *  header, units and dashes rows carry no integer `recno` and are skipped, as is
- *  any row with an unparseable coordinate or distance. */
-export function parseZ2020Sightlines(text: string): Map<string, Sightline[]> {
+const Z2020_COLUMNS = ['recno', 'Name', 'GLON', 'GLAT', 'd50'] as const;
+
+/** VizieR prints a units row and a dashes row under the header. */
+const VIZIER_PREAMBLE_ROWS = 2;
+
+export function isVizierPreamble(recno: string): boolean {
+  return !/^\d+$/.test(recno.trim());
+}
+
+/** Sightlines grouped by raw cloud name, in first-appearance order. */
+export function parseZ2020Sightlines(text: string, from: Declared): Map<string, Sightline[]> {
   const out = new Map<string, Sightline[]>();
-  for (const line of text.split('\n')) {
-    if (line === '' || line.startsWith('#')) continue;
-    const parts = line.split('\t');
-    if (parts.length < 16 || !/^\s*[+-]?\d+\s*$/.test(parts[0])) continue;
-    const [lDeg, bDeg, dPc] = [parts[2], parts[3], parts[14]].map(decimal);
-    if (lDeg === null || bDeg === null || dPc === null) continue;
-    const name = parts[1].trim();
-    out.set(name, [...(out.get(name) ?? []), { lDeg, bDeg, dPc }]);
+  let rowIndex = 0;
+  for (const row of readTable({ ...from, columns: Z2020_COLUMNS, comments: true }, text)) {
+    if (rowIndex++ < VIZIER_PREAMBLE_ROWS) {
+      if (!isVizierPreamble(row.raw('recno'))) row.fail('expected VizieR\'s units and dashes rows under the header');
+      continue;
+    }
+    row.requiredInt('recno');
+    const name = row.requiredText('Name');
+    const sightline = { lDeg: row.requiredFloat('GLON'), bDeg: row.requiredFloat('GLAT'), dPc: row.requiredFloat('d50') };
+    out.set(name, [...(out.get(name) ?? []), sightline]);
   }
   return out;
 }
 
-function decimal(cell: string): number | null {
-  const t = cell.trim();
-  if (t === '') return null;
-  const v = Number(t);
-  return Number.isNaN(v) ? null : v;
-}
-
-/** A whitespace-delimited table with one header row, read by column name. */
+/** A Zucker 2021 table: whitespace-delimited, a `cloud` column and the named number columns, each required. */
 function readWhitespaceTable<C extends string>(
   text: string,
   columns: readonly C[],
   from: Declared,
 ): { cloud: string; values: Record<C, number> }[] {
-  const [headerLine, ...lines] = text.split('\n');
-  const header = headerLine.trim().split(/\s+/);
-  const index = (name: string): number => {
-    const i = header.indexOf(name);
-    if (i < 0) throw new Error(`${from.file}: no "${name}" column. ${from.hint}`);
-    return i;
-  };
-  const cloudAt = index('cloud');
-  const at = columns.map(index);
-  return lines.map((l) => l.trim()).filter((l) => l !== '').map((l, row) => {
-    const parts = l.split(/\s+/);
-    const values = Object.fromEntries(columns.map((c, k) => {
-      const v = decimal(parts[at[k]] ?? '');
-      if (v === null) throw new Error(`${from.file}: row ${row + 2} has no number in "${c}". ${from.hint}`);
-      return [c, v];
-    })) as Record<C, number>;
-    return { cloud: parts[cloudAt], values };
-  });
+  return [...readTable({ ...from, columns: ['cloud', ...columns], delimiter: 'whitespace' }, text)].map((row) => ({
+    cloud: row.requiredText('cloud'),
+    values: Object.fromEntries(columns.map((c) => [c, row.requiredFloat(c)])) as Record<C, number>,
+  }));
 }
 
 export interface Z2021Extent {

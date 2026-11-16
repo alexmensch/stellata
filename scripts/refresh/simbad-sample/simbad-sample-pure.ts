@@ -153,7 +153,7 @@ export function samplePull(outputs: DeclaredOutputs<'sample'>): PhasedPull<'samp
         log(`  ${binName(i)}: ${candidates.length} candidates → drew ${bin.target}`);
       }
       const ledger = parseLedger();
-      const idents = await fetchIdents(ask, SAMPLE_PHASES, [HIP, GAIA_DR3], drawn.map((r) => oidOf(cell(r, 'oid'))).sort(ascending), ledger);
+      const idents = await fetchIdents(ask, SAMPLE_PHASES.idents, drawn.map((r) => oidOf(cell(r, 'oid'))).sort(ascending), ledger);
       const rows = drawn.map((r): Row => {
         const oid = oidOf(cell(r, 'oid'));
         const v = cell(r, 'v_mag');

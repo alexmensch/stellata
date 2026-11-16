@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { fitsBytes } from './fits-fixture';
+import { QUIET_DEPS } from './recorded-reply';
 import {
   GAIA, GAIA_ESA, SIMBAD, TapOverflow, TapRefused, TapTransient, VIZIER, csvText, readAsuTsv, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
   type AsuQuery, type HttpReply, type TapArchive, type Transport,
@@ -36,7 +37,7 @@ function fake(answer: (call: Call) => HttpReply | Error) {
   };
   const reported: string[] = [];
   const client = (archive: TapArchive) => tapClient(archive, {
-    transport, sleep: async () => {}, report: (s) => reported.push(s), log: () => {},
+    ...QUIET_DEPS, transport, report: (s) => reported.push(s),
   });
   const syncCalls = () => calls.filter((c) => c.url.endsWith('/sync'));
   return { calls, syncCalls, reported, client };

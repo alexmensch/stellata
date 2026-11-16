@@ -1,27 +1,55 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseZ2020Sightlines, parseZ2021Extents, parseZ2021Masses, parseZ2021PlummerFits } from './zucker-parse';
+import { isVizierPreamble, parseZ2020Sightlines, parseZ2021Extents, parseZ2021Masses, parseZ2021PlummerFits } from './zucker-parse';
 
 const FROM = { file: 'fixture/table.dat', hint: 'fixture' };
 
 describe('parseZ2020Sightlines', () => {
   const row = (recno: string, name: string, l: string, b: string, d: string): string =>
-    [recno, name, l, b, ...Array(10).fill('0'), d, '0'].join('\t');
+    [recno, name, l, b, 'x', d].join('\t');
+  const table = (...rows: string[]): string => [
+    '#', '# comment', '',
+    ['recno', 'Name', 'GLON', 'GLAT', 'd16', 'd50'].join('\t'),
+    [' ', ' ', 'deg', 'deg', 'pc', 'pc'].join('\t'),
+    ['--------', '----', '-----', '-----', '---', '---'].join('\t'),
+    ...rows,
+    '',
+  ].join('\n');
 
-  it('groups sightlines by trimmed name in first-appearance order, skipping header and malformed rows', () => {
-    const text = [
-      '# comment',
-      ['recno', 'Name', 'GLON', 'GLAT', ...Array(12).fill('x')].join('\t'),
+  it('groups sightlines by trimmed name in first-appearance order, past the VizieR units and dashes rows', () => {
+    const out = parseZ2020Sightlines(table(
       row('       1', 'Taurus     ', '021.8', '+09.2', ' 278'),
       row('2', 'Aquila', '30', '-1', '200'),
       row('3', 'Taurus', '22', '9', '280'),
-      row('4', 'Taurus', '22', '', '280'),
-      'short\trow',
-      '',
-    ].join('\n');
-    const out = parseZ2020Sightlines(text);
+    ), FROM);
     expect([...out.keys()]).toEqual(['Taurus', 'Aquila']);
     expect(out.get('Taurus')).toEqual([{ lDeg: 21.8, bDeg: 9.2, dPc: 278 }, { lDeg: 22, bDeg: 9, dPc: 280 }]);
+  });
+
+  it('takes a preamble row as one whose recno is not an integer', () => {
+    expect(isVizierPreamble(' ')).toBe(true);
+    expect(isVizierPreamble('--------')).toBe(true);
+    expect(isVizierPreamble('       1')).toBe(false);
+    expect(isVizierPreamble('326')).toBe(false);
+  });
+
+  it('refuses a malformed or empty coordinate or distance, naming file, line and column', () => {
+    expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '2l.8', '9', '278')), FROM))
+      .toThrow('fixture/table.dat:7: GLON: "2l.8" is not a decimal number. fixture');
+    expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '21', '', '278')), FROM))
+      .toThrow('fixture/table.dat:7: GLAT: is empty. fixture');
+    expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '21', '9', 'nan')), FROM))
+      .toThrow('fixture/table.dat:7: d50: "nan" is not a decimal number. fixture');
+  });
+
+  it('skips only the two preamble rows: a data row with a malformed recno throws, as does a missing preamble', () => {
+    expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '21', '9', '278'), row('2a', 'Taurus', '21', '9', '278')), FROM))
+      .toThrow('fixture/table.dat:8: recno: "2a" is not an integer. fixture');
+    expect(() => parseZ2020Sightlines(table(row('', 'Taurus', '21', '9', '278')), FROM))
+      .toThrow('fixture/table.dat:7: recno: is empty. fixture');
+    const noPreamble = [['recno', 'Name', 'GLON', 'GLAT', 'd16', 'd50'].join('\t'), row('1', 'Taurus', '21', '9', '278'), ''].join('\n');
+    expect(() => parseZ2020Sightlines(noPreamble, FROM))
+      .toThrow('fixture/table.dat:2: expected VizieR\'s units and dashes rows under the header. fixture');
   });
 });
 
@@ -36,7 +64,7 @@ describe('the Zucker 2021 tables', () => {
   });
 
   it('refuses a missing column and a non-numeric cell', () => {
-    expect(() => parseZ2021PlummerFits('cloud n0 rflat\nPipe 1 2\n', FROM)).toThrow(/no "p" column/);
-    expect(() => parseZ2021PlummerFits('cloud n0 rflat p\nPipe 1 x 2\n', FROM)).toThrow(/row 2 has no number in "rflat"/);
+    expect(() => parseZ2021PlummerFits('cloud n0 rflat\nPipe 1 2\n', FROM)).toThrow('fixture/table.dat is missing required columns: p. fixture');
+    expect(() => parseZ2021PlummerFits('cloud n0 rflat p\nPipe 1 x 2\n', FROM)).toThrow('fixture/table.dat:2: rflat: "x" is not a decimal number. fixture');
   });
 });

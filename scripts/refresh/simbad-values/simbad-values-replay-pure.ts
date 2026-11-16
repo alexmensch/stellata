@@ -14,7 +14,7 @@ export function valuesFake(text: string, file: string): FakeSimbad {
   const flux: NonNullable<FakeSimbad['flux']>[number][] = [];
   for (const row of readTable({ file, columns, hint: 'Replay a committed values pull.' }, text)) {
     const cell = (c: string): string | null => row.raw(c) || null;
-    const oid = row.int(BASIC[0].tsv) ?? row.fail('no simbad_oid');
+    const oid = row.requiredInt(BASIC[0].tsv);
     basic.set(oid, Object.fromEntries(BASIC.map((c) => [c.column, c === BASIC[0] ? String(oid) : cell(c.tsv)])));
     for (const ns of IDENTS) {
       const suffix = cell(ns.name);

@@ -15,7 +15,7 @@ repo-relative, so an outputs module passes them as they are.
   step-table outputs modules declare: the membership manifest and its four
   ledgers, the parked and SIMBAD-sourced distance ledgers, SIMBAD's WDS
   component cross-IDs (which a pull writes and two sources read) and the
-  WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, the label-merge
+  WDS-keyed SIMBAD spectral types, the SIMBAD validation sample, value tier and manifest-keyed spectral types, SIMBAD's TYC → HD attributions, the label-merge
   queue, the classic-ID overlay and its two gate queues, the two WGSN
   tables and the two WGSN files they are built from, the CDS pulls' tables
   (the four classic-designation cross indexes, Hipparcos' printed
@@ -29,9 +29,7 @@ repo-relative, so an outputs module passes them as they are.
   reason-code list, and the Vaidman 2025 reference table the hand-run
   `build:vaidman-table` writes; and `MANUAL_STAMP_FOLDER`, where the manual
   steps' committed records live (`/scripts/pipeline/pipeline-tree.ts`). The Horizons fetchers' per-target families are spelled beside
-  their own outputs modules. Python cannot import this module, so the
-  Python `scripts/refresh/` pulls left take the manifest's path from
-  `refresh_lib.py`, Python's one spelling of it. Each file's codec (a `defineArtifact` in
+  their own outputs modules. Each file's codec (a `defineArtifact` in
   `scripts/`) takes its `file` from here. Also the SID registry's
   partitions (`REGISTRY_PARTITIONS`: the catalogue's and one per sibling
   artifact, `SIBLING_PARTITIONS`, each named here — `CLOUD_PARTITION`,

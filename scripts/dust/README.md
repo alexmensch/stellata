@@ -12,7 +12,7 @@ guards the built tree.
 `dust-manifest.test.ts` here pins the manifest encode contract + the
 Zucker column-check provenance.
 
-Python deps in `requirements-dust.txt`.
+Python deps in `requirements-dust.txt` ([Python environment](#python-environment)).
 
 `prefilter/` is analysis only — the sweep that picked the Milky Way band's
 prefilter mechanism against this grid. Its own README. `march-taps/` is
@@ -81,7 +81,7 @@ The map comes from Zenodo record 8187943 through the `dustmaps` package,
 into `dustmaps`' own cache outside the repo, so no bake read of it is a
 repo file the recorder could hash. Each variant the bakes read is therefore
 a pull step of its own (`edenhofer2024.py`, entries
-`../refresh/refresh-edenhofer2024-{main,2kpc}.py`): it downloads the file,
+`refresh-edenhofer2024-{main,2kpc}.py`): it downloads the file,
 checks its md5 against the identity `VARIANTS` states, and writes that
 identity to `data/dust/edenhofer2024-<variant>.json`. A bake reads the
 identity file through `edenhofer2024.require(flavor)` before touching the
@@ -91,6 +91,27 @@ file is missing or fails the md5 (a checkout where the pull never ran). The dust
 cloud-surfaces reads `main` and `2kpc`. A new upstream version is an edit
 to `VARIANTS`, which stales both the pull (its `--describe` prints the
 identity) and every bake that reads it.
+
+## Python environment
+
+The pulls (`refresh:edenhofer2024-{main,2kpc}`) and the real-mode bake
+(`build:dust`) run through `scripts/pipeline/record.ts`, which starts bare
+`python3`, so `requirements-dust.txt` must be importable from the shell that
+runs them. Pin it to a local virtualenv:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r scripts/dust/requirements-dust.txt
+source .venv/bin/activate
+```
+
+**`.venv` is gitignored, so a git worktree has none** — a run from one
+dies on `ModuleNotFoundError: dustmaps` after resolving its paths perfectly
+well, which reads like a code fault and is not one. Put the main checkout's
+venv first on `PATH` and run the target
+(`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:edenhofer2024-main`):
+the scripts resolve `REPO_ROOT` from their own location, so they still read
+and write the worktree's `data/`.
 
 ## Usage
 
@@ -105,7 +126,7 @@ A run with arguments writes no record, so its outputs read stale until a
 plain `pnpm run build:dust`
 ([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
-Real mode needs `pip install -r scripts/requirements-dust.txt` and the
+Real mode needs the [Python environment](#python-environment) and the
 pulled map (~3.2 GB); a re-encode (e.g. a `DENSITY_MAX` change) reuses the
 gitignored `.voxels-<variant>-<md5>.npy` cache (`edenhofer2024.voxel_cache_path`, one per dataset variant and version) and needs only numpy. A fresh resample deletes
 that variant's older-version caches and the unkeyed `.voxels.npy`

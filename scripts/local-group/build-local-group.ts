@@ -10,6 +10,7 @@ import { sweepStaged } from '../util/emit-artifacts';
 import { LOCAL_GROUP_JSON } from './local-group-json';
 import { LOCAL_GROUP_OUTPUTS } from './local-group-outputs';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
+import { parseLvdb } from './local-group-parse';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
@@ -22,7 +23,7 @@ import { compareCodeUnits } from '../../src/astro-core/order-pure';
 
 export async function main(): Promise<void> {
   sweepStaged(LOCAL_GROUP_OUTPUTS);
-  const lvdb = LVDB.read();
+  const lvdb = parseLvdb(LVDB.read());
   const overrides = LG_OVERRIDES.read();
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
   const aliasRows = LG_ALIASES.read();

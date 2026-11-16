@@ -14,6 +14,9 @@ export const INHERITED_SPINE = defineArtifact({
   order: 'as-given',
   rowKey: { id: 'spine', cardinality: 'one', text: (line: number) => String(line) },
   decode: (row): SpineRow => {
+    row.id('hip');
+    row.id('hd');
+    row.id('hr');
     row.sourceId('gaia_source_id');
     return row.cells();
   },

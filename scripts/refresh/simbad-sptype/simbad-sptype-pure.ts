@@ -85,7 +85,7 @@ export function sptypePull(
         log(`      recovered via ${namespace.padEnd(9)} hip=${String(record.hip ?? '-').padStart(7)} hd=${String(record.hd ?? '-').padStart(7)} → ${merged.get(oid)?.[SP_TYPE.column]}`);
       }
       const oids = [...merged.keys()].sort(ascending);
-      const idents = await fetchIdents(ask, SPTYPE_PHASES, IDENTS, oids, ledger);
+      const idents = await fetchIdents(ask, SPTYPE_PHASES.idents, oids, ledger);
       const typed = countFilled(merged.values(), (cells) => isFilled(cells[SP_TYPE.column]));
       log(fillLine('sp_type', typed, merged.size));
       return {

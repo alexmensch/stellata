@@ -5,7 +5,9 @@ folder: an external input through `readTable`, a file this repo writes itself
 through its `defineArtifact` codec. A refresh pull's output is an external
 table, written by `../../refresh/pull/`'s `formatTsv` through the codec's own
 layout (`tsvLine`, `tsvText`) and read like any input. A comma-separated table
-reads through the same reader with `csv: true` (the AT-HYG classic-ID CSV).
+reads through the same reader with `delimiter: 'comma'` (the AT-HYG classic-ID CSV,
+the LVDB snapshot), a whitespace-aligned one with `delimiter: 'whitespace'`
+(the Zucker 2021 tables).
 Two places stand outside it, named so a
 third is a finding rather than precedent. The WGSN tables
 (`../../catalog/naming/wgsn-parse-pure.ts`) check their header against a
@@ -26,7 +28,7 @@ scripts/util/tsv/
   table-pure.ts (+ test)      readTable / tableLineReader, TableRow,
                               readTableLines (each row's line as written,
                               checked but never split), splitCsvLine
-                              (the `csv: true` cell split), columnTable
+                              (the `comma` cell split), columnTable
                               (#reading-a-table), and the
                               cell parsers (textCell, floatCell, intCell,
                               idCell, idListCell, sourceIdCell,
@@ -80,8 +82,10 @@ the target that rebuilds or re-pulls the file.
   a non-empty cell they cannot parse. `float` takes only a plain decimal
   (`12abc`, `nan`, `Infinity` and hex all throw); `int` only a safe integer
   (`12.0` throws). A cell past the end of a short row reads as empty.
-  `requiredText` is `text` for a hand-curated cell the row exists to state:
-  empty throws, naming the column.
+  `requiredText`, `requiredFloat` and `requiredInt` are the same reads for a
+  column every row must fill: empty throws, naming the column. A hand-curated
+  file's `hint` says what to do with an incomplete row (complete it, or
+  comment it out with `#`).
 - **An identifier reads only as the text it writes back to.** `id` (and
   `requiredId`, `idList(column, separator)`) take bare digits as written — no
   sign, padding or leading zero, within the safe-integer range — so a
@@ -134,7 +138,8 @@ and its parse each have one owner.
   `decode`. Codecs decode a typed record — numbers parsed, a closed
   column through `oneOf`, so an unknown value fails at the read rather than
   downstream. The spine (`INHERITED_SPINE`, frozen and read verbatim) is the
-  one **cell record**, every column the string as written (`row.cells()`);
+  one **cell record**, every column the string as written (`row.cells()`),
+  though its read refuses a malformed `hip` / `hd` / `hr` or `gaia_source_id`;
   `BINDING_REVIEW` keeps the spine's key cells and `derived_source_id` as
   written beside its typed verdict, since the curated dispositions join on
   that text: the key through `bindingReviewKey`, the id by equality with

@@ -3,7 +3,7 @@
 
 import { lookupGliese } from '../gliese-parse-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
-import type { SpineRow } from './inherited-spine-pure';
+import { spineIds, type SpineRow } from './inherited-spine-pure';
 import {
   bareGjKey, cns5RowFor, indexCns5, type PrimaryTables,
 } from './primaries-audit-pure';
@@ -97,9 +97,7 @@ export function partitionRow(row: SpineRow, links: LinkTables): RowPartition | n
   const cells = KEY_CELLS.filter((c) => row[c] !== '');
   if (cells.length < 2) return null;
   const at = new Map(cells.map((c, i) => [c, i] as const));
-  const hip = row.hip === '' ? null : Number(row.hip);
-  const hd = row.hd === '' ? null : Number(row.hd);
-  const hr = row.hr === '' ? null : Number(row.hr);
+  const { hip, hd, hr } = spineIds(row);
   const has = (c: KeyCell): boolean => at.has(c);
 
   const published = (uf: UnionFind): void => {

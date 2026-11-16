@@ -60,7 +60,7 @@ export interface ProperDispositionRow {
 
 export function parseProperDispositions(text: string, from: Declared): ProperDispositionRow[] {
   return [...readTable({ ...from, columns: PROPER_DISPOSITIONS_COLUMNS }, text)].map((row) => ({
-    proper: row.text('proper') ?? row.fail('proper is empty'),
+    proper: row.requiredText('proper'),
     disposition: row.oneOf('class', PROPER_DISPOSITIONS),
     hip: row.int('hip'),
     hd: row.int('hd'),

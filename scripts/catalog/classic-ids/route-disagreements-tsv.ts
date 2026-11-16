@@ -17,8 +17,8 @@ export const ROUTE_DISAGREEMENTS = defineArtifact({
   hint: 'Re-run `pnpm run build:classic-ids`.',
   order: (a: HdHipRouteDisagreement, b: HdHipRouteDisagreement) => a.hd - b.hd,
   decode: (row): HdHipRouteDisagreement => ({
-    hd: row.int('hd') ?? row.fail('hd is empty'),
-    hip: row.int('hip') ?? row.fail('hip is empty'),
+    hd: row.requiredInt('hd'),
+    hip: row.requiredInt('hip'),
     hdRouteSourceIds: row.sourceIdList('hd_route_source_ids', OVERLAY_VALUE_SEPARATOR),
     hipRouteSourceId: row.requiredSourceId('hip_route_source_id'),
   }),
