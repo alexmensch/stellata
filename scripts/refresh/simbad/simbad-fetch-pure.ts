@@ -171,7 +171,7 @@ export async function fetchIdents(
   return foldIdents<string>(await ask(phase, oids.map(String)), phase.namespaces, ledger, (into, ns, suffix) => { into.set(ns, suffix); });
 }
 
-/** Every id per namespace per oid, for a question about the whole set: corroboration asks whether an id is held at all, tyc-hd which HDs an object holds. */
+/** Every id per namespace per oid. */
 export async function fetchIdentSets(
   ask: Ask, phase: IdentPhase, oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, Set<string>>>> {
