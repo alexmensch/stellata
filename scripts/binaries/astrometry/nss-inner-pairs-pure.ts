@@ -30,6 +30,12 @@ interface Carrier {
   readonly astrometry: ComponentAstrometry;
 }
 
+function outranks(token: string, current: string): boolean {
+  const named = childComponentTokens(token) !== null;
+  const currentNamed = childComponentTokens(current) !== null;
+  return named !== currentNamed ? named : token.length > current.length;
+}
+
 function nssCarriers(pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<DecomposedPair, PairAstrometry>, indices: IdentifierIndices): Carrier[] {
   const carriers = new Map<string, Carrier>();
   for (const p of pairs) {
@@ -40,7 +46,7 @@ function nssCarriers(pairs: readonly DecomposedPair[], astrometry: ReadonlyMap<D
       if (partner.gaia === null || partner.gaia.value === gaia.value) continue;
       const key = `${component.wdsId}\t${gaia.value}`;
       const cur = carriers.get(key);
-      if (cur === undefined || component.component.length > cur.component.component.length) {
+      if (cur === undefined || outranks(component.component, cur.component.component)) {
         carriers.set(key, { gaia, component, astrometry: ast });
       }
     }

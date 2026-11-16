@@ -109,6 +109,17 @@ describe('synthesizeNssInnerPairs', () => {
     }
   });
 
+  it('takes a token with child letters over a longer one without, whichever pair comes first', () => {
+    for (const pairs of [
+      [pairOf('AB,C', side('42'), side('99')), pairOf('AD', side('42'), side('77'))],
+      [pairOf('AD', side('42'), side('77')), pairOf('AB,C', side('42'), side('99'))],
+    ]) {
+      const r = run(pairs, inRegime);
+      expect(r.pairs.map((p) => p.pair.components)).toEqual(['Aa,Ab']);
+      expect(r.tally.skipped_token_shape).toBe(0);
+    }
+  });
+
   it('skips a compound carrier token, which has no deeper WDS convention', () => {
     const r = run([pairOf('AB,C', side('42'), side('99'))], inRegime);
     expect(r.pairs).toEqual([]);

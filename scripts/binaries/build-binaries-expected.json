@@ -1,14 +1,14 @@
 {
   "stages": {
     "ingest": {
-      "wds_pairs_total": 158413,
+      "wds_pairs_total": 158415,
       "msc_orbits_unmapped": 326,
       "xwalk_hip_mag_rejected": 162,
       "athyg_gaia_mag_rejected": 241
     },
     "subdivide": {
       "synthesized_orb6_orphan_pairs": 33,
-      "synthesized_nss_inner_pairs": 495,
+      "synthesized_nss_inner_pairs": 497,
       "synthesized_msc_inner_pairs": 495
     },
     "resolve": {
@@ -16,11 +16,11 @@
       "ccdm_sibling_owned_rejected": 467,
       "position_match_sibling_claimed_rejected": 144,
       "athyg_match_sibling_claimed_rejected": 88,
-      "decomposing_pairs": 45591,
-      "components_total": 91182,
+      "decomposing_pairs": 45593,
+      "components_total": 91186,
       "resolution_orb6_hip": 1326,
-      "resolution_manifest_hip": 1596,
-      "resolution_simbad_xid": 32738,
+      "resolution_manifest_hip": 1598,
+      "resolution_simbad_xid": 32740,
       "resolution_ccdm_hip": 4181,
       "resolution_position_pm": 11773,
       "resolution_position_nopm": 731,
@@ -34,7 +34,7 @@
       "arbitration_skipped_photocentre_blend": 112
     },
     "astrometry": {
-      "astrometry_gaia_nss_systemic": 2124,
+      "astrometry_gaia_nss_systemic": 2128,
       "astrometry_hip2_long_baseline": 3330,
       "astrometry_gaia_5p": 47314,
       "astrometry_athyg_position": 1207,
@@ -42,44 +42,44 @@
     },
     "orbits": {
       "orbit_orb6": 3270,
-      "orbit_gaia_nss": 700,
+      "orbit_gaia_nss": 702,
       "orbit_orb6_spectroscopic": 100,
       "orbit_msc": 378,
       "orbit_none": 41143
     },
     "multiples": {
       "msc_pair_mags_filled": 518,
-      "multiples_rows_emitted": 50582,
+      "multiples_rows_emitted": 50586,
       "multiples_astrometry_system_inherited": 12199,
       "multiples_standalone_emitted": 9812,
       "multiples_hd_populated": 15505,
-      "multiples_sep_arcsec_populated": 40284,
-      "multiples_pa_deg_populated": 40272,
+      "multiples_sep_arcsec_populated": 40288,
+      "multiples_pa_deg_populated": 40276,
       "multiples_sep_pa_epoch_populated": 38780,
       "multiples_dmag_populated": 37794,
-      "multiples_orbit_q_populated": 7458,
+      "multiples_orbit_q_populated": 7462,
       "a_via_catalog": 6334,
-      "a_via_kepler_mass_estimate": 1968,
+      "a_via_kepler_mass_estimate": 1972,
       "a_via_none": 42280,
       "spect_curated": 9,
       "spect_simbad": 11059,
       "spect_msc": 4000,
-      "spect_athyg": 9115,
-      "spect_none": 26399
+      "spect_athyg": 9117,
+      "spect_none": 26401
     },
     "component-binding": {
       "component-binding.gaia.own": 35840,
       "component-binding.gaia.inherited.blend": 919,
       "component-binding.gaia.inherited.letter": 78,
-      "component-binding.gaia.inherited.parent": 1244,
+      "component-binding.gaia.inherited.parent": 1248,
       "component-binding.gaia.inherited.partner": 69,
       "component-binding.gaia.unbound": 12432,
       "component-binding.hip.own": 14281,
       "component-binding.hip.inherited.blend": 823,
       "component-binding.hip.inherited.letter": 123,
-      "component-binding.hip.inherited.parent": 401,
+      "component-binding.hip.inherited.parent": 403,
       "component-binding.hip.inherited.partner": 34,
-      "component-binding.hip.unbound": 34920
+      "component-binding.hip.unbound": 34922
     },
     "pairs": {
       "pairs.duplicate-row": 1,
@@ -88,7 +88,7 @@
       "pairs.blank-enumerated": 1,
       "pairs.optical.wds-notes-kept": 5871,
       "pairs.optical.wds-notes-rejected": 5677,
-      "pairs.optical.orbit-kept": 4295,
+      "pairs.optical.orbit-kept": 4297,
       "pairs.optical.sep-limit-rejected": 5587,
       "pairs.optical.gaia-kept": 3838,
       "pairs.optical.gaia-rejected": 718,
