@@ -1,7 +1,7 @@
 // Stage 6's anchor per system as the anchors lineage stage: the anchor and why, each kept primary it outranked, and its binding. See README.md#anchors-lineage.
 
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
-import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
+import { stageLines, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, refusalCode, stageCodes, taggedCodes } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { ANCHOR_RANK_STEPS, type AnchorRankStep } from '../component-tokens-pure';
 import { componentRowKey } from '../multiples-row-key-pure';
@@ -56,9 +56,7 @@ export function* anchorsLineageRows(anchors: ReadonlyMap<string, SystemAnchor>):
 }
 
 export function anchorsLineageLines(anchors: ReadonlyMap<string, SystemAnchor>): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of anchorsLineageRows(anchors)) lines.push(stageLineageLine(ANCHORS_CODES, row));
-  return lines;
+  return stageLines(ANCHORS_CODES, anchorsLineageRows(anchors));
 }
 
 const UNREACHED: readonly (readonly [wdsId: string, components: string, anchor: string, boundPrimary: string])[] = [

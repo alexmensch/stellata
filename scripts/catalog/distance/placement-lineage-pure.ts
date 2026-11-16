@@ -2,7 +2,7 @@
 
 import { lineageInvariant, NO_EXCEPTIONS, type LineageInvariant } from '../lineage/lineage-invariant-pure';
 import {
-  decodeLineageLine, lineageLineCode, paramsOf, stageLineageLine,
+  decodeLineageLine, lineageLineCode, paramsOf, stageLines,
   type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, retired, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
@@ -369,7 +369,7 @@ export function placementLineageRows(p: Placement): LineageRow[] {
 
 /** A record's rows as lines, so the walk holds strings rather than its Placements. */
 export function placementLineageLines(p: Placement): LineageLine[] {
-  return placementLineageRows(p).map((row) => stageLineageLine(PLACEMENT_CODES, row));
+  return stageLines(PLACEMENT_CODES, placementLineageRows(p));
 }
 
 const REASON_BY_PARK_CODE = new Map<string, ParkedReason>(

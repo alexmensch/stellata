@@ -1,7 +1,7 @@
 // Size as a lineage stage: its reason codes and the one serialiser over each walked record's radius route. See README.md#size-lineage.
 
 import {
-  stageLineageLine, type LineageLine, type LineageParams, type LineageRow, stageRow,
+  stageLines, type LineageLine, type LineageParams, type LineageRow, stageRow,
 } from '../lineage/lineage-row-pure';
 import { outcomeCode, refusalCode, stageCodes } from '../lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
@@ -122,5 +122,5 @@ export function sizeLineageRows({ key, radius, apsis, classEvidence }: Size): Li
 
 /** A record's rows as lines, so the walk holds strings rather than its outcomes. */
 export function sizeLineageLines(size: Size): LineageLine[] {
-  return sizeLineageRows(size).map((row) => stageLineageLine(SIZE_CODES, row));
+  return stageLines(SIZE_CODES, sizeLineageRows(size));
 }

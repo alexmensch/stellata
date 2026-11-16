@@ -10,7 +10,7 @@ import { identityText } from '../lineage/identity/identity-pure';
 import { KEY_CHANGE_KINDS } from '../lineage/lineage-diff-pure';
 import { readIdentity } from '../lineage/lineage-io';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
-import { stageLineageLine, stageLineageText } from '../lineage/lineage-row-pure';
+import { stageLines, stageLineageText } from '../lineage/lineage-row-pure';
 import { countedStageLineage } from '../lineage/stage-lineage';
 import { derivedStage, nestByStage } from '../../util/counts/count-stages-pure';
 import { MEMBERSHIP_COUNTS } from './membership-manifest-expected-json';
@@ -85,7 +85,7 @@ export async function main(): Promise<void> {
     spec: MEMBERSHIP_LINEAGE,
     inputs: stepInputHashes(),
     diffed: 'membership',
-    lines: () => result.lineage.map((row) => stageLineageLine(MEMBERSHIP_CODES, row)),
+    lines: () => stageLines(MEMBERSHIP_CODES, result.lineage),
     render: (sorted) => ({
       membership: stageLineageText(MEMBERSHIP_CODES, sorted),
       identity: identityText(result.identity),

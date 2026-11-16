@@ -37,7 +37,8 @@ scripts/catalog/lineage/
                                  a row's stage and role from its codes;
                                  stageLineageLine, the one encoder, which
                                  refuses a code the stage does not declare
-                                 or a row in another role than its code's;
+                                 or a row in another role than its code's,
+                                 and stageLines, it over a stage's rows;
                                  sortUtf8, the one order the stage lines,
                                  identity and SID files, reason-code list
                                  and trace keys sort by; and

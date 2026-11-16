@@ -1,7 +1,7 @@
 // Stage 2's decisions per WDS component as the resolve lineage stage: its tier, each candidate a cascade gate refused, its part in each audit verdict. See README.md#resolve-lineage.
 
 import {
-  foldStageLines, lineageLineCode, lineageLineParams, parseParams, stageLineageLine, stageRow,
+  foldStageLines, lineageLineCode, lineageLineParams, parseParams, stageLines, stageRow,
   type LineageLine, type LineageParams, type LineageRow,
 } from '../../catalog/lineage/lineage-row-pure';
 import {
@@ -129,9 +129,7 @@ export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusa
 }
 
 export function resolveLineageLines(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of resolveLineageRows(result)) lines.push(stageLineageLine(RESOLVE_CODES, row));
-  return lines;
+  return stageLines(RESOLVE_CODES, resolveLineageRows(result));
 }
 
 const AUDIT_BY_CODE: ReadonlyMap<string, AuditCode> = new Map(

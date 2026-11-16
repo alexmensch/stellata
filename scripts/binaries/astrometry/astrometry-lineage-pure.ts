@@ -2,7 +2,7 @@
 
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
 import {
-  foldStageLines, stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow,
+  foldStageLines, stageLines, stageRow, type LineageLine, type LineageParams, type LineageRow,
 } from '../../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, refusalCode, stageCodes, taggedCodes, type Kebab } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { hipDesignation } from '../../sid/sid-pure';
@@ -66,9 +66,7 @@ export function* astrometryLineageRows(result: Pick<Stage3Result, 'pairs' | 'ast
 }
 
 export function astrometryLineageLines(result: Pick<Stage3Result, 'pairs' | 'astrometry' | 'siblingClaimed'>): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of astrometryLineageRows(result)) lines.push(stageLineageLine(ASTROMETRY_CODES, row));
-  return lines;
+  return stageLines(ASTROMETRY_CODES, astrometryLineageRows(result));
 }
 
 /** The `astrometry_*` count-snapshot keys, one per route, from the stage's lines: both unresolved codes count as `unresolved`. */

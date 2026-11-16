@@ -1,7 +1,7 @@
 // Stage 6's spectral-type masses per multiples.tsv row as the masses lineage stage: the branch each was read off, and what it fed. See README.md#masses-lineage.
 
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
-import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
+import { stageLines, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, stageCodes, taggedCodes } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import { MASS_BRANCHES, type MassBranch } from '../masses/mass-estimate-pure';
@@ -47,9 +47,7 @@ export function* massesLineageRows(massReads: ReadonlyMap<MultiplesRecord, MassR
 }
 
 export function massesLineageLines(massReads: ReadonlyMap<MultiplesRecord, MassRead | null>): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of massesLineageRows(massReads)) lines.push(stageLineageLine(MASSES_CODES, row));
-  return lines;
+  return stageLines(MASSES_CODES, massesLineageRows(massReads));
 }
 
 const UNPARSED: readonly (readonly [systemId: string, comp: string, spect: string])[] = [

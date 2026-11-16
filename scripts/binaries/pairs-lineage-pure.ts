@@ -1,6 +1,6 @@
 // Every WDS pair row the binaries pipeline decides, keyed on its founding row, as the `pairs` lineage stage. See README.md#pairs-lineage.
 
-import { stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
+import { stageLines, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { BlankRescueOutcome } from './load/blank-rescue-pure';
@@ -66,7 +66,5 @@ export function* pairsLineageRows({ reference, optical, multiples }: PairDecisio
 }
 
 export function pairsLineageLines(decisions: PairDecisions): LineageLine[] {
-  const lines: LineageLine[] = [];
-  for (const row of pairsLineageRows(decisions)) lines.push(stageLineageLine(PAIRS_CODES, row));
-  return lines;
+  return stageLines(PAIRS_CODES, pairsLineageRows(decisions));
 }

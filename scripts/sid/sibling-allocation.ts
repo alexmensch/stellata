@@ -8,7 +8,7 @@ import { emitArtifacts, type ArtifactContents, type DeclaredOutputs } from '../u
 import { stepInputHashes } from '../util/step-input-hashes';
 import { identityText, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { LINEAGE_LAYOUT } from '../catalog/lineage/lineage-layout-pure';
-import { stageLineageLine, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
+import { stageLines, stageLineageText, type LineageLine } from '../catalog/lineage/lineage-row-pure';
 import type { StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { countedStageLineage, type LineageBudget, type StageLineageEmission } from '../catalog/lineage/stage-lineage';
 import { allocate, type Upstream } from './allocate-pure';
@@ -61,7 +61,7 @@ export function allocateSibling<N extends SiblingPartition, I extends string>(
   return {
     sids: allocation.outcomes.map((o) => o.sid),
     registry: appended ? registryTexts(spec.ns, allocation.minted, allocation.events) : null,
-    lines: objectOutcomeRows(spec.codes, objects, allocation.outcomes).map((row) => stageLineageLine(spec.codes, row)),
+    lines: stageLines(spec.codes, objectOutcomeRows(spec.codes, objects, allocation.outcomes)),
     identity: objects.map(({ origin, designations }) => ({
       key: origin, tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '', designations,
     })),
