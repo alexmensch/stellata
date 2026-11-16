@@ -9,6 +9,7 @@ import {
   isSiblingLetterAttribution,
   parseSimbadWdsXidsTsv,
   rejectionOf,
+  sourcesWithSiblingComponent,
   weighBinding,
 } from './binding-gate-pure';
 import { NO_PRINTED_V } from '../../photometry/photometry-fixture';
@@ -187,5 +188,19 @@ describe('isSiblingLetterAttribution', () => {
   it('is inert without a HIP or without the xids index', () => {
     expect(isSiblingLetterAttribution('1420101696285626624', null, xids)).toBe(false);
     expect(isSiblingLetterAttribution('1420101696285626624', 83608, null)).toBe(false);
+  });
+});
+
+describe('sourcesWithSiblingComponent', () => {
+  it('is every source whose WDS system SIMBAD lists another component of, a HIP-only component counting', () => {
+    const xids = parseSimbadWdsXidsTsv(columnTable(FROM, [
+      'wds_id\tcomponent\tgaia_source_id\thip',
+      '00001+0001\tA\t11\t',
+      '00001+0001\tB\t\t5',
+      '00002+0002\tA\t22\t',
+      '00003+0003\tA\t33\t',
+      '00003+0003\tB\t34\t',
+    ].join('\n')));
+    expect([...sourcesWithSiblingComponent(xids)].sort()).toEqual(['11', '33', '34']);
   });
 });

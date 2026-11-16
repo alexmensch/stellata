@@ -3,7 +3,7 @@
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`; `parked-ledger.tsv`
 and `simbad_sourced_distances.tsv` by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
-the three files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
+the four files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
 membership-manifest.tsv  LFS. One row per admitted record: final
@@ -99,6 +99,15 @@ pair-review-dispositions.tsv
                          Regular git. Hand-curated; header only today. The
                          entry each disposed HIP ships on, as the authority
                          (/scripts/catalog/membership/merge-derivation/README.md#disposing-a-queued-pair).
+sibling-rendered.tsv     Regular git. Hand-curated: the Gaia sources whose
+                         WDS system has another component of its own record
+                         that SIMBAD's WDS cross-IDs do not name, with that
+                         system's wds_id. The label merge withholds their
+                         alias HD/HR numbers beside SIMBAD's
+                         (/scripts/catalog/classic-ids/label-merge/README.md#an-alias-stops-at-the-blend).
+                         24 rows, frozen from multiples.tsv 2026-11-16;
+                         sibling-rendered.test.ts holds it to the
+                         committed multiples.tsv both ways.
 ```
 
 The five ledgers above that `build:membership` writes, and

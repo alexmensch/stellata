@@ -124,8 +124,8 @@ describe.skipIf(!isReadable(MEMBERSHIP_MANIFEST))('withheld sibling HD numbers',
     }
   });
 
-  it('withholds 34 HD numbers, six of which a manifest row of its own carries', () => {
-    expect(withheld.size).toBe(34);
+  it('withholds 36 HD numbers, six of which a manifest row of its own carries', () => {
+    expect(withheld.size).toBe(36);
     expect([...carriedBy.keys()].sort(ascending)).toEqual(WITHHELD_ON_THEIR_OWN_ROW);
   });
 

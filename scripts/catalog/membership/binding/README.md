@@ -13,8 +13,10 @@ scripts/catalog/membership/binding/
                                 through: `BindingEvidence`, the G − V threshold
                                 and `gMinusVRejects`, the one comparison the
                                 binaries load stage's gate calls too,
-                                SIMBAD's WDS cross-ID index and the
-                                sibling-letter check over it, and
+                                SIMBAD's WDS cross-ID index, the
+                                sibling-letter check over it and
+                                `sourcesWithSiblingComponent`, which the
+                                label merge's sibling rule reads, and
                                 `weighBinding`'s verdict. Pure.
   simbad-wds-xids-source.ts     SIMBAD_WDS_XIDS, declared
                                 (../../../util/sources/) as a column
@@ -22,7 +24,8 @@ scripts/catalog/membership/binding/
                                 simbad-wds-sptype pull's oid request and
                                 the binaries load stage each read it.
   binding-evidence.ts           Loads the gate's own evidence — G per source
-                                and SIMBAD's WDS component cross-IDs — and
+                                and SIMBAD's WDS component cross-IDs, which
+                                it also returns bare — and
                                 `loadHipVMag`. The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,

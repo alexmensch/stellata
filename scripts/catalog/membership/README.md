@@ -61,7 +61,11 @@ scripts/catalog/membership/
                                   log's summary, and the change
                                   report's multiples join, which reads the
                                   baseline's identity file only for a key
-                                  the build lacks.
+                                  the build lacks and the multiples.tsv
+                                  components off the baseline's
+                                  component-binding lineage stage, never
+                                  multiples.tsv itself
+                                  (/scripts/pipeline/README.md#loops-through-committed-files).
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, then runs each phase in order
                                   — the pair rule, binding/spine-settle and
@@ -91,6 +95,10 @@ scripts/catalog/membership/
   binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated
     source.ts                     dispositions' declaration
                                   (../../util/sources/).
+  sibling-rendered-source.ts      SIBLING_RENDERED, the curated
+    (+ sibling-rendered.test.ts)  sibling-rendered sources' declaration; its
+                                  test holds the file to multiples.tsv
+                                  (../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend).
   pair-review-dispositions-       The pair-review queue's dispositions:
     pure.ts (+ test)              columns, reader and its checks, and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
@@ -98,7 +106,8 @@ scripts/catalog/membership/
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
-                                  multiples.tsv, both queues' dispositions
+                                  the curated sibling-rendered sources,
+                                  both queues' dispositions
                                   and SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
                                   merge's queue
                                   (data/classic-ids/label_flips.tsv) and its

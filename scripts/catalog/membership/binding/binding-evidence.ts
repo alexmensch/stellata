@@ -7,7 +7,7 @@ import { GAIA_ASTROMETRY } from '../../sources/gaia-astrometry-source';
 import { HIP_PHOTOMETRY } from '../../photometry/hip-photometry-source';
 import type { PrintedHipValue } from '../../photometry/hip-photometry-parse-pure';
 import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
-import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './binding-gate-pure';
+import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence, type SimbadWdsXidIndex } from './binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './simbad-wds-xids-source';
 
 export function loadHipVMag(): Map<number, PrintedHipValue> {
@@ -21,6 +21,7 @@ export function loadHipVMag(): Map<number, PrintedHipValue> {
 export function loadBindingEvidence(printedV: PrintedVLookups): {
   evidence: BindingEvidence;
   gaiaAstrometry: Map<string, GaiaAstrometryRow>;
+  wdsXids: SimbadWdsXidIndex;
 } {
   const gaiaAstrometry = GAIA_ASTROMETRY.read();
   const wdsXids = parseSimbadWdsXidsTsv(SIMBAD_WDS_XIDS.read());
@@ -28,5 +29,5 @@ export function loadBindingEvidence(printedV: PrintedVLookups): {
   for (const [sourceId, row] of gaiaAstrometry) {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
-  return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry };
+  return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry, wdsXids };
 }

@@ -56,7 +56,7 @@ to the record's alias list — `hdAlt` / `hrAlt`, queued as `extra-alias`. The
 record answers to every one of them: they become extra keys on the search
 index's `hdMap` / `hrMap` ([Star search](/src/client/typeahead/README.md#star-search)) and
 extra `hd:` / `hr:` designations in its same-as class ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)).
-The overlay asserts 130 such values today (129 hd + 1 hr); **95 are carried**,
+The overlay asserts 130 such values today (129 hd + 1 hr); **93 are carried**,
 and which ones is the next section's rule.
 
 **HD and HR are the only fields with an alias list**, and that follows from the
@@ -79,24 +79,34 @@ without saying which component is which. Three outcomes:
 
 | Disposition | Values | When |
 |---|---|---|
-| `extra-alias` | 95 | the pair is unresolved — one record, both components' light |
-| `extra-sibling-rendered` | 35 | the secondary is a record of its own, so the number is its |
+| `extra-alias` | 93 | the pair is unresolved — one record, both components' light |
+| `extra-sibling-rendered` | 37 | the secondary is a record of its own, so the number is its |
 | `extra-dropped` | 0 | the field has no alias list, or the guard withheld the value |
 
 Where the pair is unresolved the single record **is** the granularity the
 catalogue has, and answering to both numbers is accurate rather than sloppy:
-**93 of the 95 have no `multiples.tsv` row at all**, so no separation, position
+**None of the 93 has a `multiples.tsv` row at all**, so no separation, position
 angle or component magnitude exists to split them with, and the two HD numbers
 are the entire trace of duplicity.
 
-The predicate is `sourceIdsWithSiblingComponent`
-(`../../companions/companion-promotion.ts`), keyed on the `multiples.tsv`
-SYSTEM rather than the source_id — a secondary routinely carries its own
-source_id or none, so grouping by source_id misses the sibling on exactly the
-resolved pairs this asks about. Promotion can still decline to render a member
-row, so the set is a deliberate **superset** of what ships — 35 withheld
-(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 34 records whose system names a sibling, of which
-33 render one today.
+The predicate is a source SIMBAD's WDS cross-IDs
+(`data/simbad/simbad_wds_xids.tsv`) attribute to a WDS system they list
+another component of (`sourcesWithSiblingComponent`,
+`../../membership/binding/binding-gate-pure.ts`), or one
+`data/membership/sibling-rendered.tsv` lists: the 24 SIMBAD does not name,
+which `../../membership/sibling-rendered.test.ts` holds to the committed
+`multiples.tsv` — a listed source with no sibling there, or a shipped alias
+on a source `multiples.tsv` gives a sibling neither names, fails it. It is keyed on the SYSTEM rather than the
+source_id — a secondary routinely carries its own source_id or none, so
+grouping by source_id misses the sibling on exactly the resolved pairs this
+asks about. It reads no `multiples.tsv`: `build:binaries` reads the manifest
+this merge writes, so the step table refuses that read as a cycle
+([Loops through committed files](/scripts/pipeline/README.md#loops-through-committed-files)).
+Promotion can still decline to render a member row, so the set is a
+deliberate **superset** of what ships — 37 withheld
+(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 36 records whose system names a sibling, of which
+33 render one today: HD 13729 (on HIP 10382) and HD 122939 (on HIP 68964)
+are withheld on SIMBAD's word for a component binaries keeps no pair for.
 
 An alias also clears [The collision guard](#the-collision-guard)'s rule, which the guard itself
 cannot apply — aliases are not display cells, so its tally never sees them.
@@ -117,7 +127,8 @@ attribution the table declines to make ([Promoted-companion field inheritance](.
 it as a row, and that row is where the number belongs; where it does not, no
 witness attributes it.** So the merge withholds and stops, and nothing in this
 folder attributes a withheld number to a promoted companion. Measured over the
-34, 2026-09-09, and each figure refutes a cheaper rule that looks available:
+34 withheld on 2026-09-09 (HD 13729 and HD 122939 are outside these figures),
+and each figure refutes a cheaper rule that looks available:
 
 - **IV/27A disambiguates 6.** Its `hr` / `hip` columns are not evidence of
   componenthood: on 3 of those 6 — 14 Lyn, 113 Her, ο Leo — SIMBAD holds ONE
@@ -137,7 +148,7 @@ folder attributes a withheld number to a promoted companion. Measured over the
 - **The four left have no committed route at all**: HD 19135, 91173, 171397 and
   174639 are distinct SIMBAD objects that no second Tycho entry names.
 
-None of the 34 is searchable today, and the six with a row of their own are why
+None of the 36 is searchable today, and the six with a row of their own are why
 that is a distance problem rather than a label one: all six park
 `no_parallax_published`, so the row that names the number builds no record
 (`stellata-hooj.13`).

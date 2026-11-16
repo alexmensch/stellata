@@ -8,7 +8,9 @@ import { artifactRows, readArtifact } from '../../util/sources/source';
 import { MEMBERSHIP_OUTPUTS } from './membership-manifest-outputs';
 import { identityText } from '../lineage/identity/identity-pure';
 import { KEY_CHANGE_KINDS } from '../lineage/lineage-diff-pure';
-import { readIdentity } from '../lineage/lineage-io';
+import { readIdentity, streamLineageRows } from '../lineage/lineage-io';
+import type { LineageRow } from '../lineage/lineage-row-pure';
+import { existsSync } from 'node:fs';
 import { LINEAGE_LAYOUT } from '../lineage/lineage-layout-pure';
 import { stageLines, stageLineageText } from '../lineage/lineage-row-pure';
 import { countedStageLineage } from '../lineage/stage-lineage';
@@ -16,7 +18,7 @@ import { derivedStage, nestByStage } from '../../util/counts/count-stages-pure';
 import { MEMBERSHIP_COUNTS } from './membership-manifest-expected-json';
 import {
   MEMBERSHIP_CODES, MEMBERSHIP_INVARIANTS, MEMBERSHIP_LINEAGE_BUDGET, identityLookup, membershipSummary,
-  multiplesComponentJoin,
+  componentsOfBindingLineage, multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { countSnapshotCheck } from '../../util/snapshot-check';
 import { loadBindingEvidence, loadHipVMag } from './binding/binding-evidence';
@@ -27,7 +29,6 @@ import { CLASSIC_ID_OVERRIDES } from '../classic-ids/label-merge/classic-id-over
 import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
-import { readMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/multiples-row';
 import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V, magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
@@ -47,14 +48,21 @@ import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-sourc
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
-import { stageFile, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { stageFile, BINDING_LINEAGE, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { sourcesWithSiblingComponent } from './binding/binding-gate-pure';
+import { SIBLING_RENDERED } from './sibling-rendered-source';
+
+/** The baseline's own binaries stage, never multiples.tsv: a step read would close build:binaries → build:membership. */
+function baselineBindingRows(baselineDir: string): Iterable<LineageRow> {
+  const file = stageFile(baselineDir, BINDING_LINEAGE.stage);
+  return existsSync(file) ? streamLineageRows(file) : [];
+}
 
 
 export async function main(): Promise<void> {
   const spine = readArtifact(INHERITED_SPINE);
-  const multiples = readMultiplesTsv();
   const tables = await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== ''));
-  const { evidence, gaiaAstrometry } = loadBindingEvidence(
+  const { evidence, gaiaAstrometry, wdsXids } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
   const magnitudeTerm = MAGNITUDE_FLOOR_V === null ? null : await readMagnitudeTerm(MAGNITUDE_FLOOR_V);
@@ -63,7 +71,7 @@ export async function main(): Promise<void> {
     tables,
     overlay: overlayMap(artifactRows(CLASSIC_ID_OVERLAY)),
     overrides: CLASSIC_ID_OVERRIDES.read(),
-    siblingRenderedSourceIds: sourceIdsWithSiblingComponent(multiples),
+    siblingRenderedSourceIds: new Set([...sourcesWithSiblingComponent(wdsXids), ...SIBLING_RENDERED.read().map((r) => r.sourceId)]),
     evidence,
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
@@ -92,7 +100,7 @@ export async function main(): Promise<void> {
     }),
     joins: (baselineDir) => [multiplesComponentJoin(
       identityLookup(result.identity, () => readIdentity(stageFile(baselineDir, MEMBERSHIP_LINEAGE.identity!))),
-      multiples,
+      componentsOfBindingLineage(baselineBindingRows(baselineDir)),
     )],
     budget: MEMBERSHIP_LINEAGE_BUDGET,
     invariants: MEMBERSHIP_INVARIANTS,

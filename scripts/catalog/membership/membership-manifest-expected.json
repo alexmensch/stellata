@@ -105,9 +105,9 @@
       "membership.label.suppressed-collision.hr": 0,
       "membership.label.suppressed-collision.gl": 3,
       "membership.label.suppressed-collision.flam": 2,
-      "membership.label.extra-alias.hd": 95,
+      "membership.label.extra-alias.hd": 93,
       "membership.label.extra-alias.hr": 0,
-      "membership.label.extra-sibling-rendered.hd": 34,
+      "membership.label.extra-sibling-rendered.hd": 36,
       "membership.label.extra-sibling-rendered.hr": 1,
       "membership.label.extra-dropped.hip": 0,
       "membership.label.extra-dropped.hd": 0,
@@ -160,7 +160,7 @@
       "labelSpineOnly.gl": 1225,
       "labelSpineOnly.flam": 692,
       "sharedDesignations": 68,
-      "rowsWithHdAlt": 102,
+      "rowsWithHdAlt": 100,
       "rowsWithHrAlt": 0,
       "spineCellsCorrected.tyc": 1
     }

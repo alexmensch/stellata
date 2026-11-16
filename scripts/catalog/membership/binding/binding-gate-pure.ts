@@ -69,6 +69,23 @@ export function parseSimbadWdsXidsTsv(table: ColumnTable): SimbadWdsXidIndex {
   return { bySource, byHip, primarySourceLetterByWds };
 }
 
+/** Every source SIMBAD attributes to a WDS system it lists another component of. */
+export function sourcesWithSiblingComponent(index: SimbadWdsXidIndex): Set<string> {
+  const componentsByWds = new Map<string, Set<string>>();
+  for (const attrs of [...index.bySource.values(), ...index.byHip.values()]) {
+    for (const { wdsId, component } of attrs) {
+      let comps = componentsByWds.get(wdsId);
+      if (comps === undefined) componentsByWds.set(wdsId, (comps = new Set()));
+      comps.add(component);
+    }
+  }
+  const out = new Set<string>();
+  for (const [sourceId, attrs] of index.bySource) {
+    if (attrs.some(({ wdsId }) => componentsByWds.get(wdsId)!.size > 1)) out.add(sourceId);
+  }
+  return out;
+}
+
 /** 'A' vs 'B' are disjoint siblings; 'A' vs 'Aa' are one lineage (the
  *  sub-letter carries the parent's light), so only a non-prefix-related
  *  pair counts as a different star. */

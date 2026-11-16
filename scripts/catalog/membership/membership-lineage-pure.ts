@@ -881,8 +881,21 @@ export function identityLookup(
   };
 }
 
+/** /scripts/binaries/resolve/README.md#binding-lineage */
+export function componentsOfBindingLineage(rows: Iterable<LineageRow>): MultiplesComponent[] {
+  const out: MultiplesComponent[] = [];
+  for (const row of rows) {
+    if (!row.code.startsWith('component-binding.hip.') || !row.key.startsWith('multiples:')) continue;
+    const hip = paramsOf(row).hip;
+    if (hip === undefined) continue;
+    const slash = row.key.lastIndexOf('/');
+    out.push({ systemId: row.key.slice('multiples:'.length, slash), comp: row.key.slice(slash + 1), hip: Number(hip.slice('hip:'.length)) });
+  }
+  return out;
+}
+
 /** The change report's `multiples` column: the multiples.tsv components the
- *  record's HIP names. */
+ *  record's HIP names, as the baseline's component-binding stage records them. */
 export function multiplesComponentJoin(
   identityOf: (key: string) => IdentityRow | undefined, multiples: readonly MultiplesComponent[],
 ): DiffJoin {
