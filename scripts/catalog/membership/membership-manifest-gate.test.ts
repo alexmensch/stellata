@@ -250,7 +250,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
     it('ledgers Bayer drops only on records the build gives no Bayer designation', () => {
       const drops = BAYER_DROPS.read();
-      expect(drops).toHaveLength(2);
+      expect(drops).toHaveLength(1);
       for (const drop of drops) {
         const rows = manifest.filter((r) => r.hd === drop.hd);
         expect(rows, `hd ${drop.hd}`).toHaveLength(1);

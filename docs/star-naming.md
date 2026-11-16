@@ -46,7 +46,8 @@ implementation's own statement of all three rules.
 | IAU WGSN `NEC.csv` | **authority** | 377 approved names + 4,971 glyph-bearing Bayer/Flamsteed/Gould designations over the V ≤ 6.5 sky (<!-- count:wgsn/necRows -->9,297<!-- /count --> rows) | IAU Div. C WG on Star Names, 2025-05 |
 | IAU WGSN `wgsnFaints.csv` | **authority** | <!-- count:wgsn/faintsRows -->132<!-- /count --> approved names below V 6.5; its WDS column ships empty | same, 2025-05 |
 | `IV/27A` cross index | mechanical | Bayer/Flamsteed for the sub-naked-eye tail (`data/classic-ids/`) | [Kostjuk 2002](/data/papers/index.md#kostjuk2002) |
-| `V/50`, `IV/25`, CNS5, `I/239` | mechanical | HR / HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
+| `V/50` | mechanical | HR designations; Bayer below IV/27A, for a star nothing above reaches | [Hoffleit 1991](/data/papers/index.md#hoffleit1991) |
+| `IV/25`, CNS5, `I/239` | mechanical | HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
 | AT-HYG `proper` / `bayer` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
@@ -143,7 +144,7 @@ Display resolution order, first hit wins:
    those with a Flamsteed number take it back, and <!-- count:build-catalog/naming.name.own.bayer-latin -->202<!-- /count --> keep their own
    letter, having none to lose to (`naming.name.own.bayer-latin`; borrowed
    Latin-letter labels count under the borrowed `bayer-latin` codes). The
-   Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,232<!-- /count --> displaying their own letter, are untouched.
+   Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,233<!-- /count --> displaying their own letter, are untouched.
    Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
    southern `p Eri` / `f Pup` series with nothing above it. Both forms stay
@@ -246,6 +247,12 @@ already sources from GCVS. Measured over all 2,185 Bayer cells (pinned):
 union adds 446 of the 2,051 as the tail; <!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> are already covered by a
 WGSN designation on the same star.
 
+**V/50 normaliser** (same module): the `name` cell's fixed columns —
+Flamsteed, Bayer, superscript, constellation — arrive with their leading
+blanks trimmed, so the field is read from the right (`81Pi 1Cnc`,
+`Zet1Ant`) and then normalised as an IV/27A cell. A V/50 row reaches through
+the HIP IV/27A links its HD to, since V/50 prints none.
+
 **Gliese prefix.** Display `GJ <number><component>` uniformly. `Gl` (Gliese
 1969) and `GJ` (Gliese–Jahreiß supplements) are both legitimate printed
 forms, so both stay searchable — `normalizeGlKey` already strips the prefix
@@ -289,10 +296,12 @@ already rewrote that to `Acrab C`, so today's shipped display name is ours
 layered on AT-HYG's mistake. The ladder keeps the upstream string
 searchable, drops ours, and displays `β² Sco`.
 
-`V/50`'s `name` column (`3Alp Lyr`, 3,157 rows, committed and read by
-nothing) is **rejected**: it is Flamsteed + Bayer + constellation, fully
-derivable from designations we already carry. The column stays in the frozen
-slice as provenance; no consumer is added.
+`V/50`'s `name` column (`3Alp Lyr`, 3,157 rows) is read for its **Bayer
+field only**, as the last tail of the Bayer union below IV/27A: a
+designation an owned primary prints is shipped rather than left out, and V/50
+reaches one star nothing above it does (π¹ Cnc). Its Flamsteed and
+constellation fields add nothing the label merge and the designation
+cascade do not already carry.
 
 Nothing that resolves a search is lost by a demotion. That is the
 invariant the parity gate ([§ 8](#8-parity--the-gate-on-any-naming-change)) enforces.

@@ -21,7 +21,12 @@
   "iv27aBayerCovered": 1605,
   "iv27aVariableRejected": 134,
   "iv27aUnparsed": 0,
-  "designationRows": 4627,
+  "v50BayerCells": 1565,
+  "v50BayerAdded": 1,
+  "v50BayerCovered": 1563,
+  "v50VariableRejected": 0,
+  "v50Unparsed": 1,
+  "designationRows": 4628,
   "designationsKeyless": 3,
   "designationDuplicateRows": 7,
   "nameDuplicateRows": 7

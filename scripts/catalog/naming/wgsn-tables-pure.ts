@@ -1,12 +1,12 @@
-// The WGSN tables' row shaping and the IV/27A Bayer tail union. See README.md.
+// The WGSN tables' row shaping and the Bayer tail unions, IV/27A then V/50. See README.md.
 
-import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
-import { normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
+import type { Bsc5Row, CrossIndexRow } from '../classic-ids/classic-ids-parse';
+import { normaliseBsc5Bayer, normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export const DESIGNATION_KINDS = ['bayer', 'flamsteed', 'gould'] as const;
-export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a'] as const;
+export const DESIGNATION_SOURCES = ['nec', 'faints', 'iv27a', 'v50'] as const;
 
 export interface DesignationRow {
   kind: (typeof DESIGNATION_KINDS)[number];
@@ -120,6 +120,23 @@ export function iv27aBayerCells(crossIndex: readonly CrossIndexRow[]): BayerTail
     if (row.bayer === null || row.cst === null) return [];
     const keys = { hip: row.hip, hr: null, hd: row.hd };
     return [{ cell: normaliseIv27aBayer(row.bayer, row.cst), keys, reach: keys }];
+  });
+}
+
+/** README.md#the-union-policy: a V/50 row reaches through IV/27A's HIP. */
+export function bsc5BayerCells(
+  bsc5: readonly Bsc5Row[],
+  crossIndex: readonly CrossIndexRow[],
+): BayerTailCell[] {
+  const hipByHd = new Map<number, number>();
+  for (const r of crossIndex) {
+    if (r.hd !== null && r.hip !== null) hipByHd.set(r.hd, r.hip);
+  }
+  return bsc5.flatMap((row) => {
+    if (row.name === null) return [];
+    const keys = { hip: null, hr: row.hr, hd: row.hd };
+    const linkedHip = row.hd === null ? null : hipByHd.get(row.hd) ?? null;
+    return [{ cell: normaliseBsc5Bayer(row.name), keys, reach: { ...keys, hip: linkedHip } }];
   });
 }
 

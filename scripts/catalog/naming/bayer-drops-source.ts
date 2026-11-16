@@ -3,7 +3,7 @@
 import { defineSource, type Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 
-export const BAYER_DROP_REASONS = ['authority_omits', 'sibling_holds'] as const;
+export const BAYER_DROP_REASONS = ['sibling_holds'] as const;
 export type BayerDropReason = (typeof BAYER_DROP_REASONS)[number];
 
 export interface BayerDropRow {

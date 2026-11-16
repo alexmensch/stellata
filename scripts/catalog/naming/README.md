@@ -47,10 +47,11 @@ scripts/catalog/naming/
                                 other-catalogue / corrupt; IV/27A `bayer`
                                 cells → glyph + superscript, with the GCVS
                                 contaminants rejected to the variable
-                                class. Plus the multi-name cell split and
+                                class; V/50 `name` cells' Bayer field, read
+                                as an IV/27A cell. Plus the multi-name cell split and
                                 the diacritic fold used for name matching.
-  wgsn-tables-pure.ts (+ test)  Row shaping, the IV/27A Bayer union, the
-                                key sets both sides of the union share, and
+  wgsn-tables-pure.ts (+ test)  Row shaping, the Bayer tail union (IV/27A,
+                                then V/50), the key sets it reaches by, and
                                 the total sort order the committed table's
                                 byte-for-byte CI diff rests on.
   build-wgsn-tables.ts          Orchestrator: read, normalise, delegate
@@ -129,10 +130,13 @@ scripts/catalog/naming/
 
 ## The union policy
 
-WGSN is the primary designation source; IV/27A supplies only the Bayer
-tail — a cross-index Bayer row is added only when no WGSN Bayer
-designation already reaches its star by HD or HIP (<!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> covered, <!-- count:wgsn/iv27aBayerAdded -->444<!-- /count -->
-added). IV/27A Flamsteed numbers are **not** unioned: the record build
+WGSN is the primary designation source; IV/27A and then V/50 supply only
+the Bayer tail — a tail row is added only when no Bayer row above it
+already reaches its star by HIP, HR or HD (IV/27A: <!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> covered, <!-- count:wgsn/iv27aBayerAdded -->444<!-- /count -->
+added; V/50: <!-- count:wgsn/v50BayerCovered -->1,563<!-- /count --> covered, <!-- count:wgsn/v50BayerAdded -->1<!-- /count --> added, π¹ Cnc). V/50's `name` cell
+prints no HIP, so its row reaches through the HIP IV/27A links its HD to;
+that link is what keeps ξ UMa off the B component, whose HD 98230 V/50
+also labels ξ. IV/27A Flamsteed numbers are **not** unioned: the record build
 already carries `f` via the label merge and `dc` via the
 designation-constellation cascade, and the cross index adds no glyph
 content to them.
@@ -177,13 +181,12 @@ The gate's figures are pinned in `manifest-naming-expected.json`.
 
 ## Measured coverage
 
-The unioned table reaches **<!-- count:build-catalog/namingBayer -->2,043<!-- /count -->** records. Of the <!-- count:inherited-spine/nonEmpty.bayer -->1,522<!-- /count --> Bayer cells
+The unioned table reaches **<!-- count:build-catalog/namingBayer -->2,044<!-- /count -->** records. Of the <!-- count:inherited-spine/nonEmpty.bayer -->1,522<!-- /count --> Bayer cells
 AT-HYG printed, it reaches all but the rows of `data/naming/bayer_drops.tsv`,
-each frozen with its reason: ξ UMa on HD 98230 is `sibling_holds` (the
-authority keys ξ UMa on the A record, so B takes the system's designation
-with its component letter), and π¹ Cnc on HD 79096 is `authority_omits`
-(neither NEC nor IV/27A publishes it). The membership gate holds every row
-to a record the Bayer join leaves bare.
+each frozen with its reason: one today, ξ UMa on HD 98230, `sibling_holds`
+(the authority keys ξ UMa on the A record, so B takes the system's
+designation with its component letter). The membership gate holds every
+row to a record the Bayer join leaves bare.
 
 Three designation rows carry no key at all (`designationsKeyless`):
 β Cen B, δ Cyg B and ζ Her B spell both key cells `-` upstream. Seven
@@ -244,7 +247,7 @@ it, and it carries its own string.
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
 merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
-so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,043<!-- /count --> records render against the constellation of the
+so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,044<!-- /count --> records render against the constellation of the
 authority's Bayer designation and <!-- count:build-catalog/naming.dc.wgsn-gould -->936<!-- /count --> against its Gould one. One
 `uint8` serves one designation and the tier that COMPOSES the label owns
 it, so where the authority's Bayer names a different constellation from

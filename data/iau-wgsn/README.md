@@ -25,7 +25,7 @@ wgsn_designations.tsv          Derived. One row per normalised designation:
                                kind (bayer / flamsteed / gould), glyph
                                letter + superscript, dc, Serpens Gould
                                half, component, HIP / HR / HD, source
-                               (nec / faints / iv27a).
+                               (nec / faints / iv27a / v50).
 athyg_proper_dispositions.tsv  Hand-curated. The /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them residual: every spine
                                `proper` no WGSN name matches, classified
                                (discovery-designation / component-letter /

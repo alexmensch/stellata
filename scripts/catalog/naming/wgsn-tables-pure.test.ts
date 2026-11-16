@@ -8,6 +8,7 @@ import {
   designationFromCell,
   compareDesignationRows,
   duplicateDesignationRows,
+  bsc5BayerCells,
   iv27aBayerCells,
   unionBayerTail,
   type DesignationRow,
@@ -102,6 +103,27 @@ describe('unionBayerTail over IV/27A', () => {
     ]);
     expect(u).toMatchObject({ cells: 3, variableRejected: 2, unparsed: 1 });
     expect(u.added).toEqual([]);
+  });
+});
+
+describe('unionBayerTail over V/50', () => {
+  it('adds a Bayer no row above reaches, keyed on the HR and HD V/50 prints', () => {
+    const u = unionBayerTail([], bsc5BayerCells([{ hr: 3650, hd: 79096, name: '81Pi 1Cnc' }], []), 'v50');
+    expect(u.added).toEqual([desig({
+      letter: 'π', sup: 1, dc: 'Cnc', hr: 3650, hd: 79096, source: 'v50',
+    })]);
+  });
+
+  it('reaches through the HIP IV/27A links the HD to, so a pair\'s designation stays on one component', () => {
+    const above = [desig({ letter: 'ξ', dc: 'UMa', hip: 55203 })];
+    const crossIndex = [xrow({ hd: 98230, hip: 55203, bayer: 'ksi', cst: 'UMa' })];
+    const u = unionBayerTail(above, bsc5BayerCells([{ hr: 4374, hd: 98230, name: '53Xi  UMa' }], crossIndex), 'v50');
+    expect(u).toMatchObject({ cells: 1, covered: 1, added: [] });
+  });
+
+  it('skips a name with no Bayer field without counting it', () => {
+    const u = unionBayerTail([], bsc5BayerCells([{ hr: 33, hd: 693, name: '6    Cet' }], []), 'v50');
+    expect(u).toMatchObject({ cells: 0, added: [] });
   });
 });
 
