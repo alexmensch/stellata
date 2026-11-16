@@ -166,8 +166,10 @@ scripts/catalog/
   tycho2-parse.ts (+ test)        data/tycho2/ indexed on the full TYC, with
                                   the position-to-propagate-from choice and
                                   the main-table-wins rule resolved at parse
-                                  time (data/tycho2/README.md). Feeds the
-                                  direction, PM-rescue and V cascades.
+                                  time (data/tycho2/README.md), plus every
+                                  entry's observed J1991.25 cell. Feeds the
+                                  direction, PM-rescue and V cascades and
+                                  membership/positional-witness/.
   tycho2-fixture.ts               Test-only Tycho2Row builder: suites in
                                   distance/, parse/, spine/ and membership/
                                   build these rows, and a field added to the

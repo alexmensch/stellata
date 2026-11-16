@@ -132,11 +132,24 @@ describe('parseTycho2Tsvs', () => {
     expect(r.fromIcrs).toBe(false);
   });
 
-  it('drops a row carrying no position at all', () => {
-    const index = parseTycho2Tsvs(
-      main(mainRow({ mean: ['', '', '', ''], icrs: ['', ''] })), suppl(), TYCHO2,
-    );
-    expect(index.size).toBe(0);
+  it('refuses a main row with no observed cell, mean solution or not', () => {
+    for (const mean of [['', '', '', ''], ['33.5', '12.25', '', '']] as const) {
+      expect(() => parseTycho2Tsvs(
+        main(mainRow({ mean: [...mean], icrs: ['', ''] })), suppl(), TYCHO2,
+      )).toThrow(/no observed position/);
+    }
+  });
+
+  it("keeps a photocentre's observed cell beside its blended mean position", () => {
+    const index = parseTycho2Tsvs(main(mainRow({ pflag: 'P' })), suppl(), TYCHO2);
+    const r = index.get('1-1-1')!;
+    expect(r.raDeg).toBe(33.5);
+    expect(r.observed).toEqual({ raDeg: 33.6, decDeg: 12.3 });
+  });
+
+  it("states a supplement row's observed cell as its position", () => {
+    const r = parseTycho2Tsvs(main(), suppl(supplRow(['2', '2', '1'])), TYCHO2).get('2-2-1')!;
+    expect(r.observed).toEqual({ raDeg: 40.0, decDeg: 20.0 });
   });
 
   it("carries Tycho-2's own hip cross-index off both tables", () => {

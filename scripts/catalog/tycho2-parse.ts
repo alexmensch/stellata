@@ -3,6 +3,7 @@
 // See data/tycho2/README.md.
 
 import { HIPPARCOS_EPOCH_JYEAR } from '../../src/astro-core/astronomy-constants';
+import type { SkyPosition } from '../../src/astro-core/equatorial-basis';
 import type { Declared } from '../util/sources/source';
 import { sourceRowRef, type RowKeyed, type OneRowRef } from '../util/sources/row-ref-pure';
 import { readTable } from '../util/tsv/table-pure';
@@ -58,6 +59,9 @@ export interface Tycho2Row {
    *  cascades reading the row need it: the direction tier counts it, and a V
    *  from it is a system blend. */
   isPhotocentre: boolean;
+  /** The observed cell, at `TYCHO2_ICRS_EPOCH`
+   *  (/data/tycho2/README.md#which-position-to-propagate-from). */
+  observed: SkyPosition;
   ref: OneRowRef<string>;
   /** The HIP number Tycho-2 itself names for this entry, its own cross-index
    *  to I/239 rather than a walk's verdict. */
@@ -100,15 +104,13 @@ export function parseTycho2Tsvs(
   const out = new Map<string, Tycho2Row>();
 
   for (const row of readTable({ ...main.from, columns: MAIN_COLUMNS }, main.text)) {
-    const position = meanPosition(
-      row.float('ra_mdeg'), row.float('de_mdeg'),
-    ) ?? icrsPosition(
-      row.float('ra_icrs'), row.float('de_icrs'),
-    );
-    if (position === null) continue;
+    const observed = icrsPosition(row.float('ra_icrs'), row.float('de_icrs'))
+      ?? row.fail('no observed position');
+    const position = meanPosition(row.float('ra_mdeg'), row.float('de_mdeg')) ?? observed;
     const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
     out.set(key, {
       ...position,
+      observed: { raDeg: observed.raDeg, decDeg: observed.decDeg },
       pmRaMasyr: row.float('pm_ra'),
       pmDecMasyr: row.float('pm_de'),
       btMag: row.float('bt_mag'),
@@ -130,6 +132,7 @@ export function parseTycho2Tsvs(
     if (position === null) continue;
     out.set(key, {
       ...position,
+      observed: { raDeg: position.raDeg, decDeg: position.decDeg },
       pmRaMasyr: row.float('pm_ra'),
       pmDecMasyr: row.float('pm_de'),
       btMag: row.float('bt_mag'),

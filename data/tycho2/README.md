@@ -76,7 +76,9 @@ local east tangent directly, never divided by cos δ again.
 `ra_icrs` earns its place on the **1,802 `pflag='X'` rows**, which have no mean
 solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings are all empty
 there and the observed cell is the only position the row has. `pflag='P'` (5,555 rows) means the mean solution is
-the photocentre of an unresolved double, not one star's place.
+the photocentre of an unresolved double, not one star's place — both entries of
+such a pair carry the same mean position, so only their observed cells tell them
+apart. Every row has one, and the parse keeps it beside the chosen position.
 
 ## The two tables overlap on 254 TYCs
 
