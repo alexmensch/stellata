@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { LineSpill } from './line-spill';
-import { encodeLineageLine, paramsText, type LineageLine } from './lineage-row-pure';
+import { encodeLineageLine, paramsText, type LineageLine } from '../lineage-row-pure';
 
 const line = (key: string, params: Record<string, string> = {}): LineageLine => encodeLineageLine({
   stage: 'demo', key, role: 'outcome', code: 'demo.kept', params: paramsText(params), evidence: ['gaia:1'],

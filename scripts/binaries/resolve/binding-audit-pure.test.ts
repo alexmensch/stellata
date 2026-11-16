@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { componentKey } from '../component-tokens-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import {
-  auditBindingIntegrity, bfsOffset, bindingAuditSourceIds, bindingIntegrityCounts, enforceBindingVerdicts,
+  auditBindingIntegrity, bfsOffset, bindingAuditSourceIds, bindingIntegrityCounts, enforceBindingVerdicts, verdictTouches,
   type BindingCandidate, type BindingVerdict, type Edge,
 } from './binding-audit-pure';
 import { componentsOf, resolveViaOf } from './components-pure';
@@ -293,15 +293,64 @@ describe('enforceBindingVerdicts', () => {
   });
 });
 
-describe('bindingIntegrityCounts', () => {
-  const v = (shape: BindingVerdict['shape'], verdict: BindingVerdict['verdict']): BindingVerdict => ({
-    wdsId: 'w', shape, verdict, contested: 'c', reference: null, winner: null, candidates: [], action: null,
+describe('verdictTouches', () => {
+  const touched = (rows: readonly BiRow[], astro: ReturnType<typeof biAstro>[]) =>
+    verdictTouches(audit(rows, astro).audited).map((t) => `${t.verdict.shape} ${t.verdict.verdict} ${t.pair.components}/${t.component} ${t.sourceId} ${t.part}`);
+
+  it('marks the winner\'s instances won and the loser\'s refused', () => {
+    expect(touched(
+      [['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]],
+      [biAstro(SA, 0, 0), biAstro(SX, 0, 3)],
+    )).toEqual([`source_letters geometric AB/B ${SX} won`, `source_letters geometric AC/C ${SX} refused`]);
   });
 
+  it('refuses a rebound letter\'s other sources at each instance holding one', () => {
+    const SB = '200';
+    expect(touched(
+      [
+        ['AB', 0.9, 0.0, [SA, null], [SB, null, 'ccdm_hip']],
+        ['AC', 5.0, 0.0, [SA, null], ['300', null]],
+        ['BC', 4.1, 0.0, [SA, null, 'orb6_hip'], ['300', null]],
+      ],
+      [biAstro(SA, 0, 0), biAstro(SB, 0, 0.9), biAstro('300', 0, 5)],
+    ).filter((t) => t.startsWith('letter_sources'))).toEqual([
+      `letter_sources geometric BC/B ${SA} refused`, `letter_sources geometric AB/B ${SB} won`,
+    ]);
+  });
+
+  it('refuses every instance an ambiguous verdict unbinds', () => {
+    expect(touched(
+      [['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 5.0, 0.0, [SA, null], [SX, null]]],
+      [biAstro(SA, 0, 0), biAstro(SX, 0, 4)],
+    )).toEqual([`source_letters unbound_ambiguous AB/B ${SX} refused`, `source_letters unbound_ambiguous AC/C ${SX} refused`]);
+  });
+
+  it('marks every instance of a skipped verdict skipped (Castor)', () => {
+    expect(touched(blendRowsForTouches, [biAstro(SX, 0, -6.5), biAstro(SC, 0, 0)])).toEqual([
+      `source_letters skipped_photocentre_blend AB/A ${SX} skipped`, `source_letters skipped_photocentre_blend AC/A ${SX} skipped`,
+      `source_letters skipped_photocentre_blend AB/B ${SX} skipped`,
+    ]);
+  });
+
+  it('refuses a weighed token with no instance, and a verdict no component holds a binding of', () => {
+    const { audited } = audit(
+      [['AB', 3.0, 0.0, [SA, null], [SX, null]], ['AC', 10.0, 0.0, [SA, null], [SX, null]]],
+      [biAstro(SA, 0, 0), biAstro(SX, 0, 3)],
+    );
+    const weighing = (weighed: BindingVerdict['weighed']) =>
+      ({ ...audited, verdicts: audited.verdicts.map((v) => ({ ...v, weighed })) });
+    expect(() => verdictTouches(weighing([{ token: 'Z', sourceId: SX }]))).toThrow(/weighed token Z has no component instance/);
+    expect(() => verdictTouches(weighing([{ token: 'B', sourceId: '999' }]))).toThrow(/no component holds a binding it weighed/);
+  });
+});
+
+const blendRowsForTouches: BiRow[] = [['AB', 5.0, 0.0, [SX, null], [SX, null]], ['AC', 10.0, 0.0, [SX, null], [SC, null]]];
+
+describe('bindingIntegrityCounts', () => {
   it('counts each shape and each outcome', () => {
     const counts = bindingIntegrityCounts([
-      v('source_letters', 'geometric'), v('source_letters', 'unbound_ambiguous'),
-      v('letter_sources', 'skipped_no_reference'), v('source_letters', 'skipped_photocentre_blend'),
+      { shape: 'source_letters', verdict: 'geometric' }, { shape: 'source_letters', verdict: 'unbound_ambiguous' },
+      { shape: 'letter_sources', verdict: 'skipped_no_reference' }, { shape: 'source_letters', verdict: 'skipped_photocentre_blend' },
     ]);
     expect(counts).toEqual({
       binding_conflicts_source_letters: 3,
@@ -321,13 +370,13 @@ describe('bindingAuditSourceIds', () => {
   it('covers every candidate, kept or unbound', () => {
     const verdicts: BindingVerdict[] = [
       {
-        wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', reference: null, winner: null,
+        wdsId: 'X', shape: 'letter_sources', verdict: 'unbound_ambiguous', contested: 'A', weighed: [], reference: null, winner: null,
         candidates: [cand('444'), cand('555')],
         action: { kind: 'unbind', targets: [{ token: 'A', sourceId: '444' }, { token: 'A', sourceId: '555' }] },
       },
       {
-        wdsId: 'Y', shape: 'source_letters', verdict: 'geometric', contested: '666', reference: { token: 'A', sourceId: '777' },
-        winner: cand('666'), candidates: [cand('666')], action: null,
+        wdsId: 'Y', shape: 'source_letters', verdict: 'geometric', contested: '666', weighed: [], reference: { token: 'A', sourceId: '777' },
+        winner: cand('666'), candidates: [cand('666')], action: { kind: 'unbind', targets: [] },
       },
     ];
     expect(bindingAuditSourceIds(verdicts)).toEqual(new Set(['444', '555', '666']));

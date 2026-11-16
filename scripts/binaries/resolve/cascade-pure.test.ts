@@ -16,7 +16,7 @@ const orb6 = (wdsId: string, components: string, hip: number | null): Orb6Entry 
 
 describe('resolveComponent', () => {
   const resolveA = (pair: WdsPair, entries: Orb6Entry[], idx: ReturnType<typeof indices>, isPrimary = true, comp = 'A') =>
-    resolveComponent(pair, comp, isPrimary, entries, idx);
+    resolveComponent(pair, comp, isPrimary, entries, idx).component;
 
   it('binds the primary through ORB6\'s HIP and the Gaia cross-walk', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB' });
@@ -56,6 +56,9 @@ describe('resolveComponent', () => {
     expect(resolveViaOf(r)).toBe('unresolved');
     expect(r.gaia).toBeNull();
     expect(r.hip).toBeNull();
+    const twice = [orb6(pair.wdsId, 'Aa,Ab', 103579), orb6(pair.wdsId, 'Aa,Ab', 103579)];
+    expect(resolveComponent(pair, 'Aa', true, twice, idx).refused)
+      .toEqual([{ gate: 'orb6_hip_off_coord', pair, component: 'Aa', hip: 103579 }]);
   });
 
   const sirius = indices({
@@ -200,7 +203,9 @@ describe('resolveViaCcdm', () => {
     const r = resolveViaCcdm([decomposed(ab), decomposed(bc, { primary: {}, secondary: {} })], idx);
     expect(ids(r.pairs[1].primary)).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
     expect(ids(r.pairs[1].secondary)).toMatchObject({ hip: null, gaiaSourceId: null });
-    expect(r.rejected.filter((x) => x.tier === 'ccdm_sibling_owned')).toHaveLength(2);
+    expect(r.rejected.map((x) => [x.gate, x.pair, x.component, x.hip])).toEqual([
+      ['ccdm_sibling_owned', bc, 'B', 24436], ['ccdm_sibling_owned', bc, 'C', 24436],
+    ]);
   });
 
   it('never refuses for the pair partner (σ Ori blend convention)', () => {
@@ -316,7 +321,7 @@ describe('resolveViaPosition', () => {
     const athyg = [athygAt({ ra: 100, dec: 0, gaia: '555', hip: 24436 })];
     const r = resolveViaPosition([decomposed(ad, { primary: { hip: 24436 } }), decomposed(bc, { primary: {} })], athyg);
     expect(ids(r.pairs[1].primary)).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
-    expect(r.rejected.filter((x) => x.tier === 'athyg_match_sibling_claimed')).toHaveLength(1);
+    expect(r.rejected).toEqual([{ gate: 'athyg_match_sibling_claimed', pair: bc, component: 'B', hip: 24436 }]);
   });
 
   it('lets a letter match a row carrying its own HIP', () => {

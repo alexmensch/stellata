@@ -20,7 +20,9 @@ a derived block of the overlay's sizes,
 [Counts and the parity measurement](../classic-ids/README.md#counts-and-the-parity-measurement))
 and placement's,
 beside a derived block of the shipped tiers
-([Placement counts](../distance/README.md#placement-counts)).
+([Placement counts](../distance/README.md#placement-counts)). Resolve's
+snapshot keys fold from its lines without being its codes, each audit verdict
+counted once ([Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage)).
 
 ## Files in this area
 
@@ -55,8 +57,10 @@ scripts/catalog/lineage/
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
-                                 call; countedStageLineage, the same plus
-                                 its count block; namedStageRun, the run of
+                                 call; foldedStageLineage, the same plus a
+                                 fold over its lines, and
+                                 countedStageLineage, that fold as its
+                                 count block; namedStageRun, the run of
                                  a stage whose lines file is named for it,
                                  which build:catalog and build:binaries
                                  build their stages with.
@@ -68,8 +72,8 @@ scripts/catalog/lineage/
                                  absolute. Their names, the stage specs and
                                  their output declarations:
                                  /src/catalog-format/pipeline-outputs/.
-  line-spill.ts (+ test)         LineSpill: a stage's lines in a temporary
-                                 file while another's are held (#storage-and-cost).
+  storage/                       The file format, each stage's budget, and
+                                 LineSpill. Own README.
   lineage-io.ts                  The baseline members and a stage's emission,
                                  gzip, and the header with its input map
                                  and file hashes, re-checked on read.
@@ -174,6 +178,9 @@ Classic-IDs' (`CLASSIC_ID_INVARIANTS`): no `unweighed-no-pulled-row` row
 ([The gate's evidence has to be pulled](../classic-ids/README.md#the-gates-evidence-has-to-be-pulled)).
 Placement's (`PLACEMENT_INVARIANTS`): no `distance.bailer-jones-absent` row.
 Naming's (`NAMING_INVARIANTS`): no `dc.none` row.
+Resolve's (`RESOLVE_INVARIANTS`): named rows alone for the two
+`audit.*.unbound-ambiguous.refused` codes
+([Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage)).
 Runtime-pairs' (`RUNTIME_PAIRS_INVARIANTS`): named rows alone for
 `dropped.duplicate-relation`
 ([Runtime-pairs lineage](/scripts/binaries/README.md#runtime-pairs-lineage)).
@@ -213,74 +220,10 @@ fail-closed rule live beside their modules, in [SID events](/scripts/sid/README.
 
 ## Storage and cost
 
-`build/lineage/<stage>.tsv.gz`: gzip level 1, sorted by key, every record at
-every stage, no reduced-detail mode.
-
-A design-time probe on 1M synthetic rows (2026-10-21) chose the format: the
-bulk is Gaia ids, which no format compresses much, and Parquet with zstd
-came out about 15% smaller at five to nine times the write cost and the
-loss of `zgrep`. Its per-stage size is not a sizing figure: plan a new
-stage from the measured budgets below, and every build prints its own
-(`<stage> lineage: N bytes gzipped`). With `build/lineage.previous/` a
-checkout holds about twice the current build, and each new worktree copies
-one build's worth in.
-
-The real stages' write time and disk are pinned as a budget: each stage
-passes `stageLineage` (`stage-lineage.ts`) a `LineageBudget`, and a run over
-it fails its emission. Membership, measured 2026-11-12 on the full tree:
-1,651,103 rows (165 MB plain, 17.4 MB gzipped) plus 975,840 identity rows
-(22.3 MB gzipped), 39.6 MB together, 1.4 MB under its budget: a change that
-adds a row to every record raises the budget with it. The timed window is everything lineage
-adds to the build — the baseline headers' file re-hash, the base's input
-re-hash each verdict asks for, producing the lines (`lines`, a function the
-window calls: a spill reads back there), the diff, rendering,
-gzip and invariants: about 8.2 s with a diff
-against a full baseline. The merge-base input re-hash measured 116 ms for
-membership on a branch where 34 of its 167 inputs differ (2026-11-15,
-`inputHashesAt` over `inputHashes(stepInputPaths('build:membership'))`); a
-changed 204 MB LFS input adds its own hash of the local object. The header's input map is not in it: a stage hands
-`stageLineage` the input hashes the runner took for its step's stamp before
-starting it (`stepInputHashes`, `../../util/step-input-hashes.ts`), so no
-step hashes its own input set. `build:catalog` does hash membership's inputs
-from disk, once per build (`upstreamLineage`), to judge membership's header
-against the base: 153 paths in 275–352 ms (2026-11-05,
-`onDiskHashes(stepInputPaths('build:membership'), {})`), inside the first
-catalogue stage's timed window.
-A spine derivation's row carries only its winner, route and component
-letters; the binding-review columns ride the rows the queue lists — a
-contested or collision verdict and a disposition — since the candidates and
-refusals are rows of their own. `MEMBERSHIP_LINEAGE_BUDGET` pins 41 MB and
-20 s: a CI run that diffs against a restored merge-base baseline took
-11.2 s (2026-11-06), against 6.8 s with no diff. Every other stage's
-measured budget sits beside its contract: [component-binding's](/scripts/binaries/resolve/README.md#binding-lineage),
-[pairs'](/scripts/binaries/README.md#pairs-lineage),
-[runtime-pairs'](/scripts/binaries/README.md#runtime-pairs-lineage),
-[classic-ids'](../classic-ids/README.md#classic-id-lineage),
-[allocation's](/scripts/sid/README.md#sid-events),
-[promotion's](../companions/promotion-lineage/README.md#promotion-lineage),
-[overlap's](../overlap/README.md#overlap-lineage),
-[placement's](../distance/README.md#placement-lineage),
-[brightness-colour's](../photometry/README.md#brightness-colour-lineage),
-[size's](../spectral/README.md#size-lineage),
-[coherence's](../multiplicity/README.md#coherence-lineage) and
-[naming's](../naming/README.md#naming-lineage). Placement's 349 MB plain outruns
-V8's longest string, so stage files and diffs are written and read as UTF-8
-bytes in chunks, and the diff walks the baseline a key at a time
-(`streamLineage`) rather than holding it.
-
-A stage that size cannot hold its rows as objects either: 3.9 million
-`LineageRow`s, beside the `Placement`s they came from, are about 1.7 GB of
-heap. So a stage hands `stageLineage` lines, never rows, and placement,
-brightness-colour and size serialise each record to their lines inside the
-walk, keeping only the strings; the diff reads the baseline as lines too,
-and only a reader that needs fields (trace, a ledger view) decodes them.
-Even as strings the three stages' 8.8 million lines (placement 3.9M,
-brightness-colour 4.0M, size 0.96M) overrun the heap budget together, so
-brightness-colour's and size's go to a `LineSpill` each during the walk and
-are read back one stage at a time, once placement's lines are released.
-
+The file format, every stage's measured size and write-time budget, and how the lines are held in the heap: [storage/](storage/README.md).
 The committed form of lineage is `data/sid/events.tsv` plus the ledger views
-below; the derivation itself is a build artifact, regenerated every build.
+([Committed ledgers become views](#committed-ledgers-become-views)); the
+derivation itself is a build artifact, regenerated every build.
 
 ## Run-to-run diff
 
@@ -368,9 +311,17 @@ and `parked-ledger.tsv` of placement's ([Placement lineage](../distance/README.m
 named token of its system. Its contract lives beside its module, in
 [Binding lineage](/scripts/binaries/resolve/README.md#binding-lineage).
 
+## The resolve stage
+
+`build:binaries` writes it after component-binding: each WDS component's
+resolve tier, every candidate a cascade gate refused, and its part in each
+binding-integrity verdict, keyed on its `multiples.tsv` row. Its contract lives
+beside its module, in
+[Resolve lineage](/scripts/binaries/resolve/README.md#resolve-lineage).
+
 ## The pairs stage
 
-`build:binaries` writes it too, after component-binding: every WDS pair row
+`build:binaries` writes it too, after resolve: every WDS pair row
 the binaries stages decide — a duplicate, a blank row left out, each Stage 5
 verdict, a position-less drop — keyed on the row that founded the pair. Its
 contract lives beside its module, in

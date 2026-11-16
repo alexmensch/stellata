@@ -12,7 +12,7 @@ import { gzipText } from '../lineage-io';
 import { lineageRows } from '../lineage-row-pure';
 import { matchName, parseTraceQuery, queryTerms, traceRecords, traceText, type TraceLookups } from './trace-pure';
 import {
-  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, SIZE_LINEAGE,
+  BINDING_LINEAGE, BRIGHTNESS_COLOUR_LINEAGE, CLASSIC_IDS_LINEAGE, CLOUDS_ALLOCATION_LINEAGE, COHERENCE_LINEAGE, RESOLVE_LINEAGE, SIZE_LINEAGE,
   stageFile,
 } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -232,9 +232,19 @@ const BINDING = [
   'component-binding\tmultiples:S-CD/D\toutcome\tcomponent-binding.hip.unbound\t\t',
 ].join('\n') + '\n';
 
+const REBOUND_FROM = '4000000000000000044';
+
+/** A rebound on the audit's letter verdict: its donor's tier, and the source it lost. */
+const RESOLVE = [
+  'stage\tkey\trole\tcode\tparams\tevidence',
+  'resolve\tmultiples:S-AB/A\toutcome\tresolve.tier.simbad-xid\t{"gaia":"222"}\t',
+  `resolve\tmultiples:S-AB/A\trefused\tresolve.audit.letter-sources.geometric.refused\t{"wds":"S","contested":"A:222/${REBOUND_FROM}","gaia":"${REBOUND_FROM}","reference":"B","reference_gaia":"4000000000000000045","winner":"222"}\t`,
+].join('\n') + '\n';
+
 describe('traceRecords over a promoted system', () => {
   const withPromotion = [
     { stage: 'component-binding', rows: () => lineageRows(BINDING, 'fixture/component-binding.tsv') },
+    { stage: 'resolve', rows: () => lineageRows(RESOLVE, 'fixture/resolve.tsv') },
     ...stages, { stage: 'promotion', rows: () => lineageRows(PROMOTION, 'fixture/promotion.tsv') },
   ];
   const promotionIdentity = [...identityRows(PROMOTION_IDENTITY, 'fixture/promotion.identity.tsv')];
@@ -252,6 +262,16 @@ describe('traceRecords over a promoted system', () => {
     const d = traceSystem('hd:5').find((r) => r.key === 'multiples:S-CD/D');
     expect(d?.rows.filter((r) => r.stage === 'component-binding').map((r) => `${r.code} ${r.params}`)).toEqual([
       'component-binding.gaia.inherited.blend {"gaia":"999","from":"C"}', 'component-binding.hip.unbound ',
+    ]);
+  });
+
+  it('shows a rebound component\'s donor tier and the source the audit refused it, after its binding rows', () => {
+    const a = traceSystem(REBOUND_FROM);
+    expect(a.map((r) => r.key)).toEqual(['multiples:S-AB/A']);
+    expect(a[0].rows.map((r) => `${r.role} ${r.code}`)).toEqual([
+      'outcome component-binding.gaia.own', 'outcome component-binding.hip.unbound',
+      'outcome resolve.tier.simbad-xid', 'refused resolve.audit.letter-sources.geometric.refused',
+      'outcome promotion.not-applicable.pair-anchor',
     ]);
   });
 
@@ -323,6 +343,7 @@ describe('pnpm run trace', () => {
   writeFileSync(stageFile(dir, CLOUDS_ALLOCATION_LINEAGE.stage), gzipText(CLOUD_ALLOCATION));
   writeFileSync(stageFile(dir, 'identity'), gzipText(IDENTITY));
   writeFileSync(stageFile(dir, BINDING_LINEAGE.stage), gzipText(BINDING));
+  writeFileSync(stageFile(dir, RESOLVE_LINEAGE.stage), gzipText(RESOLVE));
   writeFileSync(stageFile(dir, CLASSIC_IDS_LINEAGE.stage), gzipText(CLASSIC_IDS));
   writeFileSync(stageFile(dir, 'membership'), gzipText(MEMBERSHIP));
   writeFileSync(stageFile(dir, 'placement'), gzipText(PLACEMENT));
@@ -380,6 +401,12 @@ describe('pnpm run trace', () => {
 
   it('prints a component\'s binding provenance before its promotion rows', () => {
     expect(run(MINTED)).toMatch(/multiples:S-AB\/B\n.*\n {2}outcome  component-binding\.gaia\.own +\{"gaia":"6000000000000000001"\}[\s\S]*promotion\.minted\.keyed/);
+  });
+
+  it('prints a component\'s resolve tier and the candidate the audit refused, after its binding provenance', () => {
+    expect(run(REBOUND_FROM)).toMatch(
+      /multiples:S-AB\/A\n[\s\S]*component-binding\.gaia\.own[\s\S]*outcome  resolve\.tier\.simbad-xid[\s\S]*refused  resolve\.audit\.letter-sources\.geometric\.refused/,
+    );
   });
 
   it('prints a minted companion\'s absmag-source, colour and A_V provenance', () => {

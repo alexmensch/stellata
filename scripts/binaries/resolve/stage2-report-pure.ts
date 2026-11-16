@@ -2,12 +2,13 @@
 
 import { count, countsListed } from '../build-log-pure';
 import { BINDING_INTEGRITY_COUNT_KEYS, bindingIntegrityCounts } from './binding-audit-pure';
-import { siblingRejectionTally, type Stage2Result } from './resolve-pairs';
+import { refusalTally, type Stage2Result } from './resolve-pairs';
 
 export function stage2Report(result: Stage2Result): string[] {
-  const rejected = siblingRejectionTally(result);
+  const rejected = refusalTally(result);
   const audit = bindingIntegrityCounts(result.verdicts);
   return [
+    `ORB6 coordinate check: ${count(rejected.orb6_hip_off_coord)} ORB6 HIPs off the pair's WDS coordinate`,
     `sibling-identity rejections: ${count(rejected.ccdm_sibling_owned)} CCDM candidates owned by another letter, `
       + `${count(rejected.athyg_match_sibling_claimed)} AT-HYG position matches onto a row another letter already binds`,
     `seeded ${count(result.synthesizedSeeds.length)} synthesized-pair component bindings`,

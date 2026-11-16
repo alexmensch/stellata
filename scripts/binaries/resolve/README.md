@@ -15,18 +15,23 @@ scripts/binaries/resolve/
   resolve-pairs.ts             resolveStage2 (the passes in order) and
                                resolveCascade (the tiers and propagations
                                alone), Stage2Result, astrometryRequestIds,
-                               stage2Counts.
+                               refusalTally.
   components-pure.ts           ResolvedComponent, DecomposedPair, Bound
                                (an identifier and its origin),
                                GaiaBinding (a Gaia source's Bound plus the
                                tier that found it; resolveViaOf reads
                                `unresolved` off a null one), decompose
                                (the split), working (a pass's copy),
-                               findOwningPair, RESOLVE_VIA_PRIORITY.
+                               componentSides (each component with the
+                               row that produced it: the one component
+                               order), findOwningPair,
+                               RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
-                               sibling-identity rejections they record.
+                               CascadeRefusal each gate records (the ORB6
+                               HIP's coordinate check, the two
+                               sibling-identity guards).
   athyg-match-pure.ts          The AT-HYG position match Stage 3 reuses:
                                the 1° grid, the nearest-row search,
                                pairAthygMatches.
@@ -38,6 +43,11 @@ scripts/binaries/resolve/
                                inheritDownwardParentBindings.
   binding-audit-pure.ts        auditBindingIntegrity (the verdicts) and
                                enforceBindingVerdicts (applying them),
+                               verdictTouches (each instance holding a
+                               binding a verdict weighed, and its part),
+                               VERDICT_PARTS (the verdicts each shape
+                               reaches and the parts each gives; the
+                               BindingVerdict union is typed from it),
                                bindingIntegrityCounts, addNewestEdge (the
                                pair-geometry graph Stage 6's anchor offsets
                                build too).
@@ -45,6 +55,10 @@ scripts/binaries/resolve/
                                build/binding-integrity-verdicts.tsv, and
                                bindingVerdictRow.
   stage2-report-pure.ts        The build-log lines, read off the result.
+  resolve-lineage-pure.ts      RESOLVE_CODES, resolveLineageLines,
+    (+ test)                   resolveCounts and RESOLVE_INVARIANTS: Stage
+                               2's decisions as the resolve lineage stage
+                               (#resolve-lineage).
   binding-lineage-pure.ts      BINDING_CODES and bindingLineageLines: the
     (+ test)                   origins as the component-binding lineage
                                stage
@@ -122,6 +136,45 @@ inputs re-reads each changed file at the merge-base in one batched git read
 to refuse the baseline: 622 ms for the whole window on CI, 269 of it the
 baseline (f7a87137, 2026-11-15).
 
+## Resolve lineage
+
+`build:binaries` writes Stage 2's decisions as the `resolve` lineage stage,
+after `component-binding` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-resolve-stage)), from
+`resolve-lineage-pure.ts` over the `Stage2Result` itself, never re-read off
+`multiples.tsv`. Every row is keyed on its component's pair row as
+`multiples.tsv` writes it (`multiples:<system_id>/<comp>`, `pairSystemId`), so
+a component a later stage drops keeps the key its row would carry, and trace
+joins the stage to component-binding and promotion on the key.
+
+| Code | Written for |
+| --- | --- |
+| `resolve.tier.<tag>` | every component of every decomposing pair row, once: its `resolve_via` ([What each tier decides](#what-each-tier-decides)), underscores as dashes, with its Gaia source and `hip:` in `params`; a rebound component carries its donor's tier |
+| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `athyg-match-sibling-claimed` |
+| `resolve.audit.<shape>.<verdict>.<part>` | each component holding a binding an audit verdict weighed (`verdictTouches`), as `won` (it keeps the source), `refused` (it loses it) or `skipped` (unchanged); `params` carry the verdict's `wds`, `contested` label, `reference` letter and `reference_gaia`, `winner`, and the component's own `gaia` |
+
+A `refused` part and every gate code are in the refusal role. No tier binds
+`position_pm` or `position_nopm` (`RESERVED_RESOLVE_VIA`), so they have no code
+and no component can carry one ([the reserved tags](#what-each-tier-decides)).
+The stage writes no identity rows.
+
+`resolveCounts` folds the snapshot keys this stage's code alone produces from
+the stage's lines, inside the timed window (`foldedStageLineage`): a
+`ccdm-sibling-owned` refusal per line, each verdict once by its `wds`, shape
+and `contested` label however many components it weighed. The keys keep their
+names in the snapshot's `resolve` block ([Counts](#counts)).
+
+`RESOLVE_INVARIANTS` allows an `audit.*.unbound-ambiguous.refused` row only
+for the 31 rows it names, from 4 conflicts, 20 of them 10444-6000's Aa across
+its pair rows ([Invariants](/scripts/catalog/lineage/README.md#invariants)): a
+new ambiguous unbinding fails the build by key, and a fix that clears one
+fails until it is struck off the list.
+
+`RESOLVE_LINEAGE_BUDGET` pins 1.2 MB and 2 s: 97,386 rows came to 1,032,005
+bytes gzipped in 173–196 ms across two runs, neither diffing against a
+baseline (2026-11-16). The time budget keeps its siblings' 2 s: write times
+swing under machine load (stellata-hhaw.66.1).
+
 ## Choices the outputs rest on
 
 `multiples.tsv` is pinned byte for byte, and these choices hold it where a
@@ -145,9 +198,10 @@ cleaner one would move a row; changing one is a correctness item of its own:
 
 ## Counts
 
-`stage2Counts` returns the count-snapshot keys this stage's code alone
+`resolveCounts` returns the count-snapshot keys this stage's code alone
 produces — `ccdm_sibling_owned_rejected` and the seven binding-integrity keys
-— folded from the sibling rejections and the verdicts. The snapshot's other
+— folded from the resolve stage's lines ([Resolve lineage](#resolve-lineage)).
+The snapshot's other
 `resolve` keys also count Stage 3's work, so Stage 3's `stage3Counts` returns
 them ([Counts](../astrometry/README.md#counts)).
 
@@ -200,7 +254,7 @@ component carries a source without a tier, and `gaia_resolve_rate`
 | `athyg_gaia_native` | ORB6's HIP routes through AT-HYG's own `gaia` column when Gaia's published HIP→DR3 cross-walk misses (AT-HYG's source_id coverage is broader). The position-match pass below tags it too, binding the matched AT-HYG row's `gaia` directly, with no HIP involved. A CCDM sibling's HIP that falls through to AT-HYG's `gaia` column tags `ccdm_hip`. |
 | `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
 | `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord (PM-propagated from J1991.25). Routes that HIP through Gaia's HIP cross-walk and AT-HYG-native fall-through. A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
-| `position_pm` / `position_nopm` | Reserved placeholders in `RESOLVE_VIA` for a future PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`. Not yet wired. |
+| `position_pm` / `position_nopm` | Reserved in `RESOLVE_VIA` (`RESERVED_RESOLVE_VIA`) for a PM-propagated match against `data/gaia/gaia_dr3_astrometry.tsv`; no tier binds them. `GaiaVia` leaves them out, so no pass can bind one, and the `multiples.tsv` codec refuses a row carrying one. |
 | `unresolved` | All strategies missed. The component still binds a HIP whenever any tier surfaced one — Stage 3's HIP2 long-baseline fallback can attach astrometry to a Gaia-source-less Sirius A or α Cen B from the bare HIP. |
 
 Before any tier runs, Stage 1's `buildIndices` applies a one-sided

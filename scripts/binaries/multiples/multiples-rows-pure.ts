@@ -9,6 +9,7 @@ import { fromGaia, type ComponentAstrometry, type PairAstrometry } from '../astr
 import type { AthygRow } from '../load/athyg-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
+import { pairSystemId } from '../multiples-row-key-pure';
 import { massFromSpectralClass, massRatioFromComponents } from '../masses/mass-estimate-pure';
 import { ORBIT_VIA_PROPERTIES, OWN, gaiaFields, hipFields, type AstrometryVia, type GaiaFields, type HipFields, type MultiplesRecord, type MultiplesRecordFields, type PhotometryVia } from '../multiples-record-pure';
 import { keplerSemimajorAxisAu, type PairOrbit } from '../orbits/select-orbit-pure';
@@ -194,7 +195,7 @@ export function pairRows(
   const sTok = canonicalCompLetter(p.primary.component, p.secondary.component);
   const mags = pairMagnitudes(p.pair, p.primary.component, sTok, indices.msc);
   const shared = {
-    systemId: `${wdsId}-${p.pair.components}`,
+    systemId: pairSystemId(p.pair),
     regime: ORBIT_VIA_PROPERTIES[orbit.orbitVia].regime,
     orbitVia: orbit.orbitVia,
     ...orbitFields(orbit, pri.spect, sec.spect),
