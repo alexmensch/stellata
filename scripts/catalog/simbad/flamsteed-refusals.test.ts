@@ -10,8 +10,7 @@ import { REPO_ROOT, isLfsPointerFile } from '../../util/paths';
 import { artifactRows } from '../../util/sources/source';
 import { FLAMSTEED_REFUSALS_LIST } from './flamsteed-refusals-source';
 import { formatRefusals, refusalRows } from './flamsteed-refusals-pure';
-import { classifySimbadFlamsteed } from './simbad-flamsteed-pure';
-import { SIMBAD_IDENTS } from './simbad-idents-source';
+import { readSimbadFlamsteed } from './simbad-idents-source';
 
 const INPUTS = [DATA_FILES.simbadIdents, DATA_FILES.membershipManifest].map((file) => resolve(REPO_ROOT, file));
 
@@ -22,7 +21,7 @@ describe.skipIf(INPUTS.some(isLfsPointerFile))('the frozen Flamsteed refusal lis
     if (row.hip !== null) hips.add(row.hip);
     for (const hd of row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt]) hds.add(hd);
   }
-  const derived = refusalRows(classifySimbadFlamsteed(SIMBAD_IDENTS.read(), CROSS_INDEX.read()), { hips, hds });
+  const derived = refusalRows(readSimbadFlamsteed(CROSS_INDEX.read()), { hips, hds });
 
   it('is exactly the numbers the rule refuses on a catalogue star, with their evidence', () => {
     expect(formatRefusals(DATA_FILES.flamsteedRefusals, derived)).toBe(readFileSync(resolve(REPO_ROOT, DATA_FILES.flamsteedRefusals), 'utf8'));
