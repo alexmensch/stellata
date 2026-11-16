@@ -68,10 +68,13 @@ the dimmed anchor). A key's rows are a set, ordered as every stage file is
 pair's primary that anchors its pair is `promotion.pair-anchor`, a merge into
 the record it resolved to: that record is the row's star, so a SID keyed on
 the row's synthetic key — the component it named when it was minted on its
-own — merges into the record's. A keyed mint writes
-`promotion.synthetic-key.keyed-mint` beside its outcome row, a merge naming
-itself, for the same reason: a SID its row's synthetic key held before the
-component bound an identifier of its own merges into the minted record's.
+own — merges into the record's. A keyed mint
+carries its row's synthetic key too, the synth↔component same-as edge
+([docs/sid.md § 4.1](/docs/sid.md#41-same-as-equivalence-graph)):
+`mintSynthDesignations` names it per minted record, by origin key, and SID
+allocation adds it to that record's designations, so a SID the key held
+before the component bound an identifier of its own continues on the
+record, with no event.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
 to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
 both park, since promotion ships no record for the star the row names, so a
@@ -93,8 +96,8 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-16: 128,794 rows — one outcome row per `multiples.tsv` row
-and a `synthetic-key.keyed-mint` row per keyed mint, 59,710 facet rows (two of them, colour and dust, per minted record), 16,611
+Measured 2026-11-16: 125,287 rows — one outcome row per `multiples.tsv` row,
+59,710 facet rows (two of them, colour and dust, per minted record), 16,611
 size rows (one per record promotion sized, by its last pass:
 <!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
 <!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
@@ -102,8 +105,8 @@ size rows (one per record promotion sized, by its last pass:
 <!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
 <!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 45,795
 identity rows (the 14,676 minted companions and the 31,119 rows promotion
-retires, parks or merges), 1.77 MB gzipped in 0.72 s (header, diff, write and
-invariants; 131 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+retires, parks or merges), 1.73 MB gzipped in 0.18 s (header, diff, write and
+invariants; 57 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
 1.87 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
 

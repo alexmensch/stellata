@@ -8,7 +8,7 @@ import { wdsPair } from '../wds/wds-fixture';
 import { multiplesRow } from '../catalog/companions/multiples-fixture';
 import type { PromotedRow, RowOutcome } from '../catalog/companions/promotion-outcome';
 import {
-  PROMOTION_ADMISSION_CODES, PROMOTION_CODES, promotionLineage,
+  PROMOTION_ADMISSION_CODES, PROMOTION_CODES, promotionLineage, withDesignation,
 } from '../catalog/companions/promotion-lineage/promotion-lineage-pure';
 import type { IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { stageLineageLine, type LineageLine } from '../catalog/lineage/lineage-row-pure';
@@ -76,25 +76,27 @@ describe('a synthetic SID whose component now resolves to a record of its own', 
   const GAIA = '2595463996992115840';
   const promotionStage = (outcome: RowOutcome, row: PromotedRow['row'], stars: Parameters<typeof enterPhase<'promoted', Star>>[1]) => {
     const promoted: PromotedRow = { row, via: 'secondary', outcome, anchor: 'spine:1', systemAnchor: 'spine:1', synthKey: 'synth-00010+0010-B' };
-    const { lineage, identity } = promotionLineage([promoted], enterPhase('promoted', stars), new Set(['hip:100']), new Map());
-    return { stage: PROMOTION_CODES.stage, lines: lineage.map((r) => stageLineageLine(PROMOTION_CODES, r)), identity };
+    const { lineage, identity, mintSynth } = promotionLineage([promoted], enterPhase('promoted', stars), new Set(['hip:100']), new Map());
+    return { stage: PROMOTION_CODES.stage, lines: lineage.map((r) => stageLineageLine(PROMOTION_CODES, r)), identity, mintSynth };
   };
   const removalsOf = (a: Allocation) => {
     if (a.kind === 'failed') throw new Error(a.errors.join('\n'));
     return a.removals.map((r) => [r.kind, r.sid, r.decision.code, r.kind === 'merged' ? r.into : null]);
   };
 
-  it('merges into the record promotion mints on the component\'s own Gaia source', () => {
+  it('keeps its SID on the record promotion mints on the component\'s own Gaia source, with no event', () => {
     const origin = 'multiples:00010+0010-AB/B';
     const keyed = makeStar({ originKey: origin, hip: null, gaiaSourceId: GAIA, syntheticId: null });
-    const minted: SidObject = { designations: [`gaia_dr3:${GAIA}`], kind: 'star', label: 'B', origin, admission: { kind: 'lineage' } };
     const stage = promotionStage(
       { kind: 'minted', idx: 0, synthetic: false, constellationSplit: false, brightness: { source: 'own', spectMsFromOwnAbsmag: false, ci: 'own', av: 0, adjustment: null } },
       multiplesRow({ systemId: '00010+0010-AB', comp: 'B', gaiaSourceId: GAIA }), [keyed],
     );
+    const minted: SidObject = {
+      designations: withDesignation([`gaia_dr3:${GAIA}`], stage.mintSynth.get(origin)), kind: 'star', label: 'B', origin, admission: { kind: 'lineage' },
+    };
     const a = allocateOver([anchor, minted], upstreamOf([stage]));
-    const mintedSid = Math.max(ANCHOR_SID, SYNTH_SID) + 1;
-    expect(removalsOf(a)).toEqual([['merged', SYNTH_SID, 'promotion.synthetic-key.keyed-mint', mintedSid]]);
+    if (a.kind === 'failed') throw new Error(a.errors.join('\n'));
+    expect([a.outcomes[1].sid, a.removals, a.events]).toEqual([SYNTH_SID, [], []]);
   });
 
   it('merges into the record its row, now a pair\'s primary, resolves to', () => {
