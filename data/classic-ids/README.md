@@ -47,13 +47,15 @@ label_flips.tsv                    Pipeline-derived, and by
                                    `/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change` requires, and
                                    the delta the spine's designation-multiset
                                    gate replays.
-classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
+classic_id_overrides.tsv           Hand-curated. 20 rows; the escape
                                    hatch for a CDS join review finds wrong
                                    (/scripts/catalog/classic-ids/label-merge/README.md#curated-overrides-and-what-does-not-belong-in-them).
                                    Fifteen are the eight
                                    close-pair records whose hd and hr the
                                    four-witness rule moves together
-                                   (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd).
+                                   (/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd),
+                                   three CNS5 renumberings no overlay entry
+                                   reaches.
 ```
 
 ## Provenance

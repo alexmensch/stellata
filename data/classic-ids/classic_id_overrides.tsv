@@ -86,3 +86,17 @@ gaia_source_id	field	value
 # no GJ for this source, so the merge's backstop would keep the spine's
 # spelling.
 2277839861099828480	gl	GJ 1255
+#
+# THREE CNS5 RENUMBERINGS the overlay cannot reach, a rule's output: CNS5's
+# row for the record's HIP names one GJ, a different number from the spine's
+# V/70A entry, and carries no Gaia source of its own (its astrometry is
+# Hipparcos), while the HIP walk carries no row either, so no overlay entry
+# keys it. Each record binds through SIMBAD and keys on its HIP, so the rename
+# moves no canonical key and needs no same-as bridge
+# (/scripts/catalog/membership/merge-derivation/README.md#settling-a-differs-cell).
+6165699748417797504	gl	GJ 9441
+# ^ HIP 65109. Ships Gl 508.1.
+3639984066101401344	gl	GJ 9477
+# ^ HIP 69962. Ships Gl 542.2.
+6458881569025875840	gl	GJ 9753
+# ^ HIP 107522. Ships Gl 836.9A.

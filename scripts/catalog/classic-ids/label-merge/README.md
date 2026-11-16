@@ -162,7 +162,7 @@ proposal can re-expose a value its partner had proposed to vacate.
 `data/classic-ids/classic_id_overrides.tsv` pins one record's one identifier —
 an explicit value, or empty for "keep the spine's". It is for the case
 [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) names: review finding the CDS join wrong. It holds
-**17 rows**, and they are three shapes rather than 17 judgements. The count is
+**20 rows**, and they are four shapes rather than 20 judgements. The count is
 the `membership.label.override-spine.*` and `membership.label.override-value.*`
 codes summed in `../../membership/membership-manifest-expected.json`.
 
@@ -188,6 +188,13 @@ keep that spelling. The row pins `GJ 1255`, the V/70A row whose HD is the
 record's own. `../../membership/membership-manifest-gate.test.ts` asserts no
 manifest `gl` cell ends in punctuation, so a second such cell fails there
 rather than shipping.
+
+**Three are CNS5 renumberings no overlay entry reaches** (HIP 65109 → GJ 9441,
+HIP 69962 → GJ 9477, HIP 107522 → GJ 9753): CNS5's row carries the record's
+HIP and no Gaia source, and the HIP walk has no row for it, so nothing keys
+the renumbered GJ onto the record's source. Each keys its SID on its HIP, so
+the rename needs no same-as bridge
+([Settling a differs cell](../../membership/merge-derivation/README.md#settling-a-differs-cell)).
 
 An override is applied before the collision guard and before the extras
 partition, so a curated value neither suppresses nor aliases: it is what the

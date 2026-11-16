@@ -295,7 +295,6 @@ tyc	hip	hd	gl	gaia_source_id	divergence	cells	derived	evidence
 4963-1245-1	63742	113449		3677911582262521728	derived_only	gl	GJ 11888	free
 4970-1091-1	67092		Gl 524.1	3633065148665344384	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 4972-1082-1	66587		GJ 11963	3632451071421231360	derived_only	gl	GJ 11963	free
-4982-1597-1	69962	125354	Gl 542.2	3639984066101401344	differs	gl	GJ 9477	from hip; ships Gl 542.2; no-rule
 5009-154-1	74555		GJ 1190	6336170195850218240	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 5042-558-1	80053		Gl 618.1	4356712162461401728	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 5065-23-1	84123		Gl 660A		unlinked	gl	tyc+hip | gl	tyc+hip | gl
@@ -440,7 +439,6 @@ tyc	hip	hd	gl	gaia_source_id	divergence	cells	derived	evidence
 722-960-1	26676	246132		3340374260001078016	derived_only	hd	246132	free
 7232-584-1	59780	106549			derived_only	gl	GJ 11761	free
 7257-644-1	63480		GJ 11882	6155259541913716608	derived_only	gl	GJ 11882	free
-7275-2074-1	65109	115892	Gl 508.1	6165699748417797504	differs	gl	GJ 9441	from hip; ships Gl 508.1; no-rule
 7281-1391-1	69163		Gl 539.2	6172774315468302208	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 7281-158-1	69285		GJ 12037	6124711741640147712	derived_only	gl	GJ 12037	free
 732-1947-1	30947	258361		3327083913201412096	derived_only	hd	258361	free
@@ -546,7 +544,6 @@ tyc	hip	hd	gl	gaia_source_id	divergence	cells	derived	evidence
 8730-1145-1	83390			5917694897793466880	derived_only	hd	153432	held
 8745-1216-1	90945	170573	GJ 12684A	6651058467639413248	derived_only	gl	GJ 12684A	free
 8780-47-1	99137	190422	GJ 12920	6472858766996632704	derived_only	gl	GJ 12920	free
-8815-877-1	107522	206804	Gl 836.9A	6458881569025875840	differs	gl	GJ 9753	from hip; ships Gl 836.9A; no-rule
 8887-1611-1	25647	36705	GJ 10774A	4660766641264343680	derived_only	gl	GJ 10773B	free
 8887-1611-1	25647	36705	GJ 10774A	4660766641264343680	derived_only	gl	GJ 10774A	free
 8892-1247-1	27887	40307	GJ 2046	4758877919212831104	derived_only	gl	GJ 2046	free
