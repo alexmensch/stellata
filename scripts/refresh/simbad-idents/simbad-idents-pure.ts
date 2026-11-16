@@ -1,9 +1,9 @@
 // The SIMBAD identifier pull: the designation classes the label cells read, with each object's catalogue keys. See README.md.
 
 import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
-import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { IDENTS_COLUMN, IDENTS_SEPARATOR } from '../../catalog/simbad/simbad-idents-parse';
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
+import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import type { Column, Row } from '../pull/columns-pure';
 import type { Ask, Phase, PhasedPull, WrittenTable } from '../pull/pull';
@@ -112,10 +112,10 @@ export const IDENTS_GATES: IdentsGates = {
 };
 
 /** Every distinct oid a simbad_sptype.tsv row names, ascending. */
-export function sptypeOids(text: string): number[] {
+export function sptypeOids(text: string, from: Declared): number[] {
   const oids = new Set<number>();
-  for (const row of readTable({ file: DATA_FILES.simbadSptype, columns: [IDENTS_COLUMN.oid], hint: 'Re-run `pnpm run refresh:simbad-sptype`.' }, text)) {
-    oids.add(row.requiredId(IDENTS_COLUMN.oid));
+  for (const row of readTable({ ...from, columns: [OID.tsv] }, text)) {
+    oids.add(row.requiredId(OID.tsv));
   }
   return [...oids].sort(ascending);
 }
