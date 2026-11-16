@@ -2,6 +2,7 @@
 
 import { nestByStage, type StageBlock, type StagedCounts } from '../../util/counts/count-stages-pure';
 import { stage3Counts } from '../astrometry/attach-astrometry';
+import type { AstrometryCounts } from '../astrometry/astrometry-lineage-pure';
 import type { StageResults } from '../build-binaries';
 import { stage1Counts } from '../load/reference-catalogs';
 import { stage6Counts } from '../multiples/attach-multiples';
@@ -12,7 +13,7 @@ import type { ResolveCounts } from '../resolve/resolve-lineage-pure';
 import { BINDING_LINEAGE, PAIRS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 type StageCountKey = keyof (
-  ReturnType<typeof stage1Counts> & ResolveCounts & ReturnType<typeof stage3Counts>
+  ReturnType<typeof stage1Counts> & ResolveCounts & ReturnType<typeof stage3Counts> & AstrometryCounts
   & ReturnType<typeof stage4Counts> & ReturnType<typeof stage6Counts>
 );
 const BINARIES_STAGES = ['ingest', 'subdivide', 'resolve', 'astrometry', 'orbits', 'multiples'] as const;
@@ -42,6 +43,7 @@ function withPrefix<K extends string, P extends string>(counts: Readonly<Record<
 export interface LineageCounts {
   readonly binding: BindingCounts;
   readonly resolve: ResolveCounts;
+  readonly astrometry: AstrometryCounts;
   readonly pairs: PairsCounts;
 }
 
@@ -70,7 +72,7 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
       ...withPrefix(s3, 'resolution_'),
       ...bindingIntegrity,
     },
-    astrometry: withPrefix(s3, 'astrometry_'),
+    astrometry: lineage.astrometry,
     orbits: stage4Counts(r.orbits),
     multiples: stage6Counts(r.multiples),
   }, true);

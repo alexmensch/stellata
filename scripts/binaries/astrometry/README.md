@@ -4,7 +4,8 @@ The TypeScript Stage 3 of the binaries pipeline: each side of every
 `DecomposedPair` Stage 2 bound (`../resolve/`) gets the most trustworthy
 astrometric measurement on file, keyed by its pair; `../build-binaries.ts`
 calls it. What each route's gate decides, and why:
-[What each route decides](#what-each-route-decides).
+[What each route decides](#what-each-route-decides); each component's route
+as the `astrometry` lineage stage: [Astrometry lineage](#astrometry-lineage).
 
 ## Files in this area
 
@@ -15,6 +16,10 @@ scripts/binaries/astrometry/
                                stage3Rates, and the tallies both they and
                                the report read.
   stage3-report-pure.ts        The build-log lines, read off the result.
+  astrometry-lineage-pure.ts   ASTROMETRY_CODES, astrometryLineageLines,
+    (+ test)                   astrometryCounts and ASTROMETRY_INVARIANTS:
+                               the routes as the astrometry lineage stage
+                               (#astrometry-lineage).
   routes-pure.ts (+ test)      ComponentAstrometry, ROUTED_VIA,
                                routeAstrometry (the Gaia / HIP2 cascade
                                for one component), minRhoPerSource, and
@@ -94,9 +99,11 @@ the PM anchor.
 
 ## Counts
 
-`stage3Counts` returns the count-snapshot keys this stage completes, each
-folded from the result through the one tally helper: the `astrometry_*`
-routes and `synthesized_nss_inner_pairs`, which are its own, and the totals
+The `astrometry_*` routes fold from the astrometry stage's lines
+(`astrometryCounts`, [Astrometry lineage](#astrometry-lineage)).
+`stage3Counts` returns the other count-snapshot keys this stage completes, each
+folded from the result through the one tally helper:
+`synthesized_nss_inner_pairs`, which is its own, and the totals
 its NSS inner pairs and AT-HYG fallback add to — `wds_pairs_total`,
 `decomposing_pairs`, `components_total`, the `resolution_*` tiers (an inner
 pair's children inherit their carrier's tier) and
@@ -112,6 +119,38 @@ and `hip2_fallback_rate`, each through
 key is held exactly to the committed snapshot
 ([Stage 7](../counts/README.md)), so a rate needs no pin of its own: it can
 move only if a count does.
+
+## Astrometry lineage
+
+`build:binaries` writes each component's route as the `astrometry` lineage
+stage, after `resolve` in `LINEAGE_STAGES`
+([Record lineage](/scripts/catalog/lineage/README.md#the-astrometry-stage)), from
+`astrometry-lineage-pure.ts` over the `Stage3Result`, NSS inner pairs
+included. Rows are keyed on the component's pair row as `multiples.tsv` writes
+it (`multiples:<system_id>/<comp>`, `componentRowKey`), the resolve stage's
+key, so trace joins the two; `params` carry its Gaia source, `hip:` and bound
+AT-HYG row (`athyg:<id>`).
+
+| Code | Written for |
+| --- | --- |
+| `astrometry.route.<via>` | every component a route measured, once, one code per measured `ROUTED_VIA` tag, underscores as dashes; its evidence is the row the values are read off (`from`) |
+| `astrometry.route.unresolved.nothing-bound` / `.identifier-bound` | a component no route reached, split by whether it binds a Gaia source, HIP or AT-HYG row |
+| `astrometry.refused.athyg-match-sibling-claimed` | an AT-HYG fallback match the sibling-identity guard refused, with the `hip:` another letter binds |
+
+`astrometryCounts` folds the `astrometry_*` snapshot keys from the lines,
+both unresolved codes into `astrometry_unresolved`. The fallback's refusals
+stay in `stage3Counts`' `athyg_match_sibling_claimed_rejected`, a `resolve`
+key that sums Stage 2's refusals with them.
+
+`ASTROMETRY_INVARIANTS` allows an `identifier-bound` row only for the 12 it
+names ([Invariants](/scripts/catalog/lineage/README.md#invariants)): 8 bind a
+HIP that HIP2 does not carry, 3 an AT-HYG row whose match the sibling guard
+refused, and Sirius B a Gaia source the astrometry pull lacks. A new one fails
+the build by key, and a fix that clears one fails until it is struck off.
+
+`ASTROMETRY_LINEAGE_BUDGET` pins 1.3 MB and 2 s: 91,172 rows came to
+1,112,130 bytes gzipped in 192 ms, not diffing against a baseline
+(2026-11-16).
 
 ## Choices the outputs rest on
 

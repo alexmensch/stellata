@@ -8,12 +8,13 @@ import { nssTally, resolutionTally, routeTally, stage3Counts, stage3Rates, type 
 
 export function stage3Report(reference: ReferenceCatalogs, resolved: Stage2Result, result: Stage3Result): string[] {
   const { synthesized, ...skipped } = nssTally(result);
-  const rates = stage3Rates(stage3Counts(reference, resolved, result));
+  const routes = routeTally(result);
+  const rates = stage3Rates({ ...stage3Counts(reference, resolved, result), astrometry_hip2_long_baseline: routes.hip2_long_baseline });
   return [
     `synthesized ${count(synthesized)} NSS inner pairs (skipped: ${countsListed(skipped)})`,
     `AT-HYG position fallback: ${count(result.siblingClaimed.length)} matches onto a row another letter already binds`,
     `Resolution: ${countsListed(resolutionTally(result))}`,
-    `astrometry routing: ${countsListed(routeTally(result))}`,
+    `astrometry routing: ${countsListed(routes)}`,
     `Gaia resolve rate: ${formatShare(rates.gaia_resolve_rate)}; HIP2 fallback rate: ${formatShare(rates.hip2_fallback_rate)}`,
   ];
 }

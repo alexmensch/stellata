@@ -25,6 +25,7 @@ import { foldStageLines } from '../catalog/lineage/lineage-row-pure';
 import { PAIRS_CODES, pairsLineageLines } from './pairs-lineage-pure';
 import { BINDING_CODES, bindingLineageLines } from './resolve/binding-lineage-pure';
 import { resolveCounts, resolveLineageLines } from './resolve/resolve-lineage-pure';
+import { astrometryCounts, astrometryLineageLines } from './astrometry/astrometry-lineage-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage4Result } from './orbits/attach-orbits';
 import type { Stage5Result } from './optical/attach-optical';
@@ -137,8 +138,9 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     const binding = foldStageLines(BINDING_CODES, bindingLineageLines(results.multiples.rows));
     const resolve = resolveCounts(resolveLineageLines(results.resolved));
+    const astrometry = astrometryCounts(astrometryLineageLines(results.astrometry));
     const pairs = foldStageLines(PAIRS_CODES, pairsLineageLines(results));
-    expect(asWritten(binariesCounts(results, { binding, resolve, pairs })) === readRepoFile(BUILD_BINARIES_COUNTS.file)).toBe(true);
+    expect(asWritten(binariesCounts(results, { binding, resolve, astrometry, pairs })) === readRepoFile(BUILD_BINARIES_COUNTS.file)).toBe(true);
   });
 });
 

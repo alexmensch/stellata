@@ -2,13 +2,14 @@ import { describe, expect, it } from 'vitest';
 
 import { emptyTallyPartition, prefixed } from '../../util/counts/tally-pure';
 import { RESOLVE_VIA } from '../multiples-record-pure';
-import { stage3Rates, type Stage3Counts } from './attach-astrometry';
-import { ROUTED_VIA } from './routes-pure';
+import { stage3Rates } from './attach-astrometry';
 
-const counts = (over: Partial<Stage3Counts>): Stage3Counts => ({
+type RatedCounts = Parameters<typeof stage3Rates>[0];
+
+const counts = (over: Partial<RatedCounts>): RatedCounts => ({
   wds_pairs_total: 0, synthesized_nss_inner_pairs: 0, athyg_match_sibling_claimed_rejected: 0, decomposing_pairs: 0, components_total: 0,
   ...prefixed('resolution_', emptyTallyPartition(RESOLVE_VIA)),
-  ...prefixed('astrometry_', emptyTallyPartition(ROUTED_VIA)),
+  astrometry_hip2_long_baseline: 0,
   ...over,
 });
 

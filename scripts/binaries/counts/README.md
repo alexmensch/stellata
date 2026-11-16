@@ -15,7 +15,8 @@ them and nothing pins them.
 scripts/binaries/counts/
   binaries-counts.ts   binariesCounts, over the shell's StageResults, the
                        component-binding and pairs stages' count blocks
-                       and the resolve stage's folded keys.
+                       and the resolve and astrometry stages' folded
+                       keys.
 ```
 
 The real-data case is the parent folder's `build-binaries.test.ts`: the
@@ -27,7 +28,9 @@ Stage 7 counts nothing itself. Each stage's `stageNCounts` returns the keys
 its code produces, folded through the one tally helper
 ([The tally](../../util/counts/README.md#the-tally)); Stage 2's are
 `resolveCounts`, folded from the resolve stage's lines
-([Resolve lineage](../resolve/README.md#resolve-lineage)). A snapshot stage is not
+([Resolve lineage](../resolve/README.md#resolve-lineage)), and Stage 3's
+routes are `astrometryCounts`, folded from the astrometry stage's lines
+([Astrometry lineage](../astrometry/README.md#astrometry-lineage)). A snapshot stage is not
 a code stage: `subdivide` holds Stage 1's ORB6 orphan and MSC inner-pair
 counts and Stage 3's NSS inner pairs; `ingest` holds Stage 3's
 `wds_pairs_total`, which its inner pairs add to. `binariesCounts` places each
@@ -37,8 +40,8 @@ key by name, in the snapshot's order, and hands each snapshot stage to
 a refresh rewrites the file unchanged. Every input is required, so no block is
 ever `absent`. `filed` takes
 the stages with a second argument that is `true` only when they are exactly
-`BINARIES_STAGES` and hold each key the four `stageNCounts` and
-`resolveCounts` return exactly once, so a key left out, invented or filed twice, or a stage outside the list,
+`BINARIES_STAGES` and hold each key the four `stageNCounts`,
+`resolveCounts` and `astrometryCounts` return exactly once, so a key left out, invented or filed twice, or a stage outside the list,
 fails to compile, naming it.
 
 `SNAPSHOT_STAGES` is `BINARIES_STAGES` then the `component-binding` and

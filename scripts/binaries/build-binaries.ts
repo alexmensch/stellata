@@ -13,6 +13,9 @@ import { binariesCounts } from './counts/binaries-counts';
 import { MULTIPLES_TSV } from './multiples-tsv';
 import { BINDING_VERDICTS_TSV, bindingVerdictRow } from './resolve/binding-verdicts-tsv';
 import { attachStage3, type Stage3Result } from './astrometry/attach-astrometry';
+import {
+  ASTROMETRY_CODES, ASTROMETRY_INVARIANTS, ASTROMETRY_LINEAGE_BUDGET, astrometryCounts, astrometryLineageLines,
+} from './astrometry/astrometry-lineage-pure';
 import { stage3Report } from './astrometry/stage3-report-pure';
 import { loadReferenceCatalogs, type ReferenceCatalogs } from './load/reference-catalogs';
 import { stage1Report } from './load/stage1-report-pure';
@@ -29,7 +32,7 @@ import {
 import { stage2Report } from './resolve/stage2-report-pure';
 import { attachStage4, type Stage4Result } from './orbits/attach-orbits';
 import { stage4Report } from './orbits/stage4-report-pure';
-import { BINDING_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
+import { ASTROMETRY_LINEAGE, BINDING_LINEAGE, PAIRS_LINEAGE, RESOLVE_LINEAGE, type StageLineageSpec } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export interface StageResults {
   readonly reference: ReferenceCatalogs;
@@ -67,7 +70,7 @@ function binariesStageLineage<S extends string, B extends string, L extends B>(
 
 export async function main(): Promise<void> {
   const results = await runStages(log);
-  const { reference, resolved, optical, multiples } = results;
+  const { reference, resolved, astrometry: routed, optical, multiples } = results;
   const binding = binariesStageLineage(
     BINDING_LINEAGE, BINDING_CODES, () => bindingLineageLines(multiples.rows), BINDING_LINEAGE_BUDGET,
   );
@@ -75,6 +78,10 @@ export async function main(): Promise<void> {
     spec: RESOLVE_LINEAGE, codes: RESOLVE_CODES, lines: () => resolveLineageLines(resolved), budget: RESOLVE_LINEAGE_BUDGET,
     invariants: RESOLVE_INVARIANTS, inputs: stepInputHashes(),
   }), resolveCounts);
+  const astrometry = foldedStageLineage(namedStageRun({
+    spec: ASTROMETRY_LINEAGE, codes: ASTROMETRY_CODES, lines: () => astrometryLineageLines(routed), budget: ASTROMETRY_LINEAGE_BUDGET,
+    invariants: ASTROMETRY_INVARIANTS, inputs: stepInputHashes(),
+  }), astrometryCounts);
   const pairs = binariesStageLineage(
     PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
   );
@@ -85,16 +92,18 @@ export async function main(): Promise<void> {
       bindingVerdicts: BINDING_VERDICTS_TSV.serialize(resolved.verdicts.map(bindingVerdictRow)),
       ...binding.files,
       ...resolve.files,
+      ...astrometry.files,
       ...pairs.files,
     },
-    members: new Map([...binding.members, ...resolve.members, ...pairs.members]),
+    members: new Map([...binding.members, ...resolve.members, ...astrometry.members, ...pairs.members]),
     checks: [
       ...reference.checks,
       ...binding.checks,
       ...resolve.checks,
+      ...astrometry.checks,
       ...pairs.checks,
       countSnapshotCheck(BUILD_BINARIES_COUNTS, {
-        actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, pairs: pairs.counts }),
+        actual: binariesCounts(results, { binding: binding.counts, resolve: resolve.counts, astrometry: astrometry.counts, pairs: pairs.counts }),
         failureLabel: 'build-binaries count',
       }),
     ],
