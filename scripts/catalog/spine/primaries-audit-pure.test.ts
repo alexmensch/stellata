@@ -79,13 +79,12 @@ const tables: PrimaryTables = {
   tycToSource: new Map([['1-1-1', '111'], ['1-2-1', '222'], ['9-9-1', '999']]),
   hipToSource: new Map([[10, '111'], [20, '333']]),
   simbadSourceless: [],
-  simbadObjectOfSource: new Map(),
   simbadBySourceId: new Map([
-    ['999', { hip: 20, tyc: null, gj: null }],
-    ['777', { hip: 21, tyc: '5-5-5', gj: null }],
-    ['666', { hip: null, tyc: null, gj: null }],
-    ['444', { hip: null, tyc: null, gj: 'GJ 3239' }],
-    ['9141', { hip: null, tyc: null, gj: '9140' }],
+    ['999', { oid: 0, hip: 20, tyc: null, gj: null }],
+    ['777', { oid: 0, hip: 21, tyc: '5-5-5', gj: null }],
+    ['666', { oid: 0, hip: null, tyc: null, gj: null }],
+    ['444', { oid: 0, hip: null, tyc: null, gj: 'GJ 3239' }],
+    ['9141', { oid: 0, hip: null, tyc: null, gj: '9140' }],
   ]),
 };
 

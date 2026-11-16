@@ -7,7 +7,7 @@ export interface ClosePairWitnesses {
   iv25Hds: (tyc: string) => ReadonlySet<number> | undefined;
   simbadTycHd: ReadonlyMap<string, SimbadTycHdRow>;
   /** SIMBAD's object (oid) for a Gaia DR3 source. */
-  simbadObjectOfSource: ReadonlyMap<string, number>;
+  simbadObjectOf: (sourceId: string) => number | undefined;
 }
 
 /** `split`: the two TYC witnesses share no HD. `uncontested`: they share one,
@@ -37,7 +37,7 @@ export function closePairHdVerdict(
   if (answer === undefined || printed === undefined) return 'unanswered';
   if (!hdNumbers(answer).some((hd) => printed.has(hd))) return 'split';
   if (record.hd !== null && (printed.has(record.hd) || hdNumbers(answer).includes(record.hd))) return 'uncontested';
-  const ofSource = record.gaiaSourceId === null ? undefined : w.simbadObjectOfSource.get(record.gaiaSourceId);
+  const ofSource = record.gaiaSourceId === null ? undefined : w.simbadObjectOf(record.gaiaSourceId);
   if (ofSource === undefined) return 'source-silent';
   return ofSource === answer.simbadOid ? 'move' : 'refuse';
 }

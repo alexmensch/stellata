@@ -57,8 +57,6 @@ export interface BindingTables {
   hipToSource: ReadonlyMap<number, string>;
   simbadBySourceId: ReadonlyMap<string, SimbadXids>;
   simbadSourceless: readonly SimbadXids[];
-  /** SIMBAD's object (oid) for each Gaia DR3 source. */
-  simbadObjectOfSource: ReadonlyMap<string, number>;
 }
 
 export interface PrimaryTables extends BindingTables {

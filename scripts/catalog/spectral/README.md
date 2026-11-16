@@ -21,8 +21,8 @@ scripts/catalog/spectral/
                                   derivation and the spine audits read, plus
                                   the cross-IDs of the objects carrying no
                                   source_id, which contest the derivation's
-                                  keys, and each source_id's SIMBAD oid, the
-                                  close-pair rule's fourth witness
+                                  keys; each carries the object's SIMBAD oid,
+                                  the close-pair rule's fourth witness
                                   (../simbad/README.md#which-witness-decides-a-close-pairs-hd);
                                   a repeated source_id fails it.
   sptype-overrides-source.ts      SPTYPE_OVERRIDES, the curated tier's MK

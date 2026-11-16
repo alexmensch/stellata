@@ -110,7 +110,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     closePair: {
       iv25Hds: (tyc: string) => pairLinks.links.tycHd.get(tyc),
       simbadTycHd: input.simbadTycHd,
-      simbadObjectOfSource: tables.simbadObjectOfSource,
+      simbadObjectOf: (sourceId: string) => tables.simbadBySourceId.get(sourceId)?.oid,
     },
   };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(

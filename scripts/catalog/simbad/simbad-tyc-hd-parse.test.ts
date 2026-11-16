@@ -15,6 +15,7 @@ import {
   type SimbadTycHdRow,
 } from './simbad-tyc-hd-parse';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
+import type { SimbadXids } from '../spectral/spectral-resolve';
 import { closePairHdVerdict, iv25HdSets, type ClosePairWitnesses } from './close-pair-hd-pure';
 
 const TYC_HD_FROM = { file: 'simbad_tyc_hd.tsv', hint: 'h' };
@@ -177,6 +178,7 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 );
 
 const SRC_SIMBAD_SPTYPE = AT(SIMBAD_SPTYPE.file);
+const objectOf = (xids: ReadonlyMap<string, SimbadXids>) => (s: string) => xids.get(s)?.oid;
 const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 
 /** The move set of README.md#which-witness-decides-a-close-pairs-hd: the
@@ -210,7 +212,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     const w: ClosePairWitnesses = {
       iv25Hds: (tyc) => iv.get(tyc),
       simbadTycHd: SIMBAD_TYC_HD.read(),
-      simbadObjectOfSource: SIMBAD_SPTYPE.read().objectOfSource,
+      simbadObjectOf: objectOf(SIMBAD_SPTYPE.read().xids),
     };
 
     // Keyed on the TYC, not the source: a mutual swap is two rows.
@@ -263,7 +265,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
     let refusals: string[];
     let ivHd: Map<string, Set<number>>;
     let simbad: Map<string, SimbadTycHdRow>;
-    let objectOfSource: ReadonlyMap<string, number>;
+    let objectOfSource: ClosePairWitnesses['simbadObjectOf'];
     let hdOfHr: Map<number, number | null>;
 
     beforeAll(() => {
@@ -297,7 +299,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
         hr: hrBySource.get(sourceId) ?? null,
       }));
 
-      objectOfSource = SIMBAD_SPTYPE.read().objectOfSource;
+      objectOfSource = objectOf(SIMBAD_SPTYPE.read().xids);
     });
 
     it('asserts eight records and refuses one', () => {
@@ -315,7 +317,7 @@ describe.skipIf(!ASSERTED_INPUTS.every(lfsContentReadable))(
 
     it('has the record\'s own source resolving to the component that entry names', () => {
       for (const { sourceId, tyc } of asserted) {
-        expect(objectOfSource.get(sourceId), `source ${sourceId}`)
+        expect(objectOfSource(sourceId), `source ${sourceId}`)
           .toBe(simbad.get(tyc)!.simbadOid);
       }
     });

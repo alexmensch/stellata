@@ -9,7 +9,7 @@ function witnesses(iv25: number[] | null, simbad: number[] | null, objectOfSourc
   return {
     iv25Hds: (tyc) => (tyc === TYC && iv25 !== null ? new Set(iv25) : undefined),
     simbadTycHd: new Map(simbad === null ? [] : [[TYC, { hdIdents: simbad.map(String), simbadOid: OWN, mainId: null }]]),
-    simbadObjectOfSource: new Map(objectOfSource === null ? [] : [['S', objectOfSource]]),
+    simbadObjectOf: (s) => (s === 'S' && objectOfSource !== null ? objectOfSource : undefined),
   };
 }
 

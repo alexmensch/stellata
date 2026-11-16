@@ -54,7 +54,6 @@ export async function loadBindingTables(keepTycs: ReadonlySet<string>): Promise<
     hipToSource: GAIA_HIP_XMATCH.read(),
     simbadBySourceId: sptype.xids,
     simbadSourceless: sptype.sourcelessXids,
-    simbadObjectOfSource: sptype.objectOfSource,
   };
 }
 

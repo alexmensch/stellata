@@ -44,7 +44,7 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     v70aByHd: new Map([[300, ['GJ 1234']]]),
     cns5BySource: new Map(),
     held: spineKeys(spine),
-    closePair: { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOfSource: new Map() },
+    closePair: { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined },
   };
 }
 
@@ -389,7 +389,7 @@ describe('settling a differs cell', () => {
   const closePair = (iv25: number[], simbad: number[], objectOfSource: number) => ({
     iv25Hds: (tyc: string) => (tyc === '2-2-2' ? new Set(iv25) : undefined),
     simbadTycHd: new Map([['2-2-2', { hdIdents: simbad.map(String), simbadOid: 5, mainId: null }]]),
-    simbadObjectOfSource: new Map([['S9', objectOfSource]]),
+    simbadObjectOf: (s: string) => (s === 'S9' ? objectOfSource : undefined),
   });
   const hdRow = row({ tyc: '2-2-2', hip: '20', hd: '999', gaia_source_id: 'S9' });
 
