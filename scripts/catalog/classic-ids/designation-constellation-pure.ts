@@ -34,11 +34,9 @@ export function buildDesignationConIndex(rows: readonly CrossIndexRow[]): Design
   return index;
 }
 
-/** The record's designation constellation, or `NO_CONSTELLATION_INDEX` where
- *  IV/27A carries no row for either of its identifiers — 123 faint
- *  Flamsteed-only records, which then ride the positional fallback in
- *  `designationConIndex`. HD first: it is IV/27A's own key, and the HIP column
- *  is the table's cross-reference to it. */
+/** The record's IV/27A designation constellation, or `NO_CONSTELLATION_INDEX`
+ *  where IV/27A carries no row for either of its identifiers. HD first: it is
+ *  IV/27A's own key, and the HIP column is the table's cross-reference to it. */
 export function resolveDesignationConIndex(
   index: DesignationConIndex,
   hd: number | null,

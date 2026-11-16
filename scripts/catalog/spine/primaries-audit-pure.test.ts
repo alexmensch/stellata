@@ -167,6 +167,11 @@ describe('attestSpineRow', () => {
       .toBe('iv27a');
   });
 
+  it('attests a Flamsteed number SIMBAD gives the star only where the Flamsteed rule accepts it', () => {
+    expect(attestSpineRow(row({ hip: '20', flam: '5' }), tables, idx).attestation.flam).toBe('simbad');
+    expect(attestSpineRow(row({ hip: '20', flam: '9' }), tables, idx).unattested).toEqual(['flam']);
+  });
+
   it('attests a Bayer cell on the star, not the letter, and falls back to WGSN', () => {
     const wgsnRow = attestSpineRow(row({ hd: '900001', bayer: 'Bet', flam: '12' }), tables, idx);
     expect(wgsnRow.attestation.bayer).toBe('wgsn');
