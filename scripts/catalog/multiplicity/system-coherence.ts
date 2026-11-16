@@ -2,15 +2,16 @@
  *  system move to the system's best-tier distance anchor. See
  *  /scripts/catalog/multiplicity/README.md#system-distance-coherence. */
 
-import type { Star } from '../parse/stars-parse';
+import type { WalkedStar } from '../parse/stars-parse';
 import type { Hip2AstrometryRow } from '../sources/hip2-source';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
-import type { MultiplesTsvRow } from '../companions/companion-promotion';
+import type { MultiplesTsvRow } from '../companions/multiples-row';
 import { wdsRootOf } from '../../binaries/component-tokens-pure';
 import type { BailerJonesIndex } from '../distance/refinement/distance-overrides-pure';
 import { sourceRowRef, type AnySourceRowRef } from '../../util/sources/row-ref-pure';
 import { isCoherenceAnchorGrade } from './anchor-grade-pure';
 import { absoluteMagnitude, apparentMagnitude } from '../../../src/astro-core/perceptual-magnitude';
+import type { Records } from '../record/record-phase';
 
 /** A member snaps to the anchor distance only when the radial gap is
  *  NOT significant at this many sigma of the combined parallax error —
@@ -109,7 +110,7 @@ type AnchorEvidence = AnchorBasis & { readonly fracError: number | null };
  *  parallax error of that fit — null below the HIP2 tier, which carries no
  *  trusted fit. See README.md#system-distance-coherence Precision veto. */
 function anchorEvidence(
-  star: Star, sources: CoherenceSources, hostsSubsystem: boolean,
+  star: WalkedStar, sources: CoherenceSources, hostsSubsystem: boolean,
 ): AnchorEvidence {
   // A component that hosts its own sub-pair (Acrux C = Ca,Cb) is an
   // unresolved close binary whatever its RUWE says — photocentre wobble
@@ -143,7 +144,7 @@ function anchorEvidence(
  *  quality), then HIP2. Null when neither exists — an inherited or
  *  position-matched distance with no error model. */
 function parallaxDistanceWithError(
-  star: Star, sources: CoherenceSources,
+  star: WalkedStar, sources: CoherenceSources,
 ): { distPc: number; sigmaPc: number } | null {
   const invert = (plxMas: number | null, errMas: number | null) =>
     plxMas !== null && plxMas > 0
@@ -160,7 +161,7 @@ function parallaxDistanceWithError(
   return h !== undefined ? invert(h.plxMas, h.plxErrorMas) : null;
 }
 
-type Position = Pick<Star, 'x' | 'y' | 'z'>;
+type Position = Pick<WalkedStar, 'x' | 'y' | 'z'>;
 
 function starDist(p: Position): number {
   return Math.sqrt(p.x * p.x + p.y * p.y + p.z * p.z);
@@ -191,7 +192,7 @@ const DUST_FREE = 0;
 
 /** Move the snapped member radially onto its anchor's distance, preserving
  *  its (mas-accurate) measured direction. */
-function repositionRadially(star: Star, m: MemberVerdict & { kind: 'snapped' }): void {
+function repositionRadially(star: WalkedStar, m: MemberVerdict & { kind: 'snapped' }): void {
   Object.assign(star, scaledPosition(star, m.toPc / m.fromPc));
   star.physicalRadius *= m.radiusFactor;
   star.absmag = m.toAbsmag;
@@ -210,7 +211,7 @@ function repositionRadially(star: Star, m: MemberVerdict & { kind: 'snapped' }):
  *  members project off already-coherent anchors. */
 export function systemCoherenceVerdicts(
   multiplesRows: readonly MultiplesTsvRow[],
-  stars: readonly Star[],
+  stars: Records<'walked'>,
   sources: CoherenceSources,
 ): SystemVerdict[] {
   const byGaia = new Map<string, number>();
@@ -381,7 +382,7 @@ export function systemCoherenceVerdicts(
 }
 
 /** Moves every snapped member of `verdicts` onto its anchor's distance. */
-export function applySystemCoherence(stars: Star[], verdicts: readonly SystemVerdict[]): void {
+export function applySystemCoherence(stars: Records<'walked'>, verdicts: readonly SystemVerdict[]): void {
   for (const v of verdicts) {
     if (v.kind !== 'coherent') continue;
     for (const m of v.members) if (m.kind === 'snapped') repositionRadially(stars[m.idx], m);

@@ -19,7 +19,10 @@ gliese_v70a.tsv   3,803 rows from V/70A/catalog. Printed Johnson V (+ its
 
 `ra_b1950_deg` / `de_b1950_deg` are the catalogue's own B1950 equinox and
 epoch coordinates, printed to 0.1 arcmin in declination and 0.1 min of time
-in right ascension, so a position is good to ~6–10″; `pm_arcsec_yr` and
+in right ascension, so a position is good to ~6–10″. VizieR serves them as
+degrees computed from that printing and declares them to 0.001° (`F8.3`),
+the precision they are written at: at most 1.8″ from the computed degrees,
+inside the printing's own grain. `pm_arcsec_yr` and
 `pm_pa_deg` are the total proper motion and its position angle. No value
 cascade reads them: they are the frozen witness the binding review is
 measured against — a spine `gaia_source_id` only AT-HYG asserts, on a
@@ -65,8 +68,8 @@ indexes under itself — no record's `gl` cell reaches it.
 
 Where the catalogue resolved a system into components and a record's cell
 names none of them, the bare number answers with the **alphabetically first**
-component, which the pull's `order_by=("Name", "Comp")` makes stable across
-re-pulls rather than a function of row order. 403 numbers are in that shape;
+component, which the pull's sort (name, then component, by code unit) makes
+stable across re-pulls rather than a function of row order. 403 numbers are in that shape;
 no spine cell reaches one today (measured over all <!-- count:inherited-spine/nonEmpty.gl -->3,147<!-- /count --> `gl` cells, 2,566 of
 them bare), so this decides nothing yet and would need revisiting if the
 magnitude pull widens the cohort.
@@ -124,10 +127,11 @@ resulting parallax keeps value and error bar from the same pair of columns.
 
 - **Citation**: [Gliese 1991](/data/papers/index.md#gliese1991), *Preliminary
   Version of the Third Catalogue of Nearby Stars*, CDS `V/70A`.
-- **VizieR**: `V/70A/catalog`, over the CDS TAP endpoint
-  `refresh_lib.CDS_TAP_URL` names.
+- **VizieR**: `V/70A/catalog`, over `scripts/refresh/pull/tap-pure.ts`'s
+  `VIZIER`: CDS, or the CfA mirror when CDS is unreachable. The stamp
+  (`data/stamps/refresh-gliese.json`, `answeredBy`) names which answered.
 - **Retrieved**: 2026-08-27; re-sliced 2026-09-06 with the astrometry and
-  cross-name columns, same 3,803 rows.
+  cross-name columns, same 3,803 rows; re-pulled from CfA 2026-11-15.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Gliese 1991](/data/papers/index.md#gliese1991).
 
@@ -151,5 +155,6 @@ the newer catalogue does not retire this one.
 
 ## Refresh
 
-`pnpm run refresh:gliese` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
-`--force` overrides the mtime skip.
+`pnpm run refresh:gliese` (`scripts/refresh/vizier/refresh-gliese.ts`).
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).

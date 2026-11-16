@@ -292,7 +292,7 @@ re-deriving:
 
 ## Consumed by
 
-- `scripts/catalog/build-catalog.ts` — `gaia_dr3_hip_xmatch.tsv` bridges the
+- `scripts/catalog/stages/sorted-stage.ts` — `gaia_dr3_hip_xmatch.tsv` bridges the
   GCVS cross-reference onto `gaia_source_id`, so a record carrying no HIP
   still resolves a variable-star designation. It no longer backfills
   `gaia_source_id` itself: the record build reads each binding off the

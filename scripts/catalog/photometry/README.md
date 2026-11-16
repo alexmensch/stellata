@@ -318,7 +318,7 @@ against ~13% for the printed tier, which is the signature of Gaia having
 resolved the pair the cross-match could not.
 
 Anything subtracting a companion's flux from a record must gate on this or it
-double-counts: [Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass) is the
+double-counts: [Anchor flux conservation](../companions/post-passes/README.md#anchor-flux-conservation) is the
 consumer, and `RIELLO_G_MINUS_V_SIGMA` is the decisive margin its subset solve
 compares hypotheses at, since a Gaia-derived V is only good to that σ.
 
@@ -398,7 +398,7 @@ exhaustive `switch`:
 The stage founds no record, writes no identity rows, and every code's
 effect is `none`. It covers the walk's values: a minted companion's
 absmag, colour and A_V come from its `multiples.tsv` row, and promotion writes
-their rows ([Promotion lineage](../companions/README.md#promotion-lineage)).
+their rows ([Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage)).
 A walked record whose absmag a later pass changes carries that pass's row
 too: coherence's `coherence.brightness.held`
 ([Coherence lineage](../multiplicity/README.md#coherence-lineage)) and
@@ -420,10 +420,9 @@ fall outside that window. `BRIGHTNESS_COLOUR_LINEAGE_BUDGET` pins 42.4 MB and
 stage yet (2026-11-08). Its first diffed run adds a diff phase CI has not
 measured; placement's, over a file of similar size, takes 12.5 s in CI
 ([Placement lineage](../distance/README.md#placement-lineage)), which puts it near 38 s. Held in memory beside placement's, these
-lines took `build:catalog` to 3,543 MiB against its 3,482 MiB budget
+lines took `build:catalog` past its 3,481 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)), so the walk spills them
-to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)):
-3,325 MiB on 2026-11-07, against 3,312 MiB with this stage's lines not kept.
+to a `LineSpill` ([Storage and cost](../lineage/README.md#storage-and-cost)).
 
 ## Citation
 

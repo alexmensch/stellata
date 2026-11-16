@@ -1,0 +1,51 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:51 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:51	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J%2FApJS%2F235%2F6%2Fsystems&-out=ID%2CPrim%2CSec%2CParent%2CType%2CPer%2Cx_Per%2CSep%2Cx_Sep%2CPA%2CVmag1%2CSpT1%2CVmag2%2CSpT2%2CMass1%2CMass2&ID=00022%2B2705&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_22350006
+#Name: J/ApJS/235/6
+#Title: Updated Multiple Star Catalog (MSC): Dec 2023 (Tokovinin, 2018)
+#INFO	ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	creator=Tokovinin A.	    First author or institution
+#INFO	cites=bibcode:2018ApJS..235....6T	    Article or Data origin sources
+#INFO	journal=ApJS	    Journal name
+#INFO	original_date=2018	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJS/235/6	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier.22350006	    Dataset identifier that can be used for citation
+#INFO	publication_date=2024-01-08	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	J_ApJS_235_6_systems:
+#Name: J/ApJS/235/6/systems
+#Title: Systems table (table 2; sys)
+#Column	ID	(A10)	WDS code (HHMMm+DDMM; J2000) (G1)	[ucd=meta.id;meta.main]
+#Column	Prim	(A3)	Primary component label	[ucd=meta.code.multip]
+#Column	Sec	(A3)	Secondary component label	[ucd=meta.code.multip]
+#Column	Parent	(A3)	Parent label (1)	[ucd=meta.code.multip]
+#Column	Type	(a8)	Observing technique/status (2)	[ucd=meta.code]
+#Column	Per	(F10.4)	[0.005/15194]? Orbital period	[ucd=meta.note]
+#Column	x_Per	(A1)	Unit of Per (3)	[ucd=meta.unit]
+#Column	Sep	(F8.3)	[0.001/8925]? Separation or semimajor axis	[ucd=pos.angDistance]
+#Column	x_Sep	(A1)	Units of Sep	[ucd=meta.unit]
+#Column	PA	(F5.1)	[0/888]? Position angle	[ucd=pos.posAng]
+#Column	Vmag1	(F5.2)	[-0.01/24.4] V-magnitude of the primary	[ucd=phot.mag;em.opt.V]
+#Column	SpT1	(A5)	Spectral type of the primary	[ucd=src.spType]
+#Column	Vmag2	(F5.2)	[0.7/25.6]? V-magnitude of the secondary	[ucd=phot.mag;em.opt.V]
+#Column	SpT2	(a5)	Spectral type of the secondary	[ucd=src.spType]
+#Column	Mass1	(F6.2)	[0.02/140.6]? Mass of the primary	[ucd=phys.mass]
+#Column	Mass2	(F5.2)	[0.01/63]? Mass of the secondary	[ucd=phys.mass]
+ID	Prim	Sec	Parent	Type	Per	x_Per	Sep	x_Sep	PA	Vmag1	SpT1	Vmag2	SpT2	Mass1	Mass2
+ 	 	 	 	 	 	 	 	 	deg	mag	 	mag	 	Msun	Msun
+----------	---	---	---	--------	----------	-	--------	-	-----	-----	-----	-----	-----	------	-----
+00022+2705	A  	B  	*  	V,S     	   26.2800	y	   0.830	"	339.0	 5.83	G5V  	 8.90	     	  0.94	 0.64
+

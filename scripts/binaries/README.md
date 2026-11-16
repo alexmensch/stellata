@@ -167,7 +167,8 @@ scripts/binaries/
                                   reaches the codec.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
                                   the catalogue's pair ends →
-                                  public/binaries.bin through emitArtifacts,
+                                  public/binaries.bin and the runtime-pairs
+                                  lineage stage through emitArtifacts,
                                   after its pair-count snapshot check
                                   (#runtime-side-artifact).
   pairs-pure.ts (+ test)          The pair model: pairs joined from the
@@ -180,11 +181,16 @@ scripts/binaries/
   pair-fixture.ts                 Test-only: one MultiplesPair from its
                                   system_id and the cells a test names.
   runtime-binaries-pure.ts        The writer itself: planRecords — over
-    (+ test)                      each pair's resolved ends, unaddressable
-                                  pairs dropped and counted, duplicate
-                                  relations deduped, flags set — whose
-                                  records the format's encodeBinaries
-                                  writes.
+    (+ test)                      each pair's resolved ends, each pair's
+                                  fate (emitted, or dropped unaddressable
+                                  or as a duplicate relation), flags
+                                  set — whose records the format's
+                                  encodeBinaries writes.
+  runtime-pairs-lineage-pure.ts   RUNTIME_PAIRS_CODES and
+    (+ test)                      runtimePairsLineageLines: each pair's
+                                  fate as the runtime-pairs lineage stage,
+                                  and its invariant
+                                  (#runtime-pairs-lineage).
   runtime-binaries-outputs.ts     RUNTIME_BINARIES_OUTPUTS, its declaration.
   golden/                         binaries.bin golden test: the writer on a
                                   committed non-LFS fixture, byte for byte.
@@ -193,10 +199,11 @@ scripts/binaries/
                                   --update-snapshots, staged by pipeline
                                   stage (../util/counts/count-stages-pure.ts;
                                   build-runtime-binaries' one stage is
-                                  `encode`): build-binaries
+                                  `encode`, beside the runtime-pairs
+                                  stage's folded codes): build-binaries
                                   (per-strategy / per-tier counts),
-                                  build-runtime-binaries (pair-emission
-                                  counts).
+                                  build-runtime-binaries (pair flags and
+                                  fates).
   *-expected-json.ts              Each snapshot's declaration
                                   (../util/sources/README.md#a-snapshot).
 ```
@@ -293,11 +300,12 @@ pair winning by walk position. Each drop is classified
 tokens are equal, hierarchy-related, or compound-contained, the two rows
 name the SAME physical link at different granularity (18025+4414 `AB` vs
 `Aa,B`) — a correct, permanent dedup counted
-`pairs_dropped_same_relation_alias`. Disjoint letters on either side mean
-two DISTINCT stars collapsed onto one record; those are counted
-`pairs_dropped_duplicate_relation`, a ratchet toward zero — each is a
-missing minted slot (current floor: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
-Ba/Bb sub-letter blend the inner-pair hierarchy owns).
+`runtime-pairs.dropped.same-relation-alias`. Disjoint letters on either side mean
+two DISTINCT stars collapsed onto one record — each a missing minted slot.
+Those rows are `runtime-pairs.dropped.duplicate-relation`, and the stage's
+invariant allows only the rows it names: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
+Ba/Bb sub-letter blend the inner-pair hierarchy owns
+([Runtime-pairs lineage](#runtime-pairs-lineage)).
 
 ## Pairs lineage
 
@@ -330,3 +338,30 @@ identity rows. Its counts fold into the snapshot's `pairs` stage
 `PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
 bytes gzipped in 379–384 ms across two runs, neither diffing against a
 baseline (2026-11-14).
+
+## Runtime-pairs lineage
+
+`build:binaries-runtime` writes every `multiples.tsv` pair's fate in
+`binaries.bin` as the `runtime-pairs` lineage stage, the last in
+`LINEAGE_STAGES` before the sibling builds
+([Record lineage](/scripts/catalog/lineage/README.md#the-runtime-pairs-stage)), from
+`runtime-pairs-lineage-pure.ts`. A row is keyed on the pair's secondary row
+(`multiples:<system_id>/<comp>`, the key a promoted companion's own rows
+carry), so trace joins it to promotion and component-binding on the key.
+
+| Code | Written for |
+| --- | --- |
+| `runtime-pairs.emitted` | a pair `binaries.bin` carries |
+| `runtime-pairs.dropped.primary-unresolved` / `.secondary-unresolved` | a pair with an end the catalogue holds no record for |
+| `runtime-pairs.dropped.degenerate-idx` | a pair whose two ends are one record |
+| `runtime-pairs.dropped.same-relation-alias` / `.duplicate-relation` | a pair whose relation another pair won ([Shared slots and duplicate relations](#shared-slots-and-duplicate-relations)); its evidence is the kept pair's row |
+
+Every code is an outcome with no removal effect, and the stage writes no
+identity rows. Its counts are the snapshot's `runtime-pairs` stage, beside
+`encode`'s pair flags. `RUNTIME_PAIRS_INVARIANTS` allows a
+`dropped.duplicate-relation` row only for the two θ¹ Ori rows it names
+([Invariants](/scripts/catalog/lineage/README.md#invariants)): another fails the build
+by key, and a fix that clears one fails until it is struck off the list.
+
+`RUNTIME_PAIRS_LINEAGE_BUDGET` pins 150 kB and 1 s: 18,670 rows came to
+131,365 bytes gzipped in 78 ms, not diffing against a baseline (2026-11-15).

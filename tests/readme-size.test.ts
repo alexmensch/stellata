@@ -16,20 +16,6 @@ const MAX_LINES = 450;
 // listed here needs a reason that survives a future session re-reading
 // it with the intent to "finally clean this up."
 const ALLOWLIST: Record<string, string> = {
-  'scripts/catalog/companions/README.md':
-    'One pass (promoteCompanions) over one row type, whose post-passes all ' +
-    'read state the cursor walk accumulated. Every seam measured needs ' +
-    'MultiplesTsvRow plus 2-4 value helpers back OUT of the parent (the ' +
-    'wrong split, per AGENTS.md). Anchor flux conservation, the largest ' +
-    'topic at 91 lines, also writes seven of the PostPassStats counters ' +
-    'promotion\'s derived count block files, and placement needs ' +
-    'hasRenderableOrbit and the WDS letter algebra the rest of the pass ' +
-    'uses too. The science half is ' +
-    'already in docs/science-multiple-star-pipeline.md and the naming half ' +
-    'in ../naming/ and record-index/; what is left is the per-gate ' +
-    'engineering contract, and promotion\'s lineage contract, which ' +
-    'describes promotion-lineage-pure.ts here rather than lineage/, whose ' +
-    'README keeps a pointer like every other stage\'s.',
 };
 
 // A trailing newline terminates the last line rather than starting a new
@@ -67,8 +53,7 @@ function failureMessage(
     '     inside it — this removes the tax rather than relocating it.',
     '     Check the seam first: if the candidate subfolder imports its',
     '     way back into the parent on every file, the split will not',
-    '     help (see the scripts/catalog/companions entry in ALLOWLIST',
-    '     for the worked example of a folder where it does not).',
+    '     help.',
     '',
     '  2. Relocate science narrative to docs/science-*.md and leave a',
     '     one-line pointer. Applies to physics derivations and',

@@ -1,0 +1,48 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:52 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:52	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J%2FApJS%2F235%2F6%2Fcatalog&-out=ID%2Cm_ID%2CSpT%2CVmag%2CBmag%2CSep%2CHIP%2CHD%2Cplx&recno=12265%2C12266%2C12267%2C12268%2C12269&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_22350006
+#Name: J/ApJS/235/6
+#Title: Updated Multiple Star Catalog (MSC): Dec 2023 (Tokovinin, 2018)
+#INFO	ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	creator=Tokovinin A.	    First author or institution
+#INFO	cites=bibcode:2018ApJS..235....6T	    Article or Data origin sources
+#INFO	journal=ApJS	    Journal name
+#INFO	original_date=2018	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJS/235/6	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier.22350006	    Dataset identifier that can be used for citation
+#INFO	publication_date=2024-01-08	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	J_ApJS_235_6_catalog:
+#Name: J/ApJS/235/6/catalog
+#Title: Components table (table 1; comp)
+#Column	ID	(A10)	WDS code (HHMMm+DDMM; J2000) (G1)	[ucd=meta.id;meta.main]
+#Column	m_ID	(A1)	Component label	[ucd=meta.code.multip]
+#Column	SpT	(a8)	MK spectral type	[ucd=src.spType]
+#Column	Vmag	(F5.2)	[-0.01/25]? V-band magnitude	[ucd=phot.mag;em.opt.V]
+#Column	Bmag	(F5.2)	[0.1/22]? B-band magnitude	[ucd=phot.mag;em.opt.B]
+#Column	Sep	(F7.1)	[0.1/31619]? Separation from main component	[ucd=pos.angDistance]
+#Column	HIP	(I6)	[25/120005]? Hipparcos number	[ucd=meta.id]
+#Column	HD	(I6)	[9/358806]? HD number	[ucd=meta.id]
+#Column	plx	(F6.2)	[-1.4/742.1] Parallax	[ucd=pos.parallax.trig]
+ID	m_ID	SpT	Vmag	Bmag	Sep	HIP	HD	plx
+ 	 	 	mag	mag	arcsec	 	 	mas
+----------	-	--------	-----	-----	-------	------	------	------
+23300+5833	A	B3IV    	 4.91	     	       	115990	221253	  4.89
+23300+5833	D	        	 9.80	     	    1.3	      	      	  4.65
+23300+5833	G	        	11.11	     	   10.8	      	      	  4.75
+23300+5833	F	A0      	11.06	11.68	   67.3	      	      	  4.73
+23300+5833	C	B9V     	 7.09	 7.10	   75.5	      	221237	  4.73
+

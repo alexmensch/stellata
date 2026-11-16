@@ -4,17 +4,16 @@ import { existsSync, readFileSync } from 'node:fs';
 import { loadStoredEdges } from '../../../sid/stored-edges';
 import { syntheticGaiaBridges } from '../../../sid/sid-pure';
 
-import { FLAG_BINARY_PRIMARY } from '../../../../src/catalog-format/record/catalog-pure';
 import { makeStar as makeStarWithDefaults } from '../../parse/star-fixture';
 import type { Star } from '../../parse/stars-parse';
-import type { MultiplesTsvRow } from '../companion-promotion';
+import type { MultiplesTsvRow } from '../multiples-row';
 import { multiplesRow } from '../multiples-fixture';
 import {
   buildCatalogRowIndexMap,
   buildComponentDesignations,
   renderableOrbitRelations,
   resolvedMemberIndices,
-  wingRenderablePrimaries,
+  renderableCompanionClaims,
 } from './record-index';
 import { pairsFromRows } from '../../../binaries/pairs-pure';
 import { resolvePairs } from './pair-resolution-pure';
@@ -22,9 +21,10 @@ import type { CatalogRowIndexMap } from './catalog-row-index-map-pure';
 import { REPO_ROOT } from '../../../util/paths';
 import { BUILD_FILES } from '../../../../src/catalog-format/pipeline-outputs/build-files';
 import { resolve } from 'node:path';
+import { enterPhase } from '../../record/record-phase';
 
 const resolved = (rows: MultiplesTsvRow[], stars: Star[]) =>
-  resolvePairs(pairsFromRows(rows), buildCatalogRowIndexMap(stars));
+  resolvePairs(pairsFromRows(rows), buildCatalogRowIndexMap(enterPhase('sorted', stars)));
 
 function makeStar(overrides: Partial<Star> = {}): Star {
   return makeStarWithDefaults({
@@ -36,7 +36,7 @@ describe('buildCatalogRowIndexMap', () => {
   it('addresses a bridged component under its synth key', () => {
     const stars = [makeStar({ gaiaSourceId: 'g9' })];
     const map = buildCatalogRowIndexMap(
-      stars, new Map([['synth-W1-B', 'g9']]),
+      enterPhase('sorted', stars), new Map([['synth-W1-B', 'g9']]),
     );
     expect(map.bySynth['synth-W1-B']).toBe(0);
     // Addressing only -- the record's own designations are untouched.
@@ -49,7 +49,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ syntheticId: 'synth-W1-B' }),
     ];
     const map = buildCatalogRowIndexMap(
-      stars, new Map([['synth-W1-B', 'g9']]),
+      enterPhase('sorted', stars), new Map([['synth-W1-B', 'g9']]),
     );
     expect(map.bySynth['synth-W1-B']).toBe(1);
   });
@@ -60,7 +60,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ gaiaSourceId: 'g2', hip: 100 }),  // hip collision
       makeStar({ gaiaSourceId: null, hip: 101 }),
     ];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(map.byGaia.g1).toBe(0);
     expect(map.byGaia.g2).toBe(1);
     expect(map.byHip['100']).toBe(0);  // first occurrence
@@ -69,7 +69,7 @@ describe('buildCatalogRowIndexMap', () => {
 
   it('omits records with no gaia and no hip', () => {
     const stars: Star[] = [makeStar(), makeStar({ gaiaSourceId: 'g1' })];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(Object.keys(map.byGaia)).toEqual(['g1']);
     expect(Object.keys(map.byHip)).toHaveLength(0);
     expect(Object.keys(map.bySynth)).toHaveLength(0);
@@ -81,7 +81,7 @@ describe('buildCatalogRowIndexMap', () => {
       makeStar({ syntheticId: 'synth-03082+4057-Ab' }),
       makeStar({ syntheticId: 'synth-03082+4057-Aa2' }),
     ];
-    const map = buildCatalogRowIndexMap(stars);
+    const map = buildCatalogRowIndexMap(enterPhase('sorted', stars));
     expect(map.bySynth['synth-03082+4057-Ab']).toBe(1);
     expect(map.bySynth['synth-03082+4057-Aa2']).toBe(2);
     // Synthetic-only records carry no gaia/hip key.
@@ -90,10 +90,17 @@ describe('buildCatalogRowIndexMap', () => {
   });
 });
 
-describe('wingRenderablePrimaries', () => {
-  const wing = (rows: MultiplesTsvRow[], stars: Star[]) =>
-    wingRenderablePrimaries(resolved(rows, stars), stars).renderableCompanionWinged;
-  const isWinged = (s: Star) => (s.flags & FLAG_BINARY_PRIMARY) !== 0;
+describe('renderableCompanionClaims', () => {
+  let winged: Star[] = [];
+  /** `earlier`: the records an earlier claimant took. */
+  const wing = (rows: MultiplesTsvRow[], stars: Star[], earlier: Star[] = []) => {
+    const { claims, counts } = renderableCompanionClaims(
+      resolved(rows, stars), enterPhase('sorted', stars), new Set(earlier.map((s) => stars.indexOf(s))),
+    );
+    winged = [...earlier, ...claims.map((i) => stars[i])];
+    return counts.renderableCompanionWinged;
+  };
+  const isWinged = (s: Star) => winged.includes(s);
 
   it('wings the brightest member of a physical pair with a distinct companion', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
@@ -123,14 +130,14 @@ describe('wingRenderablePrimaries', () => {
     expect(isWinged(c)).toBe(false);
   });
 
-  it('skips a system a prior pass already flagged on a drawn-pair end', () => {
+  it('skips a system an earlier claimant already took on a drawn-pair end', () => {
     const a = makeStar({ hip: 100, absmag: 1.0 });
-    const b = makeStar({ hip: 200, absmag: 4.0, flags: FLAG_BINARY_PRIMARY });
+    const b = makeStar({ hip: 200, absmag: 4.0 });
     const rows = [
       multiplesRow({ systemId: 'W1-AB', comp: 'A', hip: 100, orbitRole: 'primary' }),
       multiplesRow({ systemId: 'W1-AB', comp: 'B', hip: 200, orbitRole: 'secondary' }),
     ];
-    expect(wing(rows, [a, b])).toBe(0);
+    expect(wing(rows, [a, b], [b])).toBe(0);
     expect(isWinged(a)).toBe(false);
   });
 
@@ -150,8 +157,8 @@ describe('wingRenderablePrimaries', () => {
     expect([a, b, c].map(isWinged)).toEqual([false, true, false]);
   });
 
-  it('still wings the drawn pair when a prior pass flagged only a member with no drawn companion', () => {
-    const a = makeStar({ hip: 100, absmag: 1.0, flags: FLAG_BINARY_PRIMARY });
+  it('still wings the drawn pair when an earlier claimant took only a member with no drawn companion', () => {
+    const a = makeStar({ hip: 100, absmag: 1.0 });
     const b = makeStar({ hip: 200, absmag: 4.0 });
     const c = makeStar({ hip: 300, absmag: 6.0 });
     const rows = [
@@ -160,7 +167,7 @@ describe('wingRenderablePrimaries', () => {
       multiplesRow({ systemId: 'W1-BC', comp: 'B', hip: 200, orbitRole: 'primary' }),
       multiplesRow({ systemId: 'W1-BC', comp: 'C', hip: 300, orbitRole: 'secondary' }),
     ];
-    expect(wing(rows, [a, b, c])).toBe(1);
+    expect(wing(rows, [a, b, c], [a])).toBe(1);
     expect([a, b, c].map(isWinged)).toEqual([true, true, false]);
   });
 

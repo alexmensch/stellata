@@ -1,0 +1,37 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:38:02 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:38:02	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=V%2F50%2Fcatalog&-out=HR%2CHD%2CName&HR=7001%2C2491%2C95&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_5050
+#Name: V/50
+#Title: Bright Star Catalogue, 5th Revised Ed. (Hoffleit+, 1991)
+#INFO	ivoid=ivo://cds.vizier/v/50	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/v/50	    IVOID of underlying data collection
+#INFO	creator=Hoffleit D.	    First author or institution
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/V/50	    Dataset landing page
+#INFO	publication_date=1997-12-09	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	J2000_2000.000:	eq_FK5 J2000
+#Table	V_50_catalog:
+#Name: V/50/catalog
+#Title: The main part of the Catalogue
+#Column	HR	(I4)	[1/9110]+ Harvard Revised Number = Bright Star Number	[ucd=meta.id;meta.main]
+#Column	HD	(I6)	[1/225300]? Henry Draper Catalog Number	[ucd=meta.id]
+#Column	Name	(a10)	Name, generally Bayer and/or Flamsteed name	[ucd=meta.id]
+HR	HD	Name
+ 	 	
+----	------	----------
+  95	      	 47    Tuc
+2491	 48915	  9Alp CMa
+7001	172167	  3Alp Lyr
+

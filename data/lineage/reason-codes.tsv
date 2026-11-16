@@ -356,6 +356,7 @@ naming.name.own.gould	naming	none	outcome	live		7.1.17	The record displays the h
 naming.name.own.iau	naming	none	outcome	live		7.1.17	The record displays the highest tier of the naming ladder it carries in its own right: its IAU WGSN approved name.
 naming.name.own.override	naming	none	outcome	live		7.1.17	The record displays the highest tier of the naming ladder it carries in its own right: its curated override name.
 naming.name.unlabelled	naming	none	outcome	live		7.1.12	The record carries nothing the ladder renders and has no anchor to borrow from, so the runtime displays its Gaia DR3 or SID fallback.
+overlap.inside	overlap	none	outcome	live		7.1.27	A record drawn inside another at the positions the catalogue ships, no orbit chain holding them apart; params name the other record.
 pairs.blank-deferred	pairs	none	outcome	live		7.1.24	A blank-components row with no ORB6 orbit or SIMBAD cross-ID for its system, left for the full blank → AB ingest.
 pairs.blank-donor	pairs	none	outcome	live		7.1.24	A blank-components row whose measurements an ORB6 orphan pair of its discoverer took; the orphan carries the pair on.
 pairs.blank-enumerated	pairs	none	outcome	live		7.1.24	A blank-components row of a system that already has an AB pair, so promoting it would write the pair twice.
@@ -483,6 +484,12 @@ promotion.size.blend-split	promotion	none	outcome	live		7.1.27	Blend split re-de
 promotion.size.mint	promotion	none	outcome	live		7.1.27	Promotion sized the minted record from its absolute magnitude and spectral class, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.size.recurated	promotion	none	outcome	live		7.1.27	Re-curation re-derived the held record's radius from its new absolute magnitude, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.spectral.ms-from-own-absmag	promotion	none	outcome	live		7.1.20	The minted record's spectral class is a main-sequence estimate from its own absolute magnitude, the row's type being its primary's or blank.
+runtime-pairs.dropped.degenerate-idx	runtime-pairs	none	outcome	live		7.1.27	A pair whose two ends resolve to one catalogue record.
+runtime-pairs.dropped.duplicate-relation	runtime-pairs	none	outcome	live		7.1.27	A pair whose distinct star collapsed onto the records of another pair, the one kept: a missing minted slot.
+runtime-pairs.dropped.primary-unresolved	runtime-pairs	none	outcome	live		7.1.27	A pair whose primary resolves to no catalogue record.
+runtime-pairs.dropped.same-relation-alias	runtime-pairs	none	outcome	live		7.1.27	A pair naming the same physical link as the kept pair of its (primary, secondary) records, at another granularity.
+runtime-pairs.dropped.secondary-unresolved	runtime-pairs	none	outcome	live		7.1.27	A pair whose secondary resolves to no catalogue record.
+runtime-pairs.emitted	runtime-pairs	none	outcome	live		7.1.27	A pair emitted to the runtime orbit file as a record of its own.
 size.apsis-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and its own Gaia DR3 Apsis Teff, with the class-table bolometric correction.
 size.class-teff	size	none	outcome	live		7.1.16	Stefan-Boltzmann from the record's de-extincted absmag and the class-table Teff and bolometric correction.
 size.non-finite-luminosity	size	none	outcome	live		7.1.16	The absmag gives a luminosity no float holds, so the record ships the 1 R☉ stand-in.

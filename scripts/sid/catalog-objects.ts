@@ -1,18 +1,18 @@
 // The SID objects build:catalog allocates, in allocation order: its records, then the sol and shell lists.
 
 import { FLAG_IS_SOL } from '../../src/catalog-format/record/catalog-pure';
-import type { Star } from '../catalog/parse/stars-parse';
 import { sourceRowRef, sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { SidObject } from './allocate-pure';
 import { allocationAdmissionCode } from './allocation-lineage-pure';
 import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
 import { starDesignations } from './sid-pure';
+import type { Sorted } from '../catalog/record/record-phase';
 
-export function catalogSidObjects(stars: readonly Star[]): SidObject[] {
+export function catalogSidObjects(stars: Sorted): SidObject[] {
   const records = stars.map((s, i): SidObject => ({
     designations: starDesignations({ ...s, isSol: (s.flags & FLAG_IS_SOL) !== 0 }),
     kind: 'star',
-    label: `record ${i}${s.proper ? ` (${s.proper})` : ''}`,
+    label: `record ${i}${s.printedName ? ` (${s.printedName})` : ''}`,
     origin: s.originKey,
     admission: { kind: 'lineage' },
   }));

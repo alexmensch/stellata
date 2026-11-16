@@ -108,9 +108,9 @@ scripts/catalog/membership/
                                   does, and only once
                                   membership-manifest-expected.json, the
                                   lineage budget, the lineage invariants
-                                  (../lineage/README.md#invariants) and the
-                                  CI heap budget
-                                  (../../util/heap-budget/README.md) pass.
+                                  (../lineage/README.md#invariants) pass.
+                                  Runs under the CI heap cap
+                                  (../../util/heap-budget/README.md).
   membership-manifest-outputs.ts  MEMBERSHIP_OUTPUTS — every file the
                                   generator writes, as its emitArtifacts
                                   declaration (../../util/README.md), its

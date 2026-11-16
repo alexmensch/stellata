@@ -25,7 +25,6 @@ import { indexCns5 } from '../spine/primaries-audit-pure';
 import { loadPrimaryTables } from '../spine/primaries-tables';
 import { readArtifact } from '../../util/sources/source';
 import { emitArtifacts } from '../../util/emit-artifacts';
-import { watchHeap } from '../../util/heap-budget/heap-budget';
 
 const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
 
@@ -70,7 +69,6 @@ function reviewedKeptIds(): Set<string> {
 }
 
 export async function main(): Promise<void> {
-  const heap = watchHeap('build:astrometry-request');
   const { gate, derivation } = await bindingCandidates();
   const binaries = await binariesCandidates();
   const reviewed = reviewedKeptIds();
@@ -85,7 +83,6 @@ export async function main(): Promise<void> {
   emitArtifacts({
     outputs: ASTROMETRY_REQUEST_OUTPUTS,
     files: { request: serialiseSourceIdRequest(ids) },
-    checks: [heap.check()],
   });
   console.log(`classic-ID gate candidates: ${gate.size}`);
   console.log(

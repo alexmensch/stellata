@@ -29,6 +29,7 @@ import {
 import { CONSTELLATIONS } from '../constellations/constellations';
 import { makeStar } from '../star-fixture';
 import { NO_DESIGNATION_CON } from '../../classic-ids/designation-constellation-pure';
+import { enterPhase } from '../../record/record-phase';
 
 const conIndexOf = (code: string): number =>
   CONSTELLATIONS.findIndex((c) => c.code.toLowerCase() === code);
@@ -158,7 +159,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[99, 'S Aql']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatched).toBe(1);
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(0);
@@ -177,7 +178,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(0);
     expect(r.gcvsMatchedByHd).toBe(0);
@@ -193,7 +194,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'R And']]),
       byGaia: new Map(),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(r.gcvsMatchedByHd).toBe(0);
@@ -207,7 +208,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map(),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(0);
     expect(r.gcvsMatchedByHd).toBe(1);
@@ -223,7 +224,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map([['7777', 'S Aql']]),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(0);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(star.periodDays).toBe(409.2);
@@ -236,7 +237,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map(),
     };
-    const r = applyVariability([star], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [star]), GCVS, xref).counts;
     expect(r.gcvsMatched).toBe(0);
     expect(star.periodDays).toBe(0);
     expect(star.amplitudeMag).toBe(0);
@@ -250,7 +251,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map(),
     };
-    applyVariability([matched, unmatched], GCVS, xref);
+    applyVariability(enterPhase('sorted', [matched, unmatched]), GCVS, xref);
     expect(matched.gcvsName).toBe('R And');
     // No cross-match → the field stays null so nothing is emitted for it.
     expect(unmatched.gcvsName).toBeNull();
@@ -265,7 +266,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map(),
       byGaia: new Map(),
     };
-    const r = applyVariability([aperiodic], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', [aperiodic]), GCVS, xref).counts;
     expect(aperiodic.gcvsName).toBe('V0645 Cen');
     expect(aperiodic.periodDays).toBe(0);
     expect(aperiodic.varType).toBe(0);
@@ -285,7 +286,7 @@ describe('gcvs-parse / applyVariability priority', () => {
       byHd: new Map([[60, 'T Vul']]),
       byGaia: new Map([['11111111', 'R And']]),
     };
-    const r = applyVariability(stars, GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', stars), GCVS, xref).counts;
     expect(r.gcvsMatchedByGaia).toBe(1);
     expect(r.gcvsMatchedByHip).toBe(1);
     expect(r.gcvsMatchedByHd).toBe(1);
@@ -316,7 +317,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // name is the only nomenclature there is.
     const ltVul = makeStar({ hip: 93603, desigCon: NO_DESIGNATION_CON });
     const ryCen = makeStar({ hip: 71, desigCon: NO_DESIGNATION_CON });
-    applyVariability([ltVul, ryCen], new Map<string, VarStarData>(), {
+    applyVariability(enterPhase('sorted', [ltVul, ryCen]), new Map<string, VarStarData>(), {
       byHip: new Map([[93603, 'LT Vul'], [71, 'RY Cen']]),
       byHd: new Map(),
       byGaia: new Map(),
@@ -333,7 +334,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // the constellation out of the designation string and loses only its
     // expanded alias.
     const tyCrv = makeStar({ hip: 58587, desigCon: { via: 'iv27a', index: conIndexOf('crt') } });
-    applyVariability([tyCrv], new Map<string, VarStarData>(), {
+    applyVariability(enterPhase('sorted', [tyCrv]), new Map<string, VarStarData>(), {
       byHip: new Map([[58587, 'TY Crv']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(tyCrv.desigCon).toEqual({ via: 'iv27a', index: conIndexOf('crt') });
@@ -343,7 +344,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // The shape every spine-driven record now arrives in: the walk sets no
     // designation constellation, so the GCVS name is the only source there is.
     const orphan = makeStar({ hip: 74, desigCon: NO_DESIGNATION_CON });
-    applyVariability([orphan], new Map<string, VarStarData>(), {
+    applyVariability(enterPhase('sorted', [orphan]), new Map<string, VarStarData>(), {
       byHip: new Map([[74, 'DX Aqr']]), byHd: new Map(), byGaia: new Map(),
     });
     expect(orphan.desigCon).toEqual({ via: 'gcvs', index: conIndexOf('aqr') });
@@ -353,7 +354,7 @@ describe('gcvs-parse / the designation as its own constellation authority', () =
     // The dominant post-IV/27A shape: 698 records where the two agree.
     const agreeing = makeStar({ hip: 72, desigCon: { via: 'iv27a', index: conIndexOf('and') } });
     const silent = makeStar({ hip: 73, desigCon: { via: 'iv27a', index: conIndexOf('dor') } });
-    applyVariability([agreeing, silent], new Map<string, VarStarData>(), {
+    applyVariability(enterPhase('sorted', [agreeing, silent]), new Map<string, VarStarData>(), {
       byHip: new Map([[72, 'R And'], [73, 'LMC V0471']]),
       byHd: new Map(),
       byGaia: new Map(),
@@ -542,7 +543,7 @@ describe('applyVariability count block', () => {
       byHd: new Map([[88, 'T Vul']]),
       byGaia: new Map(),
     };
-    const r = applyVariability([], GCVS, xref);
+    const r = applyVariability(enterPhase('sorted', []), GCVS, xref).counts;
     expect([r.gcvsEntries, r.gcvsHipXrefs, r.gcvsHdXrefs, r.gcvsGaiaXrefs]).toEqual([GCVS.size, 2, 1, 0]);
     expect(gcvsSummary(r)).toBe(
       `${GCVS.size} GCVS entries, 2 Hip + 1 HD + 0 Gaia xrefs, 0 named for search (0 with a renderable period: gaia=0, hip=0, hd=0)`,

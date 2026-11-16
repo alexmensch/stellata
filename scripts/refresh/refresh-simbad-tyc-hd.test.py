@@ -30,7 +30,7 @@ def write_tsv(tmp: Path, name: str, header: list[str], rows: list[list[str]]) ->
 
 class ReadRequestSet(unittest.TestCase):
     """The union itself is `rl.read_mentioned_tycs`, pinned in
-    refresh-tycho2.test.py where it lives. What is this shell's own is
+    refresh_lib.test.py where it lives. What is this shell's own is
     formatting that set as the sorted `1-381-1` keys the TAP request asks
     under."""
 

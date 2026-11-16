@@ -36,5 +36,5 @@ crossid.txt    ~12 MB, LFS. Hip/HD/Tyc/etc. → GCVS name mappings.
 
 ## Consumed by
 
-- `scripts/catalog/build-catalog.ts` (encodes period + amplitude
-  into v6 record bytes 36–39).
+- `scripts/catalog/stages/sorted-stage.ts` (`applyVariability` attaches
+  period + amplitude to each record, which catalog.bin carries in bytes 36–39).

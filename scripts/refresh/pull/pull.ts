@@ -10,10 +10,18 @@ import {
 } from './columns-pure';
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
 import { sliceConditions, type SliceEdges } from './slices-pure';
-import { readCsv, tapClient, type TapArchive, type TapClientDeps, type Transport } from './tap-pure';
+import {
+  readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapArchive, type TapClientDeps, type Transport,
+} from './tap-pure';
+
+/** A whole table in one query; `asu` is that query as an ASU mirror asks it, required where the archive has one. */
+interface WholeTable {
+  readonly kind: 'whole-table';
+  readonly asu?: AsuQuery;
+}
 
 export type Scope =
-  | { readonly kind: 'whole-table' }
+  | WholeTable
   | {
     readonly kind: 'request';
     /** The ADQL column the request ids match. */
@@ -65,7 +73,7 @@ export interface Pull<K extends string> {
 
 /** A phase's ids come at run time, from earlier answers; a whole-table or sliced phase states the most rows it may return, all queries together. */
 export type PhaseScope =
-  | { readonly kind: 'whole-table'; readonly maxRows: number }
+  | WholeTable & { readonly maxRows: number }
   | { readonly kind: 'request'; readonly key: string; readonly batchSize: number; readonly rowsPerId: number }
   | SlicedScope & { readonly maxRows: number };
 
@@ -141,7 +149,7 @@ function phaseOf(table: PullTable): Phase {
   const { scope } = table;
   return {
     ...table,
-    scope: scope.kind === 'whole-table' ? { kind: 'whole-table', maxRows: table.band.max }
+    scope: scope.kind === 'whole-table' ? { ...scope, maxRows: table.band.max }
       : scope.kind === 'sliced' ? { ...scope, maxRows: table.band.max }
         : { kind: 'request', key: scope.key, batchSize: scope.batchSize, rowsPerId: scope.rowsPerId },
   };
@@ -177,6 +185,20 @@ export function batchQueries(table: PullTable, quote: TapArchive['quote']): stri
   return phaseQueries(phaseOf(table), table.scope.kind === 'request' ? table.scope.ids : undefined, quote);
 }
 
+/** Each query `phase` sends, its ASU form beside the ADQL where it has one: a whole-table phase sends one query. */
+function archiveQueries(phase: Phase, ids: readonly string[] | undefined, quote: TapArchive['quote']): ArchiveQuery[] {
+  const asu = phase.scope.kind === 'whole-table' ? phase.scope.asu : undefined;
+  return phaseQueries(phase, ids, quote).map((adql) => (asu === undefined ? { adql } : { adql, asu }));
+}
+
+/** Refuses, before any query, a phase an ASU mirror of the archive could not ask. */
+function assertAsuForms(archive: TapArchive, phases: Readonly<Record<string, Phase>>): void {
+  const asu = archive.mirrors.find((m) => m.protocol === 'asu');
+  if (asu === undefined) return;
+  const missing = Object.entries(phases).filter(([, p]) => p.scope.kind !== 'whole-table' || p.scope.asu === undefined).map(([name]) => name);
+  if (missing.length > 0) throw new Error(`${asu.name} answers ASU only, and these phases have no ASU form: ${missing.join(', ')}`);
+}
+
 const keysOf = <K extends string>(record: Readonly<Record<K, unknown>>): K[] => Object.keys(record) as K[];
 
 const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
@@ -184,8 +206,10 @@ const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.colu
 /** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
 function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
   const slices = table.scope.kind === 'sliced' ? { slices: sliceConditions(table.scope.key, table.scope.edges) } : {};
-  return { query: queryTemplate(table, quote), ...slices, formats: formatsOf(table), sortBy: table.sortBy };
+  return { query: queryTemplate(table, quote), ...slices, ...asuOf(table.scope), formats: formatsOf(table), sortBy: table.sortBy };
 }
+
+const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
 
 const archiveDescription = (archive: TapArchive, release: string | undefined): Pick<PullDescription, 'services' | 'release'> => ({
   services: archive.mirrors.map((m) => m.name),
@@ -200,7 +224,8 @@ export function describePull<K extends string>(pull: Pull<K>): PullDescription {
 export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription & Partial<Projection> {
   const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, p.scope.kind === 'sliced'
     ? { query: phaseTemplate(p, pull.archive.quote), slices: sliceConditions(p.scope.key, p.scope.edges) }
-    : phaseTemplate(p, pull.archive.quote)]));
+    : p.scope.kind === 'whole-table' && p.scope.asu ? { query: phaseTemplate(p, pull.archive.quote), ...asuOf(p.scope) }
+      : phaseTemplate(p, pull.archive.quote)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
   const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };
   return { query: JSON.stringify(query), ...archiveDescription(pull.archive, pull.release), ...pull.request };
@@ -212,7 +237,7 @@ const fetchTransport: Transport = async (url, form) => {
     body: form,
     signal: AbortSignal.timeout(SYNC_TIMEOUT_MS),
   });
-  return { status: response.status, contentType: response.headers.get('content-type') ?? '', body: await response.text() };
+  return { status: response.status, contentType: response.headers.get('content-type') ?? '', body: new Uint8Array(await response.arrayBuffer()) };
 };
 
 export const LIVE: TapClientDeps = { transport: fetchTransport, sleep: (ms) => sleep(ms), report: reportService, log: console.log };
@@ -261,26 +286,44 @@ function phased<K extends string>(pull: Pull<K>): PhasedPull<K> {
 
 export const runPull = <K extends string>(pull: Pull<K>, deps: TapClientDeps = LIVE): Promise<void> => runPhasedPull(phased(pull), deps);
 
+/** Which mirror answered, in the archive's terms: its first mirror, or the fallbacks it was unreachable for; `answered` in first-answer order. */
+export function answeredLine(archive: TapArchive, answered: readonly string[]): string {
+  const [primary] = archive.mirrors;
+  if (answered.length === 0) return 'no archive answered: every reply replayed from a seeded checkpoint';
+  const fallbacks = answered.filter((name) => name !== primary.name);
+  if (fallbacks.length === 0) return `answered by ${primary.name}`;
+  const mirrors = `${fallbacks.join(' and ')} mirror${fallbacks.length > 1 ? 's' : ''}`;
+  return answered.includes(primary.name)
+    ? `answered by ${primary.name} and the ${mirrors}`
+    : `${primary.name} unreachable, answered by ${mirrors}`;
+}
+
 /** The resume cache sits beside the first output and goes only once every output has landed. */
 export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps: TapClientDeps = LIVE): Promise<void> {
   assertPhasesFit(pull.phases, pull.archive.quote);
+  assertAsuForms(pull.archive, pull.phases);
   const named = new Map(Object.entries(pull.phases).map(([name, phase]) => [phase, name]));
   const keys = keysOf(pull.tables);
   const cache = checkpoint(`${pull.outputs.files[keys[0]]}.ckpt`);
-  const client = tapClient(pull.archive, deps);
+  const answered: string[] = [];
+  const report = (service: string): void => {
+    if (!answered.includes(service)) answered.push(service);
+    deps.report(service);
+  };
+  const client = tapClient(pull.archive, { ...deps, report });
 
   const ask: Ask = async (phase, ids) => {
     const name = named.get(phase);
     if (name === undefined) throw new Error('a phase the pull does not declare cannot be asked: its describe would not state it');
     const limit = phaseLimit(phase);
-    const queries = phaseQueries(phase, ids, pull.archive.quote);
+    const queries = archiveQueries(phase, ids, pull.archive.quote);
     const rows: Row[] = [];
-    for (const [i, adql] of queries.entries()) {
-      const cached = cache.load(adql);
-      if (cached?.service) deps.report(cached.service);
-      const result = cached === null ? await client.query(adql, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
+    for (const [i, query] of queries.entries()) {
+      const cached = cache.load(query.adql);
+      if (cached?.service) report(cached.service);
+      const result = cached === null ? await client.query(query, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
       const checked = checkedRows(phase.columns, result.result, name);
-      if (cached === null) cache.save(adql, result);
+      if (cached === null) cache.save(query.adql, result);
       for (const row of checked) rows.push(row);
       deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
       if (phase.scope.kind !== 'request' && rows.length > phase.scope.maxRows) {
@@ -301,4 +344,5 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
   }
   emitArtifacts({ outputs: pull.outputs, files, checks });
   cache.clear();
+  deps.log(answeredLine(pull.archive, answered));
 }

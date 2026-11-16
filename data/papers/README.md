@@ -84,8 +84,9 @@ the store and pin it in `manifest.json`.
   copy can be read.
 - It also fails a DOI, arXiv ID or bibcode written
   in prose or a comment outside the index — string literals, code spans, data
-  tables under `data/`, dataset DOIs, VizieR catalogue bibcodes and public
-  copy aside.
+  tables under `data/`, the archive replies the refresh suites record
+  verbatim (`scripts/refresh/*/*.cfa.tsv`), dataset DOIs, VizieR catalogue
+  bibcodes and public copy aside.
 - Review, for what no scan can judge: an author-year credit written without a
   pointer, and a cited value that neither matches its claims row nor states
   its departure ([When the codebase departs from a paper](#when-the-codebase-departs-from-a-paper)).

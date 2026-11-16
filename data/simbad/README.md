@@ -321,7 +321,7 @@ the intrinsic spectral-class colour their new class supports.
 
 `multiplicityUnresolved` moves by **1** on the same pull, which is the one
 place the sp_type index is read for something other than a spectral type:
-`build-catalog.ts` takes the `otype = '**'` unresolved-multiplicity flag off
+the catalogue build (`scripts/catalog/stages/sorted-stage.ts`) takes the `otype = '**'` unresolved-multiplicity flag off
 `bySourceId`. A vetoed object leaves the file, and its `otype` leaves with
 it. Expected rather than incidental — the veto's judgement is about which
 star the object IS, so every cell it carries is subject to it.

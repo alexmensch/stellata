@@ -9,11 +9,16 @@ This folder holds the build's own halves of it.
 scripts/catalog/record/
   gaia-apsis-source.ts (+ test)   GAIA_APSIS with its parse, declared
                                   (../../util/sources/).
+  record-phase.ts (+ test)        The phase tag on the build's record list,
+                                  `Sorted`, `Unsorted`, `AllocatedSids` and
+                                  `Finalised`,
+                                  and the tags' constructors (#record-phases).
   record-order-pure.ts (+ test)   `apparentVFromSol` — the key the build sorts
-                                  records on — and `assertSolFirst`, throwing
-                                  unless exactly one record carries
-                                  FLAG_IS_SOL and it sorted to
-                                  SOL_RECORD_INDEX (record 0, stated in
+                                  records on — `sortByApparentV`, the sort
+                                  that hands on `Sorted` records, and
+                                  `assertSolFirst`, throwing unless exactly
+                                  one record carries FLAG_IS_SOL and it sorted
+                                  to SOL_RECORD_INDEX (record 0, stated in
                                   catalog-pure.ts). Pure.
                                   /src/catalog-format/record/README.md#record-order.
   curated-records.ts (+ test)     CURATED_RECORDS — the curated-records
@@ -28,16 +33,100 @@ scripts/catalog/record/
                                   sorted records — and variabilityUnits,
                                   the quantised period and amplitude each
                                   record writes. Pure.
-  encode-catalog-pure.ts (+ test) encodeCatalog — the sorted records, their
-                                  SIDs and multiplicity statuses to the
-                                  assembled catalog.bin buffer: header, name
-                                  table (the NAME tiers only), then each
-                                  record with its Apsis cells. Throws on a
-                                  SID or status list that does not pair
-                                  one-for-one with the records, on NO_SID,
+  encode-catalog-pure.ts (+ test) encodeCatalog — the finalised records
+                                  (their SIDs and display names), their
+                                  multiplicity statuses and the
+                                  binary-primary claims' union to the
+                                  assembled
+                                  catalog.bin buffer: header, name table (the display
+                                  names, NAME tiers only), then each record
+                                  with its Apsis cells. The flags byte is
+                                  the bits the record carries from its
+                                  creation (IS_SOL, the companion bits)
+                                  plus the three derived ones
+                                  (/src/catalog-format/record/README.md,
+                                  byte 35). Throws on a status
+                                  list that does not pair one-for-one with
+                                  the records, on a binary-primary claim
+                                  addressing no record, on NO_SID,
                                   and unless Sol is the one record without
                                   a constellation. Pure.
 ```
+
+## Record phases
+
+The build's record list carries the phase it has reached, as a compile-time
+tag (`Records<P>`, `record-phase.ts`), and each pass whose place in the order
+matters takes the phase it runs in, so a pass moved out of its place does
+not compile:
+
+| Phase | Entered by | Passes that take it |
+| --- | --- | --- |
+| `walked` | the manifest walk | `applyStarNames`, `systemCoherenceVerdicts`, `applySystemCoherence` |
+| `named` | the walked passes | `promoteCompanions` |
+| `promoted` | promotion | `sortByApparentV` |
+| `sorted` | `sortByApparentV` | `buildHipToIndex`, `inferBinaries`, `applyVariability`, `ccdmClaims`, `eclipsingClaims`, `buildCatalogRowIndexMap`, `renderableCompanionClaims`, `physicalOverlaps`, `overlapLineageLines`, `multiplicityStatuses`, `buildSystemMembership`, `lentDistanceRecords`, `catalogSidObjects`, `recordsCounts`, `assignDisplayNames`, `namingLineageLines` |
+
+A reader of positions taken before the sort — `coherenceLineageLines`,
+`promotionLineage`, `anchorMovedRecords` — takes `Unsorted`, any phase but
+`sorted`, so it cannot be handed the sorted list its indices no longer
+address.
+
+Each order it holds, and why:
+
+- **Naming, then promotion** — the anchor-is-the-component refusal reads the
+  `bayerComponent` naming writes ([Row identity](../companions/identity/README.md#anchor-is-the-component-refusal)).
+- **Coherence, then promotion** — minted members project off already-coherent
+  anchors ([System distance coherence](../multiplicity/README.md#system-distance-coherence)).
+- **The sort, then every index-keyed pass** — indices are final only after it
+  ([Record order](/src/catalog-format/record/README.md#record-order)).
+- **The row-index map, then the wings** — the wings take resolved pairs, which
+  only the map resolves, and the map takes `Sorted`.
+- **Naming, then variability** — GCVS fills `desigCon` only where IV/27A
+  left it empty, and `desigCon` exists only once naming attaches it
+  ([Field groups](#field-groups)).
+- **SID allocation, then display names** — the curated overrides key on SIDs,
+  and `assignDisplayNames` takes `AllocatedSids`, which only the allocation
+  stage tags (`allocatedSids`).
+
+Passes in one phase are free to run in either order: naming and coherence.
+The `FLAG_BINARY_PRIMARY` claimants' precedence — geometric, CCDM,
+eclipsing, renderable wings — is the argument order of the one
+`binaryPrimaries` call ([Binary-primary claims](../multiplicity/README.md#binary-primary-claims)),
+and `encodeCatalog` sets the bit from its union.
+
+`Finalised` is the sorted records with each one's SID and display name, built
+only by `finalise`, which throws unless the three pair one-for-one, and is
+what `encodeCatalog` and `buildSearchIndex` take; a record carries only its
+printed name (`printedName`), so no reader can take the one for the other.
+
+## Field groups
+
+A field filled after the walk does not exist on a record before the step that
+fills it: the walk builds `WalkedStar` (`../parse/stars-parse.ts`), and each
+step attaches its group with `attach` (`record-phase.ts`), which writes the
+fields onto the same records and hands them back typed with them. A read of a
+group member on an earlier handle does not compile.
+
+| Group | Fields | Attached by |
+| --- | --- | --- |
+| `NamingFields` | `desigCon`, `iauName`, `eponym`, `bayer`, `bayerSup`, `bayerComponent`, `gould`, `gouldHalf`, `aliases` | `applyStarNames`, from IV/27A's `desigCon` (`designationConstellation`) |
+| `MultiplicityFields` | `companionIdx` | `sortedPasses`, from `inferBinaries`' nearest neighbours |
+| `VariableFields` | `periodDays`, `amplitudeMag`, `varType`, `gcvsName` | `applyVariability`, in `sortedPasses` |
+
+Each phase's record type is the default of `Records<P>`: `walked` records are
+`WalkedStar`, `named`, `promoted` and `sorted` ones `NamedStar`. The groups
+attached inside the sorted phase ride the handle `sortedPasses` returns, which
+every later stage takes as `Sorted<Star>`. The walk's own copy of the
+manifest's Bayer cell is `printedBayer`, read only for the ladder's added /
+dropped counts. A record promotion mints is a `NamedStar` literal, so it
+states every naming field and no later group; leaving one to a default does
+not compile.
+
+`enterPhase` and `allocatedSids` are the tags' only constructors. Each phase
+is entered once, by the pass that completes it, the SIDs are tagged once, by
+the allocation stage, and `../build-catalog.test.ts` pins those call sites;
+tests call both to build fixtures.
 
 ## Curated records
 

@@ -1,8 +1,8 @@
 // Default-valued MultiplesTsvRow factory for catalog-pipeline tests.
 // A module rather than a .test.ts export — see README.md#files-in-this-area.
 
-import type { MultiplesTsvRow } from './companion-promotion';
-import { parseStage6Offset } from './anchor-offset-pure';
+import type { MultiplesTsvRow } from './multiples-row';
+import { parseStage6Offset } from './placement/anchor-offset-pure';
 import { OWN, gaiaFields, hipFields, type GaiaVia, type IdOrigin } from '../../binaries/multiples-record-pure';
 
 type IdentifierKeys = 'gaiaSourceId' | 'gaiaOrigin' | 'resolveVia' | 'hip' | 'hipOrigin';

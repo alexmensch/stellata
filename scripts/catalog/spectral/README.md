@@ -240,7 +240,7 @@ its own row: coherence's `coherence.size.rescaled` for a snapped member
 ([Coherence lineage](../multiplicity/README.md#coherence-lineage)), and
 promotion's `promotion.size.*` for every record it sizes, minted or held,
 in this stage's params through `radiusRouteParams`
-([Promotion lineage](../companions/README.md#promotion-lineage)).
+([Promotion lineage](../companions/promotion-lineage/README.md#promotion-lineage)).
 
 Measured 2026-11-11 on the full tree: 964,982 rows (152 MB plain), 24.2 MB
 gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,
@@ -248,6 +248,6 @@ gzipped in 1.3 s without a diff — 863,562 `apsis-teff`, 101,117 `class-teff`,
 row's Gaia id and carries its own absmag, which is what the gzip cannot
 shrink. `SIZE_LINEAGE_BUDGET` pins 26.7 MB and 30 s; CI has not timed it yet.
 Its lines spill to a `LineSpill` during the walk like brightness-colour's
-([Storage and cost](../lineage/README.md#storage-and-cost)): `build:catalog`
-peaked at 3,335 MiB against its 3,482 MiB budget
+([Storage and cost](../lineage/README.md#storage-and-cost)), which keeps
+`build:catalog` within its 3,481 MiB budget
 ([CI heap budget](../../util/heap-budget/README.md)).

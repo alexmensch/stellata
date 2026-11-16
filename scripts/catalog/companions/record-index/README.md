@@ -14,9 +14,9 @@ in one direction only.
 scripts/catalog/companions/record-index/
   record-index.ts (+ test)   buildCatalogRowIndexMap (the sidecar), and
                              the readers of resolvePairs' pairs:
-                             wingRenderablePrimaries,
+                             renderableCompanionClaims,
                              renderableOrbitRelations (the overlap gate's
-                             exemption, ../README.md#overlap-gate),
+                             exemption, ../../overlap/README.md#overlap-gate),
                              resolvedMemberIndices (the
                              MULTIPLICITY_RESOLVED set),
                              buildComponentDesignations.
@@ -100,7 +100,7 @@ still pins the baked catalogue against the real artifact.
 **`bySynth` also carries bridged keys.** A component whose row carries no
 identifier is addressable only under its synth key, and where promotion
 refused the mint because a stored same-as edge names a Gaia source already in
-the catalogue ([Same-as bridge to an already-admitted source](../README.md#same-as-bridge-to-an-already-admitted-source)),
+the catalogue ([Same-as bridge to an already-admitted source](../identity/README.md#same-as-bridge-to-an-already-admitted-source)),
 the key maps onto that source's record — or the star ships with no component
 letter, no search entry and no `binaries.bin` pairing. A record that owns the
 key outright wins over a bridge. Addressing only: the record's own
@@ -112,30 +112,32 @@ each other.
 
 ## Renderable-companion wings
 
-The three passes that set `FLAG_BINARY_PRIMARY` in `build-catalog.ts`
-(geometric `inferBinaries`, the CCDM pass, the eclipsing sweep) are all
+The three claimants of `FLAG_BINARY_PRIMARY` ahead of this one
+([Binary-primary claims](../../multiplicity/README.md#binary-primary-claims):
+geometric, CCDM, eclipsing) are all
 keyed on evidence unaligned with the *presence of a rendered companion*.
 A physical pair wider than the `0.005 pc` geometric cell, not CCDM
 `C/G/O`, and not eclipsing (16 Cyg A, whose promoted placement exceeds
 the geometric cell) shows a companion or a live orbit with no wings on
-the anchor. `wingRenderablePrimaries` closes that gap:
+the anchor. `renderableCompanionClaims`, the last claimant, closes that gap:
 
 - **Renders-a-companion gate.** Only the ends of pairs `binaries.bin`
   draws take part: a pair whose `rendered` ends are DISTINCT records.
 - **One glyph per WDS system's drawn pairs.** A system's drawn-pair ends
   are grouped by WDS root and the bit lands on the intrinsically brightest
-  of them (the mutual-primary / CCDM brightest-member contract) — never on a
+  of them (`pickBrightest`, the mutual-primary / CCDM contract) — never on a
   member with no drawn companion, however bright. A WDS root's members can
   sit hundreds of parsecs apart in the catalogue (05159+3425: A at 89 pc, Ba
   at 364 pc), so its brightest member is not necessarily anywhere near a
   drawn pair. `A,BC` with BC an unresolved compound draws only B against C,
   so the glyph lands on B. A hierarchical system (Castor Ca,Cb inside the
   outer pairs) gets one glyph on its brightest drawn-pair end, never one
-  per inner pair. A system an earlier pass already flagged on a drawn-pair
-  end is skipped. One flagged only on a member with no drawn companion is
-  not, so it ends up with two glyphs: 08095+3213 carries an earlier pass's
-  on its Aa record and this pass's on A, the brightest end of its drawn AB.
-- **Additive only.** The pass never clears wings, so the
+  per inner pair. A system an earlier claimant (or this one, through
+  another system) already claimed on a drawn-pair end is skipped. One
+  claimed only on a member with no drawn companion is not, so it ends up
+  with two glyphs: 08095+3213 carries an earlier claim on its Aa record and
+  this one's on A, the brightest end of its drawn AB.
+- **Additive only.** A claim never retracts another, so the
   reverse-direction cases stay correct: eclipsing binaries (an eclipsed
   star is a binary by convention even with a spectroscopically-
   unresolved companion) and iconic CCDM / Hipparcos doubles whose faint
@@ -144,9 +146,9 @@ the anchor. `wingRenderablePrimaries` closes that gap:
   renders.
 
 `renderableCompanionWinged` in build-counts pins the count. It moves
-when an earlier pass's brightest-member pick moves: more records
-carrying the bit before this pass runs means more systems hit the
-already-flagged skip, which lowers this count without lowering the
+when an earlier claimant's brightest-member pick moves: more records
+claimed before this claimant runs means more systems hit the
+claimed skip, which lowers this count without lowering the
 number of winged systems.
 
 `resolvedMemberIndices` is the record set the `MULTIPLICITY_RESOLVED`

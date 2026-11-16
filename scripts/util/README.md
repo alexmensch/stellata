@@ -201,7 +201,11 @@ same thing — single-use helpers stay with their consumer.
   whose multiply moves near-ties. Beside them, `formatRepr(x, width)`,
   Python's `repr(x)` of a double or numpy's `str` of a float32: the
   shortest digits that read back to `x`, no rounding (a refresh pull's
-  shortest-digits column format).
+  shortest-digits column format); and `formatDeclared(x, digits, width)`,
+  a VizieR value at its catalogue's declared `Fw.d`: those shortest digits
+  rounded half away from zero, which reproduces CDS's printed values where
+  rounding the exact binary value does not
+  ([FITS replies](../refresh/pull/README.md#fits-replies)).
 - `seeded-random-pure.ts` (+ test) — `mulberry32(seed)`, the one seeded
   uniform generator: the synthetic faint catalogue's draws
   (`../perf/synthetic-catalog/`) and the SIMBAD validation sample's
@@ -326,9 +330,8 @@ same thing — single-use helpers stay with their consumer.
   `record.ts` it records nothing. Its callers: the refresh pulls' TAP client
   (`../refresh/pull/`) and `fetchHorizonsText`, so both Horizons fetchers
   record `HORIZONS_SERVICE`.
-- `heap-budget/` — `watchHeap(step)`, a heavy step's peak live heap judged
-  against the CI runner's V8 heap limit as an `emitArtifacts` check. Own
-  README.
+- `heap-budget/` — the CI heap budget a heavy build step runs capped at,
+  and the Node major it must run under. Own README.
 - `step-command-pure.ts` — `rerunCommand(step)`, `pnpm run <step>`: the one
   spelling of a step's command, for the runner's refusals, the snapshot
   refresh hint and every artifact or registry hint naming its writer.
@@ -344,7 +347,7 @@ same thing — single-use helpers stay with their consumer.
   message names the refresh command: `pnpm run <step> --update-snapshots`
   when `PIPELINE_STEP` is set (the runner sets it to each step it runs, and
   drops an inherited `UPDATE_SNAPSHOTS`), the variable form otherwise. Used by
-  `build-catalog.ts` (build counts and distance outliers), the classic-ID
+  `build:catalog` (build counts and distance outliers, `../catalog/stages/catalog-emission.ts`), the classic-ID
   overlay, membership and WGSN builds, `build:binaries`' counts
   (`binaries/counts/`), `build:binaries-runtime`'s pair counts, and the
   allocation counts of `build:clouds` and `build:local-group`

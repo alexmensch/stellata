@@ -1,0 +1,59 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:50 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:50	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=V%2F70A%2Fcatalog&-out=Name%2CComp%2CVmag%2Cn_Vmag%2Cr_Vmag%2CB-V%2Cn_B-V%2Cr_B-V%2CSp%2Cr_Sp%2Cplx%2Ce_plx%2Cn_plx%2Ctrplx%2CRV%2Cn_RV%2CHD%2CRAB1950%2CDEB1950%2Cpm%2CpmPA%2CDM%2CGiclas%2CLHS%2COtherName&recno=19%2C2849%2C1102&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_5070
+#Name: V/70A
+#Title: Nearby Stars, Preliminary 3rd Version (Gliese+ 1991)
+#INFO	ivoid=ivo://cds.vizier/v/70a	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/v/70a	    IVOID of underlying data collection
+#INFO	creator=GLIESE W.	    First author or institution
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/V/70A	    Dataset landing page
+#INFO	publication_date=2012-09-24	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Coosys	B1950:	eq_FK4 B1950
+#Table	V_70A_catalog:
+#Name: V/70A/catalog
+#Title: The Catalogue
+#Column	Name	(A8)	Identifier ; see remarks.	[ucd=meta.id;meta.main]
+#Column	Comp	(A2)	Components (A,B,C,... )	[ucd=meta.code.multip]
+#Column	Vmag	(F6.2)	Apparent magnitude	[ucd=phot.mag;em.opt.V]
+#Column	n_Vmag	(A1)	[J] joint magnitude	[ucd=meta.note]
+#Column	r_Vmag	(A1)	Note on origin of magnitude	[ucd=meta.ref;pos.frame]
+#Column	B-V	(F5.2)	? color	[ucd=phot.color;em.opt.B;em.opt.V]
+#Column	n_B-V	(A1)	Joint color	[ucd=meta.note]
+#Column	r_B-V	(A1)	Note on origin of magnitude	[ucd=meta.ref;phot.color;em.opt.B]
+#Column	Sp	(a12)	Spectral type or color class	[ucd=src.spType]
+#Column	r_Sp	(A1)	Selected sources	[ucd=meta.ref]
+#Column	plx	(F6.1)	? Resulting parallax	[ucd=pos.parallax.trig]
+#Column	e_plx	(F5.1)	? Standard error of res. parallax	[ucd=stat.error;pos.parallax]
+#Column	n_plx	(A1)	[rwsop] Code on plx	[ucd=meta.note]
+#Column	trplx	(F6.1)	? Trigonometric parallax	[ucd=pos.parallax.trig]
+#Column	RV	(F6.1)	? Radial velocity	[ucd=spect.dopplerVeloc;pos.heliocentric]
+#Column	n_RV	(A3)	Remark on RV	[ucd=meta.note]
+#Column	HD	(I6)	[15/352860]? designation	[ucd=meta.id]
+#Column	RAB1950	(A8)	? Right Ascension B1950	[ucd=pos.eq.ra;meta.main]
+#Column	DEB1950	(A8)	? Declination B1950	[ucd=pos.eq.dec;meta.main]
+#Column	pm	(F6.3)	? Total proper motion	[ucd=pos.pm]
+#Column	pmPA	(F5.1)	? Direction angle of proper motion	[ucd=pos.pm;pos.posAng]
+#Column	DM	(A12)	Durchmusterung number BD / CD / CP	[ucd=meta.id]
+#Column	Giclas	(A9)	number <...>	[ucd=meta.id]
+#Column	LHS	(A5)	number <...>	[ucd=meta.id]
+#Column	OtherName	(A5)	Other designations	[ucd=meta.id]
+Name	Comp	Vmag	n_Vmag	r_Vmag	B-V	n_B-V	r_B-V	Sp	r_Sp	plx	e_plx	n_plx	trplx	RV	n_RV	HD	RAB1950	DEB1950	pm	pmPA	DM	Giclas	LHS	OtherName
+ 	 	mag	 	 	mag	 	 	 	 	mas	mas	 	mas	km/s	 	 	"h:m:s"	"d:m:s"	arcsec/yr	deg	 	 	 	
+--------	--	------	-	-	-----	-	-	------------	-	------	-----	-	------	------	---	------	--------	--------	------	-----	------------	---------	-----	-----
+GJ 1002 	  	 13.75	 	 	 1.98	 	 	M5-5.5      	 	 212.8	  3.3	 	 212.8	 -42.0	   	      	00 04 13	-07 47.5	 2.041	203.6	            	G158-027 	2    	
+NN 3417 	  	 13.65	 	 	     	 	 	m           	 	 129.0	 20.0	r	      	      	   	      	06 53 17	+62 23.7	 0.516	139.9	            	G250-031 	1885 	
+Gl 699  	  	  9.55	 	 	 1.74	 	 	M5 V        	 	 545.3	  1.0	 	 545.3	-111.0	   	      	17 55 23	+04 33.3	10.310	355.8	BD+04  3561a	G140-024 	57   	V799
+

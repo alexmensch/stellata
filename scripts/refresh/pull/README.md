@@ -1,14 +1,16 @@
 # Pull — the TypeScript refresh runtime
 
-What a TypeScript pull does when it runs: one TAP backend for Gaia, VizieR and
-SIMBAD. A pull is a `pull` step on the step table
+What a TypeScript pull does when it runs: one backend for Gaia, VizieR and
+SIMBAD, over TAP and, for VizieR's CfA mirror, ASU. A pull is a `pull` step on the step table
 ([Step kinds](../../pipeline/README.md#step-kinds)); the runner never runs it,
 `record.ts` does, and its committed record is `data/stamps/<step>.json`.
 
 ## Files
 
-- `tap-pure.ts` (+ test) — the backend: the three archives, the sync query,
-  the reply's classification, `tapClient`, `SIMBAD_BATCH_SIZE`, the ids
+- `tap-pure.ts` (+ test) — the backend: the three archives, the TAP sync
+  query and the ASU URL, the reply's classification, `csvText`, `tapClient`,
+  `withRetry` (which the WGSN
+  pull's plain fetch shares), `SIMBAD_BATCH_SIZE`, the ids
   one SIMBAD `IN (…)` batch may carry, and `GAIA_SLICE_ROWS`, the rows one
   sliced Gaia query holds.
 - `unverified-mirrors.test.ts` — no committed `data/stamps/` record answered by
@@ -19,10 +21,14 @@ SIMBAD. A pull is a `pull` step on the step table
   `emitArtifacts` check.
 - `slices-pure.ts` (+ test) — the sliced scope's key ranges: their ADQL
   conditions, per-slice counts, and cutting edges from a table.
+- `fits-pure.ts` (+ test) — `readFitsTable`, a FITS reply's first binary
+  table as text cells ([FITS replies](#fits-replies)); `fits-fixture.ts`,
+  for tests, writes one from typed cells.
 - `checkpoint.ts` — the resume cache.
 - `recorded-reply.ts` — for a pull's own tests: a reply recorded from the
-  archive replayed into a committed table's lines, the committed table's rows,
-  and its slices measured against `sliceRows`.
+  archive, CSV lines or an ASU mirror's TSV and FITS pair read through
+  `tapClient` (`RecordedAsu`), replayed into a committed table's lines, the committed
+  table's rows, and its slices measured against `sliceRows`.
 - `pull.ts` (+ test, the faked-transport acceptance cases) — the `Pull` and
   `PhasedPull` types, `describePull` / `describePhasedPull`, `runPull` /
   `runPhasedPull`, and `LIVE`, the network transport.
@@ -45,7 +51,7 @@ across runs and a server `ORDER BY` cannot order across batches, so
 `runPull` sorts every row of a table, all batches together, by `sortBy`
 before writing: each key a column compared as `integer` (exactly, through
 `BigInt`, so a source_id past 2^53 orders right), `decimal` or `text` (code
-unit), an empty cell first (`sortRows`). A re-pull of unchanged data writes
+unit), an empty cell first (`sortRows`, by `rowOrder`). A re-pull of unchanged data writes
 the same bytes. `orderBy` is only for a query that needs a server order, such
 as one under `TOP`. Scopes:
 
@@ -115,11 +121,9 @@ smallest `--max-old-space-size` the replay completes in, bisected to about
 | magnitude | 19 | 23.7 M / 11.8 M | 1,313 MiB | 635 MiB | 60 B | ~0 |
 | tyc-xmatch | 5 | 12.6 M / 6.3 M | 762 MiB | 406 MiB | 59 B | ~50 MiB |
 
-At 60 bytes per cell the 3,482 MiB budget (0.85 of the runner's 4,096 MiB)
-holds about 60.8 M cells, tyc's line about 60.7 M, so the cap is **60 M**.
-`watchHeap` is not the instrument here: its samples at full collections miss
-the peak between them, reading 815–894 MiB for the magnitude run that needs
-1,313 (stellata-hhaw.45.87).
+At 60 bytes per cell the 3,481 MiB budget (0.85 of the runner's 4,096 MiB,
+[CI heap budget](../../util/heap-budget/README.md)) holds about 60.8 M cells,
+tyc's line about 60.7 M, so the cap is **60 M**.
 Bounds today: magnitude 25.1 M ((1,273,000 + 48,000) × 19), tyc-xmatch
 12.9 M ((2,530,000 + 48,000) × 5). A table with wider text cells costs more
 per cell, so a pull near the cap is re-measured, not assumed.
@@ -150,7 +154,9 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 
 ## The checkpoint
 
-Each answered query's CSV reply is cached once it passes the column check, under
+Each answered query is cached as CSV (a FITS answer written as the CSV
+`readCsv` reads back to the same cells, `csvText`) once it passes the column
+check, under
 `<first output>.ckpt/`, named by the hash of the query's text, beside the
 mirror that answered it; a re-run replays a cached reply (re-checked against
 the limit and the columns) and asks only what is missing. **A replay reports
@@ -165,18 +171,47 @@ gitignored (`data/**/*.tsv.ckpt*/`) and deleting it is always safe.
 
 ## The TAP backend
 
-**One request shape for every service; only the URL differs.** `POST
-<mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`, `FORMAT=csv`, and
-`MAXREC = limit + 1`. An archive (`GAIA`, `VIZIER`, `SIMBAD`) is its mirrors
-in fallback order, its retry delays and how it quotes an identifier (VizieR
-double-quotes every one: table ids carry `/`, columns carry case and
-parentheses).
+**One request shape for every TAP service; only the URL differs.** `POST
+<mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`, `FORMAT=<the archive's
+format>`, and `MAXREC = limit + 1`. An archive (`GAIA`, `VIZIER`, `SIMBAD`)
+is its mirrors in fallback order, the format its TAP mirrors answer in (`csv`,
+or `fits` where a text reply would round a stored double:
+[FITS replies](#fits-replies)), its retry delays and how it quotes an
+identifier (VizieR double-quotes every one: table ids carry `/`, columns carry
+case and parentheses).
+
+**An ASU mirror is VizieR's own interface, for a mirror that serves no TAP.**
+A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked each query
+twice, `GET <mirror>/asu-tsv?…` and `GET <mirror>/asu-binfits?…`, with
+`-source=<table>&-out=<columns>&<constraints>&-out.max=<limit + 1>` from the
+query's ASU form (`AsuQuery`: each archive column under the name it answers
+as, and `column=value` constraints). `joinAsu` takes the float columns from
+the FITS, at their declared precision ([FITS replies](#fits-replies)), and
+every other cell from the TSV (`readAsuTsv`), whose blank is the catalogue's
+null where both binary writers put a 0 (IV/27A's blank `Fl`, measured
+2026-11-15; the catalogue standard makes a null a blank field). A non-float
+cell both report with a value must agree, and a float must be null in both
+or in neither (the TSV prints it shorter, so its text cannot be compared),
+else the pair is refused as not of the same rows; differing row counts are
+transient. Each reply's leading columns must
+be the asked ones in order, else it is refused: ASU silently drops a column
+it does not know. Its FITS spells a name's parentheses as underscores
+(`RA(ICRS)` answers as `RA_ICRS_`; `B-V` keeps its hyphen), and
+`asuFitsName` matches that. It appends link columns of its own (`recno`,
+Hipparcos' `Sn`), which are cut. A FITS file with no table is no rows. An
+ASU mirror has no `/capabilities` and no hard row limit. A TSV's `#…Error`
+comment line is transient when it names an unreachable database (the
+messages measured: "not currently reachable", "Postgres connect error"),
+and refused as a query fault otherwise. Only a whole-table scope carries an ASU
+form, and a pull whose archive has an ASU mirror refuses, before any query,
+a phase without one; the form is part of its describe.
 
 **Overflow is refused by row count, never by a status flag.** A CSV reply
 carries no `QUERY_STATUS`: truncated at MAXREC it is HTTP 200 with exactly
 MAXREC rows and nothing else (measured 2026-11-05 on ESA, ARI and
 SIMBAD-Harvard). So a query of limit `n` asks for `n + 1` rows, and a reply
-holding more than `n` raises `TapOverflow` (`readCsv`). It is permanent: every
+holding more than `n` raises `TapOverflow`, a FITS or ASU reply as a CSV one.
+It is permanent: every
 mirror truncates the same query the same way, so it neither retries nor falls
 back.
 
@@ -188,13 +223,15 @@ that can hold `n + 1`. When none can, the query is refused as one to batch.
 A `/capabilities` reply other than 200 is about the mirror, never the query,
 so it is transient on any status and the next mirror is tried.
 Measured 2026-11-05: ESA 50,000, ARI 10,000,000, SIMBAD-Harvard 2,000,000.
+CfA's ASU states none and returned a 155,282-row Tycho-2 band whole
+(2026-11-15).
 
 **The archive's own error message is what classifies a failure.** A failed
 query's reply is a VOTable whatever FORMAT asked for, its `QUERY_STATUS` INFO
 naming the clause it rejected (`queryStatus`). A message naming a query fault
 (unknown column, parse error, …) is `TapRefused` on any status, since a 5xx
-can carry one; otherwise a 5xx, a network failure or a non-CSV 2xx is
-transient (retried through the archive's delays, then the next mirror), and
+can carry one; otherwise a 5xx, a network failure, a 2xx in another format
+than asked or a FITS reply cut short is transient (retried through the archive's delays, then the next mirror), and
 any other 4xx is refused. Only the parsed message is matched: a proxy's HTML
 page saying "not found" is about the service and must still fall back. An
 HTML page is reported by its text.
@@ -203,12 +240,19 @@ HTML page is reported by its text.
 its retries once per run, and each answer is reported through
 `../../util/answered-by.ts`, which `record.ts` copies into the record's
 `answeredBy`. `services`, the declared mirror list, is what a pull's
-describe states.
+describe states. A pull's last line says the same in the archive's terms
+(`answeredLine`): `answered by CDS`, `CDS unreachable, answered by CfA
+mirror`, both when the answers were split, or that every reply replayed
+from a seeded checkpoint.
 
 **The `CDS` and `SIMBAD-CDS` mirrors are unverified, and the first PR a mirror
 answers verifies that mirror before it lands.** CDS Strasbourg was unreachable
-from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so their CSV dialect (quoting,
-a BOM, the empty cell), `/capabilities` limit and error body are unmeasured.
+from 2026-11-05, and Harvard mirrors SIMBAD's TAP but not VizieR's, so
+SIMBAD-CDS's CSV dialect (quoting, a BOM, the empty cell), each CDS mirror's
+`/capabilities` limit and error body, and whether CDS's TAP answers
+`FORMAT=fits` are unmeasured. The `CfA` mirror (VizieR's ASU at Harvard)
+passed its checks on 2026-11-15: a complete answer, nulls, the overflow at
+`limit + 1`, an unknown column refused.
 Each mirror's `verified` flag is the gate: `unverified-mirrors.test.ts` fails
 on any committed `data/stamps/` record whose `answeredBy` names an unverified
 mirror, a Python pull's included, so the PR that first reaches one cannot
@@ -216,6 +260,32 @@ land until it runs that mirror's group of live checks in
 stellata-hhaw.45.29.9, records its limit here, fixes whatever the checks find
 and sets the flag. The two are separate hosts and may return apart, so each
 mirror passes on its own; the bead closes once both have.
+
+## FITS replies
+
+**A VizieR number means what its catalogue's declared format says.** The
+catalogue standard makes a catalogue its ASCII file and ReadMe format
+([Standards for Astronomical Catalogues](https://vizier.cfa.harvard.edu/vizier/catstd/catstd-3.4.htx)),
+and VOTable's `precision` is the meaningful digits "irrespective of the
+number of digits presented"; VizieR's stored doubles carry noise below it
+(`e_pmRA` `0.015000000000000001`). A FITS reply carries the stored value and
+the declared format as `TDISPn`. `readFitsTable` writes an `E` or `D` cell at
+its `TDISPn = 'Fw.d'` (`formatDeclared`: the shortest digits, rounded half
+away from zero, which reproduces all 235,910 of hip2's committed CDS RA/Dec
+cells), or as the shortest digits that read back to it where none is
+declared; any other display format throws. A NaN is `null`. An integer is
+`null` at its `TNULLn`, or at its signed type's minimum where none is
+declared: VizieR writes that for a blank without declaring it (V/50 `HD`,
+CNS5 `GaiaDR3`). A string drops the blanks or NULs at either end, `null` when
+nothing is left: CfA's FITS keeps a right-justified field's leading blanks
+(`  3Alp Lyr` in V/50) where CDS's text replies drop them. Arrays, bit
+fields, heaps and scaled columns throw: no pull asks for one. The table
+states which columns are floats, for [the CfA mirror's join](#the-tap-backend).
+
+A file whose bytes end inside a header block or the rows is `incomplete`,
+which a retry can change: CfA's ASU sends a 1,120-byte `200` reply cut
+inside the primary header now and then (measured 2026-11-15). A complete
+file with no table is `no-table`, ASU's answer to a query no row matched.
 
 ## Columns
 

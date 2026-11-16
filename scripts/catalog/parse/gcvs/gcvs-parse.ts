@@ -13,8 +13,12 @@ import {
   VAR_TYPE_UNKNOWN,
 } from '../../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../constellations/constellations';
-import type { Star } from '../stars-parse';
 import { ascending } from '../../../../src/astro-core/order-pure';
+import type { NamedStar, VariableFields } from '../stars-parse';
+import { attach, type Sorted } from '../../record/record-phase';
+
+/** The fields the GCVS cross-match reads. */
+export type VariabilitySource = Pick<NamedStar, 'gaiaSourceId' | 'hip' | 'hd' | 'desigCon'>;
 
 export function splitPipeDelimited(text: string): string[][] {
   const out: string[][] = [];
@@ -302,16 +306,17 @@ export function gcvsSummary(c: GcvsCounts): string {
 // name resolves; period / amplitude / varType (rendering) apply only when
 // the GCVS main table also gave that name a period — the two gates are
 // independent, so aperiodic variables stay findable by name.
-export function applyVariability(
-  stars: Star[],
+export function applyVariability<S extends VariabilitySource>(
+  stars: Sorted<S>,
   gcvsData: Map<string, VarStarData>,
   xref: VarStarXref,
-): GcvsCounts {
+): { records: Sorted<S & VariableFields>; counts: GcvsCounts } {
   let matchedByGaia = 0;
   let matchedByHip = 0;
   let matchedByHd = 0;
   let named = 0;
-  for (const s of stars) {
+  const records = attach(stars, (s): VariableFields => {
+    const fields: VariableFields = { periodDays: 0, amplitudeMag: 0, varType: 0, gcvsName: null };
     let gcvsName: string | undefined;
     let source: 'gaia' | 'hip' | 'hd' | null = null;
     if (s.gaiaSourceId !== null) {
@@ -326,8 +331,8 @@ export function applyVariability(
       gcvsName = xref.byHd.get(s.hd);
       if (gcvsName) source = 'hd';
     }
-    if (!gcvsName || !source) continue;
-    s.gcvsName = gcvsName;
+    if (!gcvsName || !source) return fields;
+    fields.gcvsName = gcvsName;
     named++;
     // A GCVS designation names its own constellation (LT Vul is Vulpecula's
     // whatever any catalogue column says), but it fills `desigCon` only
@@ -343,15 +348,16 @@ export function applyVariability(
       s.desigCon = { via: 'gcvs', index: desigCon };
     }
     const data = gcvsData.get(gcvsName);
-    if (!data) continue;
-    s.periodDays = data.periodDays;
-    s.amplitudeMag = data.amplitudeMag;
-    s.varType = data.varType ?? VAR_TYPE_UNKNOWN;
+    if (!data) return fields;
+    fields.periodDays = data.periodDays;
+    fields.amplitudeMag = data.amplitudeMag;
+    fields.varType = data.varType ?? VAR_TYPE_UNKNOWN;
     if (source === 'gaia') matchedByGaia++;
     else if (source === 'hip') matchedByHip++;
     else matchedByHd++;
-  }
-  return {
+    return fields;
+  });
+  return { records, counts: {
     gcvsEntries: gcvsData.size,
     gcvsHipXrefs: xref.byHip.size,
     gcvsHdXrefs: xref.byHd.size,
@@ -361,5 +367,5 @@ export function applyVariability(
     gcvsMatchedByHip: matchedByHip,
     gcvsMatchedByHd: matchedByHd,
     gcvsNamed: named,
-  };
+  } };
 }

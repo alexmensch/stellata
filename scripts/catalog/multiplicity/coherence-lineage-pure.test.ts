@@ -8,6 +8,7 @@ import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { RADIUS_FACTOR_PARAM_DECIMALS } from '../spectral/size-lineage-pure';
 import { COHERENCE_CODES, coherenceFigures, coherenceLineageLines, coherenceLineageRows } from './coherence-lineage-pure';
 import type { AnchorBasis, CoherenceAnchor, SystemVerdict } from './system-coherence';
+import { enterPhase } from '../record/record-phase';
 
 const stars = ['spine:1', 'spine:2', 'spine:3', 'spine:4', 'spine:5', 'spine:6'].map((originKey) => makeStar({ originKey }));
 const gaia = gaiaAstrometryRow({});
@@ -19,7 +20,7 @@ const anchor = (
 
 describe('coherenceLineageRows', () => {
   it('writes not-applicable, with no params or evidence, for every record no system decided', () => {
-    const rows = [...coherenceLineageRows([], stars.slice(0, 2))];
+    const rows = [...coherenceLineageRows([], enterPhase('promoted', stars.slice(0, 2)))];
     expect(rows).toEqual(['spine:1', 'spine:2'].map((key) => ({
       stage: 'coherence', key, role: 'outcome', code: 'coherence.not-applicable', params: '', evidence: [],
     })));
@@ -40,7 +41,7 @@ describe('coherenceLineageRows', () => {
       { kind: 'anchor-inconsistent', root: '00002+0002', anchor: anchor(1), anchorPc: 1686, parallaxPc: 534, sigmaPc: 210, members: [2] },
       { kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(3, {}, INHERITED), members: [4] },
     ];
-    const rows = [...coherenceLineageRows(verdicts, stars)];
+    const rows = [...coherenceLineageRows(verdicts, enterPhase('promoted', stars))];
     expect(rows.map((r) => [r.key, r.code])).toEqual([
       ['spine:1', 'coherence.anchor.anchor-won'],
       ['spine:2', 'coherence.snapped'],
@@ -55,7 +56,7 @@ describe('coherenceLineageRows', () => {
       ['spine:5', 'coherence.kept.anchor-unplaced'],
       ['spine:6', 'coherence.kept.member-unplaced'],
     ]);
-    const lines = sortLineageLines(coherenceLineageLines(verdicts, stars));
+    const lines = sortLineageLines(coherenceLineageLines(verdicts, enterPhase('promoted', stars)));
     expect(() => stageLineageText(COHERENCE_CODES, lines)).not.toThrow();
   });
 
@@ -63,7 +64,7 @@ describe('coherenceLineageRows', () => {
     const [snapped] = coherenceLineageRows([{
       kind: 'coherent', root: '02318+8916', anchor: anchor(1, { memberWon: true }), anchorPc: 137.233,
       members: [{ kind: 'snapped', idx: 0, fromPc: 132.626, toPc: 137.233, toAbsmag: 3.1, radiusFactor: 0.97 }],
-    }], stars.slice(0, 2));
+    }], enterPhase('promoted', stars.slice(0, 2)));
     expect(snapped.key).toBe('spine:1');
     expect(paramsOf(snapped)).toEqual({
       root: '02318+8916', anchor: 'spine:2', anchor_tier: 'gaia-clean', from_pc: '132.626', to_pc: '137.233',
@@ -75,7 +76,7 @@ describe('coherenceLineageRows', () => {
     const [, held, rescaled] = coherenceLineageRows([{
       kind: 'coherent', root: '00001+0001', anchor: anchor(1), anchorPc: 100,
       members: [{ kind: 'snapped', idx: 0, fromPc: 10, toPc: 100, toAbsmag: 0, radiusFactor: 10 }],
-    }], stars.slice(0, 2));
+    }], enterPhase('promoted', stars.slice(0, 2)));
     expect([held.code, rescaled.code]).toEqual(['coherence.brightness.held', 'coherence.size.rescaled']);
     expect(paramsOf(held)).toEqual({ root: '00001+0001', absmag: '0.0000' });
     expect(paramsOf(rescaled)).toEqual({ root: '00001+0001', factor: (10).toFixed(RADIUS_FACTOR_PARAM_DECIMALS) });
@@ -92,7 +93,7 @@ describe('coherenceLineageRows', () => {
       }
     };
     const code = (kind: SystemVerdict['kind']) => picks.map((o) => [...coherenceLineageRows(
-      [verdict(kind, anchor(0, o))], stars.slice(0, 1),
+      [verdict(kind, anchor(0, o))], enterPhase('promoted', stars.slice(0, 1)),
     )][0].code);
     expect(code('coherent')).toEqual(['coherence.anchor.member-won', 'coherence.anchor.anchor-won', 'coherence.anchor.precision-vetoed']);
     expect(code('anchor-inconsistent')).toEqual([
@@ -105,14 +106,14 @@ describe('coherenceLineageRows', () => {
     ]);
     const [anchorRow] = coherenceLineageRows([{
       kind: 'coherent', root: '00001+0001', anchor: anchor(0, { memberWon: true }), anchorPc: 50, members: [],
-    }], stars.slice(0, 1));
+    }], enterPhase('promoted', stars.slice(0, 1)));
     expect(paramsOf(anchorRow)).toEqual({ root: '00001+0001', tier: 'gaia-clean', anchor_pc: '50' });
   });
 
   it('cites nothing for an inherited anchor', () => {
     const rows = [...coherenceLineageRows([{
       kind: 'anchor-unplaced', root: '00003+0003', anchor: anchor(0, {}, INHERITED), members: [1],
-    }], stars.slice(0, 2))];
+    }], enterPhase('promoted', stars.slice(0, 2)))];
     expect(rows.map((r) => r.evidence)).toEqual([[], []]);
   });
 });
@@ -122,7 +123,7 @@ describe('the coherence count block', () => {
     kind: 'coherent', root: '00001+0001', anchor: anchor(0, { memberWon: true }), anchorPc: 50,
     members: [{ kind: 'snapped', idx: 1, fromPc: 52, toPc: 50, toAbsmag: 3.9, radiusFactor: 1.04 }],
   }];
-  const lines = coherenceLineageLines(verdicts, stars.slice(0, 3));
+  const lines = coherenceLineageLines(verdicts, enterPhase('promoted', stars.slice(0, 3)));
 
   it('keys every live code, zeros included, and no retired one', () => {
     const counts = foldStageLines(COHERENCE_CODES, lines);

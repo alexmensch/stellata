@@ -41,7 +41,7 @@ packs a class into two bytes — spectClass 0–6 for O–M, 7 carbon (Wolf-Raye
 too), 8 none; lumClass 1–9, 255 none — and a white dwarf as `8 / 0`. The
 build writes them once, where a `Star` becomes a record; companion promotion
 decodes them back
-([Reading a record's class back](/scripts/catalog/companions/README.md#reading-a-records-class-back));
+([Reading a record's class back](/scripts/catalog/companions/post-passes/README.md#reading-a-records-class-back));
 the viewer's descriptor (`/src/client/format/spectral-format.ts`) reads the
 same named codes. The bytes drop the subclass, the WD index and the
 Wolf-Rayet kind, so a decode reads the first two back as not stated and a

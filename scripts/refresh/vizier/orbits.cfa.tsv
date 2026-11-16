@@ -1,0 +1,51 @@
+#
+#   VizieR Astronomical Server vizier.cfa.harvard.edu
+#    Date: 2026-11-15T18:37:51 [V7.6.1]
+#   In case of problem, please report to:	cds-question@unistra.fr
+#
+#
+#Coosys	J2000:	eq_FK5 J2000
+#INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
+#INFO	request_date=2026-11-15T18:37:51	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=J%2FApJS%2F235%2F6%2Forbits&-out=ID%2CSyst%2CPer%2Cx_Per%2CT%2Ce%2Ca%2CNode%2CLongP%2CIncl%2CK1%2CK2%2CV0%2CFlag%2CNote&recno=2%2C4538&-out.max=21	  Full request URL
+#INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
+#INFO	server_software=VizieR/7.6.1	  Software version
+#INFO	publisher=CDS	  Data centre that produced the VOTable
+
+#RESOURCE=yCat_22350006
+#Name: J/ApJS/235/6
+#Title: Updated Multiple Star Catalog (MSC): Dec 2023 (Tokovinin, 2018)
+#INFO	ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	data_ivoid=ivo://cds.vizier/j/apjs/235/6	    IVOID of underlying data collection
+#INFO	creator=Tokovinin A.	    First author or institution
+#INFO	cites=bibcode:2018ApJS..235....6T	    Article or Data origin sources
+#INFO	journal=ApJS	    Journal name
+#INFO	original_date=2018	    Year of the article publication
+#INFO	reference_url=https://cdsarc.cds.unistra.fr/viz-bin/cat/J/ApJS/235/6	    Dataset landing page
+#INFO	citation=doi:10.26093/cds/vizier.22350006	    Dataset identifier that can be used for citation
+#INFO	publication_date=2024-01-08	    Date of first publication in the data centre
+#INFO	rights_uri=https://cds.unistra.fr/vizier-org/licences_vizier.html	    Licence URI
+#Table	J_ApJS_235_6_orbits:
+#Name: J/ApJS/235/6/orbits
+#Title: Orbit table (table 4; orb)
+#Column	ID	(A10)	WDS code (HHMMm+DDMM; J2000) (G1)	[ucd=meta.id;meta.main]
+#Column	Syst	(a8)	Primary,Secondary	[ucd=meta.code.multip]
+#Column	Per	(F11.4)	[0/830370]? Period	[ucd=meta.note]
+#Column	x_Per	(A1)	[dy] Units of period (days or years)	[ucd=meta.unit]
+#Column	T	(F10.4)	[-499/88500]? Periastron epoch; Besselian year or JD-2400000	[ucd=src.orbital.periastron;time.epoch]
+#Column	e	(F6.3)	[0.001/8.1]? Eccentricity	[ucd=src.orbital.eccentricity]
+#Column	a	(F8.4)	[0.0001/205.1]? Semimajor axis	[ucd=phys.angSize.smajAxis;src.orbital]
+#Column	Node	(F6.2)	[-3.7/360]? Position angle of ascending node	[ucd=src.orbital.node]
+#Column	LongP	(F6.2)	[-90/445]? Longitude of periastron	[ucd=src.orbital.periastron]
+#Column	Incl	(F6.2)	[2.4/922]? Inclination	[ucd=src.orbital.inclination]
+#Column	K1	(F6.2)	[0.01/335]? Primary semi-amplitude	[ucd=phys.veloc;src.orbital]
+#Column	K2	(F6.2)	[-25.2/435]? Secondary semi-amplitude	[ucd=phys.veloc;src.orbital]
+#Column	V0	(F7.2)	[-291/664]? Center of mass velocity	[ucd=phys.veloc]
+#Column	Flag	(A1)	Component to which the node refers	[ucd=meta.code.error]
+#Column	Note	(a30)	Note; may include bibcode	[ucd=meta.note]
+ID	Syst	Per	x_Per	T	e	a	Node	LongP	Incl	K1	K2	V0	Flag	Note
+ 	 	 	 	 	 	arcsec	deg	deg	deg	km/s	km/s	km/s	 	
+----------	--------	-----------	-	----------	------	--------	------	------	------	------	------	-------	-	------------------------------
+00012+0905	Aa,Ab   	   765.9424	d	  327.6040	 0.455	        	      	 15.16	      	  5.85	      	 -19.67	 	NSS SB1
+23300+5833	Aa,Ab   	     6.0663	d	40087.1914	 0.250	        	      	 31.40	      	 56.70	      	 -13.40	B	SB9_1445 1971PDDO....3...99G
+

@@ -34,7 +34,7 @@ import { evaluateOrbitSkyAU } from '../../src/client/binaries/binary-orbit-pure'
 import { BinaryOrbitField } from '../../src/client/binaries/binary-orbit-field';
 import { AU_PC, AU_PER_PC, RAD_TO_DEG } from '../../src/astro-core/astronomy-constants';
 import { pyMod } from '../../src/astro-core/angles';
-import { readMultiplesTsv } from '../../scripts/catalog/companions/companion-promotion';
+import { readMultiplesTsv } from '../../scripts/catalog/companions/multiples-row';
 import { wdsRootOf } from '../../scripts/binaries/component-tokens-pure';
 import { MULTIPLES_TSV, MULTIPLES_TSV_PATH } from '../../scripts/binaries/multiples-tsv';
 import { NAMING_DUPLICATES } from '../../scripts/catalog/naming/naming-duplicates-tsv';
@@ -205,7 +205,7 @@ function loadBinariesSync(): BinariesData {
 /** Decompose the catalog Δxyz between two records into the WDS-comparable
  *  sky-tangent frame at the primary: separation (AU) + position angle
  *  (deg E of N) in the tangent plane, plus the line-of-sight component.
- *  Inverse of companion-promotion's `projectFromSepPa` / the runtime's
+ *  Inverse of companions/placement's `projectFromSepPa` / the runtime's
  *  `projectSkyToICRS` — same north/east basis. */
 function skySeparationAtPrimary(
   primary: CatalogRecord,
@@ -771,7 +771,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
 
   it('wings a wide physical pair the geometric/CCDM/eclipsing passes miss, not an optical double', () => {
     // 16 Cyg A: promoted placement exceeds the 0.005 pc geometric cell,
-    // not CCDM C/G/O, not eclipsing — wingRenderablePrimaries recovers it.
+    // not CCDM C/G/O, not eclipsing — renderableCompanionClaims recovers it.
     expect(winged(96895), '16 Cygni A / HIP 96895').toBe(true);
     // Canopus's sole WDS companion is a 999.9-overflow optical double.
     // With the overflow sentinel nulled at parse it no longer projects to
@@ -781,7 +781,7 @@ describe.runIf(FIXTURES_READY)('renderable-companion wings', () => {
   });
 
   it('every system rendering a companion in binaries.bin carries the wings bit', () => {
-    // Ground truth for the TS wingRenderablePrimaries mirror: binaries.bin IS
+    // Ground truth for the TS renderableCompanionClaims mirror: binaries.bin IS
     // the set of rendered pairs, and the wings contract is one glyph per
     // physical system on the brightest participant. A "system" is the union of
     // (a) catalog rows sharing a WDS root — one glyph covers a root's disjoint

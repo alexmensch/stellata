@@ -46,7 +46,7 @@ scripts/catalog/parse/
   gaia-xmatch.ts (+ test)         Gaia DR3 best-neighbour cross-walk parsing
                                   (HIP + TYC, one shared accumulator). The HIP
                                   walk now serves the GCVS byGaia bridge in
-                                  build-catalog.ts, not the record walk. The
+                                  ../stages/sorted-stage.ts, not the record walk. The
                                   TYC reader streams and takes a keep-set —
                                   its table is 2.5 M rows. The binaries
                                   pipeline's Stage 1 reads both walks too.
@@ -165,7 +165,7 @@ never a membership decision — so the walk throws, naming the row.
    both a place and a brightness. The tier that won is kept on the record as
    `vVia`, because it decides whether the magnitude is the system's blend or
    one component's — companion promotion's flux conservation may only subtract
-   a companion's light from a blend ([Anchor flux conservation](../companions/README.md#anchor-flux-conservation-post-pass)).
+   a companion's light from a blend ([Anchor flux conservation](../companions/post-passes/README.md#anchor-flux-conservation)).
 2. **Direction resolution** (`resolveDirection` in `direction-cascade.ts`)
    selects the tier's solution. See [Direction resolution](../distance/README.md#direction-resolution).
    Every solution propagates rather than shipping its source's own

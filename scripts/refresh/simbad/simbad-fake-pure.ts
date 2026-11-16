@@ -2,7 +2,7 @@
 
 import type { Row } from '../pull/columns-pure';
 import { phaseTemplate, type Ask, type Phase } from '../pull/pull';
-import type { HttpReply, TapClientDeps } from '../pull/tap-pure';
+import { csvText, textReply, type HttpReply, type TapClientDeps } from '../pull/tap-pure';
 import { simbadMatchKey } from './simbad-specs-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
@@ -64,12 +64,6 @@ export function fakeAsk(fake: FakeSimbad): { ask: Ask; asked: { phase: Phase; id
   };
 }
 
-const csvCell = (cell: string | null): string => (cell === null ? '' : /[",\n\r]/.test(cell) || cell === '' ? `"${cell.replace(/"/g, '""')}"` : cell);
-
-export function csvText(names: readonly string[], rows: readonly Row[]): string {
-  return [names, ...rows].map((row) => row.map(csvCell).join(',')).join('\n') + '\n';
-}
-
 /** The fake behind a TAP transport: each query matched to the declared phase whose template it fills, answered as CSV. */
 export function fakeTransport(fake: FakeSimbad, phases: Readonly<Record<string, Phase>>, quote: (id: string) => string): TapClientDeps['transport'] {
   const templates = Object.values(phases).map((phase) => {
@@ -77,12 +71,12 @@ export function fakeTransport(fake: FakeSimbad, phases: Readonly<Record<string, 
     return { phase, head, tail };
   });
   return async (_url, form): Promise<HttpReply> => {
-    if (!form) return { status: 200, contentType: 'text/xml', body: '<capabilities/>' };
+    if (!form) return textReply(200, 'text/xml', '<capabilities/>');
     const adql = form.get('QUERY') ?? '';
     const match = templates.find((t) => (t.phase.scope.kind === 'whole-table' ? adql === t.head : adql.startsWith(t.head) && adql.endsWith(t.tail)));
     if (match === undefined) throw new Error(`the fake matches no declared phase to ${adql.slice(0, 120)}`);
     const ids = match.phase.scope.kind === 'whole-table' ? undefined : adql.slice(match.head.length, adql.length - match.tail.length).split(', ');
     const rows = answer(fake, match.phase, ids);
-    return { status: 200, contentType: 'text/csv', body: csvText(match.phase.columns.map((c) => c.name), rows) };
+    return textReply(200, 'text/csv', csvText(match.phase.columns.map((c) => c.name), rows));
   };
 }

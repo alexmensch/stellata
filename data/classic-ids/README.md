@@ -58,9 +58,11 @@ classic_id_overrides.tsv           Hand-curated. 17 rows; the escape
 
 ## Provenance
 
-Every table is a whole-table column slice pulled over CDS/VizieR TAP by
-`scripts/refresh/refresh-classic-ids.py` (`pnpm run refresh:classic-ids`),
-verified against VizieR 2026-07-28. Licence: public domain via CDS for
+Every table is a whole-table column slice pulled from VizieR by
+`scripts/refresh/vizier/refresh-classic-ids.ts` (`pnpm run refresh:classic-ids`):
+CDS, or the CfA mirror when CDS is unreachable, named in the stamp's
+`answeredBy` (`data/stamps/refresh-classic-ids.json`). Verified against
+VizieR 2026-07-28; re-pulled from CfA 2026-11-15. Licence: public domain via CDS for
 all four; cite the paper per table.
 
 - **`tyc2_hd.tsv`** ← VizieR `IV/25/tyc2_hd`.
@@ -334,13 +336,14 @@ than degrading.
 `classic_id_overlay.tsv` + `classic_id_overrides.tsv` are then read by
 `build:membership`, which runs `mergeClassicIdLabels` and writes
 `label_flips.tsv`: the overlay is the manifest's label layer. `cross_index.tsv`
-is read by `build-catalog.ts` itself, for IV/27A's `cst` — the only source for
+is read by the catalogue build itself (`scripts/catalog/stages/naming-stage.ts`), for IV/27A's `cst` — the only source for
 the constellation a Bayer / Flamsteed designation is NAMED for.
 
 ## Refresh
 
 `pnpm run refresh:classic-ids` re-pulls all four tables;
-`--only <stem>` limits it to one, `--force` overrides the mtime skip.
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).
 Then `pnpm run build:classic-ids` regenerates the overlay and
 `pnpm run build:membership` regenerates `label_flips.tsv` — CI runs both and
 fails on any diff, so artifact and code always land in the same commit. The

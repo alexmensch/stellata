@@ -1,8 +1,8 @@
 // The record build's half of the composer: every record's designation set
-// to its display name, with the NAME tiers written into `proper`.
+// to its display name, and the NAME tiers as the name table's strings.
 // See /src/catalog-format/naming/README.md#two-callers-one-composer.
 
-import { FLAG_HAS_NAME, NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
+import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
 import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation-pure';
 import {
@@ -12,10 +12,10 @@ import {
   type DisplayName,
   type DisplayNameInput,
 } from '../../../src/catalog-format/naming/star-naming-pure';
+import type { AllocatedSids, Sorted } from '../record/record-phase';
 
 /** Structural subset of `Star` the display-name pass reads. */
 export interface DisplayNameSource {
-  proper: string | null;
   iauName: string | null;
   eponym: string | null;
   bayer: string | null;
@@ -31,7 +31,6 @@ export interface DisplayNameSource {
   gl: string | null;
   conIndex: number;
   desigCon: DesignationCon;
-  flags: number;
 }
 
 /** Which constellation the record's constellation-relative designations
@@ -109,16 +108,19 @@ export interface DisplayNameResult {
   counts: DisplayNameCounts;
   /** Indexed by record. */
   records: NamedRecord[];
+  /** Indexed by record: the NAME tier's label, or null for a record that
+   *  displays a designation the runtime composes. */
+  displayNames: (string | null)[];
   /** Duplicate label → the records claiming it, for the parity ledger. */
   duplicates: Map<string, number[]>;
 }
 
 export function assignDisplayNames(
-  stars: DisplayNameSource[],
+  stars: Sorted<DisplayNameSource>,
   components: Map<number, ComponentDesignation>,
   constellations: readonly { code: string }[],
   overrides: Map<number, string>,
-  recordSids: readonly number[],
+  recordSids: AllocatedSids,
 ): DisplayNameResult {
   // A curated row is the one tier no published source can be re-read to
   // check, so an unmatched SID has to fail rather than count as applied —
@@ -156,24 +158,21 @@ export function assignDisplayNames(
     set: input.set,
     dc: dcs[i],
   }));
-  for (let i = 0; i < stars.length; i++) writeName(stars[i], records[i].name);
+  const displayNames = records.map(({ name }) => approvedName(name));
   const duplicates = duplicateLabels(records);
   const counts: DisplayNameCounts = {
     namingDuplicateLabels: duplicates.size,
     namingDuplicateRecords: [...duplicates.values()].reduce((n, idxs) => n + idxs.length, 0),
     namingOverrides: overrides.size,
   };
-  return { counts, records, duplicates };
+  return { counts, records, displayNames, duplicates };
 }
 
 /** A name attaches to a star; a designation is compiled for it. Only the
  *  former reaches catalog.bin, so first paint carries names while the
  *  runtime composes designations off the search index. */
-function writeName(star: DisplayNameSource, name: NameOutcome): void {
-  const isName = name.kind !== 'unlabelled' && isApprovedName(name.tier);
-  star.proper = isName ? name.label : null;
-  if (isName) star.flags |= FLAG_HAS_NAME;
-  else star.flags &= ~FLAG_HAS_NAME;
+function approvedName(name: NameOutcome): string | null {
+  return name.kind !== 'unlabelled' && isApprovedName(name.tier) ? name.label : null;
 }
 
 function duplicateLabels(records: readonly NamedRecord[]): Map<string, number[]> {

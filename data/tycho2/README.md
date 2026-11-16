@@ -90,17 +90,16 @@ supplement only where the main table has no row.
 
 ## The request set — manifest ∪ IV/25
 
-`refresh_lib.read_mentioned_tycs` derives the mentioned-TYC set from the
+The pull derives the mentioned-TYC set (`tycho2Request`, `scripts/refresh/tycho2/`) from the
 membership manifest's `tyc` column (372,147) unioned with IV/25's own TYCs
 (471 more than the manifest already names), for 372,618 requested. The union
 is unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
 the IV/25 TYCs that the union was widened to cover in the first place.
 
-It lives in `refresh_lib` rather than in `refresh-tycho2.py` because
-`refresh-simbad-tyc-hd.py` asks the same question of the same two tables —
-the terms `read_mentioned_tycs` is shared on. Both parse each side into
-integer triples, so the two pulls cover the same entries by construction and
-a differently-spelled cell cannot drift them apart.
+`refresh-simbad-tyc-hd.py` asks the same question of the same two tables,
+through `refresh_lib.read_mentioned_tycs`. Both parse each side into integer
+triples, so the two pulls cover the same entries and a differently-spelled
+cell cannot drift them apart.
 
 Coverage, re-measured 2026-09-07 against the committed tables:
 
@@ -157,18 +156,14 @@ mentions all 9,537 regions. The range scans are cheap (~2 min for the
 whole 2,539,913-row main table), so the pull transfers the table and
 keeps 15% of it.
 
-**No resume checkpoint, deliberately.** `run_in_batches` can cache each
-batch to `<output>.tsv.ckpt/` ([Resuming a long pull](/scripts/refresh/README.md#resuming-a-long-pull)),
-but here a batch is ~106k *unfiltered* upstream rows and the
-cache holds them as XML, so checkpointing this pull would spend gigabytes
-of disk to save two minutes. The filter is what makes the output small;
-the thing worth caching is the part we throw away.
+**Every band reply is checkpointed**, as any TypeScript pull's is
+([The checkpoint](/scripts/refresh/pull/README.md#the-checkpoint)): about
+400 MB of CSV, the unfiltered rows, held until both tables land.
 
 Nothing is written until every gate has passed — each table's fraction
 band and pinned rows, then the cross-table manifest cover. A gate failure
-must leave the committed TSVs untouched, because the skip check is a
-file-modification-time comparison: a half-committed failing pull would
-look up to date to the next run and skip itself silently.
+leaves the committed TSVs and the pull's record untouched, so a
+half-committed failing pull can never read as fresh.
 
 ## The pinned row
 
@@ -187,9 +182,11 @@ and 3.7″ away on the observation epochs.
 ## Provenance
 
 - **Citation**: [Høg 2000](/data/papers/index.md#hog2000) (Tycho-2).
-- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over the CDS TAP endpoint
-  `refresh_lib.CDS_TAP_URL` names.
-- **Retrieved**: 2026-08-25.
+- **VizieR**: `I/259` (`tyc2`, `suppl_1` tables), over
+  `scripts/refresh/pull/tap-pure.ts`'s `VIZIER`: CDS, or the CfA mirror when
+  CDS is unreachable. The stamp (`data/stamps/refresh-tycho2.json`,
+  `answeredBy`) names which answered.
+- **Retrieved**: 2026-08-25; re-pulled from CfA 2026-11-15, byte-identical.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Høg 2000](/data/papers/index.md#hog2000).
 
@@ -225,5 +222,6 @@ both tables carry.
 
 ## Refresh
 
-`pnpm run refresh:tycho2` (venv per [One-time setup](/scripts/refresh/README.md#one-time-setup)).
-`--force` overrides the mtime skip.
+`pnpm run refresh:tycho2` (`scripts/refresh/tycho2/`).
+`--force` re-pulls when its record is fresh
+([Freshness](/scripts/pipeline/README.md#freshness--one-mechanism)).

@@ -11,7 +11,7 @@ import type { Star } from '../parse/stars-parse';
  *  `starDesignations` reads, plus the label columns the naming ladder will. */
 type SpineStarFields = Pick<
   Star,
-  'hip' | 'hd' | 'hr' | 'flam' | 'gl' | 'bayer' | 'proper' | 'gaiaSourceId'
+  'hip' | 'hd' | 'hr' | 'flam' | 'gl' | 'bayer' | 'printedName' | 'gaiaSourceId'
 >;
 
 type ColumnSpec =
@@ -29,7 +29,7 @@ const COLUMN_SPEC = [
   { column: 'gl', star: 'gl' },
   { column: 'flam', star: 'flam' },
   { column: 'bayer', star: 'bayer' },
-  { column: 'proper', star: 'proper' },
+  { column: 'proper', star: 'printedName' },
   { column: 'gaia_source_id', star: 'gaiaSourceId' },
   { column: 'ra', printed: true },
   { column: 'dec', printed: true },
