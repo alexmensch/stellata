@@ -90,10 +90,10 @@ class RequireTests(unittest.TestCase):
 
 class DescribeTests(unittest.TestCase):
     def test_each_entry_describes_its_variant_under_isolated_stdlib_python(self) -> None:
-        refresh = Path(__file__).resolve().parents[1] / "refresh"
+        here = Path(__file__).resolve().parent
         for variant in e.VARIANTS:
             out = subprocess.run(
-                ["python3", "-I", "-S", str(refresh / f"refresh-edenhofer2024-{variant}.py"), "--describe"],
+                ["python3", "-I", "-S", str(here / f"refresh-edenhofer2024-{variant}.py"), "--describe"],
                 capture_output=True, text=True, check=True,
             )
             described = json.loads(out.stdout)
