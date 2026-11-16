@@ -1,13 +1,13 @@
 {
   "inputs": {},
   "outputs": {
-    "data/simbad/simbad_sptype.tsv": "9debd2796874149be2b2cdf518ae125b12e9b5ea"
+    "data/simbad/simbad_sptype.tsv": "8f10e57e11507492cf988e8ad56193f5d6a32a03"
   },
   "query": "c61f729b18f71761e5bd9bae27a40e68fdabce69",
   "answeredBy": [
     "SIMBAD-Harvard"
   ],
-  "request": "383642236cefb5235eb614877e4b05bd7129eb34",
+  "request": "98625ebb9f6c94c6feed13ead28651c27a5b2011",
   "requestFrom": [
     "data/membership/membership-manifest.tsv"
   ]

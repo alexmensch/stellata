@@ -104,6 +104,13 @@ export function spineDesignations(row: SpineRow): string[] {
   });
 }
 
+/** Each Tycho-2 entry a row sits on, to that row's index. */
+export function rowIndexByTyc(rows: readonly SpineRow[]): Map<string, number> {
+  const byTyc = new Map<string, number>();
+  rows.forEach((r, i) => { if (r.tyc !== '') byTyc.set(r.tyc, i); });
+  return byTyc;
+}
+
 export interface SpineCounts {
   rows: number;
   /** Rows carrying a value, per column — the fill rate a frozen artifact is

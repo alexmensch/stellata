@@ -1,4 +1,4 @@
-// Tycho-2's two tables filtered to the TYCs the manifest and IV/25 mention: the request set, the TYC1 bands, the phased pull and its cover gate. See README.md.
+// Tycho-2's two tables filtered to the TYCs the manifest and IV/25 mention and the manifest's HIPs: the request set, the TYC1 bands, the phased pull and its cover gate. See README.md.
 
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 import type { Check, DeclaredOutputs } from '../../util/emit-artifacts';
@@ -40,6 +40,12 @@ export function tycho2Request(manifestTycs: Iterable<string | null>, iv25Tycs: I
 }
 
 export const requestLines = (request: Tycho2Request): string[] => [...request.mentioned].sort(compareCodeUnits);
+
+/** The TYCs, then the manifest HIPs whose rows the Tycho-2 pull also keeps. */
+export const tycho2RequestLines = ({ request, hips }: Tycho2PullInputs): string[] => [
+  ...requestLines(request),
+  ...[...hips].map(String).sort(compareCodeUnits).map((hip) => `HIP ${hip}`),
+];
 
 export const TYC1_MIN = 1;
 export const TYC1_MAX = 9537;
@@ -96,7 +102,7 @@ export const MAIN: Tycho2Table = {
     vizierColumn('EpRAm', 'ep_ra', FLOAT), vizierColumn('EpDEm', 'ep_de', FLOAT),
     ...motion, ...icrs, ...photometry,
   ],
-  keptShare: { min: 0.98, max: 1 },
+  keptShare: { min: 0.98, max: 1.01 },
   spotRows: [{
     key: 'ra_mdeg',
     value: '34.60250679',
@@ -104,14 +110,21 @@ export const MAIN: Tycho2Table = {
       tyc1: '3694', tyc2: '2544', tyc3: '1', de_mdeg: near(56.55991447, 1e-6), ep_ra: near(1991.07, 0.01), ep_de: near(1991, 0.01),
       pm_ra: near(341.5, 0.05), pm_de: near(-223.6, 0.05), vt_mag: near(8.354, 0.001),
     },
+  }, {
+    key: 'ra_mdeg',
+    value: '76.57874132',
+    cells: { tyc1: '102', tyc2: '835', tyc3: '2', hip: '23752', vt_mag: near(10.013, 0.001) },
   }],
 };
 
 export const SUPPL1: Tycho2Table = {
   vizierId: 'I/259/suppl_1',
   columns: [...tycColumns, vizierColumn('flag', 'flag'), ...icrs, ...motion, ...photometry],
-  keptShare: { min: 0.004, max: 0.012 },
-  spotRows: [{ key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } }],
+  keptShare: { min: 0.008, max: 0.024 },
+  spotRows: [
+    { key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } },
+    { key: 'hip', value: '95517', cells: { tyc1: '9088', tyc2: '1001', tyc3: '2', flag: 'H', vt_mag: near(11.261, 0.001) } },
+  ],
 };
 
 export const TABLES = { main: MAIN, suppl1: SUPPL1 } as const;
@@ -127,11 +140,14 @@ export function bandPhase(table: Tycho2Table, [lo, hi]: readonly [number, number
   return { ...query, scope: { kind: 'whole-table', maxRows: TYC1_BAND_ROWS, asu } };
 }
 
-function tycReader(table: Tycho2Table): (row: Row) => string {
+/** The row's TYC when the pull keeps it, else null. */
+function keptTyc(table: Tycho2Table, { request, hips }: Tycho2PullInputs): (row: Row) => string | null {
   const cells = cellReader(table.columns, table.vizierId);
   return (row) => {
     const cell = cells(row);
-    return tycKey([Number(cell('tyc1')), Number(cell('tyc2')), Number(cell('tyc3'))]);
+    const tyc = tycKey([Number(cell('tyc1')), Number(cell('tyc2')), Number(cell('tyc3'))]);
+    const hip = cell('hip') ?? '';
+    return request.mentioned.has(tyc) || (hip !== '' && hips.has(Number(hip))) ? tyc : null;
   };
 }
 
@@ -165,7 +181,13 @@ export interface Tycho2Inputs {
   readonly requestFrom: readonly string[];
 }
 
-export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, requestFrom }: Tycho2Inputs): PhasedPull<Tycho2Key> {
+export interface Tycho2PullInputs extends Tycho2Inputs {
+  /** The manifest's HIPs: a row whose `hip` names one is kept too, so both entries of a pair stay (README.md#the-request-set). */
+  readonly hips: ReadonlySet<number>;
+}
+
+export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, inputs: Tycho2PullInputs): PhasedPull<Tycho2Key> {
+  const { request, requestFrom, hips } = inputs;
   const keys = Object.keys(TABLES) as Tycho2Key[];
   const bands = tyc1Bands();
   const phases = new Map(keys.flatMap((key) => bands.map((band) => [`${key} ${band[0]}-${band[1]}`, { key, phase: bandPhase(TABLES[key], band) }] as const)));
@@ -180,7 +202,7 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
     phases: Object.fromEntries([...phases].map(([name, { phase }]) => [name, phase])),
     tables,
     release: vizierRelease(keys.map((key) => TABLES[key])),
-    request: { request: requestLines(request), requestFrom },
+    request: { request: tycho2RequestLines(inputs), requestFrom },
     async run(ask, log) {
       if (request.mentioned.size === 0) throw new Error(`${requestFrom.join(' and ')} name no TYC between them, so there is nothing to pull`);
       const outside = unscannable(request.mentioned);
@@ -188,13 +210,13 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
         throw new Error(`${outside.length} mentioned TYC(s) fall outside the scanned TYC1 span [${TYC1_MIN}, ${TYC1_MAX}] `
           + `(${sample(outside)}); widen the span or fix the request set`);
       }
-      log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new)`);
+      log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new), plus rows naming one of ${hips.size} manifest HIPs`);
       const kept = { main: new Map<string, Row>(), suppl1: new Map<string, Row>() };
-      const tycOf = { main: tycReader(MAIN), suppl1: tycReader(SUPPL1) };
+      const keep = { main: keptTyc(MAIN, inputs), suppl1: keptTyc(SUPPL1, inputs) };
       for (const { key, phase } of phases.values()) {
         for (const row of await ask(phase)) {
-          const tyc = tycOf[key](row);
-          if (request.mentioned.has(tyc)) kept[key].set(tyc, row);
+          const tyc = keep[key](row);
+          if (tyc !== null) kept[key].set(tyc, row);
         }
       }
       for (const key of keys) {

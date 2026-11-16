@@ -52,7 +52,7 @@ relational:
    letters and his Latin overflow are read differently: `α UMa` outranks
    `50 UMa`, while atlases print `15 UMa` over `f UMa`. A Latin-letter
    record with a Flamsteed number displays the number; one with none keeps
-   its letter (<!-- count:build-catalog/naming.name.own.bayer-latin -->201<!-- /count --> records displaying their own, `naming.name.own.bayer-latin`,
+   its letter (<!-- count:build-catalog/naming.name.own.bayer-latin -->202<!-- /count --> records displaying their own, `naming.name.own.bayer-latin`,
    with borrowed Latin-letter labels under their own codes — the far-southern
    `p Eri` / `f Pup` series, outside what Greenwich could catalogue).
    The Gaia tail and the `SID #<n>` last resort below it belong to the

@@ -1,12 +1,12 @@
 {
   "ledger": {
-    "rows": 983938,
-    "max_sid": 984157,
-    "sha256": "1521a92b31083a8bd4af6512d535bc78bc1281d4528a05fec11400f3dc42951a"
+    "rows": 983985,
+    "max_sid": 984204,
+    "sha256": "b43afed7a8499c0535d25b8170d82d96ad992acbafb284f82ebaa25257ad1494"
   },
   "events": {
-    "rows": 4013,
-    "max_sid": 984157,
-    "sha256": "65ed6878710c0b65547931db6ec9a935c7e46581b8d1d738bffda124404f7090"
+    "rows": 4108,
+    "max_sid": 984204,
+    "sha256": "d8813b04a458d153309e05723b49cf05539466feba933fcad5f6afc10110e6bf"
   }
 }

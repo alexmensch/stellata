@@ -41,10 +41,6 @@ Of the spine's **1,537** 2p rows: **1,219** route
 (272 of the 283 `distRefusedNoOwnedParallax` rows are 2p); **36** reach this
 cascade. The cascade did not narrow — the catalogue stopped building the records.
 
-Do not read that 1,537 against Tycho-2's **1,537 `pflag='X'` rows**
-(`data/tycho2/README.md`): the two counts matching to the digit is a coincidence
-of unrelated catalogues.
-
 Routing, pinned in `../../build-catalog-expected.json` as `pmRescue*`. The
 cascade returns the shared shape (`../../cascade-result.ts`), so a skipped
 candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
@@ -53,10 +49,10 @@ candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
 
 | Route | Key | Rows |
 |---|---|---|
-| `tycho2` | the record's own TYC | **<!-- count:build-catalog/placement.pm-rescue.tycho2 -->71<!-- /count -->** |
+| `tycho2` | the record's own TYC | **<!-- count:build-catalog/placement.pm-rescue.tycho2 -->72<!-- /count -->** |
 | `cns5` | its own GJ, non-Gaia citation only | **<!-- count:build-catalog/placement.pm-rescue.cns5 -->22<!-- /count -->** |
 | `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **<!-- count:build-catalog/placement.pm-rescue.simbad -->113<!-- /count -->** |
-| `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->63<!-- /count -->** |
+| `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->62<!-- /count -->** |
 | `none` | — | **<!-- count:build-catalog/placement.pm-rescue.none.unreached -->21<!-- /count -->** |
 
 The order is the direction cascade's own designation-joined order, so a
@@ -64,10 +60,10 @@ first-order catalogue always outranks the second-order index.
 
 **`velocityVia` credits the catalogue, not the route to it.** A row's PM came
 from Tycho-2 whether the direction tier or this cascade found it, so
-`velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->144<!-- /count -->**) counts the direction tier's own Tycho-2 motions
+`velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->145<!-- /count -->**) counts the direction tier's own Tycho-2 motions
 plus this cascade's `tycho2` row above, against a `tycho2` direction tier of
 **<!-- count:build-catalog/placement.direction.tycho2.mean -->69<!-- /count -->** mean, **<!-- count:build-catalog/placement.direction.tycho2.photocentre -->4<!-- /count -->** photocentre and **<!-- count:build-catalog/placement.direction.tycho2.observed -->8<!-- /count -->** observed positions, and the two counts answer different questions. `velocityZero`
-(**<!-- count:build-catalog/velocityZero -->91<!-- /count -->**) is Sol, the **<!-- count:build-catalog/placement.velocity.clamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
+(**<!-- count:build-catalog/velocityZero -->90<!-- /count -->**) is Sol, the **<!-- count:build-catalog/placement.velocity.clamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
 rows this cascade leaves without a motion.
 
 **Neither join widens, and that is measured rather than argued.** A 2p row is

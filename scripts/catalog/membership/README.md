@@ -33,10 +33,11 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The four ledgers' codecs, one leaf each:
+  additions-ledger-tsv.ts         The five ledgers' codecs, one leaf each:
   binding-review-tsv.ts           header check, decode and sort order.
   label-drops-tsv.ts
   merge-divergence-tsv.ts
+  pair-review-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,
                                   apart from the codecs so the row-assembly
                                   rules reach no ledger file. The review
@@ -54,7 +55,7 @@ scripts/catalog/membership/
                                   module's, so no phase reaches a declaration.
   membership-lineage-pure.ts      This stage's lineage: reason codes, the
     (+ test)                      outcome union and its serialiser, the
-                                  five ledgers as views of it
+                                  six ledgers as views of it
                                   (#membership-lineage), its count blocks'
                                   types, membershipTotals and the build
                                   log's summary, and the change
@@ -63,8 +64,11 @@ scripts/catalog/membership/
                                   the build lacks.
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, then runs each phase in order
-                                  — binding/spine-settle, spine side, the
-                                  merge-derivation shadow, the fold check,
+                                  — the pair rule, binding/spine-settle and
+                                  the spine side (repeated until SIMBAD's
+                                  check refuses no move), the merge
+                                  derivation, the
+                                  fold check,
                                   additions/admission, the magnitude rows —
                                   and joins their rows,
                                   outcomes and identity rows. The test
@@ -79,17 +83,23 @@ scripts/catalog/membership/
                                   the unattested outcomes (routedRow), for
                                   spine rows and additions alike. Pure.
   spine-match-pure.ts             matchSpineToManifest, the parity gate's
-                                  spine ↔ manifest matcher. Pure.
+                                  spine ↔ manifest matcher, and
+                                  withRecordMoves, the spine rows as the
+                                  pair rule's HIP moves leave them. Pure.
   binding-review-dispositions-    The dispositions' columns, closed bases and
     pure.ts                       reader, on the same terms.
   binding-review-dispositions-    BINDING_REVIEW_DISPOSITIONS, the curated
     source.ts                     dispositions' declaration
                                   (../../util/sources/).
+  pair-review-dispositions-       The pair-review queue's dispositions:
+    pure.ts (+ test)              columns, reader and its checks, and
+  pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
+    source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
-                                  multiples.tsv and the review dispositions,
-                                  and emits data/membership/ plus the label
+                                  multiples.tsv, both queues' dispositions
+                                  and SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
                                   merge's queue
                                   (data/classic-ids/label_flips.tsv) and its
                                   lineage, baseline rotation and change
@@ -107,7 +117,7 @@ scripts/catalog/membership/
                                   lineage files included (MEMBERSHIP_LINEAGE,
                                   /src/catalog-format/pipeline-outputs/).
                                   Side-effect free.
-  committed-artifacts.test.ts     Each of the four codecs above round-trips
+  committed-artifacts.test.ts     Each of the codecs above round-trips
                                   its committed file byte for byte.
   membership-manifest-gate.test.ts
                                   The replacement parity gate, (i)–(iii) below,
@@ -131,8 +141,8 @@ scripts/catalog/membership/
                                   astrometry that comes with it. Own README.
   merge-derivation/               Each spine row's merge decision held
                                   against what the primaries' own links
-                                  derive, the pair rule, and the divergence
-                                  ledger it writes. Moves no row. Own README.
+                                  derive, the pair rule it applies, and the
+                                  divergence ledger it writes. Own README.
   spine-corrections/              The curated corrections to AT-HYG's merge
                                   decisions, and the spine they leave. Own
                                   README.
@@ -221,10 +231,10 @@ a code with a winner names the highest-precedence source proposing it
 
 | Code | Rows | What it is |
 |---|---|---|
-| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,125<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->861<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
+| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,287<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
 | `refused` | <!-- count:membership-manifest/membership.binding.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
-| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->274<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->47<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
+| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->228<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
 
@@ -324,7 +334,10 @@ arithmetic and label-flips replay:
 - **(i)** every spine row resolves to exactly one manifest row — with the
   folds of [Correcting a merge decision](#correcting-a-merge-decision) as the only exception, whose count is
   pinned and whose every pair is checked, so a second row landing on someone
-  else's record still fails.
+  else's record still fails. Each row is matched on the designations its
+  record answers to once the pair rule has moved a HIP onto another spine
+  record (`withRecordMoves`, over the ledgered moves, count pinned;
+  [Applying the pair rule](merge-derivation/README.md#applying-the-pair-rule)).
   `matchSpineToManifest` resolves it through the classes SID allocation
   resolves a record by — `sameAsClasses` (`../../sid/sid-pure.ts`) over the
   manifest's designations plus `data/sid/sameas-overrides.tsv`, ambiguous
@@ -384,10 +397,11 @@ addition's binding, each label flip and label drop — and
 new variant without a row fails typecheck. `ParamsOf` declares each code's
 params beside the codes; the writer and the views both read through it, so
 a renamed key fails typecheck on both sides. Every record gets an admission
-row. `membershipLedgers` generates the five ledgers from those rows and the
+row. `membershipLedgers` generates the six ledgers from those rows and the
 identity rows alone; the first four are byte-identical to the files they
-replaced as writers, and `merge-divergence.tsv` was born a view
-([The divergence ledger](merge-derivation/README.md#the-divergence-ledger)).
+replaced as writers, and `merge-divergence.tsv` and `pair-review.tsv` were
+born views ([The divergence ledger](merge-derivation/README.md#the-divergence-ledger),
+[The pair-review queue](merge-derivation/README.md#the-pair-review-queue)).
 
 **The count snapshot is a fold of these rows.** `membership-manifest-expected.json`
 is staged ([The staged snapshot](../../util/counts/README.md#the-staged-snapshot)):

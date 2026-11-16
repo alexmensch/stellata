@@ -1,15 +1,15 @@
 {
   "inputs": {},
   "outputs": {
-    "data/tycho2/tycho2_main.tsv": "ac3bc9a83bf5abf2b8045017c9ebc9d6bcdd8bf4",
-    "data/tycho2/tycho2_suppl1.tsv": "de0c1700d005fea964317facfc18204987833b69"
+    "data/tycho2/tycho2_main.tsv": "604070e2a62b924e50f8af0d7d0e72abe1014cbc",
+    "data/tycho2/tycho2_suppl1.tsv": "bbc669983c0cfabdb73ed013769b5629382974ba"
   },
   "query": "ccfb145f4471c6d98a77c6dc354f3e1e8bb0ce48",
   "answeredBy": [
     "CfA"
   ],
   "release": "VizieR I/259/tyc2, VizieR I/259/suppl_1",
-  "request": "f96f93bb5fc5c9d3a16126a699aa75aea567ac78",
+  "request": "4b5062d95962999b7779fa9ea37cc2bd93107a97",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/classic-ids/tyc2_hd.tsv"

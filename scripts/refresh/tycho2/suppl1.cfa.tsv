@@ -1,13 +1,13 @@
 #
 #   VizieR Astronomical Server vizier.cfa.harvard.edu
-#    Date: 2026-11-15T18:37:53 [V7.6.1]
+#    Date: 2026-11-16T11:37:42 [V7.6.1]
 #   In case of problem, please report to:	cds-question@unistra.fr
 #
 #
 #Coosys	J2000:	eq_FK5 J2000
 #INFO	service_protocol=ASU	  IVOID of the protocol through which the data was retrieved
-#INFO	request_date=2026-11-15T18:37:53	  Query execution date
-#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=I%2F259%2Fsuppl_1&-out=TYC1%2CTYC2%2CTYC3%2Cflag%2CRA%28ICRS%29%2CDE%28ICRS%29%2CpmRA%2CpmDE%2Ce_pmRA%2Ce_pmDE%2CBTmag%2Ce_BTmag%2CVTmag%2Ce_VTmag%2Cprox%2CHIP&TYC1=4&TYC2=1130&-out.max=21	  Full request URL
+#INFO	request_date=2026-11-16T11:37:42	  Query execution date
+#INFO	request=https://vizier.cfa.harvard.edu/viz-bin/asu-tsv?-source=I%2F259%2Fsuppl_1&-out=TYC1%2CTYC2%2CTYC3%2Cflag%2CRA%28ICRS%29%2CDE%28ICRS%29%2CpmRA%2CpmDE%2Ce_pmRA%2Ce_pmDE%2CBTmag%2Ce_BTmag%2CVTmag%2Ce_VTmag%2Cprox%2CHIP&TYC1=4%2C9088&TYC2=1130%2C1001&-out.max=21	  Full request URL
 #INFO	contact=cds-question@unistra.fr	  Email or URL to contact publisher
 #INFO	server_software=VizieR/7.6.1	  Software version
 #INFO	publisher=CDS	  Data centre that produced the VOTable
@@ -48,4 +48,5 @@ TYC1	TYC2	TYC3	flag	RA(ICRS)	DE(ICRS)	pmRA	pmDE	e_pmRA	e_pmDE	BTmag	e_BTmag	VTma
  	 	 	 	deg	deg	mas/yr	mas/yr	mas/yr	mas/yr	mag	mag	mag	mag	 	
 ----	-----	-	-	------------	------------	-------	-------	-----	-----	------	------	------	------	---	------
    4	 1130	1	H	  0.01814144	  3.94648893	  226.3	  -12.8	  6.2	  3.2	      	      	12.449	 0.009	999	     6
+9088	 1001	2	H	291.43192098	-62.18580810	   53.9	 -146.4	  1.1	  1.0	      	      	11.261	 0.095	 32	 95517
 

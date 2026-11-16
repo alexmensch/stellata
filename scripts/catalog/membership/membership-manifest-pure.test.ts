@@ -14,7 +14,7 @@ import { TYCHO2 } from '../tycho2-source';
 import { GLIESE } from '../gliese-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
 import { buildMembership, type MembershipResult } from './membership-manifest-pure';
-import { matchSpineToManifest } from './spine-match-pure';
+import { matchSpineToManifest, withRecordMoves } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
@@ -29,7 +29,8 @@ import { BINDING_REVIEW } from './binding-review-tsv';
 import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
-import { mergeDivergences, mergeLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { PAIR_REVIEW } from './pair-review-tsv';
+import { mergeDivergences, pairLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
 import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
@@ -57,6 +58,7 @@ import { fold } from '../../util/counts/tally-pure';
 import { ORIGIN_KEYS } from './origin-keys';
 import { printedHipTable } from '../photometry/photometry-fixture';
 import type { PrintedHipValue } from '../photometry/hip-photometry-parse-pure';
+import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
@@ -227,6 +229,8 @@ const input = {
   evidence: gateEvidence(tables),
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
+  simbadTycHd: new Map<string, SimbadTycHdRow>(),
+  pairDispositions: new Map(),
   magnitudeTerm: null,
   publishesGaiaParallax: (_sourceId: string) => true,
   keys: ORIGIN_KEYS,
@@ -962,7 +966,7 @@ describe('codecs', () => {
       gliese: parseGlieseTsv(gliese, GLIESE),
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
-    const m = mergeLinksFrom(t, spineKeys(spine));
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine) };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
     expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);
@@ -971,27 +975,30 @@ describe('codecs', () => {
     expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
   });
 
-  it('ledgers every merge divergence but a confirmed pair, and round-trips the ledger', () => {
+  it('ledgers every merge divergence but a confirmed pair and a move onto an entry, queues a review, and round-trips both', () => {
     const key = 'spine:9';
     const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
     const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
     const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
-    const ledger = membershipLedgers([
+    const { mergeDivergence: ledger, pairReview } = membershipLedgers([
       merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', sourceId: '5' }),
-      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5', onto: 'entry' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', sourceId: '5', onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
-    ], identity).mergeDivergence;
-    expect(ledger).toHaveLength(4);
+    ], identity);
+    expect(ledger).toHaveLength(3);
     expect(ledger).toEqual(expect.arrayContaining([
-      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-2', evidence: '5' },
-      { ...ids, divergence: 'pair_review', cells: 'hip', derived: '1-1-1|1-1-2', evidence: 'no_hip_source' },
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
       { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
     ]));
+    expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);
     expect(MERGE_DIVERGENCE.serialize(MERGE_DIVERGENCE.parse(text))).toBe(text);
+    const queue = PAIR_REVIEW.serialize(pairReview);
+    expect(PAIR_REVIEW.serialize(PAIR_REVIEW.parse(queue))).toBe(queue);
   });
 
   it('parses dispositions under the closed enums, refusing an unstated basis or evidence', () => {
@@ -1057,6 +1064,26 @@ describe('matchSpineToManifest', () => {
 
   it('reports the manifest rows no spine row reaches', () => {
     expect(match.unreached).toEqual([4, 5, 6]);
+  });
+});
+
+describe('withRecordMoves', () => {
+  const spine = [
+    spineRow({ tyc: '8-1-2', hip: '77', hd: '60' }),
+    spineRow({ tyc: '8-1-1', hd: '61' }),
+  ];
+  const manifest = [manifestRow({ tyc: '8-1-2', hd: '60' }), manifestRow({ tyc: '8-1-1', hip: '77', hd: '61' })];
+
+  it('matches both spine rows on their own records once the HIP has moved', () => {
+    const moved = withRecordMoves(spine, [{ tyc: '8-1-2', derived: '8-1-1' }]);
+    expect(moved).toEqual([spineRow({ tyc: '8-1-2', hd: '60' }), spineRow({ tyc: '8-1-1', hip: '77', hd: '61' })]);
+    expect(matchSpineToManifest(moved.map(spineDesignations), manifest, []).manifestIndex).toEqual([0, 1]);
+    expect(matchSpineToManifest(spine.map(spineDesignations), manifest, []).manifestIndex).toEqual([1, 1]);
+  });
+
+  it('refuses a move naming no spine row, or one onto a row that carries a HIP', () => {
+    expect(() => withRecordMoves(spine, [{ tyc: '8-1-9', derived: '8-1-1' }])).toThrow(/8-1-9 -> 8-1-1/);
+    expect(() => withRecordMoves(spine, [{ tyc: '8-1-1', derived: '8-1-2' }])).toThrow(/8-1-1 -> 8-1-2/);
   });
 });
 
@@ -1202,5 +1229,51 @@ describe('membership lineage', () => {
 
   it('writes an empty diff when nothing changed', () => {
     expect(diffLineage(sorted(result.lineage), sorted(buildMembership(input).lineage))).toEqual([]);
+  });
+});
+
+/** HIP 90 on TYC 5-5-1 (HD 500), which Tycho-2 also gives to 5-5-2, the entry
+ *  whose Gaia neighbour is the HIP's own source 5050. */
+describe('buildMembership — the pair rule', () => {
+  const pairTables: PrimaryTables = {
+    ...tables,
+    iv25: [...tables.iv25, { tyc: '5-5-1', hd: 500, nHd: 1, nTyc: 1 }, { tyc: '5-5-2', hd: 501, nHd: 1, nTyc: 1 }],
+    hipI239: new Set([...tables.hipI239, 90]),
+    tycho2: new Map([...tables.tycho2, ['5-5-1', tycho2(8.5, 90)], ['5-5-2', tycho2(8.6, 90)]]),
+    tycToSource: new Map([...tables.tycToSource, ['5-5-2', '5050']]),
+    hipToSource: new Map([...tables.hipToSource, [90, '5050']]),
+  };
+  const pairInput = {
+    ...input,
+    spine: [...spine, spineRow({ tyc: '5-5-1', hip: '90', hd: '500' })],
+    tables: pairTables,
+    evidence: gateEvidence(pairTables, new Map([['777', 14.0], ['5050', 8.6]]), new Map(), new Set(['888', '6060', '777', '5050'])),
+  };
+  const simbadNames = (hd: string) => new Map([['5-5-2', { hdIdents: [hd], simbadOid: 1, mainId: null }]]);
+  const hip90 = (r: MembershipResult) => r.rows.find((row) => row.hip === 90);
+
+  it('moves the record onto the entry Gaia names', () => {
+    const moved = buildMembership(pairInput);
+    expect(hip90(moved)?.tyc).toBe('5-5-2');
+    expect(codes(moved)['merge.pair.moves']).toBe(1);
+  });
+
+  it('queues the move SIMBAD names the new entry by another HD for, on a later pass', () => {
+    const queued = buildMembership({ ...pairInput, simbadTycHd: simbadNames('502') });
+    expect(hip90(queued)?.tyc).toBe('5-5-1');
+    expect(queued.pairReview.map((r) => [r.hip, r.reason])).toEqual([[90, 'simbad_refused']]);
+  });
+
+  it('settles a SIMBAD-refused pair by its disposition', () => {
+    const disposed = buildMembership({
+      ...pairInput,
+      simbadTycHd: simbadNames('502'),
+      pairDispositions: new Map([[90, {
+        hip: 90, entries: ['5-5-1', '5-5-2'], keepEntry: '5-5-2', basis: 'tycho2_position' as const, evidence: 'sep 0.2"',
+      }]]),
+    });
+    expect(hip90(disposed)?.tyc).toBe('5-5-2');
+    expect(disposed.pairReview).toEqual([]);
+    expect(codes(disposed)['merge.pair.disposed']).toBe(1);
   });
 });

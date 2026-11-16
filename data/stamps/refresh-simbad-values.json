@@ -1,13 +1,13 @@
 {
   "inputs": {},
   "outputs": {
-    "data/simbad/simbad_values.tsv": "7fe8bb3b63584824775d9783f9c2fc11612d8641"
+    "data/simbad/simbad_values.tsv": "e352ad0ef3e0b6a454cb39a1da974d613c790dee"
   },
   "query": "9824f09ba2af64af04b6ff4be993b96036c97dc4",
   "answeredBy": [
     "SIMBAD-Harvard"
   ],
-  "request": "e4b2e3bd15214d8cf83be6ed9a2bb9b4561e3795",
+  "request": "530e907f35592833a4c92b6e195396c388514f38",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/gaia/gaia_dr3_astrometry.tsv",

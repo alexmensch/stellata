@@ -69,7 +69,7 @@ export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as c
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
 export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;
-export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'pair_review', 'derived_only', 'differs'] as const;
+export const MERGE_DIVERGENCE_KINDS = ['unlinked', 'pair_moves', 'derived_only', 'differs'] as const;
 export type MergeDivergenceKind = (typeof MERGE_DIVERGENCE_KINDS)[number];
 /** see merge-derivation/README.md#the-divergence-ledger */
 export interface MergeDivergenceRow extends RecordIdentifiers {
@@ -77,6 +77,19 @@ export interface MergeDivergenceRow extends RecordIdentifiers {
   cells: string;
   derived: string;
   evidence: string;
+}
+
+/** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
+export const PAIR_REVIEW_REASONS = [
+  'no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused', 'simbad_refused',
+] as const;
+export type PairReviewReason = (typeof PAIR_REVIEW_REASONS)[number];
+
+export const PAIR_REVIEW_COLUMNS = [...RECORD_KEY_COLUMNS, 'entries', 'reason'] as const;
+/** see merge-derivation/README.md#the-pair-review-queue */
+export interface PairReviewRow extends RecordIdentifiers {
+  entries: readonly string[];
+  reason: PairReviewReason;
 }
 
 /** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /

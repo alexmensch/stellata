@@ -13,5 +13,6 @@ export const MEMBERSHIP_OUTPUTS = declareOutputs({
   bindingReview: DATA_FILES.bindingReview,
   labelDrops: DATA_FILES.labelDrops,
   mergeDivergence: DATA_FILES.mergeDivergence,
+  pairReview: DATA_FILES.pairReview,
   ...stageOutputFiles(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE),
 }, stageFamilies(LINEAGE_REPO_LAYOUT, MEMBERSHIP_LINEAGE));

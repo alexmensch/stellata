@@ -78,7 +78,7 @@ tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescu
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,743<!-- /count --> oids, up
+Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,744<!-- /count --> oids, up
 from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
@@ -148,7 +148,7 @@ object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
 ### What it adjudicates
 
 The two classes it answers in, the 220 rows no committed table could detect,
-the 10 it vindicates against IV/25, and the four-witness split of the 15 it
+the 10 it vindicates against IV/25, and the four-witness split of the 4 it
 still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
 and [Which witness decides a close pair's HD](/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd). That folder owns
 what a consumer may conclude from these tables; this one owns what they are.
@@ -376,6 +376,10 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   flag, [Multiplicity status](/scripts/catalog/multiplicity/README.md#multiplicity-status)) +
   `build:membership` and `build:astrometry-request`, whose binding
   derivation reads its cross-IDs (`scripts/catalog/spine/primaries-tables.ts`).
+- `simbad_tyc_hd.tsv` → `build:membership`, the pair rule's check on a move
+  onto the other entry of a Tycho-2 pair
+  ([Applying the pair rule](/scripts/catalog/membership/merge-derivation/README.md#applying-the-pair-rule)),
+  and `scripts/catalog/simbad/simbad-tyc-hd-parse.test.ts`'s adjudication.
 - `simbad_wds_sptype.tsv` → `scripts/binaries/build-binaries.ts` Stage 6
   (per-component sp_type, beats AT-HYG's system-inherited string).
 - `sptype_overrides.tsv` → `scripts/catalog/spectral/sptype-overrides-source.ts`,
@@ -404,7 +408,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
   (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/placement.pm-rescue.simbad -->113<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->63<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->62<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.

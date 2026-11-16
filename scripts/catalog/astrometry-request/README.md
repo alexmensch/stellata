@@ -67,7 +67,7 @@ source proposes
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The 1,778 primaries rows carrying none are the no-Gaia tier. The
+The 1,779 primaries rows carrying none are the no-Gaia tier. The
 `term = magnitude` rows are not requested: their astrometry is the magnitude
 pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
@@ -81,8 +81,8 @@ different sets, so the request is the union of all four:
 | Contribution | Ids | Consumer |
 |---|---|---|
 | `../classic-ids/`' binding-gate candidates | 354,987 | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 376,305, +21,556 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows, and every addition item `additionItemCells` enumerates, admitted or not |
-| `../../binaries/`' Stage 2 candidates | 24,512, +12,409 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
+| `../membership/`' binding-derivation candidates | 376,306, +21,557 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows both as they stand and with every move the pair rule's Gaia test makes, and every pair-review disposition, applied, so either entry a queued pair can ship on is covered ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)), and every addition item `additionItemCells` enumerates over each arrangement, admitted or not |
+| `../../binaries/`' Stage 2 candidates | 24,512, +12,408 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
 | `binding-review-dispositions.tsv`' `keep_source_id` column | 53, +30 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
 
 `build:astrometry-request` prints every figure in this table — each

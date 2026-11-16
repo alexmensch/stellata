@@ -1,19 +1,19 @@
 # Tycho-2 — astrometry and BT/VT photometry
 
 Two TSVs from VizieR `I/259`, filtered to the TYCs our designation
-sources mention. Tycho-2 is the first-order source for exactly the rows
+sources mention and the rows naming a manifest HIP. Tycho-2 is the first-order source for exactly the rows
 Gaia misses: [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers) routes the direction, proper
 motion and V-magnitude cascades here for TYC-bearing records with no
 Gaia solution.
 
 ```
-tycho2_main.tsv     370,140 rows from I/259/tyc2. Mean position
+tycho2_main.tsv     372,630 rows from I/259/tyc2. Mean position
                     (ra_mdeg/de_mdeg), the observation epochs behind it
                     (ep_ra/ep_de), proper motion + errors, BT/VT + errors,
                     prox, HIP, pflag, and the observed ra_icrs/de_icrs.
                     Which cell a propagation starts from and at which
                     epoch: README.md#which-position-to-propagate-from.
-tycho2_suppl1.tsv   2,713 rows from I/259/suppl_1 — Tycho-1 and
+tycho2_suppl1.tsv   5,910 rows from I/259/suppl_1 — Tycho-1 and
                     Hipparcos stars. Observed position only (no mean
                     solution), PM where flag='H', BT/VT + errors, prox,
                     HIP, flag.
@@ -73,11 +73,9 @@ rather than tuned away.
 `pm_ra` is μ_α* — the cos δ factor is already applied — so it is added along the
 local east tangent directly, never divided by cos δ again.
 
-`ra_icrs` earns its place on the **1,537 `pflag='X'` rows**, which have no mean
+`ra_icrs` earns its place on the **1,802 `pflag='X'` rows**, which have no mean
 solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings are all empty
-there and the observed cell is the only position the row has. (That 1,537 and
-the 1,537 Gaia 2p rows in the spine are unrelated counts that happen to match —
-see the PM rescue's README.) `pflag='P'` (3,953 rows) means the mean solution is
+there and the observed cell is the only position the row has. `pflag='P'` (5,555 rows) means the mean solution is
 the photocentre of an unresolved double, not one star's place.
 
 ## The two tables overlap on 254 TYCs
@@ -85,34 +83,37 @@ the photocentre of an unresolved double, not one star's place.
 Supplement 1 is documented as Tycho-1 stars absent from the main
 catalogue, but 254 of the mentioned TYCs appear in both. **The main table
 wins**: it carries a mean epoch and a proper motion, and the supplement's
-`flag='T'` rows (1,404 of 2,713) carry no PM at all. Consumers read the
+`flag='T'` rows (1,404 of 5,910) carry no PM at all. Consumers read the
 supplement only where the main table has no row.
 
 ## The request set — manifest ∪ IV/25
 
 The pull derives the mentioned-TYC set (`tycho2Request`, `scripts/refresh/tycho2/`) from the
-membership manifest's `tyc` column (372,147) unioned with IV/25's own TYCs
-(471 more than the manifest already names), for 372,618 requested. The union
-is unchanged in size from the spine-era `spine ∪ IV/25`: the manifest admits
-the IV/25 TYCs that the union was widened to cover in the first place.
+membership manifest's `tyc` column (372,164) unioned with IV/25's own TYCs
+(302 more than the manifest already names), for 372,466 requested. The pull
+also keeps every row whose `hip` names one of the manifest's 118,218 HIPs, so
+both entries Tycho-2 gives a HIP are in the table for the pair rule
+([The request set](/scripts/refresh/tycho2/README.md#the-request-set)):
+2,643 main and 3,197 supplement rows (every supplement one `flag='H'`) that
+no TYC names.
 
-`refresh:simbad-tyc-hd` asks the same set: both pulls read it through
+`refresh:simbad-tyc-hd` asks the same TYCs: both pulls read it through
 `readTycRequest`, which parses each side into integer triples, so they cover
 the same entries and a differently-spelled cell cannot drift them apart.
 
-Coverage, re-measured 2026-09-07 against the committed tables:
+Coverage, re-measured 2026-11-16 against the committed tables:
 
 | Cohort | Requested | Reached |
 |---|---|---|
-| Manifest TYCs | 372,147 | 372,129 |
-| IV/25-only TYCs | 471 | 469 |
-| Union | 372,618 | 372,598 |
+| Manifest TYCs | 372,164 | 372,146 |
+| IV/25-only TYCs | 302 | 300 |
+| Union | 372,466 | 372,446 |
 
 The refresh hard-fails on a manifest TYC that reaches neither table **and**
-whose pair entry is unreached too. All 371,416 manifest TYCs with `TYC3=1`
+whose pair entry is unreached too. All 371,375 manifest TYCs with `TYC3=1`
 reach Tycho-2, so a primary that misses is a membership event for [§ 6](/docs/catalog-driver.md#6-parity--the-gate-on-any-membership-change) to
 adjudicate, or an upstream regression — not a refresh landing short. The whole
-residual sits in the 731-row component cohort (`TYC3>1`), 713 of which reach,
+residual sits in the 789-row component cohort (`TYC3>1`), 771 of which reach,
 and Tycho-2 carries the pair's `TYC3=1` entry for all 18 that do not: it lists
 as one star a pair IV/25 resolves, so the component's own row never existed to
 be pulled.
@@ -130,9 +131,11 @@ record's placement** — an unreached TYC does not imply an unplaced record, and
 reading it that way is what the pre-manifest wording got wrong.
 
 One limit to know: `reached` is the filtered pull, so a pair entry is visible
-to the gate only when the request set names it too. 619 of the 969 requested
-`TYC3>1` components have no pair primary in the request set, and an unreached
-one among those would fail the gate even where Tycho-2 carries the pair. None
+to the gate only when the pull keeps it — the request set names it, or its
+`hip` names a manifest HIP. 673 of the 969 requested `TYC3>1` components have
+no pair primary in the TYC request set (counted over TYCs alone; a primary
+carrying a manifest HIP is kept anyway), and an unreached one whose primary
+is kept by neither would fail the gate even where Tycho-2 carries the pair. None
 is unreached today; widening the request set to cover every component's pair
 primary is the fix if one ever is.
 
@@ -185,7 +188,7 @@ and 3.7″ away on the observation epochs.
   `scripts/refresh/pull/tap-pure.ts`'s `VIZIER`: CDS, or the CfA mirror when
   CDS is unreachable. The stamp (`data/stamps/refresh-tycho2.json`,
   `answeredBy`) names which answered.
-- **Retrieved**: 2026-08-25; re-pulled from CfA 2026-11-15, byte-identical.
+- **Retrieved**: 2026-08-25; re-pulled from CfA 2026-11-16 with the rows naming a manifest HIP.
 - **Licence**: CDS/VizieR standard academic use; cite
   [Høg 2000](/data/papers/index.md#hog2000).
 
@@ -202,7 +205,7 @@ republish; a re-pull is warranted only when the request set moves.
   components Tycho-2 merged into their pair, which carry a TYC that reaches no
   row of its own ([The request set](#the-request-set--manifest--iv25), [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)).
 - The same parse feeds the **PM rescue cascade**
-  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/placement.pm-rescue.tycho2 -->71<!-- /count -->** rows.
+  (`scripts/catalog/distance/pm-rescue/README.md`) on a further **<!-- count:build-catalog/placement.pm-rescue.tycho2 -->72<!-- /count -->** rows.
   These carry a Gaia position but a 2p solution Gaia fitted no proper motion
   to, and Tycho-2 is the tier admitted without a bibcode check, because a
   1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row

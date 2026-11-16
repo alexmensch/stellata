@@ -14,7 +14,9 @@ import {
   indexSimbadSources,
 } from '../membership/binding/binding-derivation-pure';
 import { BINDING_REVIEW_DISPOSITIONS } from '../membership/binding-review-dispositions-source';
+import { PAIR_REVIEW_DISPOSITIONS } from '../membership/pair-review-dispositions-source';
 import { additionItemCells } from '../membership/additions/addition-items-pure';
+import { applyEveryPairMove, pairLinksFrom } from '../membership/merge-derivation/merge-derivation-pure';
 import { applySpineCorrections } from '../membership/spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from '../membership/spine-corrections/spine-corrections-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
@@ -31,8 +33,10 @@ const OUT = ASTROMETRY_REQUEST_OUTPUTS.files.request;
  *  cross-walk covers IV/25's Tycho ids as well as the spine's for the gate. */
 async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set<string> }> {
   const spine = readArtifact(INHERITED_SPINE);
-  const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
-  const tables = await loadPrimaryTables(kept.map((r) => r.tyc).filter((t) => t !== ''));
+  const corrected = applySpineCorrections(spine, SPINE_CORRECTIONS.read()).kept;
+  const tables = await loadPrimaryTables(corrected.map((r) => r.tyc).filter((t) => t !== ''));
+  const printedV = printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese);
+  const moved = applyEveryPairMove(corrected, pairLinksFrom(tables), PAIR_REVIEW_DISPOSITIONS.read());
   const gate = magnitudeWeighableSourceIds(
     joinOverlayCandidates({
       tyc2Hd: tables.iv25,
@@ -42,10 +46,10 @@ async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set
       tycToSource: tables.tycToSource,
       hipToSource: tables.hipToSource,
     }),
-    printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
+    printedV,
   );
   const derivation = derivationCandidateSourceIds(
-    [...kept, ...additionItemCells(tables, kept)], tables, indexCns5(tables.cns5).cns5ByOwnKey,
+    [corrected, moved].flatMap((rows) => [...rows, ...additionItemCells(tables, rows)]), tables, indexCns5(tables.cns5).cns5ByOwnKey,
     indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless),
   );
   return { gate, derivation };

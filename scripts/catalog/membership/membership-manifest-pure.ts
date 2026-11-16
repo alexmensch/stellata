@@ -1,4 +1,4 @@
-// buildMembership: the membership phases wired in order — corrections, spine bindings, spine side, the merge-derivation shadow, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
+// buildMembership: the membership phases wired in order — corrections, the pair rule, spine bindings, spine side, the merge derivation, folds, additions, magnitude term. Contract: /docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries.
 
 import type { ClassicIdOverlay } from '../classic-ids/classic-id-overlay-pure';
 import type { LabelMergeCounts, LabelOverrides } from '../classic-ids/label-merge/label-merge-pure';
@@ -14,7 +14,11 @@ import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
-import { mergeDivergences, mergeLinksFrom } from './merge-derivation/merge-derivation-pure';
+import {
+  iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
+} from './merge-derivation/merge-derivation-pure';
+import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import type { PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
@@ -56,6 +60,10 @@ export interface MembershipInput {
   /** The committed corrections to AT-HYG's merge decisions
    *  (spine-corrections/README.md). */
   corrections: readonly SpineCorrectionRow[];
+  /** SIMBAD's TYC→HD pull, which can refuse a pair move (merge-derivation/README.md#applying-the-pair-rule). */
+  simbadTycHd: ReadonlyMap<string, SimbadTycHdRow>;
+  /** The committed dispositions of the pair-review queue, by HIP (merge-derivation/README.md#disposing-a-queued-pair). */
+  pairDispositions: ReadonlyMap<number, PairDisposition>;
   /** `magnitude-term/README.md#the-union-dedupes-on-the-derived-binding`. */
   magnitudeTerm: MagnitudeTermSelection | null;
   /** Whether the pulled astrometry gives this source a parallax — what decides
@@ -74,20 +82,30 @@ export interface MembershipResult extends MembershipLedgers {
 export function buildMembership(input: MembershipInput): MembershipResult {
   const { tables, evidence, keys, corrections } = input;
   const idx = indexPrimaries(tables);
-  const { corrected, kept, keptSpineIndex, folds } = applySpineCorrections(input.spine, corrections);
-  const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
+  const correctedSpine = applySpineCorrections(input.spine, corrections);
+  const { corrected, keptSpineIndex, folds } = correctedSpine;
+  const pairLinks = pairLinksFrom(tables);
   const derive = rowDeriver(tables, idx, evidence);
+  const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
+  const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
 
-  const settlement = settleSpineBindings({
-    kept, keyOf, derive, dispositions: input.dispositions, evidence, tables,
-  });
-  const spine = spineSide({
-    kept, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
-    siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
-  });
+  const pair = settlePairRule(
+    correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, input.pairDispositions, tycHds,
+    (rows) => {
+      const settlement = settleSpineBindings({
+        kept: rows, keyOf, derive, dispositions: input.dispositions, evidence, tables,
+      });
+      const spine = spineSide({
+        kept: rows, keyOf, settled: settlement.rows, overlay: input.overlay, overrides: input.overrides,
+        siblingRenderedSourceIds: input.siblingRenderedSourceIds, tables, idx,
+      });
+      return { value: { settlement, spine }, shippedHd: (i) => spine.rows[i].hd };
+    },
+  );
+  const { rows: kept, decided, received, value: { settlement, spine } } = pair;
   const keptKeys = spineKeys(kept);
-  const mergeLinks = mergeLinksFrom(tables, keptKeys);
-  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks).map(
+  const mergeLinks = { ...pairLinks, held: keptKeys };
+  const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(row, mergeLinks, decided.get(i), received.has(i)).map(
     (divergence) => ({ key: keyOf(i), outcome: { kind: 'merge', divergence } }),
   ));
   const folded = foldOutcomes(folds, corrected, spine.rows, keys.spine);

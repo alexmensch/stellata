@@ -97,7 +97,7 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->319<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->115<!-- /count --> on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->259<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->90<!-- /count --> on sibling-letter attribution
 (`binding.gate-mag`, `binding.gate-sibling`; an addition's refusals are
 `addition-binding.*`); falling off the end is a derived refusal.
 `binding.ungateable` (<!-- count:membership-manifest/membership.binding.ungateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
