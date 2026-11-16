@@ -4,7 +4,7 @@ import type { Row } from '../pull/columns-pure';
 import { phaseTemplate, type Ask, type Phase } from '../pull/pull';
 import { csvText, textReply, type HttpReply, type TapClientDeps } from '../pull/tap-pure';
 import { simbadMatchKey } from './simbad-specs-pure';
-import { compareCodeUnits } from '../../../src/astro-core/order-pure';
+import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 /** The tables a fake answers from: each object's ids, its basic cells by SIMBAD column, its flux rows. */
 export interface FakeSimbad {
@@ -19,6 +19,36 @@ const literal = (id: string): string => id.replace(/^'(.*)'$/, '$1');
 const likePrefixes = (where: string | undefined): string[] => [...(where ?? '').matchAll(/LIKE '([^']*)%'/g)].map((m) => m[1]);
 const filters = (where: string | undefined): Set<string> => new Set([...(where ?? '').matchAll(/'([^']*)'/g)].map((m) => m[1]));
 
+/** Positions in `idents`, so an answer keeps the fake's own order. */
+interface IdentIndex {
+  readonly byMatchKey: ReadonlyMap<string, readonly number[]>;
+  readonly byOid: ReadonlyMap<number, readonly number[]>;
+}
+
+const indexes = new WeakMap<FakeSimbad, IdentIndex>();
+
+function push<K>(into: Map<K, number[]>, key: K, at: number): void {
+  const held = into.get(key);
+  if (held === undefined) into.set(key, [at]);
+  else held.push(at);
+}
+
+function identIndex(fake: FakeSimbad): IdentIndex {
+  const held = indexes.get(fake);
+  if (held !== undefined) return held;
+  const byMatchKey = new Map<string, number[]>();
+  const byOid = new Map<number, number[]>();
+  fake.idents.forEach((ident, at) => {
+    push(byMatchKey, simbadMatchKey(ident.id), at);
+    push(byOid, ident.oid, at);
+  });
+  const index = { byMatchKey, byOid };
+  indexes.set(fake, index);
+  return index;
+}
+
+const identsAt = (fake: FakeSimbad, positions: Iterable<number>) => [...new Set(positions)].sort(ascending).map((at) => fake.idents[at]);
+
 export function answer(fake: FakeSimbad, phase: Phase, ids: readonly string[] | undefined): Row[] {
   if (phase.scope.kind === 'whole-table') {
     const rows = fake.wholeTables?.get(phase);
@@ -28,14 +58,15 @@ export function answer(fake: FakeSimbad, phase: Phase, ids: readonly string[] | 
   const asked = ids ?? [];
   const names = phase.columns.map((c) => c.name);
   if (phase.from === 'ident' && phase.scope.key === 'id') {
-    const wanted = new Set(asked.map((id) => simbadMatchKey(literal(id))));
-    return fake.idents.filter((i) => wanted.has(simbadMatchKey(i.id))).map((i) => [String(i.oid), i.id]);
+    const { byMatchKey } = identIndex(fake);
+    return identsAt(fake, asked.flatMap((id) => byMatchKey.get(simbadMatchKey(literal(id))) ?? [])).map((i) => [String(i.oid), i.id]);
   }
   const oids = new Set(asked.map(Number));
   if (phase.from === 'ident') {
     const prefixes = likePrefixes(phase.where);
-    return fake.idents
-      .filter((i) => oids.has(i.oid) && prefixes.some((p) => i.id.startsWith(p)))
+    const { byOid } = identIndex(fake);
+    return identsAt(fake, [...oids].flatMap((oid) => byOid.get(oid) ?? []))
+      .filter((i) => prefixes.some((p) => i.id.startsWith(p)))
       .sort((a, b) => a.oid - b.oid || compareCodeUnits(a.id, b.id))
       .map((i) => [String(i.oid), i.id]);
   }
