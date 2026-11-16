@@ -189,7 +189,6 @@ tyc	hip	hd	gl	gaia_source_id	reason
 				1274596283133663488	no_parallax_published
 				127730373174191360	refused_no_defensible_parallax
 				1277719033592320256	no_parallax_published
-				1279798789901591168	refused_no_defensible_parallax
 				1282530736994382592	refused_no_defensible_parallax
 				128285179869295488	refused_no_defensible_parallax
 				129007077974680576	no_parallax_published
@@ -6877,6 +6876,7 @@ tyc	hip	hd	gl	gaia_source_id	reason
 1953-945-1		76720		691400987748470912	no_parallax_published
 1954-1156-1		79213		688634169816674688	no_parallax_published
 2013-959-2		124588			no_parallax_published
+2019-1250-1		129988		1279798789901591168	refused_no_defensible_parallax
 2021-481-1		129411			no_parallax_published
 2036-148-1		139838		1224087708250606720	refused_no_defensible_parallax
 2037-1595-1		142928		1220440765619294720	refused_no_defensible_parallax
@@ -10312,6 +10312,7 @@ tyc	hip	hd	gl	gaia_source_id	reason
 9167-702-1		269936		4657647498566997504	no_parallax_published
 9167-735-1		269993		4657210747619648000	no_parallax_published
 9168-415-1		271900		5279708262241760256	no_parallax_published
+917-1471-1		129246			no_parallax_published
 9170-2106-1	25146	269475		4651736313584682240	no_parallax_published
 9170-2174-1		36063		4651738821845582464	no_parallax_published
 9170-2189-1		271167		4651372654438082304	no_parallax_published

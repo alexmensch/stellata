@@ -4012,3 +4012,98 @@ sid	date	event	code	params	successor	build_version
 984155	2026-11-08	mint	membership.admit.magnitude	{"key":"gaia-dr3:487543113826526080"}		7.1.15
 984156	2026-11-08	mint	membership.admit.hd-omitted	{"key":"iv25:8622-3390-1"}		7.1.15
 984157	2026-11-08	mint	membership.admit.hd-omitted	{"key":"iv25:2848-696-1"}		7.1.15
+317472	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:8830"}	317282	7.1.30
+389042	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:158544"}	171777	7.1.30
+389181	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:118292"}	192673	7.1.30
+389188	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:153632"}	283160	7.1.30
+389223	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:223069"}	185348	7.1.30
+389268	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:87005"}	73778	7.1.30
+389271	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:312062"}	235423	7.1.30
+389285	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:88436"}	5572	7.1.30
+389614	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:123451"}	236001	7.1.30
+389787	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:189719"}	201084	7.1.30
+389887	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:276369"}	204544	7.1.30
+390462	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:4857"}	231434	7.1.30
+390557	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:239369"}	278065	7.1.30
+391007	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:142706"}	262485	7.1.30
+391268	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:15208"}	264871	7.1.30
+391298	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:92855"}	34459	7.1.30
+391455	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:218798"}	223718	7.1.30
+391538	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:57395"}	150250	7.1.30
+392383	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:144621"}	223707	7.1.30
+392685	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:188127"}	270817	7.1.30
+393018	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:165418"}	70648	7.1.30
+395638	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:306214"}	158899	7.1.30
+396027	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:302958"}	218658	7.1.30
+399325	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:166900"}	32183	7.1.30
+399361	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:111156"}	245480	7.1.30
+401814	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:110829"}	120430	7.1.30
+402192	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:134615"}	285691	7.1.30
+403212	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:144557"}	292638	7.1.30
+410526	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:6458"}	152063	7.1.30
+415650	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:151125"}	84376	7.1.30
+415924	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:133274"}	17353	7.1.30
+419381	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:23298"}	286459	7.1.30
+426886	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:305334"}	224226	7.1.30
+431833	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:134212"}	226271	7.1.30
+433845	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:115065"}	307117	7.1.30
+437194	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:14738"}	221543	7.1.30
+438864	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:90411"}	90416	7.1.30
+446570	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:106306"}	312128	7.1.30
+454258	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:197087"}	211788	7.1.30
+462459	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:294341"}	270319	7.1.30
+489426	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:105995"}	100633	7.1.30
+491651	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:10920"}	208517	7.1.30
+500010	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:9433"}	258736	7.1.30
+543288	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:77230"}	45383	7.1.30
+548877	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:150586"}	193396	7.1.30
+598070	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:281089"}	154536	7.1.30
+630268	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:313041"}	263955	7.1.30
+934642	2026-11-16	merge	allocation.merged.same-class	{"key":"spine:290087"}	209641	7.1.30
+984158	2026-11-16	mint	membership.admit.spine.crosswalk-gated	{"key":"spine:8829"}		7.1.30
+984159	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1590752742798813568"}		7.1.30
+984160	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5374412050596184448"}		7.1.30
+984161	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1177532908459199872"}		7.1.30
+984162	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2881270705919758976"}		7.1.30
+984163	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5490328648067151104"}		7.1.30
+984164	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6734631732295247232"}		7.1.30
+984165	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5605186102307627008"}		7.1.30
+984166	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4139792296555526400"}		7.1.30
+984167	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5385908677315465216"}		7.1.30
+984168	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5269758472276674432"}		7.1.30
+984169	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:3608046547553963776"}		7.1.30
+984170	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1755466490947446272"}		7.1.30
+984171	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6744118967160350592"}		7.1.30
+984172	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2918270337348519936"}		7.1.30
+984173	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5045205139520656000"}		7.1.30
+984174	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6722825039006632704"}		7.1.30
+984175	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4902656416211263744"}		7.1.30
+984176	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5792420185057095040"}		7.1.30
+984177	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1889576157572447872"}		7.1.30
+984178	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1448493530351691520"}		7.1.30
+984179	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5365525866341935872"}		7.1.30
+984180	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2287296107776383488"}		7.1.30
+984181	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:3904527697615028736"}		7.1.30
+984182	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6030151061649040000"}		7.1.30
+984183	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5232140399928615936"}		7.1.30
+984184	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:401504026845406848"}		7.1.30
+984185	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:1684525932004362368"}		7.1.30
+984186	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5883530189610032384"}		7.1.30
+984187	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6117071235344709376"}		7.1.30
+984188	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:831444237591553152"}		7.1.30
+984189	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5836905158500462592"}		7.1.30
+984190	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:3196855282103368448"}		7.1.30
+984191	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6500944692017583104"}		7.1.30
+984192	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4012648207891929216"}		7.1.30
+984193	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:3041912580263260032"}		7.1.30
+984194	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4754985167013791616"}		7.1.30
+984195	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5418436702331452032"}		7.1.30
+984196	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4117430532210566784"}		7.1.30
+984197	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2679687721550773632"}		7.1.30
+984198	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:4692871178179711616"}		7.1.30
+984199	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2509494729004741888"}		7.1.30
+984200	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2919267388238206720"}		7.1.30
+984201	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6124283615003841280"}		7.1.30
+984202	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:6779762149123890688"}		7.1.30
+984203	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:2307165348040488448"}		7.1.30
+984204	2026-11-16	mint	membership.admit.magnitude.no-own-candidate	{"key":"gaia-dr3:5670715346059194112"}		7.1.30
