@@ -19,7 +19,10 @@ the clouds both cover.
   display-name and alias tables, the merge, and both output payloads.
   Every rounded field goes through `../util/round-pure.ts`.
 - `zucker-parse.ts` (+ test) / `zucker-source.ts` — the four tables' parsers
-  and declarations (`../util/sources/`).
+  and declarations (`../util/sources/`). Table A1 reads through `readTable`
+  (`../util/tsv/`), so a malformed or empty coordinate or distance fails the
+  build naming file, line and column; the VizieR units and dashes rows under
+  its header are the rows whose `recno` is not an integer.
 - `clouds-outputs.ts` — the emitArtifacts declaration.
 - `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
   (`../util/sources/README.md#a-json-artifact`): the writer serializes
@@ -34,7 +37,7 @@ the clouds both cover.
 
 Sources under `data/molecular-clouds/`:
 
-- `zucker2020-tablea1.tsv` — 326 sightlines, ~96 unique cloud names.
+- `zucker2020-tablea1.tsv` — 326 sightlines, 94 unique cloud names.
 - `zucker2021-table1.dat` — 12 famous local SF clouds with the 3D
   bounding box of each cloud's spine skeleton.
 - `zucker2021-table2.dat` — fitted radial profiles (Plummer columns)
