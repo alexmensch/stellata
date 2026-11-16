@@ -361,12 +361,11 @@ export function buildOrientationQuat(
 }
 
 /** Filter LVDB rows to those that pass the rendering predicate:
- *  confirmed real, confirmed galaxy, valid ra/dec/distance, and within
+ *  confirmed real, confirmed galaxy, a positive distance, and within
  *  the MAX_DISTANCE_PC heliocentric envelope. */
 export function filterForRendering(rows: LvdbRow[]): LvdbRow[] {
   return rows.filter((r) => {
-    if (!Number.isFinite(r.ra) || !Number.isFinite(r.dec)) return false;
-    if (!Number.isFinite(r.distanceKpc) || r.distanceKpc <= 0) return false;
+    if (r.distanceKpc <= 0) return false;
     if (r.confirmedReal !== 1 || r.confirmedGalaxy !== 1) return false;
     return r.distanceKpc * 1000 <= MAX_DISTANCE_PC;
   });

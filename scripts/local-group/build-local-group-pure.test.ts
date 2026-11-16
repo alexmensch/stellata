@@ -224,9 +224,9 @@ describe('filterForRendering', () => {
     const rows = [makeRow({ confirmedGalaxy: 0 }), makeRow({ confirmedGalaxy: 1 })];
     expect(filterForRendering(rows)).toHaveLength(1);
   });
-  it('drops rows with missing or non-positive distance', () => {
+  it('drops rows with a non-positive distance', () => {
     const rows = [
-      makeRow({ distanceKpc: NaN }),
+      makeRow({ distanceKpc: -1 }),
       makeRow({ distanceKpc: 0 }),
       makeRow({ distanceKpc: 50 }),
     ];
@@ -243,10 +243,6 @@ describe('filterForRendering', () => {
     ];
     const kept = filterForRendering(rows).map((r) => r.key);
     expect(kept).toEqual(['inner', 'm31-band', 'edge-in']);
-  });
-  it('drops rows with missing RA/Dec', () => {
-    const rows = [makeRow({ ra: NaN }), makeRow({ dec: NaN }), makeRow({})];
-    expect(filterForRendering(rows)).toHaveLength(1);
   });
 });
 

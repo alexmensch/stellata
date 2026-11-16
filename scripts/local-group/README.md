@@ -28,7 +28,11 @@ Reads three committed source files under `data/local-group/`, each
 required:
 
 - `lvdb-snapshot.csv` — [Pace 2025](/data/papers/index.md#pace2025)
-  LVDB dwarf_all table (CC0).
+  LVDB dwarf_all table (CC0), read through `readTable`'s CSV path
+  (`../util/tsv/`). `ra`, `dec`, `distance`, `confirmed_real` and
+  `confirmed_galaxy` are required in every row; an empty structure or
+  photometry cell is null, and a malformed cell anywhere fails the build
+  naming file, line and column.
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,
   Sagittarius dSph, M 32, NGC 205; plus standalone-position rows for
   M31 and M33 which LVDB's dwarf_all table excludes.

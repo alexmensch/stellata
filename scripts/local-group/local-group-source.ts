@@ -4,7 +4,7 @@ import { defineSource } from '../util/sources/source';
 import { parseAliases, parseLvdb, parseOverrides } from './local-group-parse';
 
 export const LVDB = defineSource({ file: 'data/local-group/lvdb-snapshot.csv',
-  hint: 'Refresh it by hand from LVDB (/scripts/local-group/README.md#inputs-and-output).', parse: (input) => parseLvdb(input.text()) });
+  hint: 'Refresh it by hand from LVDB (/scripts/local-group/README.md#inputs-and-output).', parse: (input) => parseLvdb(input.text(), input) });
 
 export const LG_OVERRIDES = defineSource({
   file: 'data/local-group/overrides.tsv',
