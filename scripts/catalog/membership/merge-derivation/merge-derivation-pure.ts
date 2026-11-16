@@ -67,7 +67,7 @@ export const UNLINKED_SETTLEMENTS_BY_CELL = {
   gl: ['not-shipped', ...DIFFERS_SETTLEMENTS_BY_CELL.gl, 'v70a-position'],
 } as const satisfies Record<KeyCell, readonly string[]>;
 export type UnlinkedSettlement<C extends KeyCell = KeyCell> = (typeof UNLINKED_SETTLEMENTS_BY_CELL)[C][number];
-type V70aQueueReason = 'v70a-none' | 'v70a-several' | 'no-v70a-astrometry' | 'no-tycho2-entry';
+type V70aQueueReason = 'v70a-none' | 'no-v70a-astrometry' | 'no-tycho2-entry';
 export type UnlinkedVerdict<C extends KeyCell = KeyCell> =
   | { readonly settled: UnlinkedSettlement<C> }
   | { readonly queued: DiffersQueueReason | V70aQueueReason };
@@ -465,8 +465,11 @@ function v70aVerdict(shipped: ShippedCells, m: MergeLinks): Pick<UnlinkedOf<'gl'
   const astrometry = shipped.gl === null ? null : m.positional.v70a(shipped.gl);
   if (astrometry === null) return { verdict: { queued: 'no-v70a-astrometry' }, separations: NOT_WITNESSED };
   const witness = witnessV70a(astrometry, [entry]);
-  const verdict = ({ match: { settled: 'v70a-position' }, none: { queued: 'v70a-none' }, several: { queued: 'v70a-several' } } as const)[witness.kind];
-  return { verdict, separations: witness.separations };
+  if (witness.kind === 'several') throw new Error(`positional witness: one candidate, ${shipped.tyc}, read as several`);
+  return {
+    verdict: witness.kind === 'match' ? { settled: 'v70a-position' } : { queued: 'v70a-none' },
+    separations: witness.separations,
+  };
 }
 
 /** see README.md#settling-an-unlinked-cell */

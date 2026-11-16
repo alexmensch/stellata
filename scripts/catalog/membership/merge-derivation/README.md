@@ -215,7 +215,7 @@ value standing while it waits.
 | `tyc`, `hip` | no rule |
 
 A GJ the witness cannot settle queues as `v70a-none` (the entry is outside the
-tolerance), `v70a-several`, `no-v70a-astrometry` (V/70A prints no position for
-it, mostly `GJ 9xxx` numbers) or `no-tycho2-entry`; the separation rides in the
+tolerance), `no-v70a-astrometry` (V/70A prints no position for it) or
+`no-tycho2-entry`; the separation rides in the
 evidence. The other reasons are the `differs` ones. The counts are the
 `membership.merge.unlinked.*` codes in `../membership-manifest-expected.json`.
