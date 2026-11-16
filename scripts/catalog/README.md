@@ -181,6 +181,9 @@ scripts/catalog/
                                   name prefixes and a record's `gl` cell meet
                                   (data/gliese/README.md). Bottom tier of the
                                   V cascade, trigonometric tier of parallax.
+  gliese-fixture.ts               Test-only V/70A table text, its header
+                                  written once for the spine/ and
+                                  membership/ suites.
   catalog-lookup.ts (+ test)      Reads a built catalog back (loadCatalog) — the
                                   shared reader for verify-catalog, the frozen
                                   corpora, validate-simbad-sample, trace.

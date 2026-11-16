@@ -4,6 +4,7 @@ import { parseGlieseTsv } from '../gliese-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import { tycho2Row } from '../tycho2-fixture';
 import { GLIESE } from '../gliese-source';
+import { glieseTsv } from '../gliese-fixture';
 import { SPINE_COLUMNS, type SpineRow } from './inherited-spine-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -31,11 +32,10 @@ function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
   return tycho2Row('1-1-1', { vtMag, hip });
 }
 
-const GLIESE_TSV = [
-  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+const GLIESE_TSV = glieseTsv(
   'NN 3001\t\t12.1\t\t\t\t\t\t',
   'Gl 165\tAB\t9.0\t\t\t\t\t\t',
-].join('\n') + '\n';
+);
 
 const tables: PrimaryTables = {
   iv25: [
