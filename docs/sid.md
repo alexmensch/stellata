@@ -239,7 +239,9 @@ record carrying the losing key or, where only a curated same-as edge brings
 it into the class, on that edge (`sameas:<a>|<b>`). Or a stage
 decides the merge itself: a `fold` row in
 `data/membership/spine-corrections.tsv` saying AT-HYG carried one star
-twice, or promotion adopting a record as the component it names. The
+twice, promotion adopting a record as the component it names, or a pair
+primary resolving to a record that carries its own HIP, Gaia source or
+synthetic key (`promotion.pair-anchor.own-star`). The
 fold is for the duplicate the derivation cannot dissolve on its own,
 because the twin holds the very source the survivor would otherwise
 derive (VV Lyn, SID 324680 → 324702). A stage's decision on the losing
