@@ -379,9 +379,9 @@ ships stays promotion's to decide; a side whose kept pair Stage 6 could not
 place (`pairs.no-position`) has no decision, so its departure fails closed. Its counts fold into the snapshot's
 `pairs` stage ([Composition, not counting](counts/README.md#composition-not-counting)).
 
-`PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
-bytes gzipped in 379–384 ms across two runs, neither diffing against a
-baseline (2026-11-14).
+`PAIRS_LINEAGE_BUDGET` pins 2.7 MB and 2 s, over both files: 167,851 rows
+(2,384,503 bytes gzipped) and 9,878 identity rows (129,025 bytes), 2,513,528
+bytes in 613 ms, 341 ms of it the baseline (2026-11-16).
 
 ## Runtime-pairs lineage
 

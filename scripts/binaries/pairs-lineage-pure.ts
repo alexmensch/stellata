@@ -18,7 +18,7 @@ import type { DecomposedPair, ResolvedComponent } from './resolve/components-pur
 import { componentIdParams } from './resolve/resolve-lineage-pure';
 import { PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
-export const PAIRS_LINEAGE_BUDGET = { gzipBytes: 2_600_000, writeMs: 2_000 };
+export const PAIRS_LINEAGE_BUDGET = { gzipBytes: 2_700_000, writeMs: 2_000 };
 
 type UnpairedBlank = Exclude<BlankRescueOutcome, 'rescued'>;
 
