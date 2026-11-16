@@ -82,8 +82,8 @@ describe('witnessV70a — against Tycho-2 entries', () => {
     const atMean = witnessV70a(v70a(279.0, 7.9, 0, 0), [
       tycho2Row('1024-2212-2', { raDeg: 279.50029734, decDeg: 8.00067305 }),
     ]);
-    expect(atObserved.separations[0].separationArcsec)
-      .not.toBeCloseTo(atMean.separations[0].separationArcsec, 1);
+    expect(seps(atObserved)).toEqual([['1024-2212-2', 415.4]]);
+    expect(seps(atMean)).toEqual([['1024-2212-2', 415.2]]);
   });
 });
 
