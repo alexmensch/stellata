@@ -181,8 +181,8 @@ The gate's figures are pinned in `manifest-naming-expected.json`.
 
 ## Measured coverage
 
-The unioned table reaches **<!-- count:build-catalog/namingBayer -->2,044<!-- /count -->** records. Of the <!-- count:inherited-spine/nonEmpty.bayer -->1,522<!-- /count --> Bayer cells
-AT-HYG printed, it reaches all but the rows of `data/naming/bayer_drops.tsv`,
+The unioned table reaches **<!-- count:build-catalog/namingBayer -->2,044<!-- /count -->** records. The Bayer cells AT-HYG printed
+that it reaches no record with are the rows of `data/naming/bayer_drops.tsv`,
 each frozen with its reason: one today, ξ UMa on HD 98230, `sibling_holds`
 (the authority keys ξ UMa on the A record, so B takes the system's
 designation with its component letter). The membership gate holds every

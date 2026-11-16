@@ -56,8 +56,7 @@ implementation's own statement of all three rules.
 
 The IAU list is the only source with an approval process. It is also the
 **only in-tree source of Unicode Greek designations**: it ships
-`α Andromedae`, `ϕ Cassiopeiae`, `β 1 Tucanae` directly, covering **1,494 of
-the <!-- count:inherited-spine/nonEmpty.bayer -->1,522<!-- /count --> Bayer records AT-HYG printed** and 2,372 of <!-- count:inherited-spine/nonEmpty.flam -->2,724<!-- /count --> Flamsteed ones. Stellarium's
+`α Andromedae`, `ϕ Cassiopeiae`, `β 1 Tucanae` directly. Stellarium's
 skyculture file, which `stellata-wgp3`'s description named as the glyph
 source, contains **zero Greek glyphs** — only constellation lines and folk
 names.
