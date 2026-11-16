@@ -4,7 +4,9 @@ import { emitArtifacts } from '../util/emit-artifacts';
 import { countSnapshotCheck } from '../util/snapshot-check';
 import { BUILD_BINARIES_COUNTS } from './build-binaries-expected-json';
 import { stepInputHashes } from '../util/step-input-hashes';
+import type { LineageInvariant } from '../catalog/lineage/lineage-invariant-pure';
 import type { LineageLine } from '../catalog/lineage/lineage-row-pure';
+import type { FileHashes } from '../util/build-stamp';
 import type { StageCodes } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { countedStageLineage, foldedStageLineage, namedStageRun, stageLineage, type LineageBudget } from '../catalog/lineage/stage-lineage';
 import { BINARIES_OUTPUTS } from './binaries-outputs';
@@ -69,40 +71,47 @@ export async function runStages(log: (line: string) => void): Promise<StageResul
 
 const log = (line: string): void => console.log(`[build-binaries] ${line}`);
 
-function binariesStageLineage<S extends string, B extends string, L extends B>(
-  spec: StageLineageSpec<S, S>, codes: StageCodes<B, S, L>, lines: () => readonly LineageLine[], budget: LineageBudget,
-) {
-  return countedStageLineage(namedStageRun({ spec, codes, lines, budget, invariants: [], inputs: stepInputHashes() }), codes);
+interface BinariesStage<S extends string, C extends StageCodes<string, S>> {
+  readonly spec: StageLineageSpec<S, S>;
+  readonly codes: C;
+  readonly lines: () => readonly LineageLine[];
+  readonly budget: LineageBudget;
+  readonly invariants: readonly LineageInvariant[];
+}
+
+/** One binaries lineage stage's run, its files named for it, over the step's input hashes. */
+function binariesRun<S extends string, C extends StageCodes<string, S>>(inputs: FileHashes, stage: BinariesStage<S, C>) {
+  return namedStageRun<S, S, C>({ ...stage, inputs });
 }
 
 export async function main(): Promise<void> {
   const results = await runStages(log);
   const { reference, resolved, astrometry: routed, orbits: sourced, optical, multiples } = results;
-  const binding = binariesStageLineage(
-    BINDING_LINEAGE, BINDING_CODES, () => bindingLineageLines(multiples.rows), BINDING_LINEAGE_BUDGET,
-  );
-  const resolve = foldedStageLineage(namedStageRun({
-    spec: RESOLVE_LINEAGE, codes: RESOLVE_CODES, lines: () => resolveLineageLines(resolved), budget: RESOLVE_LINEAGE_BUDGET,
-    invariants: RESOLVE_INVARIANTS, inputs: stepInputHashes(),
+  const inputs = stepInputHashes();
+  const binding = countedStageLineage(binariesRun(inputs, {
+    spec: BINDING_LINEAGE, codes: BINDING_CODES, lines: () => bindingLineageLines(multiples.rows), budget: BINDING_LINEAGE_BUDGET, invariants: [],
+  }), BINDING_CODES);
+  const resolve = foldedStageLineage(binariesRun(inputs, {
+    spec: RESOLVE_LINEAGE, codes: RESOLVE_CODES, lines: () => resolveLineageLines(resolved), budget: RESOLVE_LINEAGE_BUDGET, invariants: RESOLVE_INVARIANTS,
   }), resolveCounts);
-  const astrometry = foldedStageLineage(namedStageRun({
+  const astrometry = foldedStageLineage(binariesRun(inputs, {
     spec: ASTROMETRY_LINEAGE, codes: ASTROMETRY_CODES, lines: () => astrometryLineageLines(routed), budget: ASTROMETRY_LINEAGE_BUDGET,
-    invariants: ASTROMETRY_INVARIANTS, inputs: stepInputHashes(),
+    invariants: ASTROMETRY_INVARIANTS,
   }), astrometryCounts);
-  const orbits = foldedStageLineage(namedStageRun({
-    spec: ORBITS_LINEAGE, codes: ORBITS_CODES, lines: () => orbitsLineageLines(sourced), budget: ORBITS_LINEAGE_BUDGET,
-    invariants: ORBITS_INVARIANTS, inputs: stepInputHashes(),
+  const orbits = foldedStageLineage(binariesRun(inputs, {
+    spec: ORBITS_LINEAGE, codes: ORBITS_CODES, lines: () => orbitsLineageLines(sourced), budget: ORBITS_LINEAGE_BUDGET, invariants: ORBITS_INVARIANTS,
   }), orbitsCounts);
-  const pairs = binariesStageLineage(
-    PAIRS_LINEAGE, PAIRS_CODES, () => pairsLineageLines({ reference, optical, multiples }), PAIRS_LINEAGE_BUDGET,
-  );
-  const anchors = stageLineage(namedStageRun({
+  const pairs = countedStageLineage(binariesRun(inputs, {
+    spec: PAIRS_LINEAGE, codes: PAIRS_CODES, lines: () => pairsLineageLines({ reference, optical, multiples }), budget: PAIRS_LINEAGE_BUDGET,
+    invariants: [],
+  }), PAIRS_CODES);
+  const anchors = stageLineage(binariesRun(inputs, {
     spec: ANCHORS_LINEAGE, codes: ANCHORS_CODES, lines: () => anchorsLineageLines(multiples.anchors), budget: ANCHORS_LINEAGE_BUDGET,
-    invariants: ANCHORS_INVARIANTS, inputs: stepInputHashes(),
+    invariants: ANCHORS_INVARIANTS,
   }));
-  const masses = stageLineage(namedStageRun({
+  const masses = stageLineage(binariesRun(inputs, {
     spec: MASSES_LINEAGE, codes: MASSES_CODES, lines: () => massesLineageLines(multiples.massReads), budget: MASSES_LINEAGE_BUDGET,
-    invariants: MASSES_INVARIANTS, inputs: stepInputHashes(),
+    invariants: MASSES_INVARIANTS,
   }));
   emitArtifacts({
     outputs: BINARIES_OUTPUTS,
