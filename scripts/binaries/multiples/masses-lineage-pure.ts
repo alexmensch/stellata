@@ -1,13 +1,13 @@
 // Stage 6's spectral-type masses per multiples.tsv row as the masses lineage stage: the branch each was read off, and what it fed. See README.md#masses-lineage.
 
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
-import { stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
+import { stageLineageLine, stageRow, type LineageLine, type LineageRow } from '../../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, stageCodes, taggedCodes } from '../../catalog/lineage/reason-codes/reason-codes-pure';
-import { hipDesignation } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import { MASS_BRANCHES, type MassBranch } from '../masses/mass-estimate-pure';
 import type { MultiplesRecord } from '../multiples-record-pure';
 import { MULTIPLES_ROW_KEY } from '../multiples-row-key-pure';
+import { idParams } from '../resolve/resolve-lineage-pure';
 import type { MassRead } from './multiples-rows-pure';
 import { MASSES_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -30,22 +30,15 @@ export const MASSES_CODES = stageCodes(MASSES_LINEAGE.stage, {
   'not-read': outcomeCode('Stage 6 read no mass for the component: no orbit, or one whose q is published and whose a is published or not estimated.'),
 });
 
-function idParams(r: MultiplesRecord): LineageParams {
-  return {
-    ...(r.gaiaSourceId === null ? {} : { gaia: r.gaiaSourceId }),
-    ...(r.hip === null ? {} : { hip: hipDesignation(r.hip) }),
-  };
-}
-
 export function* massesLineageRows(massReads: ReadonlyMap<MultiplesRecord, MassRead | null>): Generator<LineageRow> {
   for (const [r, read] of massReads) {
     const key = rowKeyText(MULTIPLES_ROW_KEY, r);
     if (read === null) {
-      yield stageRow(MASSES_CODES, key, 'not-read', idParams(r), []);
+      yield stageRow(MASSES_CODES, key, 'not-read', idParams(r.gaiaSourceId, r.hip), []);
       continue;
     }
     yield stageRow(MASSES_CODES, key, `read.${kebab(read.mass.kind)}`, {
-      ...idParams(r),
+      ...idParams(r.gaiaSourceId, r.hip),
       ...(r.spect === '' ? {} : { spect: r.spect }),
       ...(read.q === null ? {} : { q: read.q }),
       ...(read.a === null ? {} : { a: read.a }),

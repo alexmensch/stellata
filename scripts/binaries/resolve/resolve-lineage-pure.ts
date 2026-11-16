@@ -103,14 +103,16 @@ function touchParams({ verdict, sourceId }: VerdictTouch): LineageParams {
   };
 }
 
-/** A component's Gaia source bare and its HIP as `hip:`, where bound: the forms trace matches a query on. */
-export function componentIdParams(c: Pick<ResolvedComponent, 'gaia' | 'hip'>): LineageParams {
-  const gaia = valueOf(c.gaia);
-  const hip = valueOf(c.hip);
+/** A Gaia source bare and a HIP as `hip:`, where bound: the forms trace matches a query on. */
+export function idParams(gaia: string | null, hip: number | null): LineageParams {
   return {
     ...(gaia === null ? {} : { gaia }),
     ...(hip === null ? {} : { hip: hipDesignation(hip) }),
   };
+}
+
+export function componentIdParams(c: Pick<ResolvedComponent, 'gaia' | 'hip'>): LineageParams {
+  return idParams(valueOf(c.gaia), valueOf(c.hip));
 }
 
 export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): Generator<LineageRow> {
