@@ -180,7 +180,9 @@ scripts/catalog/
                                   number + component, so the catalogue's four
                                   name prefixes and a record's `gl` cell meet
                                   (data/gliese/README.md). Bottom tier of the
-                                  V cascade, trigonometric tier of parallax.
+                                  V cascade, trigonometric tier of parallax;
+                                  its B1950 astrometry feeds
+                                  membership/positional-witness/.
   gliese-fixture.ts               Test-only V/70A table text, its header
                                   written once for the spine/ and
                                   membership/ suites, and the GlieseRow

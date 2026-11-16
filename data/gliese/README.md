@@ -30,7 +30,8 @@ GJ-keyed record, is kept where V/70A's position propagated to Gaia's epoch
 and its proper motion match the Gaia source
 (`data/membership/README.md`). The four name columns (`dm`, `giclas`,
 `lhs`, `other_name`) are the same review's cross-names. `parseGlieseTsv`
-adds a field per bead, so today it reads none of the eight.
+reads the four astrometry columns into `astrometryB1950`, null on the 51
+rows missing any of them, and none of the name columns.
 
 ## Why this table exists at all
 

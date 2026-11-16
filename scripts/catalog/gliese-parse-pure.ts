@@ -8,7 +8,10 @@ import { readTable } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './simbad/simbad-namespace-ladder-pure';
 import type { MeasuredParallax } from './cited-parallax';
 
-const GLIESE_COLUMNS = ['name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd'] as const;
+const GLIESE_COLUMNS = [
+  'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd',
+  'ra_b1950_deg', 'de_b1950_deg', 'pm_arcsec_yr', 'pm_pa_deg',
+] as const;
 
 /** V/70A's resulting parallax, carrying which KIND of parallax it is.
  *
@@ -24,6 +27,16 @@ export interface GlieseParallax extends MeasuredParallax {
   trigonometric: boolean;
 }
 
+/** V/70A's position at the B1950 equinox and epoch, with the total proper
+ *  motion and its position angle east of north
+ *  (/data/gliese/README.md#the-astrometry-and-cross-name-columns). */
+export interface V70aAstrometry {
+  raB1950Deg: number;
+  decB1950Deg: number;
+  pmArcsecYr: number;
+  pmPaDeg: number;
+}
+
 export interface GlieseRow {
   /** The catalogue entry's own name, prefix included (`Gl 559`, `NN 3417`). */
   name: string;
@@ -35,6 +48,8 @@ export interface GlieseRow {
   parallax: GlieseParallax | null;
   /** V/70A's own `HD` column — the GJ↔HD link the association audit joins on. */
   hd: number | null;
+  /** Null where any of the four cells is blank. */
+  astrometryB1950: V70aAstrometry | null;
   ref: OneRowRef<string>;
 }
 
@@ -57,6 +72,14 @@ function catalogueKey(name: string, comp: string): string | null {
   const bare = name.trim().replace(/^(Gl|GJ|NN|Wo)\s+/i, '').replace(/\s+/g, '');
   if (!bare) return null;
   return `${bare}${comp.trim().replace(/\s+/g, '')}`.toUpperCase();
+}
+
+function v70aAstrometry(
+  raB1950Deg: number | null, decB1950Deg: number | null,
+  pmArcsecYr: number | null, pmPaDeg: number | null,
+): V70aAstrometry | null {
+  if (raB1950Deg === null || decB1950Deg === null || pmArcsecYr === null || pmPaDeg === null) return null;
+  return { raB1950Deg, decB1950Deg, pmArcsecYr, pmPaDeg };
 }
 
 /** Index V/70A on bare number + component. Exact `number+comp` keys are laid
@@ -91,6 +114,10 @@ export function parseGlieseTsv(text: string, from: Declared & RowKeyed<string>):
         trigonometric: row.text('n_plx') === null,
       },
       hd: row.int('hd'),
+      astrometryB1950: v70aAstrometry(
+        row.float('ra_b1950_deg'), row.float('de_b1950_deg'),
+        row.float('pm_arcsec_yr'), row.float('pm_pa_deg'),
+      ),
       ref: sourceRowRef(from, key),
     };
     if (index.byKey.has(key)) row.fail(`two rows keyed ${key}`);
