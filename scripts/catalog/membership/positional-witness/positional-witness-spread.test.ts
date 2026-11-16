@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { DATA_FILES } from '../../../../src/catalog-format/pipeline-outputs/data-files';
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
@@ -37,7 +37,8 @@ function tallyKinds(verdicts: readonly WitnessVerdict[]): Record<WitnessVerdict[
 }
 
 describe.skipIf(!readable)('the witness over the committed queues (README.md#the-tolerances)', () => {
-  const tycho2 = TYCHO2.read();
+  let tycho2: ReadonlyMap<string, Tycho2Row>;
+  beforeAll(() => { tycho2 = TYCHO2.read(); });
   const candidates = (tycs: readonly string[]): Tycho2Row[] => tycs.map((tyc) => {
     const entry = tycho2.get(tyc);
     if (entry === undefined) throw new Error(`${tyc}: no Tycho-2 row`);
