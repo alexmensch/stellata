@@ -3,7 +3,7 @@
 import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
 import { percentOf } from '../../util/counts/tally-pure';
 import type { DeclaredOutputs } from '../../util/emit-artifacts';
-import type { Column, Row } from '../pull/columns-pure';
+import { cellReader, type Column, type Row } from '../pull/columns-pure';
 import type { Phase, PhasedPull, WrittenTable } from '../pull/pull';
 import { SIMBAD } from '../pull/tap-pure';
 import { fetchBasic, fetchIdentSets, parseLedger, resolveOids, simbadPhases, type BasicCells } from '../simbad/simbad-fetch-pure';
@@ -79,7 +79,7 @@ export function tycHdPull(outputs: DeclaredOutputs<'tycHd'>, { request, requestF
       const hds = await fetchIdentSets(ask, CORE.idents, oids, ledger);
       const basic = await fetchBasic(ask, CORE, oids);
       const rows = tycHdRows(tycs, oidByTyc, hds, basic);
-      log(`rows: ${rows.length}, ${rows.filter((r) => r[3]?.includes('|')).length} carrying more than one HD`);
+      log(`rows: ${rows.length}, ${rows.map(cellReader(TYC_HD_COLUMNS, 'tycHd')).filter((cell) => cell(TYC_HD.hd)?.includes('|')).length} carrying more than one HD`);
       return { rows: { tycHd: rows }, checks: [ledger.check('idents')] };
     },
   };
