@@ -370,8 +370,8 @@ arithmetic and label-flips replay:
 - **The naming authority's residual**: the manifest propers no WGSN name
   matches are exactly the disposed ones, with the counts pinned in
   `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)),
-  and each row of `data/naming/bayer_drops.tsv` keys one manifest record the
-  build's Bayer join leaves bare.
+  and each `data/naming/bayer_drops.tsv` row keys one record the Bayer join
+  leaves bare, while exactly one other record holds its designation.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin

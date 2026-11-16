@@ -10,6 +10,7 @@ import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
 import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { BAYER_DROPS } from '../naming/bayer-drops-source';
+import { normaliseIv27aBayer } from '../naming/wgsn-normalise-pure';
 import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
@@ -248,14 +249,26 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
       expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
     });
 
-    it('ledgers Bayer drops only on records the build gives no Bayer designation', () => {
+    it('ledgers Bayer drops only on records the build gives no Bayer designation, and a sibling holds each', () => {
       const drops = BAYER_DROPS.read();
       expect(drops).toHaveLength(1);
+      const bayerOf = (r: ManifestRecord) => index.bayerOf({ hip: r.hip, hd: r.hd, hr: r.hr, proper: r.proper });
       for (const drop of drops) {
         const rows = manifest.filter((r) => r.hd === drop.hd);
         expect(rows, `hd ${drop.hd}`).toHaveLength(1);
-        const { hip, hd, hr, proper } = rows[0];
-        expect(index.bayerOf({ hip, hd, hr, proper })?.letter ?? null, `hd ${drop.hd}`).toBeNull();
+        expect(bayerOf(rows[0])?.letter ?? null, `hd ${drop.hd}`).toBeNull();
+
+        const [field, cst] = drop.bayer.split(' ');
+        const printed = normaliseIv27aBayer(field, cst);
+        expect(printed.class, drop.bayer).toBe('bayer');
+        if (printed.class !== 'bayer') continue;
+        const { letter, sup, dc } = printed.bayer;
+        const holders = manifest.filter((r) => {
+          const held = bayerOf(r);
+          return held !== null && held.letter === letter && held.sup === sup && held.dc === dc;
+        });
+        expect(holders.length, `${drop.bayer} is held by another record`).toBe(1);
+        expect(holders[0]).not.toBe(rows[0]);
       }
     });
 
