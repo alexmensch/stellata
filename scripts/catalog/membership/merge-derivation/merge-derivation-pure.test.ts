@@ -42,7 +42,9 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     hdHr: new Map([[100, 7], [300, 9]]),
     cns5ByHip: new Map([[20, ['GJ 1234']]]),
     v70aByHd: new Map([[300, ['GJ 1234']]]),
+    cns5BySource: new Map(),
     held: spineKeys(spine),
+    closePair: { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOfSource: new Map() },
   };
 }
 
@@ -52,7 +54,7 @@ const num = (cell: string): number | null => (cell === '' ? null : Number(cell))
 function shippedAsIs(r: SpineRow): ShippedCells {
   return {
     tyc: r.tyc === '' ? null : r.tyc, hip: num(r.hip), hd: num(r.hd), hr: num(r.hr),
-    gl: r.gl === '' ? null : r.gl, hdAlt: [], hrAlt: [],
+    gl: r.gl === '' ? null : r.gl, hdAlt: [], hrAlt: [], gaiaSourceId: r.gaia_source_id === '' ? null : r.gaia_source_id,
   };
 }
 
@@ -331,14 +333,14 @@ describe('mergeDivergences', () => {
   it('reports a filled cell a primary\'s link fills with other values', () => {
     const d = divergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
     expect(d.filter((x) => x.kind === 'differs')).toEqual([
-      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: '999', derived: ['300'] },
+      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: '999', derived: ['300'], verdict: { queued: 'close-pair-unanswered' } },
     ]);
   });
 
   it('leaves a pair row\'s TYC-to-HD link to the pair rule, but not its HIP-to-HD link', () => {
     const d = divergences(row({ tyc: B, hip: '10', hd: '555', hr: '7' }), mergeLinks(links({ [B]: 'S1' })));
     expect(d.filter((x) => x.kind === 'differs')).toEqual([
-      { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, ships: '555', derived: ['100'] },
+      { kind: 'differs', link: { to: 'hd', from: 'hip', key: 'hd<hip' }, ships: '555', derived: ['100'], verdict: { queued: 'close-pair-unanswered' } },
     ]);
   });
 
@@ -354,7 +356,7 @@ describe('mergeDivergences', () => {
     const dropped = { ...shippedAsIs(spineRow), hd: null };
     expect(divergences(spineRow, mergeLinks(links({})), undefined, false, dropped)
       .filter((x) => x.kind === 'differs')).toEqual([
-      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: null, derived: ['300'] },
+      { kind: 'differs', link: { to: 'hd', from: 'tyc', key: 'hd<tyc' }, ships: null, derived: ['300'], verdict: { queued: 'close-pair-unanswered' } },
     ]);
     const empty = row({ tyc: '2-2-2', hip: '20' });
     const filled = { ...shippedAsIs(empty), hd: 999 };
@@ -376,7 +378,48 @@ describe('mergeDivergences', () => {
     expect(gl('GJ 1234')).toEqual([]);
     expect(gl('Gl 1234A')).toEqual([]);
     expect(gl('GJ 1234B')).toEqual([
-      { kind: 'differs', link: { to: 'gl', from: 'hip', key: 'gl<hip' }, ships: 'GJ 1234B', derived: ['GJ 1234A'] },
+      { kind: 'differs', link: { to: 'gl', from: 'hip', key: 'gl<hip' }, ships: 'GJ 1234B', derived: ['GJ 1234A'], verdict: { queued: 'no-rule' } },
     ]);
+  });
+});
+
+describe('settling a differs cell', () => {
+  const verdictOf = (r: SpineRow, m: MergeLinks, to: string) => divergences(r, m)
+    .flatMap((x) => (x.kind === 'differs' && x.link.to === to ? [x.verdict] : []));
+  const closePair = (iv25: number[], simbad: number[], objectOfSource: number) => ({
+    iv25Hds: (tyc: string) => (tyc === '2-2-2' ? new Set(iv25) : undefined),
+    simbadTycHd: new Map([['2-2-2', { hdIdents: simbad.map(String), simbadOid: 5, mainId: null }]]),
+    simbadObjectOfSource: new Map([['S9', objectOfSource]]),
+  });
+  const hdRow = row({ tyc: '2-2-2', hip: '20', hd: '999', gaia_source_id: 'S9' });
+
+  it('runs an HD through the close-pair rule: uncontested and refused stand, the rest queue', () => {
+    const at = (iv25: number[], simbad: number[], oid: number) => verdictOf(
+      hdRow, { ...mergeLinks(links({})), closePair: closePair(iv25, simbad, oid) }, 'hd',
+    );
+    expect(at([999], [999], 5)).toEqual([{ settled: 'close-pair-uncontested' }]);
+    expect(at([300], [300], 6)).toEqual([{ settled: 'close-pair-refuse' }]);
+    expect(at([300], [300], 5)).toEqual([{ queued: 'close-pair-move' }]);
+    expect(at([300], [999], 5)).toEqual([{ queued: 'close-pair-split' }]);
+  });
+
+  it('settles an HR V/50 pairs with the shipped HD', () => {
+    const m = { ...mergeLinks(links({})), hdHr: new Map([[300, 9], [999, 8]]) };
+    expect(verdictOf(row({ tyc: '2-2-2', hip: '20', hd: '300', hr: '9' }), m, 'hr')).toEqual([]);
+    const moved = row({ tyc: '2-2-2', hip: '20', hd: '300', hr: '9' });
+    const shipped = { ...shippedAsIs(moved), hd: 999, hr: 8 };
+    expect(divergences(moved, m, undefined, false, shipped)
+      .flatMap((x) => (x.kind === 'differs' && x.link.to === 'hr' ? [x.verdict] : [])))
+      .toEqual([{ settled: 'v50-pair' }]);
+  });
+
+  it('settles a GJ CNS5\'s row for the record\'s own source names', () => {
+    const m = {
+      ...mergeLinks(links({})),
+      cns5ByHip: new Map([[20, ['GJ 1234A']]]),
+      cns5BySource: new Map([['S9', ['GJ 1234B']]]),
+    };
+    expect(verdictOf(row({ tyc: '2-2-2', hip: '20', hd: '300', gl: 'GJ 1234B', gaia_source_id: 'S9' }), m, 'gl'))
+      .toEqual([{ settled: 'cns5-source' }]);
   });
 });

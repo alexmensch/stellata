@@ -9,6 +9,9 @@ import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow } from '../../gliese-parse-pure';
 import { confirmsLabel, formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import type { ManifestRecord } from '../membership-manifest-tsv';
+import {
+  closePairHdVerdict, type ClosePairVerdictKind, type ClosePairWitnesses,
+} from '../../simbad/close-pair-hd-pure';
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
 import type { PairReviewReason } from '../ledger-rows-pure';
@@ -62,7 +65,19 @@ export type MergeDivergence =
     /** The value the record ships in the cell; null where a label rule emptied the spine's. */
     readonly ships: string | null;
     readonly derived: readonly string[];
+    readonly verdict: DiffersVerdict;
   };
+
+/** What settles a differs cell without review. see README.md#settling-a-differs-cell */
+export const DIFFERS_SETTLEMENTS = ['close-pair-uncontested', 'close-pair-refuse', 'v50-pair', 'cns5-source'] as const;
+export type DiffersSettlement = (typeof DIFFERS_SETTLEMENTS)[number];
+export const DIFFERS_QUEUE_REASONS = [
+  'close-pair-unanswered', 'close-pair-split', 'close-pair-source-silent', 'close-pair-move', 'no-rule',
+] as const;
+export type DiffersQueueReason = (typeof DIFFERS_QUEUE_REASONS)[number];
+export type DiffersVerdict =
+  | { readonly settled: DiffersSettlement }
+  | { readonly queued: DiffersQueueReason };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -81,10 +96,13 @@ export interface PairLinks {
   cns5ByHip: ReadonlyMap<number, readonly string[]>;
   /** V/70A's rows by their `HD`, in the record's GJ form. */
   v70aByHd: ReadonlyMap<number, readonly string[]>;
+  /** CNS5's rows by their own Gaia source, in the record's GJ form. */
+  cns5BySource: ReadonlyMap<string, readonly string[]>;
 }
 
 export interface MergeLinks extends PairLinks {
   held: SpineKeys;
+  closePair: ClosePairWitnesses;
 }
 
 function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
@@ -99,7 +117,11 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
   for (const entries of hipEntries.values()) entries.sort();
   const cns5ByHip = new Map<number, string[]>();
-  for (const r of tables.cns5) if (r.hip !== null) push(cns5ByHip, r.hip, cns5Gl(r)!);
+  const cns5BySource = new Map<string, string[]>();
+  for (const r of tables.cns5) {
+    if (r.hip !== null) push(cns5ByHip, r.hip, cns5Gl(r)!);
+    if (r.gaiaSourceId !== null) push(cns5BySource, r.gaiaSourceId, cns5Gl(r)!);
+  }
   const v70aByHd = new Map<number, string[]>();
   for (const r of tables.gliese.byKey.values()) if (r.hd !== null) push(v70aByHd, r.hd, v70aGl(r));
   return {
@@ -108,6 +130,7 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
     hdHr: hdToHr(links.hrHd),
     cns5ByHip,
     v70aByHd,
+    cns5BySource,
   };
 }
 
@@ -357,7 +380,35 @@ function derivedOnlyCells(row: SpineRow, { hd }: SpineIds, hip: number | null, m
 type LinkKey = DiffersLink['key'];
 
 /** The record as the spine side ships it: what `differs` holds the primaries' links against. */
-export type ShippedCells = Pick<ManifestRecord, 'tyc' | 'hip' | 'hd' | 'hdAlt' | 'hr' | 'hrAlt' | 'gl'>;
+export type ShippedCells = Pick<ManifestRecord, 'tyc' | 'hip' | 'hd' | 'hdAlt' | 'hr' | 'hrAlt' | 'gl' | 'gaiaSourceId'>;
+
+const CLOSE_PAIR_QUEUE = {
+  unanswered: 'close-pair-unanswered',
+  split: 'close-pair-split',
+  'source-silent': 'close-pair-source-silent',
+  move: 'close-pair-move',
+} as const satisfies Partial<Record<ClosePairVerdictKind, DiffersQueueReason>>;
+
+/** see README.md#settling-a-differs-cell */
+function differsVerdict(to: DiffersLink['to'], shipped: ShippedCells, m: MergeLinks): DiffersVerdict {
+  switch (to) {
+    case 'hd': {
+      const { kind } = closePairHdVerdict(shipped, m.closePair);
+      if (kind === 'uncontested') return { settled: 'close-pair-uncontested' };
+      if (kind === 'refuse') return { settled: 'close-pair-refuse' };
+      return { queued: CLOSE_PAIR_QUEUE[kind] };
+    }
+    case 'hr':
+      return shipped.hd !== null && m.hdHr.get(shipped.hd) === shipped.hr ? { settled: 'v50-pair' } : { queued: 'no-rule' };
+    case 'gl': {
+      const own = shipped.gaiaSourceId === null ? [] : m.cns5BySource.get(shipped.gaiaSourceId) ?? [];
+      const gl = shipped.gl;
+      return gl !== null && own.some((c) => confirmsLabel('gl', c, gl)) ? { settled: 'cns5-source' } : { queued: 'no-rule' };
+    }
+    case 'hip':
+      return { queued: 'no-rule' };
+  }
+}
 
 /** see README.md#the-divergence-ledger */
 function differsCells(
@@ -384,7 +435,7 @@ function differsCells(
     if (row[link.from] === '' || row[link.to] === '') continue;
     const derived = [...new Set(derivedBy[link.key]().map(String))].sort();
     if (derived.length === 0 || derived.some((d) => held.some((h) => confirmsLabel(link.to, d, h)))) continue;
-    out.push({ kind: 'differs', link, ships: held[0] ?? null, derived });
+    out.push({ kind: 'differs', link, ships: held[0] ?? null, derived, verdict: differsVerdict(link.to, shipped, m) });
   }
   return out;
 }

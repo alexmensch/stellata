@@ -30,8 +30,11 @@ scripts/catalog/simbad/
                                   IV/25. The test carries the adjudication
                                   below, pinned over the committed tables.
   close-pair-hd-pure.ts (+ test)  closePairHdVerdict, the four-witness rule
-                                  below as one function, which the
-                                  adjudication test calls. Pure.
+                                  below as one function: the adjudication
+                                  test and build:membership's divergence
+                                  ledger both call it
+                                  (../membership/merge-derivation/README.md#settling-a-differs-cell).
+                                  Pure.
 ```
 
 ## What the TYC → HD pull adjudicates

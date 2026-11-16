@@ -46,6 +46,7 @@ const tables: BindingTables = {
   hipToSource: new Map([[10, '100'], [20, '999']]),
   simbadBySourceId,
   simbadSourceless,
+  simbadObjectOfSource: new Map(),
 };
 const { cns5ByKey, cns5ByOwnKey } = indexCns5(tables.cns5);
 

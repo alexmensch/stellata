@@ -28,7 +28,7 @@ import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
   DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES,
-  type DerivedOnlyCell, type DiffersLink, type HeldState, type MergeDivergence,
+  type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
 } from './merge-derivation/merge-derivation-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
@@ -278,10 +278,27 @@ type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
 const derivedOnlyBranch = (c: DerivedOnlyCell, h: HeldState): DerivedOnlyBranch => `merge.derived-only.${c}.${h}`;
 type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`;
 const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
+type DiffersSettledBranch = `${DiffersBranch}.${DiffersSettlement}`;
+const differsSettledBranch = (l: DiffersLink, s: DiffersSettlement): DiffersSettledBranch => `${differsBranch(l)}.${s}`;
+
+/** The settlements a cell can reach, and what each says. see merge-derivation/README.md#settling-a-differs-cell */
+const DIFFERS_SETTLEMENTS_BY_CELL = {
+  hip: [],
+  hd: ['close-pair-uncontested', 'close-pair-refuse'],
+  hr: ['v50-pair'],
+  gl: ['cns5-source'],
+} as const satisfies Record<DiffersLink['to'], readonly DiffersSettlement[]>;
+const DIFFERS_SETTLEMENT_DESCRIPTIONS = {
+  'close-pair-uncontested': 'the close-pair rule\'s two TYC witnesses agree, and one names the HD the record ships',
+  'close-pair-refuse': 'the close-pair rule finds the record\'s Gaia source is another SIMBAD object than its TYC\'s, so the TYC cell is the crossed one and the HD stands',
+  'v50-pair': 'V/50 pairs the shipped HR with the shipped HD',
+  'cns5-source': 'CNS5\'s row for the record\'s own Gaia source names the shipped GJ',
+} as const satisfies Record<DiffersSettlement, string>;
+
 type MergeBranch =
   | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
-  | PairReviewBranch | DerivedOnlyBranch | DiffersBranch;
+  | PairReviewBranch | DerivedOnlyBranch | DiffersBranch | DiffersSettledBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
 
@@ -326,8 +343,12 @@ const MERGE_BRANCHES: readonly {
   }))),
   ...DIFFERS_LINKS.map((l) => ({
     branch: differsBranch(l), of: 'differs' as const, ledger: 'differs' as const,
-    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule.`,
+    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule, and no rule settles the cell: it is queued for review and the shipped value stands.`,
   })),
+  ...DIFFERS_LINKS.flatMap((l) => DIFFERS_SETTLEMENTS_BY_CELL[l.to].map((s: DiffersSettlement) => ({
+    branch: differsSettledBranch(l, s), of: 'differs' as const, ledger: null,
+    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, and ${DIFFERS_SETTLEMENT_DESCRIPTIONS[s]}: the shipped value stands.`,
+  }))),
 ];
 
 /** The merge codes whose rows `merge-divergence.tsv` records as `kind`. */
@@ -629,10 +650,14 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
     case 'derived-only':
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
-    case 'differs':
-      return row(key, differsBranch(d.link), {
-        cells: d.link.to, derived: d.derived.join('|'), evidence: `from ${d.link.from}; ships ${d.ships ?? 'none'}`,
-      });
+    case 'differs': {
+      const evidence = `from ${d.link.from}; ships ${d.ships ?? 'none'}`;
+      const params = { cells: d.link.to, derived: d.derived.join('|') };
+      if ('settled' in d.verdict) {
+        return row(key, differsSettledBranch(d.link, d.verdict.settled), { ...params, evidence });
+      }
+      return row(key, differsBranch(d.link), { ...params, evidence: `${evidence}; ${d.verdict.queued}` });
+    }
     default: {
       const unmapped: never = d;
       throw new Error(`merge divergence with no row mapping: ${JSON.stringify(unmapped)}`);

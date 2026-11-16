@@ -195,6 +195,7 @@ const tables: PrimaryTables = {
   ]),
   hipToSource: new Map([[10, '111'], [20, '333'], [30, '444'], [40, '999'], [50, '1414']]),
   simbadSourceless: [],
+  simbadObjectOfSource: new Map(),
   simbadBySourceId: new Map([
     ['222', { hip: null, tyc: '1-2-1', gj: null }],
     ['888', { hip: null, tyc: '9-9-9', gj: null }],
@@ -966,8 +967,9 @@ describe('codecs', () => {
       gliese: parseGlieseTsv(gliese, GLIESE),
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
-    const m = { ...pairLinksFrom(t), held: spineKeys(spine) };
-    const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null };
+    const closePair = { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOfSource: new Map() };
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair };
+    const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, gaiaSourceId: null };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
     expect(derivedOnly(spineRow({ tyc: '4-1-1' }))).toEqual(['hip:90:free', 'hd:300:free', 'gl:GJ 9390A:free']);

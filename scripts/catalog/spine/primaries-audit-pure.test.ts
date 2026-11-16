@@ -84,6 +84,7 @@ const tables: PrimaryTables = {
   tycToSource: new Map([['1-1-1', '111'], ['1-2-1', '222'], ['9-9-1', '999']]),
   hipToSource: new Map([[10, '111'], [20, '333']]),
   simbadSourceless: [],
+  simbadObjectOfSource: new Map(),
   simbadBySourceId: new Map([
     ['999', { hip: 20, tyc: null, gj: null }],
     ['777', { hip: 21, tyc: '5-5-5', gj: null }],

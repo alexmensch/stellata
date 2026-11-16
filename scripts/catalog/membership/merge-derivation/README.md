@@ -169,3 +169,29 @@ is the pair rule's verdict. Rows the pair rule confirms carry
 
 The counts are the `membership.merge.*` codes in
 `../membership-manifest-expected.json`; read them there.
+
+## Settling a differs cell
+
+A `differs` cell is weighed by the rule that already decides that kind of
+cell elsewhere in the pipeline, and **only a cell no rule settles reaches the
+ledger**, where it waits for review with the shipped value standing. A
+settled cell writes `merge.differs.<to>.<from>.<settlement>` in lineage and
+no ledger row. The spine's value and I/239's HD are never evidence: the first
+is the decision being replaced, and Hipparcos printed one HD for a pair it
+did not resolve
+([I/239's HD for a HIP is not a fourth opinion](../../simbad/README.md#which-witness-decides-a-close-pairs-hd)).
+
+| Cell | Rule | Settles as |
+|---|---|---|
+| `hd` | the close-pair rule, `closePairHdVerdict` ([Which witness decides a close pair's HD](../../simbad/README.md#which-witness-decides-a-close-pairs-hd)) on the shipped HD | `close-pair-uncontested` (both TYC witnesses share an HD and one names the shipped value), `close-pair-refuse` (the record's source is another object than its TYC's, so the HD stands) |
+| `hr` | V/50 publishes HD and HR as a pair | `v50-pair` (V/50 pairs the shipped HR with the shipped HD) |
+| `gl` | a record's identity is its Gaia binding | `cns5-source` (CNS5's row for the record's own source names the shipped GJ) |
+| `hip` | none | — |
+
+Everything else queues, the reason as the evidence's last field:
+`close-pair-split` (the two TYC witnesses share no HD), `close-pair-unanswered`
+(IV/25 or SIMBAD has no row for the record's TYC, or it has none),
+`close-pair-source-silent`, `close-pair-move` (all four witnesses name another
+HD: the rule's move set, which reaches the build through
+`classic_id_overrides.tsv` after review, as the rule's other moves do), or
+`no-rule`.

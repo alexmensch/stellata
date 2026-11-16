@@ -142,10 +142,17 @@
       "membership.merge.derived-only.gl.held": 7,
       "membership.merge.differs.hip.tyc": 0,
       "membership.merge.differs.hd.tyc": 3,
-      "membership.merge.differs.hd.hip": 71,
-      "membership.merge.differs.hr.hd": 30,
+      "membership.merge.differs.hd.hip": 17,
+      "membership.merge.differs.hr.hd": 0,
       "membership.merge.differs.gl.hip": 4,
-      "membership.merge.differs.gl.hd": 1
+      "membership.merge.differs.gl.hd": 0,
+      "membership.merge.differs.hd.tyc.close-pair-uncontested": 0,
+      "membership.merge.differs.hd.tyc.close-pair-refuse": 0,
+      "membership.merge.differs.hd.hip.close-pair-uncontested": 54,
+      "membership.merge.differs.hd.hip.close-pair-refuse": 0,
+      "membership.merge.differs.hr.hd.v50-pair": 30,
+      "membership.merge.differs.gl.hip.cns5-source": 0,
+      "membership.merge.differs.gl.hd.cns5-source": 1
     },
     "membership-derived": {
       "labelNoOverlayEntry": 14909,

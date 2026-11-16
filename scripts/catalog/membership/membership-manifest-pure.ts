@@ -104,7 +104,15 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   );
   const { rows: kept, decided, received, value: { settlement, spine } } = pair;
   const keptKeys = spineKeys(kept);
-  const mergeLinks = { ...pairLinks, held: keptKeys };
+  const mergeLinks = {
+    ...pairLinks,
+    held: keptKeys,
+    closePair: {
+      iv25Hds: (tyc: string) => pairLinks.links.tycHd.get(tyc),
+      simbadTycHd: input.simbadTycHd,
+      simbadObjectOfSource: tables.simbadObjectOfSource,
+    },
+  };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(
     row, spine.rows[i], mergeLinks, decided.get(i), received.has(i),
   ).map(
