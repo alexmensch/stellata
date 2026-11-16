@@ -5,7 +5,7 @@ import {
   type LineageLine, type LineageParams, type LineageRow,
 } from '../../catalog/lineage/lineage-row-pure';
 import {
-  kebab, outcomeCode, refusalCode, stageCodes, taggedCodes, type CodeDeclaration, type Kebab,
+  kebab, outcomeCode, refusalCode, retired, stageCodes, taggedCodes, type CodeDeclaration, type Kebab,
 } from '../../catalog/lineage/reason-codes/reason-codes-pure';
 import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/lineage/lineage-invariant-pure';
 import { hipDesignation } from '../../sid/sid-pure';
@@ -84,10 +84,14 @@ function auditDeclaration(branch: AuditBranch): CodeDeclaration {
   return part === 'refused' ? refusalCode(description) : outcomeCode(description);
 }
 
+const RETIRED_7_1_31 = retired('7.1.31');
+
 export const RESOLVE_CODES = stageCodes(RESOLVE_LINEAGE.stage, {
   ...taggedCodes('tier.', RESOLVE_VIA, (tier) => outcomeCode(TIER_DESCRIPTIONS[tier])),
   ...taggedCodes('refused.', CASCADE_GATES, (gate) => refusalCode(GATE_DESCRIPTIONS[gate])),
   ...Object.fromEntries([...AUDIT_CODES.keys()].map((b) => [b, auditDeclaration(b)])) as Record<AuditBranch, CodeDeclaration>,
+  'tier.athyg-gaia-native': outcomeCode('The component\'s Gaia source is an AT-HYG row\'s own gaia cell, reached through a HIP or a position match.', 'none', RETIRED_7_1_31),
+  'refused.athyg-match-sibling-claimed': refusalCode('An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.', RETIRED_7_1_31),
 });
 
 function tierBranch(via: BoundTier): `tier.${Kebab<BoundTier>}` {

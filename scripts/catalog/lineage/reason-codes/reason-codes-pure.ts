@@ -35,8 +35,10 @@ export function outcomeCode(description: string, effect: CodeEffect = 'none', st
   return { description, effect, role: 'outcome', status, onRows: true };
 }
 
-export function refusalCode(description: string): CodeDeclaration<typeof LIVE, true> {
-  return { description, effect: 'none', role: 'refused', status: LIVE, onRows: true };
+export function refusalCode(description: string): CodeDeclaration<typeof LIVE, true>;
+export function refusalCode<St extends CodeStatus>(description: string, status: St): CodeDeclaration<St, true>;
+export function refusalCode(description: string, status: CodeStatus = LIVE): CodeDeclaration {
+  return { description, effect: 'none', role: 'refused', status, onRows: true };
 }
 
 /** A code that admits an object — a mint or reinstate event's code, a minted row's `route` — and is never a row's own code. Listed in the `outcome` role. */
