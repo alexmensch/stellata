@@ -98,7 +98,7 @@ export function valuesPull(outputs: DeclaredOutputs<'values'>, inputs: ValuesInp
       log(`oids: ${resolved.oids.size} (+${gained} the widening reached alone)`);
       const oids = [...resolved.oids].sort(ascending);
       const basic = await fetchBasic(ask, VALUES_PHASES, oids);
-      const idents = await fetchIdents(ask, VALUES_PHASES, IDENTS, oids, ledger);
+      const idents = await fetchIdents(ask, VALUES_PHASES.idents, oids, ledger);
       const flux = await fetchFlux(ask, VALUES_PHASES, FLUX_BANDS, oids);
 
       const total = basic.size;

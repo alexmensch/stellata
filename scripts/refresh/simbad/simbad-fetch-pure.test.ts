@@ -7,7 +7,7 @@ import {
   fetchBasic, fetchFlux, fetchIdentSets, fetchIdents, parseLedger, phaseRecord, resolveOids, simbadPhases,
 } from './simbad-fetch-pure';
 import {
-  GAIA_DR3, GAIA_RELEASES, GJ, HIP, MAIN_ID, OID, SP_TYPE, TYC, compose, fluxColumns, likePattern, parseIdent,
+  GAIA_DR3, GJ, HIP, MAIN_ID, OID, SP_TYPE, TYC, compose, fluxColumns, likePattern, parseIdent,
 } from './simbad-specs-pure';
 import { simbad } from './simbad-test-fixtures';
 
@@ -103,10 +103,10 @@ describe('fetchBasic, fetchIdents, fetchFlux', () => {
     const fake = simbad({ 100: ['HIP 1', 'Gaia DR3 9999', 'TYC  144-1004-1'], 200: ['Gaia DR3 8888'], 300: ['HIP 11', 'HIP 22', 'Gaia DR2 5'] });
     const { ask } = fakeAsk(fake);
     const ledger = parseLedger();
-    const idents = await fetchIdents(ask, PHASES, [HIP, GAIA_DR3, TYC], [100, 200, 300], ledger);
+    const idents = await fetchIdents(ask, PHASES.idents, [100, 200, 300], ledger);
     expect(idents.get(100)).toEqual(new Map([['hip', '1'], ['source_id', '9999'], ['tyc', '144-1004-1']]));
     expect(idents.get(300)?.get('hip')).toBe('22');
-    expect((await fetchIdentSets(ask, PHASES.releases, GAIA_RELEASES, [300], ledger)).get(300)).toEqual(new Map([['source_id_dr2', new Set(['5'])]]));
+    expect((await fetchIdentSets(ask, PHASES.releases, [300], ledger)).get(300)).toEqual(new Map([['source_id_dr2', new Set(['5'])]]));
   });
 
   it('pivots the long flux table, a missing band leaving its cells absent', async () => {

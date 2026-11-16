@@ -16,9 +16,9 @@ export interface SimbadPhases {
   readonly resolve: Phase;
   readonly basic: Phase;
   /** The shipped namespaces' ids per oid, in id order, so a namespace's last id is the last in that order. */
-  readonly idents: Phase;
+  readonly idents: IdentPhase;
   /** Every Gaia release's ids per oid, read only by corroboration (README.md#the-corroboration-rule). */
-  readonly releases: Phase;
+  readonly releases: IdentPhase;
   readonly flux: Phase | null;
 }
 
@@ -30,9 +30,15 @@ export interface PhaseSpec {
 
 const byOid = (rowsPerId: number) => ({ kind: 'request', key: 'oidref', batchSize: SIMBAD_BATCH_SIZE, rowsPerId }) as const;
 
+/** An ident phase with the namespaces it asks, so a fetcher reads replies under exactly those. */
+export interface IdentPhase extends Phase {
+  readonly namespaces: readonly Namespace[];
+}
+
 /** Each oid's ids under `namespaces`, ordered by oid then id. */
-export function identPhase(namespaces: readonly Namespace[]): Phase {
+export function identPhase(namespaces: readonly Namespace[]): IdentPhase {
   return {
+    namespaces,
     from: 'ident',
     where: namespaces.map((ns) => `id LIKE '${likePattern(ns)}'`).join(' OR '),
     orderBy: 'oidref, id',
@@ -160,16 +166,16 @@ function foldIdents<T>(rows: IdentRows, namespaces: readonly Namespace[], ledger
 
 /** One id per namespace per oid: the last in id order, since the shipped column holds one. */
 export async function fetchIdents(
-  ask: Ask, phases: SimbadPhases, namespaces: readonly Namespace[], oids: readonly number[], ledger: ParseLedger,
+  ask: Ask, phase: IdentPhase, oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, string>>> {
-  return foldIdents<string>(await ask(phases.idents, oids.map(String)), namespaces, ledger, (into, ns, suffix) => { into.set(ns, suffix); });
+  return foldIdents<string>(await ask(phase, oids.map(String)), phase.namespaces, ledger, (into, ns, suffix) => { into.set(ns, suffix); });
 }
 
 /** Every id per namespace per oid, for a question about the whole set: corroboration asks whether an id is held at all, tyc-hd which HDs an object holds. */
 export async function fetchIdentSets(
-  ask: Ask, phase: Phase, namespaces: readonly Namespace[], oids: readonly number[], ledger: ParseLedger,
+  ask: Ask, phase: IdentPhase, oids: readonly number[], ledger: ParseLedger,
 ): Promise<Map<number, Map<string, Set<string>>>> {
-  return foldIdents<Set<string>>(await ask(phase, oids.map(String)), namespaces, ledger, (into, ns, suffix) => {
+  return foldIdents<Set<string>>(await ask(phase, oids.map(String)), phase.namespaces, ledger, (into, ns, suffix) => {
     let held = into.get(ns);
     if (held === undefined) into.set(ns, held = new Set());
     held.add(suffix);

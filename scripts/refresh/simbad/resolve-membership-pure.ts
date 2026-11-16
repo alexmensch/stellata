@@ -4,7 +4,7 @@ import { percentOf } from '../../util/counts/tally-pure';
 import type { Ask } from '../pull/pull';
 import { fetchIdentSets, resolveOids, type ParseLedger, type SimbadPhases } from './simbad-fetch-pure';
 import type { MembershipKeys } from './membership-keys-pure';
-import { GAIA_DR3, GAIA_RELEASES, WIDENING_LADDER, type Namespace } from './simbad-specs-pure';
+import { GAIA_DR3, WIDENING_LADDER, type Namespace } from './simbad-specs-pure';
 import { ascending } from '../../../src/astro-core/order-pure';
 
 export interface Verdicts {
@@ -63,7 +63,7 @@ export async function corroborate(
   const verdicts: Verdicts = { corroborated: 0, vetoed: 0, uncorroborated: 0 };
   const kept = new Map<string, number>();
   if (bound.size === 0) return { kept, verdicts };
-  const gaiaIds = await fetchIdentSets(ask, phases.releases, GAIA_RELEASES, [...new Set(bound.values())].sort(ascending), ledger);
+  const gaiaIds = await fetchIdentSets(ask, phases.releases, [...new Set(bound.values())].sort(ascending), ledger);
   for (const [suffix, oid] of bound) {
     const releases = gaiaIds.get(oid) ?? new Map<string, Set<string>>();
     const asking = askingIds.get(suffix) ?? null;

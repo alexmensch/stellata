@@ -76,7 +76,7 @@ export function tycHdPull(outputs: DeclaredOutputs<'tycHd'>, { request, requestF
       const oidByTyc = await resolveOids(ask, CORE, TYC, tycs, ledger);
       log(`resolved ${oidByTyc.size}/${tycs.length} (${percentOf(oidByTyc.size, tycs.length)}) to a SIMBAD oid`);
       const oids = [...new Set(oidByTyc.values())].sort(ascending);
-      const hds = await fetchIdentSets(ask, CORE.idents, [HD_LETTERED], oids, ledger);
+      const hds = await fetchIdentSets(ask, CORE.idents, oids, ledger);
       const basic = await fetchBasic(ask, CORE, oids);
       const rows = tycHdRows(tycs, oidByTyc, hds, basic);
       log(`rows: ${rows.length}, ${rows.filter((r) => r[3]?.includes('|')).length} carrying more than one HD`);
