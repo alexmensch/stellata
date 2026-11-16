@@ -38,6 +38,31 @@ export const DIFFERS_LINKS = [
   { to: 'gl', from: 'hd', key: 'gl<hd' },
 ] as const satisfies readonly { to: KeyCell; from: KeyCell; key: string }[];
 export type DiffersLink = (typeof DIFFERS_LINKS)[number];
+type DiffersCell = DiffersLink['to'];
+
+/** What settles a differs cell without review, per cell. see README.md#settling-a-differs-cell */
+export const DIFFERS_SETTLEMENTS_BY_CELL = {
+  hip: [],
+  hd: ['close-pair-uncontested', 'close-pair-refuse'],
+  hr: ['v50-pair'],
+  gl: ['cns5-source'],
+} as const satisfies Record<DiffersCell, readonly string[]>;
+export type DiffersSettlement<C extends DiffersCell = DiffersCell> = (typeof DIFFERS_SETTLEMENTS_BY_CELL)[C][number];
+type DiffersQueueReason =
+  | 'close-pair-unanswered' | 'close-pair-split' | 'close-pair-source-silent' | 'close-pair-move' | 'no-rule';
+export type DiffersVerdict<C extends DiffersCell = DiffersCell> =
+  | { readonly settled: DiffersSettlement<C> }
+  | { readonly queued: DiffersQueueReason };
+
+type DiffersOf<L extends DiffersLink> = {
+  readonly kind: 'differs';
+  readonly link: L;
+  /** The value the record ships in the cell; null where a label rule emptied the spine's. */
+  readonly ships: string | null;
+  readonly derived: readonly string[];
+  readonly verdict: DiffersVerdict<L['to']>;
+};
+type Differs = { [K in DiffersLink['key']]: DiffersOf<Extract<DiffersLink, { key: K }>> }[DiffersLink['key']];
 
 export type MergeDivergence =
   | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
@@ -59,25 +84,7 @@ export type MergeDivergence =
     readonly onto: PairDisposedTarget;
   }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
-  | {
-    readonly kind: 'differs';
-    readonly link: DiffersLink;
-    /** The value the record ships in the cell; null where a label rule emptied the spine's. */
-    readonly ships: string | null;
-    readonly derived: readonly string[];
-    readonly verdict: DiffersVerdict;
-  };
-
-/** What settles a differs cell without review. see README.md#settling-a-differs-cell */
-export const DIFFERS_SETTLEMENTS = ['close-pair-uncontested', 'close-pair-refuse', 'v50-pair', 'cns5-source'] as const;
-export type DiffersSettlement = (typeof DIFFERS_SETTLEMENTS)[number];
-export const DIFFERS_QUEUE_REASONS = [
-  'close-pair-unanswered', 'close-pair-split', 'close-pair-source-silent', 'close-pair-move', 'no-rule',
-] as const;
-export type DiffersQueueReason = (typeof DIFFERS_QUEUE_REASONS)[number];
-export type DiffersVerdict =
-  | { readonly settled: DiffersSettlement }
-  | { readonly queued: DiffersQueueReason };
+  | Differs;
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -390,24 +397,28 @@ const CLOSE_PAIR_QUEUE = {
 } as const satisfies Partial<Record<ClosePairVerdictKind, DiffersQueueReason>>;
 
 /** see README.md#settling-a-differs-cell */
-function differsVerdict(to: DiffersLink['to'], shipped: ShippedCells, m: MergeLinks): DiffersVerdict {
-  switch (to) {
-    case 'hd': {
-      const { kind } = closePairHdVerdict(shipped, m.closePair);
-      if (kind === 'uncontested') return { settled: 'close-pair-uncontested' };
-      if (kind === 'refuse') return { settled: 'close-pair-refuse' };
-      return { queued: CLOSE_PAIR_QUEUE[kind] };
-    }
-    case 'hr':
-      return shipped.hd !== null && m.hdHr.get(shipped.hd) === shipped.hr ? { settled: 'v50-pair' } : { queued: 'no-rule' };
-    case 'gl': {
-      const own = shipped.gaiaSourceId === null ? [] : m.cns5BySource.get(shipped.gaiaSourceId) ?? [];
-      const gl = shipped.gl;
-      return gl !== null && own.some((c) => confirmsLabel('gl', c, gl)) ? { settled: 'cns5-source' } : { queued: 'no-rule' };
-    }
-    case 'hip':
-      return { queued: 'no-rule' };
-  }
+const DIFFERS_VERDICT: { [C in DiffersCell]: (shipped: ShippedCells, m: MergeLinks) => DiffersVerdict<C> } = {
+  hd: (shipped, m) => {
+    const { kind } = closePairHdVerdict(shipped, m.closePair);
+    if (kind === 'uncontested') return { settled: 'close-pair-uncontested' };
+    if (kind === 'refuse') return { settled: 'close-pair-refuse' };
+    return { queued: CLOSE_PAIR_QUEUE[kind] };
+  },
+  hr: (shipped, m) =>
+    shipped.hd !== null && m.hdHr.get(shipped.hd) === shipped.hr ? { settled: 'v50-pair' } : { queued: 'no-rule' },
+  gl: (shipped, m) => {
+    const own = shipped.gaiaSourceId === null ? [] : m.cns5BySource.get(shipped.gaiaSourceId) ?? [];
+    const gl = shipped.gl;
+    return gl !== null && own.some((c) => confirmsLabel('gl', c, gl)) ? { settled: 'cns5-source' } : { queued: 'no-rule' };
+  },
+  hip: () => ({ queued: 'no-rule' }),
+};
+
+function differsOf<L extends DiffersLink>(
+  link: L, ships: string | null, derived: readonly string[], shipped: ShippedCells, m: MergeLinks,
+): DiffersOf<L> {
+  const verdict: (s: ShippedCells, m: MergeLinks) => DiffersVerdict<L['to']> = DIFFERS_VERDICT[link.to];
+  return { kind: 'differs', link, ships, derived, verdict: verdict(shipped, m) };
 }
 
 /** see README.md#the-divergence-ledger */
@@ -435,7 +446,7 @@ function differsCells(
     if (row[link.from] === '' || row[link.to] === '') continue;
     const derived = [...new Set(derivedBy[link.key]().map(String))].sort();
     if (derived.length === 0 || derived.some((d) => held.some((h) => confirmsLabel(link.to, d, h)))) continue;
-    out.push({ kind: 'differs', link, ships: held[0] ?? null, derived, verdict: differsVerdict(link.to, shipped, m) });
+    out.push(differsOf(link, held[0] ?? null, derived, shipped, m) as Differs);
   }
   return out;
 }

@@ -27,7 +27,7 @@ import {
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding/binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES,
   type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
 } from './merge-derivation/merge-derivation-pure';
 import {
@@ -278,16 +278,13 @@ type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
 const derivedOnlyBranch = (c: DerivedOnlyCell, h: HeldState): DerivedOnlyBranch => `merge.derived-only.${c}.${h}`;
 type DiffersBranch = `merge.differs.${DiffersLink['to']}.${DiffersLink['from']}`;
 const differsBranch = (l: DiffersLink): DiffersBranch => `merge.differs.${l.to}.${l.from}`;
-type DiffersSettledBranch = `${DiffersBranch}.${DiffersSettlement}`;
-const differsSettledBranch = (l: DiffersLink, s: DiffersSettlement): DiffersSettledBranch => `${differsBranch(l)}.${s}`;
+type DiffersSettledBranch = {
+  [K in DiffersLink['key']]: Extract<DiffersLink, { key: K }> extends infer L extends DiffersLink
+    ? `merge.differs.${L['to']}.${L['from']}.${DiffersSettlement<L['to']>}` : never;
+}[DiffersLink['key']];
+const differsSettledBranch = <L extends DiffersLink>(l: L, s: DiffersSettlement<L['to']>): DiffersSettledBranch =>
+  `${differsBranch(l)}.${s}` as DiffersSettledBranch;
 
-/** The settlements a cell can reach, and what each says. see merge-derivation/README.md#settling-a-differs-cell */
-const DIFFERS_SETTLEMENTS_BY_CELL = {
-  hip: [],
-  hd: ['close-pair-uncontested', 'close-pair-refuse'],
-  hr: ['v50-pair'],
-  gl: ['cns5-source'],
-} as const satisfies Record<DiffersLink['to'], readonly DiffersSettlement[]>;
 const DIFFERS_SETTLEMENT_DESCRIPTIONS = {
   'close-pair-uncontested': 'the close-pair rule\'s two TYC witnesses agree, and one names the HD the record ships',
   'close-pair-refuse': 'the close-pair rule finds the record\'s Gaia source is another SIMBAD object than its TYC\'s, so the TYC cell is the crossed one and the HD stands',
@@ -348,7 +345,7 @@ const MERGE_BRANCHES: readonly {
     branch: differsQueuedBranch(l), of: 'differs' as const, ledger: 'differs' as const,
     description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule, and no rule settles the cell: it is queued for review and the shipped value stands.`,
   })),
-  ...DIFFERS_LINKS.flatMap((l) => DIFFERS_SETTLEMENTS_BY_CELL[l.to].map((s: DiffersSettlement) => ({
+  ...DIFFERS_LINKS.flatMap((l) => (DIFFERS_SETTLEMENTS_BY_CELL[l.to] as readonly DiffersSettlement[]).map((s) => ({
     branch: differsSettledBranch(l, s), of: 'differs' as const, ledger: null,
     description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, and ${DIFFERS_SETTLEMENT_DESCRIPTIONS[s]}: the shipped value stands.`,
   }))),
