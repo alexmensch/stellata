@@ -41,10 +41,6 @@ Of the spine's **1,537** 2p rows: **1,219** route
 (272 of the 283 `distRefusedNoOwnedParallax` rows are 2p); **36** reach this
 cascade. The cascade did not narrow — the catalogue stopped building the records.
 
-Do not read that 1,537 against Tycho-2's **1,537 `pflag='X'` rows**
-(`data/tycho2/README.md`): the two counts matching to the digit is a coincidence
-of unrelated catalogues.
-
 Routing, pinned in `../../build-catalog-expected.json` as `pmRescue*`. The
 cascade returns the shared shape (`../../cascade-result.ts`), so a skipped
 candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
