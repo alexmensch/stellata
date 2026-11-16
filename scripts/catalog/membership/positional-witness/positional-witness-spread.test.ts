@@ -45,7 +45,7 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
       return witnessHipparcos(hip, candidates(r.entries));
     });
     expect(rows.length).toBe(1046);
-    expect(tallyKinds(verdicts)).toEqual({ match: 1028, none: 2, several: 16 });
+    expect(tallyKinds(verdicts)).toEqual({ match: 1034, none: 2, several: 10 });
   });
 
   it("tests each unlinked GJ cell's V/70A position against the row's own TYC", () => {

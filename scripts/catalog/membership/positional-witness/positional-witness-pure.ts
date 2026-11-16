@@ -17,7 +17,7 @@ import type { ObservedPosition, Tycho2Row } from '../../tycho2-parse';
 export const V70A_WITNESS_TOLERANCE_ARCSEC = 15;
 
 /** See README.md#the-tolerances. */
-export const HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.5;
+export const HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.4;
 
 const B1950_JD = besselianEpochToJd(1950);
 const B1950_JULIAN_YEAR = julianYearOfJd(B1950_JD);

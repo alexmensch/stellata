@@ -60,16 +60,18 @@ of known matches below, so no verdict turns on them.
 Measured 2026-11-16 over the committed tables. The verdict counts are pinned
 in `positional-witness-spread.test.ts`.
 
-**`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.5`.** Over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
+**`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.4`.** Over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
 `no_hip_source` HIPs, carried HIP2 lands on the nearer entry's observed cell
 within 0.18″ at the 99th percentile (median 0.013″); the nearer separations
 run continuously to 0.36″, then two pairs Hipparcos measured as one sit at
 1.05″ (HIP 17750) and 1.23″ (HIP 94223). Uncarried, the 99th percentile was
 0.39″ and every one of the five fast movers past 0.5″ read `none`. The other
-entry sits a median 2.81″ away and as close as 0.12″. At 0.5″: **1,028 match,
-2 none, 16 several**. At 1.0″ the several count rises to 141; at any value the
-V/70A witness needs (≥ 12″) it is 1,005, which is why one tolerance cannot
-serve both sources.
+entry sits a median 2.81″ away and as close as 0.12″. 0.4″ is the tightest
+value above every right entry but the two blends: **1,034 match, 2 none
+(those two), 10 several** — close pairs whose other entry is inside it too.
+At 0.3″ HIP 30953's right entry (0.36″) would read `none`; at 0.5″ six more
+pairs read `several`, at 1.0″ 141 do, and at any value the V/70A witness needs
+(≥ 12″) 1,005 do, which is why one tolerance cannot serve both sources.
 
 **`V70A_WITNESS_TOLERANCE_ARCSEC = 15`.** The 22 `v70a_astrometry`
 dispositions (`data/membership/binding-review-dispositions.tsv`) put V/70A
