@@ -8,7 +8,7 @@ import { readTable } from '../util/tsv/table-pure';
 import { normaliseGjKey } from './simbad/simbad-namespace-ladder-pure';
 import type { MeasuredParallax } from './cited-parallax';
 
-const GLIESE_COLUMNS = [
+export const GLIESE_COLUMNS = [
   'name', 'comp', 'vmag', 'bv', 'sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'hd',
   'ra_b1950_deg', 'de_b1950_deg', 'pm_arcsec_yr', 'pm_pa_deg',
 ] as const;
