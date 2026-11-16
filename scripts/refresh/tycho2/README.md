@@ -58,8 +58,11 @@ re-run costs no network.
 ## Gates
 
 - **Kept share**, per table: kept rows as a share of the mentioned TYCs,
-  floored at both ends (main 0.98–1, supplement 0.004–0.012), so a request
-  that moves moves the band with it.
+  floored at both ends (main 0.98–1.01, supplement 0.008–0.024), so a request
+  that moves moves the band with it. The rows kept by HIP alone push both
+  above the TYC-only share: measured 2026-11-16, main 1.0004 (2,643 rows a
+  manifest HIP names and no TYC does), supplement 0.0159 (3,197, every one a
+  `flag='H'` Hipparcos star).
 - **Spot rows**: the main table's on `ra_mdeg` (TYC 3694-2544-1, HD 14039,
   carries no HIP, and the TYC is three columns); the supplement's on `hip` 6.
 - **The cover gate** (`membershipCover`): every manifest TYC reaches a row of

@@ -110,7 +110,7 @@ export const MAIN: Tycho2Table = {
     vizierColumn('EpRAm', 'ep_ra', FLOAT), vizierColumn('EpDEm', 'ep_de', FLOAT),
     ...motion, ...icrs, ...photometry,
   ],
-  keptShare: { min: 0.98, max: 1 },
+  keptShare: { min: 0.98, max: 1.01 },
   spotRows: [{
     key: 'ra_mdeg',
     value: '34.60250679',
@@ -124,7 +124,7 @@ export const MAIN: Tycho2Table = {
 export const SUPPL1: Tycho2Table = {
   vizierId: 'I/259/suppl_1',
   columns: [...tycColumns, vizierColumn('flag', 'flag'), ...icrs, ...motion, ...photometry],
-  keptShare: { min: 0.004, max: 0.012 },
+  keptShare: { min: 0.008, max: 0.024 },
   spotRows: [{ key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } }],
 };
 
