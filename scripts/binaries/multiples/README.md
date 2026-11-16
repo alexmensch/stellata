@@ -311,11 +311,11 @@ Three system-level mechanisms run at emit time:
   `unresolved` (a HIP alone binds no tier, as on a pair row).
 - **Mass-ratio q backfill.** When Stage 4 produced orbital elements but
   no `q` (visual ORB6 with no spectroscopic counterpart),
-  `massRatio` in `../masses/mass-estimate-pure.ts`
-  parses both components' spectral strings (SIMBAD per-component
-  preferred, AT-HYG inherited fallback) into class / subclass / lum
-  class and reads a `q = M_secondary / (M_primary + M_secondary)` off
-  per-class mass tables for MS / III / IV / I
+  `spectralMass` in `../masses/mass-estimate-pure.ts` parses each
+  component's spectral string (SIMBAD per-component preferred, AT-HYG
+  inherited fallback) into class / subclass / lum class and reads its
+  mass off per-class tables for MS / III / IV / I, and `massRatio` reads
+  `q = M_secondary / (M_primary + M_secondary)` off the two masses
   ([Cox 2000](/data/papers/index.md#cox2000) Sect. 15.2; the
   main-sequence anchors, checked against the online table of
   [Mamajek 2022](/data/papers/index.md#mamajek2022) (v2022.04.16), disagree
