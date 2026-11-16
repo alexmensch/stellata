@@ -9,6 +9,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
 import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
+import { BAYER_DROPS } from '../naming/bayer-drops-source';
+import { normaliseIv27aBayer } from '../naming/wgsn-normalise-pure';
 import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
@@ -229,9 +231,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // is held here.
   describe('↔ the naming authority', () => {
     const designations = readArtifact(WGSN_DESIGNATIONS);
-    const { approvedNameKeys } = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
+    const index = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
+    const { approvedNameKeys } = index;
     const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
-      rows, approvedNameKeys, designations, PROPER_DISPOSITIONS.read(),
+      rows, approvedNameKeys, PROPER_DISPOSITIONS.read(),
     );
 
     it('disposes exactly the manifest propers no WGSN name matches', () => {
@@ -241,9 +244,32 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
     it('fails on a manifest proper WGSN does not name and the file does not dispose', () => {
       const seeded: ManifestNamingRow = {
-        proper: 'Nonesuch', bayer: null, hip: null, hd: 999_999, isSol: false,
+        proper: 'Nonesuch', hip: null, hd: 999_999, isSol: false,
       };
       expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
+    });
+
+    it('ledgers Bayer drops only on records the build gives no Bayer designation, and a sibling holds each', () => {
+      const drops = BAYER_DROPS.read();
+      expect(drops).toHaveLength(1);
+      const bayerOf = (r: ManifestRecord) => index.bayerOf({ hip: r.hip, hd: r.hd, hr: r.hr, proper: r.proper });
+      for (const drop of drops) {
+        const rows = manifest.filter((r) => r.hd === drop.hd);
+        expect(rows, `hd ${drop.hd}`).toHaveLength(1);
+        expect(bayerOf(rows[0])?.letter ?? null, `hd ${drop.hd}`).toBeNull();
+
+        const [field, cst] = drop.bayer.split(' ');
+        const printed = normaliseIv27aBayer(field, cst);
+        expect(printed.class, drop.bayer).toBe('bayer');
+        if (printed.class !== 'bayer') continue;
+        const { letter, sup, dc } = printed.bayer;
+        const holders = manifest.filter((r) => {
+          const held = bayerOf(r);
+          return held !== null && held.letter === letter && held.sup === sup && held.dc === dc;
+        });
+        expect(holders.length, `${drop.bayer} is held by another record`).toBe(1);
+        expect(holders[0]).not.toBe(rows[0]);
+      }
     });
 
     it('matches the pinned naming counts', () => {

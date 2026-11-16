@@ -238,17 +238,21 @@ export interface Attestation {
   tyc: 'tycho2' | null;
 }
 
-export type ClassicalCell = 'hd' | 'hr' | 'hip' | 'gl' | 'bayer' | 'flam' | 'proper';
+export type IdentifierCell = 'hd' | 'hr' | 'hip' | 'gl' | 'flam' | 'proper';
+export type ClassicalCell = IdentifierCell | 'bayer';
 export const CLASSICAL_CELLS: readonly ClassicalCell[] = [
   'hd', 'hr', 'hip', 'gl', 'bayer', 'flam', 'proper',
 ];
+export const IDENTIFIER_CELLS: readonly IdentifierCell[] = CLASSICAL_CELLS.filter(
+  (c): c is IdentifierCell => c !== 'bayer',
+);
 
-export interface RowAttestation {
-  attestation: Attestation;
+export interface RowAttestation<C extends ClassicalCell = ClassicalCell> {
+  attestation: Pick<Attestation, C | 'tyc'>;
   /** Classical cells the row carries a value in. */
-  carried: ClassicalCell[];
+  carried: C[];
   /** Carried cells no primary attests. */
-  unattested: ClassicalCell[];
+  unattested: C[];
   /** No carried classical cell is attested: the record exists on AT-HYG's
    *  authority alone. */
   residual: boolean;
@@ -286,13 +290,12 @@ function attestFlam(
   return null;
 }
 
-/** The identifier cells attestation reads — a spine row's, or a membership
- *  manifest row's, which carries the same columns. */
+/** A spine row's identifier cells, as the audit reads them. */
 export type IdentifierCells = Pick<
   SpineRow, 'tyc' | 'hip' | 'hd' | 'hr' | 'gl' | 'flam' | 'bayer' | 'proper'
 >;
 
-/** The same identifiers typed — a membership manifest record satisfies it. */
+/** A row's identifiers typed — a membership manifest record satisfies it. */
 export interface Identifiers {
   tyc: string | null;
   hip: number | null;
@@ -300,7 +303,6 @@ export interface Identifiers {
   hr: number | null;
   gl: string | null;
   flam: number | null;
-  bayer: string | null;
   proper: string | null;
 }
 
@@ -311,47 +313,57 @@ export function attestSpineRow(
   tables: PrimaryTables,
   idx: PrimaryIndex,
 ): RowAttestation {
-  return attestIdentifiers({
+  const ids: Identifiers = {
     tyc: nonEmpty(row.tyc),
     hip: intCell(row.hip),
     hd: intCell(row.hd),
     hr: intCell(row.hr),
     gl: nonEmpty(row.gl),
     flam: intCell(row.flam),
-    bayer: nonEmpty(row.bayer),
     proper: nonEmpty(row.proper),
-  }, tables, idx);
+  };
+  const bayer = nonEmpty(row.bayer);
+  const attestation: Attestation = {
+    ...attestIdentifiers(ids, tables, idx).attestation,
+    bayer: bayer === null ? null : attestBayer(ids.hd, ids.hip, idx, tables.wgsn),
+  };
+  return summarise(CLASSICAL_CELLS, attestation, { ...carriedCells(ids), bayer: bayer !== null });
 }
 
 export function attestIdentifiers(
   ids: Identifiers,
   tables: PrimaryTables,
   idx: PrimaryIndex,
-): RowAttestation {
-  const { hd, hr, hip, flam, gl, bayer, proper, tyc } = ids;
-  const attestation: Attestation = {
+): RowAttestation<IdentifierCell> {
+  const { hd, hr, hip, flam, gl, proper, tyc } = ids;
+  const attestation: Pick<Attestation, IdentifierCell | 'tyc'> = {
     hd: hd === null ? null : attestHd(hd, idx, tables),
     hr: hr === null ? null : idx.hrSet.has(hr) ? 'v50' : null,
     hip: hip === null ? null : tables.hipI239.has(hip) ? 'i239' : null,
     gl: gl === null ? null : attestGl(gl, idx, tables.gliese),
-    bayer: bayer === null ? null : attestBayer(hd, hip, idx, tables.wgsn),
     flam: flam === null ? null : attestFlam(flam, hd, hip, idx, tables.wgsn),
     proper: proper === null
       ? null
       : proper === SOL_PROPER_NAME ? 'sol' : tables.wgsn.names.has(proper) ? 'wgsn' : null,
     tyc: tyc !== null && tables.tycho2.has(tyc) ? 'tycho2' : null,
   };
-  const carried: ClassicalCell[] = [];
-  const unattested: ClassicalCell[] = [];
-  const present: Record<ClassicalCell, boolean> = {
-    hd: hd !== null, hr: hr !== null, hip: hip !== null, gl: gl !== null,
-    bayer: bayer !== null, flam: flam !== null, proper: proper !== null,
+  return summarise(IDENTIFIER_CELLS, attestation, carriedCells(ids));
+}
+
+function carriedCells(ids: Identifiers): Record<IdentifierCell, boolean> {
+  return {
+    hd: ids.hd !== null, hr: ids.hr !== null, hip: ids.hip !== null, gl: ids.gl !== null,
+    flam: ids.flam !== null, proper: ids.proper !== null,
   };
-  for (const cell of CLASSICAL_CELLS) {
-    if (!present[cell]) continue;
-    carried.push(cell);
-    if (attestation[cell] === null) unattested.push(cell);
-  }
+}
+
+function summarise<C extends ClassicalCell>(
+  cells: readonly C[],
+  attestation: Pick<Attestation, C | 'tyc'>,
+  present: Record<C, boolean>,
+): RowAttestation<C> {
+  const carried = cells.filter((c) => present[c]);
+  const unattested = carried.filter((c) => attestation[c] === null);
   return {
     attestation,
     carried,

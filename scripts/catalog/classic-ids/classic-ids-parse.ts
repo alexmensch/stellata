@@ -55,6 +55,18 @@ export interface CrossIndexRow {
   cst: string | null;
 }
 
+/** Every HIP IV/27A links to each HD, in row order. */
+export function crossIndexHipsByHd(rows: readonly CrossIndexRow[]): Map<number, number[]> {
+  const out = new Map<number, number[]>();
+  for (const r of rows) {
+    if (r.hip === null) continue;
+    const hips = out.get(r.hd);
+    if (hips === undefined) out.set(r.hd, [r.hip]);
+    else hips.push(r.hip);
+  }
+  return out;
+}
+
 const CROSS_INDEX_COLUMNS = ['hd', 'hip', 'bayer', 'flamsteed', 'cst'] as const;
 
 export function parseCrossIndexTsv(text: string, from: Declared): CrossIndexRow[] {

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import {
   foldNameKey,
+  normaliseBsc5Bayer,
   normaliseIv27aBayer,
   normaliseWgsnCell,
   splitNameCell,
@@ -119,6 +120,25 @@ describe('normaliseWgsnCell — NEC Bayer/other grammar', () => {
     expect(normaliseWgsnCell('Σ 1694 A').class).toBe('other_catalogue');
     expect(normaliseWgsnCell('If[StringTake["ρ2", 3] == "HIP", "", name]').class).toBe('corrupt');
     expect(normaliseWgsnCell(null).class).toBe('empty');
+  });
+});
+
+describe('normaliseBsc5Bayer', () => {
+  const bayer = (letter: string, sup: number | null, dc: string) => ({
+    class: 'bayer', bayer: { letter, sup, dc, component: null },
+  });
+
+  it('reads the Bayer field from the right, with and without Flamsteed and superscript', () => {
+    expect(normaliseBsc5Bayer('81Pi 1Cnc')).toEqual(bayer('π', 1, 'Cnc'));
+    expect(normaliseBsc5Bayer('53Xi  UMa')).toEqual(bayer('ξ', null, 'UMa'));
+    expect(normaliseBsc5Bayer('Zet1Ant')).toEqual(bayer('ζ', 1, 'Ant'));
+    expect(normaliseBsc5Bayer('16Zet1Cnc')).toEqual(bayer('ζ', 1, 'Cnc'));
+  });
+
+  it('finds no Bayer field in a Flamsteed-only name or a non-stellar one', () => {
+    for (const name of ['6    Cet', '106    Aqr', 'NOVA 1572', 'NGC 2281', 'M 67']) {
+      expect(normaliseBsc5Bayer(name), name).toEqual({ class: 'empty' });
+    }
   });
 });
 

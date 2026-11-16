@@ -8,7 +8,7 @@ the three files marked hand-curated below, which the build reads as input. Contr
 ```
 membership-manifest.tsv  LFS. One row per admitted record: final
                          labels (hd/hd_alt/hr/hr_alt/hip/gl/flam, the spine's
-                         bayer/proper), gaia_source_id with its binding class,
+                         proper), gaia_source_id with its binding class,
                          the primary attesting each cell, `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
                          the row — and `origin_key`, the record's lineage

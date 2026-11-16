@@ -1,10 +1,11 @@
 // Which classical labels a manifest row keeps, and the routes column naming the primary that attests each. See README.md#the-unattested-labels-leave-the-row.
 
 import {
-  CLASSICAL_CELLS,
+  IDENTIFIER_CELLS,
   attestHd,
   attestIdentifiers,
   type PrimaryIndex,
+  type IdentifierCell,
   type PrimaryTables,
   type RowAttestation,
 } from '../spine/primaries-audit-pure';
@@ -21,7 +22,7 @@ export interface LabelDrop {
 /** A row and the attestation taken of that row. */
 export interface AttestedRow {
   row: ManifestRecord;
-  attestation: RowAttestation;
+  attestation: RowAttestation<IdentifierCell>;
 }
 
 export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): AttestedRow {
@@ -54,7 +55,7 @@ export function attestedLabels(
  *  `attestedLabels` first. */
 export function routedRow({ row, attestation: a }: AttestedRow): { row: ManifestRecord; outcomes: KeyedOutcome[] } {
   const routes: string[] = [];
-  for (const cell of CLASSICAL_CELLS) {
+  for (const cell of IDENTIFIER_CELLS) {
     const by = a.attestation[cell];
     if (by !== null) routes.push(`${cell}:${by}`);
   }
