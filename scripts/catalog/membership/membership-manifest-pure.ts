@@ -10,7 +10,7 @@ import type { SpineRow } from '../spine/inherited-spine-pure';
 import { indexPrimaries, spineKeys, type PrimaryTables } from '../spine/primaries-audit-pure';
 import { admitAdditions } from './additions/admission-pure';
 import type { BindingEvidence } from './binding/binding-gate-pure';
-import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
+import { ownCandidates, queuedIdentities, rowDeriver } from './binding/binding-outcomes-pure';
 import type { PositionEvidence } from './binding/binding-derivation-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding/binding-review-dispositions-pure';
@@ -134,6 +134,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ownCandidates([...settlement.unshipped, ...additions.unshipped]), keys.gaia,
   );
 
+  const identityQueue = queuedIdentities(
+    [...settlement.identityQueue, ...additions.identityQueue],
+    new Set(magnitude.rows.map((r) => r.gaiaSourceId ?? '')),
+  );
   const rows = [...primariesRows, ...magnitude.rows];
   const identity = [
     ...folded.identity,
@@ -141,7 +145,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ...rows.map((r) => identityRow(r.originKey, MEMBERSHIP_MANIFEST.encode(r), manifestDesignations(r))),
   ];
   const lineage = [
-    ...settlement.outcomes, ...spine.outcomes, ...merge, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes,
+    ...settlement.outcomes, ...spine.outcomes, ...merge, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes, ...identityQueue,
   ].map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const sorted = sortManifestRecords(rows);

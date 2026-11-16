@@ -16,21 +16,20 @@ import { nullableCell } from '../../../util/tsv/artifact-pure';
 import { identityRow, type IdentityCells, type IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   BINDING_SOURCES,
-  isUnconfirmed,
   type BindingSource,
   type DerivedBinding,
   type RowGateEvidence,
 } from '../binding/binding-derivation-pure';
 import {
-  bindingReviewCells,
   boundOutcome,
+  identityQueueCandidate,
   heldMoreThanOnce,
   identityWitnessed,
   passingRunnersUp,
   refusedCandidates,
-  reviewLetters,
   unshippedCandidates,
   unweighedCandidates,
+  type IdentityQueueCandidate,
   type RowDeriver,
   type UnshippedCandidate,
 } from '../binding/binding-outcomes-pure';
@@ -386,15 +385,11 @@ function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
   return boundOutcome(g.derived);
 }
 
-/** ../binding/README.md#identity-outranks-a-blended-magnitude: the group goes to the binding review queue. */
-function queuedAddition(g: AdditionGroup, tables: PrimaryTables): KeyedOutcome {
-  const hip = g.hip === null ? '' : String(g.hip.hip);
-  const cells = { tyc: g.tyc, hip, hd: g.hd === null ? '' : String(g.hd.lowestHd), hr: '', gl: g.rawGl ?? '' };
-  return { key: g.origin, outcome: {
-    kind: 'addition-binding-queued', outcome: 'unconfirmed',
-    review: bindingReviewCells(cells, g.derived, g.gate, tables),
-    ...reviewLetters(g.derived.sourceId, hip, g.gate.evidence.wdsXids),
-  } };
+function reviewKeyCells(g: AdditionGroup) {
+  return {
+    tyc: g.tyc, hip: g.hip === null ? '' : String(g.hip.hip),
+    hd: g.hd === null ? '' : String(g.hd.lowestHd), hr: '', gl: g.rawGl ?? '',
+  };
 }
 
 export interface AdditionsPhase {
@@ -404,6 +399,7 @@ export interface AdditionsPhase {
   /** The component groups', which become no row. */
   identity: IdentityRow[];
   unshipped: UnshippedCandidate[];
+  identityQueue: IdentityQueueCandidate[];
 }
 
 export function admitAdditions(input: {
@@ -429,7 +425,7 @@ export function admitAdditions(input: {
   });
   const sharedSources = heldMoreThanOnce(derivedGroups.map(({ derived }) => derived.sourceId));
 
-  const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [] };
+  const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [], identityQueue: [] };
   const groups = derivedGroups.map(({ items: groupItems, derived, gate }) => {
     const group = additionGroup(groupItems, { derived, gate }, claims, sharedSources, keys);
     const weighedBy = groupItems.map((item) => {
@@ -457,13 +453,14 @@ export function admitAdditions(input: {
       } });
     }
     out.outcomes.push(
-      isUnconfirmed(g.derived) ? queuedAddition(g, tables) : { key: g.origin, outcome: {
+      { key: g.origin, outcome: {
         kind: 'addition-binding', ...withLead(additionBindingOutcome(g), LED_ADDITION_OUTCOMES, g.derived.via, BINDING_SOURCES),
         sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),
       ...identityWitnessed(g.origin, 'addition', g.derived),
     );
+    out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', reviewKeyCells(g), g.derived, g.gate, tables));
     if (a.verdict.kind === 'component') {
       out.outcomes.push({
         key: g.origin,

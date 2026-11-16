@@ -4,7 +4,6 @@ import type { PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   BINDING_SOURCES,
-  isUnconfirmed,
   type DerivedBinding,
   type RowGateEvidence,
 } from './binding-derivation-pure';
@@ -13,6 +12,8 @@ import type {
 } from './binding-gate-pure';
 import {
   bindingReviewCells,
+  identityQueueCandidate,
+  type IdentityQueueCandidate,
   boundOutcome,
   heldMoreThanOnce,
   identityWitnessed,
@@ -37,7 +38,7 @@ import {
 } from '../membership-lineage-pure';
 import { isSolProper } from '../membership-manifest-tsv';
 
-type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'unconfirmed' | 'sol';
+type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'sol';
 
 /** What the derivation reached for one spine row. Sol derives nothing. */
 export type SpineBinding =
@@ -67,11 +68,12 @@ export interface SpineSettlement {
   rows: SettledSpineRow[];
   outcomes: KeyedOutcome[];
   unshipped: UnshippedCandidate[];
+  identityQueue: IdentityQueueCandidate[];
 }
 
 function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutcome {
   if (withheld) return 'collision';
-  if (derived.sourceId === null) return isUnconfirmed(derived) ? 'unconfirmed' : 'refused';
+  if (derived.sourceId === null) return 'refused';
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
@@ -195,6 +197,7 @@ export function settleSpineBindings(input: {
   const { kept, keyOf, dispositions, evidence, tables } = input;
   const bindings = deriveSpineBindings(kept, input.derive);
   const outcomes: KeyedOutcome[] = [];
+  const identityQueue: IdentityQueueCandidate[] = [];
   const unshipped: UnshippedCandidate[] = [];
   const applied = new Set<string>();
   const rows = bindings.map((b, i): SettledSpineRow => {
@@ -207,6 +210,9 @@ export function settleSpineBindings(input: {
       const disposition = dispositions.get(reviewKey);
       if (disposition !== undefined) applied.add(reviewKey);
       const r = settleRow(row, key, b, disposition, evidence, tables);
+      if (r.settled.value === null) {
+        identityQueue.push(...identityQueueCandidate(key, 'spine', row, b.derived, b.gate, tables));
+      }
       outcomes.push(...r.outcomes);
       unshipped.push(...r.unshipped);
       s = r.settled;
@@ -223,5 +229,5 @@ export function settleSpineBindings(input: {
   if (duplicated.size > 0) {
     throw new Error(`two spine rows bind one Gaia source: ${[...duplicated].join(', ')}`);
   }
-  return { rows, outcomes, unshipped };
+  return { rows, outcomes, unshipped, identityQueue };
 }

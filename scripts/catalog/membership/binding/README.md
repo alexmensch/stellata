@@ -158,13 +158,16 @@ The binding ships `binding.identified.<lead>`; `binding.identity-witness`
 either way. Like the component witness it applies only once every candidate
 has refused, so it never outranks a candidate that passes on its own.
 
-**Where the position does not confirm SIMBAD, the row is queued**
-(`unconfirmed`, below), ships no source, and the refused source stays a
-magnitude-term row while it waits: a disagreement leans toward a different
-star — HIP 83369's source sits 64″ from the HIP — and withholding it could
-drop a real one. No position is no confirmation: the HIPs the original
-Hipparcos catalogue lists as the second member of a double with no
-astrometric solution of their own have no HIP2 row, and queue.
+**Where the position does not confirm SIMBAD, the row ships no source, and
+it is queued** (`unconfirmed`, below) **only where the refused source is a
+magnitude-term row** — the one case that draws a star twice. The source stays
+that row while it waits: a disagreement leans toward a different star —
+HIP 83369's source sits 64″ from the HIP — and withholding it could drop a
+real one. A refused source fainter than the floor draws nothing twice, so its
+row is an ordinary refusal and only `*.identity-witness` records what SIMBAD
+named. No position is no confirmation: the HIPs the original Hipparcos
+catalogue lists as the second member of a double with no astrometric solution
+of their own have no HIP2 row.
 
 **The losers are weighed too, not only the candidates ahead of the winner.**
 `passingRunnersUp` reads the rejections to decide whether a row's sources

@@ -3,6 +3,7 @@
 import {
   bindingCandidates,
   deriveBinding,
+  isUnconfirmed,
   indexSimbadSources,
   rowGateEvidence,
   type BindingCells,
@@ -36,6 +37,38 @@ export function rowDeriver(
 export function boundOutcome(d: DerivedBinding): 'bound' | 'rescued' | 'identified' {
   if (d.rescue === null) return 'bound';
   return d.rescue === 'component' ? 'rescued' : 'identified';
+}
+
+/** A row whose identity witness went unconfirmed: queued only once the magnitude
+ *  term admits its source (README.md#identity-outranks-a-blended-magnitude). */
+export interface IdentityQueueCandidate {
+  key: string;
+  subject: RefusalSubject;
+  sourceId: string;
+  review: BindingReviewCells;
+  sourceLetters: string;
+  hipLetters: string;
+}
+
+export function identityQueueCandidate(
+  key: string, subject: RefusalSubject, cells: ReviewKeyCells, d: DerivedBinding, gate: RowGateEvidence, tables: PrimaryTables,
+): IdentityQueueCandidate[] {
+  if (!isUnconfirmed(d) || d.identity === null) return [];
+  return [{
+    key, subject, sourceId: d.identity.sourceId,
+    review: bindingReviewCells(cells, d, gate, tables),
+    ...reviewLetters(d.sourceId, cells.hip, gate.evidence.wdsXids),
+  }];
+}
+
+/** The candidates whose source the magnitude term admitted, as queue rows. */
+export function queuedIdentities(
+  candidates: readonly IdentityQueueCandidate[], admitted: ReadonlySet<string>,
+): KeyedOutcome[] {
+  return candidates.filter((c) => admitted.has(c.sourceId)).map((c) => ({
+    key: c.key,
+    outcome: { kind: 'identity-queued', subject: c.subject, review: c.review, sourceLetters: c.sourceLetters, hipLetters: c.hipLetters },
+  }));
 }
 
 /** The identity witness's evidence, wherever it named a refused candidate. */

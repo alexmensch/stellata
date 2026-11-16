@@ -196,7 +196,7 @@ membership.addition-binding.rescued.tyc	membership	none	outcome	live		7.1.20	The
 membership.addition-binding.route-disagree	membership	none	outcome	live		7.1.20	The addition group's TYC route and HIP route propose different Gaia sources.
 membership.addition-binding.runner-up	membership	none	refused	live		7.1.20	An addition group's binding candidate that passed both gates but lost to a higher-ranked one.
 membership.addition-binding.shared	membership	none	outcome	live		7.1.6	Two admitted stars reach the same Gaia source, so neither takes it.
-membership.addition-binding.unconfirmed	membership	none	outcome	live		7.1.32	Every candidate failed a gate, and SIMBAD's one object for the HIP names a refused one its position does not confirm; the row is queued for review.
+membership.addition-binding.unconfirmed	membership	none	outcome	live		7.1.32	SIMBAD's one object for the HIP names a refused candidate its position does not confirm, and the magnitude term admits that source as a record of its own; the row is queued for review.
 membership.addition.blocked-designation	membership	none	outcome	live		7.1.20	The admitted star ships without a designation its primaries publish, because another record answers to it.
 membership.admit.cns5-census	membership	none	outcome	retired	7.1.20	7.1.6	A CNS5 nearby-star census row the spine lacks is admitted.
 membership.admit.cns5-census.crosswalk-gated	membership	none	outcome	live		7.1.20	A CNS5 nearby-star census row the spine lacks is admitted. It ships a TYC, HIP or CNS5 candidate the binding gates passed.
@@ -253,7 +253,7 @@ membership.binding.rescued.tyc	membership	none	outcome	live		7.1.20	Every candid
 membership.binding.runner-up	membership	none	refused	live		7.1.6	A binding candidate that passed both gates but lost to a higher-ranked one.
 membership.binding.ships-none	membership	none	outcome	live		7.1.20	The spine row ships no Gaia source, so no classic-ID overlay entry can reach its labels.
 membership.binding.sol	membership	none	outcome	live		7.1.6	The Sun takes no Gaia binding.
-membership.binding.unconfirmed	membership	none	outcome	live		7.1.32	Every candidate failed a gate, and SIMBAD's one object for the HIP names a refused one its position does not confirm; the row is queued for review.
+membership.binding.unconfirmed	membership	none	outcome	live		7.1.32	SIMBAD's one object for the HIP names a refused candidate its position does not confirm, and the magnitude term admits that source as a record of its own; the row is queued for review.
 membership.binding.ungateable	membership	none	outcome	live		7.1.20	The record reached a binding candidate with no printed V under any tier, so only the sibling gate weighs its candidates.
 membership.binding.unweighed-no-pulled-row	membership	none	outcome	live		7.1.8	A binding candidate the magnitude gate passed unweighed, because the astrometry pull holds no row for it.
 membership.binding.weighed-null-g	membership	none	outcome	live		7.1.20	A binding candidate weighed on an astrometry row publishing no Gaia G, so the magnitude gate passed it unweighed.

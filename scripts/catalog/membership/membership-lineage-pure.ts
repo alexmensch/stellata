@@ -232,7 +232,7 @@ const OWN_CANDIDATE_BRANCHES = {
 } as const satisfies Record<OwnCandidateReason, string>;
 
 const IDENTIFIED = 'Every candidate failed a gate, and SIMBAD\'s one object for the HIP and the HIP\'s own position both name a refused one, so that one binds.';
-const UNCONFIRMED = 'Every candidate failed a gate, and SIMBAD\'s one object for the HIP names a refused one its position does not confirm; the row is queued for review.';
+const UNCONFIRMED = 'SIMBAD\'s one object for the HIP names a refused candidate its position does not confirm, and the magnitude term admits that source as a record of its own; the row is queued for review.';
 const IDENTITY_WITNESS = 'The source SIMBAD\'s one object for the HIP carries, a refused candidate, and its distance from the HIP\'s position at J1991.25 (empty where either position is missing).';
 
 const SPINE_LED_DESCRIPTIONS = {
@@ -492,13 +492,13 @@ export type MembershipOutcome =
     readonly sourceLetters: string;
     readonly hipLetters: string;
   } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome, ContestedLead>)
-  | ({
-    readonly kind: 'addition-binding-queued';
-    readonly outcome: 'unconfirmed';
+  | {
+    readonly kind: 'identity-queued';
+    readonly subject: RefusalSubject;
     readonly review: BindingReviewCells;
     readonly sourceLetters: string;
     readonly hipLetters: string;
-  })
+  }
   | {
     readonly kind: 'identity-witness';
     readonly subject: RefusalSubject;
@@ -635,8 +635,10 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       return row(key, 'lead' in o ? `binding.${o.outcome}.${o.lead}` : `binding.${o.outcome}`, {
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
-    case 'addition-binding-queued':
-      return row(key, 'addition-binding.unconfirmed', { ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters });
+    case 'identity-queued':
+      return row(key, o.subject === 'spine' ? 'binding.unconfirmed' : 'addition-binding.unconfirmed', {
+        ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
+      });
     case 'identity-witness':
       return row(key, o.subject === 'spine' ? 'binding.identity-witness' : 'addition-binding.identity-witness', {
         source_id: o.sourceId, separation_arcsec: o.separationArcsec === null ? '' : o.separationArcsec.toFixed(3),
@@ -824,7 +826,7 @@ export type MembershipDerivedCounts = Readonly<Record<
 
 type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
 
-const DERIVATION_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'contested', 'collision', 'unconfirmed', 'sol'] as const;
+const DERIVATION_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'contested', 'collision', 'sol'] as const;
 const STAGE_PREFIX = `${MEMBERSHIP_CODES.stage}.` as const;
 const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[MEMBERSHIP_CODES.liveCode(branch)];
 const sumOver = (counts: MembershipCounts) => (branches: readonly LiveBranch[]): number => sumOf(counts, STAGE_PREFIX, branches);
@@ -865,7 +867,6 @@ export function membershipTotals(counts: MembershipCounts) {
     refused: n('binding.refused'),
     contested: reviewByVerdict.contested,
     collision: n('binding.collision'),
-    unconfirmed: n('binding.unconfirmed'),
     sol: n('binding.sol'),
   };
   const spineLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,

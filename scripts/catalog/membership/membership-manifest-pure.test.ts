@@ -259,7 +259,7 @@ describe('buildMembership — the spine side', () => {
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(derivation(result)).toEqual({
-      bound: 3, rescued: 0, identified: 0, refused: 2, contested: 0, collision: 0, unconfirmed: 0, sol: 1,
+      bound: 3, rescued: 0, identified: 0, refused: 2, contested: 0, collision: 0, sol: 1,
     });
     expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
     expect(codes(result)['binding.consensus']).toBe(1);
