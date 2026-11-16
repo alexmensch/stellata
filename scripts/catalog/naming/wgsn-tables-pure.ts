@@ -55,8 +55,7 @@ export function designationFromCell(
   return null;
 }
 
-/** Built once before the IV/27A union to decide what the tail adds, and
- *  again after it to measure spine coverage. */
+/** Built over WGSN's own rows to decide what the IV/27A tail adds. */
 export function bayerKeySets(rows: DesignationRow[]): {
   reaches: (hip: number | null, hd: number | null) => boolean;
 } {

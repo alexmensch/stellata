@@ -72,8 +72,7 @@ scripts/catalog/naming/
                                 (--update-snapshots refreshes),
   wgsn-expected-json.ts         declared as WGSN_COUNTS
                                 (../../util/sources/README.md#a-snapshot).
-  manifest-naming-expected.json The manifest's naming figures — the residual
-                                gate's and the Bayer coverage — pinned by
+  manifest-naming-expected.json The residual gate's figures, pinned by
                                 ../membership/membership-manifest-gate.test.ts,
                                 which computes them; edit by hand.
   wgsn-index-pure.ts (+ test)   The record-side join: the disposition
@@ -174,19 +173,17 @@ edit. It runs in `../membership/membership-manifest-gate.test.ts` over the
 committed tables, never in `build:wgsn`: a step that read the manifest
 would close a loop through `build:membership`
 ([Loops through committed files](../../pipeline/README.md#loops-through-committed-files)).
-The gate's figures and the coverage below are pinned in
-`manifest-naming-expected.json`.
+The gate's figures are pinned in `manifest-naming-expected.json`.
 
 ## Measured coverage
 
-Of the manifest's <!-- count:manifest-naming/membershipBayerRows -->1,522<!-- /count --> Bayer-bearing rows, the unioned table reaches <!-- count:manifest-naming/membershipBayerRowsCovered -->1,520<!-- /count -->
-by HD or HIP. The 2 uncovered are close-pair component rows whose Bayer
-belongs to the sibling record (ξ UMa B / HD 98230, and HD 79096's Pi-1
-cell): both drop their own Bayer (`namingBayerDropped`) and take their
-system's designation with their component letter instead, which is what
-the authority's coverage actually asserts. Over the whole record set the
-table reaches **<!-- count:build-catalog/namingBayer -->2,043<!-- /count -->** records, <!-- count:build-catalog/namingBayerAdded -->523<!-- /count --> of which the manifest carries no Bayer
-cell for at all.
+The unioned table reaches **<!-- count:build-catalog/namingBayer -->2,043<!-- /count -->** records. Of the <!-- count:inherited-spine/nonEmpty.bayer -->1,522<!-- /count --> Bayer cells
+AT-HYG printed, it reaches all but the rows of `data/naming/bayer_drops.tsv`,
+each frozen with its reason: ξ UMa on HD 98230 is `sibling_holds` (the
+authority keys ξ UMa on the A record, so B takes the system's designation
+with its component letter), and π¹ Cnc on HD 79096 is `authority_omits`
+(neither NEC nor IV/27A publishes it). The membership gate holds every row
+to a record the Bayer join leaves bare.
 
 Three designation rows carry no key at all (`designationsKeyless`):
 β Cen B, δ Cyg B and ζ Her B spell both key cells `-` upstream. Seven

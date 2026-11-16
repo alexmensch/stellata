@@ -233,7 +233,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const index = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
     const { approvedNameKeys } = index;
     const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
-      rows, approvedNameKeys, designations, PROPER_DISPOSITIONS.read(),
+      rows, approvedNameKeys, PROPER_DISPOSITIONS.read(),
     );
 
     it('disposes exactly the manifest propers no WGSN name matches', () => {
@@ -243,7 +243,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
     it('fails on a manifest proper WGSN does not name and the file does not dispose', () => {
       const seeded: ManifestNamingRow = {
-        proper: 'Nonesuch', bayer: null, hip: null, hd: 999_999, isSol: false,
+        proper: 'Nonesuch', hip: null, hd: 999_999, isSol: false,
       };
       expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
     });
