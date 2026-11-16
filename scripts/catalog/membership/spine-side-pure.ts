@@ -70,6 +70,7 @@ export function spineSide(input: {
     const merged = primariesManifestRecord(printed, record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx, shippedHdsByHip);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
+    for (const value of labels.simbadSilentHds) outcomes.push({ key, outcome: { kind: 'hd-other-hip-simbad-silent', value } });
     const attested = routedRow(labels);
     outcomes.push(...attested.outcomes);
     return attested.row;

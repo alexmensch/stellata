@@ -473,6 +473,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
   'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP whose spine record ships it, so it leaves the record.'),
+  'label-drop.not-taken.hd-simbad-silent': outcomeCode('I/239 prints no HD for the record\'s HIP and gives this HD to another HIP whose spine record ships it, but SIMBAD\'s identifier pull holds no object for that HIP, so the HD stays.'),
   ...MERGE_CODES,
   'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
   ...RETIRED_DIFFERS_CODES,
@@ -548,7 +549,8 @@ export type MembershipOutcome =
     readonly reason: LabelDropReason;
     readonly cell: LabelDropCell;
     readonly value: string;
-  };
+  }
+  | { readonly kind: 'hd-other-hip-simbad-silent'; readonly value: string };
 
 export interface KeyedOutcome {
   readonly key: string;
@@ -661,6 +663,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'label-drop':
       return row(key, LABEL_DROP_BRANCHES[o.reason], { cell: o.cell, value: o.value });
+    case 'hd-other-hip-simbad-silent':
+      return row(key, 'label-drop.not-taken.hd-simbad-silent', { cell: 'hd', value: o.value });
     case 'merge': return mergeRow(key, o.divergence);
     default: {
       const unmapped: never = o;

@@ -121,6 +121,7 @@
       "membership.label-drop.flamsteed-unattested": 3,
       "membership.label-drop.hd-unattested": 1,
       "membership.label-drop.hd-other-hip": 1,
+      "membership.label-drop.not-taken.hd-simbad-silent": 0,
       "membership.merge.unlinked.tyc.queued": 0,
       "membership.merge.unlinked.hip.queued": 2,
       "membership.merge.unlinked.hd.queued": 0,

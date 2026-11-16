@@ -29,15 +29,18 @@ export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: Prima
   return { row, attestation: attestIdentifiers(row, tables, idx) };
 }
 
-/** README.md#the-unattested-labels-leave-the-row */
+/** `simbad-silent`: every condition holds but SIMBAD's identifier pull has no object for the other HIP. README.md#the-unattested-labels-leave-the-row */
+type OtherHipVerdict = 'drop' | 'simbad-silent' | 'keep';
+
 function hdOfAnotherHip(
   hd: number, hip: number | null, tables: PrimaryTables, idx: PrimaryIndex,
   shippedHdsByHip: ReadonlyMap<number, ReadonlySet<number>>,
-): boolean {
-  if (hip === null || tables.i239HipHd.has(hip)) return false;
-  return [...idx.i239HipsByHd.get(hd) ?? []].some((other) => other !== hip
-    && shippedHdsByHip.get(other)?.has(hd) === true
-    && tables.simbadHdsByHip.get(other)?.has(hd) === true);
+): OtherHipVerdict {
+  if (hip === null || tables.i239HipHd.has(hip)) return 'keep';
+  const holders = [...idx.i239HipsByHd.get(hd) ?? []]
+    .filter((other) => other !== hip && shippedHdsByHip.get(other)?.has(hd) === true);
+  if (holders.some((other) => tables.simbadHdsByHip.get(other)?.has(hd) === true)) return 'drop';
+  return holders.some((other) => !tables.simbadHdsByHip.has(other)) ? 'simbad-silent' : 'keep';
 }
 
 /** The spine-label cells a row keeps once those no primary attests leave it —
@@ -47,20 +50,25 @@ function hdOfAnotherHip(
  *  HD no HD primary attests. `shippedHdsByHip`: the HDs each spine record ships after the label merge, by its HIP. */
 export function attestedLabels(
   row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex, shippedHdsByHip: ReadonlyMap<number, ReadonlySet<number>>,
-): AttestedRow & { drops: LabelDrop[] } {
+): AttestedRow & { drops: LabelDrop[]; simbadSilentHds: string[] } {
   const drops: LabelDrop[] = [];
+  const simbadSilentHds: string[] = [];
   const hds = row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt];
   const attestedHds = hds.filter((hd) => {
-    const reason: LabelDropReason | null = attestHd(hd, idx, tables) === null ? 'hd_unattested'
-      : hdOfAnotherHip(hd, row.hip, tables, idx, shippedHdsByHip) ? 'hd_other_hip' : null;
-    if (reason === null) return true;
-    drops.push({ cell: 'hd', value: String(hd), reason });
+    if (attestHd(hd, idx, tables) === null) {
+      drops.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
+      return false;
+    }
+    const otherHip = hdOfAnotherHip(hd, row.hip, tables, idx, shippedHdsByHip);
+    if (otherHip === 'simbad-silent') simbadSilentHds.push(String(hd));
+    if (otherHip !== 'drop') return true;
+    drops.push({ cell: 'hd', value: String(hd), reason: 'hd_other_hip' });
     return false;
   });
   const hdKept = attestRow({ ...row, hd: attestedHds[0] ?? null, hdAlt: attestedHds.slice(1) }, tables, idx);
-  if (row.flam === null || hdKept.attestation.attestation.flam !== null) return { ...hdKept, drops };
+  if (row.flam === null || hdKept.attestation.attestation.flam !== null) return { ...hdKept, drops, simbadSilentHds };
   drops.push({ cell: 'flam', value: String(row.flam), reason: 'flamsteed_unattested' });
-  return { ...attestRow({ ...hdKept.row, flam: null }, tables, idx), drops };
+  return { ...attestRow({ ...hdKept.row, flam: null }, tables, idx), drops, simbadSilentHds };
 }
 
 /** The row with its routes column, and an `unattested` outcome per cell no

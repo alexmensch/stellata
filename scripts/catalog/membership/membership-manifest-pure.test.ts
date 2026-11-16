@@ -507,12 +507,20 @@ describe('buildMembership — the spine side', () => {
 
     it.each([
       ['I/239 prints an HD for the record\'s own HIP', { i239HipHd: new Map([[71, 70100], [72, 70101]]) }],
-      ['SIMBAD does not give the HD to the other HIP', { simbadHdsByHip: new Map<number, Set<number>>() }],
+      ['SIMBAD gives the other HIP another HD', { simbadHdsByHip: new Map([[71, new Set([70109])]]) }],
       ['no spine record carries the other HIP', { i239HipHd: new Map([[73, 70100]]), simbadHdsByHip: new Map([[73, new Set([70100])]]) }],
     ])('keeps the HD where %s', (_, t) => {
       const built = withOther(t);
       expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
       expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(0);
+    });
+
+    it('keeps the HD, and says so in lineage, where SIMBAD\'s pull holds no object for the other HIP', () => {
+      const built = withOther({ simbadHdsByHip: new Map<number, Set<number>>() });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(1);
     });
 
     it('keeps the HD where the other HIP\'s record ships a different HD', () => {

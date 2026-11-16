@@ -268,7 +268,11 @@ carrying that HIP ships the HD after the label merge. The drop therefore only
 ever removes a second copy of a designation another record keeps. Where the
 other record ships a different HD, or I/239 prints another HD for the record's
 own HIP, the two records hold a swapped or split pair, which is the close-pair
-rule's question, not a drop. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
+rule's question, not a drop. SIMBAD's identifier pull covers only the objects
+`simbad_sptype` reached, so where it holds no object for the other HIP the HD
+stays and the row says so in lineage
+(`label-drop.not-taken.hd-simbad-silent`, <!-- count:membership-manifest/membership.label-drop.not-taken.hd-simbad-silent -->0<!-- /count --> today) rather than reading
+SIMBAD's silence as dissent. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
 which I/239 and SIMBAD both give to HIP 54355.
 
 <a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
