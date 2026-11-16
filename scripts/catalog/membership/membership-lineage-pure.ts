@@ -49,6 +49,7 @@ export interface OriginKeys {
 }
 
 const RETIRED_7_1_20 = retired('7.1.20');
+const RETIRED_7_1_31 = retired('7.1.31');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -157,14 +158,13 @@ export type DispositionQueue = (typeof DISPOSITION_QUEUES)[number];
 type DispositionBranch = `disposition.${BindingDisposition}.${DispositionQueue}`;
 
 /** The classical cells a manifest row can ship unattested: `hd` and `flam` leave the row instead (README.md#the-unattested-labels-leave-the-row). */
-export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'bayer', 'proper'] as const satisfies readonly ClassicalCell[];
+export const UNATTESTED_CELLS = ['hip', 'hr', 'gl', 'proper'] as const satisfies readonly ClassicalCell[];
 export type UnattestedCell = (typeof UNATTESTED_CELLS)[number];
 
 const UNATTESTED_BRANCHES = {
   hip: 'unattested.hip',
   hr: 'unattested.hr',
   gl: 'unattested.gl',
-  bayer: 'unattested.bayer',
   proper: 'unattested.proper',
 } as const satisfies Record<UnattestedCell, string>;
 
@@ -412,8 +412,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   ...LABEL_CODES,
   'unattested.hip': outcomeCode('The record ships a HIP no primary attests for it.'),
   'unattested.hr': outcomeCode('The record ships an HR number no primary attests for it.'),
+  'unattested.bayer': outcomeCode('The record ships a Bayer designation no primary attests for it.', 'none', RETIRED_7_1_31),
   'unattested.gl': outcomeCode('The record ships a GJ designation no primary attests for it.'),
-  'unattested.bayer': outcomeCode('The record ships a Bayer designation no primary attests for it.'),
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),

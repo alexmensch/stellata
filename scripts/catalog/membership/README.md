@@ -154,17 +154,17 @@ audit, so the two instruments read one table set.
 ## Columns
 
 ```
-tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  bayer  proper
+tyc  hip  hd  hd_alt  hr  hr_alt  gl  flam  proper
 gaia_source_id  binding  routes  term  origin_key
 ```
 
 - The identifier cells carry the record's **final** labels: for a spine row
   the classic-ID label merge has already run
   (`../classic-ids/label-merge/README.md`), so `hd_alt` / `hr_alt` hold the
-  alias lists and there is no second designation set to flip against. `bayer` and `proper` are the
-  spine's printed cells on spine rows and empty on additions — the naming
-  ladder resolves both from HD / HIP at build time and reads the cell only as
-  a counter (`../naming/README.md`).
+  alias lists and there is no second designation set to flip against. `proper`
+  is the spine's printed cell on spine rows and empty on additions. There is
+  no Bayer column: the naming ladder takes every Bayer designation from the
+  authority's tables by HR / HD / HIP (`../naming/README.md`).
 - `binding` says how `gaia_source_id` is justified: `crosswalk_gated` (a TYC,
   HIP or CNS5 candidate the [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) gates passed), `simbad_corroborated` (the
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,

@@ -25,7 +25,7 @@ export interface AttestedRow {
 }
 
 export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex): AttestedRow {
-  return { row, attestation: attestIdentifiers(row, tables, idx) };
+  return { row, attestation: attestIdentifiers({ ...row, bayer: null }, tables, idx) };
 }
 
 /** The spine-label cells a row keeps once those no primary attests leave it —
@@ -64,8 +64,8 @@ export function routedRow({ row, attestation: a }: AttestedRow): { row: Manifest
   const cells = MEMBERSHIP_MANIFEST.encode(routed);
   const key = routed.originKey;
   const outcomes = a.unattested.map((cell): KeyedOutcome => {
-    if (cell === 'hd' || cell === 'flam') {
-      throw new Error(`manifest row ${key} ships an unattested ${cell} cell (${cells[cell]}); attestedLabels drops it on spine rows and additions take it from the primaries`);
+    if (cell === 'hd' || cell === 'flam' || cell === 'bayer') {
+      throw new Error(`manifest row ${key} ships an unattested ${cell} cell; attestedLabels drops hd and flam on spine rows, additions take them from the primaries, and attestRow reads no bayer`);
     }
     return { key, outcome: { kind: 'unattested', cell, value: cells[cell] } };
   });

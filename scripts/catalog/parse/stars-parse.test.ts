@@ -377,7 +377,7 @@ describe('readStars constellation assignment', () => {
   // proper motion is the whole reason the two constellations are separate
   // fields. See /src/astro-core/iau-geometry/README.md#ρ-aquilae.
   const RHO_AQL: ManifestRow = {
-    bayer: 'Rho', flam: '67', hip: '99742', hd: '192425', hr: '7724',
+    flam: '67', hip: '99742', hd: '192425', hr: '7724',
     tyc: RHO_AQL_TYC, gl: RHO_AQL_GL,
   };
   // 20.23796 h × 15 = 303.5694°.
