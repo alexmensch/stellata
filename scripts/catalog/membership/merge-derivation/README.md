@@ -188,7 +188,8 @@ did not resolve
 | `gl` | a record's identity is its Gaia binding | `cns5-source` (CNS5's row for the record's own source names the shipped GJ) |
 | `hip` | none | — |
 
-Everything else queues, the reason as the evidence's last field:
+Everything else queues as `merge.differs.<to>.<from>.queued`, the reason as
+the evidence's last field:
 `close-pair-split` (the two TYC witnesses share no HD), `close-pair-unanswered`
 (IV/25 or SIMBAD has no row for the record's TYC, or it has none),
 `close-pair-source-silent`, `close-pair-move` (all four witnesses name another

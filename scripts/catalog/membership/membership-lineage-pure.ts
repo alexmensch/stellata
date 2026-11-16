@@ -295,10 +295,13 @@ const DIFFERS_SETTLEMENT_DESCRIPTIONS = {
   'cns5-source': 'CNS5\'s row for the record\'s own Gaia source names the shipped GJ',
 } as const satisfies Record<DiffersSettlement, string>;
 
+type DiffersQueuedBranch = `${DiffersBranch}.queued`;
+const differsQueuedBranch = (l: DiffersLink): DiffersQueuedBranch => `${differsBranch(l)}.queued`;
+
 type MergeBranch =
   | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
-  | PairReviewBranch | DerivedOnlyBranch | DiffersBranch | DiffersSettledBranch;
+  | PairReviewBranch | DerivedOnlyBranch | DiffersQueuedBranch | DiffersSettledBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
 
@@ -342,7 +345,7 @@ const MERGE_BRANCHES: readonly {
     description: `A primary's own link puts a ${c} value on the spine row where the spine leaves the cell empty; ${HELD_DESCRIPTIONS[h]}.`,
   }))),
   ...DIFFERS_LINKS.map((l) => ({
-    branch: differsBranch(l), of: 'differs' as const, ledger: 'differs' as const,
+    branch: differsQueuedBranch(l), of: 'differs' as const, ledger: 'differs' as const,
     description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule, and no rule settles the cell: it is queued for review and the shipped value stands.`,
   })),
   ...DIFFERS_LINKS.flatMap((l) => DIFFERS_SETTLEMENTS_BY_CELL[l.to].map((s: DiffersSettlement) => ({
@@ -359,6 +362,11 @@ export function mergeBranchesLedgeredAs(kind: MergeDivergenceKind): MergeBranch[
 const MERGE_CODES = Object.fromEntries(
   MERGE_BRANCHES.map((d) => [d.branch, outcomeCode(d.description)]),
 ) as Record<MergeBranch, CodeDeclaration<typeof LIVE>>;
+
+const RETIRED_DIFFERS_CODES = Object.fromEntries(DIFFERS_LINKS.map((l) => [
+  differsBranch(l),
+  outcomeCode(`A primary's own link from the spine row's ${l.from} fills its ${l.to} with values that leave out the spine's, outside the pair rule.`, 'none', RETIRED_7_1_31),
+])) as Record<DiffersBranch, CodeDeclaration<typeof RETIRED_7_1_31>>;
 
 function ledCodes<P extends string, O extends string, S extends BindingSource>(
   prefix: P, descriptions: Readonly<Record<O, string>>, leads: readonly S[],
@@ -439,6 +447,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
   ...MERGE_CODES,
+  ...RETIRED_DIFFERS_CODES,
 });
 
 
@@ -656,7 +665,7 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       if ('settled' in d.verdict) {
         return row(key, differsSettledBranch(d.link, d.verdict.settled), { ...params, evidence });
       }
-      return row(key, differsBranch(d.link), { ...params, evidence: `${evidence}; ${d.verdict.queued}` });
+      return row(key, differsQueuedBranch(d.link), { ...params, evidence: `${evidence}; ${d.verdict.queued}` });
     }
     default: {
       const unmapped: never = d;
