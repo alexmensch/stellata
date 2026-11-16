@@ -206,10 +206,7 @@ shares with the two astrometry pulls is the schema: all three project
 `ASTROMETRY_COLUMNS` (`gaia-request/`), so one parser reads all three
 outputs.
 
-`scripts/refresh/refresh_lib.py` holds a Python pull's `--describe`
-(`description`) and entry point (`pull_main`), which the Edenhofer pulls call.
-
-Every other pull is on `pull/`, the TypeScript runtime: one backend, TAP in CSV
+Every pull in this folder is on `pull/`, the TypeScript runtime: one backend, TAP in CSV
 or FITS and VizieR's ASU on the CfA mirror, a query-keyed resume cache,
 required gates and an all-or-none write ([pull/README.md](pull/README.md)).
 
