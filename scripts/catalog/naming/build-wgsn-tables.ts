@@ -14,7 +14,8 @@ import {
 import {
   designationFromCell,
   duplicateDesignationRows,
-  unionIv27aBayer,
+  iv27aBayerCells,
+  unionBayerTail,
   type DesignationRow,
 } from './wgsn-tables-pure';
 import type { WgsnNameRow } from './wgsn-index-pure';
@@ -92,7 +93,7 @@ export async function main(): Promise<void> {
     }
   }
 
-  const iv27a = unionIv27aBayer(designations, CROSS_INDEX.read());
+  const iv27a = unionBayerTail(designations, iv27aBayerCells(CROSS_INDEX.read()), 'iv27a');
   designations.push(...iv27a.added);
 
   const counts: WgsnCounts = {

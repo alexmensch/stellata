@@ -8,7 +8,8 @@ import {
   designationFromCell,
   compareDesignationRows,
   duplicateDesignationRows,
-  unionIv27aBayer,
+  iv27aBayerCells,
+  unionBayerTail,
   type DesignationRow,
 } from './wgsn-tables-pure';
 
@@ -55,22 +56,28 @@ describe('bayerKeySets', () => {
     desig({ kind: 'flamsteed', letter: null, num: 5, hd: 300 }),
   ]).reaches;
 
-  it('matches on either key', () => {
-    expect(reached(null, 100)).toBe(true);
-    expect(reached(200, null)).toBe(true);
-    expect(reached(999, 100)).toBe(true);
+  const keys = (hip: number | null, hd: number | null, hr: number | null = null) => ({ hip, hr, hd });
+
+  it('matches on any key', () => {
+    expect(reached(keys(null, 100))).toBe(true);
+    expect(reached(keys(200, null))).toBe(true);
+    expect(reached(keys(999, 100))).toBe(true);
+    expect(bayerKeySets([desig({ hr: 50 })]).reaches(keys(null, null, 50))).toBe(true);
   });
 
   it('never matches a keyless row against a populated set', () => {
-    expect(reached(null, null)).toBe(false);
+    expect(reached(keys(null, null))).toBe(false);
   });
 
   it('ignores designations that are not Bayer', () => {
-    expect(reached(null, 300)).toBe(false);
+    expect(reached(keys(null, 300))).toBe(false);
   });
 });
 
-describe('unionIv27aBayer', () => {
+describe('unionBayerTail over IV/27A', () => {
+  const unionIv27aBayer = (above: DesignationRow[], rows: CrossIndexRow[]) =>
+    unionBayerTail(above, iv27aBayerCells(rows), 'iv27a');
+
   it('adds only the stars no WGSN Bayer row already reaches', () => {
     const u = unionIv27aBayer(
       [desig({ hd: 100 }), desig({ hip: 200 })],
