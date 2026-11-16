@@ -12,9 +12,10 @@ What the tables are for and which position a consumer propagates from:
 - `tycho2-pure.ts` — the request set, the TYC1 bands, both tables' columns,
   formats and spot rows, the kept-share band, the cover gate and
   `tycho2Pull`.
-- `refresh-tycho2.ts` — the entry: reads the request off the manifest
+- `tyc-request.ts` — `readTycRequest`: the request read off the manifest
   (`MEMBERSHIP_MANIFEST`) and IV/25 (`TYC2_HD`), both named in the record's
-  `requestFrom`. `tycho2-outputs.ts`, its `declareOutputs`.
+  `requestFrom`. `refresh:simbad-tyc-hd` asks the same one.
+- `refresh-tycho2.ts` — the entry. `tycho2-outputs.ts`, its `declareOutputs`.
 - `{main,suppl1}.cfa.{tsv,fits}` — the [replies](#replies) recorded from CfA.
 - `tycho2.test.ts` — the request, bands, gates and run over a faked `ask`,
   and each table's [replies](#replies) replayed into its committed lines.
