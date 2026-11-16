@@ -449,7 +449,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
   'addition-binding.unconfirmed': outcomeCode(UNCONFIRMED),
   'addition-binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
-  'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it and the group is queued for review.'),
+  'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.'),
   'addition-binding.route-disagree': outcomeCode('The addition group\'s TYC route and HIP route propose different Gaia sources.'),
   'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
   'addition-binding.gate-mag': refusalCode('An addition group\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the group\'s printed V.'),
