@@ -11,7 +11,9 @@ import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage6Result } from './multiples/attach-multiples';
 import type { MultiplesRecord } from './multiples-record-pure';
 import type { Stage5Result } from './optical/attach-optical';
-import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from './optical/optical-tiers-pure';
+import {
+  isRejectedVia, OPTICAL_KEPT_VIA, OPTICAL_REJECT_VIA, OPTICAL_VIA_PROPERTIES, type OpticalVia, type RejectedVia,
+} from './optical/optical-tiers-pure';
 import type { DecomposedPair, ResolvedComponent } from './resolve/components-pure';
 import { componentIdParams } from './resolve/resolve-lineage-pure';
 import { PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
@@ -26,14 +28,10 @@ const UNPAIRED_BLANKS: Record<UnpairedBlank, string> = {
   enumerated: 'A blank-components row of a system that already has an AB pair, so promoting it would write the pair twice.',
 };
 
-type KeptVia = Extract<OpticalVia, `${string}_kept`>;
-type RejectedVia = Extract<OpticalVia, `${string}_rejected`>;
 type RejectionTier<V extends RejectedVia> = V extends `${infer T}_rejected` ? T : never;
 
-const KEPT_VIA = (Object.keys(OPTICAL_VIA_PROPERTIES) as OpticalVia[]).filter((v): v is KeptVia => OPTICAL_VIA_PROPERTIES[v].physical);
-const REJECTED_VIA = (Object.keys(OPTICAL_VIA_PROPERTIES) as OpticalVia[]).filter((v): v is RejectedVia => !OPTICAL_VIA_PROPERTIES[v].physical);
 const rejectionTier = <V extends RejectedVia>(via: V): RejectionTier<V> => via.replace(/_rejected$/, '') as RejectionTier<V>;
-const REJECTION_TIERS = REJECTED_VIA.map(rejectionTier);
+const REJECTION_TIERS = OPTICAL_REJECT_VIA.map(rejectionTier);
 
 const RETIRED_7_1_31 = retired('7.1.31');
 const DEPARTED = 'A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component\'s synthetic key retires.';
@@ -41,8 +39,8 @@ const DEPARTED = 'A component it names that no kept pair names leaves multiples.
 export const PAIRS_CODES = stageCodes(PAIRS_LINEAGE.stage, {
   'duplicate-row': outcomeCode('A WDS summary row repeating another\'s wds_id, discoverer and components; the more-observed row is kept.'),
   ...taggedCodes('blank-', Object.keys(UNPAIRED_BLANKS) as UnpairedBlank[], (b) => outcomeCode(UNPAIRED_BLANKS[b])),
-  ...taggedCodes('optical.', KEPT_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description)),
-  ...taggedCodes('optical.', REJECTED_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description, 'none', RETIRED_7_1_31)),
+  ...taggedCodes('optical.', OPTICAL_KEPT_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description)),
+  ...taggedCodes('optical.', OPTICAL_REJECT_VIA, (via) => outcomeCode(OPTICAL_VIA_PROPERTIES[via].description, 'none', RETIRED_7_1_31)),
   ...taggedCodes('rejected.', REJECTION_TIERS, (tier) => outcomeCode(
     `${OPTICAL_VIA_PROPERTIES[`${tier}_rejected`].description} ${DEPARTED}`, 'retire',
   )),
@@ -70,10 +68,8 @@ export function pairParams(p: DecomposedPair): LineageParams {
   return { ...sideParams('primary', p.primary), ...sideParams('secondary', p.secondary) };
 }
 
-const isRejected = (via: OpticalVia): via is RejectedVia => !OPTICAL_VIA_PROPERTIES[via].physical;
-
 function opticalCode(via: OpticalVia) {
-  return isRejected(via) ? `rejected.${kebab(rejectionTier(via))}` as const : `optical.${kebab(via)}` as const;
+  return isRejectedVia(via) ? `rejected.${kebab(rejectionTier(via))}` as const : `optical.${kebab(via)}` as const;
 }
 
 export function* pairsLineageRows({ reference, optical, multiples }: PairDecisions): Generator<LineageRow> {
@@ -111,7 +107,7 @@ export function pairsIdentity({ optical, multiples }: Pick<PairDecisions, 'optic
   const shipped = multiplesSyntheticIds(multiples.rows);
   const rows: IdentityRow[] = [];
   for (const [p, via] of optical.optical) {
-    if (!isRejected(via)) continue;
+    if (!isRejectedVia(via)) continue;
     const departed = [...new Set(pairSyntheticIds(p))].filter((id) => !shipped.has(id));
     if (departed.length === 0) continue;
     rows.push(identityRow(
