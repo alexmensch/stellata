@@ -37,7 +37,7 @@ export function ownGaia(value: string, via: GaiaVia): GaiaBinding {
   return { value, origin: OWN, via };
 }
 
-export function resolveViaOf(c: { readonly gaia: GaiaBinding | null }): ResolveVia {
+export function resolveViaOf(c: { readonly gaia: GaiaBinding | null }): GaiaVia | 'unresolved' {
   return c.gaia === null ? 'unresolved' : c.gaia.via;
 }
 

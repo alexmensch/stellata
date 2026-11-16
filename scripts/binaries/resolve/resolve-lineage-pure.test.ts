@@ -4,7 +4,7 @@ import { invariantViolations } from '../../catalog/lineage/lineage-invariant-pur
 import { sortLineageLines, stageLineageText } from '../../catalog/lineage/lineage-row-pure';
 import { auditBindingIntegrity, bindingIntegrityCounts, enforceBindingVerdicts, verdictTouches } from './binding-audit-pure';
 import type { CascadeRefusal } from './cascade-pure';
-import { BI_WDS, astrometryMap, biAstro, biSystem, decomposed, indices, pairAt, type BiRow } from './resolve-fixture';
+import { BI_WDS, astrometryMap, biAstro, biSystem, indices, type BiRow } from './resolve-fixture';
 import {
   RESOLVE_CODES, RESOLVE_INVARIANTS, resolveCounts, resolveLineageLines, resolveLineageRows,
 } from './resolve-lineage-pure';
@@ -47,11 +47,6 @@ describe('resolveLineageRows', () => {
 
   it('writes lines the stage writer accepts', () => {
     expect(() => stageLineageText(RESOLVE_CODES, sortLineageLines(resolveLineageLines(castor())))).not.toThrow();
-  });
-
-  it('refuses a tier no cascade pass binds yet', () => {
-    const pairs = [decomposed(pairAt({ components: 'AB' }), { primary: { gaiaSourceId: '9', resolveVia: 'position_pm' } })];
-    expect(() => [...resolveLineageRows({ pairs, refusals: [], touches: [] })]).toThrow(/no tier binds "position_pm"/);
   });
 });
 

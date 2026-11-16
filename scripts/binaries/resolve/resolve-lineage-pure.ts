@@ -11,7 +11,7 @@ import { namedExceptionsInvariant, type LineageInvariant } from '../../catalog/l
 import { hipDesignation } from '../../sid/sid-pure';
 import { rowKeyText } from '../../util/sources/row-ref-pure';
 import type { WdsPair } from '../../wds/wds-pure';
-import { RESERVED_RESOLVE_VIA, RESOLVE_VIA, type ResolveVia } from '../multiples-record-pure';
+import { RESOLVE_VIA, isReservedResolveVia } from '../multiples-record-pure';
 import { MULTIPLES_ROW_KEY, pairSystemId } from '../multiples-row-key-pure';
 import {
   BINDING_SHAPES, BINDING_VERDICTS, bindingIntegrityCounts,
@@ -24,9 +24,8 @@ import { RESOLVE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/li
 
 export const RESOLVE_LINEAGE_BUDGET = { gzipBytes: 1_200_000, writeMs: 2_000 };
 
-type ReservedVia = (typeof RESERVED_RESOLVE_VIA)[number];
-type BoundTier = Exclude<ResolveVia, ReservedVia>;
-const TIERS = RESOLVE_VIA.filter((v): v is BoundTier => !(RESERVED_RESOLVE_VIA as readonly string[]).includes(v));
+type BoundTier = ReturnType<typeof resolveViaOf>;
+const TIERS = RESOLVE_VIA.filter((v): v is BoundTier => !isReservedResolveVia(v));
 
 const TIER_DESCRIPTIONS: Record<BoundTier, string> = {
   orb6_hip: 'The component\'s Gaia source came through its pair\'s ORB6 HIP and Gaia\'s HIP cross-walk.',
@@ -106,9 +105,8 @@ function rowKey(pair: Pick<WdsPair, 'wdsId' | 'components'>, component: string):
   return rowKeyText(MULTIPLES_ROW_KEY, { systemId: pairSystemId(pair), comp: component });
 }
 
-function tierBranch(via: ResolveVia): `tier.${Kebab<BoundTier>}` {
-  if ((RESERVED_RESOLVE_VIA as readonly string[]).includes(via)) throw new Error(`resolve lineage: no tier binds "${via}" yet`);
-  return `tier.${kebab(via as BoundTier)}`;
+function tierBranch(via: BoundTier): `tier.${Kebab<BoundTier>}` {
+  return `tier.${kebab(via)}`;
 }
 
 function touchParams({ verdict, sourceId }: VerdictTouch): LineageParams {

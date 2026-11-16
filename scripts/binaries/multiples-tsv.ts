@@ -8,7 +8,7 @@ import { MULTIPLES_ROW_KEY } from './multiples-row-key-pure';
 import { wdsRootOf } from './component-tokens-pure';
 import { DATA_FILES } from '../../src/catalog-format/pipeline-outputs/data-files';
 import {
-  ASTROMETRY_VIA, A_VIA, type IdentifierWithOrigin, MULTIPLES_SOURCES, type MultiplesRecord, ORBIT_ROLES, ORBIT_VIA, PHOTOMETRY_VIA, RESOLVE_VIA, type ResolveVia, SPECT_VIA, formatIdOrigin, gaiaFields, hipFields, parseIdOrigin,
+  ASTROMETRY_VIA, A_VIA, type IdentifierWithOrigin, MULTIPLES_SOURCES, type MultiplesRecord, ORBIT_ROLES, ORBIT_VIA, PHOTOMETRY_VIA, RESOLVE_VIA, type ResolveVia, SPECT_VIA, formatIdOrigin, gaiaFields, hipFields, isReservedResolveVia, parseIdOrigin,
 } from './multiples-record-pure';
 
 export const MULTIPLES_COLUMNS = [
@@ -64,6 +64,7 @@ export const MULTIPLES_TSV = defineArtifact({
       return { value, origin: parseIdOrigin(cell) ?? row.fail(`${column} "${cell}" is not own or <kind>:<token>`) };
     };
     const withVia = (gaia: IdentifierWithOrigin<string> | null, via: ResolveVia) => {
+      if (isReservedResolveVia(via)) return row.fail(`resolve_via ${via} is reserved: no tier binds it`);
       if (gaia === null) return via === 'unresolved' ? null : row.fail(`resolve_via ${via} with no gaia_source_id`);
       return via === 'unresolved' ? row.fail(`gaia_source_id ${gaia.value} with resolve_via unresolved`) : { ...gaia, via };
     };

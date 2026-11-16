@@ -10,7 +10,7 @@ import type { MscPairKey, MscPairMags } from '../load/msc-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { splitComponents, type WdsPair } from '../../wds/wds-pure';
 import { componentsOf, resolveViaOf, valueOf, type Bound, type DecomposedPair, type GaiaBinding, type ResolvedComponent } from './components-pure';
-import { OWN, type GaiaVia, type IdOrigin, type ResolveVia } from '../multiples-record-pure';
+import { OWN, type GaiaVia, type IdOrigin } from '../multiples-record-pure';
 import { ARCSEC_PER_DEG } from '../../../src/astro-core/astronomy-constants';
 import { pushTo } from '../../util/map-buckets-pure';
 import type { ComponentKey } from '../component-tokens-pure';
@@ -66,7 +66,7 @@ const FIXTURE_GAIA_VIA: GaiaVia = 'simbad_xid';
  *  `*Origin`, else as the component's own, a Gaia source by FIXTURE_GAIA_VIA. */
 export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & {
   gaiaSourceId?: string | null;
-  resolveVia?: ResolveVia;
+  resolveVia?: GaiaVia | 'unresolved';
   hip?: number | null;
   athygRow?: AthygRow | null;
   gaiaOrigin?: IdOrigin;
@@ -74,7 +74,7 @@ export type Side = Partial<Omit<ResolvedComponent, 'gaia' | 'hip' | 'athyg'>> & 
   athygOrigin?: IdOrigin;
 };
 
-function bindGaia(id: string | null | undefined, via: ResolveVia | undefined, origin: IdOrigin | undefined): GaiaBinding | null {
+function bindGaia(id: string | null | undefined, via: GaiaVia | 'unresolved' | undefined, origin: IdOrigin | undefined): GaiaBinding | null {
   if (id === null || id === undefined) {
     if (via !== undefined && via !== 'unresolved') throw new Error(`fixture: tier ${via} without a Gaia source`);
     return null;
@@ -166,7 +166,7 @@ export function biAstro(sourceId: string, eArcsec: number, nArcsec: number): Gai
 }
 
 /** A side's Gaia source, HIP, and the source's tier. */
-type BiSide = readonly [gaia: string | null, hip: number | null, via?: ResolveVia];
+type BiSide = readonly [gaia: string | null, hip: number | null, via?: GaiaVia | 'unresolved'];
 
 export type BiRow = readonly [
   components: string, rho: number | null, theta: number | null, primary: BiSide, secondary: BiSide,
