@@ -492,13 +492,10 @@ describe('buildMembership — the spine side', () => {
     expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
   });
 
-  it('fills an empty Flamsteed cell from the one number SIMBAD gives the star', () => {
-    const fills = (code: string) => result.lineage.filter((r) => r.code === code).map((r) => [r.key, paramsOf(r)]);
-    expect(result.rows.find((r) => r.hip === 20)).toMatchObject({ flam: 3, routes: 'hip:i239|gl:cns5|flam:simbad' });
-    expect(result.rows.find((r) => r.hip === 40)).toMatchObject({ flam: 6 });
-    expect(fills('membership.label-fill.flamsteed-simbad').map(([, p]) => p)).toEqual([{ designation: '3 Cas' }, { designation: '6 Cas' }]);
+  it('leaves an empty Flamsteed cell empty whatever SIMBAD numbers the star', () => {
+    expect(result.rows.find((r) => r.hip === 20)).toMatchObject({ flam: null, routes: 'hip:i239|gl:cns5' });
+    expect(result.rows.find((r) => r.hip === 40)!.flam).toBeNull();
     expect(result.rows.find((r) => r.hd === 200500)!.flam).toBeNull();
-    expect(fills('membership.label-fill.flamsteed-two-numbers').map(([, p]) => p)).toEqual([{ designations: '2 Cas|4 Cas' }]);
   });
 
   it('refuses a row no source reaches, and queues nothing', () => {

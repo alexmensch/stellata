@@ -62,9 +62,14 @@ constellations (β Tau = 112 Tau = 23 Aur), keeps the number IV/27A publishes:
 IV/27A gives one per star, and the number a record already carries is never
 replaced.
 
-The rule refuses some real Flamsteed numbers — 51 Lib on ξ Sco lies past
-IV/27A's highest Lib number, 50 — and the refusals wait for a primary edition
-of the catalogue to classify them (`stellata-hooj.46.3`).
+**The rule errs both ways, so an accepted number only attests a cell a record
+already carries.** It refuses some real Flamsteed numbers — 51 Lib on ξ Sco
+lies past IV/27A's highest Lib number, 50 — and it admits some that are not:
+IV/27A's own Flamsteed column runs past Flamsteed's catalogue in the south
+(Puppis to 212, Centaurus to 89, two numbers in Dorado), so `171 Pup`, the
+IAU's `171 G. Pup`, passes. Both wait for a primary edition of the catalogue
+(`stellata-hooj.46.3`); `build:membership` never fills an empty cell from
+SIMBAD ([SIMBAD attests a Flamsteed cell](../membership/README.md#simbad-attests-it-never-fills)).
 
 ## The refused numbers
 

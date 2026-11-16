@@ -16,7 +16,7 @@ import type { SpineRow } from '../spine/inherited-spine-pure';
 import { textCell } from '../../util/tsv/table-pure';
 import type { PrimaryIndex, PrimaryTables } from '../spine/primaries-audit-pure';
 import type { SpineSettlement } from './binding/spine-settle-pure';
-import { attestRow, attestedLabels, routedRow, simbadFlamsteedFill } from './label-attestation-pure';
+import { attestedLabels, routedRow } from './label-attestation-pure';
 import type { KeyedOutcome } from './membership-lineage-pure';
 import { primariesManifestRecord, type ManifestRecord } from './membership-manifest-tsv';
 
@@ -65,9 +65,7 @@ export function spineSide(input: {
     const merged = primariesManifestRecord(printed, record, settled[i].ships.binding, key);
     const labels = attestedLabels(merged, tables, idx);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
-    const fill = simbadFlamsteedFill(labels.row, tables);
-    if (fill.outcome !== null) outcomes.push({ key, outcome: fill.outcome });
-    const attested = routedRow(fill.row === labels.row ? labels : attestRow(fill.row, tables, idx));
+    const attested = routedRow(labels);
     outcomes.push(...attested.outcomes);
     return attested.row;
   });

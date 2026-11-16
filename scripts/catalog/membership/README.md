@@ -260,13 +260,15 @@ row per cell, keyed on the manifest row as it stands afterwards, under
 on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
 rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
-<a id="simbad-fills-an-empty-flamsteed-cell"></a>**SIMBAD fills an empty
-Flamsteed cell** where the rule accepts exactly one number for the star, on
-spine rows and additions alike (`simbadFlamsteedFill`): <!-- count:membership-manifest/membership.label-fill.flamsteed-simbad -->103<!-- /count --> rows
-(`label-fill.flamsteed-simbad`). A star given two keeps its cell empty
-(`label-fill.flamsteed-two-numbers`, <!-- count:membership-manifest/membership.label-fill.flamsteed-two-numbers -->0<!-- /count -->).
+<a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
+cell; it never supplies one.** IV/27A's own Flamsteed column runs past
+Flamsteed's catalogue in the south (Puppis to 212, Centaurus to 89), so the
+rule's range cannot tell a Gould number from a Flamsteed one by itself; a
+SIMBAD number agreeing with a cell the record already carries is two
+witnesses, a SIMBAD number alone is one. Filling an empty cell waits on a
+primary Flamsteed edition (`stellata-hooj.46.3`).
 
-**No dropped or filled label keys its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
+**No dropped label keys its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
 Flamsteed number is not a designation at all, so it cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
