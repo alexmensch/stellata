@@ -15,8 +15,7 @@ import {
 } from './tycho2-pure';
 
 const OUTPUTS = declareOutputs({ main: 'tycho2_main.tsv', suppl1: 'tycho2_suppl1.tsv' });
-const WRITTEN = tycho2Pull(OUTPUTS, { request: tycho2Request([], []), requestFrom: [] }).tables;
-const entries = (...tycs: Array<string | null>) => tycs.map((tyc) => ({ tyc, hip: null }));
+const WRITTEN = tycho2Pull(OUTPUTS, { request: tycho2Request([], []), requestFrom: [], hips: new Set() }).tables;
 
 /** Recorded from the CfA mirror, the spot row's entry each (README.md#replies). */
 function recorded(name: string, phase: Phase): RecordedAsu {
@@ -40,15 +39,14 @@ describe('parseTyc', () => {
 
 describe('the request set', () => {
   it('unions the manifest\'s TYCs with IV/25\'s, one key per entry however it is spelled', () => {
-    const request = tycho2Request(entries('1-2-1', '3-4-1', null, '  ', '0003-0004-1'), [[3, 4, 1], [5, 6, 1]]);
+    const request = tycho2Request(['1-2-1', '3-4-1', null, '  ', '0003-0004-1'], [[3, 4, 1], [5, 6, 1]]);
     expect([...request.membership].sort()).toEqual(['1-2-1', '3-4-1']);
     expect(requestLines(request)).toEqual(['1-2-1', '3-4-1', '5-6-1']);
   });
 
-  it('carries the manifest\'s HIPs, each once, after the TYCs, in the Tycho-2 record only', () => {
-    const request = tycho2Request([{ tyc: '1-2-1', hip: 70 }, { tyc: null, hip: 8 }, { tyc: '3-4-1', hip: 70 }], []);
-    expect(requestLines(request)).toEqual(['1-2-1', '3-4-1']);
-    expect(tycho2RequestLines(request)).toEqual(['1-2-1', '3-4-1', 'HIP 70', 'HIP 8']);
+  it('records the Tycho-2 pull\'s HIPs after the TYCs', () => {
+    const request = tycho2Request(['1-2-1', '3-4-1'], []);
+    expect(tycho2RequestLines({ request, requestFrom: [], hips: new Set([70, 8]) })).toEqual(['1-2-1', '3-4-1', 'HIP 70', 'HIP 8']);
   });
 });
 
@@ -112,8 +110,8 @@ function rowOf(tyc1: number, tyc2: number, tyc3: number, hip = ''): Row {
   return row;
 }
 
-function runWith(request: Tycho2Request, mainRows: readonly Row[]) {
-  const pull = tycho2Pull(OUTPUTS, { request, requestFrom: ['manifest.tsv', 'tyc2_hd.tsv'] });
+function runWith(request: Tycho2Request, mainRows: readonly Row[], hips: ReadonlySet<number> = new Set()) {
+  const pull = tycho2Pull(OUTPUTS, { request, requestFrom: ['manifest.tsv', 'tyc2_hd.tsv'], hips });
   const ask: Ask = async (phase) => {
     if (!phase.from.includes('tyc2')) return [];
     const where = /BETWEEN (\d+) AND (\d+)/.exec(phase.where ?? '');
@@ -124,7 +122,8 @@ function runWith(request: Tycho2Request, mainRows: readonly Row[]) {
 }
 
 describe('the run', () => {
-  const request = tycho2Request([{ tyc: '1-2-1', hip: null }, { tyc: '9000-3-1', hip: 77 }], [[4, 5, 1]]);
+  const request = tycho2Request(['1-2-1', '9000-3-1'], [[4, 5, 1]]);
+  const hips = new Set([77]);
 
   it('keeps only rows whose full TYC was requested, across bands', async () => {
     const { rows, checks } = await runWith(request, [rowOf(1, 2, 1), rowOf(1, 2, 2), rowOf(4, 5, 1), rowOf(9000, 3, 1), rowOf(9000, 4, 1)]);
@@ -133,17 +132,17 @@ describe('the run', () => {
   });
 
   it('keeps both entries Tycho-2 gives a manifest HIP, the one no TYC names included', async () => {
-    const { rows } = await runWith(request, [rowOf(9000, 3, 1, '77'), rowOf(9000, 3, 2, '77'), rowOf(9000, 5, 1, '78')]);
+    const { rows } = await runWith(request, [rowOf(9000, 3, 1, '77'), rowOf(9000, 3, 2, '77'), rowOf(9000, 5, 1, '78')], hips);
     expect(rows.main.map((row) => row.slice(0, 3).join('-')).sort()).toEqual(['9000-3-1', '9000-3-2']);
   });
 
   it('refuses an empty request and a TYC1 outside the span before asking anything', async () => {
     await expect(runWith(tycho2Request([], []), [])).rejects.toThrow(/name no TYC/);
-    await expect(runWith(tycho2Request(entries(`${TYC1_MAX + 1}-5-1`), []), [])).rejects.toThrow(/outside the scanned TYC1 span/);
+    await expect(runWith(tycho2Request([`${TYC1_MAX + 1}-5-1`], []), [])).rejects.toThrow(/outside the scanned TYC1 span/);
   });
 
   it('describes its 48 band queries and the mentioned TYCs and manifest HIPs as its request', () => {
-    const described = describePhasedPull(tycho2Pull(OUTPUTS, { request, requestFrom: ['m', 't'] }));
+    const described = describePhasedPull(tycho2Pull(OUTPUTS, { request, requestFrom: ['m', 't'], hips }));
     expect(Object.keys(JSON.parse(described.query).phases)).toHaveLength(48);
     expect(described.request).toEqual(['1-2-1', '4-5-1', '9000-3-1', 'HIP 77']);
     expect(described.services).toEqual(['CDS', 'CfA']);

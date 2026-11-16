@@ -48,7 +48,7 @@ describe('hdOrder', () => {
 });
 
 describe('the run', () => {
-  const pull = (tycs: string[]) => tycHdPull(declareOutputs({ tycHd: 'unused.tsv' }), { request: tycho2Request(tycs.map((tyc) => ({ tyc, hip: null })), []), requestFrom: [] });
+  const pull = (tycs: string[]) => tycHdPull(declareOutputs({ tycHd: 'unused.tsv' }), { request: tycho2Request(tycs, []), requestFrom: [] });
 
   it('joins SIMBAD\'s padded stored ids back to the request and keeps an HD\'s component letter', async () => {
     const { ask } = fakeAsk(simbad(
@@ -91,7 +91,7 @@ describe('an overflowed SIMBAD reply', () => {
 
   it('raises, and writes nothing', async () => {
     const overfull = `oidref,id\n${Array.from({ length: phaseLimit(TYC_HD_PHASES.resolve) + 1 }, (_, i) => `${i},TYC 1-${i}-1`).join('\n')}\n`;
-    const pull = tycHdPull(declareOutputs({ tycHd: join(dir, 'tyc-hd.tsv') }), { request: tycho2Request([{ tyc: '1-1-1', hip: null }], []), requestFrom: [] });
+    const pull = tycHdPull(declareOutputs({ tycHd: join(dir, 'tyc-hd.tsv') }), { request: tycho2Request(['1-1-1'], []), requestFrom: [] });
     await expect(runPhasedPull(pull, {
       ...QUIET_DEPS,
       transport: async (_url, form) => (form ? textReply(200, 'text/csv', overfull) : textReply(200, 'text/xml', '<capabilities/>')),

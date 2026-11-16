@@ -20,39 +20,31 @@ export function parseTyc(text: string): Tyc | null {
 /** One spelling per entry, so a manifest cell and an IV/25 row naming it differently collapse to one key. */
 export const tycKey = ([tyc1, tyc2, tyc3]: Tyc): string => `${tyc1}-${tyc2}-${tyc3}`;
 
-export interface ManifestEntry {
-  readonly tyc: string | null;
-  readonly hip: number | null;
-}
-
 export interface Tycho2Request {
   /** The manifest's TYCs, whose cover the pull gates. */
   readonly membership: ReadonlySet<string>;
   /** The manifest's TYCs and IV/25's: what the pull keeps. */
   readonly mentioned: ReadonlySet<string>;
-  /** The manifest's HIPs: a row whose `hip` names one is kept too, so both entries of a pair stay. */
-  readonly hips: ReadonlySet<string>;
 }
 
 /** README.md#the-request-set. */
-export function tycho2Request(manifest: Iterable<ManifestEntry>, iv25Tycs: Iterable<Tyc>): Tycho2Request {
+export function tycho2Request(manifestTycs: Iterable<string | null>, iv25Tycs: Iterable<Tyc>): Tycho2Request {
   const membership = new Set<string>();
-  const hips = new Set<string>();
-  for (const entry of manifest) {
-    const tyc = entry.tyc === null ? null : parseTyc(entry.tyc);
+  for (const cell of manifestTycs) {
+    const tyc = cell === null ? null : parseTyc(cell);
     if (tyc !== null) membership.add(tycKey(tyc));
-    if (entry.hip !== null) hips.add(String(entry.hip));
   }
   const mentioned = new Set(membership);
   for (const tyc of iv25Tycs) mentioned.add(tycKey(tyc));
-  return { membership, mentioned, hips };
+  return { membership, mentioned };
 }
 
 export const requestLines = (request: Tycho2Request): string[] => [...request.mentioned].sort(compareCodeUnits);
 
-export const tycho2RequestLines = (request: Tycho2Request): string[] => [
+/** The TYCs, then the manifest HIPs whose rows the Tycho-2 pull also keeps. */
+export const tycho2RequestLines = ({ request, hips }: Tycho2PullInputs): string[] => [
   ...requestLines(request),
-  ...[...request.hips].sort(compareCodeUnits).map((hip) => `HIP ${hip}`),
+  ...[...hips].map(String).sort(compareCodeUnits).map((hip) => `HIP ${hip}`),
 ];
 
 export const TYC1_MIN = 1;
@@ -141,13 +133,14 @@ export function bandPhase(table: Tycho2Table, [lo, hi]: readonly [number, number
   return { ...query, scope: { kind: 'whole-table', maxRows: TYC1_BAND_ROWS, asu } };
 }
 
-/** The row's TYC when the request keeps it, else null. */
-function keptTyc(table: Tycho2Table, request: Tycho2Request): (row: Row) => string | null {
+/** The row's TYC when the pull keeps it, else null. */
+function keptTyc(table: Tycho2Table, { request, hips }: Tycho2PullInputs): (row: Row) => string | null {
   const cells = cellReader(table.columns, table.vizierId);
   return (row) => {
     const cell = cells(row);
     const tyc = tycKey([Number(cell('tyc1')), Number(cell('tyc2')), Number(cell('tyc3'))]);
-    return request.mentioned.has(tyc) || request.hips.has(cell('hip') ?? '') ? tyc : null;
+    const hip = cell('hip') ?? '';
+    return request.mentioned.has(tyc) || (hip !== '' && hips.has(Number(hip))) ? tyc : null;
   };
 }
 
@@ -181,7 +174,13 @@ export interface Tycho2Inputs {
   readonly requestFrom: readonly string[];
 }
 
-export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, requestFrom }: Tycho2Inputs): PhasedPull<Tycho2Key> {
+export interface Tycho2PullInputs extends Tycho2Inputs {
+  /** The manifest's HIPs: a row whose `hip` names one is kept too, so both entries of a pair stay (README.md#the-request-set). */
+  readonly hips: ReadonlySet<number>;
+}
+
+export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, inputs: Tycho2PullInputs): PhasedPull<Tycho2Key> {
+  const { request, requestFrom, hips } = inputs;
   const keys = Object.keys(TABLES) as Tycho2Key[];
   const bands = tyc1Bands();
   const phases = new Map(keys.flatMap((key) => bands.map((band) => [`${key} ${band[0]}-${band[1]}`, { key, phase: bandPhase(TABLES[key], band) }] as const)));
@@ -196,7 +195,7 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
     phases: Object.fromEntries([...phases].map(([name, { phase }]) => [name, phase])),
     tables,
     release: vizierRelease(keys.map((key) => TABLES[key])),
-    request: { request: tycho2RequestLines(request), requestFrom },
+    request: { request: tycho2RequestLines(inputs), requestFrom },
     async run(ask, log) {
       if (request.mentioned.size === 0) throw new Error(`${requestFrom.join(' and ')} name no TYC between them, so there is nothing to pull`);
       const outside = unscannable(request.mentioned);
@@ -204,9 +203,9 @@ export function tycho2Pull(outputs: DeclaredOutputs<Tycho2Key>, { request, reque
         throw new Error(`${outside.length} mentioned TYC(s) fall outside the scanned TYC1 span [${TYC1_MIN}, ${TYC1_MAX}] `
           + `(${sample(outside)}); widen the span or fix the request set`);
       }
-      log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new), plus rows naming one of ${request.hips.size} manifest HIPs`);
+      log(`mentioned TYCs: ${request.mentioned.size} (manifest ${request.membership.size} ∪ IV/25 ${request.mentioned.size - request.membership.size} new), plus rows naming one of ${hips.size} manifest HIPs`);
       const kept = { main: new Map<string, Row>(), suppl1: new Map<string, Row>() };
-      const keep = { main: keptTyc(MAIN, request), suppl1: keptTyc(SUPPL1, request) };
+      const keep = { main: keptTyc(MAIN, inputs), suppl1: keptTyc(SUPPL1, inputs) };
       for (const { key, phase } of phases.values()) {
         for (const row of await ask(phase)) {
           const tyc = keep[key](row);
