@@ -10,11 +10,10 @@ import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, ids, indices, type Side } from '../resolve/resolve-fixture';
 import { inheritedFrom } from '../multiples-record-pure';
 import { NSS_SYNTHESIS_OUTCOMES, SYNTH_NSS_DISCOVERER, synthesizeNssInnerPairs } from './nss-inner-pairs-pure';
+import { measured } from './astrometry-fixture';
 import type { ComponentAstrometry, PairAstrometry } from './routes-pure';
 
-const AST: ComponentAstrometry = {
-  astrometryVia: 'gaia_5p', raDeg: 100, decDeg: 0, parallaxMas: 50, parallaxErrorMas: 0.05, pmraMasyr: 1, pmdecMasyr: -1, refEpoch: 2016,
-};
+const AST: ComponentAstrometry = measured({ parallaxMas: 50 });
 
 const side = (gaiaSourceId: string | null, over: Side = {}): Side =>
   ({ gaiaSourceId, resolveVia: gaiaSourceId === null ? 'unresolved' : 'simbad_xid', ...over });

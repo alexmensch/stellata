@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { columnTable } from '../../util/tsv/table-pure';
 import { componentKey, discovererKey } from '../component-tokens-pure';
 import { parseAthygRows } from './athyg-pure';
+import { sourceRowRefText } from '../../util/sources/row-ref-pure';
+import { ATHYG_CLASSIC_IDS } from '../../catalog/spine/athyg-classic-ids-source';
 import {
   parseAstrometryExclusions, parseComponentSptypeOverrides, parseOrb6ComponentOverrides,
 } from './curated-pure';
@@ -15,6 +17,7 @@ import { joinSimbadWdsSpectra, parseSimbadWdsXids, parseSptypeByOid } from './si
 
 const tsv = (text: string) => columnTable(FIXTURE, text);
 const csv = (text: string) => columnTable({ ...FIXTURE, delimiter: 'comma' }, text);
+const athygTable = (text: string) => [csv(text), ATHYG_CLASSIC_IDS] as const;
 
 const ATHYG_HEADER = '"id","tyc","gaia","hyg","hip","hd","hr","gl","bayer","flam","con",'
   + '"proper","ra","dec","pos_src","dist","x0","y0","z0","dist_src",'
@@ -23,7 +26,7 @@ const ATHYG_HEADER = '"id","tyc","gaia","hyg","hip","hd","hr","gl","bayer","flam
 
 describe('parseAthygRows', () => {
   it('surfaces hip, tyc and gaia, RA in degrees', () => {
-    const rows = parseAthygRows(csv([
+    const rows = parseAthygRows(...athygTable([
       ATHYG_HEADER,
       '1,"",,0,,,"","","","","",Sol,0.0,0.0,OTHER,0.0,0.000005,0.0,0.0,OTHER,-26.7,4.85,0.656,OTHER,,OTHER,,,OTHER,,,,G2 V,OTHER',
       '21,"5841-1155-1",2341871673090078592,0,2,,"","","","","",,0.0008,75.48,Hip,219.30,55.93,0.42,212.74,Hip,9.27,-1.45,1.46,Hip,,OTHER,,,Hip,,,,K0V,Hip',
@@ -32,10 +35,11 @@ describe('parseAthygRows', () => {
     expect(rows[0]).toMatchObject({ proper: 'Sol', hip: null, tyc: null, gaia: null });
     expect(rows[1]).toMatchObject({ hip: 2, tyc: '5841-1155-1', gaia: '2341871673090078592', absmag: -1.45, ci: 1.46 });
     expect(rows[1].raDeg).toBeCloseTo(0.0008 * 15, 12);
+    expect(rows.map((r) => sourceRowRefText(r.ref))).toEqual(['athyg:1', 'athyg:21']);
   });
 
   it('reads `0` as an absent identifier', () => {
-    const rows = parseAthygRows(csv([
+    const rows = parseAthygRows(...athygTable([
       ATHYG_HEADER,
       '99,"0","0",0,0,0,"","","","","",Historical,1.0,10.0,OTHER,100.0,80.0,40.0,40.0,OTHER,8.5,5.0,0.5,OTHER,,OTHER,,,OTHER,,,,K0V,Hip',
     ].join('\n')));
@@ -43,7 +47,7 @@ describe('parseAthygRows', () => {
   });
 
   it('skips a row with no position or no absolute magnitude', () => {
-    const rows = parseAthygRows(csv([
+    const rows = parseAthygRows(...athygTable([
       ATHYG_HEADER,
       '2,"",,0,,,"","","","","",,,10.0,OTHER,100.0,80.0,40.0,40.0,OTHER,8.5,5.0,,OTHER,,OTHER,,,OTHER,,,,,',
       '3,"",,0,,,"","","","","",,1.0,10.0,OTHER,100.0,80.0,40.0,40.0,OTHER,8.5,,,OTHER,,OTHER,,,OTHER,,,,,',
@@ -53,7 +57,7 @@ describe('parseAthygRows', () => {
 
   it('throws on a missing column rather than reading every row as absent', () => {
     const noDist = ATHYG_HEADER.replace('"dist",', '');
-    expect(() => parseAthygRows(csv(`${noDist}\n1,"",,0,,,"","","","","",Sol,0.0,0.0,OTHER\n`)))
+    expect(() => parseAthygRows(...athygTable(`${noDist}\n1,"",,0,,,"","","","","",Sol,0.0,0.0,OTHER\n`)))
       .toThrow(/missing required columns: dist/);
   });
 });

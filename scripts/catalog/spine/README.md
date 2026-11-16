@@ -78,7 +78,8 @@ scripts/catalog/spine/
                                   read is a table each reader takes its
                                   own columns from: the primaries audit's
                                   hd / hyg cells, and the binaries
-                                  pipeline's Stage 1 AT-HYG rows.
+                                  pipeline's Stage 1 AT-HYG rows. Keyed on
+                                  AT-HYG's own `id` (`athyg:<id>`).
   association-audit-pure.ts       Per row, whether the primaries' own
     (+ test)                      cross-references connect every identifier
                                   it carries (README.md#the-association-audit).

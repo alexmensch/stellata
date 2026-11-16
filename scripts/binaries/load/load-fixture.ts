@@ -1,6 +1,7 @@
 // Test-only builders for the Stage 1 row types.
 
 import type { AthygRow } from './athyg-pure';
+import { ATHYG_CLASSIC_IDS } from '../../catalog/spine/athyg-classic-ids-source';
 import { GAIA_ASTROMETRY, type GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { MscOrbitRow, MscSystemRow } from './msc-pure';
 import { gaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-fixture';
@@ -29,6 +30,7 @@ export function mscOrbit(over: Partial<MscOrbitRow> = {}): MscOrbitRow {
 
 export function athygRow(over: Partial<AthygRow> = {}): AthygRow {
   return {
+    ref: sourceRowRef(ATHYG_CLASSIC_IDS, 1),
     hip: null, tyc: null, gaia: null, hd: null, raDeg: 0, decDeg: 0, xPc: 0, yPc: 0, zPc: 0,
     distPc: 1, vMag: null, absmag: 5, ci: null, spect: '', proper: '', pmRaMasyr: null, pmDecMasyr: null,
     ...over,

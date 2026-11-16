@@ -1,9 +1,12 @@
 // The AT-HYG v3.3 classic-ID rows the binaries stages read.
 
 import { RA_HOURS_TO_DEG } from '../../../src/astro-core/astronomy-constants';
+import { sourceRowRef, type OneRowRef, type RowKeyed } from '../../util/sources/row-ref-pure';
 import type { ColumnTable, TableRow } from '../../util/tsv/table-pure';
 
 export interface AthygRow {
+  /** `athyg:<id>`, AT-HYG's own row id. */
+  readonly ref: OneRowRef<number>;
   readonly hip: number | null;
   /** Tycho-2 designation, `"4669-731-1"`. */
   readonly tyc: string | null;
@@ -26,7 +29,7 @@ export interface AthygRow {
 }
 
 const COLUMNS = [
-  'hip', 'tyc', 'gaia', 'hd', 'ra', 'dec', 'x0', 'y0', 'z0', 'dist',
+  'id', 'hip', 'tyc', 'gaia', 'hd', 'ra', 'dec', 'x0', 'y0', 'z0', 'dist',
   'mag', 'absmag', 'ci', 'spect', 'proper', 'pm_ra', 'pm_dec',
 ] as const;
 type Column = (typeof COLUMNS)[number];
@@ -43,7 +46,7 @@ function intIdentifier(row: TableRow<Column>, column: 'hip' | 'hd'): number | nu
 
 /** Every row with a position, a distance and an absolute magnitude; RA in
  *  hours becomes degrees. */
-export function parseAthygRows(table: ColumnTable): AthygRow[] {
+export function parseAthygRows(table: ColumnTable, from: RowKeyed<number>): AthygRow[] {
   const rows: AthygRow[] = [];
   for (const row of table(COLUMNS)) {
     const ra = row.float('ra');
@@ -56,6 +59,7 @@ export function parseAthygRows(table: ColumnTable): AthygRow[] {
     if (ra === null || decDeg === null || xPc === null || yPc === null || zPc === null || distPc === null) continue;
     if (absmag === null) continue;
     rows.push({
+      ref: sourceRowRef(from, row.requiredId('id')),
       hip: intIdentifier(row, 'hip'),
       tyc: identifier(row, 'tyc'),
       gaia: identifier(row, 'gaia') === null ? null : row.sourceId('gaia'),

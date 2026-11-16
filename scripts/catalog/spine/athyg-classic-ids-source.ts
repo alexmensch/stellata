@@ -6,5 +6,6 @@ import { columnTable } from '../../util/tsv/table-pure';
 export const ATHYG_CLASSIC_IDS = defineSource({
   file: 'data/athyg/athyg_33_classic_ids.csv',
   hint: 'It is frozen; restore it from git rather than regenerating it.',
+  rowKey: { id: 'athyg', cardinality: 'one', text: (id: number) => String(id) },
   parse: (input) => columnTable({ file: input.file, hint: input.hint, delimiter: 'comma' }, input.text()),
 });

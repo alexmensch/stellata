@@ -2,14 +2,14 @@
 
 import { stageLineageLine, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
-import { hipDesignation } from '../sid/sid-pure';
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
 import type { BlankRescueOutcome } from './load/blank-rescue-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage6Result } from './multiples/attach-multiples';
 import type { Stage5Result } from './optical/attach-optical';
 import { OPTICAL_VIA, OPTICAL_VIA_PROPERTIES } from './optical/optical-tiers-pure';
-import { valueOf, type DecomposedPair, type ResolvedComponent } from './resolve/components-pure';
+import type { DecomposedPair, ResolvedComponent } from './resolve/components-pure';
+import { componentIdParams } from './resolve/resolve-lineage-pure';
 import { PAIRS_LINEAGE } from '../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const PAIRS_LINEAGE_BUDGET = { gzipBytes: 2_600_000, writeMs: 2_000 };
@@ -39,16 +39,12 @@ export interface PairDecisions {
 }
 
 function sideParams(side: 'primary' | 'secondary', c: ResolvedComponent): LineageParams {
-  const gaia = valueOf(c.gaia);
-  const hip = valueOf(c.hip);
-  return {
-    [side]: c.component,
-    ...(gaia === null ? {} : { [`${side}_gaia`]: gaia }),
-    ...(hip === null ? {} : { [`${side}_hip`]: hipDesignation(hip) }),
-  };
+  const ids = Object.entries(componentIdParams(c)).map(([key, value]) => [`${side}_${key}`, value]);
+  return { [side]: c.component, ...Object.fromEntries(ids) };
 }
 
-function pairParams(p: DecomposedPair): LineageParams {
+/** Each side's letter, Gaia source and `hip:`, the forms trace matches a pair on. */
+export function pairParams(p: DecomposedPair): LineageParams {
   return { ...sideParams('primary', p.primary), ...sideParams('secondary', p.secondary) };
 }
 

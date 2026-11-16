@@ -25,6 +25,8 @@ import { foldStageLines } from '../catalog/lineage/lineage-row-pure';
 import { PAIRS_CODES, pairsLineageLines } from './pairs-lineage-pure';
 import { BINDING_CODES, bindingLineageLines } from './resolve/binding-lineage-pure';
 import { resolveCounts, resolveLineageLines } from './resolve/resolve-lineage-pure';
+import { astrometryCounts, astrometryLineageLines } from './astrometry/astrometry-lineage-pure';
+import { orbitsCounts, orbitsLineageLines } from './orbits/orbits-lineage-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage4Result } from './orbits/attach-orbits';
 import type { Stage5Result } from './optical/attach-optical';
@@ -114,8 +116,8 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   });
 
   it('selects one frozen orbit for every Stage 3 pair', () => {
-    expect([...s4.orbits.keys()]).toEqual(s3.pairs);
-    const withElements = [...s4.orbits.values()].flatMap((o) => (o.orbitVia === 'none' ? [] : [o]))[0];
+    expect([...s4.decisions.keys()]).toEqual(s3.pairs);
+    const withElements = [...s4.decisions.values()].flatMap(({ orbit: o }) => (o.orbitVia === 'none' ? [] : [o]))[0];
     expect([Object.isFrozen(withElements), Object.isFrozen(withElements.elements)]).toEqual([true, true]);
   });
 
@@ -137,8 +139,10 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   it('counts the committed count snapshot, byte for byte as a refresh writes it', () => {
     const binding = foldStageLines(BINDING_CODES, bindingLineageLines(results.multiples.rows));
     const resolve = resolveCounts(resolveLineageLines(results.resolved));
+    const astrometry = astrometryCounts(astrometryLineageLines(results.astrometry));
+    const orbits = orbitsCounts(orbitsLineageLines(results.orbits));
     const pairs = foldStageLines(PAIRS_CODES, pairsLineageLines(results));
-    expect(asWritten(binariesCounts(results, { binding, resolve, pairs })) === readRepoFile(BUILD_BINARIES_COUNTS.file)).toBe(true);
+    expect(asWritten(binariesCounts(results, { binding, resolve, astrometry, orbits, pairs })) === readRepoFile(BUILD_BINARIES_COUNTS.file)).toBe(true);
   });
 });
 

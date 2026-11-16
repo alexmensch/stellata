@@ -31,6 +31,16 @@ export const RESOLVE_LINEAGE: StageLineageSpec<'resolve', 'resolve'> = {
   files: ['resolve'],
 };
 
+export const ASTROMETRY_LINEAGE: StageLineageSpec<'astrometry', 'astrometry'> = {
+  stage: 'astrometry',
+  files: ['astrometry'],
+};
+
+export const ORBITS_LINEAGE: StageLineageSpec<'orbits', 'orbits'> = {
+  stage: 'orbits',
+  files: ['orbits'],
+};
+
 export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
   stage: 'pairs',
   files: ['pairs'],

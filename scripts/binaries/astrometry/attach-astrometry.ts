@@ -6,6 +6,7 @@ import { RESOLVE_VIA, type ResolveVia } from '../multiples-record-pure';
 import { componentsOf, resolveViaOf, type DecomposedPair } from '../resolve/components-pure';
 import { refusalTally, type Stage2Result } from '../resolve/resolve-pairs';
 import { NSS_SYNTHESIS_OUTCOMES, synthesizeNssInnerPairs, type NssSynthesisOutcome } from './nss-inner-pairs-pure';
+import type { AstrometryCounts } from './astrometry-lineage-pure';
 import { ROUTED_VIA, routePairs, type PairAstrometry, type RoutedVia, type SiblingClaimedComponent } from './routes-pure';
 
 export interface Stage3Result {
@@ -54,7 +55,7 @@ export function nssTally(result: Stage3Result): Record<NssSynthesisOutcome, numb
 
 export type Stage3Counts = Record<
   'wds_pairs_total' | 'synthesized_nss_inner_pairs' | 'athyg_match_sibling_claimed_rejected' | 'decomposing_pairs' | 'components_total'
-  | `resolution_${ResolveVia}` | `astrometry_${RoutedVia}`,
+  | `resolution_${ResolveVia}`,
   number
 >;
 
@@ -69,12 +70,11 @@ export function stage3Counts(reference: ReferenceCatalogs, resolved: Stage2Resul
     decomposing_pairs: result.pairs.length,
     components_total: 2 * result.pairs.length,
     ...prefixed('resolution_', resolutionTally(result)),
-    ...prefixed('astrometry_', routeTally(result)),
   };
 }
 
 /** Stage 3's build-log rates over `stage3Counts`. */
-export function stage3Rates(counts: Stage3Counts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', Share> {
+export function stage3Rates(counts: Stage3Counts & AstrometryCounts): Record<'gaia_resolve_rate' | 'hip2_fallback_rate', Share> {
   const total = counts.components_total;
   return {
     gaia_resolve_rate: share(total - counts.resolution_unresolved, total),

@@ -63,7 +63,10 @@ scripts/binaries/
                                   multiples.tsv, the binding verdicts and
                                   the component-binding
                                   (resolve/README.md#binding-lineage),
-                                  resolve (resolve/README.md#resolve-lineage)
+                                  resolve (resolve/README.md#resolve-lineage),
+                                  astrometry
+                                  (astrometry/README.md#astrometry-lineage),
+                                  orbits (orbits/README.md#orbits-lineage)
                                   and pairs (#pairs-lineage) lineage stages
                                   to emitArtifacts behind the row bands and
                                   Stage 7's count snapshot check. The test
@@ -77,7 +80,8 @@ scripts/binaries/
   binaries-outputs.ts             BINARIES_OUTPUTS, its declaration.
   pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
                                   pair row the stages decide, as the pairs
-                                  lineage stage (#pairs-lineage).
+                                  lineage stage (#pairs-lineage); pairParams,
+                                  which the orbits stage writes too.
   load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
   orbits/ optical/ multiples/
   counts/
@@ -165,7 +169,10 @@ scripts/binaries/
   multiples-row-key-pure.ts       MULTIPLES_ROW_KEY, that rowKey, for code
                                   that cites a row without reading the file
                                   (promotion's origin keys), so it never
-                                  reaches the codec.
+                                  reaches the codec; componentRowKey, one
+                                  pair row's component as that key's text,
+                                  the key the resolve and astrometry stages
+                                  write.
   build-runtime-binaries.ts        build:binaries-runtime: multiples.tsv +
                                   the catalogue's pair ends →
                                   public/binaries.bin and the runtime-pairs
@@ -232,6 +239,10 @@ Three build steps in order, with `data/binaries/multiples.tsv` and
    (`build/lineage/component-binding.tsv.gz`), Stage 2's tiers, refusals and
    audit verdicts per component as the `resolve` stage
    (`build/lineage/resolve.tsv.gz`, [Resolve lineage](resolve/README.md#resolve-lineage)),
+   Stage 3's route per component as the `astrometry` stage
+   (`build/lineage/astrometry.tsv.gz`, [Astrometry lineage](astrometry/README.md#astrometry-lineage)),
+   Stage 4's orbit source and passed-over candidates per pair as the `orbits`
+   stage (`build/lineage/orbits.tsv.gz`, [Orbits lineage](orbits/README.md#orbits-lineage)),
    and every pair row's fate as
    the `pairs` stage (`build/lineage/pairs.tsv.gz`, [Pairs lineage](#pairs-lineage)).
    The Gaia ids Stage 2 weighs are not an output: `build:astrometry-request`
@@ -314,7 +325,7 @@ Ba/Bb sub-letter blend the inner-pair hierarchy owns
 ## Pairs lineage
 
 `build:binaries` writes every pair row the stages decide as the `pairs`
-lineage stage, after `resolve` in `LINEAGE_STAGES`
+lineage stage, after `orbits` in `LINEAGE_STAGES`
 ([Record lineage](/scripts/catalog/lineage/README.md#the-pairs-stage)), from
 `pairs-lineage-pure.ts`. A pair founds no record, so its rows are keyed on
 the rows that founded it, the pair's `origin`

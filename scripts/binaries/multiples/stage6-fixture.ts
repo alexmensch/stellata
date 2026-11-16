@@ -3,7 +3,8 @@
 import { wdsPair } from '../../wds/wds-fixture';
 import type { WdsPair } from '../../wds/wds-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
-import type { ComponentAstrometry, MeasuredAstrometry } from '../astrometry/routes-pure';
+import { measured } from '../astrometry/astrometry-fixture';
+import type { ComponentAstrometry } from '../astrometry/routes-pure';
 import type { ComponentKey } from '../component-tokens-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
@@ -13,13 +14,6 @@ import { NO_ORBIT, type PairOrbit } from '../orbits/select-orbit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { decomposed, indices, type Side } from '../resolve/resolve-fixture';
 import { attachStage6, type Stage6Result } from './attach-multiples';
-
-export function measured(over: Partial<MeasuredAstrometry> = {}): MeasuredAstrometry {
-  return {
-    astrometryVia: 'gaia_5p', raDeg: 100.0, decDeg: 0.0, parallaxMas: 10.0, parallaxErrorMas: 0.05,
-    pmraMasyr: 1.0, pmdecMasyr: -1.0, refEpoch: 2016.0, ...over,
-  };
-}
 
 export function elements(over: Partial<OrbitElements> = {}): OrbitElements {
   return {
@@ -54,7 +48,7 @@ export function runStage6(
   };
   return attachStage6(
     stage3,
-    { orbits: new Map(pairs.map((p, i) => [p, specs[i].orbit ?? NO_ORBIT])) },
+    { decisions: new Map(pairs.map((p, i) => [p, { orbit: specs[i].orbit ?? NO_ORBIT, candidates: [] }])) },
     { optical: new Map(pairs.map((p, i) => [p, specs[i].optical ?? 'wds_notes_kept'])) },
     { indices: ix, simbadWdsXids: xids },
   );
