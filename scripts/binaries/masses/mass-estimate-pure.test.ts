@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatio, parseSpectralType, spectralMass, WD_MASS_DEFAULT,
+  CARBON_WR_MASS_DEFAULT, massFromSpectralClass, massRatio, parseSpectralType, spectralMass, spectralText, WD_MASS_DEFAULT,
 } from './mass-estimate-pure';
 
 const massRatioFromComponents = (a: string, b: string) => massRatio(spectralMass(a), spectralMass(b));
@@ -50,8 +50,14 @@ describe('parseSpectralType', () => {
     expect(triple('kA5hA8mF1(III)')).toEqual([3, 1, 4]);
   });
 
-  it('is null for an empty string and an unknown first letter', () => {
-    for (const s of ['', null, '   ', 'XYZ']) expect(parseSpectralType(s)).toBeNull();
+  it('is null for an unknown first letter', () => {
+    expect(parseSpectralType('XYZ')).toBeNull();
+  });
+});
+
+describe('spectralText', () => {
+  it('strips whitespace, and states no type when nothing is left', () => {
+    expect(['', null, '   ', ' K0 III '].map(spectralText)).toEqual([null, null, null, 'K0III']);
   });
 });
 

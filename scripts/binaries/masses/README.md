@@ -12,7 +12,9 @@ The spectral type comes from `../components/`'s cascade.
 
 ```
 scripts/binaries/masses/
-  mass-estimate-pure.ts (+ test)   parseSpectralType and spectralMass:
+  mass-estimate-pure.ts (+ test)   spectralText (no type stated, or the
+                                   text the parser reads),
+                                   parseSpectralType and spectralMass:
                                    the branch a mass is read off (the
                                    main-sequence, giant and supergiant
                                    tables of Cox 2000

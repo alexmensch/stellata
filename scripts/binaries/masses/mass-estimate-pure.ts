@@ -40,11 +40,14 @@ function lookupLumClass(window: string): number {
 
 const subclassOf = (digits: string | undefined): number => (digits ? Number(digits[0]) : DEFAULT_SUBCLASS);
 
-export function parseSpectralType(raw: string | null): ParsedSpect | null {
-  if (!raw) return null;
-  const s = raw.replace(/\s+/g, '');
-  if (!s) return null;
+/** A spectral string with its whitespace removed; null when nothing is left, so no type is stated. */
+export function spectralText(raw: string | null): string | null {
+  const s = raw?.replace(/\s+/g, '') ?? '';
+  return s === '' ? null : s;
+}
 
+/** A stated type (`spectralText`'s) read off; null when the parser cannot read it. */
+export function parseSpectralType(s: string): ParsedSpect | null {
   if (/^D[ABCOHQXZV]+/.test(s)) {
     return { classIdx: UNKNOWN_CLASS_IDX, subclass: DEFAULT_SUBCLASS, lumClass: 0, isWhiteDwarf: true };
   }
@@ -150,8 +153,9 @@ function tableMass(parsed: ParsedSpect): SpectralMass {
 }
 
 export function spectralMass(spect: string | null): SpectralMass {
-  if (!spect?.replace(/\s+/g, '')) return { kind: 'no_type' };
-  const parsed = parseSpectralType(spect);
+  const s = spectralText(spect);
+  if (s === null) return { kind: 'no_type' };
+  const parsed = parseSpectralType(s);
   return parsed === null ? { kind: 'unparsed' } : tableMass(parsed);
 }
 
