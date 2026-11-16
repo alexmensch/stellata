@@ -19,15 +19,13 @@ glob is the list, so a new suite runs without a workflow edit. Each file
 runs in its own interpreter, since the suites put their own folder on
 `sys.path` and several import siblings by bare name; `unittest discover`
 is no substitute, as it matches no dotted name like
-`refresh_lib.test.py`.
+`edenhofer2024.test.py`.
 
-**A skip fails the run**, and so does a file that runs no tests. The
-refresh suites `skipTest` when pyvo, astropy or requests is missing, so a
-run that tolerated skips could be green while testing almost nothing. The
-job installs `scripts/refresh/requirements-refresh.txt` and
-`scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the
-venv that holds them activated, as for every other `python3` package
-script — without it, the suites that import numpy fail.
+**A skip fails the run**, and so does a file that runs no tests: a suite
+that skipped on a missing library could be green while testing almost
+nothing. The job installs `scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the venv that holds them
+activated, as for every other `python3` package script — without it, the
+suites that import numpy fail.
 
 ## Vitest with every input
 

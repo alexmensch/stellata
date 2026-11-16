@@ -67,10 +67,8 @@ jobs:
         with:
           python-version-file: .python-version
           cache: 'pip'
-          cache-dependency-path: |
-            scripts/refresh/requirements-refresh.txt
-            scripts/textures/requirements.txt
-      - run: pip install -r scripts/refresh/requirements-refresh.txt -r scripts/textures/requirements.txt
+          cache-dependency-path: scripts/textures/requirements.txt
+      - run: pip install -r scripts/textures/requirements.txt
       - run: python scripts/ci/python_tests.py
 
   # Stage 2 resolution asserted against the curated ground truth
