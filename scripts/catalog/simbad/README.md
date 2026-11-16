@@ -98,12 +98,15 @@ A consumer therefore has three verdicts to handle, not two — agrees, dissents,
 and silent, the last being the rows the pull answers for at all ([Which
 witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd), Silence is silence).
 
-**One build step reads it**: `build:membership`'s pair rule queues a move
+**`build:membership` reads it twice.** Its pair rule queues a move
 onto the other entry of a Tycho-2 pair wherever SIMBAD names that entry by
 HDs the moved record does not ship
-([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
-The rule the next section settles reaches the build through curation rather
-than a join: eight of the
+([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)),
+and its divergence ledger joins the next section's rule to settle or queue an
+HD cell a primary contradicts
+([Settling a differs cell](../membership/merge-derivation/README.md#settling-a-differs-cell)).
+That rule's moves reach the build through curation rather than the join:
+eight of the
 nine records it licenses are asserted as rows of
 `data/classic-ids/classic_id_overrides.tsv` (`stellata-hooj.14`), each carrying
 the component the witnesses named. α Psc is the ninth, held back on
