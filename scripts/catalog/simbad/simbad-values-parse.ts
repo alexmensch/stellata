@@ -139,7 +139,7 @@ export function parseSimbadValuesTsv(text: string, from: Declared & RowKeyed<num
 }
 
 /** The record's SIMBAD row over the namespaces the request was composed from,
- *  source_id first, then `WIDENING_LADDER`'s order (`scripts/refresh/simbad/specs.py`). A widened row is readable
+ *  source_id first, then `WIDENING_LADDER`'s order (`scripts/refresh/simbad/simbad-specs-pure.ts`). A widened row is readable
  *  not because the two ladders share an order but because its emitted row
  *  carries the asking designation in the namespace that bound it, so this
  *  walk reaches it whichever rung matches first. What arrives here is already

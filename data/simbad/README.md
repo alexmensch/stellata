@@ -171,9 +171,8 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
 - **TAP endpoint**:
   https://simbad.cds.unistra.fr/simbad/sim-tap, with the Harvard CfA
   mirror https://simbad.cfa.harvard.edu/simbad/sim-tap as fallback: the
-  TypeScript pulls' `SIMBAD` archive in `scripts/refresh/pull/tap-pure.ts`
-  ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)), and
-  `refresh_lib.simbad_client` for the one Python pull left, tyc-hd.
+  pulls' `SIMBAD` archive in `scripts/refresh/pull/tap-pure.ts`
+  ([The TAP backend](/scripts/refresh/pull/README.md#the-tap-backend)).
 - **Licence**: SIMBAD content is publicly accessible per CDS policy
   (academic / non-commercial); cite the
   [Wenger 2000](/data/papers/index.md#wenger2000) paper.
@@ -432,7 +431,7 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `pnpm run refresh:simbad-values` →
   [`scripts/refresh/simbad-values/`](../../scripts/refresh/simbad-values/README.md).
 - `pnpm run refresh:simbad-tyc-hd` →
-  [`scripts/refresh/refresh-simbad-tyc-hd.py`](../../scripts/refresh/README.md).
+  [`scripts/refresh/simbad-tyc-hd/`](../../scripts/refresh/simbad-tyc-hd/README.md).
 - `pnpm run refresh:simbad-sptype` →
   [`scripts/refresh/simbad-sptype/`](../../scripts/refresh/simbad-sptype/README.md).
 - `pnpm run refresh:simbad-wds-sptype` →
@@ -440,5 +439,5 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
 - `pnpm run refresh:simbad-wds-xids` →
   [`scripts/refresh/simbad-wds-xids/`](../../scripts/refresh/simbad-wds-xids/README.md).
 
-All share the `scripts/refresh/simbad/` plumbing; every one but the TYC → HD
-pull runs on the TypeScript pull runtime.
+All share the `scripts/refresh/simbad/` plumbing and run on the TypeScript
+pull runtime.

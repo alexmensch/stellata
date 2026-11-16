@@ -25,8 +25,7 @@ What the tables are for and which position a consumer propagates from:
 The manifest's `tyc` cells and IV/25's Tycho ids, each parsed to integers and
 written back as one key (`3694-2544-1`), so two spellings of one entry
 collapse. The manifest's own TYCs are kept apart as the set the cover gate
-holds to. `refresh-simbad-tyc-hd.py` reads the same set through
-`refresh_lib.read_mentioned_tycs` until it ports
+holds to. `refresh:simbad-tyc-hd` asks the same set
 ([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
 
 ## Bands, not a key filter

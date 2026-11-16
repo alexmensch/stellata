@@ -19,6 +19,8 @@ export const GAIA_DR2: Namespace = { prefix: 'Gaia DR2 ', name: 'source_id_dr2',
 export const GAIA_DR1: Namespace = { prefix: 'Gaia DR1 ', name: 'source_id_dr1', numeric: true };
 export const GAIA_RELEASES: readonly Namespace[] = [GAIA_DR3, GAIA_DR2, GAIA_DR1];
 export const HD: Namespace = { prefix: 'HD ', name: 'hd', numeric: true };
+/** HD read as text, its component letter kept (`24071B`): which form SIMBAD hangs on an object is the attribution tyc-hd ships. */
+export const HD_LETTERED: Namespace = { ...HD, numeric: false };
 /** One WDS component, `WDS J<wds_id><component>` with no space; SIMBAD holds no id for the bare system. */
 export const WDS: Namespace = { prefix: 'WDS J', name: 'wds', numeric: false };
 
