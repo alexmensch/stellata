@@ -61,7 +61,7 @@ function singleStarPosition(entry: Tycho2Row): { position: SkyPosition; epoch: n
 }
 
 /** Carried in the B1950 frame, then precessed: README.md#the-two-witnesses. */
-export function v70aPositionAt(astrometry: V70aAstrometry, epoch: number): SkyPosition {
+function v70aPositionAt(astrometry: V70aAstrometry, epoch: number): SkyPosition {
   const { eastArcsec, northArcsec } = polarToTangent(astrometry.pmArcsecYr, astrometry.pmPaDeg);
   const carried = skyPositionAtEpoch(
     { raDeg: astrometry.raB1950Deg, decDeg: astrometry.decB1950Deg },
