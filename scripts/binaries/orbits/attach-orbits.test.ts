@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { stage4Rates, type Stage4Counts } from './attach-orbits';
+import { stage4Rates } from './attach-orbits';
+import type { OrbitsCounts } from './orbits-lineage-pure';
 import { stage4Report } from './stage4-report-pure';
 
-const counts = (over: Partial<Stage4Counts>): Stage4Counts => ({
+const counts = (over: Partial<OrbitsCounts>): OrbitsCounts => ({
   orbit_orb6: 0, orbit_gaia_nss: 0, orbit_orb6_spectroscopic: 0, orbit_msc: 0, orbit_none: 0, ...over,
 });
 

@@ -76,12 +76,12 @@ export function orbitsLineageLines(result: Stage4Result): LineageLine[] {
 }
 
 /** The `orbit_*` count-snapshot keys, one per source, from the stage's lines. */
-export function orbitsCounts(lines: readonly LineageLine[]): Record<`orbit_${OrbitVia}`, number> {
-  const perCode = foldStageLines(ORBITS_CODES, lines);
-  return Object.fromEntries(ORBIT_VIA.map((via) => [`orbit_${via}`, perCode[ORBITS_CODES.liveCode(`source.${kebab(via)}`)]])) as Record<`orbit_${OrbitVia}`, number>;
-}
+export type OrbitsCounts = Record<`orbit_${OrbitVia}`, number>;
 
-export type OrbitsCounts = ReturnType<typeof orbitsCounts>;
+export function orbitsCounts(lines: readonly LineageLine[]): OrbitsCounts {
+  const perCode = foldStageLines(ORBITS_CODES, lines);
+  return Object.fromEntries(ORBIT_VIA.map((via) => [`orbit_${via}`, perCode[ORBITS_CODES.liveCode(`source.${kebab(via)}`)]])) as OrbitsCounts;
+}
 
 const UNREADABLE_HOLDS = 'every orbit row the cascade weighs converts to elements, but the rows named';
 

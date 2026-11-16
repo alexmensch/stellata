@@ -10,6 +10,7 @@ import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-record-pure';
 import { groupOrb6ByPair } from '../resolve/cascade-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
+import type { OrbitsCounts } from './orbits-lineage-pure';
 import { selectOrbit, type OrbitCandidate, type PairOrbit } from './select-orbit-pure';
 
 export interface Stage4Result {
@@ -48,10 +49,8 @@ export function orbitTally(result: Stage4Result): Record<OrbitVia, number> {
   return fold(ORBIT_VIA, [...result.orbits.values()], (o) => o.orbitVia);
 }
 
-export type Stage4Counts = Record<`orbit_${OrbitVia}`, number>;
-
 /** The share of pairs with elements whose elements are Gaia NSS's. */
-export function stage4Rates(counts: Stage4Counts): Record<'nss_orbit_rate', Share> {
+export function stage4Rates(counts: OrbitsCounts): Record<'nss_orbit_rate', Share> {
   const onFile = sumOf(counts, 'orbit_', ORBIT_VIA_ON_FILE);
   return { nss_orbit_rate: share(counts.orbit_gaia_nss, onFile) };
 }
