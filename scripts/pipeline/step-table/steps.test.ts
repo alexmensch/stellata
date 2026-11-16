@@ -50,8 +50,8 @@ describe('the step table', () => {
 
   it('runs the build steps in their data-flow order', () => {
     expect(loaded.graph.order.filter(isBuildStep)).toEqual([
-      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:astrometry-request',
-      'build:binaries', 'build:classic-ids', 'build:membership', 'build:probes-sync', 'build:ephemerides-sync',
+      'lineage:codes', 'build:clouds', 'build:local-group', 'build:wgsn', 'build:classic-ids',
+      'build:membership', 'build:astrometry-request', 'build:binaries', 'build:probes-sync', 'build:ephemerides-sync',
       'build:catalog', 'build:binaries-runtime', 'build:dust-sync', 'build:local-bubble-sync', 'build:cloud-surfaces-sync',
       'build:textures-sync',
     ]);
@@ -62,7 +62,8 @@ describe('the step table', () => {
       MEMBERSHIP_MANIFEST.file, 'build/lineage/membership.tsv.gz',
     ]));
     expect(edgeFiles('lineage:codes', 'build:catalog')).toEqual([REASON_CODES.file]);
-    expect(edgeFiles('build:binaries', 'build:membership')).toEqual([MULTIPLES_TSV.file]);
+    expect(edgeFiles('build:membership', 'build:binaries')).toEqual([MEMBERSHIP_MANIFEST.file]);
+    expect(edgeFiles('build:binaries', 'build:catalog')).toEqual([MULTIPLES_TSV.file]);
   });
 
   it('orders a describing bake after the writer of the file it projects', () => {
