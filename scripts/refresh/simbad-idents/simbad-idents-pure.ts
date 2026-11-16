@@ -75,7 +75,7 @@ function mergeInto(into: Map<number, Set<string>>, from: ReadonlyMap<number, Rea
   }
 }
 
-const numericOrder = (a: string, b: string): number => (BigInt(a) < BigInt(b) ? -1 : BigInt(a) > BigInt(b) ? 1 : 0);
+const numericOrder = (a: string, b: string): number => ascending(BigInt(a), BigInt(b));
 
 /** One row per object holding an id of a pulled class: README.md#the-table. */
 export function identsRows(
