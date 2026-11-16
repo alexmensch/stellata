@@ -514,6 +514,20 @@ describe('buildMembership — the spine side', () => {
       expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
       expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
     });
+
+    it('keeps the HD where the other HIP\'s record ships a different HD', () => {
+      const built = buildMembership({
+        ...withTables({
+          ...tables,
+          hdI239: new Set([70100, 70101]),
+          i239HipHd: new Map([[71, 70100]]),
+          simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        }),
+        spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70101' })],
+      });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+    });
   });
 
   it('drops the spine labels no primary attests onto the label ledger', () => {

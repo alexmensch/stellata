@@ -84,7 +84,7 @@ flamsteed-refusals.tsv   Regular git. Pipeline-derived. Every SIMBAD
                          37 rows.
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
                          spine Flamsteed / HD cell no primary attests, or HD
-                         I/239 and SIMBAD give to another spine HIP, keyed on
+                         I/239 and SIMBAD give to another HIP whose record ships it, keyed on
                          the manifest row it left, under
                          flamsteed_unattested (3) · hd_unattested (1) ·
                          hd_other_hip (1).

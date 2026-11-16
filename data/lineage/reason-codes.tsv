@@ -258,7 +258,7 @@ membership.disposition.other.queued	membership	none	outcome	live		7.1.20	A commi
 membership.disposition.other.settled	membership	none	outcome	live		7.1.20	A committed review disposition binds a Gaia source other than the derived one, on its stated evidence. The derivation settled the row by itself; the disposition overrides it.
 membership.fold	membership	merge	outcome	live		7.1.6	Review found the spine row duplicates another spine row; it folds onto that row and its SID merges into the survivor's.
 membership.label-drop.flamsteed-unattested	membership	none	outcome	live		7.1.6	No primary publishes this Flamsteed number for the star, so it leaves the record.
-membership.label-drop.hd-other-hip	membership	none	outcome	live		7.2.1	I/239 prints no HD for the record's HIP, and I/239 and SIMBAD both give this HD to another HIP a spine record carries, so it leaves the record.
+membership.label-drop.hd-other-hip	membership	none	outcome	live		7.2.1	I/239 prints no HD for the record's HIP, and I/239 and SIMBAD both give this HD to another HIP whose spine record ships it, so it leaves the record.
 membership.label-drop.hd-unattested	membership	none	outcome	live		7.1.6	No HD primary publishes this HD number for the star, so it leaves the record.
 membership.label.added	membership	none	outcome	retired	7.1.20	7.1.6	The classic-ID overlay adds a designation the spine row lacked.
 membership.label.added.flam	membership	none	outcome	live		7.1.20	The classic-ID overlay adds a designation the spine row lacked. Identifier: flam.

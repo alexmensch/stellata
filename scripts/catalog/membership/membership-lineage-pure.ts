@@ -472,7 +472,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
-  'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP a spine record carries, so it leaves the record.'),
+  'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP whose spine record ships it, so it leaves the record.'),
   ...MERGE_CODES,
   'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
   ...RETIRED_DIFFERS_CODES,

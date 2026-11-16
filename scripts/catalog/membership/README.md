@@ -262,11 +262,13 @@ on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifes
 rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
 **An attested HD that is another HIP's leaves the row too** (`hd_other_hip`):
-I/239 prints no HD for the record's own HIP, and both I/239's `HD` column and
-SIMBAD's identifier pull give the HD to a different HIP that a spine record
-carries. Both witnesses are required, and so is I/239's silence on the record's
-own HIP: where it prints another HD there, the two records swap HDs, which is
-the close-pair rule's question, not a drop. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
+I/239 prints no HD for the record's own HIP, both I/239's `HD` column and
+SIMBAD's identifier pull give the HD to a different HIP, and the spine record
+carrying that HIP ships the HD after the label merge. The drop therefore only
+ever removes a second copy of a designation another record keeps. Where the
+other record ships a different HD, or I/239 prints another HD for the record's
+own HIP, the two records hold a swapped or split pair, which is the close-pair
+rule's question, not a drop. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
 which I/239 and SIMBAD both give to HIP 54355.
 
 <a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
