@@ -55,8 +55,10 @@ scripts/catalog/lineage/
   stage-lineage.ts               stageLineage: one stage's files, header,
                                  baseline plan, diff, budget and invariant
                                  checks, ready for the stage's emitArtifacts
-                                 call; countedStageLineage, the same plus
-                                 its count block; namedStageRun, the run of
+                                 call; foldedStageLineage, the same plus a
+                                 fold over its lines, and
+                                 countedStageLineage, that fold as its
+                                 count block; namedStageRun, the run of
                                  a stage whose lines file is named for it,
                                  which build:catalog and build:binaries
                                  build their stages with.
