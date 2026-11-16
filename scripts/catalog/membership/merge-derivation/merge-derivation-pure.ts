@@ -3,7 +3,7 @@
 import {
   linkTablesFrom, partitionRow, type KeyCell, type LinkTables,
 } from '../../spine/association-audit-pure';
-import type { SpineRow } from '../../spine/inherited-spine-pure';
+import { spineIds, type SpineIds, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure';
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow } from '../../gliese-parse-pure';
@@ -101,8 +101,6 @@ export function pairOwner(
   return { owner: matches[0], sourceId };
 }
 
-const intOf = (cell: string): number | null => (cell === '' ? null : Number(cell));
-
 /** A V/70A entry in the record's GJ form, whichever of the catalogue's four prefixes it prints (../../gliese-parse-pure.ts). */
 function v70aGl(row: GlieseRow): string {
   return formatGlieseDisplay(`${row.name.replace(/^(Gl|GJ|NN|Wo)\s+/i, '')}${row.comp}`.replace(/\s+/g, ''));
@@ -132,9 +130,8 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: MergeLinks): {
 }
 
 /** Each cell the spine row leaves empty that a primary's link fills, from the row's derived HIP. */
-function derivedOnlyCells(row: SpineRow, hip: number | null, m: MergeLinks): MergeDivergence[] {
+function derivedOnlyCells(row: SpineRow, { hd }: SpineIds, hip: number | null, m: MergeLinks): MergeDivergence[] {
   const out: MergeDivergence[] = [];
-  const hd = intOf(row.hd);
   const hds = new Set<number>(row.tyc === '' ? [] : m.links.tycHd.get(row.tyc) ?? []);
   if (hip !== null) for (const d of m.links.hipHd.get(hip) ?? []) hds.add(d);
   if (hd !== null) hds.add(hd);
@@ -167,9 +164,7 @@ function derivedOnlyCells(row: SpineRow, hip: number | null, m: MergeLinks): Mer
 type LinkKey = DiffersLink['key'];
 
 /** see README.md#the-divergence-ledger */
-function differsCells(row: SpineRow, inPair: boolean, m: MergeLinks): MergeDivergence[] {
-  const hip = intOf(row.hip);
-  const hd = intOf(row.hd);
+function differsCells(row: SpineRow, { hip, hd, hr }: SpineIds, inPair: boolean, m: MergeLinks): MergeDivergence[] {
   const one = (v: number | undefined): number[] => (v === undefined ? [] : [v]);
   const derivedBy = {
     'hip<tyc': () => one(m.links.tycHip.get(row.tyc)),
@@ -179,7 +174,7 @@ function differsCells(row: SpineRow, inPair: boolean, m: MergeLinks): MergeDiver
     'gl<hip': () => (m.links.glHip(row.gl) === hip ? [] : m.cns5ByHip.get(hip!) ?? []),
     'gl<hd': () => (m.links.glHd(row.gl) === hd ? [] : m.v70aByHd.get(hd!) ?? []),
   } satisfies Record<LinkKey, () => readonly (number | string)[]>;
-  const spine = { hip, hd, hr: intOf(row.hr), gl: row.gl === '' ? null : row.gl } satisfies Record<DiffersLink['to'], number | string | null>;
+  const spine = { hip, hd, hr, gl: row.gl === '' ? null : row.gl } satisfies Record<DiffersLink['to'], number | string | null>;
   const out: MergeDivergence[] = [];
   for (const link of DIFFERS_LINKS) {
     const value = spine[link.to];
@@ -201,11 +196,12 @@ export function mergeDivergences(row: SpineRow, m: MergeLinks): MergeDivergence[
       published: partition.partition.published,
     }]
     : [];
-  const pair = pairVerdict(row, intOf(row.hip), m);
+  const ids = spineIds(row);
+  const pair = pairVerdict(row, ids.hip, m);
   return [
     ...unlinked,
     ...(pair.divergence === null ? [] : [pair.divergence]),
-    ...derivedOnlyCells(row, pair.hip, m),
-    ...differsCells(row, pair.divergence !== null, m),
+    ...derivedOnlyCells(row, ids, pair.hip, m),
+    ...differsCells(row, ids, pair.divergence !== null, m),
   ];
 }

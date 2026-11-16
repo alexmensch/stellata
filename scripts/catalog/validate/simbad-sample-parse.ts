@@ -37,7 +37,7 @@ export function parseSimbadSampleRows(text: string, from: Declared): SimbadSampl
   const rows: SimbadSampleRow[] = [];
   for (const row of readTable({ ...from, columns: SIMBAD_SAMPLE_COLUMNS }, text)) {
     rows.push({
-      simbadOid: row.int('simbad_oid') ?? row.fail('simbad_oid is empty'),
+      simbadOid: row.requiredInt('simbad_oid'),
       simbadMainId: row.raw('simbad_main_id'),
       hip: row.int('hip'),
       gaiaSourceId: row.sourceId('gaia_source_id'),

@@ -2,6 +2,7 @@
 // build-local-group.ts does, for the emission suites (no public/ artifact).
 
 import { LG_OVERRIDES, LVDB } from '../../scripts/local-group/local-group-source';
+import { parseLvdb } from '../../scripts/local-group/local-group-parse';
 import {
   buildStandaloneOverride,
   filterForRendering,
@@ -13,7 +14,7 @@ import {
 
 export type { BuildLgObject };
 
-const lvdb = LVDB.read();
+const lvdb = parseLvdb(LVDB.read());
 export const overrides = LG_OVERRIDES.read();
 const overrideByName = new Map(overrides.map((o) => [o.name, o]));
 const renderable = filterForRendering(lvdb);

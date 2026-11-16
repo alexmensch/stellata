@@ -16,7 +16,7 @@ export const WGSN_NAMES = defineArtifact({
   decode: (row): WgsnNameRow => {
     const aliases = row.raw('aliases');
     return {
-      name: row.text('name') ?? row.fail('name is empty'),
+      name: row.requiredText('name'),
       aliases: aliases === '' ? [] : aliases.split(ALIAS_SEPARATOR),
       hip: row.int('hip'),
       hipComponent: row.text('hip_component'),
@@ -25,7 +25,7 @@ export const WGSN_NAMES = defineArtifact({
       hdComponent: row.text('hd_component'),
       vmag: row.float('vmag'),
       source: row.oneOf('source', ['nec', 'faints'] as const),
-      srcId: row.text('src_id') ?? row.fail('src_id is empty'),
+      srcId: row.requiredText('src_id'),
     };
   },
   encode: (r) => ({

@@ -113,7 +113,7 @@ function parseAstrometry(row: ValuesRow, ref: OneRowRef<number>): SimbadAstromet
 export function parseSimbadValuesTsv(text: string, from: Declared & RowKeyed<number>): SimbadValueIndex {
   const index = emptySimbadValueIndex();
   for (const row of readTable({ ...from, columns: SIMBAD_VALUES_COLUMNS }, text)) {
-    const oid = row.int('simbad_oid') ?? row.fail('a row with no simbad_oid');
+    const oid = row.requiredInt('simbad_oid');
     const ref = sourceRowRef(from, oid);
     const keys: SimbadRecordKeys = {
       sourceId: row.sourceId('source_id'),

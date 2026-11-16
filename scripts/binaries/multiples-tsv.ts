@@ -45,7 +45,7 @@ export const MULTIPLES_TSV = defineArtifact({
   order: 'as-given',
   rowKey: MULTIPLES_ROW_KEY,
   decode: (row): MultiplesRecord => {
-    const regime = row.int('regime') ?? row.fail('regime is empty');
+    const regime = row.requiredInt('regime');
     const positive = (column: 'P_days' | 'a_AU'): number | null => {
       const v = row.float(column);
       return v === null || v > 0 ? v : row.fail(`${column} ${v} is not positive`);

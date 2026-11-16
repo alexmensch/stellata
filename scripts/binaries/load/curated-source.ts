@@ -5,7 +5,7 @@ import {
   parseAstrometryExclusions, parseComponentSptypeOverrides, parseOrb6ComponentOverrides,
 } from './curated-pure';
 
-const HINT = 'It is hand-curated: correct the row (data/binaries/README.md).';
+const HINT = 'It is hand-curated: complete or correct the row, or comment it out with `#` (data/binaries/README.md).';
 
 export const ORB6_COMPONENT_OVERRIDES = defineSource({
   file: 'data/binaries/orb6_component_overrides.tsv',
