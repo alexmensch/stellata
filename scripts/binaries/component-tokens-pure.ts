@@ -1,5 +1,6 @@
 // WDS component-letter tokens on the TypeScript side. See README.md#files-in-this-area.
 
+import { ascending } from '../../src/astro-core/order-pure';
 import { splitComponents } from '../wds/wds-pure';
 
 /** The WDS id of a Stage 6 `system_id` (`<wds_id>-<components>`), or of a
@@ -89,15 +90,19 @@ export function anchorRankStep(a: string, b: string): AnchorRankStep | null {
   return 'alphabetical';
 }
 
-/** The more canonical of two pair primaries under one WDS root: the
- *  top-level letter decides, then token length, then alphabetical order. */
-export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
-  switch (anchorRankStep(candidateComp, incumbentComp)) {
-    case null: return false;
-    case 'letter': return candidateComp.charAt(0) < incumbentComp.charAt(0);
-    case 'length': return candidateComp.length < incumbentComp.length;
-    case 'alphabetical': return candidateComp < incumbentComp;
+/** Pair primaries under one WDS root, most canonical first: the top-level
+ *  letter decides, then token length, then alphabetical order. */
+export function compareAnchorRank(a: string, b: string): number {
+  switch (anchorRankStep(a, b)) {
+    case null: return 0;
+    case 'letter': return ascending(a.charAt(0), b.charAt(0));
+    case 'length': return ascending(a.length, b.length);
+    case 'alphabetical': return ascending(a, b);
   }
+}
+
+export function isMoreCanonicalAnchor(candidateComp: string, incumbentComp: string): boolean {
+  return compareAnchorRank(candidateComp, incumbentComp) < 0;
 }
 
 declare const KEY_SPACE: unique symbol;

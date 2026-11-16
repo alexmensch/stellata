@@ -1,7 +1,7 @@
 // Each component's WDS offset from its system's anchor letter, composed over the system's pair geometry. See README.md#what-each-column-carries.
 
 import {
-  anchorRankStep, canonicalCompLetter, componentKey, isComponentToken, isMoreCanonicalAnchor, parentComponentToken, tokenLetters,
+  anchorRankStep, canonicalCompLetter, compareAnchorRank, componentKey, isComponentToken, isMoreCanonicalAnchor, parentComponentToken, tokenLetters,
   type AnchorRankStep, type ComponentKey,
 } from '../component-tokens-pure';
 import type { MscLookup } from '../load/msc-pure';
@@ -39,8 +39,6 @@ export function mostCanonical(tokens: Iterable<string>): string {
   if (best === null) throw new Error('mostCanonical: no tokens');
   return best;
 }
-
-const canonicalOrder = (a: string, b: string): number => (isMoreCanonicalAnchor(a, b) ? -1 : isMoreCanonicalAnchor(b, a) ? 1 : 0);
 
 /** A compound's letters (`BC` → B, C), or the token itself. */
 function proxyEndpoints(tok: string): string[] {
@@ -161,7 +159,7 @@ export function computeAnchorOffsets(
     const anchor = mostCanonical(firstPairs.keys());
     choices.set(wdsId, {
       pair: firstPairs.get(anchor)!,
-      rankedOut: [...firstPairs.keys()].filter((t) => t !== anchor).sort(canonicalOrder)
+      rankedOut: [...firstPairs.keys()].filter((t) => t !== anchor).sort(compareAnchorRank)
         .map((t) => ({ pair: firstPairs.get(t)!, step: anchorRankStep(anchor, t)! })),
     });
     const links: GeomAdj = new Map();
