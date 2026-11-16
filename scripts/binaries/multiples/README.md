@@ -131,8 +131,9 @@ primary promotion anchors on, so promotion refuses every member's offset
 rank bound primaries first, as promotion does, is `stellata-hooj.43.4`.
 
 `ANCHORS_LINEAGE_BUDGET` pins 600 kB and 1 s: 38,430 rows came to 509,980
-bytes gzipped in 163–171 ms across two runs, not diffing against a baseline
-(2026-11-16).
+bytes gzipped in 163–249 ms across three runs, none diffing against a
+baseline (2026-11-16). A diff is the one phase unmeasured: the `pairs`
+stage's took 58–99 ms over 2.4 MB in the same runs, so about 20–40 ms here.
 
 ## Masses lineage
 
@@ -155,9 +156,9 @@ L and T dwarfs and types whose class sits in parentheses. Moving to the
 catalogue's spectral parser is `stellata-hhaw.45.17.12`, which strikes each
 row it fixes off the list.
 
-`MASSES_LINEAGE_BUDGET` pins 800 kB and 1 s: 47,021 rows came to 698,089
-bytes gzipped in 95–96 ms across two runs, not diffing against a baseline
-(2026-11-16).
+`MASSES_LINEAGE_BUDGET` pins 800 kB and 1 s: 47,021 rows came to 701,239
+bytes gzipped in 164 ms, not diffing against a baseline (2026-11-16); its
+diff, scaled from `pairs`' as for anchors, adds about 30–40 ms.
 
 ## Choices the outputs rest on
 
