@@ -11,6 +11,7 @@ import {
   pairComponentTokens,
   parentComponentToken,
   relatedHier,
+  pairSyntheticIds,
   rowSyntheticId,
   subcomponentTopLetter,
   syntheticIdIn,
@@ -101,6 +102,11 @@ describe('rowSyntheticId', () => {
     expect(rowSyntheticId(row('Aa1', 'primary'), null)).toBe('synth-03082+4057-Aa1');
     expect(rowSyntheticId(row('2', 'standalone'), 'Aa1')).toBe('synth-03082+4057-2');
     expect(rowSyntheticId(row('2', 'secondary'), null)).toBe('synth-03082+4057-2');
+  });
+
+  it('keys a pair\'s rows as pairSyntheticIds keys the pair\'s sides', () => {
+    expect([rowSyntheticId(row('Aa1', 'primary'), null), rowSyntheticId(row('2', 'secondary'), 'Aa1')])
+      .toEqual(pairSyntheticIds('03082+4057', 'Aa1', '2'));
   });
 });
 

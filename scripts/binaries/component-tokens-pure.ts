@@ -16,9 +16,13 @@ export function wdsRootOf(systemId: string): string | null {
 /** `synth-<wds_id>-<comp>`. Every multiples.tsv row composes one: its reader
  *  refuses a blank comp or a system_id with no WDS id, so this throws on either. */
 export function composeSyntheticId(systemId: string, comp: string): string {
+  return syntheticIdIn(synthWdsRoot(systemId, comp), comp);
+}
+
+function synthWdsRoot(systemId: string, comp: string): string {
   const wdsId = wdsRootOf(systemId);
   if (wdsId === null) throw new Error(`no synthetic key composes from system_id "${systemId}", comp "${comp}"`);
-  return syntheticIdIn(wdsId, comp);
+  return wdsId;
 }
 
 /** `synth-<wds_id>-<comp>` for a component of WDS system `wdsId`; throws on a blank comp. */
@@ -28,14 +32,18 @@ export function syntheticIdIn(wdsId: string, comp: string): string {
   return `synth-${wdsId}-${c}`;
 }
 
-/** The synthetic key a multiples.tsv row composes: a pair's secondary on its
- *  canonical letter, re-anchored on its pair's primary; every other row on its own comp. */
+/** The synthetic keys of a pair's two sides in WDS system `wdsId`: the secondary on its canonical letter, re-anchored on the primary. */
+export function pairSyntheticIds(wdsId: string, primaryComp: string, secondaryComp: string): readonly [string, string] {
+  return [syntheticIdIn(wdsId, primaryComp), syntheticIdIn(wdsId, canonicalCompLetter(primaryComp, secondaryComp))];
+}
+
+/** The synthetic key a multiples.tsv row composes: a pair's secondary as `pairSyntheticIds` keys it; every other row on its own comp. */
 export function rowSyntheticId(
   row: { readonly systemId: string; readonly comp: string; readonly orbitRole: OrbitRole },
   pairPrimaryComp: string | null,
 ): string {
-  const comp = row.orbitRole === 'secondary' && pairPrimaryComp !== null ? canonicalCompLetter(pairPrimaryComp, row.comp) : row.comp;
-  return composeSyntheticId(row.systemId, comp);
+  if (row.orbitRole !== 'secondary' || pairPrimaryComp === null) return composeSyntheticId(row.systemId, row.comp);
+  return pairSyntheticIds(synthWdsRoot(row.systemId, row.comp), pairPrimaryComp, row.comp)[1];
 }
 
 /** Re-anchor WDS prefix truncation on a secondary's comp: Stage 6 writes

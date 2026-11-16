@@ -127,8 +127,10 @@ scripts/binaries/
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
                                   key promotion mints and every resolver
                                   looks up; syntheticIdIn, the same from a
-                                  WDS id; rowSyntheticId, the one a
-                                  multiples.tsv row composes),
+                                  WDS id; pairSyntheticIds, a pair's two
+                                  sides'; rowSyntheticId, the one a
+                                  multiples.tsv row composes, a pair's
+                                  rows keyed as its sides are),
                                   canonicalCompLetter (WDS
                                   truncation re-anchored: Aa1,2 → Aa2),
                                   parentComponentToken, isComponentToken,

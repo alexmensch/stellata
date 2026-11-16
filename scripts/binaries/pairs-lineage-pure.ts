@@ -5,7 +5,7 @@ import { stageLines, stageRow, type LineageLine, type LineageParams, type Lineag
 import { kebab, outcomeCode, retired, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { synthDesignation } from '../sid/sid-pure';
 import { sourceRowRefText } from '../util/sources/row-ref-pure';
-import { canonicalCompLetter, rowSyntheticId, syntheticIdIn } from './component-tokens-pure';
+import { pairSyntheticIds, rowSyntheticId } from './component-tokens-pure';
 import type { BlankRescueOutcome } from './load/blank-rescue-pure';
 import type { ReferenceCatalogs } from './load/reference-catalogs';
 import type { Stage6Result } from './multiples/attach-multiples';
@@ -93,22 +93,13 @@ export function pairsLineageLines(decisions: PairDecisions): LineageLine[] {
   return stageLines(PAIRS_CODES, pairsLineageRows(decisions));
 }
 
-/** The synthetic keys of a pair's two sides, as promotion composes them for the pair's rows. */
-function pairSyntheticIds(p: DecomposedPair): readonly [string, string] {
-  const wdsId = p.primary.wdsId;
-  return [
-    syntheticIdIn(wdsId, p.primary.component),
-    syntheticIdIn(wdsId, canonicalCompLetter(p.primary.component, p.secondary.component)),
-  ];
-}
-
 /** One identity row per pair Stage 5 rejected that names a component no multiples.tsv row composes, carrying that component's synthetic key, so a SID keyed on it joins the rejection's retire. */
 export function pairsIdentity({ optical, multiples }: Pick<PairDecisions, 'optical' | 'multiples'>): IdentityRow[] {
   const shipped = multiplesSyntheticIds(multiples.rows);
   const rows: IdentityRow[] = [];
   for (const [p, via] of optical.optical) {
     if (!isRejectedVia(via)) continue;
-    const departed = [...new Set(pairSyntheticIds(p))].filter((id) => !shipped.has(id));
+    const departed = [...new Set(pairSyntheticIds(p.primary.wdsId, p.primary.component, p.secondary.component))].filter((id) => !shipped.has(id));
     if (departed.length === 0) continue;
     rows.push(identityRow(
       sourceRowRefText(p.pair.origin), { tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '' }, departed.map(synthDesignation),
