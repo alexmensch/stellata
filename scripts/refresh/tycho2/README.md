@@ -66,6 +66,10 @@ re-run costs no network.
   `flag='H'` Hipparcos star).
 - **Spot rows**: the main table's on `ra_mdeg` (TYC 3694-2544-1, HD 14039,
   carries no HIP, and the TYC is three columns); the supplement's on `hip` 6.
+  One more per table that only the HIP clause keeps, so a filter that stops
+  matching HIPs fails the pull rather than sliding inside a share band: main
+  TYC 102-835-2 (HIP 23752, whose record sits on 102-835-1), supplement TYC
+  9088-1001-2 (HIP 95517).
 - **The cover gate** (`membershipCover`): every manifest TYC reaches a row of
   either table, or is a `TYC3>1` component whose pair's `TYC3=1` entry was
   reached, Tycho-2 having merged it into the pair. Anything else fails the
@@ -77,7 +81,8 @@ the record as they were.
 ## Replies
 
 Each table's replies are CfA's TSV and FITS answers to one query,
-`<table>.cfa.{tsv,fits}` beside the suite (2026-11-15): the spot row's
-entry, asked by TYC1 and TYC2, read through `tapClient` as a live band is. CDS's
+`<table>.cfa.{tsv,fits}` beside the suite (2026-11-16): the spot rows'
+entries, asked by two TYC1 values and two TYC2 values chosen so no cross
+pair names a row the committed table lacks, read through `tapClient` as a live band is. CDS's
 replies wait on CDS answering, as the whole-table pulls' do
 ([Replies](../vizier/README.md#replies)).

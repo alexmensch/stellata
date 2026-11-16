@@ -110,6 +110,10 @@ export const MAIN: Tycho2Table = {
       tyc1: '3694', tyc2: '2544', tyc3: '1', de_mdeg: near(56.55991447, 1e-6), ep_ra: near(1991.07, 0.01), ep_de: near(1991, 0.01),
       pm_ra: near(341.5, 0.05), pm_de: near(-223.6, 0.05), vt_mag: near(8.354, 0.001),
     },
+  }, {
+    key: 'ra_mdeg',
+    value: '76.57874132',
+    cells: { tyc1: '102', tyc2: '835', tyc3: '2', hip: '23752', vt_mag: near(10.013, 0.001) },
   }],
 };
 
@@ -117,7 +121,10 @@ export const SUPPL1: Tycho2Table = {
   vizierId: 'I/259/suppl_1',
   columns: [...tycColumns, vizierColumn('flag', 'flag'), ...icrs, ...motion, ...photometry],
   keptShare: { min: 0.008, max: 0.024 },
-  spotRows: [{ key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } }],
+  spotRows: [
+    { key: 'hip', value: '6', cells: { tyc1: '4', tyc2: '1130', tyc3: '1', flag: 'H', vt_mag: near(12.449, 0.001) } },
+    { key: 'hip', value: '95517', cells: { tyc1: '9088', tyc2: '1001', tyc3: '2', flag: 'H', vt_mag: near(11.261, 0.001) } },
+  ],
 };
 
 export const TABLES = { main: MAIN, suppl1: SUPPL1 } as const;
