@@ -20,9 +20,10 @@ on the [pull runtime](../pull/README.md#a-phased-pull) over the
 
 ## The request
 
-`refresh:tycho2`'s, read through the same `readTycRequest`
+The TYC part of `refresh:tycho2`'s, read through the same `readTycRequest`
 ([The request set](../tycho2/README.md#the-request-set)): the manifest's TYCs
-and IV/25's, one `1-381-1` key each. Its describe states every key, off the
+and IV/25's, one `1-381-1` key each, without the manifest HIPs only the
+Tycho-2 pull keeps rows by. Its describe states every key, off the
 manifest and IV/25, so either moving stales the record.
 
 ## The run

@@ -93,8 +93,9 @@ membership manifest's `tyc` column (372,164) unioned with IV/25's own TYCs
 (302 more than the manifest already names), for 372,466 requested. The pull
 also keeps every row whose `hip` names one of the manifest's 118,218 HIPs, so
 both entries Tycho-2 gives a HIP are in the table for the pair rule
-([Keeping a pair whole](/scripts/refresh/tycho2/README.md#the-request-set)):
-2,643 main and 3,197 supplement rows, all `flag='H'`, that no TYC names.
+([The request set](/scripts/refresh/tycho2/README.md#the-request-set)):
+2,643 main and 3,197 supplement rows (every supplement one `flag='H'`) that
+no TYC names.
 
 `refresh:simbad-tyc-hd` asks the same TYCs: both pulls read it through
 `readTycRequest`, which parses each side into integer triples, so they cover
@@ -130,9 +131,11 @@ record's placement** — an unreached TYC does not imply an unplaced record, and
 reading it that way is what the pre-manifest wording got wrong.
 
 One limit to know: `reached` is the filtered pull, so a pair entry is visible
-to the gate only when the request set names it too. 673 of the 969 requested
-`TYC3>1` components have no pair primary in the request set, and an unreached
-one among those would fail the gate even where Tycho-2 carries the pair. None
+to the gate only when the pull keeps it — the request set names it, or its
+`hip` names a manifest HIP. 673 of the 969 requested `TYC3>1` components have
+no pair primary in the TYC request set (counted over TYCs alone; a primary
+carrying a manifest HIP is kept anyway), and an unreached one whose primary
+is kept by neither would fail the gate even where Tycho-2 carries the pair. None
 is unreached today; widening the request set to cover every component's pair
 primary is the fix if one ever is.
 
