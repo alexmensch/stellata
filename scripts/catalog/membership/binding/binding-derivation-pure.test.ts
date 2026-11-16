@@ -22,16 +22,16 @@ import { printedVOf } from '../../photometry/photometry-fixture';
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 
 const simbadBySourceId = new Map<string, SimbadXids>([
-  ['100', { hip: 10, tyc: '1-1-1', gj: null }],
-  ['200', { hip: null, tyc: '2-2-1', gj: '820 A' }],
-  ['201', { hip: null, tyc: null, gj: '820 B' }],
-  ['300', { hip: 30, tyc: null, gj: null }],
-  ['301', { hip: 30, tyc: null, gj: null }],
-  ['400', { hip: null, tyc: null, gj: '9140' }],
-  ['866', { hip: null, tyc: null, gj: '866 C' }],
-  ['575', { hip: null, tyc: '3484-1580-2', gj: '575 B' }],
+  ['100', { oid: 0, hip: 10, tyc: '1-1-1', gj: null }],
+  ['200', { oid: 0, hip: null, tyc: '2-2-1', gj: '820 A' }],
+  ['201', { oid: 0, hip: null, tyc: null, gj: '820 B' }],
+  ['300', { oid: 0, hip: 30, tyc: null, gj: null }],
+  ['301', { oid: 0, hip: 30, tyc: null, gj: null }],
+  ['400', { oid: 0, hip: null, tyc: null, gj: '9140' }],
+  ['866', { oid: 0, hip: null, tyc: null, gj: '866 C' }],
+  ['575', { oid: 0, hip: null, tyc: '3484-1580-2', gj: '575 B' }],
 ]);
-const simbadSourceless: SimbadXids[] = [{ hip: 73695, tyc: null, gj: '575' }];
+const simbadSourceless: SimbadXids[] = [{ oid: 0, hip: 73695, tyc: null, gj: '575' }];
 const simbad = indexSimbadSources(simbadBySourceId, simbadSourceless);
 
 const tables: BindingTables = {
@@ -220,10 +220,10 @@ describe('deriveBinding', () => {
       printedVOf({ hip: new Map([[60, 5.0]]) }),
     );
     const witnessIndex = indexSimbadSources(new Map([
-      ['601', { hip: null, tyc: '6-6-1', gj: null }],
-      ['700', { hip: null, tyc: '7-7-1', gj: null }],
-      ['701', { hip: null, tyc: '8-8-1', gj: null }],
-      ['702', { hip: null, tyc: '8-8-1', gj: null }],
+      ['601', { oid: 0, hip: null, tyc: '6-6-1', gj: null }],
+      ['700', { oid: 0, hip: null, tyc: '7-7-1', gj: null }],
+      ['701', { oid: 0, hip: null, tyc: '8-8-1', gj: null }],
+      ['702', { oid: 0, hip: null, tyc: '8-8-1', gj: null }],
     ]), []);
     const gate = rowGateEvidence(
       { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, witnessIndex,

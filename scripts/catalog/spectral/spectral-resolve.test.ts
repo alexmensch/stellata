@@ -386,7 +386,7 @@ describe('parseSimbadSptypeTsv', () => {
       '1\tA\t\t\t\t*\t14576\t9876\t1-2-1\tGl 165A\n' +
       '2\tB\tG2V\tC\t\t*\t\t\t3-4-1\t\n';
     const { xids } = parseSimbadSptypeTsv(tsv, FROM);
-    expect([...xids]).toEqual([['9876', { hip: 14576, tyc: '1-2-1', gj: 'Gl 165A' }]]);
+    expect([...xids]).toEqual([['9876', { oid: 1, hip: 14576, tyc: '1-2-1', gj: 'Gl 165A' }]]);
   });
 
   it('decodes blank sp_qual / otype cells as null', () => {

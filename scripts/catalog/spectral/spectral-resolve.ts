@@ -36,6 +36,8 @@ export const SIMBAD_OTYPE_MULTIPLE = '**';
 /** The designations SIMBAD's `ident` table hangs on the object it holds under
  *  a Gaia DR3 source_id — the frozen sp_type pull's cross-ID columns. */
 export interface SimbadXids {
+  /** SIMBAD's object. */
+  oid: number;
   hip: number | null;
   tyc: string | null;
   gj: string | null;
@@ -87,7 +89,7 @@ export function parseSimbadSptypeTsv(text: string, from: Declared & RowKeyed<num
       tyc: row.text('tyc'),
       gl: row.text('gj'),
     };
-    const rowXids: SimbadXids = { hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
+    const rowXids: SimbadXids = { oid: row.requiredId('simbad_oid'), hip: keys.hip, tyc: row.raw('tyc') || null, gj: row.raw('gj') || null };
     if (keys.sourceId !== null) {
       if (xids.has(keys.sourceId)) throw new Error(`${from.file} has two rows keyed source_id=${keys.sourceId}. ${from.hint}`);
       xids.set(keys.sourceId, rowXids);

@@ -25,7 +25,7 @@ function links(overrides: Partial<LinkTables> = {}): LinkTables {
       hip: (hip) => (hip === 30 ? 'S3' : hip === 40 ? 'S4' : null),
       gl: () => null,
     },
-    simbad: (id): SimbadXids | undefined => (id === 'S4' ? { hip: 40, tyc: null, gj: 'GJ 4' } : undefined),
+    simbad: (id): SimbadXids | undefined => (id === 'S4' ? { oid: 0, hip: 40, tyc: null, gj: 'GJ 4' } : undefined),
     ...overrides,
   };
 }
