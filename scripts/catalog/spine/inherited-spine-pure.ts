@@ -77,15 +77,24 @@ export function buildSpineRow(
   return row;
 }
 
+export interface SpineIds {
+  readonly hip: number | null;
+  readonly hd: number | null;
+  readonly hr: number | null;
+}
+
+/** INHERITED_SPINE's decode has already refused a malformed id cell. */
+export function spineIds(row: SpineRow): SpineIds {
+  return { hip: idCell(row.hip), hd: idCell(row.hd), hr: idCell(row.hr) };
+}
+
 /** The `starDesignations` set a spine row stands in for — the membership term's
  *  half of SID resolution once AT-HYG leaves the build's input set. `synth:`
  *  is absent by construction: promoted companions are not spine rows. */
 export function spineDesignations(row: SpineRow): string[] {
   return starDesignations({
     isSol: row.proper === SOL_PROPER_NAME,
-    hip: idCell(row.hip),
-    hd: idCell(row.hd),
-    hr: idCell(row.hr),
+    ...spineIds(row),
     // The spine states one value per identifier; the alias lists are the
     // overlay's addition, and the review queue is what accounts for them.
     hdAlt: [], hrAlt: [],

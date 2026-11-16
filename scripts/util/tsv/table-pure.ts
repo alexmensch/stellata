@@ -15,8 +15,9 @@ export interface TableSpec<C extends string> {
    *  that many cells: the contract for a file this repo writes itself. */
   readonly exact?: boolean;
   readonly comments?: true;
-  /** Comma-separated with quoted cells (`splitCsvLine`) instead of tabs. */
-  readonly csv?: true;
+  /** Tab when omitted; `comma` splits quoted cells (`splitCsvLine`);
+   *  `whitespace` splits the trimmed line on any run of spaces or tabs. */
+  readonly delimiter?: 'tab' | 'comma' | 'whitespace';
 }
 
 /** One CSV record: handles quoted cells with doubled-quote escapes. Callers
@@ -42,7 +43,11 @@ export function splitCsvLine(line: string): string[] {
 }
 
 function splitCells(spec: TableSpec<string>, line: string): string[] {
-  return spec.csv ? splitCsvLine(line) : line.split('\t');
+  switch (spec.delimiter ?? 'tab') {
+    case 'tab': return line.split('\t');
+    case 'comma': return splitCsvLine(line);
+    case 'whitespace': return line.trim().split(/\s+/);
+  }
 }
 
 const DECIMAL = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
@@ -161,17 +166,24 @@ export class TableRow<C extends string> {
     return textCell(this.raw(c));
   }
 
-  /** A hand-curated cell the row exists to state: empty is refused, never skipped. */
   requiredText(c: C): string {
-    return this.text(c) ?? this.fail(`${c} is empty. A curated row skipped in silence does nothing; complete it or comment it with \`#\``);
+    return this.cell(c, (raw) => present(textCell(raw)));
   }
 
   float(c: C): number | null {
     return this.cell(c, floatCell);
   }
 
+  requiredFloat(c: C): number {
+    return this.cell(c, (raw) => present(floatCell(raw)));
+  }
+
   int(c: C): number | null {
     return this.cell(c, intCell);
+  }
+
+  requiredInt(c: C): number {
+    return this.cell(c, (raw) => present(intCell(raw)));
   }
 
   id(c: C): number | null {

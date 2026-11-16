@@ -186,6 +186,19 @@ describe('readTable', () => {
     expect(empty.idList('v', '|')).toEqual([3, 4]);
   });
 
+  it('requiredText, requiredFloat and requiredInt refuse an empty cell as they refuse a malformed one', () => {
+    const [row] = readTable(SPEC, 'id\tv\n12\t \n');
+    expect(row.requiredText('id')).toBe('12');
+    expect(() => row.requiredText('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    expect(row.requiredFloat('id')).toBe(12);
+    expect(row.requiredInt('id')).toBe(12);
+    expect(() => row.requiredFloat('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    expect(() => row.requiredInt('v')).toThrow('fixture/t.tsv:2: v: is empty. Re-run x.');
+    const [bad] = readTable(SPEC, 'id\tv\n1.5\tx\n');
+    expect(() => bad.requiredInt('id')).toThrow('fixture/t.tsv:2: id: "1.5" is not an integer. Re-run x.');
+    expect(() => bad.requiredFloat('v')).toThrow('fixture/t.tsv:2: v: "x" is not a decimal number. Re-run x.');
+  });
+
   it('oneOf accepts only the listed values', () => {
     const [row] = readTable(SPEC, 'id\tv\nA\tq\n');
     expect(row.oneOf('id', ['A', 'B'] as const)).toBe('A');
@@ -205,7 +218,7 @@ describe('splitCsvLine', () => {
 });
 
 describe('readTable csv', () => {
-  const CSV: TableSpec<'id' | 'name'> = { file: 'fixture/t.csv', columns: ['id', 'name'], hint: 'h', csv: true };
+  const CSV: TableSpec<'id' | 'name'> = { file: 'fixture/t.csv', columns: ['id', 'name'], hint: 'h', delimiter: 'comma' };
 
   it('resolves a quoted header and splits quoted cells', () => {
     const rows = [...readTable(CSV, '"name","id"\n"a,b",1\n,2\n')];
@@ -214,6 +227,17 @@ describe('readTable csv', () => {
 
   it('throws on a missing column', () => {
     expect(() => [...readTable(CSV, '"id"\n1\n')]).toThrow(/missing required columns: name/);
+  });
+});
+
+describe('readTable whitespace', () => {
+  const WS: TableSpec<'cloud' | 'p'> = { file: 'fixture/t.dat', columns: ['cloud', 'p'], hint: 'h', delimiter: 'whitespace' };
+
+  it('splits on any run of spaces or tabs and names the physical line', () => {
+    const rows = [...readTable(WS, 'cloud  \t p\n\n  Pipe   1.8\nLupus\tx\n')];
+    expect(rows.map((r) => [r.text('cloud'), r.line])).toEqual([['Pipe', 3], ['Lupus', 4]]);
+    expect(rows[0].requiredFloat('p')).toBe(1.8);
+    expect(() => rows[1].requiredFloat('p')).toThrow('fixture/t.dat:4: p: "x" is not a decimal number. h');
   });
 });
 

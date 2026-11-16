@@ -42,7 +42,7 @@ const FAINTS_CORRECTION_COLUMNS = ['wgsn_id', 'column', 'value', 'evidence'] as 
 
 export function parseFaintsCorrections(text: string, from: Declared): CellSet<string>[] {
   return [...readTable({ ...from, columns: FAINTS_CORRECTION_COLUMNS, comments: true }, text)].map((row) => {
-    const key = row.text('wgsn_id') ?? row.fail('wgsn_id is empty');
+    const key = row.requiredText('wgsn_id');
     evidenceOf(row, 'evidence', key);
     return { key, cell: row.oneOf('column', FAINTS_COLUMNS), value: row.raw('value') };
   });

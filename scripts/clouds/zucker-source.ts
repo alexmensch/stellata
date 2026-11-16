@@ -8,7 +8,7 @@ const HINT = 'It is a committed VizieR table; see data/molecular-clouds/README.m
 export const ZUCKER_2020 = defineSource({
   file: 'data/molecular-clouds/zucker2020-tablea1.tsv',
   hint: HINT,
-  parse: (input) => parseZ2020Sightlines(input.text()),
+  parse: (input) => parseZ2020Sightlines(input.text(), input),
 });
 
 export const ZUCKER_2021_EXTENTS = defineSource({

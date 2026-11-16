@@ -3,11 +3,10 @@
 // CSV and pins display-name routing for every renderable name.
 
 import { roundEach, roundHalfEven } from '../util/round-pure';
-import { parse } from 'csv-parse/sync';
+import { columnTable } from '../util/tsv/table-pure';
 import { describe, expect, it } from 'vitest';
 import { parseAliases, parseLvdb, parseOverrides } from './local-group-parse';
 import { LG_ALIASES, LG_OVERRIDES, LVDB } from './local-group-source';
-import { openDeclared } from '../util/sources/source';
 import {
   applyAliasMeta,
   buildStandaloneOverride,
@@ -125,7 +124,7 @@ describe('LVDB-band display-name coverage', () => {
   // that introduces a name the renderer would mis-suffix surfaces here
   // rather than only at build-output review time. Reading committed
   // data follows the pattern in src/client/stellata-events.test.ts.
-  const lvdb = LVDB.read();
+  const lvdb = parseLvdb(LVDB.read());
   const renderable = filterForRendering(lvdb);
 
   // Every renderable name that legitimately falls to the default
@@ -199,9 +198,34 @@ describe('LVDB-band display-name coverage', () => {
   });
 });
 
+describe('parseLvdb', () => {
+  const FROM = { file: 'fixture/lvdb.csv', hint: 'fixture' };
+  const HEADER = 'key,ra,dec,name,confirmed_real,confirmed_galaxy,distance,rhalf_physical,ellipticity,position_angle,apparent_magnitude_v,n_sersic';
+  const lvdb = (row: string): ReturnType<typeof parseLvdb> => parseLvdb(columnTable({ ...FROM, delimiter: 'comma' }, `${HEADER}\n${row}\n`));
+
+  it('reads required position and flags, nulls an empty structure cell, and falls back to the key for an empty name', () => {
+    expect(lvdb('draco_1,260.06,57.92,,1,1,75.8,"221",,,10.9,')).toEqual([{
+      key: 'draco_1', name: 'draco_1', ra: 260.06, dec: 57.92, distanceKpc: 75.8,
+      confirmedReal: true, confirmedGalaxy: true, rhalfPhysicalPc: 221, ellipticity: null,
+      positionAngle: null, apparentMagV: 10.9, nSersic: null,
+    }]);
+  });
+
+  it('refuses a malformed coordinate, distance or confirmed_* cell, naming file, line and column', () => {
+    expect(() => lvdb('d,26O.06,57.92,Draco,1,1,75.8,,,,,'))
+      .toThrow('fixture/lvdb.csv:2: ra: "26O.06" is not a decimal number. fixture');
+    expect(() => lvdb('d,260.06,57.92,Draco,1,1,,,,,,'))
+      .toThrow('fixture/lvdb.csv:2: distance: is empty. fixture');
+    expect(() => lvdb('d,260.06,57.92,Draco,yes,1,75.8,,,,,'))
+      .toThrow('fixture/lvdb.csv:2: confirmed_real: "yes" is not one of 0 | 1. fixture');
+    expect(() => lvdb('d,260.06,57.92,Draco,1,,75.8,,,,,'))
+      .toThrow('fixture/lvdb.csv:2: confirmed_galaxy: "" is not one of 0 | 1. fixture');
+  });
+});
+
 describe('emission over the committed catalog', () => {
-  const csvText = openDeclared(LVDB).text();
-  const lvdb = parseLvdb(csvText);
+  const lvdbTable = LVDB.read();
+  const lvdb = parseLvdb(lvdbTable);
   const overrides = LG_OVERRIDES.read();
   const overrideByName = new Map(overrides.map((o) => [o.name, o]));
   const renderable = filterForRendering(lvdb);
@@ -281,23 +305,21 @@ describe('emission over the committed catalog', () => {
     // calibration consumes (m_V, rhalf, ellipticity) and LVDB's own
     // derived mean surface brightness — a data-sanity check on the
     // committed snapshot, not a new physical constraint.
-    const records = parse(csvText, {
-      columns: true,
-      skip_empty_lines: true,
-      trim: true,
-    }) as Record<string, string>[];
-    const byKey = new Map(records.map((r) => [r.key, r]));
+    const columns = ['key', 'apparent_magnitude_v', 'rhalf', 'ellipticity', 'surface_brightness_rhalf'] as const;
+    const byKey = new Map([...lvdbTable(columns)].map((r) => [r.raw('key'), r]));
     const devs: number[] = [];
     let worstName = '';
     let worstDev = 0;
     for (const row of renderable) {
       const raw = byKey.get(row.key)!;
-      if (raw.apparent_magnitude_v === '' || raw.rhalf === '' || raw.surface_brightness_rhalf === '') continue;
-      const mv = Number(raw.apparent_magnitude_v);
-      const aArcsec = Number(raw.rhalf) * 60;
-      const e = raw.ellipticity === '' ? 0 : Number(raw.ellipticity);
+      const mv = raw.float('apparent_magnitude_v');
+      const rhalf = raw.float('rhalf');
+      const muRhalf = raw.float('surface_brightness_rhalf');
+      if (mv === null || rhalf === null || muRhalf === null) continue;
+      const aArcsec = rhalf * 60;
+      const e = raw.float('ellipticity') ?? 0;
       const mu = mv + 0.753 + 2.5 * Math.log10(Math.PI * aArcsec * aArcsec * (1 - e));
-      const dev = mu - Number(raw.surface_brightness_rhalf);
+      const dev = mu - muRhalf;
       devs.push(Math.abs(dev));
       if (Math.abs(dev) > Math.abs(worstDev)) {
         worstDev = dev;
@@ -348,7 +370,7 @@ describe('parseAliases + type/alias plumbing', () => {
   });
   it('curated rows all match rendered objects (no orphans in the committed TSV)', () => {
     const aliasRows = LG_ALIASES.read();
-    const names = new Set(filterForRendering(LVDB.read()).map((r) => r.name));
+    const names = new Set(filterForRendering(parseLvdb(LVDB.read())).map((r) => r.name));
     names.add('M31');
     names.add('M33');
     const orphans = aliasRows.filter((a) => !names.has(a.name));
