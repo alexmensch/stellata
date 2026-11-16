@@ -94,6 +94,14 @@ export function hipDesignation(hip: number): string {
   return `hip:${hip}`;
 }
 
+/** A runtime synthetic id (`synth-<wds_id>-<comp>`) as its `synth:` designation. */
+export function synthDesignation(syntheticId: string): string {
+  if (!syntheticId.startsWith(SYNTH_RUNTIME_PREFIX)) {
+    throw new Error(`synthetic id "${syntheticId}" lacks the ${SYNTH_RUNTIME_PREFIX} prefix`);
+  }
+  return `synth:${syntheticId.slice(SYNTH_RUNTIME_PREFIX.length)}`;
+}
+
 /** External designations for one catalog star: the one extractor (README.md#designation-extraction--where-each-namespace-comes-from). */
 export function starDesignations(f: StarDesignationFields): string[] {
   const d: string[] = [];
@@ -104,12 +112,7 @@ export function starDesignations(f: StarDesignationFields): string[] {
   if (f.hr !== null) d.push(`hr:${f.hr}`);
   for (const hr of f.hrAlt) d.push(`hr:${hr}`);
   if (f.gl) d.push(`gl:${f.gl.trim().replace(/\s+/g, '_')}`);
-  if (f.syntheticId) {
-    if (!f.syntheticId.startsWith(SYNTH_RUNTIME_PREFIX)) {
-      throw new Error(`synthetic id "${f.syntheticId}" lacks the ${SYNTH_RUNTIME_PREFIX} prefix`);
-    }
-    d.push(`synth:${f.syntheticId.slice(SYNTH_RUNTIME_PREFIX.length)}`);
-  }
+  if (f.syntheticId) d.push(synthDesignation(f.syntheticId));
   if (f.gaiaSourceId !== null) d.push(`gaia_dr3:${f.gaiaSourceId}`);
   return d;
 }

@@ -13,8 +13,9 @@ sid-pure.ts               Pure algebra: designation grammar (/docs/sid.md#3-desi
                           (sameAsClasses, the one class build: allocation
                           and the membership parity matcher both call
                           it, /docs/sid.md#41-same-as-equivalence-graph), per-record designation
-                          extraction (starDesignations) and the HIP
-                          designation's one spelling (hipDesignation),
+                          extraction (starDesignations) and the HIP and
+                          synthetic designations' one spellings
+                          (hipDesignation, synthDesignation),
                           parsers for every registry file, each taking
                           the declared file it reads (readTable in
                           exact mode, which also owns the LF / final-

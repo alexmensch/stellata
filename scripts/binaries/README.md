@@ -125,7 +125,8 @@ scripts/binaries/
     (+ test)                      wdsRootOf (a system_id's WDS id, the one
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
                                   key promotion mints and every resolver
-                                  looks up), canonicalCompLetter (WDS
+                                  looks up; syntheticIdIn, the same from a
+                                  WDS id), canonicalCompLetter (WDS
                                   truncation re-anchored: Aa1,2 → Aa2),
                                   parentComponentToken, isComponentToken,
                                   and relatedHier / compoundContains — the
