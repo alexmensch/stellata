@@ -41,6 +41,16 @@ describe('parseZ2020Sightlines', () => {
     expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '21', '9', 'nan')), FROM))
       .toThrow('fixture/table.dat:7: d50: "nan" is not a decimal number. fixture');
   });
+
+  it('skips only the two preamble rows: a data row with a malformed recno throws, as does a missing preamble', () => {
+    expect(() => parseZ2020Sightlines(table(row('1', 'Taurus', '21', '9', '278'), row('2a', 'Taurus', '21', '9', '278')), FROM))
+      .toThrow('fixture/table.dat:8: recno: "2a" is not an integer. fixture');
+    expect(() => parseZ2020Sightlines(table(row('', 'Taurus', '21', '9', '278')), FROM))
+      .toThrow('fixture/table.dat:7: recno: is empty. fixture');
+    const noPreamble = [['recno', 'Name', 'GLON', 'GLAT', 'd16', 'd50'].join('\t'), row('1', 'Taurus', '21', '9', '278'), ''].join('\n');
+    expect(() => parseZ2020Sightlines(noPreamble, FROM))
+      .toThrow('fixture/table.dat:2: expected VizieR\'s units and dashes rows under the header. fixture');
+  });
 });
 
 describe('the Zucker 2021 tables', () => {

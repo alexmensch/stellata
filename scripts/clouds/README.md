@@ -22,8 +22,9 @@ the clouds both cover.
   and declarations (`../util/sources/`). All four read through `readTable`
   (`../util/tsv/`; the Z2021 tables as `delimiter: 'whitespace'`), so a
   malformed or empty coordinate, distance or fit cell fails the build naming
-  file, line and column. Table A1's VizieR units and dashes rows under its
-  header are the rows whose `recno` is not an integer.
+  file, line and column. Table A1's two rows directly under its header are
+  VizieR's units and dashes rows: each must carry a non-integer `recno` and
+  is skipped, and every later row's `recno` must be an integer.
 - `clouds-outputs.ts` — the emitArtifacts declaration.
 - `clouds-json.ts` — `CLOUDS_JSON`, `clouds.json` as a JSON artifact
   (`../util/sources/README.md#a-json-artifact`): the writer serializes

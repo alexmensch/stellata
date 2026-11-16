@@ -12,8 +12,9 @@ export interface Sightline {
 
 const Z2020_COLUMNS = ['recno', 'Name', 'GLON', 'GLAT', 'd50'] as const;
 
-/** VizieR prints a units row and a dashes row under the header; neither
- *  carries an integer `recno`, and every data row does. */
+/** VizieR prints a units row and a dashes row under the header. */
+const VIZIER_PREAMBLE_ROWS = 2;
+
 export function isVizierPreamble(recno: string): boolean {
   return !/^\d+$/.test(recno.trim());
 }
@@ -21,8 +22,13 @@ export function isVizierPreamble(recno: string): boolean {
 /** Sightlines grouped by raw cloud name, in first-appearance order. */
 export function parseZ2020Sightlines(text: string, from: Declared): Map<string, Sightline[]> {
   const out = new Map<string, Sightline[]>();
+  let rowIndex = 0;
   for (const row of readTable({ ...from, columns: Z2020_COLUMNS, comments: true }, text)) {
-    if (isVizierPreamble(row.raw('recno'))) continue;
+    if (rowIndex++ < VIZIER_PREAMBLE_ROWS) {
+      if (!isVizierPreamble(row.raw('recno'))) row.fail('expected VizieR\'s units and dashes rows under the header');
+      continue;
+    }
+    row.requiredInt('recno');
     const name = row.requiredText('Name');
     const sightline = { lDeg: row.requiredFloat('GLON'), bDeg: row.requiredFloat('GLAT'), dPc: row.requiredFloat('d50') };
     out.set(name, [...(out.get(name) ?? []), sightline]);
