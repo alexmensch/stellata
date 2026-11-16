@@ -1,6 +1,6 @@
 // Every WDS pair row the binaries pipeline decides, keyed on its founding row, as the `pairs` lineage stage. See README.md#pairs-lineage.
 
-import { identityRow, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
+import { identityRow, recordKeyCells, type IdentityRow } from '../catalog/lineage/identity/identity-pure';
 import { stageLines, stageRow, type LineageLine, type LineageParams, type LineageRow } from '../catalog/lineage/lineage-row-pure';
 import { kebab, outcomeCode, retired, stageCodes, taggedCodes, type StageCounts } from '../catalog/lineage/reason-codes/reason-codes-pure';
 import { synthDesignation } from '../sid/sid-pure';
@@ -93,6 +93,8 @@ export function pairsLineageLines(decisions: PairDecisions): LineageLine[] {
   return stageLines(PAIRS_CODES, pairsLineageRows(decisions));
 }
 
+const NO_IDS = { tyc: null, hip: null, hd: null, gl: null, gaiaSourceId: null } as const;
+
 const sideSyntheticIds = (p: DecomposedPair) => pairSyntheticIds(p.primary.wdsId, p.primary.component, p.secondary.component);
 
 /** One identity row per pair Stage 5 rejected that names a component no pair Stage 5 kept names and no multiples.tsv row composes, carrying that component's synthetic key, so a SID keyed on it joins the rejection's retire. */
@@ -108,7 +110,7 @@ export function pairsIdentity({ optical, multiples }: Pick<PairDecisions, 'optic
     const departed = [...new Set(sideSyntheticIds(p))].filter((id) => !named.has(id));
     if (departed.length === 0) continue;
     rows.push(identityRow(
-      sourceRowRefText(p.pair.origin), { tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '' }, departed.map(synthDesignation),
+      sourceRowRefText(p.pair.origin), recordKeyCells(NO_IDS), departed.map(synthDesignation),
     ));
   }
   return rows;

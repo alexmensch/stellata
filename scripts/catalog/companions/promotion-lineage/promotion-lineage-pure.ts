@@ -3,7 +3,7 @@
 import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
 import { starDesignations, synthDesignation } from '../../../sid/sid-pure';
 import { rowKeyText } from '../../../util/sources/row-ref-pure';
-import type { IdentityRow } from '../../lineage/identity/identity-pure';
+import { identityRow, recordKeyCells, type IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, type LineageInvariant,
 } from '../../lineage/lineage-invariant-pure';
@@ -372,7 +372,7 @@ export function promotionLineage(
   ];
   const synth = mintSynthDesignations(rows, stars);
   const minted = rows.flatMap(({ outcome: o }) => (o.kind === 'minted' ? [stars[o.idx]] : []))
-    .map((s) => identityRow(s.originKey, s.hip, s.gaiaSourceId, withDesignation(starDesignations({ ...s, isSol: false }), synth.get(s.originKey))));
+    .map((s) => promotionIdentityRow(s.originKey, s.hip, s.gaiaSourceId, withDesignation(starDesignations({ ...s, isSol: false }), synth.get(s.originKey))));
   const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
   const removed = rows.flatMap((r, i): IdentityRow[] => {
     const effect = PROMOTION_EFFECTS.get(decided[i].outcome.code);
@@ -385,7 +385,7 @@ export function promotionLineage(
     const kept = <T>(value: T | null, ns: string): T | null => (
       value !== null && designations.includes(`${ns}:${value}`) ? value : null
     );
-    return [identityRow(
+    return [promotionIdentityRow(
       promotionOriginKey(r.row), kept(r.row.hip, 'hip'), kept(r.row.gaiaSourceId, 'gaia_dr3'), designations,
     )];
   });
@@ -404,10 +404,8 @@ export function withDesignation(designations: string[], extra: string | undefine
   return extra === undefined || designations.includes(extra) ? designations : [...designations, extra];
 }
 
-function identityRow(
-  key: string, hip: number | null, gaiaSourceId: string | null, designations: string[],
+function promotionIdentityRow(
+  key: string, hip: number | null, gaiaSourceId: string | null, designations: readonly string[],
 ): IdentityRow {
-  return {
-    key, tyc: '', hip: hip === null ? '' : String(hip), hd: '', gl: '', gaia_source_id: gaiaSourceId ?? '', designations,
-  };
+  return identityRow(key, recordKeyCells({ tyc: null, hip, hd: null, gl: null, gaiaSourceId }), designations);
 }
