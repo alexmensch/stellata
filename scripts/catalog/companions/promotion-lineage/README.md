@@ -70,7 +70,7 @@ the record it resolved to: that record is the row's star, so a SID keyed on
 the row's synthetic key — the component it named when it was minted on its
 own — merges into the record's. A keyed mint
 carries its row's synthetic key too, the synth↔component same-as edge
-([docs/sid.md § 4.1](/docs/sid.md#41-same-as-equivalence-graph)):
+([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)):
 `mintSynthDesignations` names it per minted record, by origin key, and SID
 allocation adds it to that record's designations, so a SID the key held
 before the component bound an identifier of its own continues on the
