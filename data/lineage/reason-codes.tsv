@@ -436,17 +436,23 @@ pairs.blank-enumerated	pairs	none	outcome	live		7.1.24	A blank-components row of
 pairs.duplicate-row	pairs	none	outcome	live		7.1.24	A WDS summary row repeating another's wds_id, discoverer and components; the more-observed row is kept.
 pairs.no-position	pairs	none	outcome	live		7.1.24	A pair Stage 5 kept with no position on either side and no system anchor, so it never reaches multiples.tsv.
 pairs.optical.asymm-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair: one side's Gaia parallax agrees with the other's HIP2 anchor.
-pairs.optical.asymm-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair: one side's Gaia parallax disagrees with the other's HIP2 anchor.
+pairs.optical.asymm-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair: one side's Gaia parallax disagrees with the other's HIP2 anchor.
 pairs.optical.cpm-baseline-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair: its WDS separation held still while the primary moved.
-pairs.optical.cpm-baseline-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair: its WDS separation drifted as a background star's would.
+pairs.optical.cpm-baseline-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair: its WDS separation drifted as a background star's would.
 pairs.optical.gaia-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair: both sides have Gaia astrometry, consistent with a bound pair.
-pairs.optical.gaia-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair on both sides' Gaia parallaxes or its escape-velocity gate.
+pairs.optical.gaia-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair on both sides' Gaia parallaxes or its escape-velocity gate.
 pairs.optical.mag-heuristic-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair on the magnitude-gap backstop, or for want of magnitudes.
-pairs.optical.mag-heuristic-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5).
+pairs.optical.mag-heuristic-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5).
 pairs.optical.orbit-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair because Stage 4 found it an orbit.
-pairs.optical.sep-limit-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair: its components sit over 1 pc apart in 3D.
+pairs.optical.sep-limit-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair: its components sit over 1 pc apart in 3D.
 pairs.optical.wds-notes-kept	pairs	none	outcome	live		7.1.24	Stage 5 kept the pair on a WDS note flag marking it physical (T, V, Z).
-pairs.optical.wds-notes-rejected	pairs	none	outcome	live		7.1.24	Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y).
+pairs.optical.wds-notes-rejected	pairs	none	outcome	retired	7.1.31	7.1.24	Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y).
+pairs.rejected.asymm	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair: one side's Gaia parallax disagrees with the other's HIP2 anchor. A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+pairs.rejected.cpm-baseline	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair: its WDS separation drifted as a background star's would. A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+pairs.rejected.gaia	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair on both sides' Gaia parallaxes or its escape-velocity gate. A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+pairs.rejected.mag-heuristic	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5). A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+pairs.rejected.sep-limit	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair: its components sit over 1 pc apart in 3D. A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+pairs.rejected.wds-notes	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y). A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
 placement.direction.cns5	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
 placement.direction.curated	placement	none	outcome	live		7.1.6	Sol: the direction is arbitrary at distance zero.
 placement.direction.gaia-2p	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.
@@ -546,7 +552,9 @@ promotion.minted	promotion	none	outcome	retired	7.1.20	7.1.6	The row becomes a n
 promotion.minted.keyed	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, keyed on a Gaia source or HIP of its own.
 promotion.minted.synthetic	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, addressed only by its synthetic key.
 promotion.not-applicable	promotion	none	outcome	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
-promotion.not-applicable.pair-anchor	promotion	none	outcome	live		7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.not-applicable.pair-anchor	promotion	none	outcome	retired	7.1.31	7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.pair-anchor.other-record	promotion	none	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair but carries none of the row's own Gaia source, HIP or synthetic key, so promotion decides nothing for a SID keyed on the row.
+promotion.pair-anchor.own-star	promotion	merge	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair and carries the row's own Gaia source, HIP or synthetic key, so it is the row's star and a SID keyed on the row's identifiers or synthetic key merges into that record's.
 promotion.parked.primary-unresolved	promotion	park	outcome	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
 promotion.parked.unpaired	promotion	park	outcome	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
 promotion.primary-unresolved	promotion	none	outcome	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.

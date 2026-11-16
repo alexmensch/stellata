@@ -33,6 +33,7 @@ exists, so its rows are keyed on the catalogue row stating each designation
 | a magnitude-term row | its Gaia DR3 `source_id` |
 | a promoted companion | its `multiples.tsv` `(system_id, comp)` |
 | (no record) a `multiples.tsv` component's binding | its row, the same `(system_id, comp)` |
+| (no record) a component a Stage 5 rejection removes from `multiples.tsv` | the rejected pair's founding row ([Pairs lineage](/scripts/binaries/README.md#pairs-lineage)) |
 | a cloud or Local Group object | its record in `clouds.json` / `local-group.json`, by slug (`clouds:<slug>`, `local-group:<slug>`) |
 | (no record) a same-class SID merge whose key only a stored same-as edge carries | that edge: `sameas:` followed by its two designations ([SID events](/scripts/sid/README.md#sid-events)) |
 

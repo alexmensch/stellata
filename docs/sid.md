@@ -239,7 +239,9 @@ record carrying the losing key or, where only a curated same-as edge brings
 it into the class, on that edge (`sameas:<a>|<b>`). Or a stage
 decides the merge itself: a `fold` row in
 `data/membership/spine-corrections.tsv` saying AT-HYG carried one star
-twice, or promotion adopting a record as the component it names. The
+twice, promotion adopting a record as the component it names, or a pair
+primary resolving to a record that carries its own HIP, Gaia source or
+synthetic key (`promotion.pair-anchor.own-star`). The
 fold is for the duplicate the derivation cannot dissolve on its own,
 because the twin holds the very source the survivor would otherwise
 derive (VV Lyn, SID 324680 → 324702). A stage's decision on the losing
@@ -375,12 +377,15 @@ the next while the physical object persists. This is an active
 failure mode, not a hypothetical.
 
 **Ownership pin:** all synth-SID reconciliation lives in allocation
-(`scripts/sid/`); the binaries pipeline stays sid-free. A ledger row
+(`scripts/sid/`); the binaries pipeline allocates no SID. A ledger row
 whose canonical `synth:` key is absent from the build is settled by
 promotion's decision on the `multiples.tsv` row that would carry that
-key: a component promotion drops retires under that row's code. A key
-whose row left `multiples.tsv` altogether has no decision, so the build
-**fails closed**, and resolution is one of:
+key — a component promotion drops retires under that row's code — or, for
+a component every pair of which Stage 5 rejected as optical, by that
+rejection, which the binaries pairs stage records with the component's key
+([Ownership pin](/scripts/sid/README.md#ownership-pin--synth-churn-resolves-here)). A key
+no stage records has no decision, so the build **fails closed**, and
+resolution is one of:
 
 - **Bridge** — one line in `sameas-overrides.tsv`,
   `synth:04357+1010-Aa,Ab` = `synth:04357+1010-Aa1,2` (same physical

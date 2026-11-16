@@ -6,11 +6,13 @@ import type { SidObject } from './allocate-pure';
 import { allocationAdmissionCode } from './allocation-lineage-pure';
 import { SHELL_OBJECTS, SOL_OBJECTS } from './object-mints-source';
 import { starDesignations } from './sid-pure';
+import { withDesignation } from '../catalog/companions/promotion-lineage/promotion-lineage-pure';
 import type { Sorted } from '../catalog/record/record-phase';
 
-export function catalogSidObjects(stars: Sorted): SidObject[] {
+/** `mintSynth`: each minted record's row's `synth:` designation, by origin key (`mintSynthDesignations`). */
+export function catalogSidObjects(stars: Sorted, mintSynth: ReadonlyMap<string, string>): SidObject[] {
   const records = stars.map((s, i): SidObject => ({
-    designations: starDesignations({ ...s, isSol: (s.flags & FLAG_IS_SOL) !== 0 }),
+    designations: withDesignation(starDesignations({ ...s, isSol: (s.flags & FLAG_IS_SOL) !== 0 }), mintSynth.get(s.originKey)),
     kind: 'star',
     label: `record ${i}${s.printedName ? ` (${s.printedName})` : ''}`,
     origin: s.originKey,

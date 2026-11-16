@@ -37,8 +37,18 @@ export const MAG_GAP_HEURISTIC_THRESHOLD = 5.0;
 
 const listed = (chars: ReadonlySet<string>): string => [...chars].join(', ');
 
+/** A tag keeps its pair exactly when it is named `_kept`, and rejects it exactly when named `_rejected`. */
+type TierProperties<K> = {
+  readonly physical: K extends `${string}_kept` ? true : K extends `${string}_rejected` ? false : never;
+  readonly description: string;
+};
+
+function opticalTiers<const T extends { readonly [K in keyof T]: TierProperties<K> }>(tiers: T): T {
+  return tiers;
+}
+
 /** Each tag, in the cascade's order, whether it keeps the pair, and its lineage code's description (`../pairs-lineage-pure.ts`). */
-export const OPTICAL_VIA_PROPERTIES = {
+export const OPTICAL_VIA_PROPERTIES = opticalTiers({
   wds_notes_kept: {
     physical: true, description: `Stage 5 kept the pair on a WDS note flag marking it physical (${listed(WDS_NOTES_PHYSICAL_CHARS)}).`,
   },
@@ -65,11 +75,15 @@ export const OPTICAL_VIA_PROPERTIES = {
   mag_heuristic_rejected: {
     physical: false, description: `Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > ${MAG_GAP_HEURISTIC_THRESHOLD}).`,
   },
-} as const satisfies Record<string, { readonly physical: boolean; readonly description: string }>;
+});
 
 export type OpticalVia = keyof typeof OPTICAL_VIA_PROPERTIES;
+export type KeptVia = Extract<OpticalVia, `${string}_kept`>;
+export type RejectedVia = Extract<OpticalVia, `${string}_rejected`>;
 export const OPTICAL_VIA = Object.keys(OPTICAL_VIA_PROPERTIES) as readonly OpticalVia[];
-export const OPTICAL_REJECT_VIA: readonly OpticalVia[] = OPTICAL_VIA.filter((v) => !OPTICAL_VIA_PROPERTIES[v].physical);
+export const isRejectedVia = (via: OpticalVia): via is RejectedVia => !OPTICAL_VIA_PROPERTIES[via].physical;
+export const OPTICAL_KEPT_VIA: readonly KeptVia[] = OPTICAL_VIA.filter((v): v is KeptVia => !isRejectedVia(v));
+export const OPTICAL_REJECT_VIA: readonly RejectedVia[] = OPTICAL_VIA.filter(isRejectedVia);
 
 /** A side with no independent parallax: what the CPM tier exists for. */
 const INHERITED_SECONDARY_ASTROMETRY_VIAS: ReadonlySet<ComponentAstrometry['astrometryVia']> = new Set(['unresolved', 'athyg_position']);

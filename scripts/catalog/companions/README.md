@@ -100,7 +100,8 @@ see [Promotion identity](identity/README.md)).
 Each pair row's decision is a `RowOutcome`: dropped with its reason, adopted
 onto a record already held (its own id or HIP, a same-as bridge, or an
 earlier mint this build), or minted;
-a pair's primary is `pair-anchor` when it anchors its pair and
+a pair's primary is `pair-anchor` when it anchors its pair (`ownStar`
+when that record carries the row's own Gaia source, HIP or synthetic key) and
 `primary-unresolved` when it resolves to no record, and a row in no pair is
 `unpaired`. The last two park
 ([Promotion lineage](promotion-lineage/README.md#promotion-lineage)).
