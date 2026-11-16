@@ -9,7 +9,7 @@ import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia, type OrbitViaOnFile } from '../multiples-record-pure';
 import { pairParams } from '../pairs-lineage-pure';
 import type { Stage4Result } from './attach-orbits';
-import { ORBIT_PASS_RULES, type OrbitPassRule } from './select-orbit-pure';
+import { orbitPassRules, type AnyOrbitPassRule, type OrbitPassRule } from './select-orbit-pure';
 import { ORBITS_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
 export const ORBITS_LINEAGE_BUDGET = { gzipBytes: 1_300_000, writeMs: 2_000 };
@@ -29,9 +29,7 @@ const ROUTE_TEXT: Record<OrbitViaOnFile, string> = {
   msc: 'An MSC row',
 };
 
-type AnyPassRule = OrbitPassRule<OrbitViaOnFile>;
-
-const RULE_TEXT: Record<AnyPassRule, string> = {
+const RULE_TEXT: Record<AnyOrbitPassRule, string> = {
   outranked: 'outranked by the orbit a higher route chose',
   unreadable: 'converting to no elements (an unreadable period, unit or solution type)',
   partner_distinct_source: 'interior to its side, the pair\'s other side being a different Gaia source',
@@ -42,12 +40,12 @@ const RULE_TEXT: Record<AnyPassRule, string> = {
 
 type PassBranch = { [R in OrbitViaOnFile]: `passed.${Kebab<R>}.${Kebab<OrbitPassRule<R>>}` }[OrbitViaOnFile];
 
-function passBranch<R extends OrbitViaOnFile>(route: R, rule: OrbitPassRule<R>): PassBranch {
+function passBranch(route: OrbitViaOnFile, rule: AnyOrbitPassRule): PassBranch {
   return `passed.${kebab(route)}.${kebab(rule)}` as PassBranch;
 }
 
-const PASS_CODES = Object.fromEntries(ORBIT_VIA_ON_FILE.flatMap((route) => (ORBIT_PASS_RULES[route] as readonly AnyPassRule[]).map(
-  (rule) => [passBranch(route, rule as OrbitPassRule<typeof route>), refusalCode(`${ROUTE_TEXT[route]} passed over: ${RULE_TEXT[rule]}.`)],
+const PASS_CODES = Object.fromEntries(ORBIT_VIA_ON_FILE.flatMap((route) => orbitPassRules(route).map(
+  (rule) => [passBranch(route, rule), refusalCode(`${ROUTE_TEXT[route]} passed over: ${RULE_TEXT[rule]}.`)],
 ))) as Record<PassBranch, CodeDeclaration>;
 
 export const ORBITS_CODES = stageCodes(ORBITS_LINEAGE.stage, {
@@ -63,7 +61,7 @@ export function* orbitsLineageRows(result: Stage4Result): Generator<LineageRow> 
     yield stageRow(ORBITS_CODES, key, `source.${kebab(orbit.orbitVia)}`, params, chosen);
     for (const c of candidates) {
       if (c.verdict === 'chosen') continue;
-      yield stageRow(ORBITS_CODES, key, passBranch(c.route, c.verdict as OrbitPassRule<typeof c.route>), params, [sourceRowRefText(c.from)]);
+      yield stageRow(ORBITS_CODES, key, passBranch(c.route, c.verdict), params, [sourceRowRefText(c.from)]);
     }
   }
 }

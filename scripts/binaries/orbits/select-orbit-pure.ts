@@ -52,20 +52,32 @@ export interface OrbitCandidates {
   readonly systemParallaxMas: number | null;
 }
 
-/** Why the cascade passed over a candidate, per route, in the order its gates run. */
-export const ORBIT_PASS_RULES = {
-  orb6: ['unreadable', 'outranked'],
-  gaia_nss: ['partner_distinct_source', 'out_of_regime', 'separation_inconsistent', 'unreadable', 'outranked'],
-  orb6_spectroscopic: ['unreadable', 'outranked'],
-  msc: ['measured_separation', 'unreadable', 'outranked'],
+/** Each route's own gates, in the order they run. */
+const ROUTE_GATES = {
+  orb6: [],
+  gaia_nss: ['partner_distinct_source', 'out_of_regime', 'separation_inconsistent'],
+  orb6_spectroscopic: [],
+  msc: ['measured_separation'],
 } as const satisfies Readonly<Record<OrbitViaOnFile, readonly string[]>>;
 
-export type OrbitPassRule<R extends OrbitViaOnFile> = (typeof ORBIT_PASS_RULES)[R][number];
+type GateRule<R extends OrbitViaOnFile> = (typeof ROUTE_GATES)[R][number];
+export type OrbitPassRule<R extends OrbitViaOnFile> = GateRule<R> | 'unreadable' | 'outranked';
+export type AnyOrbitPassRule = OrbitPassRule<OrbitViaOnFile>;
+
+/** Why the cascade can pass over one of `route`'s candidates, in the order it checks. */
+export function orbitPassRules<R extends OrbitViaOnFile>(route: R): readonly OrbitPassRule<R>[] {
+  return [...ROUTE_GATES[route], 'unreadable', 'outranked'];
+}
 
 /** One orbit row the cascade weighed for a pair: the one it chose, or why it passed it over. */
 export type OrbitCandidate = {
   [R in OrbitViaOnFile]: { readonly route: R; readonly from: AnySourceRowRef; readonly verdict: 'chosen' | OrbitPassRule<R> }
 }[OrbitViaOnFile];
+
+/** The one place a route is paired with its verdict: the union cannot be built from a generic route without it. */
+function orbitCandidate<R extends OrbitViaOnFile>(route: R, from: AnySourceRowRef, verdict: 'chosen' | OrbitPassRule<R>): OrbitCandidate {
+  return { route, from, verdict } as OrbitCandidate;
+}
 
 export interface OrbitDecision {
   readonly orbit: PairOrbit;
@@ -85,7 +97,7 @@ interface RouteCandidate<R extends OrbitViaOnFile> {
 const passed = <R extends OrbitViaOnFile>(rule: Exclude<OrbitPassRule<R>, 'outranked'>): Weighed<R> => ({ kind: 'passed', rule });
 
 function readable<R extends OrbitViaOnFile>(elements: OrbitElements | null): Weighed<R> {
-  return elements === null ? passed<R>('unreadable' as Exclude<OrbitPassRule<R>, 'outranked'>) : { kind: 'elements', elements };
+  return elements === null ? passed<R>('unreadable') : { kind: 'elements', elements };
 }
 
 function orb6Candidates<R extends 'orb6' | 'orb6_spectroscopic'>(
@@ -151,12 +163,12 @@ export function selectOrbit(
   const weighRoute = <R extends OrbitViaOnFile>(route: R): void => {
     for (const c of routes[route]()) {
       if (orbit !== NO_ORBIT) {
-        weighed.push({ route, from: c.from, verdict: 'outranked' } as OrbitCandidate);
+        weighed.push(orbitCandidate(route, c.from, 'outranked'));
         continue;
       }
       const w = c.weigh();
       if (w.kind === 'passed') {
-        weighed.push({ route, from: c.from, verdict: w.rule } as OrbitCandidate);
+        weighed.push(orbitCandidate(route, c.from, w.rule));
         continue;
       }
       const { elements } = w;
@@ -164,7 +176,7 @@ export function selectOrbit(
         throw new Error(`Stage 4 periastron epoch out of range for ${p.pair.wdsId}/${p.pair.components} via ${route}: T_jd=${elements.tJd}`);
       }
       orbit = { orbitVia: route, elements };
-      weighed.push({ route, from: c.from, verdict: 'chosen' } as OrbitCandidate);
+      weighed.push(orbitCandidate(route, c.from, 'chosen'));
     }
   };
   for (const route of ORBIT_VIA_ON_FILE) weighRoute(route);

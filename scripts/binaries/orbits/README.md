@@ -25,7 +25,7 @@ scripts/binaries/orbits/
                                  pair's rows.
   select-orbit-pure.ts (+ test)  PairOrbit; selectOrbit, the cascade for
                                  one pair, and the candidates it weighed
-                                 (ORBIT_PASS_RULES); nssSeparationConsistent
+                                 (orbitPassRules); nssSeparationConsistent
                                  and keplerSemimajorAxisAu.
   attach-orbits.ts (+ test)      attachStage4 (every pair's candidates,
                                  then selectOrbit), Stage4Result (each
@@ -51,7 +51,7 @@ NSS row per distinct Gaia source on the pair's sides — the first to yield
 elements winning. A route whose best row converts to nothing (an unreadable
 period) falls through to the next. It returns the orbit beside every
 candidate it weighed, each citing its own row: the one `chosen`, or the rule
-that passed it over (`ORBIT_PASS_RULES`, per route in its gates' order), a
+that passed it over (`orbitPassRules`: the route's own gates in order, then `unreadable`), a
 candidate below the winner being `outranked` unweighed.
 
 `attachStage4` gathers each pair's candidates: its ORB6 rows by (WDS id,
@@ -89,7 +89,7 @@ identifiers.
 | Code | Written for |
 | --- | --- |
 | `orbits.source.<via>` | every pair, once, one code per `ORBIT_VIA` tag, underscores as dashes; its evidence is the chosen row, none for `none` or where that row is the key itself (an MSC inner pair) |
-| `orbits.passed.<route>.<rule>` | each candidate the cascade passed over, one code per rule `ORBIT_PASS_RULES` gives the route; its evidence is the candidate's row |
+| `orbits.passed.<route>.<rule>` | each candidate the cascade passed over, one code per rule `orbitPassRules` gives the route; its evidence is the candidate's row |
 
 `orbitsCounts` folds the `orbit_*` snapshot keys from the `source` codes.
 `ORBITS_INVARIANTS` holds the four `unreadable` codes, an orbit row on file
