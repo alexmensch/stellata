@@ -139,8 +139,6 @@ def pull(variant: str) -> None:
 
 
 def main(variant: str) -> None:
-    """--describe prints the description with no network call and no import
-    beyond the standard library; otherwise the variant is pulled."""
     if sys.argv[1:] == ["--describe"]:
         print(json.dumps(describe(variant)))
         return
