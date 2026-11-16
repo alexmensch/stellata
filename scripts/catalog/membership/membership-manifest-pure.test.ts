@@ -18,7 +18,7 @@ import { matchSpineToManifest, withRecordMoves } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
-} from './binding-review-dispositions-pure';
+} from './binding/binding-review-dispositions-pure';
 import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
