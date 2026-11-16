@@ -57,7 +57,7 @@ docs/validation-residuals.md
 # re-encode without re-running the 10-minute query phase. Local-only.
 data/dust/.voxels*.npy
 
-# Per-batch resume cache written by refresh_lib.BatchCheckpoint. Survives a
+# A pull's resume cache (scripts/refresh/pull/checkpoint.ts). Survives a
 # failed run on purpose so a re-run resumes; deleted once the pull completes.
 data/**/*.tsv.ckpt*/
 
@@ -68,9 +68,7 @@ data/papers/pdf
 # Python venv for scripts/dust/build-dust.py and refresh scripts
 .venv/
 
-# Python bytecode cache (refresh_lib gets imported by sibling test +
-# refresh scripts; build-binaries.test.py imports build-binaries via
-# spec_from_file_location, also populating __pycache__).
+# Python bytecode cache, written wherever a Python step or suite imports a sibling.
 scripts/**/__pycache__/
 
 

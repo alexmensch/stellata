@@ -45,13 +45,14 @@ one), and atomically replaces its output TSV under `data/`.
 
 ### One-time setup
 
-The Python pulls (Edenhofer) use astropy + numpy +
-pyvo + requests. Pin them to a
-local virtualenv so the system Python stays clean:
+The two Python pulls (Edenhofer) read the dust map through `dustmaps`, from
+`scripts/dust/requirements-dust.txt`
+([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)).
+Pin them to a local virtualenv so the system Python stays clean:
 
 ```bash
 python3 -m venv .venv
-.venv/bin/pip install -r scripts/refresh/requirements-refresh.txt
+.venv/bin/pip install -r scripts/dust/requirements-dust.txt
 ```
 
 After that, prefix every `python3` invocation with `.venv/bin/`, or
@@ -63,7 +64,7 @@ still fresh (`--force` re-pulls) and rewrites the record after every run
 ([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
 
 **`.venv` is gitignored, so a git worktree has none** — a refresh run from
-one dies on `ModuleNotFoundError: astropy` after resolving its paths
+one dies on `ModuleNotFoundError: dustmaps` after resolving its paths
 perfectly well, which reads like a code fault and is not one. Put the main
 checkout's venv first on `PATH` and run the target
 (`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
@@ -226,15 +227,10 @@ shares with the two astrometry pulls is the schema: all three project
 `ASTROMETRY_COLUMNS` (`gaia-request/`), so one parser reads all three
 outputs.
 
-`scripts/refresh/refresh_lib.py` is the shared TAP / Astroquery /
-atomic-rename plumbing every Python pull imports — handles retry,
-schema validation, row-count and
-coverage gating (`assert_row_count`, `report_coverage`), spot-check
-pinning (`validate_spot_rows`), and
-partial-write protection so a mid-run failure never leaves a
-half-written TSV under `data/`.
+`scripts/refresh/refresh_lib.py` holds a Python pull's `--describe`
+(`description`) and entry point (`pull_main`), which the Edenhofer pulls call.
 
-The pulls port onto `pull/`, the TypeScript runtime: one backend, TAP in CSV
+Every other pull is on `pull/`, the TypeScript runtime: one backend, TAP in CSV
 or FITS and VizieR's ASU on the CfA mirror, a query-keyed resume cache,
 required gates and an all-or-none write ([pull/README.md](pull/README.md)).
 
