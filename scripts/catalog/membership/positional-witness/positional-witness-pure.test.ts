@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { skyPositionAtEpoch } from '../../../../src/astro-core/equatorial-basis';
 import type { V70aAstrometry } from '../../gliese-parse-pure';
-import { TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH } from '../../tycho2-parse';
+import { TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type ObservedPosition } from '../../tycho2-parse';
 import { tycho2Row } from '../../tycho2-fixture';
 import {
   HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
@@ -76,7 +76,7 @@ describe('witnessV70a — against Tycho-2 entries', () => {
   it("reads a photocentre entry's observed cell, not the blend's mean position", () => {
     const photocentre = tycho2Row('1024-2212-2', {
       raDeg: 279.50029734, decDeg: 8.00067305, isPhotocentre: true,
-      observed: { raDeg: 279.50013611, decDeg: 8.00051333 },
+      observed: { raDeg: 279.50013611, decDeg: 8.00051333, raEpoch: 1991.83, decEpoch: 1991.75 },
     });
     const atObserved = witnessV70a(v70a(279.0, 7.9, 0, 0), [photocentre]);
     const atMean = witnessV70a(v70a(279.0, 7.9, 0, 0), [
@@ -87,13 +87,13 @@ describe('witnessV70a — against Tycho-2 entries', () => {
   });
 });
 
-describe('witnessHipparcos — HIP2 against the observed cells, both at J1991.25', () => {
+describe("witnessHipparcos — HIP2 carried to each observed cell's own epochs", () => {
   it("splits a photocentre pair on the entries' observed cells", () => {
-    const pair = (tyc: string, observed: { raDeg: number; decDeg: number }) =>
+    const pair = (tyc: string, observed: ObservedPosition) =>
       tycho2Row(tyc, { raDeg: 279.50029734, decDeg: 8.00067305, isPhotocentre: true, observed });
-    const v = witnessHipparcos({ raDeg: 279.50034459, decDeg: 8.00073794 }, [
-      pair('1024-2212-1', { raDeg: 279.50034139, decDeg: 8.00073056 }),
-      pair('1024-2212-2', { raDeg: 279.50013611, decDeg: 8.00051333 }),
+    const v = witnessHipparcos({ raDeg: 279.50034459, decDeg: 8.00073794, pmRaMasyr: -1.2, pmDeMasyr: -8.38 }, [
+      pair('1024-2212-1', { raDeg: 279.50034139, decDeg: 8.00073056, raEpoch: 1991.84, decEpoch: 1991.75 }),
+      pair('1024-2212-2', { raDeg: 279.50013611, decDeg: 8.00051333, raEpoch: 1991.83, decEpoch: 1991.75 }),
     ]);
     expect(v).toMatchObject({ kind: 'match', tyc: '1024-2212-1' });
     expect(seps(v)).toEqual([['1024-2212-1', 0.0], ['1024-2212-2', 1.1]]);
@@ -102,7 +102,7 @@ describe('witnessHipparcos — HIP2 against the observed cells, both at J1991.25
   it('returns several when both entries sit inside the tolerance (HIP 7397)', () => {
     const supplement = (tyc: string, raDeg: number, decDeg: number) =>
       tycho2Row(tyc, { raDeg, decDeg, epoch: TYCHO2_ICRS_EPOCH, fromIcrs: true });
-    const v = witnessHipparcos({ raDeg: 23.83990087, decDeg: 11.43444409 }, [
+    const v = witnessHipparcos({ raDeg: 23.83990087, decDeg: 11.43444409, pmRaMasyr: 115.16, pmDeMasyr: -38.82 }, [
       supplement('624-579-1', 23.83989367, 11.43441458),
       supplement('624-579-2', 23.83990957, 11.43447656),
     ]);
@@ -110,8 +110,22 @@ describe('witnessHipparcos — HIP2 against the observed cells, both at J1991.25
     expect(v.separations.every((s) => s.separationArcsec <= HIPPARCOS_WITNESS_TOLERANCE_ARCSEC)).toBe(true);
   });
 
+  it("carries a fast mover to the entry's epoch: HIP 2552 at 1.74″/yr", () => {
+    const v = witnessHipparcos({ raDeg: 8.11171915, decDeg: 67.23621557, pmRaMasyr: 1738.21, pmDeMasyr: -224.11 }, [
+      tycho2Row('4027-802-1', {
+        raDeg: 8.11256651, decDeg: 67.23511149, epoch: TYCHO2_ICRS_EPOCH, fromIcrs: true,
+      }),
+      tycho2Row('4027-803-1', {
+        raDeg: 8.12272949, decDeg: 67.23559317,
+        observed: { raDeg: 8.11229028, decDeg: 67.23618444, raEpoch: 1991.70, decEpoch: 1991.72 },
+      }),
+    ]);
+    expect(v).toMatchObject({ kind: 'match', tyc: '4027-803-1' });
+    expect(seps(v)).toEqual([['4027-803-1', 0.0], ['4027-802-1', 4.1]]);
+  });
+
   it('returns none with every separation when no entry is inside the tolerance', () => {
-    const v = witnessHipparcos({ raDeg: 10, decDeg: 10 }, [
+    const v = witnessHipparcos({ raDeg: 10, decDeg: 10, pmRaMasyr: 0, pmDeMasyr: 0 }, [
       tycho2Row('1-1-1', { raDeg: 10, decDeg: 10.001 }),
     ]);
     expect(v.kind).toBe('none');

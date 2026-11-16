@@ -10,7 +10,8 @@ import {
 import { ascending } from '../../../../src/astro-core/order-pure';
 import type { V70aAstrometry } from '../../gliese-parse-pure';
 import type { Hip2AstrometryRow } from '../../sources/hip2-source';
-import { TYCHO2_ICRS_EPOCH, type Tycho2Row } from '../../tycho2-parse';
+import { HIPPARCOS_EPOCH_JYEAR } from '../../../../src/astro-core/astronomy-constants';
+import type { ObservedPosition, Tycho2Row } from '../../tycho2-parse';
 
 /** In the 13.8″ → 20.6″ gap of the measured separations (README.md#the-tolerances). */
 export const V70A_WITNESS_TOLERANCE_ARCSEC = 15;
@@ -53,11 +54,17 @@ function separationArcsec(a: SkyPosition, b: SkyPosition): number {
   );
 }
 
+type PositionAt = (epoch: number) => SkyPosition;
+
+/** Each coordinate of the source carried to the epoch its observed counterpart was measured at. */
+function separationFromObserved(at: PositionAt, observed: ObservedPosition): number {
+  return separationArcsec({ raDeg: at(observed.raEpoch).raDeg, decDeg: at(observed.decEpoch).decDeg }, observed);
+}
+
 /** README.md#the-two-witnesses. */
-function singleStarPosition(entry: Tycho2Row): { position: SkyPosition; epoch: number } {
-  return entry.isPhotocentre
-    ? { position: entry.observed, epoch: TYCHO2_ICRS_EPOCH }
-    : { position: { raDeg: entry.raDeg, decDeg: entry.decDeg }, epoch: entry.epoch };
+function separationFromSingleStar(at: PositionAt, entry: Tycho2Row): number {
+  if (entry.isPhotocentre || entry.fromIcrs) return separationFromObserved(at, entry.observed);
+  return separationArcsec(at(entry.epoch), entry);
 }
 
 /** Carried in the B1950 frame, then precessed: README.md#the-two-witnesses. */
@@ -75,18 +82,27 @@ function v70aPositionAt(astrometry: V70aAstrometry, epoch: number): SkyPosition 
 export function witnessV70a(
   astrometry: V70aAstrometry, candidates: readonly Tycho2Row[],
 ): WitnessVerdict {
-  return verdictOf((entry) => {
-    const { position, epoch } = singleStarPosition(entry);
-    return separationArcsec(v70aPositionAt(astrometry, epoch), position);
-  }, candidates, V70A_WITNESS_TOLERANCE_ARCSEC);
+  const at: PositionAt = (epoch) => v70aPositionAt(astrometry, epoch);
+  return verdictOf((entry) => separationFromSingleStar(at, entry), candidates, V70A_WITNESS_TOLERANCE_ARCSEC);
 }
 
-export function witnessHipparcos(
-  hip: Pick<Hip2AstrometryRow, 'raDeg' | 'decDeg'>, candidates: readonly Tycho2Row[],
-): WitnessVerdict {
-  return verdictOf(
-    (entry) => separationArcsec(hip, entry.observed),
-    candidates,
-    HIPPARCOS_WITNESS_TOLERANCE_ARCSEC,
+/** HIP2's position and proper motion, both required: the carry has nothing to carry by without them. */
+export interface HipparcosAstrometry {
+  raDeg: number;
+  decDeg: number;
+  pmRaMasyr: number;
+  pmDeMasyr: number;
+}
+
+/** Null where HIP2 publishes no proper motion. */
+export function hipparcosAstrometry(row: Hip2AstrometryRow): HipparcosAstrometry | null {
+  const { raDeg, decDeg, pmRaMasyr, pmDeMasyr } = row;
+  return pmRaMasyr === null || pmDeMasyr === null ? null : { raDeg, decDeg, pmRaMasyr, pmDeMasyr };
+}
+
+export function witnessHipparcos(hip: HipparcosAstrometry, candidates: readonly Tycho2Row[]): WitnessVerdict {
+  const at: PositionAt = (epoch) => skyPositionAtEpoch(
+    hip, { pmRaMasyr: hip.pmRaMasyr, pmDecMasyr: hip.pmDeMasyr }, HIPPARCOS_EPOCH_JYEAR, epoch,
   );
+  return verdictOf((entry) => separationFromObserved(at, entry.observed), candidates, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC);
 }

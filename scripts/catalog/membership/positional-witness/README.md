@@ -35,19 +35,22 @@ the nearer.
 
 ## The two witnesses
 
-**Hipparcos** (`witnessHipparcos`) — HIP2's position against each entry's
-**observed** cell. Both are stated at J1991.25
-([Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)), so
-nothing is carried. The mean position will not do: both entries of a
-`pflag='P'` pair carry the same mean position, the blend's photocentre, and
-315 of the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count --> queued pairs are that shape.
+**Hipparcos** (`witnessHipparcos`) — HIP2's J1991.25 position, carried by
+its own proper motion to each entry's **observed** cell: its RA to the epoch
+the cell's RA was measured at and its Dec to the Dec's, which differ per row
+on the main table and are J1991.25 on the supplement
+([Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)).
+The mean position will not do: both entries of a `pflag='P'` pair carry the
+same mean position, the blend's photocentre, and 315 of the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count --> queued
+pairs are that shape. A HIP with no HIP2 proper motion cannot be witnessed
+(`hipparcosAstrometry` returns null); none of the queued ones lacks one.
 
 **V/70A** (`witnessV70a`) — the GJ cell's B1950 position, carried by its own
 total proper motion and position angle from B1950.0 to the entry's epoch in
 the B1950 frame, then precessed to J2000 with the IAU 1976 angles
 (`/src/astro-core/precession.ts`). The entry's place is its mean position at
-J2000, or its observed cell at J1991.25 where it has no mean solution or the
-mean solution is a photocentre. The FK4 → FK5 frame terms (the E-terms of
+J2000, or its observed cell at that cell's own epochs where it has no mean
+solution or the mean solution is a photocentre. The FK4 → FK5 frame terms (the E-terms of
 aberration, ≤ 0.34″, and the FK4 equinox offset, ~0.5″) are left out: they
 sit under V/70A's own 0.001° (3.6″) printing and inside the 0.7–12.1″ spread
 of known matches below, so no verdict turns on them.
@@ -58,12 +61,15 @@ Measured 2026-11-16 over the committed tables. The verdict counts are pinned
 in `positional-witness-spread.test.ts`.
 
 **`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.5`.** Over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
-`no_hip_source` HIPs, HIP2 lands on the nearer entry's observed cell within
-0.39″ at the 99th percentile (median 0.02″, worst 1.31″); the other entry sits
-a median 2.85″ away and as close as 0.12″. At 0.5″: **1,025 match, 5 none,
-16 several**. At 1.0″ the several count rises to 137; at any value the V/70A
-witness needs (≥ 12″) it is 1,005, which is why one tolerance cannot serve
-both sources.
+`no_hip_source` HIPs, carried HIP2 lands on the nearer entry's observed cell
+within 0.18″ at the 99th percentile (median 0.013″); the nearer separations
+run continuously to 0.36″, then two pairs Hipparcos measured as one sit at
+1.05″ (HIP 17750) and 1.23″ (HIP 94223). Uncarried, the 99th percentile was
+0.39″ and every one of the five fast movers past 0.5″ read `none`. The other
+entry sits a median 2.81″ away and as close as 0.12″. At 0.5″: **1,028 match,
+2 none, 16 several**. At 1.0″ the several count rises to 141; at any value the
+V/70A witness needs (≥ 12″) it is 1,005, which is why one tolerance cannot
+serve both sources.
 
 **`V70A_WITNESS_TOLERANCE_ARCSEC = 15`.** The 22 `v70a_astrometry`
 dispositions (`data/membership/binding-review-dispositions.tsv`) put V/70A

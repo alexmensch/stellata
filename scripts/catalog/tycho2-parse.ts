@@ -15,8 +15,12 @@ const MAIN_PFLAG_PHOTOCENTRE = 'P';
 const MAIN_COLUMNS = [
     'tyc1', 'tyc2', 'tyc3', 'pflag',
     'ra_mdeg', 'de_mdeg', 'pm_ra', 'pm_de',
-    'ra_icrs', 'de_icrs', 'bt_mag', 'vt_mag', 'hip',
+    'ra_icrs', 'de_icrs', 'ep_ra_icrs_since_1990', 'ep_de_icrs_since_1990',
+    'bt_mag', 'vt_mag', 'hip',
   ] as const;
+
+/** The main table states each observed epoch as years after this. */
+const OBSERVED_EPOCH_ORIGIN = 1990;
 
 const SUPPL1_COLUMNS = [
     'tyc1', 'tyc2', 'tyc3',
@@ -33,9 +37,15 @@ const SUPPL1_COLUMNS = [
  *  (/data/tycho2/README.md#which-position-to-propagate-from). */
 export const TYCHO2_MEAN_EPOCH = 2000.0;
 
-/** The epoch a `ra_icrs` / `de_icrs` cell is stated at: Tycho-2's observed
- *  position, which the catalogue publishes at J1991.25 rather than J2000. */
+/** The supplement's observed epoch; a main row carries its own
+ *  (/data/tycho2/README.md#which-position-to-propagate-from). */
 export const TYCHO2_ICRS_EPOCH = HIPPARCOS_EPOCH_JYEAR;
+
+/** The observed cell, each coordinate at the epoch it was measured at. */
+export interface ObservedPosition extends SkyPosition {
+  raEpoch: number;
+  decEpoch: number;
+}
 
 /** One Tycho-2 entry, with the position choice already made — `raDeg` /
  *  `decDeg` is the position to propagate FROM, at `epoch`
@@ -59,9 +69,7 @@ export interface Tycho2Row {
    *  cascades reading the row need it: the direction tier counts it, and a V
    *  from it is a system blend. */
   isPhotocentre: boolean;
-  /** The observed cell, at `TYCHO2_ICRS_EPOCH`
-   *  (/data/tycho2/README.md#which-position-to-propagate-from). */
-  observed: SkyPosition;
+  observed: ObservedPosition;
   ref: OneRowRef<string>;
   /** The HIP number Tycho-2 itself names for this entry, its own cross-index
    *  to I/239 rather than a walk's verdict. */
@@ -106,11 +114,16 @@ export function parseTycho2Tsvs(
   for (const row of readTable({ ...main.from, columns: MAIN_COLUMNS }, main.text)) {
     const observed = icrsPosition(row.float('ra_icrs'), row.float('de_icrs'))
       ?? row.fail('no observed position');
+    const raSince = row.float('ep_ra_icrs_since_1990') ?? row.fail('no observed RA epoch');
+    const decSince = row.float('ep_de_icrs_since_1990') ?? row.fail('no observed Dec epoch');
     const position = meanPosition(row.float('ra_mdeg'), row.float('de_mdeg')) ?? observed;
     const key = tycho2Key(row.raw('tyc1'), row.raw('tyc2'), row.raw('tyc3'));
     out.set(key, {
       ...position,
-      observed: { raDeg: observed.raDeg, decDeg: observed.decDeg },
+      observed: {
+        raDeg: observed.raDeg, decDeg: observed.decDeg,
+        raEpoch: OBSERVED_EPOCH_ORIGIN + raSince, decEpoch: OBSERVED_EPOCH_ORIGIN + decSince,
+      },
       pmRaMasyr: row.float('pm_ra'),
       pmDecMasyr: row.float('pm_de'),
       btMag: row.float('bt_mag'),
@@ -130,7 +143,10 @@ export function parseTycho2Tsvs(
       ?? row.fail('no observed position');
     out.set(key, {
       ...position,
-      observed: { raDeg: position.raDeg, decDeg: position.decDeg },
+      observed: {
+        raDeg: position.raDeg, decDeg: position.decDeg,
+        raEpoch: TYCHO2_ICRS_EPOCH, decEpoch: TYCHO2_ICRS_EPOCH,
+      },
       pmRaMasyr: row.float('pm_ra'),
       pmDecMasyr: row.float('pm_de'),
       btMag: row.float('bt_mag'),

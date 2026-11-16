@@ -8,7 +8,7 @@ import { TYCHO2 } from './tycho2-source';
 const MAIN_HEADER = [
   'tyc1', 'tyc2', 'tyc3', 'pflag', 'ra_mdeg', 'de_mdeg', 'ep_ra', 'ep_de',
   'pm_ra', 'pm_de', 'e_pm_ra', 'e_pm_de', 'ra_icrs', 'de_icrs',
-  'bt_mag', 'e_bt_mag', 'vt_mag', 'e_vt_mag', 'prox', 'hip',
+  'ep_ra_icrs_since_1990', 'ep_de_icrs_since_1990', 'bt_mag', 'e_bt_mag', 'vt_mag', 'e_vt_mag', 'prox', 'hip',
 ].join('\t');
 
 const SUPPL_HEADER = [
@@ -23,6 +23,7 @@ interface MainCells {
   mean?: [string, string, string, string];   // ra, de, ep_ra, ep_de
   pm?: [string, string];
   icrs?: [string, string];
+  icrsEpochs?: [string, string];             // years after 1990: ra, de
   photometry?: [string, string];             // bt, vt
   hip?: string;
 }
@@ -32,9 +33,10 @@ function mainRow(c: MainCells = {}): string {
   const [ra, de, epRa, epDe] = c.mean ?? ['33.5', '12.25', '1991.07', '1991.00'];
   const [pmRa, pmDe] = c.pm ?? ['10', '-10'];
   const [raI, deI] = c.icrs ?? ['33.6', '12.3'];
+  const [epRaI, epDeI] = c.icrsEpochs ?? ['1.71', '1.65'];
   const [bt, vt] = c.photometry ?? ['9.5', '8.9'];
   return [t1, t2, t3, c.pflag ?? '', ra, de, epRa, epDe,
-    pmRa, pmDe, '1', '1', raI, deI, bt, '0.01', vt, '0.01', '', c.hip ?? ''].join('\t');
+    pmRa, pmDe, '1', '1', raI, deI, epRaI, epDeI, bt, '0.01', vt, '0.01', '', c.hip ?? ''].join('\t');
 }
 
 function supplRow(
@@ -137,6 +139,13 @@ describe('parseTycho2Tsvs', () => {
     expect(() => parseTycho2Tsvs(main(), suppl(blank), TYCHO2)).toThrow(/no observed position/);
   });
 
+  it('refuses a main row missing either observed epoch', () => {
+    for (const icrsEpochs of [['', '1.65'], ['1.71', '']] as const) {
+      expect(() => parseTycho2Tsvs(main(mainRow({ icrsEpochs: [...icrsEpochs] })), suppl(), TYCHO2))
+        .toThrow(/no observed (RA|Dec) epoch/);
+    }
+  });
+
   it('refuses a main row with no observed cell, mean solution or not', () => {
     for (const mean of [['', '', '', ''], ['33.5', '12.25', '', '']] as const) {
       expect(() => parseTycho2Tsvs(
@@ -149,12 +158,12 @@ describe('parseTycho2Tsvs', () => {
     const index = parseTycho2Tsvs(main(mainRow({ pflag: 'P' })), suppl(), TYCHO2);
     const r = index.get('1-1-1')!;
     expect(r.raDeg).toBe(33.5);
-    expect(r.observed).toEqual({ raDeg: 33.6, decDeg: 12.3 });
+    expect(r.observed).toEqual({ raDeg: 33.6, decDeg: 12.3, raEpoch: 1991.71, decEpoch: 1991.65 });
   });
 
   it("states a supplement row's observed cell as its position", () => {
     const r = parseTycho2Tsvs(main(), suppl(supplRow(['2', '2', '1'])), TYCHO2).get('2-2-1')!;
-    expect(r.observed).toEqual({ raDeg: 40.0, decDeg: 20.0 });
+    expect(r.observed).toEqual({ raDeg: 40.0, decDeg: 20.0, raEpoch: TYCHO2_ICRS_EPOCH, decEpoch: TYCHO2_ICRS_EPOCH });
   });
 
   it("carries Tycho-2's own hip cross-index off both tables", () => {

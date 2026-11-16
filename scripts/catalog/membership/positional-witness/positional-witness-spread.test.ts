@@ -12,7 +12,9 @@ import type { Tycho2Row } from '../../tycho2-parse';
 import { TYCHO2 } from '../../tycho2-source';
 import { MERGE_DIVERGENCE } from '../merge-divergence-tsv';
 import { PAIR_REVIEW } from '../pair-review-tsv';
-import { witnessHipparcos, witnessV70a, type WitnessVerdict } from './positional-witness-pure';
+import {
+  hipparcosAstrometry, witnessHipparcos, witnessV70a, type WitnessVerdict,
+} from './positional-witness-pure';
 
 const readable = [
   DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1, DATA_FILES.gliese, DATA_FILES.hip2,
@@ -37,12 +39,13 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     const rows = PAIR_REVIEW.parse(readFileSync(resolve(REPO_ROOT, PAIR_REVIEW.file), 'utf-8'))
       .filter((r) => r.reason === 'no_hip_source');
     const verdicts = rows.map((r) => {
-      const hip = hip2.get(r.hip!);
-      if (hip === undefined) throw new Error(`HIP ${r.hip}: no HIP2 position`);
+      const row = hip2.get(r.hip!);
+      const hip = row === undefined ? null : hipparcosAstrometry(row);
+      if (hip === null) throw new Error(`HIP ${r.hip}: no HIP2 position and proper motion`);
       return witnessHipparcos(hip, candidates(r.entries));
     });
     expect(rows.length).toBe(1046);
-    expect(tallyKinds(verdicts)).toEqual({ match: 1025, none: 5, several: 16 });
+    expect(tallyKinds(verdicts)).toEqual({ match: 1028, none: 2, several: 16 });
   });
 
   it("tests each unlinked GJ cell's V/70A position against the row's own TYC", () => {
