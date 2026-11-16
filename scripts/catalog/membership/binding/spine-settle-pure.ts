@@ -22,7 +22,7 @@ import {
   type UnshippedCandidate,
 } from './binding-outcomes-pure';
 import { bindingReviewKey } from '../ledger-rows-pure';
-import { dispositionOf, type BindingDispositionRow } from '../binding-review-dispositions-pure';
+import { dispositionOf, type BindingDispositionRow } from './binding-review-dispositions-pure';
 import {
   CONTESTED_LEADS,
   isQueuedOutcome,

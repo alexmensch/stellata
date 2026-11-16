@@ -24,7 +24,7 @@ import {
   type AdditionLedgerRow, type AdditionReason, type BindingReviewRow, type BindingReviewVerdict,
   type LabelDropCell, type LabelDropReason, type LabelDropRow, type OwnCandidate, type OwnCandidateReason,
 } from './ledger-rows-pure';
-import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding-review-dispositions-pure';
+import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding/binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
   DERIVED_ONLY_CELLS, DIFFERS_LINKS, HELD_STATES,

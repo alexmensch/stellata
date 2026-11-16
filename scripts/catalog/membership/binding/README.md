@@ -45,6 +45,11 @@ scripts/catalog/membership/binding/
                                 derivation, the collision rule, its queue
                                 cells and the dispositions settling it,
                                 with the value it ships. Pure.
+  binding-review-dispositions-  The dispositions' columns, closed bases and
+    pure.ts                     reader, on the same terms.
+  binding-review-dispositions-  BINDING_REVIEW_DISPOSITIONS, the curated
+    source.ts                   dispositions' declaration
+                                (../../../util/sources/).
 ```
 
 ## The four sources, in precedence order
@@ -158,6 +163,45 @@ records keys neither ([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)), so *
 queued. Nothing in the derivation ranks one row over the other, so there is no
 tiebreak to inherit, and inventing one would settle an identity question on
 walk order.
+
+## A disposition is the authority wherever one keys a row
+
+Whatever the derivation reached, a row of
+`data/membership/binding-review-dispositions.tsv` settles it — keyed on
+the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
+was taken over, so a re-pull that moves the derivation re-opens the review
+rather than carrying a stale verdict forward. `keep_source_id` is what the row
+ships: the derived id, any other candidate the queue row lists, an id **no
+committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> of
+the 53 today (`disposition.asserted`) and is why the file exists — the review
+reached evidence the derivation cannot, and the count is what keeps the number
+of ids resting on it visible.
+
+**An asserted id still needs a second witness**, because the count cannot
+supply one: a mistyped digit leaves every `disposition.*` code reading what it
+read before, so nothing but the value itself says it is wrong. The generator therefore requires every asserted
+id to be a source `data/gaia/gaia_dr3_astrometry.tsv` carries, and
+fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
+whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
+a gap in what SIMBAD publishes for two objects, not a rule
+(`stellata-hooj.17.10`).
+
+`basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
+position against the source), `v70a_astrometry` (V/70A's B1950 position and
+proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
+namespace), `gaia_photometry` (G against the record's printed V on each
+candidate), `pair_component` (a resolved pair's components bound crosswise,
+the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
+reach). Each disposition's code says what it kept and whether the derivation
+had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
+9 keep the derived id and 44 another. The nine
+are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
+record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
+(SIMBAD names the brighter of a blended pair whose fainter member the TYC
+cross-match picks), and GJ 1001 and GJ 3527 — bare cells the SIMBAD route
+binds to component A only while `simbad_sptype.tsv` holds no companion
+object under the number, so the review stays the authority should a pull
+bring one back. A kept value ships as `reviewed`.
 
 ## The candidates have to be in the astrometry pull
 

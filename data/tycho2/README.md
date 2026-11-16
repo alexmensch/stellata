@@ -21,13 +21,12 @@ tycho2_suppl1.tsv   5,910 rows from I/259/suppl_1 — Tycho-1 and
 
 ## Which position to propagate from
 
-Tycho-2 states two positions per star, at two different epochs, and neither
-epoch is written in the column beside it.
+Tycho-2 states two positions per star, at two different epochs.
 
 | Cell | What it is | Epoch |
 |---|---|---|
 | `ra_mdeg` / `de_mdeg` | the mean solution's position — what a propagation starts from | **J2000** |
-| `ra_icrs` / `de_icrs` | the observed Tycho-2 position | **J1991.25** |
+| `ra_icrs` / `de_icrs` | the observed Tycho-2 position | main: **`1990 + ep_ra_icrs_since_1990`** / **`1990 + ep_de_icrs_since_1990`**, per row and per coordinate; supplement: **J1991.25** |
 | `ep_ra` / `ep_de` | mean epoch of the OBSERVATIONS behind the mean solution | — |
 
 **`ep_ra` / `ep_de` are not the mean position's epoch**, and reading them as one
@@ -54,21 +53,19 @@ SIMBAD tier:
   star's own motion, the second reads a median 8.97 yr adrift, and dividing that
   by `2000 - ep_ra` gives **1.009** — the signature of a position that sits at
   J2000.
-- The observed cell solves to **1991.67** over the 133 measurable `pflag='X'`
-  rows and **1991.25** over the 81 measurable supplement rows, against the
-  catalogue's stated J1991.25. It is 8.75 yr behind `ra_mdeg`, which is the same
-  fact from the other side: across 8,609 rows above 150 mas/yr the two cells sit
-  `ep_ra - 8.75` apart when solved against each other.
+- The main table prints each observed coordinate's own epoch (`EpRA-1990`,
+  `EpDE-1990`): RA 1991.02–1992.11, Dec 1990.72–1992.28, RA mean **1991.70**
+  over all rows and over the 1,802 `pflag='X'` rows alike — the 1991.67 the
+  X rows solve to against another catalogue's rate. The supplement prints none
+  and solves to **1991.25** over its 81 measurable rows, its stated epoch.
+- Against HIP2, the per-row epoch is what closes the gap: over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
+  `no_hip_source` pairs, carrying HIP2 to it takes the right entry's 99th
+  percentile from 0.39″ to 0.18″
+  ([The tolerances](/scripts/catalog/membership/positional-witness/README.md#the-tolerances)).
 
-**The parse takes the published J1991.25, not the `pflag='X'` fit's 1991.67.**
-The two halves of that measurement are not equally good: a `pflag='X'` row
-carries no proper motion of its own, so solving it borrows a rate from another
-catalogue and inherits that catalogue's disagreement, while the supplement half
-solves on its own footing and lands on the published value to the digit. The
-0.42 yr difference is also bounded to nothing — the tier's two `pflag='X'` rows
-move at 4.4 and 6.0 mas/yr, so preferring the fit would shift them by
-**0.003″** — so the published epoch is taken and the residual is recorded here
-rather than tuned away.
+**The parse keeps both coordinates' epochs on `Tycho2Row.observed`.** The
+direction tier still propagates a `pflag='X'` row from J1991.25
+(`stellata-hooj.47.2`).
 
 `pm_ra` is μ_α* — the cos δ factor is already applied — so it is added along the
 local east tangent directly, never divided by cos δ again.
@@ -76,7 +73,10 @@ local east tangent directly, never divided by cos δ again.
 `ra_icrs` earns its place on the **1,802 `pflag='X'` rows**, which have no mean
 solution at all: `ra_mdeg`, `ep_ra`, `pm_ra` and their Dec siblings are all empty
 there and the observed cell is the only position the row has. `pflag='P'` (5,555 rows) means the mean solution is
-the photocentre of an unresolved double, not one star's place.
+the photocentre of an unresolved double, not one star's place — both entries of
+such a pair carry the same mean position, so only their observed cells tell them
+apart. Every row has one, and the parse keeps it beside the chosen position
+for the [positional witness](/scripts/catalog/membership/positional-witness/README.md#the-two-witnesses).
 
 ## The two tables overlap on 254 TYCs
 
@@ -211,6 +211,9 @@ republish; a re-pull is warranted only when the request set moves.
   1997 publication cannot be Gaia's own reduction returning. A `pflag='P'` row
   is admitted here deliberately: the light centre's motion is the quantity
   wanted, and the flag's warning is about the position.
+- The **positional witness**
+  (`scripts/catalog/membership/positional-witness/README.md`) reads
+  `observed` with its two epochs, on every row it is handed.
 
 Every count above is pinned in `scripts/catalog/build-catalog-expected.json`
 (`placement.direction.tycho2.*`, `vTycho2`, `placement.pm-rescue.tycho2`) and moves with membership —
@@ -219,8 +222,8 @@ read it rather than this list when they disagree.
 The parser resolves [Which position to propagate from](#which-position-to-propagate-from) at parse time, so
 no consumer re-decides it: a row with a mean solution exposes
 `ra_mdeg`/`de_mdeg` at J2000, a row with none exposes `ra_icrs` at J1991.25
-and `fromIcrs: true`, and the main table's row wins on the 254 identifiers
-both tables carry.
+and `fromIcrs: true`, every row carries `observed` with its own two epochs,
+and the main table's row wins on the 254 identifiers both tables carry.
 
 ## Refresh
 

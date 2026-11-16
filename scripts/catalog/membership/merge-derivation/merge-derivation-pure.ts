@@ -11,7 +11,7 @@ import { formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-p
 import { cns5Gl } from '../additions/addition-items-pure';
 import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse';
 import type { PairReviewReason } from '../ledger-rows-pure';
-import type { BindingDispositionBasis } from '../binding-review-dispositions-pure';
+import type { BindingDispositionBasis } from '../binding/binding-review-dispositions-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
 
 
