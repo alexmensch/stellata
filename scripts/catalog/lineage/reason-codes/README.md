@@ -15,6 +15,8 @@ scripts/catalog/lineage/reason-codes/
                                  outcomeCode, refusalCode and
                                  admissionCode, the declaration shapes;
                                  retired, a retired code's status;
+                                 taggedCodes, one code per tag of a closed
+                                 set, underscores as dashes (kebab);
                                  StageCounts, a stage's count block type;
                                  codeCount, a count block read by live
                                  branch (LiveBranchOf), as each stage's log
