@@ -80,9 +80,10 @@ the target that rebuilds or re-pulls the file.
   a non-empty cell they cannot parse. `float` takes only a plain decimal
   (`12abc`, `nan`, `Infinity` and hex all throw); `int` only a safe integer
   (`12.0` throws). A cell past the end of a short row reads as empty.
-  `requiredText` is `text` for a hand-curated cell the row exists to state:
-  empty throws, naming the column; `requiredFloat` and `requiredInt` hold a
-  number column to the same rule.
+  `requiredText`, `requiredFloat` and `requiredInt` are the same reads for a
+  column every row must fill: empty throws, naming the column. A hand-curated
+  file's `hint` says what to do with an incomplete row (complete it, or
+  comment it out with `#`).
 - **An identifier reads only as the text it writes back to.** `id` (and
   `requiredId`, `idList(column, separator)`) take bare digits as written — no
   sign, padding or leading zero, within the safe-integer range — so a

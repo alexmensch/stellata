@@ -23,7 +23,7 @@ export function parseZ2020Sightlines(text: string, from: Declared): Map<string, 
   const out = new Map<string, Sightline[]>();
   for (const row of readTable({ ...from, columns: Z2020_COLUMNS, comments: true }, text)) {
     if (isVizierPreamble(row.raw('recno'))) continue;
-    const name = row.text('Name') ?? row.fail('Name is empty');
+    const name = row.requiredText('Name');
     const sightline = { lDeg: row.requiredFloat('GLON'), bDeg: row.requiredFloat('GLAT'), dPc: row.requiredFloat('d50') };
     out.set(name, [...(out.get(name) ?? []), sightline]);
   }

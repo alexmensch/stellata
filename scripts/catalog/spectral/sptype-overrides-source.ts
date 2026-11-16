@@ -16,7 +16,7 @@ export const SPTYPE_OVERRIDES = defineSource({
       if (byHip.has(hip)) row.fail(`HIP ${hip} is curated twice`);
       if (row.text('source') === null) row.fail('source is empty: every curated type cites its literature');
       byHip.set(hip, {
-        ...curatedSpectralValue(row.text('sp_type') ?? row.fail('sp_type is empty'), (m) => row.fail(m)),
+        ...curatedSpectralValue(row.requiredText('sp_type'), (m) => row.fail(m)),
         ref: sourceRowRef(SPTYPE_OVERRIDES, hip),
       });
     }
