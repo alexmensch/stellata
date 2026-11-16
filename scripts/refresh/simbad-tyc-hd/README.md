@@ -32,7 +32,9 @@ manifest and IV/25, so either moving stales the record.
    first field right-aligned (`TYC   40-1338-1`); `parseIdent` strips it, so
    the reply joins its request
    ([Two invariants](../simbad/README.md#two-invariants-the-adql-depends-on)).
-   A TYC answering under two objects fails the pull.
+   A TYC answering under two objects fails the pull; none did on
+   SIMBAD-Harvard on 2026-11-16 (`SELECT id, COUNT(*) FROM ident WHERE id
+   LIKE 'TYC %' GROUP BY id HAVING COUNT(*) > 1`: no rows).
 2. **HD idents.** Every `HD ` id each resolved object holds, read under
    `HD_LETTERED`, so the component letter stays in the suffix (`24071B`).
 3. **main_id** from `basic`, written as SIMBAD spells it (`HD    254`).
