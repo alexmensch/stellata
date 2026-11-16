@@ -86,8 +86,9 @@ scripts/binaries/
                                   declaration, derived from that list.
   pairs-lineage-pure.ts (+ test)  PAIRS_CODES and pairsLineageLines: every
                                   pair row the stages decide, as the pairs
-                                  lineage stage (#pairs-lineage); pairParams,
-                                  which the orbits stage writes too.
+                                  lineage stage (#pairs-lineage); pairsIdentity,
+                                  the components a rejection removes;
+                                  pairParams, which the orbits stage writes too.
   load/ resolve/ astrometry/      Stages 1-7, one folder each (#the-stages).
   orbits/ optical/ multiples/
   counts/
@@ -125,7 +126,12 @@ scripts/binaries/
     (+ test)                      wdsRootOf (a system_id's WDS id, the one
                                   spelling), composeSyntheticId (the synth-<wds>-<comp>
                                   key promotion mints and every resolver
-                                  looks up), canonicalCompLetter (WDS
+                                  looks up; syntheticIdIn, the same from a
+                                  WDS id; pairSyntheticIds, a pair's two
+                                  sides'; rowSyntheticId, the one a
+                                  multiples.tsv row composes, a pair's
+                                  rows keyed as its sides are),
+                                  canonicalCompLetter (WDS
                                   truncation re-anchored: Aa1,2 → Aa2),
                                   parentComponentToken, isComponentToken,
                                   and relatedHier / compoundContains — the
@@ -354,18 +360,28 @@ form, components as printed), an MSC inner pair's first orbit row's key
 | --- | --- |
 | `pairs.duplicate-row` | a WDS row the duplicate collapse dropped; the kept row shares its key |
 | `pairs.blank-deferred` / `-donor` / `-enumerated` | a blank-components row the rescue did not rescue ([Blank-components rescue](load/README.md#blank-components-rescue)); a donor cites the ORB6 orphans it donated to as evidence |
-| `pairs.optical.<tag>` | every pair Stage 5 classified, one code per `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.optical.<tag>` | every pair Stage 5 kept, one code per keeping `OPTICAL_VIA` tag, underscores as dashes |
+| `pairs.rejected.<tier>` | every pair Stage 5 rejected, one code per rejecting tag less its `_rejected`; effect `retire` |
 | `pairs.no-position` | a pair Stage 5 kept that Stage 6 could not place, beside its optical row |
 
 A decomposed pair's `params` carry each side's letter and, where bound, its
 Gaia source bare and its HIP as `hip:` — the forms trace matches a query on.
-Every code is an outcome with no removal effect, and the stage writes no
-identity rows. Its counts fold into the snapshot's `pairs` stage
-([Composition, not counting](counts/README.md#composition-not-counting)).
+Every code but `pairs.rejected.*` is an outcome with no removal effect. A
+rejected pair's side that no pair Stage 5 kept names, and no
+`multiples.tsv` row composes (`pairSyntheticIds` / `rowSyntheticId`; the
+secondary on its canonical letter), left the file because of the
+rejection, so the stage writes an identity row
+(`pairs.identity.tsv.gz`, `pairsIdentity`) under the pair's key carrying
+each such side's `synth:` key. SID allocation joins a ledger key that left
+the build to that row and retires it under the rejection's code
+([SID events](/scripts/sid/README.md#sid-events)). A side a kept pair still
+ships stays promotion's to decide; a side whose kept pair Stage 6 could not
+place (`pairs.no-position`) has no decision, so its departure fails closed. Its counts fold into the snapshot's
+`pairs` stage ([Composition, not counting](counts/README.md#composition-not-counting)).
 
-`PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
-bytes gzipped in 379–384 ms across two runs, neither diffing against a
-baseline (2026-11-14).
+`PAIRS_LINEAGE_BUDGET` pins 2.7 MB and 2 s, over both files: 167,851 rows
+(2,384,503 bytes gzipped) and 9,878 identity rows (129,025 bytes), 2,513,528
+bytes in 613 ms, 341 ms of it the baseline (2026-11-16).
 
 ## Runtime-pairs lineage
 

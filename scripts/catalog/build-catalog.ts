@@ -21,7 +21,7 @@ import { walkStage } from './stages/walk-stage';
 export async function main() {
   const inputHashes = startCatalogBuild();
   const built = await preAllocationStages(inputHashes);
-  const allocated = allocationStage(built.sorted, {
+  const allocated = allocationStage(built.sorted, built.promotion.mintSynth, {
     placementRemovals: built.walk.placementRemovals,
     promotion: built.promotion.lines,
     promotionIdentity: built.promotion.identity,

@@ -11,10 +11,14 @@ import {
   pairComponentTokens,
   parentComponentToken,
   relatedHier,
+  pairSyntheticIds,
+  rowSyntheticId,
   subcomponentTopLetter,
+  syntheticIdIn,
   tokenLetters,
   wdsRootOf,
 } from './component-tokens-pure';
+import type { OrbitRole } from './multiples-record-pure';
 
 describe('isComponentToken', () => {
   it('admits one component and refuses compounds and fixed-width garbage', () => {
@@ -84,6 +88,35 @@ describe('composeSyntheticId', () => {
 
   it('throws when system_id has no dash (malformed)', () => {
     expect(() => composeSyntheticId('NODASH', 'Ab')).toThrow(/no synthetic key/);
+  });
+});
+
+describe('rowSyntheticId', () => {
+  const row = (comp: string, orbitRole: OrbitRole) => ({ systemId: '03082+4057-Aa1,2', comp, orbitRole });
+
+  it('re-anchors a pair secondary on its primary', () => {
+    expect(rowSyntheticId(row('2', 'secondary'), 'Aa1')).toBe('synth-03082+4057-Aa2');
+  });
+
+  it('keys a primary, a row in no pair and a secondary with no pair primary on their own comp', () => {
+    expect(rowSyntheticId(row('Aa1', 'primary'), null)).toBe('synth-03082+4057-Aa1');
+    expect(rowSyntheticId(row('2', 'standalone'), 'Aa1')).toBe('synth-03082+4057-2');
+    expect(rowSyntheticId(row('2', 'secondary'), null)).toBe('synth-03082+4057-2');
+  });
+
+  it('keys a pair\'s rows as pairSyntheticIds keys the pair\'s sides', () => {
+    expect([rowSyntheticId(row('Aa1', 'primary'), null), rowSyntheticId(row('2', 'secondary'), 'Aa1')])
+      .toEqual(pairSyntheticIds('03082+4057', 'Aa1', '2'));
+  });
+});
+
+describe('syntheticIdIn', () => {
+  it('is the key composeSyntheticId builds, from the WDS id itself', () => {
+    expect(syntheticIdIn('16120-1928', 'Ab')).toBe(composeSyntheticId('16120-1928-Aa,Ab', 'Ab'));
+  });
+
+  it('throws on an empty comp letter', () => {
+    expect(() => syntheticIdIn('16120-1928', ' ')).toThrow(/no synthetic key/);
   });
 });
 

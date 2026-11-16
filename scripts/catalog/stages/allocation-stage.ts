@@ -32,12 +32,13 @@ export interface AllocatedCatalog {
 
 export function allocationStage(
   sorted: Sorted<Star>,
+  mintSynth: ReadonlyMap<string, string>,
   upstream: CatalogLineage,
   multiplesRows: readonly MultiplesTsvRow[],
   stepInputs: FileHashes,
 ): AllocatedCatalog {
   const registry = loadRegistry();
-  const sidObjects = catalogSidObjects(sorted);
+  const sidObjects = catalogSidObjects(sorted, mintSynth);
   const allocation = allocate({
     objects: sidObjects,
     storedEdges: registry.storedEdges,
