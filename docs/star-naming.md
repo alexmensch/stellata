@@ -241,9 +241,9 @@ the estimates this section carried from the gate's probe):
 trailing-period forms (`mu.`, `nu.`, `pi.`), zero-padded indices
 (`alf01`), and **GCVS-style cells rejected** from the Bayer field
 (`R And`, `RZ Cas`, `AR Aur`, `V380 Cyg`) — variable designations tier 6
-already sources from GCVS. Measured over all 2,185 Bayer cells (pinned):
-2,051 parse as Bayer (<!-- count:wgsn/iv27aUnparsed -->0<!-- /count --> unparsed) · <!-- count:wgsn/iv27aVariableRejected -->134<!-- /count --> GCVS contaminants rejected. The
-union adds 446 of the 2,051 as the tail; <!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> are already covered by a
+already sources from GCVS. Measured over all <!-- count:wgsn/iv27aBayerCells -->2,183<!-- /count --> Bayer cells (pinned):
+<!-- count:wgsn/iv27aVariableRejected -->134<!-- /count --> GCVS contaminants rejected, <!-- count:wgsn/iv27aUnparsed -->0<!-- /count --> unparsed, the rest parse as Bayer. The
+union adds <!-- count:wgsn/iv27aBayerAdded -->444<!-- /count --> of them as the tail; <!-- count:wgsn/iv27aBayerCovered -->1,605<!-- /count --> are already covered by a
 WGSN designation on the same star.
 
 **V/50 normaliser** (same module): the `name` cell's fixed columns —
