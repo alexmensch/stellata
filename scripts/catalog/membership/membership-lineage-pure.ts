@@ -292,7 +292,10 @@ const DIFFERS_SETTLEMENT_DESCRIPTIONS = {
   'cns5-source': 'CNS5\'s row for the record\'s own Gaia source names the shipped GJ',
 } as const satisfies Record<DiffersSettlement, string>;
 
-type DiffersQueuedBranch = `${DiffersBranch}.queued`;
+const differsPrefix = (l: DiffersLink): string =>
+  `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule`;
+
+type DiffersQueuedBranch =`${DiffersBranch}.queued`;
 const differsQueuedBranch = (l: DiffersLink): DiffersQueuedBranch => `${differsBranch(l)}.queued`;
 
 type MergeBranch =
@@ -343,11 +346,11 @@ const MERGE_BRANCHES: readonly {
   }))),
   ...DIFFERS_LINKS.map((l) => ({
     branch: differsQueuedBranch(l), of: 'differs' as const, ledger: 'differs' as const,
-    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, outside the pair rule, and no rule settles the cell: it is queued for review and the shipped value stands.`,
+    description: `${differsPrefix(l)}, and no rule settles the cell: it is queued for review and the shipped value stands.`,
   })),
   ...DIFFERS_LINKS.flatMap((l) => (DIFFERS_SETTLEMENTS_BY_CELL[l.to] as readonly DiffersSettlement[]).map((s) => ({
     branch: differsSettledBranch(l, s), of: 'differs' as const, ledger: null,
-    description: `A primary's own link from the spine row's ${l.from} fills its ${l.to} with values naming none the record answers to after the label merge, and ${DIFFERS_SETTLEMENT_DESCRIPTIONS[s]}: the shipped value stands.`,
+    description: `${differsPrefix(l)}, and ${DIFFERS_SETTLEMENT_DESCRIPTIONS[s]}: the shipped value stands.`,
   }))),
 ];
 
