@@ -29,8 +29,8 @@ required:
 
 - `lvdb-snapshot.csv` — [Pace 2025](/data/papers/index.md#pace2025)
   LVDB dwarf_all table (CC0), read through `readTable`'s CSV path
-  (`../util/tsv/`). `ra`, `dec`, `distance`, `confirmed_real` and
-  `confirmed_galaxy` are required in every row; an empty structure or
+  (`../util/tsv/`). `ra`, `dec` and `distance` are required in every row, and
+  `confirmed_real` / `confirmed_galaxy` must each be `0` or `1`; an empty structure or
   photometry cell is null, and a malformed cell anywhere fails the build
   naming file, line and column.
 - `overrides.tsv` — hand-curated structural detail for LMC, SMC,

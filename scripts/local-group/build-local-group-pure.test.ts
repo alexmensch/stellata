@@ -66,8 +66,8 @@ function makeRow(o: Partial<LvdbRow>): LvdbRow {
     ra: o.ra ?? 0,
     dec: o.dec ?? 0,
     distanceKpc: o.distanceKpc ?? 100,
-    confirmedReal: o.confirmedReal ?? 1,
-    confirmedGalaxy: o.confirmedGalaxy ?? 1,
+    confirmedReal: o.confirmedReal ?? true,
+    confirmedGalaxy: o.confirmedGalaxy ?? true,
     rhalfPhysicalPc: o.rhalfPhysicalPc ?? null,
     ellipticity: o.ellipticity ?? null,
     positionAngle: o.positionAngle ?? null,
@@ -217,11 +217,11 @@ describe('buildOrientationQuat — geometric correctness', () => {
 
 describe('filterForRendering', () => {
   it('drops candidate (confirmed_real=0) rows', () => {
-    const rows = [makeRow({ confirmedReal: 0 }), makeRow({ confirmedReal: 1 })];
+    const rows = [makeRow({ confirmedReal: false }), makeRow({ confirmedReal: true })];
     expect(filterForRendering(rows)).toHaveLength(1);
   });
   it('drops globular-cluster-shaped rows (confirmed_galaxy=0)', () => {
-    const rows = [makeRow({ confirmedGalaxy: 0 }), makeRow({ confirmedGalaxy: 1 })];
+    const rows = [makeRow({ confirmedGalaxy: false }), makeRow({ confirmedGalaxy: true })];
     expect(filterForRendering(rows)).toHaveLength(1);
   });
   it('drops rows with a non-positive distance', () => {
@@ -383,7 +383,7 @@ describe('displayName overrides + default type suffix', () => {
       key: 'lmc',
       name: 'LMC',
       ra: 78.76, dec: -69.19, distanceKpc: 49.59,
-      confirmedReal: 1, confirmedGalaxy: 1,
+      confirmedReal: true, confirmedGalaxy: true,
       rhalfPhysicalPc: null, ellipticity: null, positionAngle: null,
       apparentMagV: 0.4, nSersic: null,
     };
@@ -402,7 +402,7 @@ describe('displayName overrides + default type suffix', () => {
       key: 'sculptor_1',
       name: 'Sculptor',
       ra: 15, dec: -33, distanceKpc: 84,
-      confirmedReal: 1, confirmedGalaxy: 1,
+      confirmedReal: true, confirmedGalaxy: true,
       rhalfPhysicalPc: 270, ellipticity: 0.3, positionAngle: 99,
       apparentMagV: 8.6, nSersic: null,
     };

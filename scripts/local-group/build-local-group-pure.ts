@@ -74,10 +74,10 @@ export interface LvdbRow {
   dec: number;
   /** Heliocentric distance, kiloparsecs (LVDB native unit). */
   distanceKpc: number;
-  /** Confirmed real (1) / candidate (0). */
-  confirmedReal: number;
-  /** Confirmed galaxy (1) / candidate (0). */
-  confirmedGalaxy: number;
+  /** Confirmed real, else a candidate. */
+  confirmedReal: boolean;
+  /** Confirmed galaxy, else a candidate (e.g. a globular cluster). */
+  confirmedGalaxy: boolean;
   /** Half-light radius in parsecs (LVDB rhalf_physical), or null. */
   rhalfPhysicalPc: number | null;
   /** Ellipticity e = 1 − b/a on the sky plane, or null. */
@@ -366,7 +366,7 @@ export function buildOrientationQuat(
 export function filterForRendering(rows: LvdbRow[]): LvdbRow[] {
   return rows.filter((r) => {
     if (r.distanceKpc <= 0) return false;
-    if (r.confirmedReal !== 1 || r.confirmedGalaxy !== 1) return false;
+    if (!r.confirmedReal || !r.confirmedGalaxy) return false;
     return r.distanceKpc * 1000 <= MAX_DISTANCE_PC;
   });
 }

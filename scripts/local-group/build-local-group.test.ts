@@ -207,7 +207,7 @@ describe('parseLvdb', () => {
   it('reads required position and flags, nulls an empty structure cell, and falls back to the key for an empty name', () => {
     expect(lvdb('draco_1,260.06,57.92,,1,1,75.8,"221",,,10.9,')).toEqual([{
       key: 'draco_1', name: 'draco_1', ra: 260.06, dec: 57.92, distanceKpc: 75.8,
-      confirmedReal: 1, confirmedGalaxy: 1, rhalfPhysicalPc: 221, ellipticity: null,
+      confirmedReal: true, confirmedGalaxy: true, rhalfPhysicalPc: 221, ellipticity: null,
       positionAngle: null, apparentMagV: 10.9, nSersic: null,
     }]);
   });
@@ -218,9 +218,9 @@ describe('parseLvdb', () => {
     expect(() => lvdb('d,260.06,57.92,Draco,1,1,,,,,,'))
       .toThrow('fixture/lvdb.csv:2: distance: is empty. fixture');
     expect(() => lvdb('d,260.06,57.92,Draco,yes,1,75.8,,,,,'))
-      .toThrow('fixture/lvdb.csv:2: confirmed_real: "yes" is not an integer. fixture');
+      .toThrow('fixture/lvdb.csv:2: confirmed_real: "yes" is not one of 0 | 1. fixture');
     expect(() => lvdb('d,260.06,57.92,Draco,1,,75.8,,,,,'))
-      .toThrow('fixture/lvdb.csv:2: confirmed_galaxy: is empty. fixture');
+      .toThrow('fixture/lvdb.csv:2: confirmed_galaxy: "" is not one of 0 | 1. fixture');
   });
 });
 

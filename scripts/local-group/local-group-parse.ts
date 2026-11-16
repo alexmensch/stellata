@@ -13,6 +13,7 @@ const LVDB_COLUMNS = [
   'key', 'name', 'ra', 'dec', 'distance', 'confirmed_real', 'confirmed_galaxy',
   'rhalf_physical', 'ellipticity', 'position_angle', 'apparent_magnitude_v', 'n_sersic',
 ] as const;
+const LVDB_FLAG = ['0', '1'] as const;
 
 /** Position and the two confirmation flags are required; an empty structure or photometry cell is null. */
 export function parseLvdb(csv: string, from: Declared): LvdbRow[] {
@@ -24,8 +25,8 @@ export function parseLvdb(csv: string, from: Declared): LvdbRow[] {
       ra: row.requiredFloat('ra'),
       dec: row.requiredFloat('dec'),
       distanceKpc: row.requiredFloat('distance'),
-      confirmedReal: row.requiredInt('confirmed_real'),
-      confirmedGalaxy: row.requiredInt('confirmed_galaxy'),
+      confirmedReal: row.oneOf('confirmed_real', LVDB_FLAG) === '1',
+      confirmedGalaxy: row.oneOf('confirmed_galaxy', LVDB_FLAG) === '1',
       rhalfPhysicalPc: row.float('rhalf_physical'),
       ellipticity: row.float('ellipticity'),
       positionAngle: row.float('position_angle'),
