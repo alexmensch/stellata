@@ -3,6 +3,7 @@
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
 import type { CrossIndexRow } from './classic-ids-parse';
+import { acceptedFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 
 /** IV/27A's `cst` in the `CONSTELLATIONS` index space, keyed by both
  *  identifiers the table carries. HD is the table's own key; HIP covers the
@@ -33,11 +34,9 @@ export function buildDesignationConIndex(rows: readonly CrossIndexRow[]): Design
   return index;
 }
 
-/** The record's designation constellation, or `NO_CONSTELLATION_INDEX` where
- *  IV/27A carries no row for either of its identifiers — 123 faint
- *  Flamsteed-only records, which then ride the positional fallback in
- *  `designationConIndex`. HD first: it is IV/27A's own key, and the HIP column
- *  is the table's cross-reference to it. */
+/** The record's IV/27A designation constellation, or `NO_CONSTELLATION_INDEX`
+ *  where IV/27A carries no row for either of its identifiers. HD first: it is
+ *  IV/27A's own key, and the HIP column is the table's cross-reference to it. */
 export function resolveDesignationConIndex(
   index: DesignationConIndex,
   hd: number | null,
@@ -53,19 +52,22 @@ export function resolveDesignationConIndex(
  *  An authority tier names the IV/27A value it overwrote with a different one. */
 export type DesignationCon =
   | { via: 'none' }
-  | { via: 'iv27a' | 'gcvs' | 'anchor'; index: number }
+  | { via: 'iv27a' | 'simbad' | 'gcvs' | 'anchor'; index: number }
   | { via: 'wgsn-bayer' | 'wgsn-gould'; index: number; displaced: number | null };
 
 export type StatedDesignationCon = Exclude<DesignationCon, { via: 'none' }>;
 
 export const NO_DESIGNATION_CON: DesignationCon = { via: 'none' };
 
-/** IV/27A's tier of the cascade: where the naming ladder starts each walked record's `desigCon`. */
+/** IV/27A's tier of the cascade, then SIMBAD's constellation for the record's own Flamsteed number: where the naming ladder starts each walked record's `desigCon`. */
 export function designationConstellation(
-  index: DesignationConIndex, star: { readonly hd: number | null; readonly hip: number | null },
+  index: DesignationConIndex, simbad: SimbadFlamsteed,
+  star: { readonly hd: number | null; readonly hip: number | null; readonly flam: number | null },
 ): DesignationCon {
   const conIndex = resolveDesignationConIndex(index, star.hd, star.hip);
-  return conIndex === NO_CONSTELLATION_INDEX ? NO_DESIGNATION_CON : { via: 'iv27a', index: conIndex };
+  if (conIndex !== NO_CONSTELLATION_INDEX) return { via: 'iv27a', index: conIndex };
+  const named = star.flam === null ? undefined : acceptedFlamsteed(simbad, star.hd, star.hip, star.flam);
+  return named === undefined ? NO_DESIGNATION_CON : { via: 'simbad', index: named.conIndex };
 }
 
 /** A companion's designation constellation, taken from its system anchor. */

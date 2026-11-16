@@ -75,6 +75,7 @@ export const NAMING_CODES = stageCodes(NAMING_LINEAGE.stage, {
   'dc.wgsn-bayer': outcomeCode('The record\'s designations render against the constellation the IAU WGSN Bayer designation is named for.'),
   'dc.wgsn-gould': outcomeCode('The record\'s designations render against the constellation the IAU WGSN Gould designation is named for.'),
   'dc.iv27a': outcomeCode('The record\'s designations render against the constellation IV/27A gives its HD or HIP number.'),
+  'dc.simbad': outcomeCode('The record\'s Flamsteed number renders against the constellation SIMBAD names it in, IV/27A carrying no row for the star.'),
   'dc.gcvs': outcomeCode('The record\'s designations render against the constellation its GCVS designation names.'),
   'dc.anchor': outcomeCode('The record\'s designations render against the designation constellation of its system anchor.'),
   'dc.positional': outcomeCode('No tier states a designation constellation, so the record\'s designations render against the constellation its position lies in.'),
@@ -165,7 +166,7 @@ export function* namingLineageRows(
     const source = dc.con;
     const con = constellations[source.index].code;
     switch (source.via) {
-      case 'iv27a': case 'gcvs': case 'anchor':
+      case 'iv27a': case 'simbad': case 'gcvs': case 'anchor':
         yield row(`dc.${source.via}`, { con });
         break;
       case 'wgsn-bayer': case 'wgsn-gould':

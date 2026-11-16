@@ -91,7 +91,7 @@ DR2 id on a disposition of the same basis. Every record keys on a HIP, HD or
 GJ, so no canonical key moves either way ([§ 4.2](/docs/sid.md#42-canonical-key--stability-first)). All six also
 reach the SIMBAD values pull: the widening ladder falls through to their own
 TYC / GJ and corroborates the binding across releases, so each carries
-bibcoded coordinates, PM and parallax ([The widening ladder, and its corroboration rule](../simbad/README.md#the-widening-ladder-and-its-corroboration-rule)).
+bibcoded coordinates, PM and parallax ([The widening ladder, and its corroboration rule](/scripts/refresh/simbad-sptype/README.md#the-widening-ladder-and-its-corroboration-rule)).
 
 ## Consumed by
 

@@ -118,7 +118,7 @@
       "membership.unattested.hr": 0,
       "membership.unattested.gl": 0,
       "membership.unattested.proper": 46,
-      "membership.label-drop.flamsteed-unattested": 119,
+      "membership.label-drop.flamsteed-unattested": 3,
       "membership.label-drop.hd-unattested": 1,
       "membership.merge.unlinked": 135,
       "membership.merge.pair.confirmed": 4603,
@@ -161,6 +161,7 @@
       "sharedDesignations": 68,
       "rowsWithHdAlt": 102,
       "rowsWithHrAlt": 0,
+      "flamsteedRefusals": 37,
       "spineCellsCorrected.tyc": 1
     }
   }
