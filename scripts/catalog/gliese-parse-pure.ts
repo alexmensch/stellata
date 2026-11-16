@@ -27,9 +27,7 @@ export interface GlieseParallax extends MeasuredParallax {
   trigonometric: boolean;
 }
 
-/** V/70A's position at the B1950 equinox and epoch, with the total proper
- *  motion and its position angle east of north
- *  (/data/gliese/README.md#the-astrometry-and-cross-name-columns). */
+/** /data/gliese/README.md#the-astrometry-and-cross-name-columns. */
 export interface V70aAstrometry {
   raB1950Deg: number;
   decB1950Deg: number;
