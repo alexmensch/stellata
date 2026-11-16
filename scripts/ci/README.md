@@ -23,8 +23,7 @@ is no substitute, as it matches no dotted name like
 
 **A skip fails the run**, and so does a file that runs no tests: a suite
 that skipped on a missing library could be green while testing almost
-nothing. The job installs `scripts/textures/requirements.txt` (numpy,
-Pillow); locally, `pnpm run test:py` with the venv that holds them
+nothing. The job installs `scripts/textures/requirements.txt`; locally, `pnpm run test:py` with the venv that holds them
 activated, as for every other `python3` package script — without it, the
 suites that import numpy fail.
 
