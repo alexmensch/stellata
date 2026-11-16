@@ -42,6 +42,11 @@ export interface DirectionSources {
   cns5: Map<string, Cns5Astrometry>;
 }
 
+/** What `resolveDirection` reads of the sources: lookups only. */
+export type DirectionLookups = {
+  readonly [K in keyof DirectionSources]: DirectionSources[K] extends Map<infer Key, infer V> ? ReadonlyMap<Key, V> : DirectionSources[K];
+};
+
 /** One record's own designations, plus the SIMBAD row the namespace ladder
  *  already resolved for it. Extends `SimbadRecordKeys` rather than restating
  *  it: the cascade's three designation-joined tiers key on exactly the
@@ -164,7 +169,7 @@ function pmVelVia(
  *  `no_position`. */
 export function resolveDirection(
   { sourceId, hip, tyc, gl, simbad, curated }: DirectionInputs,
-  sources: DirectionSources,
+  sources: DirectionLookups,
 ): DirectionResolution {
   const gaia = sourceId !== null
     ? sources.gaiaAstrometry.get(sourceId)
