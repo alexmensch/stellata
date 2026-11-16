@@ -62,7 +62,7 @@ padding collapsed (`*  39 Psc` → `* 39 Psc`). Rows are in `simbad_oid` order.
 ## Gates
 
 - **Band** 65,000–80,000 rows. 70,157 at the committed pull: 16,086 objects
-  from the whole-sky classes, 56,348 reached.
+  from the whole-sky classes and 56,348 reached, 2,277 of them both.
 - **Spot rows**: 39 Psc, Kapteyn's Star, π² UMi (`18 UMi` too) and β Tau
   (`112 Tau`, `23 Aur`, `γ Aur` and `Elnath` on one object).
 - **Parse ledger**: a key id with nothing after its prefix fails the pull.
