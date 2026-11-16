@@ -58,8 +58,8 @@ pair to measure ρ on.
 ## The AT-HYG position fallback
 
 A component the cascade leaves `unresolved` is position-matched against
-AT-HYG through Stage 2's `pairAthygMatches`
-([The AT-HYG position match](../resolve/README.md#the-at-hyg-position-match)),
+AT-HYG through Stage 2's `pairPositionMatches`
+([The position match](../resolve/README.md#the-position-match)),
 with inheritance: a secondary whose own predicted match misses takes its
 primary's row, inherited from it as `blend` at ρ = 0, else `partner`. The matched row becomes the
 component's `athyg` when it had none, so `routePairs` returns new pairs; a row with no positive distance is

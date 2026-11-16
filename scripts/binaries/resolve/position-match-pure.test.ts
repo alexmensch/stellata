@@ -2,23 +2,23 @@ import { describe, expect, it } from 'vitest';
 
 import { angularSeparationArcsec, raDecFromUnitVector, unitVectorFromRaDec } from '../../../src/astro-core/equatorial-basis';
 import { WDS_PRECISE_COORD_EPOCH } from '../sky-geometry-pure';
-import { athygDirectionAtEpoch, buildAthygGrid, findNearestAthyg, pairAthygMatches } from './athyg-match-pure';
+import { athygDirectionAtEpoch, athygMatchStars, buildStarGrid, findNearestStar, pairPositionMatches } from './position-match-pure';
 import { athygAt, decomposed, pairAt } from './resolve-fixture';
 import { OWN, inheritedFrom } from '../multiples-record-pure';
 
-describe('findNearestAthyg', () => {
+describe('findNearestStar', () => {
   const east = (arcsec: number, decDeg: number) => 100 + arcsec / 3600 / Math.cos((decDeg * Math.PI) / 180);
 
   it('matches inside the tolerance and misses outside it', () => {
-    const athyg = [athygAt({ ra: 100, dec: 20, gaia: '42' })];
-    const grid = buildAthygGrid(athyg);
-    expect(findNearestAthyg({ raDeg: east(1, 20), decDeg: 20 }, grid, athyg, 2, null, null)).toBe(0);
-    expect(findNearestAthyg({ raDeg: east(5, 20), decDeg: 20 }, grid, athyg, 2, null, null)).toBeNull();
+    const stars = athygMatchStars([athygAt({ ra: 100, dec: 20, gaia: '42' })]);
+    const grid = buildStarGrid(stars);
+    expect(findNearestStar({ raDeg: east(1, 20), decDeg: 20 }, grid, stars, 2, null, 1)).toBe(0);
+    expect(findNearestStar({ raDeg: east(5, 20), decDeg: 20 }, grid, stars, 2, null, 1)).toBeNull();
   });
 
   it('skips the excluded row', () => {
-    const athyg = [athygAt({ ra: 100, dec: 0, gaia: '10' }), athygAt({ ra: 100.0002, dec: 0, gaia: '20' })];
-    expect(findNearestAthyg({ raDeg: 100, decDeg: 0 }, buildAthygGrid(athyg), athyg, 2, 0, null)).toBe(1);
+    const stars = athygMatchStars([athygAt({ ra: 100, dec: 0, gaia: '10' }), athygAt({ ra: 100.0002, dec: 0, gaia: '20' })]);
+    expect(findNearestStar({ raDeg: 100, decDeg: 0 }, buildStarGrid(stars), stars, 2, 0, 1)).toBe(1);
   });
 });
 
@@ -40,22 +40,22 @@ describe('athygDirectionAtEpoch', () => {
   });
 });
 
-describe('pairAthygMatches', () => {
+describe('pairPositionMatches', () => {
   const pairs = [decomposed(pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 0.0, thetaLast: 0 }), { primary: {}, secondary: {} })];
-  const athyg = [athygAt({ ra: 100, dec: 0, gaia: '111' })];
+  const stars = athygMatchStars([athygAt({ ra: 100, dec: 0, gaia: '111' })]);
 
   it('gives a ρ = 0 secondary its primary\'s row, inherited as a blend', () => {
-    expect(pairAthygMatches(pairs, athyg, { skip: () => false }).matches).toEqual([
-      { componentIdx: 0, athygIdx: 0, origin: OWN },
-      { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'blend') },
+    expect(pairPositionMatches(pairs, stars, { skip: () => false }).matches).toEqual([
+      { componentIdx: 0, starIdx: 0, origin: OWN },
+      { componentIdx: 1, starIdx: 0, origin: inheritedFrom('A', 'blend') },
     ]);
   });
 
   it('gives a measured secondary whose prediction misses its primary\'s row as a partner, not a blend', () => {
     const measured = [decomposed(pairAt({ components: 'AB', ra: 100, dec: 0, rhoLast: 360, thetaLast: 0 }), { primary: {}, secondary: {} })];
-    expect(pairAthygMatches(measured, athyg, { skip: () => false }).matches).toEqual([
-      { componentIdx: 0, athygIdx: 0, origin: OWN },
-      { componentIdx: 1, athygIdx: 0, origin: inheritedFrom('A', 'partner') },
+    expect(pairPositionMatches(measured, stars, { skip: () => false }).matches).toEqual([
+      { componentIdx: 0, starIdx: 0, origin: OWN },
+      { componentIdx: 1, starIdx: 0, origin: inheritedFrom('A', 'partner') },
     ]);
   });
 });

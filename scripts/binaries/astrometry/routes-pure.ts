@@ -7,7 +7,7 @@ import type { AthygRow } from '../load/athyg-pure';
 import type { GaiaAstrometryRow } from '../../catalog/sources/gaia-astrometry-source';
 import type { IdentifierIndices } from '../load/indices-pure';
 import { ASTROMETRY_VIA, type AstrometryVia } from '../multiples-record-pure';
-import { pairAthygMatches, type SiblingClaimedMatch } from '../resolve/athyg-match-pure';
+import { athygMatchStars, pairPositionMatches, type SiblingClaimedMatch } from '../resolve/position-match-pure';
 import {
   componentsOf, findOwningPair, pairRows, pairsByDiscoverer, valueOf, type DecomposedPair, type ResolvedComponent,
 } from '../resolve/components-pure';
@@ -123,14 +123,14 @@ export function routePairs(pairs: readonly DecomposedPair[], indices: Identifier
   const components = componentsOf(pairs);
   const routed = components.map((c) => routeAstrometry(c, c.gaia === null ? null : minRho.get(c.gaia.value) ?? null, indices));
   const athygRows = components.map((c) => c.athyg);
-  const fallback = pairAthygMatches(pairs, athyg, {
+  const fallback = pairPositionMatches(pairs, athygMatchStars(athyg), {
     skip: (i) => routed[i].astrometryVia !== 'unresolved',
   });
   for (const m of fallback.matches) {
-    const synth = fromAthygPosition(athyg[m.athygIdx]);
+    const synth = fromAthygPosition(athyg[m.starIdx]);
     if (synth === null) continue;
     routed[m.componentIdx] = synth;
-    athygRows[m.componentIdx] ??= { value: athyg[m.athygIdx], origin: m.origin };
+    athygRows[m.componentIdx] ??= { value: athyg[m.starIdx], origin: m.origin };
   }
 
   const astrometry = new Map<DecomposedPair, PairAstrometry>();

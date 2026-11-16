@@ -13,7 +13,7 @@ import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '.
 import {
   WDS_PRECISE_COORD_EPOCH, chordSqForTolerance, directionsWithin, predictSecondaryPosition, unitChordSq,
 } from '../sky-geometry-pure';
-import { athygDirectionAtEpoch, pairAthygMatches } from './athyg-match-pure';
+import { athygDirectionAtEpoch, athygMatchStars, pairPositionMatches } from './position-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
   componentSides, findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
@@ -288,14 +288,14 @@ export function resolveViaCcdm(
 export function resolveViaPosition(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
 ): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
-  const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, { skip: (_i, c) => c.gaia !== null });
+  const { matches, siblingClaimed } = pairPositionMatches(pairs, athygMatchStars(athyg), { skip: (_i, c) => c.gaia !== null });
   const sides = componentSides(pairs);
   const w = working(pairs);
   const out = w.components;
   for (const m of matches) {
     if (m.origin.kind !== 'own') continue;
     const c = out[m.componentIdx];
-    const row = athyg[m.athygIdx];
+    const row = athyg[m.starIdx];
     if (c.athyg === null) c.athyg = own(row);
     if (c.hip === null && row.hip !== null) c.hip = own(row.hip);
     if (row.gaia !== null) {

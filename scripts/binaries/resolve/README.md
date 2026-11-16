@@ -32,9 +32,10 @@ scripts/binaries/resolve/
                                CascadeRefusal each gate records (the ORB6
                                HIP's coordinate check, the two
                                sibling-identity guards).
-  athyg-match-pure.ts          The AT-HYG position match Stage 3 reuses:
-                               the 1° grid, the nearest-row search,
-                               pairAthygMatches.
+  position-match-pure.ts       The position match Stage 3 reuses, over
+                               any MatchStar list: the 1° grid, the
+                               nearest-star search by reading,
+                               pairPositionMatches; athygMatchStars.
   sibling-identity-pure.ts     HipClaims and the disjoint-letter test the
                                CCDM and position tiers both apply.
   propagate-pure.ts            propagateWithinSystem,
@@ -219,13 +220,16 @@ instance of each key to it and lists every row it misses, tier and source
 separately. A row whose note starts `known_bug:` still has to pass: the note
 explains the expectation, it does not excuse a miss.
 
-## The AT-HYG position match
+## The position match
 
-`matchAthygEitherEpoch` tries each candidate PM-propagated from AT-HYG's
-J1991.25 to the WDS coordinate epoch first, then as stored: AT-HYG's HIP rows
-sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under propagation).
-With propagation the grid search widens a cell each way so a high-PM star
-stored in a neighbouring cell is still a candidate. A secondary whose own
+`pairPositionMatches` takes any list of `MatchStar`s, each with its
+readings: directions tried in order, every star's first reading before any
+star's second. `athygMatchStars` gives an AT-HYG row two — PM-propagated
+from AT-HYG's J1991.25 to the WDS coordinate epoch, then as stored: AT-HYG's
+HIP rows sit at J1991.25, its GJ rows at J2000 (ξ UMa drifts ~5″ under
+propagation). The grid search reaches a cell past the query's neighbours
+each way, so a high-PM star gridded in a neighbouring cell is still a
+candidate. A secondary whose own
 match misses rides its primary's row, inherited from it (`blend` at ρ = 0,
 else `partner`); Stage 2 binds only `own` matches, Stage 3 takes both.
 
@@ -277,13 +281,13 @@ astrometry pull, no G) are trusted. Counted `xwalk_hip_mag_rejected` /
 The position-match pass deserves its own note. AT-HYG's stored
 ra/dec is documented as J2000 but HIP-sourced rows are empirically at
 J1991.25 (the HIP1 native epoch), while GJ / Tycho-sourced rows are
-closer to J2000. Stage 2 and Stage 3 share `pairAthygMatches`
+closer to J2000. Stage 2 and Stage 3 share `pairPositionMatches`
 to walk the pair-iteration cascade (primary match against the WDS
 precise_coord, then predicted-secondary match with primary-row
 exclusion, with the wide-pair short-circuit at the WDS overflow
 sentinel `999.9″` — `parseWdsSumm` collapses that ρ to None, and
-the predicted-secondary match skips a None ρ). The default matcher,
-`matchAthygEitherEpoch`, tries the row PM-propagated
+the predicted-secondary match skips a None ρ). `athygMatchStars`' two
+readings try the row PM-propagated
 J1991.25→J2000 first, then the unpropagated stored coord — propagated
 wins on tie, the unpropagated retry covers high-PM GJ-anchored rows
 (ξ UMa at -425/-581 mas/yr drifts ~5″ off under propagation, beyond
@@ -294,7 +298,7 @@ a matched AT-HYG row whose HIP is already bound to a hierarchy-disjoint,
 non-partner letter of the same system is dropped (WDS stamps some pair
 rows with the SYSTEM coordinate — Rigel's BC row carries A's coord, so
 B's primary match landed on A's row at ~0″ and wore A's photometry).
-The gate lives in `pairAthygMatches`, so Stage 2's identifier
+The gate lives in `pairPositionMatches`, so Stage 2's identifier
 binding and Stage 3's astrometry fallback both honour it; the
 inherited branch (a secondary riding its pair primary's row) is
 exempt by construction. Counted `athyg_match_sibling_claimed_rejected`
