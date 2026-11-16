@@ -5,7 +5,8 @@ import { GLIESE } from './gliese-source';
 
 const HEADER = ['name', 'comp', 'vmag', 'n_vmag', 'r_vmag', 'bv', 'n_bv',
   'r_bv', 'sp', 'r_sp', 'plx_mas', 'e_plx_mas', 'n_plx', 'trplx_mas',
-  'rv', 'n_rv', 'hd'].join('\t');
+  'rv', 'n_rv', 'hd', 'ra_b1950_deg', 'de_b1950_deg', 'pm_arcsec_yr',
+  'pm_pa_deg'].join('\t');
 
 const row = (name: string, comp: string, vmag: string, bv = '', sp = '', hd = '') =>
   [name, comp, vmag, '', '', bv, '', '', sp, '', '', '', '', '', '', '', hd].join('\t');
@@ -35,6 +36,18 @@ describe('parseGlieseTsv', () => {
     expect(lookupGliese(index, 'GJ 3417')?.vMag).toBe(13.65);
     expect(lookupGliese(index, 'Gl 3417')?.vMag).toBe(13.65);
     expect(lookupGliese(index, 'GJ 1001')?.vMag).toBe(12.84);
+  });
+
+  it('reads the B1950 astrometry, null where any of its four cells is blank', () => {
+    const astrometry = (cells: string[]) => [row('GJ 1001', '', '12.84'), ...cells].join('\t');
+    const index = parseGlieseTsv(tsv(
+      astrometry(['0.521', '-40.963', '1.618', '154.5']),
+      [row('GJ 1002', '', '13.75'), '1.054', '-7.792', '', ''].join('\t'),
+    ), GLIESE);
+    expect(lookupGliese(index, 'GJ 1001')?.astrometryB1950).toEqual({
+      raB1950Deg: 0.521, decB1950Deg: -40.963, pmArcsecYr: 1.618, pmPaDeg: 154.5,
+    });
+    expect(lookupGliese(index, 'GJ 1002')?.astrometryB1950).toBeNull();
   });
 
   it('reads the HD column, null where V/70A prints none', () => {

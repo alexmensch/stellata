@@ -1,10 +1,10 @@
 {
   "inputs": {},
   "outputs": {
-    "data/tycho2/tycho2_main.tsv": "604070e2a62b924e50f8af0d7d0e72abe1014cbc",
+    "data/tycho2/tycho2_main.tsv": "7e3b326830215eff59f29ca70f2e2651caf369bf",
     "data/tycho2/tycho2_suppl1.tsv": "bbc669983c0cfabdb73ed013769b5629382974ba"
   },
-  "query": "ccfb145f4471c6d98a77c6dc354f3e1e8bb0ce48",
+  "query": "4e4aabade684d1db0e822732494f2e277dfa6eb0",
   "answeredBy": [
     "CfA"
   ],

@@ -44,7 +44,7 @@ import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import { PAIR_REVIEW } from './pair-review-tsv';
 import { MEMBERSHIP_MANIFEST } from './membership-manifest-tsv';
-import { BINDING_REVIEW_DISPOSITIONS } from './binding-review-dispositions-source';
+import { BINDING_REVIEW_DISPOSITIONS } from './binding/binding-review-dispositions-source';
 import { SPINE_CORRECTIONS } from './spine-corrections/spine-corrections-source';
 import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';

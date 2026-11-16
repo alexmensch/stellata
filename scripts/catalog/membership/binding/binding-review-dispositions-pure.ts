@@ -1,9 +1,9 @@
 // The binding review dispositions' columns, closed sets and reader.
 
-import type { Declared } from '../../util/sources/source';
-import { readTable } from '../../util/tsv/table-pure';
-import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
-import { BINDING_REVIEW_KEY_COLUMNS, bindingReviewKey } from './ledger-rows-pure';
+import type { Declared } from '../../../util/sources/source';
+import { readTable } from '../../../util/tsv/table-pure';
+import { evidenceOf } from '../../../util/tsv/cell-corrections-pure';
+import { BINDING_REVIEW_KEY_COLUMNS, bindingReviewKey } from '../ledger-rows-pure';
 
 export const BINDING_DISPOSITION_COLUMNS = [
   ...BINDING_REVIEW_KEY_COLUMNS, 'derived_source_id',

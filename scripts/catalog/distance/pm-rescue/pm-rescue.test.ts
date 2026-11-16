@@ -9,8 +9,8 @@ import {
 } from './pm-rescue';
 import type { CitedProperMotion } from '../../cited-proper-motion';
 import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
-import { TYCHO2_MEAN_EPOCH, type Tycho2Row } from '../../tycho2-parse';
-import { TYCHO2 } from '../../tycho2-source';
+import type { Tycho2Row } from '../../tycho2-parse';
+import { tycho2Row as tycho2Fixture } from '../../tycho2-fixture';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
 import { sourceRowRef } from '../../../util/sources/row-ref-pure';
 
@@ -24,13 +24,12 @@ const FABRICIUS = '2002A&A...384..180F';
 const CITED_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
 function tycho2Row(overrides: Partial<Tycho2Row> = {}): Tycho2Row {
-  return {
-    raDeg: 10, decDeg: 20, epoch: TYCHO2_MEAN_EPOCH,
+  return tycho2Fixture('1-1-1', {
+    raDeg: 10, decDeg: 20,
     pmRaMasyr: -453.7, pmDecMasyr: -591.4,
-    btMag: 5, vtMag: 4.5, fromIcrs: false, isPhotocentre: false, hip: null,
-    ref: sourceRowRef(TYCHO2, '1-1-1'),
+    btMag: 5, vtMag: 4.5,
     ...overrides,
-  };
+  });
 }
 
 function cited(
