@@ -106,4 +106,19 @@ describe('a synthetic SID whose component now resolves to a record of its own', 
     const other = allocateOver([anchor], upstreamOf([promotionStage({ kind: 'pair-anchor', ownStar: false }, primary, [])]));
     expect(other.kind === 'failed' && other.unexplained).toEqual(['synth:00010+0010-B']);
   });
+
+  it('refuses, naming both, a component one pair anchors on its own star and another drops', () => {
+    const primary = multiplesRow({ systemId: '00010+0010-BC', comp: 'B', orbitRole: 'primary' });
+    const dropped = multiplesRow({ systemId: '00010+0010-AB', comp: 'B' });
+    const rows: PromotedRow[] = [
+      { row: primary, via: 'primary', outcome: { kind: 'pair-anchor', ownStar: true }, anchor: 'spine:1', systemAnchor: 'spine:1', synthKey: 'synth-00010+0010-B' },
+      { row: dropped, via: 'secondary', outcome: { kind: 'dropped', reason: 'beyond-tidal-limit' }, anchor: 'spine:1', systemAnchor: 'spine:1', synthKey: 'synth-00010+0010-B' },
+    ];
+    const { lineage, identity } = promotionLineage(rows, enterPhase('promoted', []), new Set(['hip:100']), new Map());
+    const a = allocateOver([anchor], upstreamOf([{ stage: PROMOTION_CODES.stage, lines: lineage.map((r) => stageLineageLine(PROMOTION_CODES, r)), identity }]));
+    const errors = a.kind === 'failed' ? a.errors.join('\n') : '';
+    expect(errors).toMatch(/a merge mixed with other removals/);
+    expect(errors).toMatch(/promotion\.pair-anchor\.own-star/);
+    expect(errors).toMatch(/promotion\.dropped\.beyond-tidal-limit/);
+  });
 });
