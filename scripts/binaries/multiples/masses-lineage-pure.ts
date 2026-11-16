@@ -14,11 +14,11 @@ import { MASSES_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lin
 export const MASSES_LINEAGE_BUDGET = { gzipBytes: 800_000, writeMs: 1_000 };
 
 const BRANCH_TEXT: Record<MassBranch, string> = {
-  main_sequence: 'the main-sequence table (Cox 2000), its type a dwarf or subdwarf',
-  main_sequence_assumed: 'the main-sequence table (Cox 2000), its type stating no luminosity class',
+  main_sequence: 'the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type a dwarf or subdwarf',
+  main_sequence_assumed: 'the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type stating no luminosity class',
   subgiant: 'the subgiant weighting of the giant and main-sequence tables',
-  giant: 'the giant table (Cox 2000)',
-  supergiant: 'the supergiant table (Cox 2000)',
+  giant: 'the giant table of Cox 2000 (/data/papers/index.md#cox2000)',
+  supergiant: 'the supergiant table of Cox 2000 (/data/papers/index.md#cox2000)',
   white_dwarf: 'the white-dwarf default mass',
   carbon_wr: 'the carbon / S / Wolf-Rayet default mass',
 };

@@ -164,12 +164,12 @@ component-binding.hip.own	component-binding	none	outcome	live		7.1.23	The compon
 component-binding.hip.unbound	component-binding	none	outcome	live		7.1.23	The component has no HIP number.
 masses.not-read	masses	none	outcome	live		7.1.30	Stage 6 read no mass for the component: no orbit, or one publishing q and a.
 masses.read.carbon-wr	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the carbon / S / Wolf-Rayet default mass.
-masses.read.giant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the giant table (Cox 2000).
-masses.read.main-sequence	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table (Cox 2000), its type a dwarf or subdwarf.
-masses.read.main-sequence-assumed	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table (Cox 2000), its type stating no luminosity class.
+masses.read.giant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the giant table of Cox 2000 (/data/papers/index.md#cox2000).
+masses.read.main-sequence	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type a dwarf or subdwarf.
+masses.read.main-sequence-assumed	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the main-sequence table of Cox 2000 (/data/papers/index.md#cox2000), its type stating no luminosity class.
 masses.read.no-type	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass and found no spectral type, so none.
 masses.read.subgiant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the subgiant weighting of the giant and main-sequence tables.
-masses.read.supergiant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the supergiant table (Cox 2000).
+masses.read.supergiant	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the supergiant table of Cox 2000 (/data/papers/index.md#cox2000).
 masses.read.unparsed	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass and found a spectral type the parser cannot read, so none.
 masses.read.white-dwarf	masses	none	outcome	live		7.1.30	Stage 6 read the component's mass off the white-dwarf default mass.
 membership.addition-binding.bound	membership	none	outcome	retired	7.1.20	7.1.6	The admitted star's own Gaia source survives both gates and is no other record's.
