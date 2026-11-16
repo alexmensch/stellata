@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { wdsPair } from '../../wds/wds-fixture';
 import { RESOLVE_VIA } from '../multiples-record-pure';
-import { RESOLVE_VIA_PRIORITY, componentsOf, decompose, freezePairs, unresolvedComponent } from './components-pure';
+import { RESOLVE_VIA_PRIORITY, componentSides, componentsOf, decompose, freezePairs, unresolvedComponent } from './components-pure';
 
 describe('RESOLVE_VIA_PRIORITY', () => {
   it('ranks ccdm_hip after simbad_xid and before the position tiers', () => {
@@ -34,6 +34,16 @@ describe('decompose', () => {
     const [p] = decompose([wdsPair({ wdsId: 'W1', components: 'Aa1,2' })], unresolvedComponent);
     expect(p.tokens).toEqual(['Aa1', '2']);
     expect(p.secondary.component).toBe('2');
+  });
+});
+
+describe('componentSides', () => {
+  it('pairs each component with the row that produced it, in componentsOf order', () => {
+    const rows = [wdsPair({ wdsId: 'W1', components: 'AB' }), wdsPair({ wdsId: 'W2', components: 'Aa,Ab' })];
+    const pairs = decompose(rows, unresolvedComponent);
+    const sides = componentSides(pairs);
+    expect(sides.map((s) => `${s.row.wdsId}/${s.component.component}`)).toEqual(['W1/A', 'W1/B', 'W2/Aa', 'W2/Ab']);
+    expect(sides.map((s) => s.component)).toEqual(componentsOf(pairs));
   });
 });
 

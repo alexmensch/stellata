@@ -115,17 +115,24 @@ export function working(pairs: readonly DecomposedPair[]): Working {
   return { pairs: out, components: componentsOf(out) as Draft[] };
 }
 
+/** A component with the pair row that produced it. */
+export interface ComponentSide {
+  readonly row: WdsPair;
+  readonly component: ResolvedComponent;
+}
+
+/** Every component, primary then secondary, in pair order: the one order
+ *  `componentsOf` and every index into it follow. */
+export function componentSides(pairs: readonly DecomposedPair[]): readonly ComponentSide[] {
+  return pairs.flatMap((p) => [{ row: p.pair, component: p.primary }, { row: p.pair, component: p.secondary }]);
+}
+
 export function componentsOf(pairs: readonly DecomposedPair[]): readonly ResolvedComponent[] {
-  return pairs.flatMap((p) => [p.primary, p.secondary]);
+  return componentSides(pairs).map((s) => s.component);
 }
 
 export function pairRows(pairs: readonly DecomposedPair[]): readonly WdsPair[] {
   return pairs.map((p) => p.pair);
-}
-
-/** Each component's own pair row, in `componentsOf` order. */
-export function componentPairRows(pairs: readonly DecomposedPair[]): readonly WdsPair[] {
-  return pairs.flatMap((p) => [p.pair, p.pair]);
 }
 
 /** Every pair row that splits, each side bound by `bind`. */

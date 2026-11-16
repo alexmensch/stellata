@@ -16,7 +16,7 @@ import {
 import { athygDirectionAtEpoch, pairAthygMatches } from './athyg-match-pure';
 import { ARBITRATION_RUNNERUP_FACTOR } from './binding-audit-pure';
 import {
-  componentPairRows, findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
+  componentSides, findOwningPair, own, ownGaia, pairRows, pairsByDiscoverer, unresolvedComponent, working,
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import {
@@ -228,14 +228,14 @@ export function resolveViaCcdm(
   const rejected: CascadeRefusal[] = [];
   if (indices.ccdmToHips.size === 0) return { pairs: w.pairs, rejected };
   const rows = pairRows(pairs);
-  const rowOf = componentPairRows(pairs);
+  const sides = componentSides(pairs);
   const index = pairsByDiscoverer(rows);
   const letterPositions = buildSystemLetterPositions(rows);
   const claims = buildSystemHipClaims(out);
   const primaryHipByPair = new Map<WdsPair, number>();
   const ccdmPick = (i: number, q: CcdmQuery): number | null => {
     const { hip, owned } = ccdmCandidateHip(q, indices, letterPositions.get(q.wdsId), claims);
-    for (const h of owned) rejected.push({ gate: 'ccdm_sibling_owned', pair: rowOf[i], component: out[i].component, hip: h });
+    for (const h of owned) rejected.push({ gate: 'ccdm_sibling_owned', pair: sides[i].row, component: out[i].component, hip: h });
     return hip;
   };
 
@@ -289,7 +289,7 @@ export function resolveViaPosition(
   pairs: readonly DecomposedPair[], athyg: readonly AthygRow[],
 ): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
   const { matches, siblingClaimed } = pairAthygMatches(pairs, athyg, { skip: (_i, c) => c.gaia !== null });
-  const rowOf = componentPairRows(pairs);
+  const sides = componentSides(pairs);
   const w = working(pairs);
   const out = w.components;
   for (const m of matches) {
@@ -303,7 +303,7 @@ export function resolveViaPosition(
     }
   }
   const rejected = siblingClaimed.map((s): CascadeRefusal => ({
-    gate: 'athyg_match_sibling_claimed', pair: rowOf[s.componentIdx], component: out[s.componentIdx].component, hip: s.hip,
+    gate: 'athyg_match_sibling_claimed', pair: sides[s.componentIdx].row, component: out[s.componentIdx].component, hip: s.hip,
   }));
   return { pairs: w.pairs, rejected };
 }

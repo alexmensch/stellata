@@ -22,7 +22,10 @@ scripts/binaries/resolve/
                                tier that found it; resolveViaOf reads
                                `unresolved` off a null one), decompose
                                (the split), working (a pass's copy),
-                               findOwningPair, RESOLVE_VIA_PRIORITY.
+                               componentSides (each component with the
+                               row that produced it: the one component
+                               order), findOwningPair,
+                               RESOLVE_VIA_PRIORITY.
   cascade-pure.ts              The tiers: resolveComponent (ORB6 HIP,
                                AT-HYG-native), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the

@@ -18,7 +18,7 @@ import {
   type BindingShape, type BindingVerdictKind, type VerdictPart, type VerdictTouch,
 } from './binding-audit-pure';
 import { CASCADE_GATES, type CascadeGate } from './cascade-pure';
-import { componentPairRows, componentsOf, resolveViaOf, valueOf } from './components-pure';
+import { componentSides, resolveViaOf, valueOf } from './components-pure';
 import type { Stage2Result } from './resolve-pairs';
 import { RESOLVE_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 
@@ -122,11 +122,10 @@ function touchParams({ verdict, sourceId }: VerdictTouch): LineageParams {
 }
 
 export function* resolveLineageRows(result: Pick<Stage2Result, 'pairs' | 'refusals' | 'touches'>): Generator<LineageRow> {
-  const rows = componentPairRows(result.pairs);
-  for (const [i, c] of componentsOf(result.pairs).entries()) {
+  for (const { row, component: c } of componentSides(result.pairs)) {
     const gaia = valueOf(c.gaia);
     const hip = valueOf(c.hip);
-    yield stageRow(RESOLVE_CODES, rowKey(rows[i], c.component), tierBranch(resolveViaOf(c)), {
+    yield stageRow(RESOLVE_CODES, rowKey(row, c.component), tierBranch(resolveViaOf(c)), {
       ...(gaia === null ? {} : { gaia }),
       ...(hip === null ? {} : { hip: hipDesignation(hip) }),
     }, []);
