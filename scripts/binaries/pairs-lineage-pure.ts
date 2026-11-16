@@ -93,13 +93,19 @@ export function pairsLineageLines(decisions: PairDecisions): LineageLine[] {
   return stageLines(PAIRS_CODES, pairsLineageRows(decisions));
 }
 
-/** One identity row per pair Stage 5 rejected that names a component no multiples.tsv row composes, carrying that component's synthetic key, so a SID keyed on it joins the rejection's retire. */
+const sideSyntheticIds = (p: DecomposedPair) => pairSyntheticIds(p.primary.wdsId, p.primary.component, p.secondary.component);
+
+/** One identity row per pair Stage 5 rejected that names a component no pair Stage 5 kept names and no multiples.tsv row composes, carrying that component's synthetic key, so a SID keyed on it joins the rejection's retire. */
 export function pairsIdentity({ optical, multiples }: Pick<PairDecisions, 'optical' | 'multiples'>): IdentityRow[] {
-  const shipped = multiplesSyntheticIds(multiples.rows);
+  const decided = [...optical.optical];
+  const named = new Set([
+    ...multiplesSyntheticIds(multiples.rows),
+    ...decided.flatMap(([p, via]) => (isRejectedVia(via) ? [] : sideSyntheticIds(p))),
+  ]);
   const rows: IdentityRow[] = [];
-  for (const [p, via] of optical.optical) {
+  for (const [p, via] of decided) {
     if (!isRejectedVia(via)) continue;
-    const departed = [...new Set(pairSyntheticIds(p.primary.wdsId, p.primary.component, p.secondary.component))].filter((id) => !shipped.has(id));
+    const departed = [...new Set(sideSyntheticIds(p))].filter((id) => !named.has(id));
     if (departed.length === 0) continue;
     rows.push(identityRow(
       sourceRowRefText(p.pair.origin), { tyc: '', hip: '', hd: '', gl: '', gaia_source_id: '' }, departed.map(synthDesignation),

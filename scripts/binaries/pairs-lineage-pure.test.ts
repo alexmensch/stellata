@@ -120,6 +120,13 @@ describe('pairsIdentity', () => {
     expect(identityOf([a, b], new Map([[rejected, 'sep_limit_rejected']]))).toEqual([]);
   });
 
+  it('leaves out a side a pair Stage 5 kept names, even one that never reached multiples.tsv', () => {
+    const keptNoPosition = pairIn('00008+0008', 'STF  80', 'AC');
+    expect(identityOf([], new Map([[rejected, 'gaia_rejected'], [keptNoPosition, 'mag_heuristic_kept']]))).toEqual([
+      ['wds:00008+0008/STF   8/AB', ['synth:00008+0008-B']],
+    ]);
+  });
+
   it('keys a truncated secondary on its canonical letter, as promotion does', () => {
     expect(identityOf([], new Map([[truncated, 'mag_heuristic_rejected']]))).toEqual([
       ['wds:00009+0009/STF   9/Aa1,2', ['synth:00009+0009-Aa1', 'synth:00009+0009-Aa2']],

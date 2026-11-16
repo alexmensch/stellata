@@ -367,14 +367,16 @@ form, components as printed), an MSC inner pair's first orbit row's key
 A decomposed pair's `params` carry each side's letter and, where bound, its
 Gaia source bare and its HIP as `hip:` — the forms trace matches a query on.
 Every code but `pairs.rejected.*` is an outcome with no removal effect. A
-rejected pair whose side composes no `multiples.tsv` row's synthetic key
-(`rowSyntheticId`; the secondary on its canonical letter) has left the file
-because of the rejection, so the stage writes an identity row
+rejected pair's side that no pair Stage 5 kept names, and no
+`multiples.tsv` row composes (`pairSyntheticIds` / `rowSyntheticId`; the
+secondary on its canonical letter), left the file because of the
+rejection, so the stage writes an identity row
 (`pairs.identity.tsv.gz`, `pairsIdentity`) under the pair's key carrying
 each such side's `synth:` key. SID allocation joins a ledger key that left
 the build to that row and retires it under the rejection's code
-([SID events](/scripts/sid/README.md#sid-events)); a side some kept pair still
-ships stays promotion's to decide. Its counts fold into the snapshot's
+([SID events](/scripts/sid/README.md#sid-events)). A side a kept pair still
+ships stays promotion's to decide; a side whose kept pair Stage 6 could not
+place (`pairs.no-position`) has no decision, so its departure fails closed. Its counts fold into the snapshot's
 `pairs` stage ([Composition, not counting](counts/README.md#composition-not-counting)).
 
 `PAIRS_LINEAGE_BUDGET` pins 2.6 MB and 2 s: 167,851 rows came to 2,376,628
