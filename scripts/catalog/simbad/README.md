@@ -46,11 +46,10 @@ scripts/catalog/simbad/
 ## Which SIMBAD numbers are Flamsteed numbers
 
 SIMBAD writes every numbered designation as `* NN Con` and does not say which
-catalogue the number is from. Flamsteed's (*Historia Coelestis*, 1725) shares
-the form with Gould's southern numbering and others, so the ident alone cannot
-attest a Flamsteed cell. Far-southern constellations Flamsteed never observed
-(Car, Vel, Cen, Mus, Cir, Lup, Ara, Tuc, Hor, Gru) carry `* NN Con` idents in
-SIMBAD all the same.
+catalogue the number is from, so the ident alone cannot attest a Flamsteed
+cell. SIMBAD carries `* NN Con` idents in constellations where IV/27A
+publishes no Flamsteed number at all (Ara, Cir, Gru, Hor, Mus, Sct, Tuc) and
+past IV/27A's highest number in others (Car, Vel, Lup, Cen).
 
 **The rule: a number counts where it lies within IV/27A's Flamsteed range for
 its constellation and IV/27A gives it to no other star.** IV/27A
@@ -60,17 +59,18 @@ what a Flamsteed number there can be; a number IV/27A gives to a different
 star — by HD and HIP both — is that star's. `classifySimbadFlamsteed` applies
 it to every object; the accepted numbers index by the object's HIP and HD.
 
-A star Flamsteed catalogued twice, once in each of two neighbouring
-constellations (β Tau = 112 Tau = 23 Aur), keeps the number IV/27A publishes:
+A star SIMBAD numbers in two neighbouring constellations (β Tau carries both
+`112 Tau` and `23 Aur`) keeps the number IV/27A publishes:
 IV/27A gives one per star, and the number a record already carries is never
 replaced.
 
 **The rule errs both ways, so an accepted number only attests a cell a record
-already carries.** It refuses some real Flamsteed numbers — 51 Lib on ξ Sco
-lies past IV/27A's highest Lib number, 50 — and it admits some that are not:
-IV/27A's own Flamsteed column runs past Flamsteed's catalogue in the south
-(Puppis to 212, Centaurus to 89, two numbers in Dorado), so `171 Pup`, the
-IAU's `171 G. Pup`, passes. Both wait for a primary edition of the catalogue
+already carries.** It refuses some numbers SIMBAD gives a star as its own —
+`51 Lib` on ξ Sco lies past IV/27A's highest Lib number, 50 — and it admits
+some that another authority names differently: IV/27A's own Flamsteed column
+reaches 212 in Puppis, 89 in Centaurus and two numbers in Dorado, so SIMBAD's
+`171 Pup` on HIP 37853 passes where the IAU WGSN designates the star
+`171 G. Pup`, a Gould number. Both wait for a primary edition of the catalogue
 (`stellata-hooj.46.3`); `build:membership` never fills an empty cell from
 SIMBAD ([SIMBAD attests a Flamsteed cell](../membership/README.md#simbad-attests-it-never-fills)).
 

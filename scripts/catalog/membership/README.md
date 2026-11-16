@@ -261,9 +261,9 @@ on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifes
 rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
 <a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
-cell; it never supplies one.** IV/27A's own Flamsteed column runs past
-Flamsteed's catalogue in the south (Puppis to 212, Centaurus to 89), so the
-rule's range cannot tell a Gould number from a Flamsteed one by itself; a
+cell; it never supplies one.** IV/27A's own Flamsteed column reaches 212 in
+Puppis and 89 in Centaurus, so the rule's range admits numbers the IAU WGSN
+designates as Gould numbers (`171 G. Pup`) and cannot tell the two apart; a
 SIMBAD number agreeing with a cell the record already carries is two
 witnesses, a SIMBAD number alone is one. Filling an empty cell waits on a
 primary Flamsteed edition (`stellata-hooj.46.3`).
