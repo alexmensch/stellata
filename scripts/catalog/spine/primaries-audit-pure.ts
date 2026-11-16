@@ -4,6 +4,7 @@
 
 import { SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
+import { acceptedFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 import type {
   Bsc5Row,
   Cns5Row,
@@ -75,6 +76,8 @@ export interface PrimaryTables extends BindingTables {
   hip2: ReadonlySet<number>;
   wgsn: WgsnKeys;
   tycho2: ReadonlyMap<string, Tycho2Row>;
+  /** SIMBAD's `* NN Con` numbers the Flamsteed rule accepts (../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers). */
+  simbadFlamsteed: SimbadFlamsteed;
 }
 
 /** Exact `number+comp` keys, per-letter aliases and bare numbers, all through
@@ -220,7 +223,7 @@ export type GlAttestation = 'cns5' | 'v70a' | null;
  *  the naming ladder's normalisers, which are `../naming/`'s to own. `flam` is
  *  compared by value — README.md#the-primaries-audit states the asymmetry. */
 export type BayerAttestation = 'iv27a' | 'wgsn' | null;
-export type FlamAttestation = 'iv27a' | 'wgsn' | null;
+export type FlamAttestation = 'iv27a' | 'wgsn' | 'simbad' | null;
 export type ProperAttestation = 'wgsn' | 'sol' | null;
 
 /** Which frozen primary attests each classical designation the row carries.
@@ -279,12 +282,13 @@ function publishesFlam(
 
 function attestFlam(
   flam: number, hd: number | null, hip: number | null,
-  idx: PrimaryIndex, wgsn: WgsnKeys,
+  idx: PrimaryIndex, tables: PrimaryTables,
 ): FlamAttestation {
   if (publishesFlam(idx.iv27aFlamByHd, hd, flam)
     || publishesFlam(idx.iv27aFlamByHip, hip, flam)) return 'iv27a';
-  if (publishesFlam(wgsn.flamByHd, hd, flam)
-    || publishesFlam(wgsn.flamByHip, hip, flam)) return 'wgsn';
+  if (publishesFlam(tables.wgsn.flamByHd, hd, flam)
+    || publishesFlam(tables.wgsn.flamByHip, hip, flam)) return 'wgsn';
+  if (acceptedFlamsteed(tables.simbadFlamsteed, hd, hip, flam) !== undefined) return 'simbad';
   return null;
 }
 
@@ -339,7 +343,7 @@ export function attestIdentifiers(
     hr: hr === null ? null : idx.hrSet.has(hr) ? 'v50' : null,
     hip: hip === null ? null : tables.hipI239.has(hip) ? 'i239' : null,
     gl: gl === null ? null : attestGl(gl, idx, tables.gliese),
-    flam: flam === null ? null : attestFlam(flam, hd, hip, idx, tables.wgsn),
+    flam: flam === null ? null : attestFlam(flam, hd, hip, idx, tables),
     proper: proper === null
       ? null
       : proper === SOL_PROPER_NAME ? 'sol' : tables.wgsn.names.has(proper) ? 'wgsn' : null,

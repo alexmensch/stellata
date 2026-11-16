@@ -748,6 +748,7 @@ export type MembershipDerivedCounts = Readonly<Record<
   | 'sharedDesignations'
   | 'rowsWithHdAlt'
   | 'rowsWithHrAlt'
+  | 'flamsteedRefusals'
   | `spineCellsCorrected.${SpineCorrectionCell}`,
   number
 >>;
