@@ -24,7 +24,7 @@ import {
 import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-pure';
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import type { PhotometryVia } from '../../binaries/multiples-record-pure';
-import { canonicalCompLetter, composeSyntheticId, wdsRootOf } from '../../binaries/component-tokens-pure';
+import { canonicalCompLetter, rowSyntheticId, wdsRootOf } from '../../binaries/component-tokens-pure';
 import { hasRenderableOrbit } from '../../../src/catalog-format/binaries/binaries-format';
 import { fold } from '../../util/counts/tally-pure';
 import { promotionOriginKey } from './promotion-lineage/promotion-lineage-pure';
@@ -267,7 +267,7 @@ interface PromoteRowContext {
   position: CompanionPlacement | null;
   /** Canonical comp letter for the row — the composer's component letter post-sort. */
   canonicalComp: string;
-  /** `composeSyntheticId` of the row over `canonicalComp`: the key a mint
+  /** `rowSyntheticId` of the row, over `canonicalComp`: the key a mint
    *  carries, and the one its PromotedRow records. */
   synthKey: string;
   /** True when this row is a pair-row-primary escape (the cursor primary
@@ -713,14 +713,14 @@ function walkCursors(
   const unpaired = (row: MultiplesTsvRow): PromotedRow => (
     {
       row, via: 'unpaired', outcome: { kind: 'unpaired' }, anchor: null, systemAnchor: null,
-      synthKey: composeSyntheticId(row.systemId, row.comp),
+      synthKey: rowSyntheticId(row, null),
     }
   );
   const escaped = new Set<MultiplesTsvRow>();
   const escapeCursorPrimary = (cursor: PairCursor): number | null => {
     const anchor = escapeAnchorOf(cursor, index);
     if (anchor === null) return null;
-    const synthKey = composeSyntheticId(anchor.primary.systemId, anchor.primary.comp);
+    const synthKey = rowSyntheticId(anchor.primary, null);
     const outcome = promoteCursorPrimary(anchor.primary, anchor.system, synthKey, state);
     const systemKey = anchor.system.star.originKey;
     record({ row: anchor.primary, via: 'escape', outcome, anchor: systemKey, systemAnchor: systemKey, synthKey });
@@ -738,7 +738,7 @@ function walkCursors(
     // Existing records first, then previously-promoted ones — 40 Eri B is
     // promoted in the BC group and reused as the anchor for BD.
     let primaryCatalogIdx = index.findExistingPrimary(cursor.primary);
-    const primarySynthKey = composeSyntheticId(cursor.primary.systemId, cursor.primary.comp);
+    const primarySynthKey = rowSyntheticId(cursor.primary, null);
     const cursorRoot = wdsRootOf(cursor.primary.systemId);
     const rootAnchor = index.rootAnchor(cursorRoot);
     if (
@@ -785,7 +785,7 @@ function walkCursors(
         continue;
       }
       const canonicalComp = canonicalCompLetter(cursor.primary.comp, row.comp);
-      const synthKey = composeSyntheticId(row.systemId, canonicalComp);
+      const synthKey = rowSyntheticId(row, cursor.primary.comp);
       const decided = (outcome: RowOutcome): PromotedRow => ({
         row, via: 'secondary', outcome, anchor: anchorKey, systemAnchor: systemAnchorKey, synthKey,
       });

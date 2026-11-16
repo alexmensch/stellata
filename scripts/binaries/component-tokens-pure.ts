@@ -2,6 +2,7 @@
 
 import { ascending } from '../../src/astro-core/order-pure';
 import { splitComponents } from '../wds/wds-pure';
+import type { OrbitRole } from './multiples-record-pure';
 
 /** The WDS id of a Stage 6 `system_id` (`<wds_id>-<components>`), or of a
  *  synth key's `<wds_id>-<comp>` body: everything before the last dash, so a
@@ -25,6 +26,16 @@ export function syntheticIdIn(wdsId: string, comp: string): string {
   const c = comp.trim();
   if (!c) throw new Error(`no synthetic key composes in ${wdsId} from comp "${comp}"`);
   return `synth-${wdsId}-${c}`;
+}
+
+/** The synthetic key a multiples.tsv row composes: a pair's secondary on its
+ *  canonical letter, re-anchored on its pair's primary; every other row on its own comp. */
+export function rowSyntheticId(
+  row: { readonly systemId: string; readonly comp: string; readonly orbitRole: OrbitRole },
+  pairPrimaryComp: string | null,
+): string {
+  const comp = row.orbitRole === 'secondary' && pairPrimaryComp !== null ? canonicalCompLetter(pairPrimaryComp, row.comp) : row.comp;
+  return composeSyntheticId(row.systemId, comp);
 }
 
 /** Re-anchor WDS prefix truncation on a secondary's comp: Stage 6 writes
