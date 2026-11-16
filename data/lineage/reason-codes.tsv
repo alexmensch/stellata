@@ -352,6 +352,7 @@ naming.dc.gcvs	naming	none	outcome	live		7.1.12	The record's designations render
 naming.dc.iv27a	naming	none	outcome	live		7.1.12	The record's designations render against the constellation IV/27A gives its HD or HIP number.
 naming.dc.none	naming	none	outcome	live		7.1.12	No tier states a designation constellation and the record has no positional one, so its Bayer, Flamsteed and Gould designations cannot render.
 naming.dc.positional	naming	none	outcome	live		7.1.12	No tier states a designation constellation, so the record's designations render against the constellation its position lies in.
+naming.dc.simbad	naming	none	outcome	live		7.1.31	The record's Flamsteed number renders against the constellation SIMBAD names it in, IV/27A carrying no row for the star.
 naming.dc.wgsn-bayer	naming	none	outcome	live		7.1.12	The record's designations render against the constellation the IAU WGSN Bayer designation is named for.
 naming.dc.wgsn-gould	naming	none	outcome	live		7.1.12	The record's designations render against the constellation the IAU WGSN Gould designation is named for.
 naming.letter.borrowed	naming	none	outcome	live		7.1.12	The label carries the record's WDS component letter after its system anchor's borrowed base.

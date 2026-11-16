@@ -18,6 +18,7 @@ import {
   iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import { refusalRows, type CatalogueKeys, type FlamsteedRefusalRow } from '../simbad/flamsteed-refusals-pure';
 import type { PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
@@ -76,6 +77,7 @@ export interface MembershipResult extends MembershipLedgers {
   rows: ManifestRecord[];
   lineage: LineageRow[];
   identity: IdentityRow[];
+  flamsteedRefusals: FlamsteedRefusalRow[];
   derived: MembershipDerivedCounts;
 }
 
@@ -140,14 +142,26 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   ].map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const sorted = sortManifestRecords(rows);
+  const flamsteedRefusals = refusalRows(tables.simbadFlamsteed, catalogueKeys(sorted));
   return {
-    rows: sorted, ...ledgers, lineage, identity,
-    derived: derivedCounts(sorted, spine.mergeCounts, corrections),
+    rows: sorted, ...ledgers, lineage, identity, flamsteedRefusals,
+    derived: derivedCounts(sorted, spine.mergeCounts, corrections, flamsteedRefusals),
   };
+}
+
+function catalogueKeys(rows: readonly ManifestRecord[]): CatalogueKeys {
+  const hips = new Set<number>();
+  const hds = new Set<number>();
+  for (const row of rows) {
+    if (row.hip !== null) hips.add(row.hip);
+    for (const hd of row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt]) hds.add(hd);
+  }
+  return { hips, hds };
 }
 
 function derivedCounts(
   sorted: readonly ManifestRecord[], merge: LabelMergeCounts, corrections: readonly SpineCorrectionRow[],
+  flamsteedRefusals: readonly FlamsteedRefusalRow[],
 ): MembershipDerivedCounts {
   const owners = new Map<string, number>();
   for (const row of sorted) {
@@ -160,6 +174,7 @@ function derivedCounts(
     sharedDesignations: [...owners.values()].filter((n) => n > 1).length,
     rowsWithHdAlt: sorted.filter((r) => r.hdAlt.length > 0).length,
     rowsWithHrAlt: sorted.filter((r) => r.hrAlt.length > 0).length,
+    flamsteedRefusals: flamsteedRefusals.length,
     ...prefixed('spineCellsCorrected.', fold(
       SPINE_CORRECTION_CELLS, corrections.filter((r) => r.op === 'set'), (r) => r.cell,
     )),

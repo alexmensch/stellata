@@ -339,11 +339,12 @@ derived from the record's position. The cascade:
 
 ```
 IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
+  -> SIMBAD's constellation for the record's own Flamsteed number
   -> GCVS trailing abbreviation -> positional conIndex
 ```
 
 `DesignationCon` holds the index with the tier that wrote it (`wgsn-bayer`,
-`wgsn-gould`, `iv27a`, `gcvs`, or `anchor` for a companion that took its system
+`wgsn-gould`, `iv27a`, `simbad`, `gcvs`, or `anchor` for a companion that took its system
 anchor's), and for an authority tier the IV/27A index it overwrote with a
 different one; `{ via: 'none' }` until a tier writes it.
 [Naming lineage](../naming/README.md#naming-lineage) records both.
@@ -367,12 +368,14 @@ Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
   disagreements and nothing the overlay reaches that it does not. One tier
   instead of two.
 
-The 123 rows it misses are faint Flamsteed-only records absent from IV/27A's
-TAP subset; they ride the positional fallback.
+The faint Flamsteed-only records absent from IV/27A take the constellation
+SIMBAD names their number in, where the Flamsteed rule accepts it
+([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)):
+<!-- count:build-catalog/naming.dc.simbad -->121<!-- /count --> records (`naming.dc.simbad`).
 
-**GCVS fills the field only where IV/27A left it empty**; the records whose
+**GCVS fills the field only where IV/27A and SIMBAD left it empty**; the records whose
 Bayer, Flamsteed or Gould designation then renders against it are
-`naming.dc.gcvs` (<!-- count:build-catalog/naming.dc.gcvs -->1<!-- /count -->). On the
+`naming.dc.gcvs` (<!-- count:build-catalog/naming.dc.gcvs -->0<!-- /count -->). On the
 8 where the two disagree the star carries a Bayer/Flamsteed designation and a
 variable name in different constellations (HD 104337 is Crater's Flamsteed star
 and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its

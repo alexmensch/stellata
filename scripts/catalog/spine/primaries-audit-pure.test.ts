@@ -4,6 +4,8 @@ import { parseGlieseTsv } from '../gliese-parse-pure';
 import type { Tycho2Row } from '../tycho2-parse';
 import { tycho2Row } from '../tycho2-fixture';
 import { GLIESE } from '../gliese-source';
+import type { CrossIndexRow } from '../classic-ids/classic-ids-parse';
+import { classifySimbadFlamsteed, type SimbadIdentsObject } from '../simbad/simbad-flamsteed-pure';
 import { glieseTsv } from '../gliese-fixture';
 import { SPINE_COLUMNS, type SpineRow } from './inherited-spine-pure';
 import {
@@ -37,6 +39,14 @@ const GLIESE_TSV = glieseTsv(
   'Gl 165\tAB\t9.0\t\t\t\t\t\t',
 );
 
+const IV27A: CrossIndexRow[] = [
+  { hd: 100001, hip: 10, bayer: 'alf', flamsteed: 1, cst: 'And' },
+  { hd: 123456, hip: null, bayer: 'bet', flamsteed: 7, cst: 'Cas' },
+];
+
+/** HIP 20's object: `5 Cas` sits inside IV/27A's Cas range, `9 Cas` past it. */
+const SIMBAD_OBJECTS: SimbadIdentsObject[] = [{ oid: 1, hips: [20], hds: [], idents: ['* 5 Cas', '* 9 Cas'] }];
+
 const tables: PrimaryTables = {
   iv25: [
     { tyc: '1-1-1', hd: 100001, nHd: 1, nTyc: 1 },
@@ -49,10 +59,7 @@ const tables: PrimaryTables = {
     { hr: 9999, hd: null, name: 'NGC 1' },
     { hr: 50, hd: 123456, name: null },
   ],
-  iv27a: [
-    { hd: 100001, hip: 10, bayer: 'alf', flamsteed: 1, cst: 'And' },
-    { hd: 123456, hip: null, bayer: 'bet', flamsteed: 7, cst: 'Cas' },
-  ],
+  iv27a: IV27A,
   cns5: [
     { cns5: 1, gj: '551.0', gjComp: null, gaiaSourceId: '555', hip: 70890, astrometry: null },
     { cns5: 2, gj: '423', gjComp: 'AB', gaiaSourceId: null, hip: null, astrometry: null },
@@ -76,6 +83,7 @@ const tables: PrimaryTables = {
     flamByHip: new Map<number, Set<number>>(),
   },
   tycho2: new Map([['1-1-1', tycho2(8.5, 10)], ['1-2-1', tycho2(10.2)], ['9-9-1', tycho2(11.7)]]),
+  simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_OBJECTS, IV27A),
   tycToSource: new Map([['1-1-1', '111'], ['1-2-1', '222'], ['9-9-1', '999']]),
   hipToSource: new Map([[10, '111'], [20, '333']]),
   simbadSourceless: [],
@@ -157,6 +165,11 @@ describe('attestSpineRow', () => {
     expect(wrong.unattested).toEqual(['flam']);
     expect(attestSpineRow(row({ hd: '123456', flam: '7' }), tables, idx).attestation.flam)
       .toBe('iv27a');
+  });
+
+  it('attests a Flamsteed number SIMBAD gives the star only where the Flamsteed rule accepts it', () => {
+    expect(attestSpineRow(row({ hip: '20', flam: '5' }), tables, idx).attestation.flam).toBe('simbad');
+    expect(attestSpineRow(row({ hip: '20', flam: '9' }), tables, idx).unattested).toEqual(['flam']);
   });
 
   it('attests a Bayer cell on the star, not the letter, and falls back to WGSN', () => {

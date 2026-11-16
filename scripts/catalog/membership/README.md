@@ -33,9 +33,10 @@ scripts/catalog/membership/
                                   which meets cells only through encode.
                                   Leaf: readers import it, not the generator
                                   module.
-  additions-ledger-tsv.ts         The five ledgers' codecs, one leaf each:
-  binding-review-tsv.ts           header check, decode and sort order.
-  label-drops-tsv.ts
+  additions-ledger-tsv.ts         The six ledgers' codecs, one leaf each:
+  binding-review-tsv.ts           header check, decode and sort order. The
+  flamsteed-refusals-tsv.ts       refusal ledger's rows are ../simbad/'s
+  label-drops-tsv.ts              (../simbad/README.md#the-refused-numbers).
   merge-divergence-tsv.ts
   pair-review-tsv.ts
   ledger-rows-pure.ts             Their columns, row types and closed sets,
@@ -252,21 +253,25 @@ dispositions that settle them and outrank it wherever one keys a row — is
 
 **A label no primary attests leaves the row.** After the merge, an HD —
 display cell or alias — that IV/25, V/50 and I/239's own `HD` column all
-lack, and a Flamsteed number neither IV/27A nor WGSN publishes for the star,
-are emptied into `data/membership/label-drops.tsv`: one row per cell, keyed on
-the manifest row as it stands afterwards, under `hd_unattested` or
-`flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196 on HIP 90265, where
-I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> Flamsteed numbers. Those <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> are real
-designations with no frozen primary behind them: IV/27A is the whole
-3,690-row table (<!-- count:classic-id-overlay/crossIndexRows -->3,688<!-- /count --> after its curated corrections) and publishes 2,755
-Flamsteed numbers, and SIMBAD lists every one of the 119 as `* NN Con`
-(measured 2026-09-06). Attesting them from a frozen SIMBAD identifier pull is
-the open option; until one exists the manifest ships without them and the
-ledger says which.
+lack, and a Flamsteed number IV/27A, WGSN and SIMBAD's accepted numbers
+([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers))
+all lack for the star, are emptied into `data/membership/label-drops.tsv`: one
+row per cell, keyed on the manifest row as it stands afterwards, under
+`hd_unattested` or `flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196
+on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
+rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
-**No dropped label was keying its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
+<a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
+cell; it never supplies one.** IV/27A's own Flamsteed column reaches 212 in
+Puppis and 89 in Centaurus, so the rule's range admits numbers the IAU WGSN
+designates as Gould numbers (`171 G. Pup`) and cannot tell the two apart; a
+SIMBAD number agreeing with a cell the record already carries is two
+witnesses, a SIMBAD number alone is one. Filling an empty cell waits on a
+primary Flamsteed edition (`stellata-hooj.46.3`).
+
+**No dropped label keys its record**, which is the same question [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) asks
 of a dropped binding and the reason neither queue writes a SID event. A
-Flamsteed number is not a designation at all, so the <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->119<!-- /count --> cannot move a key. An
+Flamsteed number is not a designation at all, so it cannot move a key. An
 HD can, so the gate states the rule rather than the coincidence: whatever keys
 the row after the drop must already outrank the cell it lost. Dropping the
 display HD promotes the first surviving alias into it, so the cell a record
