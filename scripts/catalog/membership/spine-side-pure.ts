@@ -14,7 +14,7 @@ import {
 } from '../classic-ids/label-merge/label-merge-pure';
 import type { SpineRow } from '../spine/inherited-spine-pure';
 import { textCell } from '../../util/tsv/table-pure';
-import type { PrimaryIndex, PrimaryTables } from '../spine/primaries-audit-pure';
+import { spineKeys, type PrimaryIndex, type PrimaryTables } from '../spine/primaries-audit-pure';
 import type { SpineSettlement } from './binding/spine-settle-pure';
 import { attestedLabels, routedRow } from './label-attestation-pure';
 import type { KeyedOutcome } from './membership-lineage-pure';
@@ -52,6 +52,7 @@ export function spineSide(input: {
     siblingRenderedSourceIds: input.siblingRenderedSourceIds,
   });
   const outcomes: KeyedOutcome[] = [];
+  const spineHips = spineKeys(kept).hip;
   const rows = records.map((record, i) => {
     const key = keyOf(i);
     if (record.gaiaSourceId === null) outcomes.push({ key, outcome: { kind: 'ships-none' } });
@@ -63,7 +64,7 @@ export function spineSide(input: {
     }
     const printed = { tyc: textCell(kept[i].tyc), proper: textCell(kept[i].proper) };
     const merged = primariesManifestRecord(printed, record, settled[i].ships.binding, key);
-    const labels = attestedLabels(merged, tables, idx);
+    const labels = attestedLabels(merged, tables, idx, spineHips);
     for (const d of labels.drops) outcomes.push({ key, outcome: { kind: 'label-drop', ...d } });
     const attested = routedRow(labels);
     outcomes.push(...attested.outcomes);

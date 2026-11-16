@@ -83,9 +83,11 @@ flamsteed-refusals.tsv   Regular git. Pipeline-derived. Every SIMBAD
                          (/scripts/catalog/simbad/README.md#the-refused-numbers).
                          37 rows.
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
-                         spine Flamsteed / HD cell no primary attests, keyed
-                         on the manifest row it left, under
-                         flamsteed_unattested (3) · hd_unattested (1).
+                         spine Flamsteed / HD cell no primary attests, or HD
+                         I/239 and SIMBAD give to another spine HIP, keyed on
+                         the manifest row it left, under
+                         flamsteed_unattested (3) · hd_unattested (1) ·
+                         hd_other_hip (1).
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·

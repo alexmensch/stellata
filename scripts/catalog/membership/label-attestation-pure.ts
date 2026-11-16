@@ -29,19 +29,31 @@ export function attestRow(row: ManifestRecord, tables: PrimaryTables, idx: Prima
   return { row, attestation: attestIdentifiers(row, tables, idx) };
 }
 
+/** README.md#the-unattested-labels-leave-the-row */
+function hdOfAnotherHip(
+  hd: number, hip: number | null, tables: PrimaryTables, idx: PrimaryIndex, spineHips: ReadonlySet<number>,
+): boolean {
+  if (hip === null || tables.i239HipHd.has(hip)) return false;
+  return [...idx.i239HipsByHd.get(hd) ?? []].some(
+    (other) => other !== hip && spineHips.has(other) && tables.simbadHdsByHip.get(other)?.has(hd) === true,
+  );
+}
+
 /** The spine-label cells a row keeps once those no primary attests leave it —
  *  the Flamsteed number, and the HD number with its aliases — each drop a
  *  label-parity ledger row (/docs/catalog-driver.md#62-label-parity). The HD
  *  drop runs first because IV/27A can publish a Flamsteed number against an
- *  HD no HD primary attests. */
+ *  HD no HD primary attests. `spineHips` is every HIP a kept spine row carries. */
 export function attestedLabels(
-  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex,
+  row: ManifestRecord, tables: PrimaryTables, idx: PrimaryIndex, spineHips: ReadonlySet<number>,
 ): AttestedRow & { drops: LabelDrop[] } {
   const drops: LabelDrop[] = [];
   const hds = row.hd === null ? row.hdAlt : [row.hd, ...row.hdAlt];
   const attestedHds = hds.filter((hd) => {
-    if (attestHd(hd, idx, tables) !== null) return true;
-    drops.push({ cell: 'hd', value: String(hd), reason: 'hd_unattested' });
+    const reason: LabelDropReason | null = attestHd(hd, idx, tables) === null ? 'hd_unattested'
+      : hdOfAnotherHip(hd, row.hip, tables, idx, spineHips) ? 'hd_other_hip' : null;
+    if (reason === null) return true;
+    drops.push({ cell: 'hd', value: String(hd), reason });
     return false;
   });
   const hdKept = attestRow({ ...row, hd: attestedHds[0] ?? null, hdAlt: attestedHds.slice(1) }, tables, idx);

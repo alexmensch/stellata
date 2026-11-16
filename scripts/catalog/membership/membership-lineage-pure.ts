@@ -171,6 +171,7 @@ const UNATTESTED_BRANCHES = {
 const LABEL_DROP_BRANCHES = {
   flamsteed_unattested: 'label-drop.flamsteed-unattested',
   hd_unattested: 'label-drop.hd-unattested',
+  hd_other_hip: 'label-drop.hd-other-hip',
 } as const satisfies Record<LabelDropReason, string>;
 
 const DISPOSITION_DESCRIPTIONS = {
@@ -446,6 +447,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
+  'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP a spine record carries, so it leaves the record.'),
   ...MERGE_CODES,
   ...RETIRED_DIFFERS_CODES,
 });

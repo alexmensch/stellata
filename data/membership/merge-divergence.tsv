@@ -504,7 +504,7 @@ tyc	hip	hd	gl	gaia_source_id	divergence	cells	derived	evidence
 8158-286-1	41847		Gl 308.3	5322816367956156160	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 8190-900-1	48928		Gl 375.1	5406185187878596480	unlinked	gl	tyc+hip | gl	tyc+hip | gl
 8196-4347-1	51271	90884	GJ 11493	5357886734438478848	derived_only	gl	GJ 11493	free
-8200-172-1	54335	96600		5386566842404336000	unlinked	hd	tyc+hip | hd	tyc+hip | hd
+8200-172-1	54335			5386566842404336000	unlinked	hd	tyc+hip | hd	tyc+hip | hd
 823-1352-1	46634			589720969909458176	derived_only	hd	82159	held
 8241-3236-1		105383		6126469139186679808	derived_only	hr	4619	free
 8247-3507-1	64550	114853	GJ 11903A	6088054505011960832	derived_only	gl	GJ 11903A	free

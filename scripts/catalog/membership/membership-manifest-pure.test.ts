@@ -181,6 +181,7 @@ const tables: PrimaryTables = {
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
+  simbadHdsByHip: new Map<number, Set<number>>(),
   glAliases: new Map<string, string[]>(),
   hip2: new Set<number>(),
   wgsn: {
@@ -483,6 +484,38 @@ describe('buildMembership — the spine side', () => {
     }));
   });
 
+  describe('an HD I/239 and SIMBAD both give to another spine HIP', () => {
+    const withOther = (t: Partial<PrimaryTables>) => buildMembership({
+      ...withTables({
+        ...tables,
+        hdI239: new Set([70100]),
+        i239HipHd: new Map([[71, 70100]]),
+        simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        ...t,
+      }),
+      spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70100' })],
+    });
+
+    it('leaves the record whose own HIP I/239 prints no HD for', () => {
+      const built = withOther({});
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: null });
+      expect(built.rows.find((r) => r.hip === 71)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops).toContainEqual(expect.objectContaining({
+        hip: 72, cell: 'hd', value: 70100, reason: 'hd_other_hip',
+      }));
+    });
+
+    it.each([
+      ['I/239 prints an HD for the record\'s own HIP', { i239HipHd: new Map([[71, 70100], [72, 70101]]) }],
+      ['SIMBAD does not give the HD to the other HIP', { simbadHdsByHip: new Map<number, Set<number>>() }],
+      ['no spine record carries the other HIP', { i239HipHd: new Map([[73, 70100]]), simbadHdsByHip: new Map([[73, new Set([70100])]]) }],
+    ])('keeps the HD where %s', (_, t) => {
+      const built = withOther(t);
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+    });
+  });
+
   it('drops the spine labels no primary attests onto the label ledger', () => {
     const row = result.rows.find((r) => r.hip === 70)!;
     expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
@@ -490,7 +523,7 @@ describe('buildMembership — the spine side', () => {
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested' },
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
-    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
+    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1, hd_other_hip: 0 });
   });
 
   it('leaves an empty Flamsteed cell empty whatever SIMBAD numbers the star', () => {
