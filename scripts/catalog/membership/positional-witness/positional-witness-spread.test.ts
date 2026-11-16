@@ -68,7 +68,7 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
   it("finds every GJ cell the merge derivation queues outside the gap above the V/70A tolerance", () => {
     const gliese = GLIESE.read();
     const rows = MERGE_DIVERGENCE.parse(readFileSync(resolve(REPO_ROOT, MERGE_DIVERGENCE.file), 'utf-8'))
-      .filter((r) => r.divergence === 'unlinked' && r.cells === 'gl');
+      .filter((r) => r.divergence === 'unlinked' && r.cells === 'gl' && r.tyc !== null);
     const astrometry = rows.map((r) => ({ r, a: lookupGliese(gliese, r.gl)?.astrometryB1950 ?? null }));
     const witnessed = astrometry.flatMap(({ r, a }) => (a === null ? [] : [witnessV70a(a, candidates([r.tyc!]))]));
     expect(rows.length).toBe(24);
