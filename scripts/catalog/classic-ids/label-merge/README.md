@@ -104,7 +104,7 @@ this merge writes, so the step table refuses that read as a cycle
 ([Loops through committed files](/scripts/pipeline/README.md#loops-through-committed-files)).
 Promotion can still decline to render a member row, so the set is a
 deliberate **superset** of what ships — 37 withheld
-(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 36 records whose system names a sibling, of which
+(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->36<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 36 records whose system names a sibling, of which
 33 render one today: HD 13729 (on HIP 10382) and HD 122939 (on HIP 68964)
 are withheld on SIMBAD's word for a component binaries keeps no pair for.
 
