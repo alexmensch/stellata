@@ -9,6 +9,7 @@ import {
 } from './primaries-audit-pure';
 import type { SimbadXids } from '../spectral/spectral-resolve';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
+import { idCell } from '../../util/tsv/table-pure';
 
 export type KeyCell = 'tyc' | 'hip' | 'hd' | 'hr' | 'gl';
 export const KEY_CELLS: readonly KeyCell[] = ['tyc', 'hip', 'hd', 'hr', 'gl'];
@@ -97,9 +98,9 @@ export function partitionRow(row: SpineRow, links: LinkTables): RowPartition | n
   const cells = KEY_CELLS.filter((c) => row[c] !== '');
   if (cells.length < 2) return null;
   const at = new Map(cells.map((c, i) => [c, i] as const));
-  const hip = row.hip === '' ? null : Number(row.hip);
-  const hd = row.hd === '' ? null : Number(row.hd);
-  const hr = row.hr === '' ? null : Number(row.hr);
+  const hip = idCell(row.hip);
+  const hd = idCell(row.hd);
+  const hr = idCell(row.hr);
   const has = (c: KeyCell): boolean => at.has(c);
 
   const published = (uf: UnionFind): void => {

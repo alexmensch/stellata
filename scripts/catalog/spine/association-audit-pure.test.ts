@@ -63,6 +63,10 @@ describe('partitionRow', () => {
     const p = partitionRow(row({ hip: '40', gl: 'GJ 4' }), links())!;
     expect(p.partition).toEqual({ published: 'gl | hip', witnessed: 'hip+gl' });
   });
+
+  it('refuses an identifier cell that is not bare digits rather than reading it as NaN', () => {
+    expect(() => partitionRow(row({ hip: '1O', hd: '100' }), links())).toThrow('"1O" is not an identifier');
+  });
 });
 
 describe('auditAssociations', () => {
