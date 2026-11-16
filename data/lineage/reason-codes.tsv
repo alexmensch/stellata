@@ -328,7 +328,7 @@ membership.merge.pair.review.simbad-refused	membership	none	outcome	live		7.1.25
 membership.merge.unlinked	membership	none	outcome	live		7.1.23	Neither the primaries' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.
 membership.overlay.bright.entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has a row for the source it ships.
 membership.overlay.bright.no-entry	membership	none	outcome	live		7.1.20	The spine row is at V <= 3, and the classic-ID overlay has no row for the source it ships, or it ships none.
-membership.unattested.bayer	membership	none	outcome	live		7.1.20	The record ships a Bayer designation no primary attests for it.
+membership.unattested.bayer	membership	none	outcome	retired	7.1.31	7.1.20	The record ships a Bayer designation no primary attests for it.
 membership.unattested.gl	membership	none	outcome	live		7.1.20	The record ships a GJ designation no primary attests for it.
 membership.unattested.hip	membership	none	outcome	live		7.1.20	The record ships a HIP no primary attests for it.
 membership.unattested.hr	membership	none	outcome	live		7.1.20	The record ships an HR number no primary attests for it.

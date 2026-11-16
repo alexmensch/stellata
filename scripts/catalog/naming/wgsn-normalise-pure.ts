@@ -244,6 +244,15 @@ export function normaliseIv27aBayer(
   return { class: 'other_catalogue', raw: cell };
 }
 
+/** /docs/star-naming.md#4-canonical-designation-forms, V/50 normaliser. */
+export function normaliseBsc5Bayer(name: string): NormalisedCell {
+  const cst = name.slice(-3);
+  const field = name.slice(-7, -4).trim();
+  if (name.length < 7 || !IAU_CODES.has(cst) || field === '') return { class: 'empty' };
+  const sup = name.slice(-4, -3).trim();
+  return normaliseIv27aBayer(sup === '' ? field : `${field}${sup.padStart(2, '0')}`, cst);
+}
+
 /** Split a multi-name cell into display name + published alternates:
  *  `Nganurganity / Unurgunite` → both; `Yunü (Yunu)` / `Bake-eo (or Bake
  *  Eo)` → parenthetical transliterations. Load-bearing, not cosmetic —

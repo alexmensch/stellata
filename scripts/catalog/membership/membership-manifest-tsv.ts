@@ -17,7 +17,7 @@ export function joinManifestValues(values: readonly (string | number)[]): string
 }
 
 export const MANIFEST_COLUMNS = [
-  'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'bayer', 'proper',
+  'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'proper',
   'gaia_source_id', 'binding', 'routes', 'term', 'origin_key',
 ] as const;
 export type ManifestColumn = (typeof MANIFEST_COLUMNS)[number];
@@ -41,7 +41,6 @@ export interface ManifestRecord {
   hrAlt: number[];
   gl: string | null;
   flam: number | null;
-  bayer: string | null;
   proper: string | null;
   /** Kept as a string: a DR3 source_id exceeds Number.MAX_SAFE_INTEGER. */
   gaiaSourceId: string | null;
@@ -83,7 +82,6 @@ export function manifestRecord(
     hrAlt: ints('hr_alt'),
     gl: text('gl'),
     flam: int('flam'),
-    bayer: text('bayer'),
     proper,
     gaiaSourceId: parsed('gaia_source_id', sourceIdCell),
     binding: oneOf('binding', BINDING_CLASSES),
@@ -94,15 +92,14 @@ export function manifestRecord(
   };
 }
 
-/** A primaries row from its merged labels: the spine's printed TYC, Bayer and
- *  proper cells (empty on an addition) beside the label merge's record. */
+/** A primaries row from its merged labels (README.md#columns). */
 export function primariesManifestRecord(
-  printed: { tyc: string | null; bayer: string | null; proper: string | null },
+  printed: { tyc: string | null; proper: string | null },
   r: LabelMergeRecord,
   binding: BindingClass,
   originKey: string,
 ): ManifestRecord {
-  const { tyc, bayer, proper } = printed;
+  const { tyc, proper } = printed;
   return {
     tyc,
     hip: r.hip,
@@ -112,7 +109,6 @@ export function primariesManifestRecord(
     hrAlt: [...r.hrAlt],
     gl: r.gl,
     flam: r.flam,
-    bayer,
     proper,
     gaiaSourceId: r.gaiaSourceId,
     binding,
@@ -128,7 +124,7 @@ export function primariesManifestRecord(
 export function magnitudeManifestRecord(sourceId: string, originKey: string): ManifestRecord {
   return {
     tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, flam: null,
-    bayer: null, proper: null,
+    proper: null,
     gaiaSourceId: sourceId,
     binding: 'gaia_native',
     routes: '',
@@ -180,7 +176,6 @@ export const MEMBERSHIP_MANIFEST = defineArtifact({
     hr_alt: joinManifestValues(r.hrAlt),
     gl: nullableCell(r.gl),
     flam: nullableCell(r.flam),
-    bayer: nullableCell(r.bayer),
     proper: nullableCell(r.proper),
     gaia_source_id: nullableCell(r.gaiaSourceId),
     binding: r.binding,

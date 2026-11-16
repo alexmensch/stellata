@@ -123,8 +123,6 @@ export interface WalkedStar {
   readonly flags: number;
   /** The manifest's printed `proper` cell, never the display name. */
   readonly printedName: string | null;
-  /** The manifest's printed Bayer cell (`Alp`), read only to count what the naming ladder adds and drops. */
-  readonly printedBayer: string | null;
   hip: number | null;
   hd: number | null;
   hr: number | null;
@@ -584,7 +582,6 @@ export function rowResolver({
       conIndex,
       flags: row.isSol ? FLAG_IS_SOL : 0,
       printedName: proper,
-      printedBayer: row.bayer,
       hip,
       hd: row.hd,
       hr: row.hr,
