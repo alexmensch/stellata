@@ -22,8 +22,9 @@ scripts/binaries/orbits/
                                  pickBestOrb6 / pickBestMsc among one
                                  pair's rows.
   select-orbit-pure.ts (+ test)  PairOrbit; selectOrbit, the cascade for
-                                 one pair; nssSeparationConsistent and
-                                 keplerSemimajorAxisAu.
+                                 one pair, and the candidates it weighed
+                                 (ORBIT_PASS_RULES); nssSeparationConsistent
+                                 and keplerSemimajorAxisAu.
   attach-orbits.ts (+ test)      attachStage4 (every pair's candidates,
                                  then selectOrbit), Stage4Result,
                                  orbitTally, stage4Counts, stage4Rates.
@@ -37,9 +38,14 @@ its `OrbitElements` — a route with elements never coexists with a null
 orbit. The routes, their order and what each carries (`hasElements`, the
 legacy `regime`, whether Stage 6 estimates its missing q / ω / a) are one
 table, `ORBIT_VIA_PROPERTIES` (`../multiples-record-pure.ts`);
-`selectOrbit` walks `ORBIT_VIA_ON_FILE` in that order with one route function
-per member, the first to return elements winning. A route whose best row
-converts to nothing (an unreadable period) falls through to the next.
+`selectOrbit` walks `ORBIT_VIA_ON_FILE` in that order, weighing each route's
+candidates — its best ORB6 row in the grade band, its best MSC row, and one
+NSS row per distinct Gaia source on the pair's sides — the first to yield
+elements winning. A route whose best row converts to nothing (an unreadable
+period) falls through to the next. It returns the orbit beside every
+candidate it weighed, each citing its own row: the one `chosen`, or the rule
+that passed it over (`ORBIT_PASS_RULES`, per route in its gates' order), a
+candidate below the winner being `outranked` unweighed.
 
 `attachStage4` gathers each pair's candidates: its ORB6 rows by (WDS id,
 components field), its MSC rows by its tokens with the secondary's WDS

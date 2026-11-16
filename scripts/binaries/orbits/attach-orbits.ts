@@ -10,11 +10,13 @@ import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-record-pure';
 import { groupOrb6ByPair } from '../resolve/cascade-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
-import { selectOrbit, type PairOrbit } from './select-orbit-pure';
+import { selectOrbit, type OrbitCandidate, type PairOrbit } from './select-orbit-pure';
 
 export interface Stage4Result {
   /** One per Stage 3 pair. */
   readonly orbits: ReadonlyMap<DecomposedPair, PairOrbit>;
+  /** Every orbit row each pair's cascade weighed, the chosen one among them. */
+  readonly candidates: ReadonlyMap<DecomposedPair, readonly OrbitCandidate[]>;
 }
 
 function frozen(orbit: PairOrbit): PairOrbit {
@@ -27,6 +29,7 @@ export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs)
   const systemParallax = systemParallaxAnchors(stage3.pairs, stage3.astrometry);
   const { msc, srcToNss } = reference.indices;
   const orbits = new Map<DecomposedPair, PairOrbit>();
+  const weighed = new Map<DecomposedPair, readonly OrbitCandidate[]>();
   for (const p of stage3.pairs) {
     const [primary, secondary] = p.tokens;
     const candidates = {
@@ -34,9 +37,11 @@ export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs)
       msc: msc.orbitsByPair.get(mscPairKey(p.pair.wdsId, primary, canonicalCompLetter(primary, secondary)))?.rows ?? [],
       systemParallaxMas: systemParallax.get(p.pair.wdsId)?.parallaxMas ?? null,
     };
-    orbits.set(p, frozen(selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss)));
+    const decision = selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss);
+    orbits.set(p, frozen(decision.orbit));
+    weighed.set(p, Object.freeze(decision.candidates.map((c) => Object.freeze(c))));
   }
-  return Object.freeze({ orbits });
+  return Object.freeze({ orbits, candidates: weighed });
 }
 
 export function orbitTally(result: Stage4Result): Record<OrbitVia, number> {

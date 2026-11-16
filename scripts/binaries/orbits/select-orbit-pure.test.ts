@@ -11,7 +11,10 @@ import { mscOrbit } from '../load/load-fixture';
 import type { MscOrbitRow } from '../load/msc-pure';
 import { decomposed, type Side } from '../resolve/resolve-fixture';
 import { nssOrbitalRow } from './nss-fixture';
-import { keplerSemimajorAxisAu, nssSeparationConsistent, selectOrbit, type PairOrbit } from './select-orbit-pure';
+import {
+  keplerSemimajorAxisAu, nssSeparationConsistent, selectOrbit, type OrbitDecision, type PairOrbit,
+} from './select-orbit-pure';
+import { sourceRowRefText } from '../../util/sources/row-ref-pure';
 
 const ast = (parallaxMas: number | null = 10): ComponentAstrometry => measured({ raDeg: 0, parallaxMas, pmraMasyr: 0, pmdecMasyr: 0 });
 
@@ -27,7 +30,7 @@ interface Case {
   systemParallaxMas?: number | null;
 }
 
-function select(c: Case): PairOrbit {
+function decide(c: Case): OrbitDecision {
   const p = decomposed(wdsPair({ components: c.components ?? 'AB', rhoLast: c.rho ?? null }), {
     primary: { gaiaSourceId: '42', ...c.primary },
     secondary: { gaiaSourceId: null, ...c.secondary },
@@ -37,6 +40,9 @@ function select(c: Case): PairOrbit {
   const srcToNss = new Map((c.nss ?? []).map((r) => [r.sourceId, r]));
   return selectOrbit(p, astrometry, { orb6: c.orb6 ?? [], msc: c.msc ?? [], systemParallaxMas: c.systemParallaxMas ?? null }, srcToNss);
 }
+
+const select = (c: Case): PairOrbit => decide(c).orbit;
+const verdicts = (c: Case): string[] => decide(c).candidates.map((w) => `${w.route} ${w.verdict} ${sourceRowRefText(w.from)}`);
 
 const nss = (over: Parameters<typeof nssOrbitalRow>[0] = {}): NssOrbitRow => nssOrbitalRow({ sourceId: '42', periodDays: 200, ...over });
 const via = (o: PairOrbit): string => o.orbitVia;
@@ -132,8 +138,43 @@ describe('selectOrbit', () => {
 
   it('reads the parallax from the secondary when the primary is unresolved', () => {
     const p = decomposed(wdsPair({ rhoLast: null }), { primary: { gaiaSourceId: '42' } });
-    const o = selectOrbit(p, { primary: UNRESOLVED_ASTROMETRY, secondary: ast(4) }, { orb6: [orb6Entry()], msc: [], systemParallaxMas: 99 }, new Map());
+    const o = selectOrbit(p, { primary: UNRESOLVED_ASTROMETRY, secondary: ast(4) }, { orb6: [orb6Entry()], msc: [], systemParallaxMas: 99 }, new Map()).orbit;
     expect(elementsOf(o)!.distancePc).toBe(250);
+  });
+});
+
+describe('selectOrbit — the candidates it weighed', () => {
+  const routeVerdicts = (c: Case): string[] => verdicts(c).map((v) => v.split(' ').slice(0, 2).join(' '));
+
+  it('names the chosen row, and every lower route\'s row as outranked', () => {
+    expect(routeVerdicts({ orb6: [orb6Entry({ grade: 2 }), orb6Entry({ grade: 8 })], nss: [nss()], msc: [mscOrbit()], rho: 0 }))
+      .toEqual(['orb6 chosen', 'gaia_nss outranked', 'orb6_spectroscopic outranked', 'msc outranked']);
+  });
+
+  it('cites each candidate by its own row', () => {
+    expect(verdicts({ orb6: [orb6Entry({ grade: 2 })], nss: [nss()] }).map((v) => v.split(' ')[2]))
+      .toEqual([expect.stringMatching(/^orb6:/), 'gaia-dr3-nss:42']);
+  });
+
+  it('gives each NSS gate its own rule, before the route that won', () => {
+    expect(routeVerdicts({ secondary: { gaiaSourceId: '99' }, nss: [nss({ sourceId: '99', periodDays: 100 })] }))
+      .toEqual(['gaia_nss partner_distinct_source']);
+    expect(routeVerdicts({ nss: [nss({ periodDays: 10 * DAYS_PER_JULIAN_YEAR, aMas: 5000 })] })).toEqual(['gaia_nss out_of_regime']);
+    expect(routeVerdicts({ nss: [nss({ periodDays: 0.9702 })], rho: 5.5, plx: 18.5, orb6: [orb6Entry({ grade: 8 })] }))
+      .toEqual(['gaia_nss separation_inconsistent', 'orb6_spectroscopic chosen']);
+  });
+
+  it('weighs a source both sides share once', () => {
+    expect(routeVerdicts({ components: 'Aa,Ab', secondary: { gaiaSourceId: '42' }, nss: [nss()] })).toEqual(['gaia_nss chosen']);
+  });
+
+  it('passes over an unreadable row and an MSC orbit on a measured pair', () => {
+    expect(routeVerdicts({ orb6: [orb6Entry({ grade: 1, pUnit: '0' })], msc: [mscOrbit()], rho: 2 }))
+      .toEqual(['orb6 unreadable', 'msc measured_separation']);
+  });
+
+  it('weighs nothing for a pair with nothing on file', () => {
+    expect(decide({})).toEqual({ orbit: { orbitVia: 'none' }, candidates: [] });
   });
 });
 
