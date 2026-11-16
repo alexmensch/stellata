@@ -11,26 +11,27 @@ import { ORBIT_VIA, ORBIT_VIA_ON_FILE, type OrbitVia } from '../multiples-record
 import { groupOrb6ByPair } from '../resolve/cascade-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import type { OrbitsCounts } from './orbits-lineage-pure';
-import { selectOrbit, type OrbitCandidate, type PairOrbit } from './select-orbit-pure';
+import { selectOrbit, type OrbitDecision, type PairOrbit } from './select-orbit-pure';
 
 export interface Stage4Result {
-  /** One per Stage 3 pair. */
-  readonly orbits: ReadonlyMap<DecomposedPair, PairOrbit>;
-  /** Every orbit row each pair's cascade weighed, the chosen one among them. */
-  readonly candidates: ReadonlyMap<DecomposedPair, readonly OrbitCandidate[]>;
+  /** One per Stage 3 pair: its orbit and every orbit row its cascade weighed. */
+  readonly decisions: ReadonlyMap<DecomposedPair, OrbitDecision>;
 }
 
-function frozen(orbit: PairOrbit): PairOrbit {
+export function orbitOf(result: Stage4Result, p: DecomposedPair): PairOrbit {
+  return result.decisions.get(p)!.orbit;
+}
+
+function frozen({ orbit, candidates }: OrbitDecision): OrbitDecision {
   if (orbit.orbitVia !== 'none') Object.freeze(orbit.elements);
-  return Object.freeze(orbit);
+  return Object.freeze({ orbit: Object.freeze(orbit), candidates: Object.freeze(candidates.map((c) => Object.freeze(c))) });
 }
 
 export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs): Stage4Result {
   const orb6ByPair: ReadonlyMap<PairRowKey, readonly Orb6Entry[]> = groupOrb6ByPair(reference.orb6);
   const systemParallax = systemParallaxAnchors(stage3.pairs, stage3.astrometry);
   const { msc, srcToNss } = reference.indices;
-  const orbits = new Map<DecomposedPair, PairOrbit>();
-  const weighed = new Map<DecomposedPair, readonly OrbitCandidate[]>();
+  const decisions = new Map<DecomposedPair, OrbitDecision>();
   for (const p of stage3.pairs) {
     const [primary, secondary] = p.tokens;
     const candidates = {
@@ -38,15 +39,13 @@ export function attachStage4(stage3: Stage3Result, reference: ReferenceCatalogs)
       msc: msc.orbitsByPair.get(mscPairKey(p.pair.wdsId, primary, canonicalCompLetter(primary, secondary)))?.rows ?? [],
       systemParallaxMas: systemParallax.get(p.pair.wdsId)?.parallaxMas ?? null,
     };
-    const decision = selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss);
-    orbits.set(p, frozen(decision.orbit));
-    weighed.set(p, Object.freeze(decision.candidates.map((c) => Object.freeze(c))));
+    decisions.set(p, frozen(selectOrbit(p, stage3.astrometry.get(p)!, candidates, srcToNss)));
   }
-  return Object.freeze({ orbits, candidates: weighed });
+  return Object.freeze({ decisions });
 }
 
 export function orbitTally(result: Stage4Result): Record<OrbitVia, number> {
-  return fold(ORBIT_VIA, [...result.orbits.values()], (o) => o.orbitVia);
+  return fold(ORBIT_VIA, [...result.decisions.values()], (d) => d.orbit.orbitVia);
 }
 
 /** The share of pairs with elements whose elements are Gaia NSS's. */

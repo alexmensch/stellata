@@ -56,10 +56,9 @@ export const ORBITS_CODES = stageCodes(ORBITS_LINEAGE.stage, {
 });
 
 export function* orbitsLineageRows(result: Stage4Result): Generator<LineageRow> {
-  for (const [p, orbit] of result.orbits) {
+  for (const [p, { orbit, candidates }] of result.decisions) {
     const key = sourceRowRefText(p.pair.origin);
     const params = pairParams(p);
-    const candidates = result.candidates.get(p)!;
     const chosen = candidates.filter((c) => c.verdict === 'chosen').map((c) => sourceRowRefText(c.from));
     yield stageRow(ORBITS_CODES, key, `source.${kebab(orbit.orbitVia)}`, params, chosen);
     for (const c of candidates) {

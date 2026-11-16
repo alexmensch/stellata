@@ -5,7 +5,7 @@ import { groupBy } from '../../util/map-buckets-pure';
 import type { Stage3Result } from '../astrometry/attach-astrometry';
 import { systemParallaxAnchors, systemPmAnchors } from '../astrometry/system-anchors-pure';
 import type { IdentifierIndices } from '../load/indices-pure';
-import type { Stage4Result } from '../orbits/attach-orbits';
+import { orbitOf, type Stage4Result } from '../orbits/attach-orbits';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { classifyPairOptical, OPTICAL_REJECT_VIA, OPTICAL_VIA, type OpticalVia } from './optical-tiers-pure';
 import { orbitalPmBudgetKmS } from './pm-budget-pure';
@@ -27,12 +27,12 @@ export function attachStage5(
     const wdsId = p.pair.wdsId;
     const systemParallax = parallaxAnchors.get(wdsId) ?? null;
     optical.set(p, classifyPairOptical(p, {
-      orbitVia: stage4.orbits.get(p)!.orbitVia,
+      orbitVia: orbitOf(stage4, p).orbitVia,
       astrometry: stage3.astrometry.get(p)!,
       systemParallax,
       systemPm: pmAnchors.get(wdsId) ?? null,
       totalMassMsun: masses.get(p)!,
-      orbitalPmBudgetKmS: orbitalPmBudgetKmS(p, bySystem.get(wdsId)!, stage4.orbits, masses, systemParallax?.parallaxMas ?? null),
+      orbitalPmBudgetKmS: orbitalPmBudgetKmS(p, bySystem.get(wdsId)!, (q) => orbitOf(stage4, q), masses, systemParallax?.parallaxMas ?? null),
     }, indices));
   }
   return Object.freeze({ optical });

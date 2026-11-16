@@ -23,8 +23,7 @@ interface PairCase {
 }
 
 function stage4(...cases: readonly PairCase[]): Stage4Result {
-  const orbits = new Map();
-  const candidates = new Map();
+  const decisions = new Map();
   const srcToNss = new Map([['42', nssOrbitalRow({ sourceId: '42', periodDays: 200 })]]);
   for (const c of cases) {
     const p = decomposed(wdsPair({ wdsId: c.wdsId ?? 'W', components: c.components ?? 'AB', rhoLast: c.rho ?? 0 }), {
@@ -32,11 +31,9 @@ function stage4(...cases: readonly PairCase[]): Stage4Result {
       secondary: { gaiaSourceId: null },
     });
     const a = measured();
-    const d = selectOrbit(p, { primary: a, secondary: a }, { orb6: c.orb6 ?? [], msc: c.msc ?? [], systemParallaxMas: null }, srcToNss);
-    orbits.set(p, d.orbit);
-    candidates.set(p, d.candidates);
+    decisions.set(p, selectOrbit(p, { primary: a, secondary: a }, { orb6: c.orb6 ?? [], msc: c.msc ?? [], systemParallaxMas: null }, srcToNss));
   }
-  return { orbits, candidates };
+  return { decisions };
 }
 
 describe('orbitsLineageRows', () => {

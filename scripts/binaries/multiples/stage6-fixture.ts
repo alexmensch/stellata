@@ -48,7 +48,7 @@ export function runStage6(
   };
   return attachStage6(
     stage3,
-    { orbits: new Map(pairs.map((p, i) => [p, specs[i].orbit ?? NO_ORBIT])), candidates: new Map() },
+    { decisions: new Map(pairs.map((p, i) => [p, { orbit: specs[i].orbit ?? NO_ORBIT, candidates: [] }])) },
     { optical: new Map(pairs.map((p, i) => [p, specs[i].optical ?? 'wds_notes_kept'])) },
     { indices: ix, simbadWdsXids: xids },
   );

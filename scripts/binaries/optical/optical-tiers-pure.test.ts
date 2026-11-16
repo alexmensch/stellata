@@ -274,11 +274,11 @@ describe('orbitalPmBudgetKmS', () => {
 
   it('sums the tighter sub-pairs the components host, a sub-pair Gaia averages out contributing nothing', () => {
     const expected = CIRCULAR_KM_S_1AU_1MSUN * Math.sqrt(1.6 / (3.4 * (1000.0 / ANCHOR_PLX)));
-    expect(orbitalPmBudgetKmS(ac, [ac, ab, aaAb], orbits, masses, ANCHOR_PLX)).toBeCloseTo(expected, 6);
+    expect(orbitalPmBudgetKmS(ac, [ac, ab, aaAb], (q) => orbits.get(q)!, masses, ANCHOR_PLX)).toBeCloseTo(expected, 6);
   });
 
   it('gives a pair with no measured ρ no budget', () => {
-    expect(orbitalPmBudgetKmS(aaAb, [ac, ab, aaAb], orbits, masses, ANCHOR_PLX)).toBe(0.0);
+    expect(orbitalPmBudgetKmS(aaAb, [ac, ab, aaAb], (q) => orbits.get(q)!, masses, ANCHOR_PLX)).toBe(0.0);
   });
 
   it('ignores unrelated and wider pairs', () => {
@@ -287,7 +287,7 @@ describe('orbitalPmBudgetKmS', () => {
     const de = decomposed(wdsPair({ wdsId: 'W-1', components: 'DE', rhoLast: 90.0 }));
     const none = new Map<DecomposedPair, PairOrbit>([acW, bd, de].map((p) => [p, NO_ORBIT]));
     const m = new Map([acW, bd, de].map((p) => [p, DEFAULT_TOTAL_MASS]));
-    expect(orbitalPmBudgetKmS(acW, [acW, bd, de], none, m, ANCHOR_PLX)).toBe(0.0);
+    expect(orbitalPmBudgetKmS(acW, [acW, bd, de], (q) => none.get(q)!, m, ANCHOR_PLX)).toBe(0.0);
   });
 });
 

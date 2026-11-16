@@ -9,7 +9,7 @@ import type { ReferenceCatalogs } from '../load/reference-catalogs';
 import { A_VIA, ASTROMETRY_VIA, ORBIT_ROLES, SPECT_VIA, type MultiplesRecord } from '../multiples-record-pure';
 import { OPTICAL_VIA_PROPERTIES } from '../optical/optical-tiers-pure';
 import type { Stage5Result } from '../optical/attach-optical';
-import type { Stage4Result } from '../orbits/attach-orbits';
+import { orbitOf, type Stage4Result } from '../orbits/attach-orbits';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { computeAnchorOffsets } from './anchor-offsets-pure';
 import { pairRows, positionPc, standaloneRow } from './multiples-rows-pure';
@@ -37,7 +37,7 @@ export function attachStage6(
   for (const p of stage3.pairs) {
     if (!OPTICAL_VIA_PROPERTIES[stage5.optical.get(p)!].physical) continue;
     const built = pairRows(
-      p, stage3.astrometry.get(p)!, stage4.orbits.get(p)!, systemAnchors.get(p.pair.wdsId) ?? null, { indices, anchors },
+      p, stage3.astrometry.get(p)!, orbitOf(stage4, p), systemAnchors.get(p.pair.wdsId) ?? null, { indices, anchors },
     );
     if (built === null) {
       droppedNoPosition.push(p);

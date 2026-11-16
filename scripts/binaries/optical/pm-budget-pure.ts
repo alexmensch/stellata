@@ -16,7 +16,7 @@ function participates(x: string, u: string, v: string): boolean {
 export function orbitalPmBudgetKmS(
   p: DecomposedPair,
   systemPairs: readonly DecomposedPair[],
-  orbits: ReadonlyMap<DecomposedPair, PairOrbit>,
+  orbitOf: (q: DecomposedPair) => PairOrbit,
   masses: ReadonlyMap<DecomposedPair, number>,
   anchorParallaxMas: number | null,
 ): number {
@@ -31,7 +31,7 @@ export function orbitalPmBudgetKmS(
     if (rhoQ >= rhoP) continue;
     const qTokens = pairComponentTokens(q.pair.components);
     if (qTokens === null || !tokens.some((x) => participates(x, qTokens[0], qTokens[1]))) continue;
-    const orbit = orbits.get(q)!;
+    const orbit = orbitOf(q);
     const elements = orbit.orbitVia === 'none' ? null : orbit.elements;
     if (elements !== null && elements.pDays !== null && elements.pDays < ESCAPE_GATE_PM_AVERAGING_PERIOD_DAYS) continue;
     let rAu: number | null = null;

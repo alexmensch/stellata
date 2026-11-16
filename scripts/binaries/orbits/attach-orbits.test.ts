@@ -21,6 +21,6 @@ describe('stage4Rates', () => {
 
 describe('stage4Report', () => {
   it('logs an absent NSS orbit rate as n/a', () => {
-    expect(stage4Report({ orbits: new Map(), candidates: new Map() }).at(-1)).toBe('NSS orbit rate: n/a of pairs with elements');
+    expect(stage4Report({ decisions: new Map() }).at(-1)).toBe('NSS orbit rate: n/a of pairs with elements');
   });
 });

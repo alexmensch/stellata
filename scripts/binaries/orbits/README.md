@@ -28,8 +28,9 @@ scripts/binaries/orbits/
                                  (ORBIT_PASS_RULES); nssSeparationConsistent
                                  and keplerSemimajorAxisAu.
   attach-orbits.ts (+ test)      attachStage4 (every pair's candidates,
-                                 then selectOrbit), Stage4Result,
-                                 orbitTally, stage4Rates.
+                                 then selectOrbit), Stage4Result (each
+                                 pair's OrbitDecision), orbitOf, orbitTally,
+                                 stage4Rates.
   orbits-lineage-pure.ts         ORBITS_CODES, orbitsLineageLines,
     (+ test)                     orbitsCounts and ORBITS_INVARIANTS: the
                                  decisions as the orbits lineage stage

@@ -116,8 +116,8 @@ describe.skipIf(![...INPUTS, ASTROMETRY_REQUEST, SPOT_CHECK_GROUND_TRUTH].every(
   });
 
   it('selects one frozen orbit for every Stage 3 pair', () => {
-    expect([...s4.orbits.keys()]).toEqual(s3.pairs);
-    const withElements = [...s4.orbits.values()].flatMap((o) => (o.orbitVia === 'none' ? [] : [o]))[0];
+    expect([...s4.decisions.keys()]).toEqual(s3.pairs);
+    const withElements = [...s4.decisions.values()].flatMap(({ orbit: o }) => (o.orbitVia === 'none' ? [] : [o]))[0];
     expect([Object.isFrozen(withElements), Object.isFrozen(withElements.elements)]).toEqual([true, true]);
   });
 
