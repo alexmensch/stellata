@@ -51,11 +51,11 @@ describe.skipIf(!available)('sid ledger guard', () => {
     expect(wrong.map((e) => `${e.event} of sid ${e.sid}: ${e.code}`)).toEqual([]);
   });
 
-  it('retired state carries over from the migrated retirement files, plus the pair rule\'s 48 merges', () => {
+  it('retired state carries over from the migrated retirement files, plus the pair rule\'s 48 merges and the identity witness\'s 18', () => {
     const rows = allEvents();
-    expect(retiredSids(rows).size).toBe(3883);
-    expect(sidSuccessorPairs(rows).length).toBe(3639);
-    expect(new Set(rows.filter((e) => e.event === 'reinstate').map((e) => e.sid)).size).toBe(18);
+    expect(retiredSids(rows).size).toBe(3900);
+    expect(sidSuccessorPairs(rows).length).toBe(3657);
+    expect(new Set(rows.filter((e) => e.event === 'reinstate').map((e) => e.sid)).size).toBe(19);
   });
 
   it('stored same-as edges and the mint lists parse under the designation grammar', () => {
