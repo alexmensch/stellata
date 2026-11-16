@@ -1,7 +1,7 @@
 // The additions phase: items grouped into stars, each group bound through the shared derivation and admitted under the collision guard, or ledgered as a component. See README.md#grouping-and-admission.
 
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
-import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
+import { crossIndexHipsByHd, type Cns5Row } from '../../classic-ids/classic-ids-parse';
 import type { LabelMergeRecord } from '../../classic-ids/label-merge/label-merge-pure';
 import {
   ATHYG_HD_LINK_FLOOR,
@@ -129,11 +129,10 @@ function indexAdditions(tables: PrimaryTables): AdditionIndex {
     if (r.hd === null) continue;
     pushKeyed(hrByHd, r.hd, r.hr);
   }
-  const hipByHdIv27a = new Map<number, number[]>();
+  const hipByHdIv27a = crossIndexHipsByHd(tables.iv27a);
   const flamByHd = new Map<number, number>();
   const flamByHip = new Map<number, number>();
   for (const r of tables.iv27a) {
-    if (r.hip !== null) pushKeyed(hipByHdIv27a, r.hd, r.hip);
     if (r.flamsteed === null) continue;
     if (!flamByHd.has(r.hd)) flamByHd.set(r.hd, r.flamsteed);
     if (r.hip !== null && !flamByHip.has(r.hip)) flamByHip.set(r.hip, r.flamsteed);

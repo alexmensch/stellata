@@ -121,6 +121,16 @@ describe('unionBayerTail over V/50', () => {
     expect(u).toMatchObject({ cells: 1, covered: 1, added: [] });
   });
 
+  it('is covered when any HIP its HD is linked to is reached', () => {
+    const above = [desig({ letter: 'ξ', dc: 'UMa', hip: 55203 })];
+    const crossIndex = [
+      xrow({ hd: 98230, hip: 1, bayer: 'ksi', cst: 'UMa' }),
+      xrow({ hd: 98230, hip: 55203, bayer: 'ksi', cst: 'UMa' }),
+    ];
+    const u = unionBayerTail(above, bsc5BayerCells([{ hr: 4374, hd: 98230, name: '53Xi  UMa' }], crossIndex), 'v50');
+    expect(u).toMatchObject({ covered: 1, added: [] });
+  });
+
   it('skips a name with no Bayer field without counting it', () => {
     const u = unionBayerTail([], bsc5BayerCells([{ hr: 33, hd: 693, name: '6    Cet' }], []), 'v50');
     expect(u).toMatchObject({ cells: 0, added: [] });

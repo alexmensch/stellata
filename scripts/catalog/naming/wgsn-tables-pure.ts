@@ -1,6 +1,6 @@
 // The WGSN tables' row shaping and the Bayer tail unions, IV/27A then V/50. See README.md.
 
-import type { Bsc5Row, CrossIndexRow } from '../classic-ids/classic-ids-parse';
+import { crossIndexHipsByHd, type Bsc5Row, type CrossIndexRow } from '../classic-ids/classic-ids-parse';
 import { normaliseBsc5Bayer, normaliseIv27aBayer, type NormalisedCell } from './wgsn-normalise-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
@@ -78,12 +78,13 @@ export function bayerKeySets(rows: DesignationRow[]): {
   };
 }
 
-/** One tail source's Bayer cell, normalised. `reach` is every key a primary
- *  links the star to, which can be wider than the keys the row ships under. */
+/** One tail source's Bayer cell, normalised. `reach` is every key set a
+ *  primary links the star to, which can be wider than the keys the row ships
+ *  under; the cell is covered if any of them is reached. */
 export interface BayerTailCell {
   cell: NormalisedCell;
   keys: StarKeys;
-  reach: StarKeys;
+  reach: readonly StarKeys[];
 }
 
 export interface BayerTail {
@@ -109,7 +110,7 @@ export function unionBayerTail(
     tail.cells++;
     if (cell.class === 'variable') { tail.variableRejected++; continue; }
     if (cell.class !== 'bayer') { tail.unparsed++; continue; }
-    if (reached.reaches(reach)) { tail.covered++; continue; }
+    if (reach.some(reached.reaches)) { tail.covered++; continue; }
     tail.added.push(designationRow('bayer', { ...cell.bayer, component: null }, { ...keys, source }));
   }
   return tail;
@@ -119,7 +120,7 @@ export function iv27aBayerCells(crossIndex: readonly CrossIndexRow[]): BayerTail
   return crossIndex.flatMap((row) => {
     if (row.bayer === null || row.cst === null) return [];
     const keys = { hip: row.hip, hr: null, hd: row.hd };
-    return [{ cell: normaliseIv27aBayer(row.bayer, row.cst), keys, reach: keys }];
+    return [{ cell: normaliseIv27aBayer(row.bayer, row.cst), keys, reach: [keys] }];
   });
 }
 
@@ -128,15 +129,12 @@ export function bsc5BayerCells(
   bsc5: readonly Bsc5Row[],
   crossIndex: readonly CrossIndexRow[],
 ): BayerTailCell[] {
-  const hipByHd = new Map<number, number>();
-  for (const r of crossIndex) {
-    if (r.hd !== null && r.hip !== null) hipByHd.set(r.hd, r.hip);
-  }
+  const hipsByHd = crossIndexHipsByHd(crossIndex);
   return bsc5.flatMap((row) => {
     if (row.name === null) return [];
     const keys = { hip: null, hr: row.hr, hd: row.hd };
-    const linkedHip = row.hd === null ? null : hipByHd.get(row.hd) ?? null;
-    return [{ cell: normaliseBsc5Bayer(row.name), keys, reach: { ...keys, hip: linkedHip } }];
+    const linked = row.hd === null ? [] : hipsByHd.get(row.hd) ?? [];
+    return [{ cell: normaliseBsc5Bayer(row.name), keys, reach: [keys, ...linked.map((hip) => ({ ...keys, hip }))] }];
   });
 }
 
