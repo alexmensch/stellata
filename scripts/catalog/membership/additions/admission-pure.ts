@@ -386,7 +386,7 @@ function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
   return boundOutcome(g.derived);
 }
 
-/** README.md#identity-outranks-a-blended-magnitude: the group goes to the binding review queue. */
+/** ../binding/README.md#identity-outranks-a-blended-magnitude: the group goes to the binding review queue. */
 function queuedAddition(g: AdditionGroup, tables: PrimaryTables): KeyedOutcome {
   const hip = g.hip === null ? '' : String(g.hip.hip);
   const cells = { tyc: g.tyc, hip, hd: g.hd === null ? '' : String(g.hd.lowestHd), hr: '', gl: g.rawGl ?? '' };
