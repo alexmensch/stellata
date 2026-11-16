@@ -8,7 +8,7 @@ import { publicRepoPath } from '../../util/paths';
 import type { ManualKind, ManualStep } from './step-table-pure';
 
 const pull = (name: string, entry: string, outputs: readonly string[]): ManualStep => ({
-  name, kind: 'pull', language: 'python', entry: `scripts/refresh/${entry}`, outputs,
+  name, kind: 'pull', language: 'python', entry: `scripts/dust/${entry}`, outputs,
 });
 
 const tsManual = (kind: ManualKind, name: string, entry: string, module: string, constant: string): ManualStep => ({

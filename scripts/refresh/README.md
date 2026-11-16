@@ -43,34 +43,13 @@ reads committed files, refresh writes them. Each script lives under
 reads a request file a build writes, or for the DR2 neighbourhood a frozen
 one), and atomically replaces its output TSV under `data/`.
 
-### One-time setup
-
-The two Python pulls (Edenhofer) read the dust map through `dustmaps`, from
-`scripts/dust/requirements-dust.txt`
-([The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls)).
-Pin them to a local virtualenv so the system Python stays clean:
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r scripts/dust/requirements-dust.txt
-```
-
-After that, prefix every `python3` invocation with `.venv/bin/`, or
-shell-activate via `source .venv/bin/activate`. Every pnpm target below
-runs its script through `scripts/pipeline/record.ts`, which starts bare
-`python3` — activate the venv (or alias `python3` to the venv binary) in the
-shell that runs them. `record.ts` skips a pull whose `data/stamps/` record is
-still fresh (`--force` re-pulls) and rewrites the record after every run
+Every pnpm target below runs its script through `scripts/pipeline/record.ts`,
+which skips a pull whose `data/stamps/` record is still fresh (`--force`
+re-pulls) and rewrites the record after every run
 ([Recording a manual step](../pipeline/README.md#recording-a-manual-step--recordts)).
-
-**`.venv` is gitignored, so a git worktree has none** — a refresh run from
-one dies on `ModuleNotFoundError: dustmaps` after resolving its paths
-perfectly well, which reads like a code fault and is not one. Put the main
-checkout's venv first on `PATH` and run the target
-(`PATH=<main-checkout>/.venv/bin:$PATH pnpm run refresh:<x>`): `record.ts`
-starts bare `python3`, and the scripts resolve `REPO_ROOT` from their own
-location, so they still read and write the worktree's `data/`. Running the
-script directly writes no record, so the build then stops on that pull.
+Running a script directly writes no record, so the build then stops on that
+pull. The two Edenhofer pulls are Python in `scripts/dust/`, with their own
+setup ([Running the pulls](/scripts/dust/README.md#running-the-pulls)).
 
 ### Per-script targets
 
@@ -97,7 +76,7 @@ script directly writes no record, so the build then stops on that pull.
 | `refresh:simbad-tyc-hd` | `simbad-tyc-hd/refresh-simbad-tyc-hd.ts` | `data/simbad/simbad_tyc_hd.tsv` | SIMBAD's own HD identification per Tycho-2 entry, keyed on TYC — the witness independent of IV/25 that a close pair's crossed HD cells need ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). Asks `refresh:tycho2`'s request — IV/25's Tycho ids union the manifest's — read once (`readTycRequest`, `tycho2/`). TypeScript, on `pull/`; own README. |
 | `refresh:simbad-wds-xids` | `simbad-wds-xids/refresh-simbad-wds-xids.ts` | `data/simbad/simbad_wds_xids.tsv` | Each WDS component's SIMBAD object, `main_id`, Gaia DR3 source_id and HIP — binaries Stage 2's `simbad_xid` tier. Keyed on `data/wds/wds_summ.txt` through `../wds/`, and on the curated `wds_xids_overrides.tsv`. TypeScript, on `pull/`; own README. |
 | `refresh:simbad-wds-sptype` | `simbad-wds-sptype/refresh-simbad-wds-sptype.ts` | `data/simbad/simbad_wds_sptype.tsv` | SIMBAD `sp_type` for every oid `simbad_wds_xids.tsv` binds a WDS component to — the rows `build:binaries` Stage 6 reads. Keyed on that file alone, never the manifest, so run it AFTER `refresh:simbad-wds-xids`. TypeScript, on `pull/`; own README. |
-| `refresh:edenhofer2024-main` / `-2kpc` | `refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
+| `refresh:edenhofer2024-main` / `-2kpc` | `scripts/dust/refresh-edenhofer2024-{main,2kpc}.py` | `data/dust/edenhofer2024-{main,2kpc}.json` | The [Edenhofer 2024](/data/papers/index.md#edenhofer2024) dust map's two variants into `dustmaps`' cache, each recorded as a committed identity file the bakes read — [The Edenhofer 2024 pulls](/scripts/dust/README.md#the-edenhofer-2024-pulls). |
 | `validate:simbad` | `scripts/catalog/validate/validate-simbad-sample.ts` | (report only) | Tier C — cross-check `public/catalog.bin` against the committed SIMBAD sample. The build-time subset of the same check is `distance-regression-check.ts`, gated on `build-distance-outliers-expected.json`. |
 
 `refresh:simbad-sptype` (`simbad-sptype/`, TypeScript, own README) writes
