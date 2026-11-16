@@ -107,11 +107,14 @@ type LedSpineOutcome = (typeof LED_SPINE_OUTCOMES)[number];
 /** A winner SIMBAD alone proposes ranks below every other passing candidate, so it is never contested. */
 export const CONTESTED_LEADS = ['tyc', 'hip', 'cns5'] as const satisfies readonly BindingSource[];
 type ContestedLead = (typeof CONTESTED_LEADS)[number];
-type QueuedBranch = `binding.contested.${ContestedLead}` | 'binding.collision' | 'binding.unconfirmed' | 'addition-binding.unconfirmed';
+type QueuedBranch =
+  | `binding.contested.${ContestedLead}` | 'binding.collision' | 'binding.unconfirmed'
+  | 'addition-binding.contested' | 'addition-binding.unconfirmed';
 const QUEUED_BRANCHES: readonly (readonly [QueuedBindingOutcome, QueuedBranch])[] = [
   ...CONTESTED_LEADS.map((lead) => ['contested', `binding.contested.${lead}`] as const),
   ['collision', 'binding.collision'],
   ['unconfirmed', 'binding.unconfirmed'],
+  ['contested', 'addition-binding.contested'],
   ['unconfirmed', 'addition-binding.unconfirmed'],
 ];
 type LedAdditionOutcome = (typeof LED_ADDITION_OUTCOMES)[number];
@@ -446,7 +449,7 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
   'addition-binding.unconfirmed': outcomeCode(UNCONFIRMED),
   'addition-binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
-  'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.'),
+  'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it and the group is queued for review.'),
   'addition-binding.route-disagree': outcomeCode('The addition group\'s TYC route and HIP route propose different Gaia sources.'),
   'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
   'addition-binding.gate-mag': refusalCode('An addition group\'s binding candidate refused because its Gaia G is more than a magnitude fainter than the group\'s printed V.'),
@@ -538,7 +541,12 @@ export type MembershipOutcome =
   | { readonly kind: 'ships-none' }
   | { readonly kind: 'bright'; readonly overlayEntry: boolean }
   | { readonly kind: 'unattested'; readonly cell: UnattestedCell; readonly value: string }
-  | { readonly kind: 'addition-contested' }
+  | {
+    readonly kind: 'addition-contested';
+    readonly review: BindingReviewCells;
+    readonly sourceLetters: string;
+    readonly hipLetters: string;
+  }
   | { readonly kind: 'route-disagree'; readonly tycSourceId: string; readonly hipSourceId: string }
   | { readonly kind: 'blocked-designation'; readonly designations: readonly string[] }
   | { readonly kind: 'merge'; readonly divergence: MergeDivergence }
@@ -580,7 +588,6 @@ type ParamsOf<B extends Branch> =
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends 'addition-binding.route-disagree' ? { tyc_source_id: string; hip_source_id: string }
-  : B extends 'addition-binding.contested' ? Record<string, never>
   : B extends 'addition.blocked-designation' ? { designations: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
@@ -658,7 +665,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'ships-none': return row(key, 'binding.ships-none', {});
     case 'bright': return row(key, o.overlayEntry ? 'overlay.bright.entry' : 'overlay.bright.no-entry', {});
     case 'unattested': return row(key, UNATTESTED_BRANCHES[o.cell], { value: o.value });
-    case 'addition-contested': return row(key, 'addition-binding.contested', {});
+    case 'addition-contested':
+      return row(key, 'addition-binding.contested', { ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters });
     case 'route-disagree':
       return row(key, 'addition-binding.route-disagree', { tyc_source_id: o.tycSourceId, hip_source_id: o.hipSourceId });
     case 'blocked-designation':
@@ -853,7 +861,7 @@ export function membershipTotals(counts: MembershipCounts) {
   };
   const disposed = (q: DispositionQueue) => sum(BINDING_DISPOSITIONS.map((d): LiveBranch => `disposition.${d}.${q}`));
   const reviewByVerdict: Record<BindingReviewVerdict, number> = {
-    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
+    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)) + n('addition-binding.contested'),
     collision: n('binding.collision'),
     unconfirmed: n('binding.unconfirmed') + n('addition-binding.unconfirmed'),
     disposed: disposed('settled'),
@@ -865,7 +873,7 @@ export function membershipTotals(counts: MembershipCounts) {
     rescued: led('rescued'),
     identified: led('identified'),
     refused: n('binding.refused'),
-    contested: reviewByVerdict.contested,
+    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
     collision: n('binding.collision'),
     sol: n('binding.sol'),
   };

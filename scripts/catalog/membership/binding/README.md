@@ -126,12 +126,19 @@ AT-HYG merged B's cells onto the system's HIP, and the refusal left B's own
 source to come back through the magnitude term as an unnamed twin. VV Crv
 (HIP 61910) is the third.
 
-**A HIP on neither component is the system's, and no witness overrides it.**
+<a id="a-hip-on-neither-component-is-the-systems"></a>**A HIP on neither component is the system's, and no witness overrides it.**
 HIP 62686 and HIP 52774 carry only a HIP and a TYC SIMBAD files under B; their
 Hipparcos entry lives on SIMBAD's system object, and `multiples.tsv` anchors
 component A on it. Rescued, the row sat on B's source and companion promotion
 minted a synthetic B beside it — one star drawn twice. 30 rows are that shape;
-they stay refused and count under `admit.magnitude.refused-sibling`.
+they stay refused and count under `admit.magnitude.refused-sibling`. Where the
+row's own TYC is A's, the HIP binds A: HIP 40476 sits on SIMBAD's `HD 69445`,
+which carries no Gaia id, while TYC 7122-1231-1, Gaia's HIP and TYC
+cross-matches and SIMBAD's object for the bound source all name HD 69445 A,
+and B (TYC 7122-1231-2) is a record of its own. The four-witness close-pair
+rule ([Which witness decides a close pair's HD](../../simbad/README.md#which-witness-decides-a-close-pairs-hd))
+reads the same: no witness names B. A component that carries the system's HIP
+anyway is the binaries pipeline's to refuse, not this derivation's.
 
 **It never outranks a candidate that passes on its own.** A TYC alone is not a
 component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C
@@ -180,8 +187,10 @@ against the star's printed V 9.98, which the magnitude gate already refuses.
 
 Three outcomes are queued into `data/membership/binding-review.tsv`: the two
 below, and an `unconfirmed` identity witness
-([Identity outranks a blended magnitude](#identity-outranks-a-blended-magnitude)),
-the one an addition can reach too.
+([Identity outranks a blended magnitude](#identity-outranks-a-blended-magnitude)).
+An addition group queues on the same terms when it is contested or
+unconfirmed; it cannot collide, since admission leaves a shared source on
+neither group.
 
 A **contested** row is one whose winner has a runner-up the gates also passed:
 the precedence order chose, not the evidence. It **ships the winner** and

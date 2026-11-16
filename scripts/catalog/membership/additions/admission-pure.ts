@@ -21,12 +21,14 @@ import {
   type RowGateEvidence,
 } from '../binding/binding-derivation-pure';
 import {
+  bindingReviewCells,
   boundOutcome,
   identityQueueCandidate,
   heldMoreThanOnce,
   identityWitnessed,
   passingRunnersUp,
   refusedCandidates,
+  reviewLetters,
   unshippedCandidates,
   unweighedCandidates,
   type IdentityQueueCandidate,
@@ -440,7 +442,11 @@ export function admitAdditions(input: {
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
-      out.outcomes.push({ key: g.origin, outcome: { kind: 'addition-contested' } });
+      const cells = reviewKeyCells(g);
+      out.outcomes.push({ key: g.origin, outcome: {
+        kind: 'addition-contested', review: bindingReviewCells(cells, g.derived, g.gate, tables),
+        ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
+      } });
     }
     const component = a.verdict.kind === 'component';
     if (component && g.derived.sourceId !== null) {

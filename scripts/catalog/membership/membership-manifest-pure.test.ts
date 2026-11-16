@@ -250,6 +250,10 @@ function withTables(t: PrimaryTables) {
 }
 
 const result = buildMembership(input);
+/** The fixture's one contested addition group, which every build queues. */
+const CONTESTED_ADDITION_TYC = '3-3-1';
+const spineQueue = (r: { bindingReview: readonly { tyc: string }[] }) =>
+  r.bindingReview.filter((row) => row.tyc !== CONTESTED_ADDITION_TYC);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
 describe('buildMembership — the spine side', () => {
@@ -271,7 +275,7 @@ describe('buildMembership — the spine side', () => {
     });
     const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
     expect(row).toMatchObject({ gaiaSourceId: '888', binding: 'reviewed' });
-    expect(disposed.bindingReview).toHaveLength(1);
+    expect(spineQueue(disposed)).toHaveLength(1);
     expect(disposed.rows.filter((r) => r.binding === 'reviewed').length).toBe(1);
     expect(totals(disposed).dispositions).toEqual({ derived: 0, other: 1, none: 0 });
     expect(codes(disposed)['disposition.asserted']).toBe(1);
@@ -354,7 +358,7 @@ describe('buildMembership — the spine side', () => {
     expect(filled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(derivation(filled).bound).toBe(4);
-    expect(filled.bindingReview).toHaveLength(0);
+    expect(spineQueue(filled)).toHaveLength(0);
   });
 
   it('queues a contested row, ships its winner, and honours a disposition', () => {
@@ -402,7 +406,7 @@ describe('buildMembership — the spine side', () => {
     expect(settled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(derivation(settled)).toMatchObject({ bound: 4, contested: 0 });
-    expect(settled.bindingReview).toHaveLength(0);
+    expect(spineQueue(settled)).toHaveLength(0);
   });
 
   it('withholds a derived source from every row that reaches it', () => {
@@ -512,9 +516,13 @@ describe('buildMembership — the spine side', () => {
     const row = byTyc.get('9-8-1')!;
     expect(row.gaiaSourceId).toBeNull();
     expect(row.binding).toBe('none');
-    expect(result.bindingReview).toEqual([]);
-    expect(totals(result).reviewRows).toBe(0);
-    expect(totals(result).reviewByVerdict).toEqual({ contested: 0, collision: 0, unconfirmed: 0, disposed: 0 });
+    expect(spineQueue(result)).toEqual([]);
+  });
+
+  it('queues a contested addition group as a contested spine row is queued', () => {
+    expect(result.bindingReview.map((r) => [r.tyc, r.verdict])).toEqual([[CONTESTED_ADDITION_TYC, 'contested']]);
+    expect(totals(result).reviewByVerdict).toEqual({ contested: 1, collision: 0, unconfirmed: 0, disposed: 0 });
+    expect(derivation(result).contested).toBe(0);
   });
 
   it('carries the label merge onto the row and attests the merged cells', () => {
