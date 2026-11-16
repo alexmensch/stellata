@@ -361,7 +361,11 @@ orphan, by the stage whose identity rows carry it:
 - **Promotion**, for a component whose `multiples.tsv` row it decided:
   its identity rows carry the synthetic key of every row it removes or
   merges, so a companion promotion dropped retires (or parks, or merges)
-  under that row's code.
+  under that row's code. A component that now binds a Gaia source or HIP
+  of its own merges into its minted record under
+  `promotion.synthetic-key.keyed-mint`, and a pair primary that now
+  resolves to a record merges into it under `promotion.pair-anchor`
+  ([Promotion lineage](/scripts/catalog/companions/promotion-lineage/README.md#the-stage)).
 - **Pairs** (`build:binaries`), for a component every pair of which
   Stage 5 rejected as optical: the rejection never reaches
   `multiples.tsv`, so the pairs stage's identity row carries that

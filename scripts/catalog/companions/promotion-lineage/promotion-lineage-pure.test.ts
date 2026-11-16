@@ -60,17 +60,17 @@ describe('promotionDecision', () => {
       ],
       [
         'promotion.minted.keyed', 'promotion.brightness.own', 'promotion.colour.own',
-        'promotion.dust.edenhofer2024.absmag-and-ci',
+        'promotion.dust.edenhofer2024.absmag-and-ci', 'promotion.synthetic-key.keyed-mint',
       ],
       ['promotion.parked.primary-unresolved'],
       ['promotion.parked.unpaired'],
-      ['promotion.not-applicable.pair-anchor'],
+      ['promotion.pair-anchor'],
     ]);
     expect(() => stageLineageText(PROMOTION_CODES, sortLineageLines(LINES))).not.toThrow();
   });
 
   it('writes a facet row with no evidence, and params only on the dust row', () => {
-    const facets = rowsOf(OUTCOMES[6]).slice(1);
+    const facets = rowsOf(OUTCOMES[6]).slice(1, -1);
     expect(facets.map((r) => [r.code, paramsOf(r), r.evidence])).toEqual([
       ['promotion.brightness.own', {}, []],
       ['promotion.colour.own', {}, []],
@@ -110,6 +110,16 @@ describe('promotionDecision', () => {
     expect(paramsOf(r)).toEqual({ via: 'secondary', record: 'spine:4', recurated: 'wds_mag' });
   });
 
+  it('names, as merges, the record a keyed mint and a pair anchor are the row\'s star', () => {
+    const merge = rowsOf(OUTCOMES[6]).at(-1)!;
+    expect([merge.code, paramsOf(merge)]).toEqual([
+      'promotion.synthetic-key.keyed-mint', { via: 'secondary', record: 'multiples:22266-1645-AB/B' },
+    ]);
+    expect(rowsOf(OUTCOMES[5]).map((r) => r.code)).not.toContain('promotion.synthetic-key.keyed-mint');
+    expect(paramsOf(outcomeRow({ kind: 'pair-anchor' }, { anchor: 'gaia-dr3:9' }))).toEqual({ via: 'secondary', record: 'gaia-dr3:9' });
+    expect(() => outcomeRow({ kind: 'pair-anchor' }, { anchor: null })).toThrow(/pair anchor with no record/);
+  });
+
   it('names the record a merge-effect drop merges into', () => {
     const r = outcomeRow({ kind: 'dropped', reason: 'anchor-is-component', idx: 7 });
     expect(r.code).toBe('promotion.dropped.anchor-is-component');
@@ -122,7 +132,7 @@ describe('promotionDecision', () => {
   });
 
   it('cites the anchor and a distinct system anchor, never the row itself', () => {
-    const cite = (anchors: Partial<PromotedRow>): readonly string[] => outcomeRow({ kind: 'pair-anchor' }, anchors).evidence;
+    const cite = (anchors: Partial<PromotedRow>): readonly string[] => outcomeRow({ kind: 'primary-unresolved' }, anchors).evidence;
     expect(cite({})).toEqual(['spine:7']);
     expect(cite({ anchor: 'gaia-dr3:9', systemAnchor: 'spine:7' })).toEqual(['gaia-dr3:9', 'spine:7']);
     expect(cite({ anchor: null, systemAnchor: null })).toEqual([]);
@@ -173,7 +183,7 @@ describe('promotionLineage identity', () => {
     }),
   ];
 
-  it('writes one identity row per minted record, and none for a merge or no-effect outcome', () => {
+  it('writes one identity row per minted record, and none for a row whose every designation a mint carries', () => {
     const { identity } = promotionLineage([
       promoted({ kind: 'minted', idx: 1, synthetic: false, brightness: own, constellationSplit: false }),
       promoted({ kind: 'adopted', idx: 0, via: 'earlier-mint' }),
@@ -201,7 +211,7 @@ describe('promotionLineage identity', () => {
     ]);
   });
 
-  it('keys a removed or merged row on the synthetic key a mint from it would carry, and a kept row on nothing', () => {
+  it('keys a removed or merged row, a pair anchor among them, on the synthetic key a mint from it would carry', () => {
     const { identity } = promotionLineage([
       promoted({ kind: 'dropped', reason: 'no-absmag' }, { synthKey: 'synth-22266-1645-B' }),
       promoted({ kind: 'adopted', idx: 1, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null }, {
@@ -212,7 +222,16 @@ describe('promotionLineage identity', () => {
     expect(identity.map((r) => [r.key, r.designations])).toEqual([
       ['multiples:22266-1645-AB/B', ['synth:22266-1645-B']],
       ['multiples:22266-1645-AC/C', ['synth:22266-1645-C']],
+      ['multiples:22266-1645-AD/A', ['synth:22266-1645-A']],
     ]);
+  });
+
+  it('carries a keyed mint\'s row synthetic key on its identity row', () => {
+    const keyed = makeStar({ originKey: 'multiples:22266-1645-AB/B', hip: null, gaiaSourceId: '2595463996992115840', syntheticId: null });
+    const { identity } = promotionLineage([
+      promoted({ kind: 'minted', idx: 0, synthetic: false, brightness: own, constellationSplit: false }),
+    ], enterPhase('promoted', [keyed]), new Set(), new Map());
+    expect(identity.map((r) => r.designations)).toEqual([['gaia_dr3:2595463996992115840', 'synth:22266-1645-B']]);
   });
 
   it('keys a removed row on no designation membership or a mint of this stage already founds', () => {

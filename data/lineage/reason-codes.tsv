@@ -526,7 +526,8 @@ promotion.minted	promotion	none	outcome	retired	7.1.20	7.1.6	The row becomes a n
 promotion.minted.keyed	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, keyed on a Gaia source or HIP of its own.
 promotion.minted.synthetic	promotion	none	outcome	live		7.1.20	The row becomes a new catalogue record, addressed only by its synthetic key.
 promotion.not-applicable	promotion	none	outcome	retired	7.1.8	7.1.6	Promotion decides nothing for the row: a pair's primary that anchors it, or a row in no pair.
-promotion.not-applicable.pair-anchor	promotion	none	outcome	live		7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.not-applicable.pair-anchor	promotion	none	outcome	retired	7.1.31	7.1.8	Promotion decides nothing for the row: it is a pair's primary that anchors the pair.
+promotion.pair-anchor	promotion	merge	outcome	live		7.1.31	The row is a pair's primary resolved to the record params.record, which anchors the pair and is the row's star, so a SID keyed on the row's identifiers or synthetic key merges into that record's.
 promotion.parked.primary-unresolved	promotion	park	outcome	live		7.1.8	A pair's primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.
 promotion.parked.unpaired	promotion	park	outcome	live		7.1.8	The row is in no pair, so promotion has no geometry to place it with and ships no record for it.
 promotion.primary-unresolved	promotion	none	outcome	retired	7.1.8	7.1.6	A pair's primary resolves to no catalogue record and no escape places it, so its pair runs with no anchor.
@@ -537,6 +538,7 @@ promotion.size.blend-split	promotion	none	outcome	live		7.1.27	Blend split re-de
 promotion.size.mint	promotion	none	outcome	live		7.1.27	Promotion sized the minted record from its absolute magnitude and spectral class, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.size.recurated	promotion	none	outcome	live		7.1.27	Re-curation re-derived the held record's radius from its new absolute magnitude, and no later promotion pass re-sized it; params name the radius route and its inputs.
 promotion.spectral.ms-from-own-absmag	promotion	none	outcome	live		7.1.20	The minted record's spectral class is a main-sequence estimate from its own absolute magnitude, the row's type being its primary's or blank.
+promotion.synthetic-key.keyed-mint	promotion	merge	outcome	live		7.1.31	The row's synthetic key names the record minted for it on its own Gaia source or HIP, params.record, so a SID keyed on that synthetic key merges into the minted record's.
 resolve.audit.letter-sources.geometric.refused	resolve	none	refused	live		7.1.30	One letter bound to different Gaia sources on different rows, arbitrated by WDS pair geometry; this component's binding to the source is refused.
 resolve.audit.letter-sources.geometric.won	resolve	none	outcome	live		7.1.30	One letter bound to different Gaia sources on different rows, arbitrated by WDS pair geometry; this component keeps its source.
 resolve.audit.letter-sources.skipped-no-reference.skipped	resolve	none	outcome	live		7.1.30	One letter bound to different Gaia sources on different rows, left as bound: no uncontested astrometric reference letter; this component keeps its source unchanged.
