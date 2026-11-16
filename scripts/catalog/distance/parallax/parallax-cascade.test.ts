@@ -13,7 +13,7 @@ import { gaiaAstrometryRow } from '../../sources/gaia-astrometry-fixture';
 import type { CitedParallax } from '../../cited-parallax';
 import type { SiblingParallax } from './pair-member-parallax';
 import type { GlieseRow } from '../../gliese-parse-pure';
-import { GLIESE } from '../../gliese-source';
+import { glieseRow } from '../../gliese-fixture';
 import { CNS5 } from '../../classic-ids/cns5-source';
 import { SIMBAD_VALUES } from '../../simbad/simbad-values-source';
 import { HIP2 } from '../../sources/hip2-source';
@@ -25,7 +25,6 @@ const VAN_LEEUWEN = '2007A&A...474..653V';
 const LITERATURE = '2014ApJ...784..156D';
 
 const HIP2_REF = sourceRowRef(HIP2, 1);
-const GLIESE_REF = sourceRowRef(GLIESE, '423');
 const CNS5_REF = sourceRowRef(CNS5, 1);
 const SIMBAD_REF = sourceRowRef(SIMBAD_VALUES, 1);
 
@@ -36,12 +35,9 @@ const NONE: ParallaxSources = {
 const hip2 = (plxMas: number, plxErrorMas: number | null) => ({
   raDeg: 0, decDeg: 0, plxMas, plxErrorMas, pmRaMasyr: null, pmDeMasyr: null, ref: HIP2_REF,
 });
-const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => ({
-  name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
-  parallax: plxMas === null
-    ? null
-    : { mas: plxMas, errMas: 1.0, trigonometric },
-  ref: GLIESE_REF,
+const gliese = (plxMas: number | null, trigonometric = true): GlieseRow => glieseRow('423', {
+  name: 'Gl 423', comp: 'A',
+  parallax: plxMas === null ? null : { mas: plxMas, errMas: 1.0, trigonometric },
 });
 // One builder for both bibcoded tiers — CNS5 and SIMBAD carry the same
 // CitedParallax shape.
@@ -195,11 +191,10 @@ describe('parallax-cascade / the precision floor', () => {
 
   it('admits a sub-floor-looking Gliese parallax whose error is unpublished, '
     + 'on the same benefit-of-the-doubt rule HIP2 gets', () => {
-    const noError: GlieseRow = {
-      name: 'Gl 423', comp: 'A', vMag: null, bMinusV: null, spectral: null, hd: null,
+    const noError = glieseRow('423', {
+      name: 'Gl 423', comp: 'A',
       parallax: { mas: 0.5, errMas: null, trigonometric: true },
-      ref: GLIESE_REF,
-    };
+    });
     const res = resolveParallax({ ...NONE, gliese: noError });
     expect(res.via).toBe('gliese_plx');
     expect(refusedMas(res)).toEqual([]);

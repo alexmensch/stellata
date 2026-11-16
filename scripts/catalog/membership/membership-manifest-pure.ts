@@ -12,7 +12,7 @@ import { admitAdditions } from './additions/admission-pure';
 import type { BindingEvidence } from './binding/binding-gate-pure';
 import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
-import type { BindingDispositionRow } from './binding-review-dispositions-pure';
+import type { BindingDispositionRow } from './binding/binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
 import {
   iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,

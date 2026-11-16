@@ -125,7 +125,7 @@ row it lists until a disposition settles it.
 `data/membership/pair-review-dispositions.tsv` is hand-written and read by
 `build:membership`, which never writes it: `hip`, `entries` (the queue row's,
 restated), `keep_entry`, `basis` and `evidence`, the shape and closed `basis`
-set of the binding queue's dispositions ([The spine side](../README.md#the-spine-side)).
+set of the binding queue's dispositions ([A disposition is the authority](../binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row)).
 A disposition is the authority: the build puts the HIP on `keep_entry` the way
 a Gaia move would — the record onto that entry, or the HIP onto the spine
 record already there — and no gate weighs it again (`merge.pair.disposed`,

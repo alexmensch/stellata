@@ -10,15 +10,15 @@ import type { PrimaryTables } from '../spine/primaries-audit-pure';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { bindingEvidence } from './binding/binding-gate-pure';
 import type { Tycho2Row } from '../tycho2-parse';
-import { TYCHO2 } from '../tycho2-source';
+import { tycho2Row } from '../tycho2-fixture';
 import { GLIESE } from '../gliese-source';
-import { sourceRowRef } from '../../util/sources/row-ref-pure';
+import { glieseTsv } from '../gliese-fixture';
 import { buildMembership, type MembershipResult } from './membership-manifest-pure';
 import { matchSpineToManifest, withRecordMoves } from './spine-match-pure';
 import {
   parseBindingDispositionsTsv,
   type BindingDispositionRow,
-} from './binding-review-dispositions-pure';
+} from './binding/binding-review-dispositions-pure';
 import { additionItemCells } from './additions/addition-items-pure';
 import type { SpineCorrectionRow } from './spine-corrections/spine-corrections-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
@@ -86,21 +86,14 @@ function manifestRow(cells: Partial<Record<ManifestColumn, string>>): ManifestRe
 }
 
 function tycho2(vtMag: number, hip: number | null = null): Tycho2Row {
-  return {
-    raDeg: 0, decDeg: 0, epoch: 2000, pmRaMasyr: null, pmDecMasyr: null,
-    btMag: null, vtMag, fromIcrs: false, isPhotocentre: false, hip,
-    ref: sourceRowRef(TYCHO2, '1-1-1'),
-  };
+  return tycho2Row('1-1-1', { vtMag, hip });
 }
 
 function entry(e: Partial<OverlayEntry>): OverlayEntry {
   return { hd: [], hr: [], hip: [], gj: [], bayer: [], flamsteed: [], ...e };
 }
 
-const GLIESE_TSV = [
-  'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
-  'Gl 165\tAB\t9.0\t\t\t\t\t\t',
-].join('\n') + '\n';
+const GLIESE_TSV = glieseTsv('Gl 165\tAB\t9.0\t\t\t\t\t\t');
 
 /** Spine: Sol; HD 100001 / HIP 10 bound and reproduced by both walks; HD 5
  *  bound by AT-HYG alone, SIMBAD's object for that id carrying its TYC; HD 40
@@ -955,11 +948,10 @@ describe('codecs', () => {
   });
 
   it('builds the merge links from the primaries, writing every GJ in the record\'s form', () => {
-    const gliese = [
-      'name\tcomp\tvmag\tbv\tsp\tplx_mas\te_plx_mas\tn_plx\thd',
+    const gliese = glieseTsv(
       'Wo 9390\tA\t9.0\t\t\t\t\t\t300',
       'NN 3002\t\t9.0\t\t\t\t\t\t301',
-    ].join('\n') + '\n';
+    );
     const t: PrimaryTables = {
       ...tables,
       iv25: [...tables.iv25, { tyc: '4-1-1', hd: 300, nHd: 1, nTyc: 1 }, { tyc: '4-2-1', hd: 301, nHd: 1, nTyc: 1 }],
