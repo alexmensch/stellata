@@ -7,6 +7,7 @@ import {
 import type { MscLookup } from '../load/msc-pure';
 import { OPTICAL_VIA_PROPERTIES, type OpticalVia } from '../optical/optical-tiers-pure';
 import { pySum } from '../python-float-pure';
+import { groupBy } from '../../util/map-buckets-pure';
 import { addEdge, addNewestEdge, pairVector, walk, type Edge } from '../resolve/binding-audit-pure';
 import type { DecomposedPair } from '../resolve/components-pure';
 import { tangentToPolar, type PolarOffset, type TangentOffset } from '../../../src/astro-core/equatorial-basis';
@@ -30,6 +31,13 @@ export function addSiblingEdge(adj: SiblingAdj, a: string, b: string, edge: Sibl
     eastArcsec: -edge.eastArcsec, northArcsec: -edge.northArcsec, dmag: edge.dmag === null ? null : -edge.dmag, epoch: edge.epoch,
   };
   addNewestEdge(adj, a, b, edge, reverse, edge.epoch, (e) => e.epoch);
+}
+
+/** Each primary token's first pair, in pair order. */
+export function firstByPrimary(pairs: Iterable<DecomposedPair>): Map<string, DecomposedPair> {
+  const out = new Map<string, DecomposedPair>();
+  for (const p of pairs) if (!out.has(p.primary.component)) out.set(p.primary.component, p);
+  return out;
 }
 
 /** The most canonical token: the order the anchor and the photocentre's reference share. */
@@ -126,16 +134,12 @@ export function computeAnchorOffsets(
   const rejected = new Map<string, GeomAdj>();
   const proxy = new Map<string, GeomAdj>();
   const siblings = new Map<ComponentKey, SiblingAdj>();
-  const keptPrimaries = new Map<string, Map<string, DecomposedPair>>();
+  const keptBySystem = groupBy(pairs.filter((p) => OPTICAL_VIA_PROPERTIES[optical.get(p)!].physical), (p) => p.pair.wdsId);
   for (const p of pairs) {
     const { wdsId } = p.pair;
     const isKept = OPTICAL_VIA_PROPERTIES[optical.get(p)!].physical;
     const pTok = p.primary.component;
     const sTok = canonicalCompLetter(pTok, p.secondary.component);
-    if (isKept) {
-      const firstPairs = getOrSet(keptPrimaries, wdsId, () => new Map());
-      if (!firstPairs.has(pTok)) firstPairs.set(pTok, p);
-    }
     const parent = parentComponentToken(pTok);
     if (parent !== null && parent === parentComponentToken(sTok) && isComponentToken(pTok) && isComponentToken(sTok)) {
       const edge = siblingEdge(p.pair, pTok, sTok, msc);
@@ -155,7 +159,8 @@ export function computeAnchorOffsets(
 
   const choices = new Map<string, AnchorChoice>();
   const out = new Map<ComponentKey, PolarOffset>();
-  for (const [wdsId, firstPairs] of keptPrimaries) {
+  for (const [wdsId, keptPairs] of keptBySystem) {
+    const firstPairs = firstByPrimary(keptPairs);
     const anchor = mostCanonical(firstPairs.keys());
     choices.set(wdsId, {
       pair: firstPairs.get(anchor)!,
