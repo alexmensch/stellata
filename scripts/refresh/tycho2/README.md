@@ -2,7 +2,7 @@
 
 `refresh:tycho2`: Tycho-2's main table and supplement 1 (VizieR `I/259/tyc2`,
 `I/259/suppl_1`) filtered to the TYCs the membership manifest and IV/25
-mention, written to `data/tycho2/tycho2_{main,suppl1}.tsv` on the
+mention and the rows naming a manifest HIP, written to `data/tycho2/tycho2_{main,suppl1}.tsv` on the
 TypeScript runtime ([pull/README.md](../pull/README.md)) as a phased pull.
 What the tables are for and which position a consumer propagates from:
 [data/tycho2/README.md](/data/tycho2/README.md).
@@ -24,7 +24,16 @@ What the tables are for and which position a consumer propagates from:
 The manifest's `tyc` cells and IV/25's Tycho ids, each parsed to integers and
 written back as one key (`3694-2544-1`), so two spellings of one entry
 collapse. The manifest's own TYCs are kept apart as the set the cover gate
-holds to. `refresh-simbad-tyc-hd.py` reads the same set through
+holds to.
+
+A row is also kept when its `hip` names a manifest HIP. Tycho-2 gives one HIP
+to both entries of a resolved pair, and the pair rule
+([The pair rule](/scripts/catalog/membership/merge-derivation/README.md#connected-is-not-unique--the-pair-rule))
+finds a pair only when both entries' rows are in the table. A move leaves the
+manifest naming one entry, so a TYC-keyed request alone would drop the other
+on the next pull, and the rule would no longer see the pair it moved. The
+recorded request lists the HIPs after the TYCs (`HIP 7751`), so a manifest HIP
+change makes the pull stale too. `refresh-simbad-tyc-hd.py` reads the same set through
 `refresh_lib.read_mentioned_tycs` until it ports
 ([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
 
@@ -34,7 +43,7 @@ VizieR can express no server-side filter on the full identifier
 ([Why the pull is range-batched](/data/tycho2/README.md#why-the-pull-is-range-batched-rather-than-key-filtered)),
 so each table is scanned in 24 bands of 400 TYC1 values over
 [`TYC1_MIN`, `TYC1_MAX`], one declared phase per band and table, and each
-band's rows are filtered to the request as they land: one band is held at a
+band's rows are filtered as they land: one band is held at a
 time, not the 2.5 M-row table. `TYC1_BAND_ROWS` (160,000) bounds a band; the
 largest holds 155,282 (8401–8800, measured on the CfA mirror). A mentioned
 TYC whose TYC1 lies outside the span stops the run before any query, since
