@@ -17,6 +17,10 @@ import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse
 import type { PairReviewReason } from '../ledger-rows-pure';
 import type { BindingDispositionBasis } from '../binding/binding-review-dispositions-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
+import type { Tycho2Row } from '../../tycho2-parse';
+import {
+  hipparcosAstrometry, witnessHipparcos, type WitnessSeparation, type WitnessVerdict,
+} from '../positional-witness/positional-witness-pure';
 
 
 /** The cells a spine row can leave empty that a primary's link fills. */
@@ -87,7 +91,9 @@ export type MergeDivergence =
   | Differs;
 
 /** What named the pair's owner entry. see README.md#connected-is-not-unique--the-pair-rule */
-export type PairWitness = { readonly by: 'gaia'; readonly sourceId: string };
+export type PairWitness =
+  | { readonly by: 'gaia'; readonly sourceId: string }
+  | { readonly by: 'position'; readonly separations: readonly WitnessSeparation[] };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -108,6 +114,8 @@ export interface PairLinks {
   v70aByHd: ReadonlyMap<number, readonly string[]>;
   /** CNS5's rows by their own Gaia source, in the record's GJ form. */
   cns5BySource: ReadonlyMap<string, readonly string[]>;
+  /** HIP2's position held against the entries; null where HIP2 gives the HIP no position and proper motion. */
+  positionWitness: (hip: number, entries: readonly string[]) => WitnessVerdict | null;
 }
 
 export interface MergeLinks extends PairLinks {
@@ -134,6 +142,11 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   }
   const v70aByHd = new Map<number, string[]>();
   for (const r of tables.gliese.byKey.values()) if (r.hd !== null) push(v70aByHd, r.hd, v70aGl(r));
+  const entryRow = (tyc: string): Tycho2Row => {
+    const row = tables.tycho2.get(tyc);
+    if (row === undefined) throw new Error(`pair rule: Tycho-2 entry ${tyc} has no row`);
+    return row;
+  };
   return {
     links,
     hipEntries,
@@ -141,6 +154,11 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
     cns5ByHip,
     v70aByHd,
     cns5BySource,
+    positionWitness: (hip, entries) => {
+      const row = tables.hip2.astrometry.get(hip);
+      const astrometry = row === undefined ? null : hipparcosAstrometry(row);
+      return astrometry === null ? null : witnessHipparcos(astrometry, entries.map(entryRow));
+    },
   };
 }
 
@@ -154,12 +172,16 @@ export function hdToHr(hrHd: ReadonlyMap<number, number>): Map<number, number> {
   return out;
 }
 
-/** Of the Tycho-2 entries naming one HIP, the one whose Gaia best neighbour is the HIP's own. */
+/** see README.md#connected-is-not-unique--the-pair-rule */
 export function pairOwner(
-  hip: number, entries: readonly string[], links: LinkTables,
+  hip: number, entries: readonly string[], { links, positionWitness }: Pick<PairLinks, 'links' | 'positionWitness'>,
 ): { owner: string; witness: PairWitness } | { reason: PairReviewReason } {
   const sourceId = links.sourceOf.hip(hip);
-  if (sourceId === null) return { reason: 'no_hip_source' };
+  if (sourceId === null) {
+    const position = positionWitness(hip, entries);
+    if (position?.kind !== 'match') return { reason: 'no_hip_source' };
+    return { owner: position.tyc, witness: { by: 'position', separations: position.separations } };
+  }
   const matches = entries.filter((tyc) => links.sourceOf.tyc(tyc) === sourceId);
   if (matches.length === 0) return { reason: 'no_entry_matches' };
   if (matches.length > 1) return { reason: 'several_match' };
@@ -181,7 +203,7 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   const hip = spineHip ?? tycho2Hip;
   const entries = hip === null ? [] : m.hipEntries.get(hip) ?? [];
   if (hip === null || entries.length < 2 || !entries.includes(row.tyc)) return { divergence: null, hip };
-  const verdict = pairOwner(hip, entries, m.links);
+  const verdict = pairOwner(hip, entries, m);
   if (spineHip === null) {
     return { divergence: null, hip: 'owner' in verdict && verdict.owner === row.tyc ? hip : null };
   }
@@ -286,7 +308,7 @@ export function applyPairRule(
   dispositions: ReadonlyMap<number, PairDisposition>,
 ): PairRuleResult {
   return applyMoves(kept, m, dispositions, 'queued', (move, receiver) => {
-    if (binds(receiver) !== move.witness.sourceId) return 'gate_refused';
+    if (move.witness.by === 'gaia' && binds(receiver) !== move.witness.sourceId) return 'gate_refused';
     return refused.has(move.hip) ? 'simbad_refused' : null;
   });
 }

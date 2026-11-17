@@ -44,11 +44,17 @@ says which entry is the HIP's record. The primaries disagree with it on that:
 IV/25 gives the HD to the other entry on most of those rows, while Gaia agrees
 with the spine on more than half.
 
-**The pair rule, the owner's (2026-11-14): Gaia decides, else review.** Of the
-entries naming a HIP, the one whose Gaia TYC cross-match names the same source
-as the HIP's own cross-match takes the HIP and its HD. Where that names no
-entry — no HIP source, no entry on it, or more than one — the row is queued
-with the entries and the reason, and the spine's choice ships while it waits.
+**The pair rule, the owner's (2026-11-14, extended 2026-11-17): Gaia decides,
+else HIP2's position, else review.** Of the entries naming a HIP, the one whose
+Gaia TYC cross-match names the same source as the HIP's own cross-match takes
+the HIP and its HD. Where Gaia cross-matches the HIP to no source at all, the
+entry HIP2's position falls on alone takes it
+([The positional witness](../positional-witness/README.md#the-two-witnesses),
+`positionWitness` in `PairLinks`). Where neither names one entry — a HIP source
+on no entry or on more than one, or HIP2's position on none or on both — the
+row is queued with the entries and the reason, and the spine's choice ships
+while it waits. HIP2's position is asked only where Gaia names no source for
+the HIP.
 IV/25's HD link does not vote: on a pair Tycho-2 resolved, an HD names a
 photographic blend, while the two cross-matches are positional fits to each
 star.
@@ -77,17 +83,22 @@ pulled. A move changes one of two things:
   `withRecordMoves`). The receiver must carry no HIP of its own, and no two
   HIPs may move onto one entry; either fails the build.
 
-**A move stands only where the moved record binds the HIP's source.** The
+Each move names its witness (`PairWitness`): a Gaia move's lineage evidence is
+the HIP's source, a position move's every entry's separation from HIP2's
+carried position, under its own codes (`merge.pair.position.*`).
+
+**A Gaia move stands only where the moved record binds the HIP's source.** The
 binding derivation ([Both gates weigh every candidate](../binding/README.md#both-gates-weigh-every-candidate))
 runs on the record as the move would leave it; where it ships anything but the
 source Gaia's two cross-matches named — the magnitude gate finding G more than
 a magnitude below the record's printed V, or SIMBAD giving the source to
 another component — Gaia contradicts itself, so the HIP is queued
 (`gate_refused`) rather than moved. On those pairs Gaia's HIP cross-match
-most likely names the fainter star.
+most likely names the fainter star. A position move has no source for the
+gates to hold it to.
 
-**A move stands only where SIMBAD names the new entry by the HD the record
-ships.** After the label merge, a moved record's TYC and its HD must not name
+**A move — Gaia's or the position's — stands only where SIMBAD names the new
+entry by the HD the record ships.** After the label merge, a moved record's TYC and its HD must not name
 different components: where SIMBAD's TYC→HD pull
 ([What the TYC → HD pull adjudicates](../../simbad/README.md#what-the-tyc--hd-pull-adjudicates))
 names the owner entry by HDs that leave out the record's shipped HD, Gaia's

@@ -1004,17 +1004,22 @@ describe('codecs', () => {
     const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
     const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
     const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
+    const hip2Near = [{ tyc: '1-1-4', separationArcsec: 0.0134 }, { tyc: '1-1-1', separationArcsec: 2.81 }];
     const { mergeDivergence: ledger, pairReview } = membershipLedgers([
       merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'gaia', sourceId: '5' } }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'gaia', sourceId: '5' }, onto: 'entry' }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', witness: { by: 'gaia', sourceId: '5' }, onto: 'record' }),
+      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'position', separations: hip2Near } }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'position', separations: hip2Near }, onto: 'entry' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-4', witness: { by: 'position', separations: hip2Near }, onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
     ], identity);
-    expect(ledger).toHaveLength(3);
+    expect(ledger).toHaveLength(4);
     expect(ledger).toEqual(expect.arrayContaining([
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-4', evidence: '1-1-4 0.013"|1-1-1 2.810"' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
       { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
     ]));

@@ -4,11 +4,11 @@ Whether a catalogue position names one of a set of Tycho-2 entries: the
 position is brought to the entry's own epoch and equinox, and each entry's
 separation from it is tested against the source's tolerance. One helper for
 both settling surfaces — the unlinked GJ cells of
-`data/membership/merge-divergence.tsv` (`stellata-hooj.17.11.2`) and the
-`no_hip_source` HIPs of `data/membership/pair-review.tsv` (the
-`stellata-hooj.17.11.5` child). What a verdict leads to — a queue row, a
-ledger row, a disposition — is each consumer's call; this folder only
-measures.
+`data/membership/merge-divergence.tsv` (`stellata-hooj.17.11.2`) and the pair
+rule, whose second step it is where Gaia cross-matches a HIP to no source
+([Connected is not unique](../merge-derivation/README.md#connected-is-not-unique--the-pair-rule)).
+What a verdict leads to — a move, a queue row, a ledger row, a disposition —
+is each consumer's call; this folder only measures.
 
 ## Files in this area
 
