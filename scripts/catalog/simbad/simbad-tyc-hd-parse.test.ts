@@ -148,26 +148,26 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353361);
-      expect(counts.answered).toBe(331757);
-      expect(counts.silent).toBe(21604);
+      expect(counts.bothCells).toBe(353363);
+      expect(counts.answered).toBe(331760);
+      expect(counts.silent).toBe(21603);
     });
 
-    it('finds 220 dissents, every one on an internally consistent IV/25 entry', () => {
-      expect(counts.dissent).toBe(220);
+    it('finds 219 dissents, every one on an internally consistent IV/25 entry', () => {
+      expect(counts.dissent).toBe(219);
       expect(counts.dissentInconsistent).toBe(0);
     });
 
-    it('splits them 210 manifest-faithful / 10 vindicating the manifest', () => {
-      expect(counts.faithful).toBe(210);
+    it('splits them 209 manifest-faithful / 10 vindicating the manifest', () => {
+      expect(counts.faithful).toBe(209);
       expect(counts.vindicating).toBe(10);
       expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
     });
 
     // README.md#which-witness-decides-a-close-pairs-hd: the three the
-    // four-witness rule licenses but no override asserts, and one it refuses.
-    it('finds 4 rows both witnesses contradict', () => {
-      expect(counts.bothAgainst).toBe(4);
+    // four-witness rule licenses but no override asserts.
+    it('finds 3 rows both witnesses contradict', () => {
+      expect(counts.bothAgainst).toBe(3);
     });
 
     it('reproduces the two dissents measured by hand against live SIMBAD', () => {
@@ -196,7 +196,7 @@ const SPLIT_INPUTS = [...ADJUDICATION_INPUTS, SRC_SIMBAD_SPTYPE];
 const FOUR_WITNESS_MOVE = ['2604-1777-1', '40-1338-1', '8568-3121-1'];
 
 /** see README.md#which-witness-decides-a-close-pairs-hd */
-const FOUR_WITNESS_REFUSE = ['1097-10-1'];
+const FOUR_WITNESS_REFUSE: string[] = [];
 
 /** Rows with no SIMBAD object for the record's own source: the fourth witness
  *  is silent and the rule leaves them alone. */
@@ -229,7 +229,7 @@ describe.skipIf(!SPLIT_INPUTS.every(lfsContentReadable))('the four-witness split
     for (const list of [move, refuse, silent]) list.sort();
   });
 
-  it('splits the remaining contested rows three / one / none', () => {
+  it('splits the remaining contested rows three / none / none', () => {
     expect(move).toEqual(FOUR_WITNESS_MOVE);
     expect(refuse).toEqual(FOUR_WITNESS_REFUSE);
     expect(silent).toEqual(FOUR_WITNESS_SILENT);
