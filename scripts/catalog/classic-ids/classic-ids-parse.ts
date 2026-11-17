@@ -66,18 +66,23 @@ export function applyTyc2HdCorrections(
   corrections: readonly Tyc2HdCorrection[],
   from: Declared,
 ): Tyc2HdRow[] {
-  const out = [...rows];
-  const printed: number[] = [];
-  const corrected: number[] = [];
+  const key = (tyc: string, hd: number): string => `${tyc}|${hd}`;
+  const byKey = new Map(corrections.map((c) => [key(c.tyc, c.printedHd), c]));
+  const found = new Map<Tyc2HdCorrection, number>();
+  const out = rows.map((r) => {
+    const c = byKey.get(key(r.tyc, r.hd));
+    if (c === undefined) return r;
+    found.set(c, (found.get(c) ?? 0) + 1);
+    return { ...r, hd: c.hd };
+  });
   for (const c of corrections) {
-    const at = rows.flatMap((r, i) => (r.tyc === c.tyc && r.hd === c.printedHd ? [i] : []));
-    if (at.length !== 1) {
-      throw new Error(`${from.file} corrects TYC ${c.tyc} HD ${c.printedHd}, which IV/25 prints ${at.length} times, not once.`);
+    const times = found.get(c) ?? 0;
+    if (times !== 1) {
+      throw new Error(`${from.file} corrects TYC ${c.tyc} HD ${c.printedHd}, which IV/25 prints ${times} times, not once.`);
     }
-    out[at[0]] = { ...rows[at[0]], hd: c.hd };
-    printed.push(c.printedHd);
-    corrected.push(c.hd);
   }
+  const printed = corrections.map((c) => c.printedHd);
+  const corrected = corrections.map((c) => c.hd);
   const sorted = (hds: number[]): string => [...hds].sort(ascending).join(',');
   if (sorted(printed) !== sorted(corrected)) {
     throw new Error(
