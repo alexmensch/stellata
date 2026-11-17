@@ -289,11 +289,11 @@ function componentRescue(rejected: readonly RejectedCandidate[], gate: RowGateEv
     && !isSiblingLetterAttribution(r.sourceId, gate.hip, gate.evidence.wdsXids, true));
 }
 
-/** The refusal the identity witness names, and whether its position confirms it. */
+/** The magnitude refusal the identity witness names, and whether its position confirms it. */
 function identityNamed(
   rejected: readonly RejectedCandidate[], identity: IdentityWitness | null,
 ): { index: number; confirmed: boolean } | null {
-  const index = identity === null ? -1 : rejected.findIndex((r) => r.sourceId === identity.sourceId);
+  const index = identity === null ? -1 : rejected.findIndex((r) => r.reason === 'mag' && r.sourceId === identity.sourceId);
   if (identity === null || index < 0) return null;
   return { index, confirmed: identity.separationArcsec !== null && hipparcosNamesSource(identity.separationArcsec) };
 }

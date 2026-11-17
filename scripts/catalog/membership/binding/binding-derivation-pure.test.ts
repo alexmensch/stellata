@@ -296,6 +296,19 @@ describe('deriveBinding', () => {
       expect(d).toMatchObject({ sourceId: 'passes', rescue: null, identity: null });
     });
 
+    it('never outranks a sibling-letter refusal, which no blended magnitude explains', () => {
+      const xids = parseSimbadWdsXidsTsv(columnTable(FROM, [
+        'wds_id\tcomponent\tgaia_source_id\thip',
+        '00009+0000\tA\t\t90',
+        '00009+0000\tB\t900\t',
+      ].join('\n')));
+      const sibling = bindingEvidence(new Map([['900', 5.2]]), xids, printedVOf({ hip: new Map([[90, 4.98]]) }));
+      const gate = rowGateEvidence({ tyc: '', hip: '90', gl: '' }, sibling, index, at(83.815945223, -5.387314083));
+      const d = deriveBinding(candidates({ simbad: '900' }), gate);
+      expect(d).toMatchObject({ sourceId: null, rescue: null, identity: null });
+      expect(d.rejected).toEqual([{ sourceId: '900', via: ['simbad'], reason: 'sibling' }]);
+    });
+
     it('has nothing to say where SIMBAD files the HIP under no source', () => {
       expect(rowGateEvidence({ tyc: '', hip: '91', gl: '' }, blend, index, at(0, 0)).identity).toBeNull();
     });
