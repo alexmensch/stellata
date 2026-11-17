@@ -28,7 +28,7 @@ import {
 } from '../../../../src/catalog-format/record/catalog-pure';
 import { CONSTELLATIONS } from '../constellations/constellations';
 import { makeStar } from '../star-fixture';
-import { NO_DESIGNATION_CON } from '../../classic-ids/designation-constellation-pure';
+import { NO_DESIGNATION_CON } from '../../classic-ids/designation-constellation/designation-constellation-pure';
 import { enterPhase } from '../../record/record-phase';
 
 const conIndexOf = (code: string): number =>

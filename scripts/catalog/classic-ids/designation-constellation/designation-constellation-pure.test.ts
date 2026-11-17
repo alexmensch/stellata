@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { CON_INDEX } from '../parse/constellations/constellations';
-import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { CON_INDEX } from '../../parse/constellations/constellations';
+import { classifySimbadFlamsteed } from '../../simbad/simbad-flamsteed-pure';
 import { designationConstellation, inheritedDesignationCon, NO_DESIGNATION_CON } from './designation-constellation-pure';
 
 describe('designationConstellation', () => {

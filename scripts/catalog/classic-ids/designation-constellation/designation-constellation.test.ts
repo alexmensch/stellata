@@ -3,11 +3,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { committedBuildCounts } from '../build-counts';
-import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
-import { CON_INDEX } from '../parse/constellations/constellations';
-import { publicFile } from '../../util/paths';
-import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { committedBuildCounts } from '../../build-counts';
+import type { SearchEntry } from '../../../../src/catalog-format/record/catalog-pure';
+import { CON_INDEX } from '../../parse/constellations/constellations';
+import { publicFile } from '../../../util/paths';
+import { PUBLIC_FILES } from '../../../../src/catalog-format/public-artifacts/public-artifacts';
 
 const built = existsSync(publicFile(PUBLIC_FILES.searchIndex));
 

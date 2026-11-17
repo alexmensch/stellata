@@ -48,7 +48,7 @@ spine spells them `Alp`; choosing between the conventions is the naming
 ladder's gate ([§ 4](/docs/star-naming.md#4-canonical-designation-forms)). So the overlay's `flamsteed` cell is
 read for its NUMBER only, its `bayer` cell for nothing at all, and the
 constellation those cells carry reaches the build through the separate
-designation-keyed route ([The designation constellation](../README.md#the-designation-constellation)).
+designation-keyed route ([The designation constellation](../designation-constellation/README.md#the-designation-constellation)).
 
 Record fields are single-valued while overlay cells are not, so where the
 overlay asserts several values the field takes ONE for display and the rest go
