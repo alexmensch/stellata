@@ -1,1 +1,12 @@
 hip	entries	keep_entry	basis	evidence
+7397	624-579-1|624-579-2	624-579-1	tycho2_photometry	Hp V 11.82; VT 12.671 vs 12.749. HIP2 position 0.11" / 0.12" from the entries, inside the 0.4" tolerance of both (several); Gaia DR3 cross-matches the HIP to no source.
+12986	640-396-1|640-396-2	640-396-1	tycho2_photometry	Hp V 11.67; VT 12.115 vs 13.443. HIP2 position 0.06" / 0.21" (several); Gaia DR3 cross-matches both entries to one source, the HIP to none.
+13610	6440-435-1|6440-435-2	6440-435-1	tycho2_photometry	Hp V 11.38; VT 12.174 vs 12.250. HIP2 position 0.00" / 0.31" (several); Gaia DR3 cross-matches the HIP to no source.
+27008	4779-338-1|4779-338-2	4779-338-1	tycho2_photometry	Hp V 11.90; VT 12.578 vs 12.996. HIP2 position 0.01" / 0.33" (several); Gaia DR3 cross-matches the HIP to no source.
+52774	257-48-1|257-48-2	257-48-1	tycho2_photometry	Hp V 12.28; VT 12.911 vs 13.203. HIP2 position 0.01" / 0.37" (several); Gaia DR3 cross-matches the HIP to no source.
+65740	6713-135-1|6713-135-2	6713-135-1	tycho2_photometry	Hp V 11.80; VT 12.473 vs 12.972. HIP2 position 0.00" / 0.32" (several); Gaia DR3 cross-matches the HIP to no source.
+65809	6129-193-1|6129-193-2	6129-193-1	tycho2_photometry	Hp V 11.84; VT 12.399 vs 13.227. HIP2 position 0.00" / 0.31" (several); Gaia DR3 cross-matches the HIP to no source.
+69673	1472-1436-1|1472-1436-2	1472-1436-1	tycho2_photometry	Arcturus. Hp V -0.05; VT 0.161 vs 3.487. HIP2 position 0.01" / 0.25" (several); Gaia DR3 publishes no source for it.
+94223	8379-2079-1|8379-2079-2	8379-2079-1	tycho2_photometry	Hp V 10.28; VT 11.012 vs 11.648. A real 2" pair Gaia DR3 resolves (G 11.04 / 11.38), the HIP cross-matched to neither. HIP2 position 1.22" / 2.29", outside the tolerance of both (none), nearer the kept entry.
+104078	1657-2535-1|1657-2535-2	1657-2535-1	tycho2_photometry	Hp V 11.61; VT 12.300 vs 12.838. HIP2 position 0.00" / 0.33" (several); Gaia DR3 cross-matches the HIP to no source.
+106972	2197-637-1|2197-637-2	2197-637-1	tycho2_photometry	GJ 4210. Hp V 11.62; VT 11.949 vs 13.216. HIP2 position 0.06" / 0.19" (several); Gaia DR3 cross-matches the HIP to no source.
