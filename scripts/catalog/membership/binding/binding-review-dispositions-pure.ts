@@ -18,7 +18,7 @@ export type BindingDisposition = (typeof BINDING_DISPOSITIONS)[number];
  *  Gaia's G against the record's printed V on both candidates; a resolved
  *  pair's components bound crosswise, the WDS component letters deciding;
  *  one Gaia source two records reach, held by the one whose light it is; the
- *  Tycho-2 entry whose V is nearest the HIP's printed V. */
+ *  Tycho-2 entry whose VT is nearest the HIP's printed V. */
 export const BINDING_DISPOSITION_BASES = [
   'tycho2_position', 'v70a_astrometry', 'simbad_dr2_object',
   'gaia_photometry', 'pair_component', 'shared_source', 'tycho2_photometry',

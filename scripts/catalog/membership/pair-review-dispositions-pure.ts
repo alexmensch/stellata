@@ -37,19 +37,20 @@ export function parsePairDispositionsTsv(text: string, from: Declared): Map<numb
 // see merge-derivation/README.md#disposing-a-queued-pair
 export function requirePhotometricKeeps(
   dispositions: ReadonlyMap<number, PairDisposition>,
-  printedV: Pick<PrintedVLookups, 'printed_hip' | 'tycho2'>,
+  printedHipV: PrintedVLookups['printed_hip'],
+  vtOf: (tyc: string) => number | null,
 ): void {
   for (const d of dispositions.values()) {
     if (d.basis !== 'tycho2_photometry') continue;
-    const hipV = printedV.printed_hip(d.hip)?.vMag;
+    const hipV = printedHipV(d.hip)?.vMag;
     if (hipV === undefined) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Hipparcos prints no V for it`);
     const offsets = d.entries.map((tyc) => {
-      const v = printedV.tycho2(tyc)?.vMag;
-      if (v === undefined) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Tycho-2 entry ${tyc} reduces to no V`);
-      return { tyc, offset: Math.abs(v - hipV) };
+      const vt = vtOf(tyc);
+      if (vt === null) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Tycho-2 entry ${tyc} prints no VT`);
+      return { tyc, offset: Math.abs(vt - hipV) };
     }).sort((a, b) => a.offset - b.offset);
     if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
-      throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but ${d.keepEntry} is not the one entry whose V is nearest Hipparcos's ${hipV}`);
+      throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but ${d.keepEntry} is not the one entry whose VT is nearest Hipparcos's V ${hipV}`);
     }
   }
 }

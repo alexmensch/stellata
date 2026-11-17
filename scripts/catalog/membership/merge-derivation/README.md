@@ -159,10 +159,12 @@ SIMBAD passes settle, since a `simbad_refused` HIP is an ordinary move until a
 later pass queues it.
 
 **`tycho2_photometry` is recomputed, not taken on trust.** A disposition on
-that basis keeps the entry whose Tycho-2 V (`VT − 0.090(BT − VT)`) is nearest
-Hipparcos's printed V for the HIP, and `requirePhotometricKeeps` fails the
-build where it does not, where the two nearest tie, or where either V is
-missing. It settles the pairs neither Gaia nor HIP2's position can: two
+that basis keeps the entry whose `VT` is nearest Hipparcos's printed V for the
+HIP, and `requirePhotometricKeeps` fails the build where it does not, where
+the two nearest tie, or where either magnitude is missing. It reads `VT`, not
+the Johnson V the printed-V cascade reduces from `BT` and `VT`: Tycho-2 prints
+no `BT` for the fainter entry of most close pairs, and a ranking of two
+entries against one V needs no colour term. It settles the pairs neither Gaia nor HIP2's position can: two
 Tycho-2 entries closer together than Hipparcos's position can separate, or a
 resolved pair Gaia names no source for. Settling the
 queue is `stellata-hooj.17.11.5`.
