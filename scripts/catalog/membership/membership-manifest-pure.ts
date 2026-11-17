@@ -18,6 +18,7 @@ import {
   iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import { lookupGliese } from '../gliese-parse-pure';
 import { refusalRows, type CatalogueKeys, type FlamsteedRefusalRow } from '../simbad/flamsteed-refusals-pure';
 import type { PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
@@ -113,6 +114,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       iv25Hds: (tyc: string) => pairLinks.links.tycHd.get(tyc),
       simbadTycHd: input.simbadTycHd,
       simbadObjectOf: (sourceId: string) => tables.simbadBySourceId.get(sourceId)?.oid,
+    },
+    positional: {
+      v70a: (gl: string) => lookupGliese(tables.gliese, gl)?.astrometryB1950 ?? null,
+      tycho2: (tyc: string) => tables.tycho2.get(tyc),
     },
   };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(

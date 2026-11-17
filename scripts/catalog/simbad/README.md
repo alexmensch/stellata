@@ -39,9 +39,6 @@ scripts/catalog/simbad/
                                   Pure.
   simbad-idents-source.ts         SIMBAD_IDENTS, data/simbad/simbad_idents.tsv
   simbad-idents-parse.ts          declared and read as one object per row.
-  simbad-flamsteed.ts             readSimbadFlamsteed: that table classified
-                                  against IV/27A, for the audit and the naming
-                                  pass.
   simbad-flamsteed-pure.ts        The Flamsteed rule below: which `* NN Con`
     (+ test)                      idents count, indexed by HIP and HD, and the
                                   refused ones with their evidence. Pure.
@@ -228,7 +225,7 @@ whichever component the blended entry printed; it backs the shipped cell on 18
 of the 23 and agrees with the TYC on 5, and neither reading is component
 evidence.
 
-**Silence is silence.** 21,605 manifest rows carrying both a TYC and an HD get
+**Silence is silence.** 21,604 manifest rows carrying both a TYC and an HD get
 no answer from the pull at all, f Pup among them, and a rule must leave a row
 whose source has no object alone rather than treat absence as agreement. The
 two of these 23 that were silent (TYC 8568-3121-1 / HD 72737, 2604-1777-1 /

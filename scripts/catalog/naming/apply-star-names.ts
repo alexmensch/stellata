@@ -10,8 +10,8 @@ import {
   buildDesignationConIndex, designationConstellation, type DesignationConIndex,
 } from '../classic-ids/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
-import type { SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
-import { readSimbadFlamsteed } from '../simbad/simbad-flamsteed';
+import { classifySimbadFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
 import {
   buildWgsnIndex,
   routeDisposedProper,
@@ -42,7 +42,7 @@ export function loadStarNamingInputs(): StarNamingInputs {
     designations: readArtifact(WGSN_DESIGNATIONS),
     dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
     designationCons: buildDesignationConIndex(crossIndex),
-    simbadFlamsteed: readSimbadFlamsteed(crossIndex),
+    simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_IDENTS.read(), crossIndex),
   };
 }
 
