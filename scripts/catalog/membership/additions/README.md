@@ -93,7 +93,7 @@ HIP 93538 without HD 176555, each held by a spine record. The record ships; only
 
 No admitted row keys on a Gaia id alone — admission throws on one, since a
 group with no classical designation left is ledgered as a component — and no
-designation one carries sits on a second row (`sharedDesignations`, <!-- count:membership-manifest/sharedDesignations -->68<!-- /count -->, every
+designation one carries sits on a second row (`sharedDesignations`, <!-- count:membership-manifest/sharedDesignations -->67<!-- /count -->, every
 one a spine-side `hd:` or `hr:` pair), so SID allocation mints every addition under `hd:` /
 `hip:` / `gl:`. The two answer only together: the first says the row has a classical
 designation, the second that the designation is its own.

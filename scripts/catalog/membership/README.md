@@ -262,6 +262,20 @@ row per cell, keyed on the manifest row as it stands afterwards, under
 on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
 rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
 
+**An attested HD that is another HIP's leaves the row too** (`hd_other_hip`):
+I/239 prints no HD for the record's own HIP, both I/239's `HD` column and
+SIMBAD's identifier pull give the HD to a different HIP, and the spine record
+carrying that HIP ships the HD after the label merge. The drop therefore only
+ever removes a second copy of a designation another record keeps. Where the
+other record ships a different HD, or I/239 prints another HD for the record's
+own HIP, the two records hold a swapped or split pair, which is the close-pair
+rule's question, not a drop. SIMBAD's identifier pull covers only the objects
+`simbad_sptype` reached, so where it holds no object for the other HIP the HD
+stays and the row says so in lineage
+(`label-drop.not-taken.hd-simbad-silent`, <!-- count:membership-manifest/membership.label-drop.not-taken.hd-simbad-silent -->0<!-- /count --> today) rather than reading
+SIMBAD's silence as dissent. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
+which I/239 and SIMBAD both give to HIP 54355.
+
 <a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
 cell; it never supplies one.** IV/27A's own Flamsteed column reaches 212 in
 Puppis and 89 in Centaurus, so the rule's range admits numbers the IAU WGSN
@@ -331,8 +345,8 @@ arithmetic and label-flips replay:
   `component:` row names a manifest designation and is itself no manifest row.
 - **No addition shares a designation with another record**, which is what says
   each mints on a classical key rather than falling through to its Gaia id.
-  The <!-- count:membership-manifest/sharedDesignations -->68<!-- /count --> designations two rows do share are the spine's own — pinned, so a
-  label change that makes a sixty-ninth fails here.
+  The <!-- count:membership-manifest/sharedDesignations -->67<!-- /count --> designations two rows do share are the spine's own — pinned, so a
+  label change that makes another fails here.
 - **The astrometry request covers every binding**: each `term = primaries`
   row's `gaia_source_id` is in the request, which reads no manifest, so this
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).

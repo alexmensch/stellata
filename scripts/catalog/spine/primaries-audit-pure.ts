@@ -71,6 +71,8 @@ export interface PrimaryTables extends BindingTables {
   hdI239: ReadonlySet<number>;
   /** I/239's HIP → HD pairing, for the rows publishing both. */
   i239HipHd: ReadonlyMap<number, number>;
+  /** The HD numbers SIMBAD's object for a HIP carries, from the frozen identifier pull. */
+  simbadHdsByHip: ReadonlyMap<number, ReadonlySet<number>>;
   /** HIP numbers carrying a van Leeuwen 2007
    *  (/data/papers/index.md#vanleeuwen2007) HIP2 re-reduction solution. */
   hip2: ReadonlySet<number>;
@@ -103,6 +105,8 @@ export interface PrimaryIndex extends Cns5Index {
   iv27aHip: Set<number>;
   iv27aFlamByHd: Map<number, Set<number>>;
   iv27aFlamByHip: Map<number, Set<number>>;
+  /** I/239's HD → HIP pairing, inverted. */
+  i239HipsByHd: Map<number, Set<number>>;
 }
 
 export function addKeyed(by: Map<number, Set<number>>, key: number, value: number): void {
@@ -135,9 +139,11 @@ export function indexPrimaries(t: PrimaryTables): PrimaryIndex {
     addKeyed(iv27aFlamByHd, r.hd, r.flamsteed);
     if (r.hip !== null) addKeyed(iv27aFlamByHip, r.hip, r.flamsteed);
   }
+  const i239HipsByHd = new Map<number, Set<number>>();
+  for (const [hip, hd] of t.i239HipHd) addKeyed(i239HipsByHd, hd, hip);
   return {
     hdToTycs, tycToHds, hrSet, v50Hd, iv27aHd, iv27aHip,
-    iv27aFlamByHd, iv27aFlamByHip, ...indexCns5(t.cns5),
+    iv27aFlamByHd, iv27aFlamByHip, i239HipsByHd, ...indexCns5(t.cns5),
   };
 }
 

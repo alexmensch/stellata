@@ -64,8 +64,8 @@ export interface LabelDropRow extends RecordIdentifiers {
   reason: LabelDropReason;
 }
 /** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
- *  that Flamsteed number, or that HD number, for the star. */
-export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
+ *  that Flamsteed number, or that HD number, for the star; or the HD is another HIP's (README.md#the-unattested-labels-leave-the-row). */
+export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested', 'hd_other_hip'] as const;
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
 export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;

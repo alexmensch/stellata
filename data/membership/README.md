@@ -89,9 +89,11 @@ flamsteed-refusals.tsv   Regular git. Pipeline-derived. Every SIMBAD
                          (/scripts/catalog/simbad/README.md#the-refused-numbers).
                          37 rows.
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
-                         spine Flamsteed / HD cell no primary attests, keyed
-                         on the manifest row it left, under
-                         flamsteed_unattested (3) · hd_unattested (1).
+                         spine Flamsteed / HD cell no primary attests, or HD
+                         I/239 and SIMBAD give to another HIP whose record ships it, keyed on
+                         the manifest row it left, under
+                         flamsteed_unattested (3) · hd_unattested (1) ·
+                         hd_other_hip (1).
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·
@@ -129,7 +131,8 @@ surface for the derived binding), the primaries the audit reads
 (`../classic-ids/`, `../gliese/`, `../hipparcos/` with I/239's `hd` column,
 `../tycho2/`, `../iau-wgsn/`, the two `../gaia/` cross-walks,
 `../simbad/simbad_sptype.tsv`), `../simbad/simbad_tyc_hd.tsv` for the pair
-rule's SIMBAD check, the `gl:` bridges of
+rule's SIMBAD check, `../simbad/simbad_idents.tsv` for the Flamsteed
+attestation and the `hd_other_hip` drop, the `gl:` bridges of
 `../sid/sameas-overrides.tsv`, the binding gates' evidence
 (`../gaia/gaia_dr3_astrometry.tsv` for G,
 `../hipparcos/hip_main_vmag.tsv` for printed V,
