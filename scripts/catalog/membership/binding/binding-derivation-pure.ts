@@ -3,7 +3,7 @@
 // See README.md.
 
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
-import { printedV } from '../../photometry/v-magnitude-pure';
+import { printedV, type PrintedV } from '../../photometry/v-magnitude-pure';
 import {
   isSiblingLetterAttribution,
   rejectionOf,
@@ -195,6 +195,9 @@ export interface RowGateEvidence extends GateRow {
 export interface IdentityWitness {
   sourceId: string;
   separationArcsec: number | null;
+  /** The named source's Gaia G and the row's printed V: the blend the magnitude gate refused on. */
+  gMag: number | null;
+  vMag: number | null;
 }
 
 /** What the identity witness reads positions from. */
@@ -206,6 +209,7 @@ export interface PositionEvidence {
 
 function identityWitness(
   hip: number | null, simbad: SimbadSourceIndex, positions: PositionEvidence,
+  gMagOf: BindingEvidence['gMagOf'], printed: PrintedV | null,
 ): IdentityWitness | null {
   const sourceId = hip === null ? null : simbad.byHip.get(hip) ?? null;
   if (hip === null || sourceId === null) return null;
@@ -214,6 +218,8 @@ function identityWitness(
   return {
     sourceId,
     separationArcsec: at === null || source === null ? null : hipparcosSeparationFromSource(at, source),
+    gMag: gMagOf(sourceId),
+    vMag: printed?.vMag ?? null,
   };
 }
 
@@ -230,7 +236,7 @@ export function rowGateEvidence(
     tycho2: row.tyc === '' ? [] : [row.tyc],
     gliese: row.gl === '' ? [] : [row.gl],
   }, evidence.printedV);
-  return { hip, printedV: printed, tycWitness, identity: identityWitness(hip, simbad, positions), evidence };
+  return { hip, printedV: printed, tycWitness, identity: identityWitness(hip, simbad, positions, evidence.gMagOf, printed), evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {

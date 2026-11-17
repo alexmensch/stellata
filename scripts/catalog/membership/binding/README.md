@@ -161,7 +161,8 @@ objects on the HIP name nothing, as on the SIMBAD route), and Gaia's position
 carried back to J1991.25 lands on HIP2's within the Hipparcos tolerance
 ([A source against its HIP](../positional-witness/README.md#a-source-against-its-hip)).
 The binding ships `binding.identified.<lead>`; `binding.identity-witness`
-(`addition-binding.*` on an addition) records the source and the separation
+(`addition-binding.*` on an addition) records the source, the separation, and
+the source's G beside the row's printed V that the magnitude gate refused on,
 either way. Like the component witness it applies only once every candidate
 has refused, so it never outranks a candidate that passes on its own.
 

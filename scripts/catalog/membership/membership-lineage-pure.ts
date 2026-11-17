@@ -34,6 +34,7 @@ import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
 } from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { milliCell } from './membership-manifest-tsv';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 
@@ -507,6 +508,8 @@ export type MembershipOutcome =
     readonly subject: RefusalSubject;
     readonly sourceId: string;
     readonly separationArcsec: number | null;
+    readonly gMag: number | null;
+    readonly vMag: number | null;
   }
   | {
     readonly kind: 'candidate-refused';
@@ -582,7 +585,7 @@ type Candidate = { source_id: string; via: string };
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
   : B extends QueuedBranch ? BindingReviewCells & Letters
-  : B extends 'binding.identity-witness' | 'addition-binding.identity-witness' ? { source_id: string; separation_arcsec: string }
+  : B extends 'binding.identity-witness' | 'addition-binding.identity-witness' ? { source_id: string; separation_arcsec: string; g_mag: string; v_mag: string }
   : B extends `binding.${'bound' | 'rescued' | 'identified'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
@@ -648,7 +651,7 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'identity-witness':
       return row(key, o.subject === 'spine' ? 'binding.identity-witness' : 'addition-binding.identity-witness', {
-        source_id: o.sourceId, separation_arcsec: o.separationArcsec === null ? '' : o.separationArcsec.toFixed(3),
+        source_id: o.sourceId, separation_arcsec: milliCell(o.separationArcsec), g_mag: milliCell(o.gMag), v_mag: milliCell(o.vMag),
       });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.subject][o.refusal], { source_id: o.sourceId, via: o.via });

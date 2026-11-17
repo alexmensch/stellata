@@ -547,6 +547,11 @@ describe('buildMembership — the spine side', () => {
       expect(codes(queued)['binding.unconfirmed']).toBe(1);
     });
 
+    it('records the blend the gate refused on beside the witness', () => {
+      const [witness] = buildMembership(unconfirmedInput).lineage.filter((r) => r.code === 'membership.binding.identity-witness');
+      expect(JSON.parse(witness.params)).toEqual({ source_id: '6062', separation_arcsec: '', g_mag: '8.000', v_mag: '5.000' });
+    });
+
     it("letters the queue row from the named source's WDS cross-ID", () => {
       const wdsXids = {
         bySource: new Map([['6062', [{ wdsId: '00001+0001', component: 'A' }]]]),
