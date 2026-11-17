@@ -1131,7 +1131,7 @@ describe('codecs', () => {
       merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'position', separations: hip2Near } }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'position', separations: hip2Near }, onto: 'entry' }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-4', witness: { by: 'position', separations: hip2Near }, onto: 'record' }),
-      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
+      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({
         kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
@@ -1149,7 +1149,7 @@ describe('codecs', () => {
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
       { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl; v70a-none; v70a 20.7"' },
     ]));
-    expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
+    expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);
     expect(MERGE_DIVERGENCE.serialize(MERGE_DIVERGENCE.parse(text))).toBe(text);
     const queue = PAIR_REVIEW.serialize(pairReview);

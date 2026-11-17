@@ -227,7 +227,7 @@ export function pairOwner(
   const sourceId = links.sourceOf.hip(hip);
   if (sourceId === null) {
     const position = positionWitness(hip, entries);
-    if (position?.kind !== 'match') return { reason: 'no_hip_source' };
+    if (position?.kind !== 'match') return { reason: 'unwitnessed' };
     return { owner: position.tyc, witness: { by: 'position', separations: position.separations } };
   }
   const matches = entries.filter((tyc) => links.sourceOf.tyc(tyc) === sourceId);

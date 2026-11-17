@@ -272,7 +272,7 @@ const LEAD_DESCRIPTIONS = {
 } as const satisfies Record<BindingSource, string>;
 
 const PAIR_REVIEW_DESCRIPTIONS = {
-  no_hip_source: 'the Gaia HIP cross-match names no source for the HIP, and HIP2\'s position falls on no entry or on more than one',
+  unwitnessed: 'the Gaia HIP cross-match names no source for the HIP, and HIP2\'s position falls on no entry or on more than one',
   no_entry_matches: 'no entry\'s Gaia TYC cross-match names the HIP\'s source',
   several_match: 'more than one entry\'s Gaia TYC cross-match names the HIP\'s source',
   gate_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and the binding gates refuse that source for the moved record',
@@ -285,7 +285,7 @@ const HELD_DESCRIPTIONS = {
 } as const satisfies Record<HeldState, string>;
 
 const PAIR_REVIEW_BRANCHES = {
-  no_hip_source: 'merge.pair.review.unwitnessed',
+  unwitnessed: 'merge.pair.review.unwitnessed',
   no_entry_matches: 'merge.pair.review.no-entry-matches',
   several_match: 'merge.pair.review.several-match',
   gate_refused: 'merge.pair.review.gate-refused',

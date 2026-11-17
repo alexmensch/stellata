@@ -138,7 +138,7 @@ be reported without being applied.
 
 `data/membership/pair-review.tsv`, keyed on the record's five identifier cells,
 one row per HIP the pair rule names no owner for: `entries`, every Tycho-2
-entry naming the HIP, and `reason` — `no_hip_source`, `no_entry_matches`,
+entry naming the HIP, and `reason` — `unwitnessed`, `no_entry_matches`,
 `several_match`, `gate_refused` or `simbad_refused`, as
 [Applying the pair rule](#applying-the-pair-rule) defines them. It is a view of
 the `merge.pair.review.*` lineage rows, and the spine's entry ships on every
