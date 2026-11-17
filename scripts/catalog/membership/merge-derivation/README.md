@@ -118,10 +118,12 @@ refusing all of them and the second none, each pass re-deriving the spine's
 bindings. Each is refused again with every other already refused, and none of
 them refuses another, so the refused set does not depend on the order passes
 find them in. The check reads only
-the entries the pull requests whatever the manifest holds — IV/25's, and every
+the entries the pull asks for every pair it knows — IV/25's, and every
 entry of a Tycho-2 pair (`pairEntries`), which is where a position move lands
 off IV/25 (`pairRuleTycHdRequest`, the one set the pull also builds its
-request from) — through `requestedTycHds`, and fails the build on any other
+request from) — through `requestedTycHds`, and fails the build on any other.
+The pair entries come off the Tycho-2 slice the manifest selects, so this
+loop runs through the Tycho-2 one
 ([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
 
 **A move can free the HD IV/25 printed for the entry it lands on**, as a
