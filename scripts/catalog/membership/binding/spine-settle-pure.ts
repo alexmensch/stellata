@@ -4,6 +4,7 @@ import type { PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   BINDING_SOURCES,
+  isUnconfirmed,
   type DerivedBinding,
   type RowGateEvidence,
 } from './binding-derivation-pure';
@@ -173,7 +174,7 @@ function settleRow(
       key,
       outcome: {
         kind: 'disposition', outcome: dispositionOf(disposition),
-        queue: isQueuedOutcome(b.outcome) ? 'queued' : 'settled',
+        queue: isQueuedOutcome(b.outcome) || isUnconfirmed(d) ? 'queued' : 'settled',
         keep: disposition.keep_source_id, basis: disposition.basis,
         review: bindingReviewCells(row, b.derived, b.gate, tables),
       },
@@ -210,7 +211,7 @@ export function settleSpineBindings(input: {
       const disposition = dispositions.get(reviewKey);
       if (disposition !== undefined) applied.add(reviewKey);
       const r = settleRow(row, key, b, disposition, evidence, tables);
-      if (r.settled.value === null) {
+      if (disposition === undefined && r.settled.value === null) {
         identityQueue.push(...identityQueueCandidate(key, 'spine', row, b.derived, b.gate, tables));
       }
       outcomes.push(...r.outcomes);

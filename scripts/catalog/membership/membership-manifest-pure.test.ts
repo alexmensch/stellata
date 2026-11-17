@@ -525,6 +525,41 @@ describe('buildMembership — the spine side', () => {
     expect(derivation(result).contested).toBe(0);
   });
 
+  describe('an unconfirmed identity witness', () => {
+    const unconfirmedInput = {
+      ...input,
+      spine: [...spine, spineRow({ hip: '60', hd: '600' })],
+      tables: {
+        ...tables,
+        hipI239: new Set([...tables.hipI239, 60]),
+        hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['6062', { oid: 0, hip: 60, tyc: null, gj: null }]]),
+      },
+      evidence: gateEvidence(tables, new Map([['6062', 8.0]]), printedHipTable([[60, 5.0]]), null),
+      magnitudeTerm: { keptSourceIds: new Set(['6062']), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
+    };
+    const key = bindingReviewKey({ tyc: '', hip: '60', hd: '600', gl: '' });
+    const hip60 = (r: MembershipResult) => r.bindingReview.filter((row) => row.hip === '60');
+
+    it('queues where the magnitude term admits the source SIMBAD names', () => {
+      const queued = buildMembership(unconfirmedInput);
+      expect(hip60(queued).map((r) => r.verdict)).toEqual(['unconfirmed']);
+      expect(codes(queued)['binding.unconfirmed']).toBe(1);
+    });
+
+    it('leaves the queue as disposed once a disposition settles it on no source', () => {
+      const settled = buildMembership({
+        ...unconfirmedInput,
+        dispositions: new Map([[key, disposition({
+          tyc: '', hip: '60', hd: '600', keep_source_id: '', basis: 'tycho2_position',
+        })]]),
+      });
+      expect(hip60(settled).map((r) => r.verdict)).toEqual(['disposed']);
+      expect(codes(settled)['binding.unconfirmed']).toBe(0);
+      expect(codes(settled)['disposition.none.queued']).toBe(1);
+    });
+  });
+
   it('carries the label merge onto the row and attests the merged cells', () => {
     const row = byTyc.get('1-1-1')!;
     expect(row.hr).toBe(1);
