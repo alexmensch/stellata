@@ -123,10 +123,11 @@ off IV/25 — through `requestedTycHds`, and fails the build on any other
 close-pair correction does
 ([What a freed number costs](../../classic-ids/label-merge/README.md#what-a-freed-number-costs)).
 HIP 47108 (HD 83231) moves on its position onto TYC 7167-1508-1, which SIMBAD
-calls HD 83231 and IV/25, crossed, HD 83232. The addition IV/25 had made of
-7167-1508-1 as HD 83232 then falls away, the entry the record left is the
-component of HD 83231 IV/25 names, and HD 83232 ships nowhere; its star,
-Gaia DR3 5632003160847347712, stays an unnamed magnitude-term row, as it was.
+calls HD 83231 and IV/25, crossed, HD 83232. Read uncorrected, the addition
+IV/25 made of 7167-1508-1 as HD 83232 falls away and HD 83232 ships on no
+star; the curated IV/25 correction re-points the pair's two HDs, so HD 83232
+lands on 7167-716-1, its own star
+([Crossed HD numbers in IV/25](../../classic-ids/README.md#crossed-hd-numbers-in-iv25)).
 
 A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot

@@ -1,0 +1,19 @@
+tyc	printed_hd	hd
+# IV/25 rows whose HD number belongs to the other entry of a Tycho-2 pair.
+# The row IV/25 prints for `tyc` as `printed_hd` names HD `hd` instead. The
+# loader hard-fails on a correction naming no IV/25 row, and on a set that is
+# not a permutation of the HDs it re-points: a correction exchanges numbers
+# between IV/25's own rows, so no HD is minted or lost. Every `hd` must be the
+# HD SIMBAD's TYC -> HD pull names for the entry, which
+# classic-ids-parse.test.ts checks over the committed tables. `#` in the first
+# column comments a line; the header stays the first line.
+#
+#   HD 83231 / HD 83232. IV/25 gives 7167-716-1 HD 83231 and 7167-1508-1
+#   HD 83232; SIMBAD names 7167-1508-1 HD 83231 and 7167-716-1 HD 83232.
+#   HIP 47108 (HD 83231 in I/239) sits on 7167-1508-1 by HIP2's position, and
+#   HD 83232's star is Gaia DR3 5632003160847347712 on 7167-716-1.
+#
+# The class, and the coded rule that would replace this file:
+# /scripts/catalog/classic-ids/README.md#crossed-hd-numbers-in-iv25.
+7167-716-1	83231	83232
+7167-1508-1	83232	83231

@@ -40,6 +40,53 @@ export function parseTyc2HdTsv(text: string, from: Declared): Tyc2HdRow[] {
   return out;
 }
 
+/** One curated IV/25 correction: the row IV/25 prints for `tyc` as `printedHd` names HD `hd`.
+ *  See README.md#crossed-hd-numbers-in-iv25. */
+export interface Tyc2HdCorrection {
+  tyc: string;
+  printedHd: number;
+  hd: number;
+}
+
+export function parseTyc2HdCorrectionsTsv(text: string, from: Declared): Tyc2HdCorrection[] {
+  const out: Tyc2HdCorrection[] = [];
+  for (const row of readTable({ ...from, columns: ['tyc', 'printed_hd', 'hd'] as const, comments: true }, text)) {
+    const printedHd = row.int('printed_hd') ?? row.fail('no printed_hd');
+    const hd = row.int('hd') ?? row.fail('no hd');
+    if (hd === printedHd) row.fail(`corrects ${row.requiredText('tyc')}'s HD ${hd} to itself`);
+    out.push({ tyc: row.requiredText('tyc'), printedHd, hd });
+  }
+  return out;
+}
+
+// see README.md#crossed-hd-numbers-in-iv25
+export function applyTyc2HdCorrections(
+  rows: readonly Tyc2HdRow[],
+  corrections: readonly Tyc2HdCorrection[],
+  from: Declared,
+): Tyc2HdRow[] {
+  const out = [...rows];
+  const printed: number[] = [];
+  const corrected: number[] = [];
+  for (const c of corrections) {
+    const at = rows.flatMap((r, i) => (r.tyc === c.tyc && r.hd === c.printedHd ? [i] : []));
+    if (at.length !== 1) {
+      throw new Error(`${from.file} corrects TYC ${c.tyc} HD ${c.printedHd}, which IV/25 prints ${at.length} times, not once.`);
+    }
+    out[at[0]] = { ...rows[at[0]], hd: c.hd };
+    printed.push(c.printedHd);
+    corrected.push(c.hd);
+  }
+  const sorted = (hds: number[]): string => [...hds].sort((a, b) => a - b).join(',');
+  if (sorted(printed) !== sorted(corrected)) {
+    throw new Error(
+      `${from.file} re-points HDs ${sorted(printed)} to ${sorted(corrected)}: a correction exchanges ` +
+        'HD numbers between IV/25 rows and cannot mint or drop one.',
+    );
+  }
+  return out;
+}
+
 /** One IV/27A cross-index row. `bayer` is IV/27A's own lowercase
  *  three-letter form ("alf"), not AT-HYG's ("Alp"); `cst` is the
  *  constellation the Bayer / Flamsteed designation belongs to, never the

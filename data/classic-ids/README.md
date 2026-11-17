@@ -7,7 +7,13 @@ half of the AT-HYG retirement — [§ 2](/docs/catalog-driver.md#2-identifier-so
 sources, [§ 4](/docs/catalog-driver.md#4-how-hd-reaches-gaia) the HD→Gaia route and the ambiguity / precedence policy.
 
 ```
-tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows).
+tyc2_hd.tsv                        ~7.4 MB, LFS. HD ↔ Tycho-2 (353,527 rows;
+                                   every consumer reads it through TYC2_HD,
+                                   with the corrections below applied).
+tyc2_hd_corrections.tsv            Hand-curated. One row per IV/25 row whose
+                                   HD belongs to the other entry of a
+                                   Tycho-2 pair; two rows, one swap
+                                   (/scripts/catalog/classic-ids/README.md#crossed-hd-numbers-in-iv25).
 cross_index.tsv                    ~94 KB, LFS. Bayer / Flamsteed ↔ HD/HR/HIP
                                    (3,690 rows; 3,688 after the corrections
                                    below, which every consumer reads through

@@ -56,10 +56,13 @@ scripts/catalog/classic-ids/
                                   (README.md#the-gates-evidence-has-to-be-pulled).
   cns5-source.ts                  CNS5, IV/25 and V/50, declared
   tyc2-hd-source.ts               (../../util/sources/). The parsers
-  bsc5-source.ts                  stay in classic-ids-parse.ts.
+  bsc5-source.ts                  stay in classic-ids-parse.ts. TYC2_HD is
+                                  IV/25 with tyc2_hd_corrections.tsv
+                                  applied (#crossed-hd-numbers-in-iv25), so
+                                  every reader sees the corrected table.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
-                                  curated IV/27A corrections and their
-                                  application. The gate's
+                                  curated IV/27A and IV/25 corrections and
+                                  their application. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-photometry-parse-pure.ts, shared
                                   with the V cascade's bright tier. CNS5's row
@@ -328,6 +331,25 @@ own proposal — *exactly one member carries a HIP* — is **refuted** rather th
 merely narrow: on ε Boo it fires and picks the wrong star, because IV/27A gives
 HIP 72105 to HD 129988 (ε Boo B) while SIMBAD, V/50 and the record's own
 `proper` cell all put the designation on HD 129989 (Izar).
+
+## Crossed HD numbers in IV/25
+
+On a Tycho-2 pair IV/25 sometimes gives each entry the other's HD: measured
+2026-11-17 against SIMBAD's TYC → HD pull, 64 pairs swap mutually and 97 more
+entries carry an HD SIMBAD gives elsewhere. `data/classic-ids/tyc2_hd_corrections.tsv`
+re-points the rows review has settled, keyed on the entry and the HD IV/25
+prints for it; `TYC2_HD` applies it, so the overlay join, the primaries tables,
+the Tycho-2 request and the origin keys all read the corrected table.
+`applyTyc2HdCorrections` hard-fails on a correction naming no IV/25 row, and on
+a set that is not a permutation of the HDs it re-points: a correction exchanges
+numbers between IV/25's own rows and never mints or drops one.
+`classic-ids-parse.test.ts` checks every corrected HD is the one SIMBAD names
+for the entry.
+
+One pair today, HD 83231 / HD 83232 (`7167-1508-1` / `7167-716-1`): without
+it the HIP 47108 record that HIP2's position puts on `7167-1508-1` takes over
+the entry IV/25 calls HD 83232, and HD 83232 ships on no star. The coded rule
+for the whole class, which would retire this file, is `stellata-hooj.46.4`.
 
 ## The designation constellation
 
