@@ -109,9 +109,9 @@ distance, the same star filed as naming and as pair resolution. Before
   `drawn twice`, `inherited position`, `two WDS ids`), not the stage that
   showed it.
 
-`bd search` matches titles only. Descriptions and notes need
-`bd list --all --limit 0 --desc-contains <s>` and `--notes-contains <s>`;
-most identifiers live there. A hit makes the new bead an instance: link it
+Search with the `beads` skill's Text search command, never `bd search`: most
+identifiers live in descriptions and notes, and a mechanism's earlier
+instances are often closed. A hit makes the new bead an instance: link it
 `caused-by` the mechanism, or `related` to a first instance, as the
 `code-craft` skill's Bug classes section says.
 
