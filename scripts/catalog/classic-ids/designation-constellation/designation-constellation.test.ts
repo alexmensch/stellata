@@ -56,7 +56,7 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
     expect(entry?.dc).toBe(con('psa'));
   });
 
-  // README.md#one-designation-two-hd-numbers. IV/27A gives both members of
+  // ../README.md#one-designation-two-hd-numbers. IV/27A gives both members of
   // each pair the designation, and neither pair carries a component letter to
   // tell them apart, so without the correction both records composed it.
   it('leaves 23 Ori and 104 Aqr on one HD each', () => {

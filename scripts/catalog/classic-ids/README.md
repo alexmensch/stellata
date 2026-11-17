@@ -15,7 +15,7 @@ Two entry points, and they split cleanly: **this build joins the overlay,
   row, keyed on the binding it derived, and writes
   `data/classic-ids/label_flips.tsv` (`label-merge/README.md`). The record
   build reads the merged cells off the manifest and takes only
-  `designationConstellation` ([The designation constellation](#the-designation-constellation)),
+  `designationConstellation` ([The designation constellation](designation-constellation/README.md#the-designation-constellation)),
   where the naming ladder starts each record's `desigCon`.
 
 ## Subfolders
