@@ -16,11 +16,6 @@ export function joinManifestValues(values: readonly (string | number)[]): string
   return values.map(String).join(MANIFEST_VALUE_SEPARATOR);
 }
 
-/** A magnitude or separation cell, to the milli-unit; empty where there is none. */
-export function milliCell(value: number | null): string {
-  return value === null ? '' : value.toFixed(3);
-}
-
 export const MANIFEST_COLUMNS = [
   'tyc', 'hip', 'hd', 'hd_alt', 'hr', 'hr_alt', 'gl', 'flam', 'proper',
   'gaia_source_id', 'binding', 'routes', 'term', 'origin_key',

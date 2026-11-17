@@ -36,7 +36,7 @@ import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
 } from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
-import { milliCell } from './membership-manifest-tsv';
+import { milliCell } from '../../util/tsv/artifact-pure';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 

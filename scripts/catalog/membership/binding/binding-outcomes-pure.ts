@@ -15,7 +15,8 @@ import {
 import type { BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution } from './binding-gate-pure';
 import type { SimbadXids } from '../../spectral/spectral-resolve';
 import { intCell } from '../../../util/tsv/table-pure';
-import { joinManifestValues, milliCell } from '../membership-manifest-tsv';
+import { joinManifestValues } from '../membership-manifest-tsv';
+import { milliCell } from '../../../util/tsv/artifact-pure';
 import type { PrimaryIndex, PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { OwnCandidate, OwnCandidateReason } from '../ledger-rows-pure';
 import type { BindingReviewCells, KeyedOutcome, RefusalSubject } from '../membership-lineage-pure';
