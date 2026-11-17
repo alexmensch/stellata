@@ -229,20 +229,23 @@ of ids resting on it visible.
 supply one: a mistyped digit leaves every `disposition.*` code reading what it
 read before, so nothing but the value itself says it is wrong. The generator therefore requires every asserted
 id to be a source `data/gaia/gaia_dr3_astrometry.tsv` carries, and
-fails the build otherwise. The one exemption is `basis = simbad_dr2_object`,
-whose ids are in the DR2 namespace and so cannot appear in a DR3 table at all —
-a gap in what SIMBAD publishes for two objects, not a rule
-(`stellata-hooj.17.10`).
+fails the build otherwise, on every basis. A DR2-namespace id therefore never
+ships: where DR3 has a successor the disposition keeps it, and where DR3 splits
+the DR2 source into a pair the unresolved record ships none — GJ 3775 and
+GJ 3981, whose DR3 components SIMBAD files under objects that carry no
+parallax, proper motion or radial velocity, while the record's GJ name still
+reaches the system object that does.
 
 `basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
 position against the source), `v70a_astrometry` (V/70A's B1950 position and
 proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
-candidate), `pair_component` (a resolved pair's components bound crosswise,
-the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
+candidate), `pair_component` (a pair's components: which one the record is,
+the HIP and SIMBAD's letters deciding, or none where the record is the system
+Gaia resolves), `shared_source` (one source two records
 reach). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
-9 keep the derived id and 44 another. The nine
+9 keep the derived id, 42 another and 3 none. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
 record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
 (SIMBAD names the brighter of a blended pair whose fainter member the TYC
