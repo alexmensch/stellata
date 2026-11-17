@@ -15,7 +15,7 @@ import {
 import type { BindingEvidence, SimbadWdsXidIndex, WdsComponentAttribution } from './binding-gate-pure';
 import type { SimbadXids } from '../../spectral/spectral-resolve';
 import { intCell } from '../../../util/tsv/table-pure';
-import { joinManifestValues } from '../membership-manifest-tsv';
+import { joinManifestValues, milliCell } from '../membership-manifest-tsv';
 import type { PrimaryIndex, PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { OwnCandidate, OwnCandidateReason } from '../ledger-rows-pure';
 import type { BindingReviewCells, KeyedOutcome, RefusalSubject } from '../membership-lineage-pure';
@@ -169,10 +169,6 @@ function xidsCell(xids: SimbadXids | undefined): string {
   return joinManifestValues(parts);
 }
 
-function magCell(value: number | null): string {
-  return value === null ? '' : value.toFixed(3);
-}
-
 /** The designations a review row is keyed and read on. */
 export type ReviewKeyCells = Pick<BindingReviewCells, 'tyc' | 'hip' | 'hd' | 'hr' | 'gl'>;
 
@@ -180,7 +176,7 @@ export type ReviewKeyCells = Pick<BindingReviewCells, 'tyc' | 'hip' | 'hd' | 'hr
 export function bindingReviewCells(
   cells: ReviewKeyCells, derived: DerivedBinding, gate: RowGateEvidence, tables: PrimaryTables,
 ): BindingReviewCells {
-  const gOf = (id: string | null): string => magCell(id === null ? null : gate.evidence.gMagOf(id));
+  const gOf = (id: string | null): string => milliCell(id === null ? null : gate.evidence.gMagOf(id));
   const xidsOf = (id: string | null): string => xidsCell(id === null ? undefined : tables.simbadBySourceId.get(id));
   const candidates = derived.ranked.flatMap((c) => c.via.map((v) => `${v}:${c.sourceId}`));
   return {
@@ -189,7 +185,7 @@ export function bindingReviewCells(
     derived_via: derived.via.join('+'),
     candidates: joinManifestValues(candidates),
     rejected: joinManifestValues(derived.rejected.map((r) => `${r.sourceId}:${r.reason}`)),
-    v_mag: magCell(gate.printedV?.vMag ?? null),
+    v_mag: milliCell(gate.printedV?.vMag ?? null),
     v_via: gate.printedV?.vVia ?? '',
     derived_g: gOf(derived.sourceId),
     derived_simbad: xidsOf(derived.sourceId),
