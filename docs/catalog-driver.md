@@ -448,7 +448,7 @@ primaries disagree with it there: IV/25 gives the HD to the other entry on 451
 regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
 entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->4,603<!-- /count -->, on the other entry for the <!-- count:membership-manifest/membership.merge.pair.moves -->163<!-- /count --> the rule moves (plus the
-one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused -->8<!-- /count --> SIMBAD contradict, below), and on no
+one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->8<!-- /count --> SIMBAD contradict, below), and on no
 single entry for the rest. Where Gaia cross-matches the HIP to no source at
 all, HIP2's position confirms the spine's entry for <!-- count:membership-manifest/membership.merge.pair.position.confirmed -->988<!-- /count --> and moves
 <!-- count:membership-manifest/membership.merge.pair.position.moves -->44<!-- /count --> records onto the other. The rule (the owner's, 2026-11-14, extended

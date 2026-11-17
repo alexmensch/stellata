@@ -54,6 +54,7 @@ export interface OriginKeys {
 const RETIRED_7_1_20 = retired('7.1.20');
 const RETIRED_7_1_31 = retired('7.1.31');
 const RETIRED_7_2_1 = retired('7.2.1');
+const RETIRED_7_2_3 = retired('7.2.3');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -284,11 +285,11 @@ const HELD_DESCRIPTIONS = {
 } as const satisfies Record<HeldState, string>;
 
 const PAIR_REVIEW_BRANCHES = {
-  no_hip_source: 'merge.pair.review.no-hip-source',
+  no_hip_source: 'merge.pair.review.unwitnessed',
   no_entry_matches: 'merge.pair.review.no-entry-matches',
   several_match: 'merge.pair.review.several-match',
   gate_refused: 'merge.pair.review.gate-refused',
-  simbad_refused: 'merge.pair.review.simbad-refused',
+  simbad_refused: 'merge.pair.review.simbad-refused-move',
 } as const satisfies Record<PairReviewReason, string>;
 type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
 type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
@@ -508,6 +509,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'label-drop.not-taken.hd-simbad-silent': outcomeCode('I/239 prints no HD for the record\'s HIP and gives this HD to another HIP whose spine record ships it, but SIMBAD\'s identifier pull holds no object for that HIP, so the HD stays.'),
   ...MERGE_CODES,
   'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
+  'merge.pair.review.no-hip-source': outcomeCode(`${PAIR} the pair rule names no owner: the Gaia HIP cross-match names no source for the HIP.`, 'none', RETIRED_7_2_3),
+  'merge.pair.review.simbad-refused': outcomeCode(`${PAIR} the pair rule names no owner: one entry's Gaia TYC cross-match names the HIP's source, and SIMBAD's TYC-to-HD cross-identification names that entry by HDs the moved record does not ship.`, 'none', RETIRED_7_2_3),
   ...RETIRED_DIFFERS_CODES,
 });
 
