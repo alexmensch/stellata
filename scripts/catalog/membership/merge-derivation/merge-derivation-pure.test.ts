@@ -8,6 +8,9 @@ import {
   type MergeDivergence, type MergeLinks, type PairDecision, type ShippedCells,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
+import { skyPositionAtEpoch } from '../../../../src/astro-core/equatorial-basis';
+import { TYCHO2_MEAN_EPOCH } from '../../tycho2-parse';
+import { tycho2Row } from '../../tycho2-fixture';
 
 function row(cells: Partial<SpineRow>): SpineRow {
   const out = {} as SpineRow;
@@ -45,6 +48,7 @@ function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks 
     cns5BySource: new Map(),
     held: spineKeys(spine),
     closePair: { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined },
+    positional: { v70a: () => null, tycho2: () => undefined },
   };
 }
 
@@ -325,9 +329,12 @@ describe('mergeDivergences', () => {
     ]);
   });
 
-  it('reports the identifiers only AT-HYG associates', () => {
+  it('reports the identifiers only AT-HYG associates, one divergence per cell', () => {
     const d = divergences(row({ tyc: '2-2-2', hip: '20', hd: '999' }), mergeLinks(links({})));
-    expect(d[0]).toEqual({ kind: 'unlinked', cells: ['hd'], witnessed: 'tyc+hip | hd', published: 'tyc+hip | hd' });
+    expect(d[0]).toEqual({
+      kind: 'unlinked', cell: 'hd', witnessed: 'tyc+hip | hd', published: 'tyc+hip | hd',
+      verdict: { queued: 'close-pair-unanswered' }, separations: [],
+    });
   });
 
   it('reports a filled cell a primary\'s link fills with other values', () => {
@@ -380,6 +387,65 @@ describe('mergeDivergences', () => {
     expect(gl('GJ 1234B')).toEqual([
       { kind: 'differs', link: { to: 'gl', from: 'hip', key: 'gl<hip' }, ships: 'GJ 1234B', derived: ['GJ 1234A'], verdict: { queued: 'no-rule' } },
     ]);
+  });
+});
+
+describe('settling an unlinked cell', () => {
+  const unlinked = (r: SpineRow, m: MergeLinks, shipped = shippedAsIs(r)) => divergences(r, m, undefined, false, shipped)
+    .flatMap((x) => (x.kind === 'unlinked' ? [x] : []));
+  const glRow = row({ tyc: '2-2-2', hip: '20', gl: 'Gl 852.1', gaia_source_id: 'S9' });
+  const gl852 = { raB1950Deg: 333.721, decB1950Deg: 15.11, pmArcsecYr: 0.226, pmPaDeg: 105.0 };
+  const atJ2000 = (raDeg: number, decDeg: number, pmRaMasyr: number, pmDecMasyr: number) => tycho2Row('2-2-2',
+    skyPositionAtEpoch({ raDeg, decDeg }, { pmRaMasyr, pmDecMasyr }, 2016, TYCHO2_MEAN_EPOCH));
+  const witnessing = (entry: ReturnType<typeof tycho2Row> | undefined, astrometry: typeof gl852 | null = gl852): MergeLinks => ({
+    ...mergeLinks(links({})),
+    cns5ByHip: new Map(),
+    positional: { v70a: (gl) => (gl === 'Gl 852.1' ? astrometry : null), tycho2: (tyc) => (tyc === '2-2-2' ? entry : undefined) },
+  });
+
+  it('settles a GJ whose V/70A position lands on the record\'s own Tycho-2 entry', () => {
+    const [d] = unlinked(glRow, witnessing(atJ2000(334.332478354, 15.359376989, 208.0508, -64.0310)));
+    expect(d).toMatchObject({ cell: 'gl', verdict: { settled: 'v70a-position' } });
+    expect(Number(d.separations[0].separationArcsec.toFixed(1))).toBe(0.7);
+  });
+
+  it('queues a GJ the witness finds no entry for, or cannot test, with the reason', () => {
+    const far = atJ2000(334.4, 15.4, 208.0508, -64.0310);
+    expect(unlinked(glRow, witnessing(far))[0].verdict).toEqual({ queued: 'v70a-none' });
+    expect(unlinked(glRow, witnessing(far, null))[0]).toMatchObject({ verdict: { queued: 'no-v70a-astrometry' }, separations: [] });
+    expect(unlinked(glRow, witnessing(undefined))[0].verdict).toEqual({ queued: 'no-tycho2-entry' });
+  });
+
+  it('settles a GJ CNS5\'s row for the record\'s own source names before the witness runs', () => {
+    const m = { ...witnessing(undefined), cns5BySource: new Map([['S9', ['Gl 852.1']]]) };
+    expect(unlinked(glRow, m)[0]).toMatchObject({ verdict: { settled: 'cns5-source' }, separations: [] });
+  });
+
+  it('settles a cell the label rules moved off the record', () => {
+    const hdRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    expect(unlinked(hdRow, mergeLinks(links({})), { ...shippedAsIs(hdRow), hd: null })[0].verdict)
+      .toEqual({ settled: 'not-shipped' });
+  });
+
+  it('judges the spine\'s value where the record ships it only as an alias, not the display HD', () => {
+    const hdRow = row({ tyc: '2-2-2', hip: '20', hd: '999' });
+    const m = {
+      ...mergeLinks(links({})),
+      closePair: {
+        iv25Hds: (tyc: string) => (tyc === '2-2-2' ? new Set([999]) : undefined),
+        simbadTycHd: new Map([['2-2-2', { hdIdents: ['999'], simbadOid: 5, mainId: null }]]),
+        simbadObjectOf: () => undefined,
+      },
+    };
+    expect(unlinked(hdRow, m, { ...shippedAsIs(hdRow), hd: 300, hdAlt: [999] })[0].verdict)
+      .toEqual({ settled: 'close-pair-uncontested' });
+  });
+
+  it('settles an HR V/50 pairs with the shipped HD, and queues a HIP on no rule', () => {
+    const hrRow = row({ tyc: '2-2-2', hd: '300', hr: '9' });
+    expect(unlinked(hrRow, mergeLinks(links({})))).toMatchObject([{ cell: 'hr', verdict: { settled: 'v50-pair' } }]);
+    const hipRow = row({ hip: '77', gl: 'GJ 1234' });
+    expect(unlinked(hipRow, mergeLinks(links({})))).toMatchObject([{ cell: 'hip', verdict: { queued: 'no-rule' } }]);
   });
 });
 

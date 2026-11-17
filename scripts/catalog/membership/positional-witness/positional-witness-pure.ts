@@ -13,7 +13,7 @@ import type { Hip2AstrometryRow } from '../../sources/hip2-source';
 import { HIPPARCOS_EPOCH_JYEAR } from '../../../../src/astro-core/astronomy-constants';
 import type { ObservedPosition, Tycho2Row } from '../../tycho2-parse';
 
-/** In the 13.8″ → 20.7″ gap of the measured separations (README.md#the-tolerances). */
+/** In the 13.5″ → 20.7″ gap of the measured separations (README.md#the-tolerances). */
 export const V70A_WITNESS_TOLERANCE_ARCSEC = 15;
 
 /** See README.md#the-tolerances. */
