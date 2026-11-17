@@ -547,6 +547,19 @@ describe('buildMembership — the spine side', () => {
       expect(codes(queued)['binding.unconfirmed']).toBe(1);
     });
 
+    it("letters the queue row from the named source's WDS cross-ID", () => {
+      const wdsXids = {
+        bySource: new Map([['6062', [{ wdsId: '00001+0001', component: 'A' }]]]),
+        byHip: new Map(), primarySourceLetterByWds: new Map(),
+      };
+      const lettered = buildMembership({
+        ...unconfirmedInput,
+        evidence: bindingEvidence(new Map([['6062', 8.0]]), wdsXids, printedVLookups(printedHipTable([[60, 5.0]]), tables.tycho2, tables.gliese), null),
+      });
+      const [queued] = lettered.lineage.filter((r) => r.code === 'membership.binding.unconfirmed');
+      expect(JSON.parse(queued.params)).toMatchObject({ source_letters: '00001+0001:A' });
+    });
+
     it('leaves the queue as disposed once a disposition settles it on no source', () => {
       const settled = buildMembership({
         ...unconfirmedInput,

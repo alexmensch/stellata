@@ -57,7 +57,7 @@ export function identityQueueCandidate(
   return [{
     key, subject, sourceId: d.identity.sourceId,
     review: bindingReviewCells(cells, d, gate, tables),
-    ...reviewLetters(d.sourceId, cells.hip, gate.evidence.wdsXids),
+    ...reviewLetters(d.identity.sourceId, cells.hip, gate.evidence.wdsXids),
   }];
 }
 
