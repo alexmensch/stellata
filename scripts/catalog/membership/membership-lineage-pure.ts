@@ -646,10 +646,10 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
     case 'unlinked':
       return row(key, 'merge.unlinked', { cells: d.cells.join('+'), derived: d.witnessed, evidence: d.published });
     case 'pair-confirmed':
-      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
+      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.witness.sourceId });
     case 'pair-moves':
       return row(key, d.onto === 'entry' ? 'merge.pair.moves' : 'merge.pair.moves-record', {
-        cells: 'hip', derived: d.owner, evidence: d.sourceId,
+        cells: 'hip', derived: d.owner, evidence: d.witness.sourceId,
       });
     case 'pair-disposed':
       return row(key, d.onto === 'record' ? 'merge.pair.disposed-record' : 'merge.pair.disposed', {

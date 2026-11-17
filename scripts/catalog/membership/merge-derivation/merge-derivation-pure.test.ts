@@ -73,7 +73,7 @@ describe('hdToHr', () => {
 
 describe('pairOwner', () => {
   it('names the entry whose Gaia neighbour is the HIP\'s', () => {
-    expect(pairOwner(10, [A, B], links({ [A]: 'S0', [B]: 'S1' }))).toEqual({ owner: B, sourceId: 'S1' });
+    expect(pairOwner(10, [A, B], links({ [A]: 'S0', [B]: 'S1' }))).toEqual({ owner: B, witness: { by: 'gaia', sourceId: 'S1' } });
   });
 
   it('names no owner without a HIP source, a matching entry, or with two', () => {
@@ -92,7 +92,7 @@ describe('applyPairRule', () => {
     const l = links({ [B]: 'S1' });
     const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), new Map());
     expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100', hr: '7' })]);
-    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' }]]));
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'entry' }]]));
     expect(kept[0].tyc).toBe(A);
   });
 
@@ -101,7 +101,7 @@ describe('applyPairRule', () => {
     const l = links({ [B]: 'S1' });
     const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), new Map());
     expect(rows).toEqual([row({ tyc: A, hd: '100' }), row({ tyc: B, hip: '10', hd: '200' })]);
-    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'record' }]]));
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'record' }]]));
   });
 
   it('reports a moved HIP once, on the row it left, and no verdict on the record it moved onto', () => {
@@ -288,7 +288,7 @@ describe('applyEveryPairMove', () => {
 describe('mergeDivergences', () => {
   it('confirms a spine entry the HIP\'s Gaia source sits on', () => {
     const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
-    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, sourceId: 'S1' }]);
+    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, witness: { by: 'gaia', sourceId: 'S1' } }]);
   });
 
   it('refuses a row the pair rule would still move', () => {
@@ -297,7 +297,7 @@ describe('mergeDivergences', () => {
   });
 
   it('reports the move applied to the row in place of its confirmation', () => {
-    const move = { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' } as const;
+    const move = { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'entry' } as const;
     const d = divergences(row({ tyc: B, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })), move);
     expect(d).toEqual([move]);
   });

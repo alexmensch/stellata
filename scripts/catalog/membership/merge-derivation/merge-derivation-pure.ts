@@ -66,12 +66,12 @@ type Differs = { [K in DiffersLink['key']]: DiffersOf<Extract<DiffersLink, { key
 
 export type MergeDivergence =
   | { readonly kind: 'unlinked'; readonly cells: readonly KeyCell[]; readonly witnessed: string; readonly published: string }
-  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
+  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly witness: PairWitness }
   | {
     readonly kind: 'pair-moves';
     readonly hip: number;
     readonly owner: string;
-    readonly sourceId: string;
+    readonly witness: PairWitness;
     /** `record` when the owner entry is another spine record's, which takes the HIP. */
     readonly onto: PairMoveTarget;
   }
@@ -85,6 +85,9 @@ export type MergeDivergence =
   }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
   | Differs;
+
+/** What named the pair's owner entry. see README.md#connected-is-not-unique--the-pair-rule */
+export type PairWitness = { readonly by: 'gaia'; readonly sourceId: string };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -154,13 +157,13 @@ export function hdToHr(hrHd: ReadonlyMap<number, number>): Map<number, number> {
 /** Of the Tycho-2 entries naming one HIP, the one whose Gaia best neighbour is the HIP's own. */
 export function pairOwner(
   hip: number, entries: readonly string[], links: LinkTables,
-): { owner: string; sourceId: string } | { reason: PairReviewReason } {
+): { owner: string; witness: PairWitness } | { reason: PairReviewReason } {
   const sourceId = links.sourceOf.hip(hip);
   if (sourceId === null) return { reason: 'no_hip_source' };
   const matches = entries.filter((tyc) => links.sourceOf.tyc(tyc) === sourceId);
   if (matches.length === 0) return { reason: 'no_entry_matches' };
   if (matches.length > 1) return { reason: 'several_match' };
-  return { owner: matches[0], sourceId };
+  return { owner: matches[0], witness: { by: 'gaia', sourceId } };
 }
 
 /** A V/70A entry in the record's GJ form, whichever of the catalogue's four prefixes it prints (../../gliese-parse-pure.ts). */
@@ -185,8 +188,8 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, reason: verdict.reason }, hip };
   return {
     divergence: verdict.owner === row.tyc
-      ? { kind: 'pair-confirmed', hip, owner: verdict.owner, sourceId: verdict.sourceId }
-      : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId, onto: 'entry' },
+      ? { kind: 'pair-confirmed', hip, owner: verdict.owner, witness: verdict.witness }
+      : { kind: 'pair-moves', hip, owner: verdict.owner, witness: verdict.witness, onto: 'entry' },
     hip,
   };
 }
@@ -283,7 +286,7 @@ export function applyPairRule(
   dispositions: ReadonlyMap<number, PairDisposition>,
 ): PairRuleResult {
   return applyMoves(kept, m, dispositions, 'queued', (move, receiver) => {
-    if (binds(receiver) !== move.sourceId) return 'gate_refused';
+    if (binds(receiver) !== move.witness.sourceId) return 'gate_refused';
     return refused.has(move.hip) ? 'simbad_refused' : null;
   });
 }
