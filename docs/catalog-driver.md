@@ -532,7 +532,15 @@ GJ 66A (TYC 8478-1394-2) and Gaia on TYC 8478-1394-1, the HD 10361 / GJ 66B
 record. The HIP alone moves between the two records, and allocation follows
 [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv) unchanged: GJ 66B now carries
 SID 317282's key `hip:7751`, so its own SID 317472 merges into 317282, and
-GJ 66A, left with no ledger key, mints. None from `17.6`, `17.5`, `17.7`.
+GJ 66A, left with no ledger key, mints. `17.11.5.1`'s position moves keep
+every moved record's SID; where the moved record binds the source a
+magnitude-term row already drew as a star of its own, that row's Gaia-keyed
+SID merges into it (27 merges, `allocation.merged.same-class`). HD 83232's SID 343235 keeps
+its key `hd:83232` while the curated IV/25 correction moves it off
+TYC 7167-1508-1, where HIP 47108 (HD 83231) now sits, onto 7167-716-1, the star
+SIMBAD calls HD 83232, whose Gaia-keyed SID 119522 merges into it
+([Crossed HD numbers in IV/25](/scripts/catalog/classic-ids/README.md#crossed-hd-numbers-in-iv25)).
+None from `17.6`, `17.5`, `17.7`.
 Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
 build. Pins that retired with `17.6`: `derivedVsFrozen`, `derivedContestedMatch`
 and the frozen-relative verdict names. Pins still to retire with the file:
