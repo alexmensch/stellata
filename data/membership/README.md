@@ -42,8 +42,8 @@ simbad_sourced_distances.tsv
                          (/scripts/catalog/distance/parallax/README.md).
                          It sits beside parked-ledger.tsv because both are
                          views of the record walk's placement. One row per
-                         record, <!-- count:build-catalog/distSimbadPlx -->404<!-- /count -->; a row
-                         carrying neither cell addresses no record
+                         record (build-catalog/distSimbadPlx counts them); a
+                         row carrying neither cell addresses no record
                          (`stellata-hooj.15`).
 binding-review.tsv       Regular git. The 353 spine rows and addition
                          groups the derivation cannot settle alone or a

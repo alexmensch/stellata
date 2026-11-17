@@ -249,6 +249,18 @@ describe('renderFigures', () => {
     ]);
   });
 
+  it('reports a marker in markdown code whose key a snapshot holds, and leaves it unwritten', () => {
+    const inCode = `\`\`\`\nroster ${mark('membership-manifest/rows', '975,000')}\n\`\`\`\n\n\`${mark('membership-manifest/rows', '1')}\``;
+    expect(renderFigures(inCode, snapshots, 'markdown')).toEqual({
+      rendered: inCode,
+      problems: [
+        'line 2: count:membership-manifest/rows sits in code, which renders it literally and the rewrite skips',
+        'line 5: count:membership-manifest/rows sits in code, which renders it literally and the rewrite skips',
+      ],
+      stale: [],
+    });
+  });
+
   it('rewrites a stale figure and reports it', () => {
     const text = `x ${mark('membership-manifest/rows', '975,000')} y`;
     const report = renderFigures(text, snapshots, 'markdown');
