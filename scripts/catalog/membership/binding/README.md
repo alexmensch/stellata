@@ -23,13 +23,16 @@ scripts/catalog/membership/binding/
                                 the binaries load stage each read it.
   binding-evidence.ts           Loads the gate's own evidence — G per source
                                 and SIMBAD's WDS component cross-IDs — and
-                                `loadHipVMag`. The printed-V lookups come from
+                                `loadHipVMag`, and the identity witness's
+                                positions (`positionEvidence`: HIP2 and the
+                                Gaia astrometry). The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,
                                 build:classic-ids' `TYCHO2` / `GLIESE` reads.
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
-                                weighBinding, and the candidate set the
+                                weighBinding, the component and identity
+                                witnesses, and the candidate set the
                                 astrometry request has to cover. Pure, and
                                 imports nothing from the manifest —
                                 `../../spine/` and
@@ -37,7 +40,8 @@ scripts/catalog/membership/binding/
   binding-outcomes-pure.ts      What every primaries row's derivation
                                 records, spine and addition alike:
                                 rowDeriver, the refused, runner-up and
-                                unweighed candidates' outcomes, and the
+                                unweighed candidates' outcomes, the identity
+                                witness's, a review-queue row's cells, and the
                                 unshipped candidates ownCandidates folds,
                                 first row first, for the magnitude term.
                                 Pure.
@@ -102,7 +106,7 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->259<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->90<!-- /count --> on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->231<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->90<!-- /count --> on sibling-letter attribution
 (`binding.gate-mag`, `binding.gate-sibling`; an addition's refusals are
 `addition-binding.*`); falling off the end is a derived refusal.
 `binding.ungateable` (<!-- count:membership-manifest/membership.binding.ungateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
@@ -122,12 +126,19 @@ AT-HYG merged B's cells onto the system's HIP, and the refusal left B's own
 source to come back through the magnitude term as an unnamed twin. VV Crv
 (HIP 61910) is the third.
 
-**A HIP on neither component is the system's, and no witness overrides it.**
+<a id="a-hip-on-neither-component-is-the-systems"></a>**A HIP on neither component is the system's, and no witness overrides it.**
 HIP 62686 and HIP 52774 carry only a HIP and a TYC SIMBAD files under B; their
 Hipparcos entry lives on SIMBAD's system object, and `multiples.tsv` anchors
 component A on it. Rescued, the row sat on B's source and companion promotion
 minted a synthetic B beside it — one star drawn twice. 30 rows are that shape;
-they stay refused and count under `admit.magnitude.refused-sibling`.
+they stay refused and count under `admit.magnitude.refused-sibling`. Where the
+row's own TYC is A's, the HIP binds A: HIP 40476 sits on SIMBAD's `HD 69445`,
+which carries no Gaia id, while TYC 7122-1231-1, Gaia's HIP and TYC
+cross-matches and SIMBAD's object for the bound source all name HD 69445 A,
+and B (TYC 7122-1231-2) is a record of its own. The four-witness close-pair
+rule ([Which witness decides a close pair's HD](../../simbad/README.md#which-witness-decides-a-close-pairs-hd))
+reads the same: no witness names B. A component that carries the system's HIP
+anyway is the binaries pipeline's to refuse, not this derivation's.
 
 **It never outranks a candidate that passes on its own.** A TYC alone is not a
 component attribution: SIMBAD files HR 846's TYC 3700-1745-1 under HD 17743 C
@@ -135,6 +146,38 @@ while its HIP, HD and HR name the unresolved AB, and letting the TYC win
 re-bound 32 such rows onto a companion. A HIP SIMBAD gives to the other
 component alone still refuses. The overlay gate weighs each source alone, with
 no rival to defer to, so it applies no rescue.
+
+## Identity outranks a blended magnitude
+
+**A refused source that SIMBAD and the HIP's own position both name is the
+HIP's star, and binds.** The magnitude gate holds Gaia's G against the
+record's printed V, and on a Hipparcos double that V is the blend's: θ¹ Ori A
+(HIP 26220) prints V 4.98 against G 6.63 for the source SIMBAD's
+`* tet01 Ori A` carries, and the gate refuses it. A refused source is
+unshipped, so the magnitude term admitted it as an unnamed second record of
+the same star. Two witnesses independent of the photometry now outrank the
+gate: SIMBAD's **one** object for the row's HIP carries the source (two
+objects on the HIP name nothing, as on the SIMBAD route), and Gaia's position
+carried back to J1991.25 lands on HIP2's within the Hipparcos tolerance
+([A source against its HIP](../positional-witness/README.md#a-source-against-its-hip)).
+The binding ships `binding.identified.<lead>`; `binding.identity-witness`
+(`addition-binding.*` on an addition) records the source, the separation, and
+the source's G beside the row's printed V that the magnitude gate refused on,
+either way. Like the component witness it applies only once every candidate
+has refused, so it never outranks a candidate that passes on its own.
+
+**Where the position does not confirm SIMBAD, the row ships no source, and
+it is queued** (`unconfirmed`, below) **only where the refused source is a
+magnitude-term row** — the one case that draws a star twice. Its queue row's
+derived source is empty, so it carries the named source, that source's G and
+its separation in `identity_*` cells. The source stays
+that row while it waits: a disagreement leans toward a different star —
+HIP 83369's source sits 64″ from the HIP — and withholding it could drop a
+real one. A refused source fainter than the floor draws nothing twice, so its
+row is an ordinary refusal and only `*.identity-witness` records what SIMBAD
+named. No position is no confirmation: the HIPs the original Hipparcos
+catalogue lists as the second member of a double with no astrometric solution
+of their own have no HIP2 row.
 
 **The losers are weighed too, not only the candidates ahead of the winner.**
 `passingRunnersUp` reads the rejections to decide whether a row's sources
@@ -145,7 +188,12 @@ against the star's printed V 9.98, which the magnitude gate already refuses.
 
 ## What the derivation cannot settle alone
 
-Two outcomes are queued into `data/membership/binding-review.tsv`.
+Three outcomes are queued into `data/membership/binding-review.tsv`: the two
+below, and an `unconfirmed` identity witness
+([Identity outranks a blended magnitude](#identity-outranks-a-blended-magnitude)).
+An addition group queues on the same terms when it is contested or
+unconfirmed; it cannot collide, since admission leaves a shared source on
+neither group.
 
 A **contested** row is one whose winner has a runner-up the gates also passed:
 the precedence order chose, not the evidence. It **ships the winner** and

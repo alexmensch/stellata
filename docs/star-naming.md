@@ -143,7 +143,7 @@ Display resolution order, first hit wins:
    those with a Flamsteed number take it back, and <!-- count:build-catalog/naming.name.own.bayer-latin -->202<!-- /count --> keep their own
    letter, having none to lose to (`naming.name.own.bayer-latin`; borrowed
    Latin-letter labels count under the borrowed `bayer-latin` codes). The
-   Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,233<!-- /count --> displaying their own letter, are untouched.
+   Greek records, <!-- count:build-catalog/naming.name.own.bayer -->1,230<!-- /count --> displaying their own letter, are untouched.
    Below Flamsteed rather than out of the ladder, because Flamsteed
    catalogued only what Greenwich could see — which is what leaves the far
    southern `p Eri` / `f Pup` series with nothing above it. Both forms stay
@@ -175,8 +175,8 @@ designation, which is a stronger test than the label needing to be unique:
 a sibling that owns the designation and then borrows a higher tier
 displays a lettered form of it regardless, so δ Cep A keeps its letter
 beside δ Cep C/D/E even though nothing else displays the bare base.
-<!-- count:build-catalog/naming.letter.sibling-owns -->54<!-- /count --> own labels carry a letter because a sibling owns the designation,
-<!-- count:build-catalog/naming.letter.stated -->50<!-- /count --> because the authority attributes it to that component. Where the authority names a
+<!-- count:build-catalog/naming.letter.sibling-owns -->52<!-- /count --> own labels carry a letter because a sibling owns the designation,
+<!-- count:build-catalog/naming.letter.stated -->49<!-- /count --> because the authority attributes it to that component. Where the authority names a
 specific component, that name attaches to that record alone; siblings
 resolve down the ladder on their own.
 

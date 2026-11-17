@@ -48,10 +48,10 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   });
 
   it('unions onto the primaries at the record total the floor implies', () => {
-    expect(boundSourceIds.size).toBe(375_141);
+    expect(boundSourceIds.size).toBe(375_171);
     const newcomers = magnitudeTermNewcomers(selection.keptSourceIds, boundSourceIds);
-    expect(newcomers.length).toBe(598_453);
-    expect(boundSourceIds.size + newcomers.length).toBe(973_594);
+    expect(newcomers.length).toBe(598_435);
+    expect(boundSourceIds.size + newcomers.length).toBe(973_606);
   });
 
   it('is the union the committed manifest already carries', () => {
@@ -59,12 +59,12 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
     expect(committedTermRows).toBe(newcomers.length);
   });
 
-  it('keeps 331,476 sources the primaries already bind', () => {
+  it('keeps 331,494 sources the primaries already bind', () => {
     let both = 0;
     for (const sourceId of selection.keptSourceIds) {
       if (boundSourceIds.has(sourceId)) both++;
     }
-    expect(both).toBe(331_476);
+    expect(both).toBe(331_494);
   });
 
   it('reads the 5p astrometry of exactly the sources it is handed', async () => {

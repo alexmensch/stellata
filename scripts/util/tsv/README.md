@@ -34,6 +34,7 @@ scripts/util/tsv/
                               idCell, idListCell, sourceIdCell,
                               oneOfCell).
   artifact-pure.ts (+ test)   defineArtifact — a self-written table's codec;
+                              nullableCell and milliCell, the cell writers;
                               tsvLine / tsvText, its line and file layout,
                               which the refresh pulls' formatter writes
                               through too; `byText`, a record order by a

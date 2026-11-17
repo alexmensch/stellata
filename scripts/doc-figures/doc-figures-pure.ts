@@ -141,8 +141,17 @@ export type DocKind = 'markdown' | 'html';
 
 export const scannable = (text: string, kind: DocKind): string => (kind === 'markdown' ? maskCode(text) : text);
 
+/** Markers in markdown code whose key a snapshot holds: a live figure the rewrite never reaches. */
+function liveMarkersInCode(text: string, scanned: readonly FigureMarker[], snapshots: Snapshots): string[] {
+  const reached = new Set(scanned.map((m) => m.bodyStart));
+  return parseMarkers(text).markers
+    .filter((m) => !reached.has(m.bodyStart) && resolveFigure(m.key, snapshots).ok)
+    .map((m) => `line ${m.line}: count:${m.key} sits in code, which renders it literally and the rewrite skips`);
+}
+
 export function renderFigures(text: string, snapshots: Snapshots, kind: DocKind): FigureReport {
   const { markers, problems } = parseMarkers(scannable(text, kind));
+  if (kind === 'markdown') problems.push(...liveMarkersInCode(text, markers, snapshots));
   const stale: string[] = [];
   let rendered = '';
   let cursor = 0;

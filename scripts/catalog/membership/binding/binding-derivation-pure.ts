@@ -3,7 +3,7 @@
 // See README.md.
 
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
-import { printedV } from '../../photometry/v-magnitude-pure';
+import { printedV, type PrintedV } from '../../photometry/v-magnitude-pure';
 import {
   isSiblingLetterAttribution,
   rejectionOf,
@@ -21,6 +21,12 @@ import {
   type BindingTables,
 } from '../../spine/primaries-audit-pure';
 import type { SimbadXids } from '../../spectral/spectral-resolve';
+import type { SkyPosition } from '../../../../src/astro-core/equatorial-basis';
+import {
+  hipparcosNamesSource,
+  hipparcosSeparationFromSource,
+  type SourceAstrometry,
+} from '../positional-witness/positional-witness-pure';
 
 /** Precedence order: the record's own TYC through the Tycho-2 best-neighbour
  *  walk, its HIP through the Hipparcos-2 walk, CNS5's EDR3 id on its GJ, then
@@ -149,12 +155,18 @@ export interface RejectedCandidate extends RankedCandidate {
   reason: GateReason;
 }
 
+/** Which witness bound a winner every candidate had refused: README.md#both-gates-weigh-every-candidate,
+ *  README.md#identity-outranks-a-blended-magnitude. */
+export type Rescue = 'component' | 'identity';
+
 export interface DerivedBinding {
   sourceId: string | null;
   via: BindingSource[];
   binding: DerivedBindingClass;
-  /** The winner is the component witness's, every candidate having refused. */
-  rescued: boolean;
+  rescue: Rescue | null;
+  /** The identity witness, where it named a refused candidate: the winner when its position
+   *  confirms it, else the row is queued (`isUnconfirmed`). */
+  identity: IdentityWitness | null;
   ranked: RankedCandidate[];
   rejected: RejectedCandidate[];
   /** The row carries a printed V, so the magnitude gate could weigh its
@@ -174,13 +186,48 @@ export interface RowGateEvidence extends GateRow {
   /** The component witness — null where SIMBAD files the TYC under no source
    *  or under two (README.md#both-gates-weigh-every-candidate). */
   tycWitness: string | null;
+  /** Null where SIMBAD files the row's HIP under no source or under two. */
+  identity: IdentityWitness | null;
   evidence: BindingEvidence;
+}
+
+/** README.md#identity-outranks-a-blended-magnitude. `separationArcsec` is null where either position is missing. */
+export interface IdentityWitness {
+  sourceId: string;
+  separationArcsec: number | null;
+  /** The named source's Gaia G and the row's printed V: the blend the magnitude gate refused on. */
+  gMag: number | null;
+  vMag: number | null;
+}
+
+/** What the identity witness reads positions from. */
+export interface PositionEvidence {
+  hipparcos: (hip: number) => SkyPosition | null;
+  /** Null where Gaia publishes no proper motion to carry the source by. */
+  gaia: (sourceId: string) => SourceAstrometry | null;
+}
+
+function identityWitness(
+  hip: number | null, simbad: SimbadSourceIndex, positions: PositionEvidence,
+  gMagOf: BindingEvidence['gMagOf'], printed: PrintedV | null,
+): IdentityWitness | null {
+  const sourceId = hip === null ? null : simbad.byHip.get(hip) ?? null;
+  if (hip === null || sourceId === null) return null;
+  const at = positions.hipparcos(hip);
+  const source = positions.gaia(sourceId);
+  return {
+    sourceId,
+    separationArcsec: at === null || source === null ? null : hipparcosSeparationFromSource(at, source),
+    gMag: gMagOf(sourceId),
+    vMag: printed?.vMag ?? null,
+  };
 }
 
 export function rowGateEvidence(
   row: BindingCells,
   evidence: BindingEvidence,
   simbad: SimbadSourceIndex,
+  positions: PositionEvidence,
 ): RowGateEvidence {
   const hip = intCell(row.hip);
   const tycWitness = row.tyc === '' ? null : simbad.byTyc.get(row.tyc) ?? null;
@@ -189,13 +236,17 @@ export function rowGateEvidence(
     tycho2: row.tyc === '' ? [] : [row.tyc],
     gliese: row.gl === '' ? [] : [row.gl],
   }, evidence.printedV);
-  return { hip, printedV: printed, tycWitness, evidence };
+  return { hip, printedV: printed, tycWitness, identity: identityWitness(hip, simbad, positions, evidence.gMagOf, printed), evidence };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
   if (via.length === 0) return 'none';
   return via.some((s) => s !== 'simbad') ? 'crosswalk_gated' : 'simbad_corroborated';
 }
+
+/** The identity witness named a refused candidate and its position did not confirm it. */
+export const isUnconfirmed = (d: DerivedBinding): d is DerivedBinding & { identity: IdentityWitness; sourceId: null } =>
+  d.identity !== null && d.sourceId === null;
 
 /** Weighs **every** ranked candidate, the winner's losing rivals included,
  *  through `weighBinding`, as `applyBindingGate` does; the component witness is
@@ -210,40 +261,47 @@ export function deriveBinding(
   const gateable = gate.printedV !== null;
   const unweighedNoPulledRow: RankedCandidate[] = [];
   const weighedNullGMag: RankedCandidate[] = [];
-  let winner: RankedCandidate | null = null;
-  const { evidence } = gate;
+  let passed: RankedCandidate | null = null;
   for (const candidate of ranked) {
-    const verdict = weighBinding(candidate.sourceId, gate, evidence);
+    const verdict = weighBinding(candidate.sourceId, gate, gate.evidence);
     if (verdict.magnitude === 'null_g') weighedNullGMag.push(candidate);
     if (verdict.magnitude === 'no_pulled_row') unweighedNoPulledRow.push(candidate);
     const reason = rejectionOf(verdict);
-    if (reason !== null) {
-      rejected.push({ ...candidate, reason });
-    } else if (winner === null) {
-      winner = candidate;
-    }
+    if (reason !== null) rejected.push({ ...candidate, reason });
+    else passed ??= candidate;
   }
-  // The component witness rescues a row the sibling gate left unbound; it never
-  // outranks a candidate that passes on its own — see README.md. A sibling
-  // rejection is one the magnitude gate already passed.
-  let rescued = false;
-  if (winner === null && gate.tycWitness !== null) {
-    const named = rejected.findIndex((r) => r.reason === 'sibling'
-      && r.sourceId === gate.tycWitness
-      && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
-    if (named >= 0) {
-      const [witnessed] = rejected.splice(named, 1);
-      winner = { sourceId: witnessed.sourceId, via: witnessed.via };
-      rescued = true;
-    }
-  }
+  const component = passed === null ? componentRescue(rejected, gate) : -1;
+  const named = passed === null && component < 0 ? identityNamed(rejected, gate.identity) : null;
+  const rescue: { index: number; by: Rescue } | null = component >= 0
+    ? { index: component, by: 'component' }
+    : named?.confirmed ? { index: named.index, by: 'identity' } : null;
+  const [taken] = rescue === null ? [] : rejected.splice(rescue.index, 1);
+  const won = passed ?? taken ?? null;
   return {
-    sourceId: winner?.sourceId ?? null,
-    via: winner?.via ?? [],
-    binding: bindingClassOf(winner?.via ?? []),
-    rescued,
+    sourceId: won?.sourceId ?? null,
+    via: won?.via ?? [],
+    binding: bindingClassOf(won?.via ?? []),
+    rescue: rescue?.by ?? null, identity: named === null ? null : gate.identity,
     ranked, rejected, gateable, unweighedNoPulledRow, weighedNullGMag,
   };
+}
+
+/** The refusal the component witness names, or -1. It never outranks a passing candidate (README.md); a sibling
+ *  rejection is one the magnitude gate already passed. */
+function componentRescue(rejected: readonly RejectedCandidate[], gate: RowGateEvidence): number {
+  if (gate.tycWitness === null) return -1;
+  return rejected.findIndex((r) => r.reason === 'sibling'
+    && r.sourceId === gate.tycWitness
+    && !isSiblingLetterAttribution(r.sourceId, gate.hip, gate.evidence.wdsXids, true));
+}
+
+/** The magnitude refusal the identity witness names, and whether its position confirms it. */
+function identityNamed(
+  rejected: readonly RejectedCandidate[], identity: IdentityWitness | null,
+): { index: number; confirmed: boolean } | null {
+  const index = identity === null ? -1 : rejected.findIndex((r) => r.reason === 'mag' && r.sourceId === identity.sourceId);
+  if (identity === null || index < 0) return null;
+  return { index, confirmed: identity.separationArcsec !== null && hipparcosNamesSource(identity.separationArcsec) };
 }
 
 /** Every source the derivation could propose for these rows — what the

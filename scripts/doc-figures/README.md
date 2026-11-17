@@ -51,8 +51,11 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 
 ```
 <!-- count:<stem>/<json.path>[ sigN|kN|dN] -->FIGURE<!-- /count -->
-<!-- count:membership-manifest/membership.component -->465<!-- /count --> groups resolve onto an existing record
 ```
+
+In prose the marker is invisible: "<!-- count:membership-manifest/membership.component -->302<!-- /count -->
+groups resolve onto an existing record" reads as a plain sentence, its figure
+owned by `membership-manifest/membership.component`.
 
 - **Key** — the snapshot's stem (`membership-manifest` for
   `scripts/catalog/membership/membership-manifest-expected.json`), a `/`,
@@ -74,7 +77,9 @@ HTML comments render as nothing on GitHub, in table cells too. Inside a code
 block, inline code or a mermaid diagram they render literally, so the scan
 skips markdown code entirely (`maskCode`, over the same `marked` lexer the
 doc-pointer suite uses) and a figure there stays unmarked — which is also how
-the grammar line above can show placeholders.
+the grammar line above can show placeholders. A marker in code whose key a
+snapshot holds is a problem, not a skip: nothing would ever rewrite it, so it
+reads as kept current while it goes stale.
 
 ## The catalogue's size
 
