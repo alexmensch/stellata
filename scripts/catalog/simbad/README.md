@@ -92,10 +92,11 @@ row shows in CI's regenerate-and-diff; its codec is
 ## What the TYC → HD pull adjudicates
 
 Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
-over the 331,760 manifest rows carrying both a TYC and an HD that this file
-answers for — the two classes, and only the first is reachable without it:
+over the 331,761 manifest rows carrying both a TYC and an HD that this file
+answers for, IV/25 read with its curated corrections
+([Crossed HD numbers in IV/25](../classic-ids/README.md#crossed-hd-numbers-in-iv25)) — the two classes, and only the first is reachable without it:
 
-- **SIMBAD shares no HD with IV/25 on the row's own TYC — 219 rows.** IV/25 is
+- **SIMBAD shares no HD with IV/25 on the row's own TYC — 218 rows.** IV/25 is
   internally consistent on every one (`n_hd=1 n_tyc=1`, and its HD→TYC
   direction agrees with its TYC→HD one), so **no committed table could detect
   this class**. It splits two ways, and the split is the load-bearing part:
@@ -103,9 +104,9 @@ answers for — the two classes, and only the first is reachable without it:
     rejects both. Many are mutual swaps between a pair's two entries, and the
     set is full of named stars: τ Oph, ξ Sco and ε² Lyr (both entries of
     each), 20 Lyn, 8 Lac, 65 Psc, 55 Eri, ε Ari, μ¹ Cyg.
-  - **10 where SIMBAD backs the manifest's shipped HD against IV/25** —
+  - **9 where SIMBAD backs the manifest's shipped HD against IV/25** —
     γ¹ Ari, π Aql B, TYC 2772-917-1, HD 17479A, HD 18281 and HD 18282 (a
-    mutual swap), HD 48766, HD 83231, HD 213973B, HD 224646B. A rule keyed
+    mutual swap), HD 48766, HD 213973B, HD 224646B. A rule keyed
     on the row's own TYC in IV/25 would corrupt every one, which is why the
     second witness is a prerequisite rather than a refinement.
 
@@ -133,11 +134,11 @@ answers for — the two classes, and only the first is reachable without it:
   agree it ships ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)).
   Why neither can be re-flagged here: [Which witness decides a close pair's HD](#which-witness-decides-a-close-pairs-hd).
 
-So 222 shipped HD cells are contradicted and 10 are vindicated against the
+So 221 shipped HD cells are contradicted and 9 are vindicated against the
 printed index. Both of the two dissents `stellata-3bsf.50` measured live
 reproduce exactly — π Aql (IV/25 187259, SIMBAD 187260) and TYC 2772-917-1
 (224635 / 224636) — which is what says the file agrees with the hand
-measurement that motivated it, and both are in the vindicating 10.
+measurement that motivated it, and both are in the vindicating 9.
 
 Every count in this section is pinned against the committed tables by
 `simbad-tyc-hd-parse.test.ts`'s *adjudication over the committed tables*, so a

@@ -148,19 +148,19 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
     });
 
     it('answers for the stated share of the rows carrying both cells', () => {
-      expect(counts.bothCells).toBe(353363);
-      expect(counts.answered).toBe(331760);
+      expect(counts.bothCells).toBe(353364);
+      expect(counts.answered).toBe(331761);
       expect(counts.silent).toBe(21603);
     });
 
-    it('finds 219 dissents, every one on an internally consistent IV/25 entry', () => {
-      expect(counts.dissent).toBe(219);
+    it('finds 218 dissents, every one on an internally consistent IV/25 entry', () => {
+      expect(counts.dissent).toBe(218);
       expect(counts.dissentInconsistent).toBe(0);
     });
 
-    it('splits them 209 manifest-faithful / 10 vindicating the manifest', () => {
+    it('splits them 209 manifest-faithful / 9 vindicating the manifest', () => {
       expect(counts.faithful).toBe(209);
-      expect(counts.vindicating).toBe(10);
+      expect(counts.vindicating).toBe(9);
       expect(counts.faithful + counts.vindicating).toBe(counts.dissent);
     });
 
