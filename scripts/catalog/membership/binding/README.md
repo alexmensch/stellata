@@ -220,7 +220,7 @@ the record's `tyc` / `hip` / `hd` / `gl` cells and restating the derived id it
 was taken over, so a re-pull that moves the derivation re-opens the review
 rather than carrying a stale verdict forward. `keep_source_id` is what the row
 ships: the derived id, any other candidate the queue row lists, an id **no
-committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> of
+committed source proposes at all**, or empty for none. That last case is <!-- count:membership-manifest/membership.disposition.asserted -->31<!-- /count --> of
 the 53 today (`disposition.asserted`) and is why the file exists — the review
 reached evidence the derivation cannot, and the count is what keeps the number
 of ids resting on it visible.

@@ -63,7 +63,7 @@ through the astrometry pull back into `build:membership`
 The derivation's candidates cover every binding it can reach, since a binding
 is one of its candidates; what they leave out is a reviewed id no committed
 source proposes
-(<!-- count:membership-manifest/membership.disposition.asserted -->33<!-- /count --> today), which is why the dispositions file is the fourth
+(<!-- count:membership-manifest/membership.disposition.asserted -->31<!-- /count --> today), which is why the dispositions file is the fourth
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
