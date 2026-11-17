@@ -15,7 +15,7 @@ import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding/binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
 import {
-  iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
+  mergeDivergences, pairEntries, pairLinksFrom, requestedTycHds, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 import { lookupGliese } from '../gliese-parse-pure';
@@ -90,7 +90,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const pairLinks = pairLinksFrom(tables);
   const derive = rowDeriver(tables, idx, evidence);
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
-  const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
+  const tycHds = requestedTycHds(input.simbadTycHd, [...tables.iv25.map((r) => r.tyc), ...pairEntries(tables.tycho2)]);
 
   const pair = settlePairRule(
     correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, input.pairDispositions, tycHds,

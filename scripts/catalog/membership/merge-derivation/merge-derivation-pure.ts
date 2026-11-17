@@ -159,11 +159,21 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   else list.push(value);
 }
 
+function tycho2HipEntries(tycho2: ReadonlyMap<string, { readonly hip: number | null }>): Map<number, string[]> {
+  const out = new Map<number, string[]>();
+  for (const [tyc, r] of tycho2) if (r.hip !== null) push(out, r.hip, tyc);
+  for (const entries of out.values()) entries.sort();
+  return out;
+}
+
+/** Every entry the pair rule can put a HIP on: each whose HIP Tycho-2 gives to another entry too. */
+export function pairEntries(tycho2: ReadonlyMap<string, { readonly hip: number | null }>): string[] {
+  return [...tycho2HipEntries(tycho2).values()].filter((entries) => entries.length > 1).flat();
+}
+
 export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   const links = linkTablesFrom(tables);
-  const hipEntries = new Map<number, string[]>();
-  for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
-  for (const entries of hipEntries.values()) entries.sort();
+  const hipEntries = tycho2HipEntries(tables.tycho2);
   const cns5ByHip = new Map<number, string[]>();
   const cns5BySource = new Map<string, string[]>();
   for (const r of tables.cns5) {
@@ -343,14 +353,14 @@ export function applyPairRule(
   });
 }
 
-/** see README.md#applying-the-pair-rule */
-export function iv25TycHds(
-  pull: ReadonlyMap<string, SimbadTycHdRow>, iv25: readonly { tyc: string }[],
+/** `requested`: the TYCs SIMBAD's TYC→HD pull asks whatever the manifest holds. see README.md#applying-the-pair-rule */
+export function requestedTycHds(
+  pull: ReadonlyMap<string, SimbadTycHdRow>, requested: Iterable<string>,
 ): (tyc: string) => readonly number[] {
-  const requested = new Set(iv25.map((r) => r.tyc));
+  const asked = new Set(requested);
   return (tyc) => {
-    if (!requested.has(tyc)) {
-      throw new Error(`pair rule: owner entry ${tyc} is no IV/25 entry, so SIMBAD's TYC→HD pull need not have asked for it`);
+    if (!asked.has(tyc)) {
+      throw new Error(`pair rule: owner entry ${tyc} is neither an IV/25 entry nor a pair's, so SIMBAD's TYC→HD pull need not have asked for it`);
     }
     const row = pull.get(tyc);
     return row === undefined ? [] : hdNumbers(row);

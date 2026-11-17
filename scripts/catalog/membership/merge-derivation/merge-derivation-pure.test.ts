@@ -4,7 +4,7 @@ import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
 import {
-  applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, settlePairRule, simbadRefusedMoves,
+  applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairEntries, pairOwner, requestedTycHds, settlePairRule, simbadRefusedMoves,
   type MergeDivergence, type MergeLinks, type PairDecision, type ShippedCells,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
@@ -306,17 +306,24 @@ describe('simbadRefusedMoves', () => {
   });
 });
 
-describe('iv25TycHds', () => {
+describe('requestedTycHds', () => {
   const pull = new Map([[A, { hdIdents: ['100', '100A', '101B'], simbadOid: 1, mainId: null }]]);
-  const read = iv25TycHds(pull, [{ tyc: A }, { tyc: B }]);
+  const read = requestedTycHds(pull, [A, B]);
 
-  it('names an IV/25 entry\'s HDs, and none where SIMBAD names none', () => {
+  it('names a requested entry\'s HDs, and none where SIMBAD names none', () => {
     expect(read(A)).toEqual([100, 101]);
     expect(read(B)).toEqual([]);
   });
 
-  it('refuses an entry outside IV/25, which the pull need not have asked for', () => {
-    expect(() => read('9-9-9')).toThrow(/9-9-9 is no IV\/25 entry/);
+  it('refuses an entry the pull was not asked for', () => {
+    expect(() => read('9-9-9')).toThrow(/9-9-9 is neither an IV\/25 entry nor a pair's/);
+  });
+});
+
+describe('pairEntries', () => {
+  it('lists every entry whose HIP Tycho-2 gives to another entry too', () => {
+    const tycho2 = new Map([[A, { hip: 10 }], [B, { hip: 10 }], ['2-2-2', { hip: 20 }], ['3-3-3', { hip: null }]]);
+    expect(pairEntries(tycho2)).toEqual([A, B]);
   });
 });
 
