@@ -9,6 +9,8 @@ import type { PrintedHipValue } from '../../photometry/hip-photometry-parse-pure
 import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
 import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './simbad-wds-xids-source';
+import { HIP2 } from '../../sources/hip2-source';
+import type { PositionEvidence } from './binding-derivation-pure';
 
 export function loadHipVMag(): Map<number, PrintedHipValue> {
   return HIP_PHOTOMETRY.read().vmag;
@@ -29,4 +31,20 @@ export function loadBindingEvidence(printedV: PrintedVLookups): {
     if (row.gMag !== null) sourceGMag.set(sourceId, row.gMag);
   }
   return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry };
+}
+
+/** HIP2's J1991.25 positions and Gaia's, for the identity witness. */
+export function positionEvidence(gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>): PositionEvidence {
+  const hip2 = HIP2.read().astrometry;
+  return {
+    hipparcos: (hip) => hip2.get(hip) ?? null,
+    gaia: (sourceId) => {
+      const row = gaiaAstrometry.get(sourceId);
+      if (row === undefined || row.pmraMasyr === null || row.pmdecMasyr === null) return null;
+      return {
+        raDeg: row.raDeg, decDeg: row.decDeg, refEpoch: row.refEpoch,
+        pmRaMasyr: row.pmraMasyr, pmDecMasyr: row.pmdecMasyr,
+      };
+    },
+  };
 }

@@ -102,8 +102,8 @@ V = G − f(BP−RP)      Riello 2021 (/data/papers/index.md#riello2021), inside
 ```
 
 Per-tier routing, the stage's count block over every row that reached the V step
-([Brightness-colour lineage](#brightness-colour-lineage)): `gaia_riello` **<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,504<!-- /count -->** ·
-`printed_hip` **<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,243<!-- /count -->** · `tycho2` **<!-- count:build-catalog/brightness-colour.v.tycho2.inside-bt-vt-range -->184<!-- /count -->** inside its counted
+([Brightness-colour lineage](#brightness-colour-lineage)): `gaia_riello` **<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,514<!-- /count -->** ·
+`printed_hip` **<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,215<!-- /count -->** · `tycho2` **<!-- count:build-catalog/brightness-colour.v.tycho2.inside-bt-vt-range -->184<!-- /count -->** inside its counted
 colour range and **<!-- count:build-catalog/brightness-colour.v.tycho2.outside-bt-vt-range -->6<!-- /count -->** outside · `gliese` **<!-- count:build-catalog/brightness-colour.v.gliese -->20<!-- /count -->** · `curated`
 **<!-- count:build-catalog/brightness-colour.v.curated -->1<!-- /count -->**, residual `none` **<!-- count:build-catalog/brightness-colour.v.none -->637<!-- /count -->** — rows no tier lights, which park
 as `no_v_magnitude`, so a shipped record never carries it (`ShippedBrightness`'s
@@ -154,9 +154,9 @@ B−V = (G−V)(BP−RP) − (G−B)(BP−RP)    inside both relations' validity
   → none                              the record bakes SOLAR_BV_FALLBACK
 ```
 
-Per-tier routing over the shipped records: `gaia_relation` **<!-- count:build-catalog/brightness-colour.ci.gaia-relation -->881,894<!-- /count -->** ·
-`printed_hip_bv` **<!-- count:build-catalog/brightness-colour.ci.printed-hip-bv -->9,584<!-- /count -->** · `gspc` **<!-- count:build-catalog/brightness-colour.ci.gspc -->12,092<!-- /count -->** ·
-`spectral_derived` **<!-- count:build-catalog/brightness-colour.ci.spectral-derived -->3,776<!-- /count -->** · `none` **<!-- count:build-catalog/brightness-colour.ci.none -->57,611<!-- /count -->**, which
+Per-tier routing over the shipped records: `gaia_relation` **<!-- count:build-catalog/brightness-colour.ci.gaia-relation -->881,900<!-- /count -->** ·
+`printed_hip_bv` **<!-- count:build-catalog/brightness-colour.ci.printed-hip-bv -->9,566<!-- /count -->** · `gspc` **<!-- count:build-catalog/brightness-colour.ci.gspc -->12,093<!-- /count -->** ·
+`spectral_derived` **<!-- count:build-catalog/brightness-colour.ci.spectral-derived -->3,774<!-- /count -->** · `none` **<!-- count:build-catalog/brightness-colour.ci.none -->57,606<!-- /count -->**, which
 bakes the solar colour. The relation carries the bulk; the two measured tiers under
 it take the rows past its colour and saturation bounds, and the rest reach
 neither and take a derived colour or none.

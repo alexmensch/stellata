@@ -18,13 +18,20 @@ import {
   BINDING_SOURCES,
   type BindingSource,
   type DerivedBinding,
+  type RowGateEvidence,
 } from '../binding/binding-derivation-pure';
 import {
+  bindingReviewCells,
+  boundOutcome,
+  identityQueueCandidate,
   heldMoreThanOnce,
+  identityWitnessed,
   passingRunnersUp,
   refusedCandidates,
+  reviewLetters,
   unshippedCandidates,
   unweighedCandidates,
+  type IdentityQueueCandidate,
   type RowDeriver,
   type UnshippedCandidate,
 } from '../binding/binding-outcomes-pure';
@@ -113,6 +120,7 @@ function spineClaims(records: readonly LabelMergeRecord[]): Claims {
 interface AdditionItem extends AdditionCohortItem {
   /** What this item alone derives — two items deriving one source are one star. */
   derived: DerivedBinding;
+  gate: RowGateEvidence;
 }
 
 /** Designation-keyed indexes over the primaries the additions join through. */
@@ -190,6 +198,7 @@ interface AdditionGroup {
   source: string | null;
   binding: AdditionBindingClass;
   derived: DerivedBinding;
+  gate: RowGateEvidence;
   sourceOnSpine: boolean;
   /** The TYC and HIP routes' candidates, where both propose one and they differ. */
   routeDisagreement: { tyc: string; hip: string } | null;
@@ -221,7 +230,7 @@ function candidateVia(d: DerivedBinding, source: BindingSource): string | null {
 
 function additionGroup(
   items: readonly AdditionItem[],
-  derived: DerivedBinding,
+  { derived, gate }: { derived: DerivedBinding; gate: RowGateEvidence },
   claims: Claims,
   sharedSources: ReadonlySet<string>,
   keys: OriginKeys,
@@ -256,6 +265,7 @@ function additionGroup(
     source,
     binding: source === null ? 'none' : derived.binding,
     derived,
+    gate,
     sourceOnSpine,
     routeDisagreement: tycSource !== null && hipSource !== null && tycSource !== hipSource
       ? { tyc: tycSource, hip: hipSource } : null,
@@ -374,7 +384,14 @@ function additionBindingOutcome(g: AdditionGroup): AdditionBindingOutcome {
   if (g.derived.sourceId === null) return g.derived.ranked.length > 0 ? 'refused' : 'no-candidate';
   if (g.sourceOnSpine) return 'on-spine';
   if (g.source === null) return 'shared';
-  return g.derived.rescued ? 'rescued' : 'bound';
+  return boundOutcome(g.derived);
+}
+
+function reviewKeyCells(g: AdditionGroup) {
+  return {
+    tyc: g.tyc, hip: g.hip === null ? '' : String(g.hip.hip),
+    hd: g.hd === null ? '' : String(g.hd.lowestHd), hr: '', gl: g.rawGl ?? '',
+  };
 }
 
 export interface AdditionsPhase {
@@ -384,6 +401,7 @@ export interface AdditionsPhase {
   /** The component groups', which become no row. */
   identity: IdentityRow[];
   unshipped: UnshippedCandidate[];
+  identityQueue: IdentityQueueCandidate[];
 }
 
 export function admitAdditions(input: {
@@ -400,17 +418,18 @@ export function admitAdditions(input: {
   const { tables, idx, derive, keys } = input;
   const claims = spineClaims(input.spineRecords);
   const items: AdditionItem[] = additionCohortItems(tables, input.spineKeys, idx).map((i) => ({
-    ...i, derived: derive(additionCells([i])).derived,
+    ...i, ...derive(additionCells([i])),
   }));
   const index = indexAdditions(tables);
-  const derivedGroups = groupAdditions(items, tables, index).map((g) => ({
-    items: g, derived: g.length === 1 ? g[0].derived : derive(additionCells(g)).derived,
-  }));
+  const derivedGroups = groupAdditions(items, tables, index).map((g) => {
+    const { derived, gate } = g.length === 1 ? g[0] : derive(additionCells(g));
+    return { items: g, derived, gate };
+  });
   const sharedSources = heldMoreThanOnce(derivedGroups.map(({ derived }) => derived.sourceId));
 
-  const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [] };
-  const groups = derivedGroups.map(({ items: groupItems, derived }) => {
-    const group = additionGroup(groupItems, derived, claims, sharedSources, keys);
+  const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [], identityQueue: [] };
+  const groups = derivedGroups.map(({ items: groupItems, derived, gate }) => {
+    const group = additionGroup(groupItems, { derived, gate }, claims, sharedSources, keys);
     const weighedBy = groupItems.map((item) => {
       const at = itemOrigin(item, keys);
       return { d: item.derived, cites: at === group.origin ? [] : [at] };
@@ -422,8 +441,12 @@ export function admitAdditions(input: {
 
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
+    const cells = reviewKeyCells(g);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
-      out.outcomes.push({ key: g.origin, outcome: { kind: 'addition-contested' } });
+      out.outcomes.push({ key: g.origin, outcome: {
+        kind: 'addition-contested', review: bindingReviewCells(cells, g.derived, g.gate, tables),
+        ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
+      } });
     }
     const component = a.verdict.kind === 'component';
     if (component && g.derived.sourceId !== null) {
@@ -441,7 +464,9 @@ export function admitAdditions(input: {
         sourceId: g.derived.sourceId ?? '', via: g.derived.via.join('+'),
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),
+      ...identityWitnessed(g.origin, 'addition', g.derived),
     );
+    out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', cells, g.derived, g.gate, tables));
     if (a.verdict.kind === 'component') {
       out.outcomes.push({
         key: g.origin,

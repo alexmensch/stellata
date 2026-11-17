@@ -442,8 +442,8 @@ gaia:3017360833515044480	The-2 Ori B	θ² Ori B	no
 gaia:3017361104086334080	The-1 Ori Ta		no
 gaia:3017364063330465152	θ¹ Ori	θ¹ Ori D	no
 gaia:3017364063330718080	The-1 Ori C	θ¹ Ori C	no
-gaia:3017364063331140224	The-1 Ori F		no
-gaia:3017364127743288704	The-1 Ori E		no
+gaia:3017364063331140224	The-1 Ori F	θ¹ Ori F	no
+gaia:3017364127743288704	The-1 Ori E	θ¹ Ori E	no
 gaia:3017364132049943680	The-1 Ori B	θ¹ Ori B	no
 gaia:3030028684933623808	HD 60998 E		no
 gaia:3030028783707181696	HD 60998 B	HD 60997	no
@@ -2060,10 +2060,10 @@ hip:103813	2 Equ		absent
 hip:116191	HIP 116191	NSV 26100 BC	yes
 hip:117218	107 Aqr		absent
 hip:2505	λ Cas	λ Cas A	yes
-hip:26220	The-1 Ori A	θ¹ Ori Aa	no
+hip:26220	The-1 Ori A		absent
 hip:27996	HIP 27988 B	HIP 27996	no
 hip:2941	HIP 2941		absent
-hip:34922	L 2 Pup	L² Pup	yes
+hip:34922	L 2 Pup		absent
 hip:37096	HIP 37096	f Pup C	yes
 hip:64375	NSV 19645	342 G. Hya	yes
 hip:7463	τ Scl		absent
@@ -2419,20 +2419,20 @@ synth:synth-05322+1703-Bb	HIP 25950 Bb	NSV 16329 Bb	no
 synth:synth-05350-0600-Bb	HIP 26197 Bb	NSV 16390 Bb	no
 synth:synth-05350-0600-C	HIP 26199 C	NSV 16390 C	no
 synth:synth-05352-0223-B	HIP 26216 B	NSV 16417 B	no
-synth:synth-05353-0523-Ab	The-1 Ori Ab		no
-synth:synth-05353-0523-Bb	The-1 Ori Bb		no
-synth:synth-05353-0523-Bc	The-1 Ori Bc		no
-synth:synth-05353-0523-Bd	The-1 Ori Bd		no
-synth:synth-05353-0523-Ca2	The-1 Ori Ca2		no
-synth:synth-05353-0523-Cb	The-1 Ori Cb		no
-synth:synth-05353-0523-Dc	The-1 Ori Dc		no
-synth:synth-05353-0523-H	The-1 Ori H		no
-synth:synth-05353-0523-I	The-1 Ori I		no
-synth:synth-05353-0523-Pb	The-1 Ori Pb		no
-synth:synth-05353-0523-Qb	The-1 Ori Qb		no
-synth:synth-05353-0523-Xb	The-1 Ori Xb		no
-synth:synth-05353-0523-Yb	The-1 Ori Yb		no
-synth:synth-05353-0523-Zb	The-1 Ori Zb		no
+synth:synth-05353-0523-Ab	The-1 Ori Ab	θ¹ Ori Ab	no
+synth:synth-05353-0523-Bb	The-1 Ori Bb	θ¹ Ori Bb	no
+synth:synth-05353-0523-Bc	The-1 Ori Bc	θ¹ Ori Bc	no
+synth:synth-05353-0523-Bd	The-1 Ori Bd	θ¹ Ori Bd	no
+synth:synth-05353-0523-Ca2	The-1 Ori Ca2	θ¹ Ori Ca2	no
+synth:synth-05353-0523-Cb	The-1 Ori Cb	θ¹ Ori Cb	no
+synth:synth-05353-0523-Dc	The-1 Ori Dc	θ¹ Ori Dc	no
+synth:synth-05353-0523-H	The-1 Ori H	θ¹ Ori H	no
+synth:synth-05353-0523-I	The-1 Ori I	θ¹ Ori I	no
+synth:synth-05353-0523-Pb	The-1 Ori Pb	θ¹ Ori Pb	no
+synth:synth-05353-0523-Qb	The-1 Ori Qb	θ¹ Ori Qb	no
+synth:synth-05353-0523-Xb	The-1 Ori Xb	θ¹ Ori Xb	no
+synth:synth-05353-0523-Yb	The-1 Ori Yb	θ¹ Ori Yb	no
+synth:synth-05353-0523-Zb	The-1 Ori Zb	θ¹ Ori Zb	no
 synth:synth-05353-0524-Cb	The-1 Ori Cb		no
 synth:synth-05353-0524-Hb	The-1 Ori Hb		no
 synth:synth-05353-0524-Ib	The-1 Ori Ib		no
@@ -2546,7 +2546,7 @@ synth:synth-06573-3530-B	HIP 33451 B	NSV 17255 B	no
 synth:synth-06573-4929-B	HIP 33455 B	NSV 17261 B	no
 synth:synth-06577-4118-Ab	HIP 33487 Ab	V358 Pup Ab	no
 synth:synth-06579-4417-B	HIP 33499 B	NSV 03321 B	no
-synth:synth-06583-3525-D	HIP 33543 D		absent
+synth:synth-06583-3525-D	HIP 33543 D	HIP 33544 D	no
 synth:synth-06584-1300-B	HIP 33560 B	NSV 03315 B	no
 synth:synth-06584-3407-B	HIP 33558 B	t Pup B	no
 synth:synth-06592+1843-B	HD 267347 B	NSV 03319 B	no

@@ -174,7 +174,7 @@ Gaia reduction can hide behind its citation.
 there is no Gaia fit at all there is no blend to distrust and a Gaia bibcode is
 an ordinary citation; all 3 Tycho-2-shaped rows route `simbad` on an
 EDR3-cited PM for exactly that reason. This mirrors the rv cascade, which
-keeps **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,554<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/placement.rv.refused.gaia-release -->430<!-- /count -->** on blended rows.
+keeps **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,545<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/placement.rv.refused.gaia-release -->430<!-- /count -->** on blended rows.
 
 **The cost is the `gaia_bibcode_skipped` rows, which stay static, concentrated
 where it hurts most** (13 before the magnitude term):
