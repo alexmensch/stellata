@@ -156,7 +156,15 @@ gate (i) matches it). The build fails on a disposition whose `entries` no
 longer match the pair, so a Tycho-2 or Gaia change reopens the review; on a
 `keep_entry` off the pair; and on a HIP the rule does not queue once the
 SIMBAD passes settle, since a `simbad_refused` HIP is an ordinary move until a
-later pass queues it. Settling the
+later pass queues it.
+
+**`tycho2_photometry` is recomputed, not taken on trust.** A disposition on
+that basis keeps the entry whose Tycho-2 V (`VT − 0.090(BT − VT)`) is nearest
+Hipparcos's printed V for the HIP, and `requirePhotometricKeeps` fails the
+build where it does not, where the two nearest tie, or where either V is
+missing. It settles the pairs neither Gaia nor HIP2's position can: two
+Tycho-2 entries closer together than Hipparcos's position can separate, or a
+resolved pair Gaia names no source for. Settling the
 queue is `stellata-hooj.17.11.5`.
 
 ## The divergence ledger

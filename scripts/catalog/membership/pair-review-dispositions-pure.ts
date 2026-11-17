@@ -4,6 +4,7 @@ import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { BINDING_DISPOSITION_BASES, type BindingDispositionBasis } from './binding/binding-review-dispositions-pure';
+import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
 
 export const PAIR_DISPOSITION_COLUMNS = ['hip', 'entries', 'keep_entry', 'basis', 'evidence'] as const;
 
@@ -31,4 +32,24 @@ export function parsePairDispositionsTsv(text: string, from: Declared): Map<numb
     });
   }
   return out;
+}
+
+// see merge-derivation/README.md#disposing-a-queued-pair
+export function requirePhotometricKeeps(
+  dispositions: ReadonlyMap<number, PairDisposition>,
+  printedV: Pick<PrintedVLookups, 'printed_hip' | 'tycho2'>,
+): void {
+  for (const d of dispositions.values()) {
+    if (d.basis !== 'tycho2_photometry') continue;
+    const hipV = printedV.printed_hip(d.hip)?.vMag;
+    if (hipV === undefined) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Hipparcos prints no V for it`);
+    const offsets = d.entries.map((tyc) => {
+      const v = printedV.tycho2(tyc)?.vMag;
+      if (v === undefined) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Tycho-2 entry ${tyc} reduces to no V`);
+      return { tyc, offset: Math.abs(v - hipV) };
+    }).sort((a, b) => a.offset - b.offset);
+    if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
+      throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but ${d.keepEntry} is not the one entry whose V is nearest Hipparcos's ${hipV}`);
+    }
+  }
 }

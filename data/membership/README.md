@@ -68,7 +68,8 @@ binding-review-dispositions.tsv
                          empty), a basis from the closed enum
                          (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
-                         · shared_source) and the measured evidence. 54 rows:
+                         · shared_source · tycho2_photometry) and the
+                         measured evidence. 54 rows:
                          9 take the derived id, 1 ships none (44 Boo), 44
                          another — 33 of those an id
                          only the cited basis stands behind

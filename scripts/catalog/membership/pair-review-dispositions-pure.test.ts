@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePairDispositionsTsv } from './pair-review-dispositions-pure';
+import { parsePairDispositionsTsv, requirePhotometricKeeps } from './pair-review-dispositions-pure';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
 
 const FROM = { file: 'pair-review-dispositions.tsv', hint: 'h' };
@@ -27,5 +27,34 @@ describe('parsePairDispositionsTsv', () => {
 
   it('reads the committed file', () => {
     expect(PAIR_REVIEW_DISPOSITIONS.read()).toBeInstanceOf(Map);
+  });
+});
+
+describe('requirePhotometricKeeps', () => {
+  const REF = { file: 'f', line: 1 } as never;
+  const printedV = (hip: Record<number, number>, tyc: Record<string, number>) => ({
+    printed_hip: (h: number) => (h in hip ? { vMag: hip[h], ref: REF } : null),
+    tycho2: (t: string) => (t in tyc ? { vMag: tyc[t], ref: REF, outsideRange: false } : null),
+  });
+  const keeps = (keep: string, basis = 'tycho2_photometry') => parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tVT`);
+
+  it('passes a keep_entry whose Tycho-2 V is nearest the printed V', () => {
+    expect(() => requirePhotometricKeeps(keeps('1-1-1'), printedV({ 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 }))).not.toThrow();
+  });
+
+  it('fails a keep_entry another entry is nearer to, or an exact tie', () => {
+    expect(() => requirePhotometricKeeps(keeps('1-1-2'), printedV({ 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })))
+      .toThrow(/1-1-2 is not the one entry whose V is nearest/);
+    expect(() => requirePhotometricKeeps(keeps('1-1-1'), printedV({ 10: 10 }, { '1-1-1': 9, '1-1-2': 11 })))
+      .toThrow(/not the one entry/);
+  });
+
+  it('fails where either V is missing', () => {
+    expect(() => requirePhotometricKeeps(keeps('1-1-1'), printedV({}, { '1-1-1': 10.7, '1-1-2': 12.1 }))).toThrow(/prints no V/);
+    expect(() => requirePhotometricKeeps(keeps('1-1-1'), printedV({ 10: 9.4 }, { '1-1-1': 10.7 }))).toThrow(/1-1-2 reduces to no V/);
+  });
+
+  it('weighs only tycho2_photometry dispositions', () => {
+    expect(() => requirePhotometricKeeps(keeps('1-1-2', 'tycho2_position'), printedV({}, {}))).not.toThrow();
   });
 });

@@ -240,7 +240,9 @@ proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
 namespace), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a resolved pair's components bound crosswise,
 the HIP and SIMBAD's letters deciding), `shared_source` (one source two records
-reach). Each disposition's code says what it kept and whether the derivation
+reach), `tycho2_photometry` (of a Tycho-2 pair's entries, the one whose V is
+nearest the HIP's printed V; the pair-review dispositions use it, and the build
+recomputes it, [Disposing a queued pair](../merge-derivation/README.md#disposing-a-queued-pair)). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
 9 keep the derived id and 44 another. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
