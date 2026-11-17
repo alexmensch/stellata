@@ -84,14 +84,14 @@ function auditDeclaration(branch: AuditBranch): CodeDeclaration {
   return part === 'refused' ? refusalCode(description) : outcomeCode(description);
 }
 
-const RETIRED_7_1_31 = retired('7.1.31');
+const RETIRED_7_2_3 = retired('7.2.3');
 
 export const RESOLVE_CODES = stageCodes(RESOLVE_LINEAGE.stage, {
   ...taggedCodes('tier.', RESOLVE_VIA, (tier) => outcomeCode(TIER_DESCRIPTIONS[tier])),
   ...taggedCodes('refused.', CASCADE_GATES, (gate) => refusalCode(GATE_DESCRIPTIONS[gate])),
   ...Object.fromEntries([...AUDIT_CODES.keys()].map((b) => [b, auditDeclaration(b)])) as Record<AuditBranch, CodeDeclaration>,
-  'tier.athyg-gaia-native': outcomeCode('The component\'s Gaia source is an AT-HYG row\'s own gaia cell, reached through a HIP or a position match.', 'none', RETIRED_7_1_31),
-  'refused.athyg-match-sibling-claimed': refusalCode('An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.', RETIRED_7_1_31),
+  'tier.athyg-gaia-native': outcomeCode('The component\'s Gaia source is an AT-HYG row\'s own gaia cell, reached through a HIP or a position match.', 'none', RETIRED_7_2_3),
+  'refused.athyg-match-sibling-claimed': refusalCode('An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.', RETIRED_7_2_3),
 });
 
 function tierBranch(via: BoundTier): `tier.${Kebab<BoundTier>}` {
