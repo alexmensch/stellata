@@ -119,6 +119,15 @@ entry of a Tycho-2 pair (`pairEntries`), which is where a position move lands
 off IV/25 — through `requestedTycHds`, and fails the build on any other
 ([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
 
+**A move can free the HD IV/25 printed for the entry it lands on**, as a
+close-pair correction does
+([What a freed number costs](../../classic-ids/label-merge/README.md#what-a-freed-number-costs)).
+HIP 47108 (HD 83231) moves on its position onto TYC 7167-1508-1, which SIMBAD
+calls HD 83231 and IV/25, crossed, HD 83232. The addition IV/25 had made of
+7167-1508-1 as HD 83232 then falls away, the entry the record left is the
+component of HD 83231 IV/25 names, and HD 83232 ships nowhere; its star,
+Gaia DR3 5632003160847347712, stays an unnamed magnitude-term row, as it was.
+
 A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot
 be reported without being applied.

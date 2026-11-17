@@ -448,12 +448,15 @@ primaries disagree with it there: IV/25 gives the HD to the other entry on 451
 regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
 entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->4,603<!-- /count -->, on the other entry for the <!-- count:membership-manifest/membership.merge.pair.moves -->163<!-- /count --> the rule moves (plus the
-one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused -->6<!-- /count --> SIMBAD contradict, below), and on no
-single entry for the rest. The rule
-(the owner's, 2026-11-14): **Gaia decides, else review** — the entry the HIP's
-own Gaia source sits on takes the HIP and its HD; with no such entry, or where
-the binding gates or SIMBAD's TYC→HD cross-identification contradict the
-move, the row is queued and the spine's choice ships meanwhile
+one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused -->8<!-- /count --> SIMBAD contradict, below), and on no
+single entry for the rest. Where Gaia cross-matches the HIP to no source at
+all, HIP2's position confirms the spine's entry for <!-- count:membership-manifest/membership.merge.pair.position.confirmed -->988<!-- /count --> and moves
+<!-- count:membership-manifest/membership.merge.pair.position.moves -->44<!-- /count --> records onto the other. The rule (the owner's, 2026-11-14, extended
+2026-11-17): **Gaia decides, else HIP2's position, else review** — the entry
+the HIP's own Gaia source sits on takes the HIP and its HD, or where Gaia
+names no source, the one entry HIP2's position falls on; with no such entry,
+or where the binding gates or SIMBAD's TYC→HD cross-identification contradict
+the move, the row is queued and the spine's choice ships meanwhile
 ([The pair rule](/scripts/catalog/membership/merge-derivation/README.md#connected-is-not-unique--the-pair-rule)).
 The cells a primary fills where the spine row leaves them empty, and the filled
 cells a primary's link fills with other values, are on the same surface. `build:membership` applies the pair rule

@@ -58,8 +58,8 @@ SIMBAD tier:
   over all rows and over the 1,802 `pflag='X'` rows alike — the 1991.67 the
   X rows solve to against another catalogue's rate. The supplement prints none
   and solves to **1991.25** over its 81 measurable rows, its stated epoch.
-- Against HIP2, the per-row epoch is what closes the gap: over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
-  `no_hip_source` pairs, carrying HIP2 to it takes the right entry's 99th
+- Against HIP2, the per-row epoch is what closes the gap: over the 1,046
+  spine pairs whose HIP Gaia cross-matches to no source, carrying HIP2 to it takes the right entry's 99th
   percentile from 0.39″ to 0.18″
   ([The tolerances](/scripts/catalog/membership/positional-witness/README.md#the-tolerances)).
 

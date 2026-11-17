@@ -20,9 +20,10 @@ scripts/catalog/membership/positional-witness/
                                   Pure.
   positional-witness-spread.test.ts
                                   The verdict counts and gaps below,
-                                  recomputed over the committed pair queue
-                                  and the corrected spine's unlinked GJ
-                                  cells, and pinned. LFS-gated.
+                                  recomputed over the corrected spine's
+                                  pairs whose HIP Gaia cross-matches to no
+                                  source and its unlinked GJ cells, and
+                                  pinned. LFS-gated.
 ```
 
 ## The verdict
@@ -43,9 +44,10 @@ the cell's RA was measured at and its Dec to the Dec's, which differ per row
 on the main table and are J1991.25 on the supplement
 ([Which position to propagate from](/data/tycho2/README.md#which-position-to-propagate-from)).
 The mean position will not do: both entries of a `pflag='P'` pair carry the
-same mean position, the blend's photocentre, and 315 of the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count --> queued
-pairs are that shape. A HIP with no HIP2 proper motion cannot be witnessed
-(`hipparcosAstrometry` returns null); none of the queued ones lacks one.
+same mean position, the blend's photocentre, and 315 of the 1,046 spine pairs
+whose HIP Gaia cross-matches to no source are that shape. A HIP with no HIP2
+proper motion cannot be witnessed (`hipparcosAstrometry` returns null); none of
+those 1,046 lacks one.
 
 **V/70A** (`witnessV70a`) — the GJ cell's B1950 position, carried by its own
 total proper motion and position angle from B1950.0 to the entry's epoch in
@@ -62,8 +64,8 @@ of known matches below, so no verdict turns on them.
 Measured 2026-11-16 over the committed tables. The verdict counts are pinned
 in `positional-witness-spread.test.ts`.
 
-**`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.4`.** Over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
-`no_hip_source` HIPs, carried HIP2 lands on the nearer entry's observed cell
+**`HIPPARCOS_WITNESS_TOLERANCE_ARCSEC = 0.4`.** Over those 1,046
+HIPs, carried HIP2 lands on the nearer entry's observed cell
 within 0.18″ at the 99th percentile (median 0.013″); the nearer separations
 run continuously to 0.36″, then two pairs Hipparcos measured as one sit at
 1.05″ (HIP 17750) and 1.23″ (HIP 94223). Uncarried, the 99th percentile was
