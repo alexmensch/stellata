@@ -15,7 +15,7 @@ import {
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
-import { TYC2_HD as TYC2_HD_SOURCE } from './tyc2-hd-source';
+import { TYC2_HD as TYC2_HD_SOURCE, TYC2_HD_CORRECTIONS } from './tyc2-hd-source';
 import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
 import { hdNumbers } from '../simbad/simbad-tyc-hd-parse';
 import { cns5Astrometry, cns5Row } from './cns5-fixture';
@@ -173,7 +173,7 @@ describe.skipIf(![TYC2_HD_SOURCE.file, SIMBAD_TYC_HD.file].every((f) => lfsConte
   () => {
     it('re-point each entry to the HD SIMBAD names for it', () => {
       const simbad = SIMBAD_TYC_HD.read();
-      const text = readFileSync(resolve(REPO_ROOT, 'data/classic-ids/tyc2_hd_corrections.tsv'), 'utf-8');
+      const text = readFileSync(resolve(REPO_ROOT, TYC2_HD_CORRECTIONS.file), 'utf-8');
       for (const c of parseTyc2HdCorrectionsTsv(text, FROM)) {
         const row = simbad.get(c.tyc);
         expect(row === undefined ? [] : hdNumbers(row), c.tyc).toContain(c.hd);

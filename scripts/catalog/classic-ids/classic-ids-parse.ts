@@ -3,6 +3,7 @@
 import type { Declared } from '../../util/sources/source';
 import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
@@ -77,7 +78,7 @@ export function applyTyc2HdCorrections(
     printed.push(c.printedHd);
     corrected.push(c.hd);
   }
-  const sorted = (hds: number[]): string => [...hds].sort((a, b) => a - b).join(',');
+  const sorted = (hds: number[]): string => [...hds].sort(ascending).join(',');
   if (sorted(printed) !== sorted(corrected)) {
     throw new Error(
       `${from.file} re-points HDs ${sorted(printed)} to ${sorted(corrected)}: a correction exchanges ` +
