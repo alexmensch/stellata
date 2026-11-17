@@ -86,17 +86,17 @@
       "pairs.blank-donor": 11,
       "pairs.blank-enumerated": 1,
       "pairs.optical.wds-notes-kept": 5871,
-      "pairs.optical.wds-notes-rejected": 5677,
       "pairs.optical.orbit-kept": 4240,
-      "pairs.optical.sep-limit-rejected": 4915,
       "pairs.optical.gaia-kept": 3447,
-      "pairs.optical.gaia-rejected": 617,
       "pairs.optical.asymm-kept": 42,
-      "pairs.optical.asymm-rejected": 0,
       "pairs.optical.cpm-baseline-kept": 101,
-      "pairs.optical.cpm-baseline-rejected": 417,
       "pairs.optical.mag-heuristic-kept": 14459,
-      "pairs.optical.mag-heuristic-rejected": 5752,
+      "pairs.rejected.wds-notes": 5677,
+      "pairs.rejected.sep-limit": 4915,
+      "pairs.rejected.gaia": 617,
+      "pairs.rejected.asymm": 0,
+      "pairs.rejected.cpm-baseline": 417,
+      "pairs.rejected.mag-heuristic": 5752,
       "pairs.no-position": 9490
     }
   }

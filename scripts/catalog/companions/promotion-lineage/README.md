@@ -65,7 +65,20 @@ re-curation's absmag, `av` and `ci_via`; `.held` carries `from_pc`, `to_pc`,
 members whose light it lost, so trace reaches it from each) and `existing.anchor-re-split` (`params.record`,
 the dimmed anchor). A key's rows are a set, ordered as every stage file is
 ([SourceRowRef](../../lineage/README.md#sourcerowref)). A
-pair's primary that anchors its pair is `promotion.not-applicable.pair-anchor`.
+pair's primary that anchors its pair on a record carrying the row's own Gaia
+source, HIP or synthetic key (`isRowStar`) is `promotion.pair-anchor.own-star`, a merge
+into that record: it is the row's star, so a SID keyed on the row's synthetic
+key — the component it named when it was minted on its own — merges into the
+record's. One anchoring on any other record (a shared slot's parent, a
+proper-name match) is `promotion.pair-anchor.other-record`, effect `none`:
+nothing says the record is the row's star, so a SID keyed on the row fails
+closed. A keyed mint
+carries its row's synthetic key too, the synth↔component same-as edge
+([§ 4.1](/docs/sid.md#41-same-as-equivalence-graph)):
+`mintSynthDesignations` names it per minted record, by origin key, and SID
+allocation adds it to that record's designations, so a SID the key held
+before the component bound an identifier of its own continues on the
+record, with no event.
 A row in no pair is `promotion.parked.unpaired`, and a primary that resolves
 to no record, leaving its pair anchor-less, `promotion.parked.primary-unresolved`:
 both park, since promotion ships no record for the star the row names, so a
@@ -76,7 +89,8 @@ carries its own from the manifest's `origin_key` column
 (`../../membership/README.md#columns`), so these are joins on the origin key.
 
 A minted companion is founded on its row, so promotion writes its identity
-row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`). So
+row (`promotion.identity.tsv.gz`, named by `StageLineageSpec.identity`),
+carrying its row's synthetic key even when it is keyed on its own id. So
 does every row whose code retires, parks or merges, keyed on the `hip` and
 `gaia_source_id` cells it arrived with and the synthetic key a mint from it
 would carry (`PromotedRow.synthKey`), less any designation a membership
@@ -86,18 +100,18 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-15: 125,290 rows — one outcome row per `multiples.tsv` row,
-59,713 facet rows (two of them, colour and dust, per minted record), 16,611
+Measured 2026-11-16: 125,287 rows — one outcome row per `multiples.tsv` row,
+59,710 facet rows (two of them, colour and dust, per minted record), 16,611
 size rows (one per record promotion sized, by its last pass:
 <!-- count:build-catalog/promotion.size.mint -->12,660<!-- /count --> mint,
 <!-- count:build-catalog/promotion.size.anchor-re-split -->1,955<!-- /count --> anchor re-split,
 <!-- count:build-catalog/promotion.size.anchor-dimmed -->1,883<!-- /count --> anchor-dimmed,
 <!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
-<!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 31,908
-identity rows (the minted companions and the 17,232 rows promotion retires,
-parks or merges), 1.57 MB gzipped in 0.43 s (header, diff, write and
-invariants; 67 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
-1.67 MB and 10 s. A CI run with a diff took
+<!-- count:build-catalog/promotion.size.recurated -->51<!-- /count --> recurated) and 1,945 held-record brightness rows — and 45,795
+identity rows (the 14,676 minted companions and the 31,119 rows promotion
+retires, parks or merges), 1.73 MB gzipped in 0.18 s (header, diff, write and
+invariants; 57 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+1.87 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
 
 ## Promotion's invariants

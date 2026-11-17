@@ -71,6 +71,9 @@ scripts/catalog/lineage/
                                  build their stages with; mergedEmissions,
                                  several stages' emissions as one
                                  emitArtifacts part.
+  stage-lineage-source.ts        Membership's and pairs' current lines and
+                                 identity files, declared as the sources
+                                 build:catalog's allocation reads.
   phase-clock-pure.ts            phaseClock: the budget line's per-phase
     (+ test)                     split of the timed window.
   lineage-invariant-pure.ts      LineageInvariant and its check (#invariants).
@@ -356,7 +359,8 @@ module, in [Orbits lineage](/scripts/binaries/orbits/README.md#orbits-lineage).
 
 `build:binaries` writes it too, after orbits: every WDS pair row
 the binaries stages decide — a duplicate, a blank row left out, each Stage 5
-verdict, a position-less drop — keyed on the row that founded the pair. Its
+verdict, a position-less drop — keyed on the row that founded the pair, and
+an identity row naming each component a Stage 5 rejection removes. Its
 contract lives beside its module, in
 [Pairs lineage](/scripts/binaries/README.md#pairs-lineage).
 
