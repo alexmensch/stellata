@@ -110,8 +110,9 @@ pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
                          the pair's entries and why
                          (/scripts/catalog/membership/merge-derivation/README.md#the-pair-review-queue).
 pair-review-dispositions.tsv
-                         Regular git. Hand-curated; header only today. The
-                         entry each disposed HIP ships on, as the authority
+                         Regular git. Hand-curated. The entry each disposed
+                         HIP ships on, as the authority: 11 rows,
+                         every one on `tycho2_photometry`
                          (/scripts/catalog/membership/merge-derivation/README.md#disposing-a-queued-pair).
 ```
 
