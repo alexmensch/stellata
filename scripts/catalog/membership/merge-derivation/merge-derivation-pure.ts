@@ -171,6 +171,14 @@ export function pairEntries(tycho2: ReadonlyMap<string, { readonly hip: number |
   return [...tycho2HipEntries(tycho2).values()].filter((entries) => entries.length > 1).flat();
 }
 
+/** The TYCs SIMBAD's TYC→HD pull asks whatever the manifest holds: IV/25's, and every pair entry a move can land on.
+ *  see README.md#applying-the-pair-rule */
+export function pairRuleTycHdRequest(
+  iv25Tycs: Iterable<string>, tycho2: ReadonlyMap<string, { readonly hip: number | null }>,
+): string[] {
+  return [...iv25Tycs, ...pairEntries(tycho2)];
+}
+
 export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   const links = linkTablesFrom(tables);
   const hipEntries = tycho2HipEntries(tables.tycho2);

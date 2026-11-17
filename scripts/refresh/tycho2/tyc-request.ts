@@ -2,7 +2,7 @@
 
 import { TYC2_HD } from '../../catalog/classic-ids/tyc2-hd-source';
 import { MEMBERSHIP_MANIFEST } from '../../catalog/membership/membership-manifest-tsv';
-import { pairEntries } from '../../catalog/membership/merge-derivation/merge-derivation-pure';
+import { pairRuleTycHdRequest } from '../../catalog/membership/merge-derivation/merge-derivation-pure';
 import { TYCHO2 } from '../../catalog/tycho2-source';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { artifactRows } from '../../util/sources/source';
@@ -17,24 +17,26 @@ function tycsOf(file: string, cells: readonly string[]): Tyc[] {
 }
 
 function tycInputs(
-  manifest: readonly { tyc: string | null }[], extra: { tycs: readonly Tyc[]; from: readonly string[] } = { tycs: [], from: [] },
+  manifest: readonly { tyc: string | null }[], asked: readonly string[], askedFrom: readonly string[],
 ): Tycho2Inputs {
-  const iv25 = tycsOf(TYC2_HD.file, TYC2_HD.read().map((row) => row.tyc));
   return {
-    request: tycho2Request(manifest.map((record) => record.tyc), [...iv25, ...extra.tycs]),
-    requestFrom: [MEMBERSHIP_MANIFEST.file, TYC2_HD.file, ...extra.from],
+    request: tycho2Request(manifest.map((record) => record.tyc), tycsOf(TYC2_HD.file, asked)),
+    requestFrom: [MEMBERSHIP_MANIFEST.file, TYC2_HD.file, ...askedFrom],
   };
 }
 
+const iv25Tycs = (): string[] => TYC2_HD.read().map((row) => row.tyc);
+
 /** README.md#the-request-set */
-export const readTycRequest = (): Tycho2Inputs => tycInputs([...artifactRows(MEMBERSHIP_MANIFEST)], {
-  tycs: tycsOf(TYCHO2.file, pairEntries(TYCHO2.read())),
-  from: [DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1],
-});
+export const readTycRequest = (): Tycho2Inputs => tycInputs(
+  [...artifactRows(MEMBERSHIP_MANIFEST)],
+  pairRuleTycHdRequest(iv25Tycs(), TYCHO2.read()),
+  [DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1],
+);
 
 export function readTycho2Inputs(): Tycho2PullInputs {
   const manifest = [...artifactRows(MEMBERSHIP_MANIFEST)];
   const hips = new Set<number>();
   for (const record of manifest) if (record.hip !== null) hips.add(record.hip);
-  return { ...tycInputs(manifest), hips };
+  return { ...tycInputs(manifest, iv25Tycs(), []), hips };
 }

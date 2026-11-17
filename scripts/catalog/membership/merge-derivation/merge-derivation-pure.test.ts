@@ -4,7 +4,7 @@ import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
 import {
-  applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairEntries, pairOwner, requestedTycHds, settlePairRule, simbadRefusedMoves,
+  applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairEntries, pairOwner, pairRuleTycHdRequest, requestedTycHds, settlePairRule, simbadRefusedMoves,
   type MergeDivergence, type MergeLinks, type PairDecision, type ShippedCells,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
@@ -324,6 +324,13 @@ describe('pairEntries', () => {
   it('lists every entry whose HIP Tycho-2 gives to another entry too', () => {
     const tycho2 = new Map([[A, { hip: 10 }], [B, { hip: 10 }], ['2-2-2', { hip: 20 }], ['3-3-3', { hip: null }]]);
     expect(pairEntries(tycho2)).toEqual([A, B]);
+  });
+});
+
+describe('pairRuleTycHdRequest', () => {
+  it('is IV/25 and every pair entry, the set the build and the pull share', () => {
+    const tycho2 = new Map([[A, { hip: 10 }], [B, { hip: 10 }], ['2-2-2', { hip: 20 }]]);
+    expect(pairRuleTycHdRequest(['7-7-7'], tycho2)).toEqual(['7-7-7', A, B]);
   });
 });
 

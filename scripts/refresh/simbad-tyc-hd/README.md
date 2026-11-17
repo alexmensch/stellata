@@ -28,7 +28,8 @@ whose HIP Tycho-2 gives to another entry too (`pairEntries`, read off the
 committed Tycho-2 tables). Those are the entries the pair rule can move a HIP
 onto, and the build's SIMBAD check reads only them and IV/25's
 ([Applying the pair rule](/scripts/catalog/membership/merge-derivation/README.md#applying-the-pair-rule)),
-so whichever entry a move lands on was asked. `readTycRequest` builds it; its
+so whichever entry a move lands on was asked. `pairRuleTycHdRequest` is the
+one set both read, so the two cannot drift. `readTycRequest` builds it; its
 describe states every key, off the manifest, IV/25 and Tycho-2, so any of the
 three moving stales the record.
 

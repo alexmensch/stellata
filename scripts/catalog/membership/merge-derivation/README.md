@@ -116,7 +116,8 @@ other five already refused, and none of them refuses another, so the refused
 set does not depend on the order passes find them in. The check reads only
 the entries the pull requests whatever the manifest holds — IV/25's, and every
 entry of a Tycho-2 pair (`pairEntries`), which is where a position move lands
-off IV/25 — through `requestedTycHds`, and fails the build on any other
+off IV/25 (`pairRuleTycHdRequest`, the one set the pull also builds its
+request from) — through `requestedTycHds`, and fails the build on any other
 ([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
 
 **A move can free the HD IV/25 printed for the entry it lands on**, as a

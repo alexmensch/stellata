@@ -16,7 +16,7 @@ import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding/binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
 import {
-  mergeDivergences, pairEntries, pairLinksFrom, requestedTycHds, settlePairRule,
+  mergeDivergences, pairLinksFrom, pairRuleTycHdRequest, requestedTycHds, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 import { lookupGliese } from '../gliese-parse-pure';
@@ -94,7 +94,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   requirePhotometricKeeps(input.pairDispositions, evidence.printedV.printed_hip, (tyc) => tables.tycho2.get(tyc)?.vtMag ?? null);
   const derive = rowDeriver(tables, idx, evidence, input.positions);
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
-  const tycHds = requestedTycHds(input.simbadTycHd, [...tables.iv25.map((r) => r.tyc), ...pairEntries(tables.tycho2)]);
+  const tycHds = requestedTycHds(input.simbadTycHd, pairRuleTycHdRequest(tables.iv25.map((r) => r.tyc), tables.tycho2));
 
   const pair = settlePairRule(
     correctedSpine.kept, pairLinks, (row) => derive(row).derived.sourceId, input.pairDispositions, tycHds,
