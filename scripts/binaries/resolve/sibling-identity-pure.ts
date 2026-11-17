@@ -44,7 +44,6 @@ export function hipClaimedByDisjointLetter(
   return true;
 }
 
-/** A letter a curated source names a HIP on: a SIMBAD cross-ID's component, an ORB6 row's primary. */
 interface HipAttestation {
   readonly wdsId: string;
   readonly token: string;
@@ -54,8 +53,12 @@ interface HipAttestation {
 function hipAttestations(
   xids: ReadonlyMap<ComponentKey, SimbadWdsXid>, orb6: readonly Orb6Entry[],
 ): ReadonlyMap<string, readonly HipAttestation[]> {
-  const all: HipAttestation[] = [];
-  for (const x of xids.values()) if (x.hip !== null) all.push({ wdsId: x.wdsId, token: x.component, hip: x.hip });
+  const simbad: HipAttestation[] = [];
+  for (const x of xids.values()) if (x.hip !== null) simbad.push({ wdsId: x.wdsId, token: x.component, hip: x.hip });
+  const simbadBySystem = groupBy(simbad, (a) => a.wdsId);
+  const all = simbad.filter((a) => !simbadBySystem.get(a.wdsId)!.some(
+    (b) => b.hip === a.hip && !tokensShareIdentity(a.token, b.token),
+  ));
   for (const e of orb6) {
     if (e.hip === null) continue;
     const tokens = splitComponents(e.components);

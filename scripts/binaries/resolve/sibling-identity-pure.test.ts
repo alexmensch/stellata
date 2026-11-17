@@ -55,6 +55,17 @@ describe('refuseHipsOfDisjointStars', () => {
     expect(r.refused).toEqual([]);
   });
 
+  it('counts no SIMBAD witness for a HIP SIMBAD gives to A and B both (θ¹ Ori\'s HIP 26220)', () => {
+    const r = refuseHipsOfDisjointStars(
+      hd69445({ gaiaSourceId: B_SOURCE, hip: HIP }), indices({ hipToGaia: new Map([[HIP, A_SOURCE]]) }),
+      new Map([
+        [componentKey(WDS, 'A'), xid(WDS, 'A', A_SOURCE, HIP)],
+        [componentKey(WDS, 'B'), xid(WDS, 'B', B_SOURCE, HIP)],
+      ]), [],
+    );
+    expect(hips(r.pairs)).toEqual(['A:-', 'B:-', 'Ba:-', 'Bb:-']);
+  });
+
   it('keeps 36 Oph A\'s HIP, which ORB6 names on A while Gaia\'s cross-walk puts it on B\'s source', () => {
     const oph = '17153-2636';
     const pairs = [decomposed(wdsPair({ wdsId: oph, components: 'AB' }), {

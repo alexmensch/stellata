@@ -243,8 +243,11 @@ takes both.
 After enforcement, `refuseHipsOfDisjointStars` takes a HIP off every
 component that holds a Gaia source of its own while a hierarchy-disjoint
 letter of the system holds the HIP's source (Gaia's HIP cross-walk, else
-the manifest's), unless SIMBAD's cross-IDs or an ORB6 row's primary name the
-HIP on the component's letter, its parent or a sub-letter. It runs last
+the manifest's), unless an ORB6 row's primary or SIMBAD's cross-IDs name the
+HIP on the component's letter, its parent or a sub-letter. A HIP SIMBAD gives
+to two hierarchy-disjoint letters of one system (θ¹ Ori A and B both carry
+HIP 26220, usually a pair Hipparcos measured as one star) is no SIMBAD
+witness for either. It runs last
 because the audit can unbind the source a HIP arrived with after propagation
 has already copied the HIP up and down the letter's line: HD 69445
 (08159-3056) Bb's position match landed on A's star and took HIP 40476; the
