@@ -239,7 +239,8 @@ export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingCla
 }
 
 /** The identity witness named a refused candidate and its position did not confirm it. */
-export const isUnconfirmed = (d: DerivedBinding): boolean => d.identity !== null && d.sourceId === null;
+export const isUnconfirmed = (d: DerivedBinding): d is DerivedBinding & { identity: IdentityWitness; sourceId: null } =>
+  d.identity !== null && d.sourceId === null;
 
 /** Weighs **every** ranked candidate, the winner's losing rivals included,
  *  through `weighBinding`, as `applyBindingGate` does; the component witness is

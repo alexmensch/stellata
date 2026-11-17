@@ -53,7 +53,7 @@ export interface IdentityQueueCandidate {
 export function identityQueueCandidate(
   key: string, subject: RefusalSubject, cells: ReviewKeyCells, d: DerivedBinding, gate: RowGateEvidence, tables: PrimaryTables,
 ): IdentityQueueCandidate[] {
-  if (!isUnconfirmed(d) || d.identity === null) return [];
+  if (!isUnconfirmed(d)) return [];
   return [{
     key, subject, sourceId: d.identity.sourceId,
     review: bindingReviewCells(cells, d, gate, tables),
