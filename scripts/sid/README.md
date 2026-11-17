@@ -84,8 +84,12 @@ synth-churn-pure.ts       synthChurnReport: for each synth key that left
                           prints it with the failure.
 catalog-upstream.ts       catalogUpstream: build:catalog's Upstream, over
                           membership's lineage files from the last
-                          build:membership and placement's and
+                          build:membership, pairs' from the last
+                          build:binaries, and placement's and
                           promotion's from this build.
+synth-departures.test.ts  The pairs and promotion stages' rows through
+                          allocation: which departed synth key retires
+                          or merges, and under which code.
 catalog-objects.ts        catalogSidObjects: build:catalog's objects in
                           allocation order (its records, then the sol and
                           shell lists).
@@ -350,21 +354,36 @@ with membership.
 ## Ownership pin — synth churn resolves here
 
 All synth-key reconciliation (WDS re-lettering, [§ 5](/docs/sid.md#5-synthetic-key-churn-wds-re-subdivision)) lives
-in this folder's allocation; the binaries pipeline stays sid-free. A
+in this folder's allocation; the binaries pipeline allocates no SID. A
 ledger `synth:` key absent from the build is settled like any other
-orphan: promotion's identity rows carry the synthetic key of every row it
-removes or merges, so a companion promotion dropped retires (or parks, or
-merges) under that row's code. A key whose row left `multiples.tsv`
-altogether has no decision, so the build fails closed, printing the live
-synth keys under the same WDS root with their geometry: a re-lettered
-component needs a bridge line in `data/sid/sameas-overrides.tsv`, and a
-component that genuinely dissolved needs a coded decision in the stage
-that drops it. A vanished `cloud:`/`lg:` slug fails its build the same
-way — a slug RENAME needs a bridge.
+orphan, by the stage whose identity rows carry it:
+
+- **Promotion**, for a component whose `multiples.tsv` row it decided:
+  its identity rows carry the synthetic key of every row it removes or
+  merges, so a companion promotion dropped retires (or parks, or merges)
+  under that row's code. A component that now binds a Gaia source or HIP
+  of its own keeps its SID: its minted record carries the row's synthetic
+  key too (`mintSynthDesignations`), so the key stays live. A pair primary
+  that now resolves to a record carrying its own HIP, Gaia source or synthetic key merges
+  into it under `promotion.pair-anchor.own-star`
+  ([Promotion lineage](/scripts/catalog/companions/promotion-lineage/README.md#the-stage)).
+- **Pairs** (`build:binaries`), for a component every pair of which
+  Stage 5 rejected as optical: the rejection never reaches
+  `multiples.tsv`, so the pairs stage's identity row carries that
+  component's key and it retires under the `pairs.rejected.*` code
+  ([Pairs lineage](/scripts/binaries/README.md#pairs-lineage)).
+
+A key no stage carries has no decision, so the build fails closed,
+printing the live synth keys under the same WDS root with their geometry:
+a re-lettered component needs a bridge line in
+`data/sid/sameas-overrides.tsv`, and a component that genuinely dissolved
+needs a coded decision in the stage that drops it. A vanished
+`cloud:`/`lg:` slug fails its build the same way — a slug RENAME needs a
+bridge.
 
 A Stage-5 filter change that mass-drops optical pairs orphans every
-synth key those pairs minted, and each retires under promotion's code
-for its row. (The reverse — a pipeline refinement re-promotes a
+synth key those pairs minted, and each retires under the rejection's
+code. (The reverse — a pipeline refinement re-promotes a
 component whose sid was retired — is a `reinstate` event carrying the
 admitting code, [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv).) Allocation writes those events in the same build,
 so the PR's `data/sid/events.tsv` diff is the review surface: CI's

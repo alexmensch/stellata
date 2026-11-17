@@ -33,7 +33,8 @@ export type RowOutcome =
   }
   | { kind: 'primary-unresolved' }
   | { kind: 'unpaired' }
-  | { kind: 'pair-anchor' };
+  /** `ownStar`: the record is the row's star (`isRowStar`). */
+  | { kind: 'pair-anchor'; ownStar: boolean };
 
 export interface MintedBrightness {
   source: CompanionAbsmagSource;

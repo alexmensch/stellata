@@ -27,13 +27,13 @@ export function promotionStage(
   const t0 = Date.now();
   const { newStars, stats, rows, rewrites } = promoteCompanions(multiplesRows, named, inputs);
   const promoted = enterPhase('promoted', [...named, ...newStars]);
-  const { lineage, identity } = promotionLineage(rows, promoted, founded, rewrites);
+  const { lineage, identity, mintSynth } = promotionLineage(rows, promoted, founded, rewrites);
   const lines = stageLines(PROMOTION_CODES, lineage);
   const counts = foldStageLines(PROMOTION_CODES, lines);
   console.log(`  promotion decided ${rows.length} rows in ${Date.now() - t0}ms`);
   console.log(promotionSummary(counts, stats, rows.filter((r) => r.via === 'secondary').length));
   return {
-    promoted, stats, lines, identity, counts,
+    promoted, stats, lines, identity, mintSynth, counts,
     anchorMoved: anchorMovedRecords(promoted, coherenceVerdicts, recuratedRecords(rewrites)),
   };
 }

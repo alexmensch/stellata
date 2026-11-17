@@ -77,10 +77,15 @@ spine-corrections.tsv    Regular git. Hand-curated: where review found
                          `value` names it). 2 rows. Every field is checked and
                          a fold's survivor must answer to everything the folded
                          row did (/scripts/catalog/membership/spine-corrections/README.md#correcting-a-merge-decision).
+flamsteed-refusals.tsv   Regular git. Pipeline-derived. Every SIMBAD
+                         `* NN Con` number the Flamsteed rule refuses on a
+                         manifest star, with IV/27A's evidence
+                         (/scripts/catalog/simbad/README.md#the-refused-numbers).
+                         37 rows.
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
                          spine Flamsteed / HD cell no primary attests, keyed
                          on the manifest row it left, under
-                         flamsteed_unattested (119) · hd_unattested (1).
+                         flamsteed_unattested (3) · hd_unattested (1).
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·

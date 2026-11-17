@@ -13,7 +13,11 @@ scripts/binaries/optical/
                                   cascade order, whether it keeps the
                                   pair, and its pairs lineage code's
                                   description, built from the thresholds
-                                  it names); the tier thresholds; each tier's
+                                  it names; the compiler ties `physical`
+                                  to a `_kept` / `_rejected` name);
+                                  OPTICAL_KEPT_VIA, OPTICAL_REJECT_VIA and
+                                  isRejectedVia, read off it; the tier
+                                  thresholds; each tier's
                                   test; classifyPairOptical, the cascade
                                   for one pair.
   pm-budget-pure.ts               orbitalPmBudgetKmS: the orbital motion a

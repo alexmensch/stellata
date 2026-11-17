@@ -40,6 +40,7 @@ import {
 } from './membership-manifest-pure';
 import { ADDITIONS_LEDGER } from './additions-ledger-tsv';
 import { BINDING_REVIEW } from './binding-review-tsv';
+import { FLAMSTEED_REFUSAL_LEDGER } from './flamsteed-refusals-tsv';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import { PAIR_REVIEW } from './pair-review-tsv';
@@ -120,6 +121,7 @@ export async function main(): Promise<void> {
       additions: ADDITIONS_LEDGER.serialize(result.ledger),
       bindingReview: BINDING_REVIEW.serialize(result.bindingReview),
       labelDrops: LABEL_DROPS.serialize(result.labelDrops),
+      flamsteedRefusals: FLAMSTEED_REFUSAL_LEDGER.serialize(result.flamsteedRefusals),
       mergeDivergence: MERGE_DIVERGENCE.serialize(result.mergeDivergence),
       pairReview: PAIR_REVIEW.serialize(result.pairReview),
       ...lineage.files,

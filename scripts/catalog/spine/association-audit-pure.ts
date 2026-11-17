@@ -2,6 +2,7 @@
 // to one another, and which only AT-HYG associates. See README.md#the-association-audit.
 
 import { lookupGliese } from '../gliese-parse-pure';
+import { iv25HdSets } from '../simbad/close-pair-hd-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
 import { spineIds, type SpineRow } from './inherited-spine-pure';
 import {
@@ -218,12 +219,7 @@ export function formatAssociationReport(s: AssociationSummary): string {
 }
 
 export function linkTablesFrom(tables: PrimaryTables): LinkTables {
-  const tycHd = new Map<string, Set<number>>();
-  for (const r of tables.iv25) {
-    const set = tycHd.get(r.tyc) ?? new Set<number>();
-    set.add(r.hd);
-    tycHd.set(r.tyc, set);
-  }
+  const tycHd = iv25HdSets(tables.iv25);
   const tycHip = new Map<string, number>();
   for (const [tyc, r] of tables.tycho2) if (r.hip !== null) tycHip.set(tyc, r.hip);
   const hipHd = new Map<number, Set<number>>();

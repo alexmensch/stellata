@@ -71,6 +71,22 @@ export type RowIdentity =
     idsInheritedFromAnchor: boolean;
   };
 
+type RowIds = Pick<MultiplesTsvRow, 'gaiaSourceId' | 'hip'>;
+type RecordIds = Pick<NamedStar, 'gaiaSourceId' | 'hip'>;
+type RecordKeys = RecordIds & Pick<NamedStar, 'syntheticId'>;
+
+const carriesRowGaia = (star: RecordIds | null, row: RowIds): boolean => (
+  row.gaiaSourceId !== null && star !== null && star.gaiaSourceId === row.gaiaSourceId
+);
+const carriesRowHip = (star: RecordIds | null, row: RowIds): boolean => (
+  row.hip !== null && row.hip > 0 && star !== null && star.hip === row.hip
+);
+
+/** The record is the row's star: it carries the row's own Gaia source or HIP, or the row's synthetic key `synthKey`. */
+export function isRowStar(star: RecordKeys, row: RowIds, synthKey: string): boolean {
+  return carriesRowGaia(star, row) || carriesRowHip(star, row) || star.syntheticId === synthKey;
+}
+
 export function resolveRowIdentity(
   row: MultiplesTsvRow,
   anchor: RowAnchor,
@@ -81,12 +97,10 @@ export function resolveRowIdentity(
   const { index, minted } = sources;
   const rowHasOwnHip = row.hip !== null && row.hip > 0;
   const inheritedGaia = row.gaiaSourceId !== null
-    && (anchor.primaryRow.gaiaSourceId === row.gaiaSourceId
-      || (anchor.star !== null && anchor.star.gaiaSourceId === row.gaiaSourceId));
+    && (anchor.primaryRow.gaiaSourceId === row.gaiaSourceId || carriesRowGaia(anchor.star, row));
   const gaia = inheritedGaia ? null : row.gaiaSourceId;
   const inheritedHip = rowHasOwnHip
-    && (anchor.primaryRow.hip === row.hip
-      || (anchor.star !== null && anchor.star.hip === row.hip));
+    && (anchor.primaryRow.hip === row.hip || carriesRowHip(anchor.star, row));
   if (row.gaiaSourceId !== null || rowHasOwnHip) {
     const existingIdx = index.findExisting(row);
     const inheritedIdCollision =
