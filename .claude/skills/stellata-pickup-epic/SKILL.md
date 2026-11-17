@@ -39,8 +39,9 @@ or not. On a `GPU_REQUEST`, hold every launch, start no step of
 `pickup-epic`'s Land that has not begun (the sync or the landing subagent),
 and run no `build:seed`. A worker in a pull wait is idle but its background
 command is not: the grant waits on its `PULL_DONE`. Tell the requester the
-blocking item and its ETA from the run state, and the requester tells the
-owner in one line: `waiting on <item>'s pull, ETA <time>`.
+blocking item, its command and its ETA from the run state's `pulling —
+<what>, ETA <time>` entry, and the requester tells the owner in one line:
+`waiting on <item>'s <what>, ETA <time>`.
 Record the pause in the run state. Tell the user nothing: the requester's announcement is what
 the owner reads. One request is served at a time; a second waits in the run state
 until `GPU_DONE`.
