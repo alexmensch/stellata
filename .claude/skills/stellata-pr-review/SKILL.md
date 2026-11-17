@@ -157,7 +157,9 @@ offender is a comment block restating what the folder README now says.
 closing bead's parent chain up to the root, the design doc is the folder
 README, and "settled" is spelled SETTLED.
 
-- The tracker search is `bd search <the thing you changed>`.
+- The tracker search is the `beads` skill's Text search command on the
+  thing you changed — never `bd search`, which reads titles only and skips
+  closed beads.
 - The raw description is `bd show <id> --json`.
 - The edit goes through `--body-file` / `--design-file` — inside a worktree
   the only workable route, since the guard rejects `$( )`.

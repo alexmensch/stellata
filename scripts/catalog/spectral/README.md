@@ -122,8 +122,8 @@ none.
 
 AT-HYG's contaminated `spect` cell is no longer consulted for
 classification (the brightness-colour count block over the walked records:
-SIMBAD by Gaia id **<!-- count:build-catalog/brightness-colour.spectral.simbad.source-id -->457,498<!-- /count -->**, the rest of SIMBAD under its other three
-namespace codes, ESP-ELS **<!-- count:build-catalog/brightness-colour.spectral.gspspec -->494,464<!-- /count -->** / `none` **<!-- count:build-catalog/brightness-colour.spectral.none -->6,067<!-- /count -->**); it is still used as a
+SIMBAD by Gaia id **<!-- count:build-catalog/brightness-colour.spectral.simbad.source-id -->457,505<!-- /count -->**, the rest of SIMBAD under its other three
+namespace codes, ESP-ELS **<!-- count:build-catalog/brightness-colour.spectral.gspspec -->494,468<!-- /count -->** / `none` **<!-- count:build-catalog/brightness-colour.spectral.none -->6,054<!-- /count -->**); it is still used as a
 last-resort hover-display fallback when both upstream sources are blank.
 
 The class it resolves feeds the radius chain:

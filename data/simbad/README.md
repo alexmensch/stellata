@@ -13,7 +13,7 @@ simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
 simbad_sptype.tsv          ~66 MB, LFS. 966,842 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
-simbad_values.tsv          ~29 MB, LFS. 115,743 rows. Bibcoded rv,
+simbad_values.tsv          ~29 MB, LFS. 115,726 rows. Bibcoded rv,
                            parallax, PM, coordinates and B/V fluxes for
                            the /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers value cohort — see README.md#the-values-pull.
 simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
@@ -81,7 +81,7 @@ tables state every [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescu
 and what an identity-only predicate loses — is
 [The cohort is two questions](/scripts/refresh/simbad/README.md#the-cohort-is-two-questions-and-the-manifest-answers-one).
 
-Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,744<!-- /count --> oids, up
+Coverage over the cohort, measured at the 2026-11-08 pull (<!-- count:build-catalog/simbadValuesEntries -->115,726<!-- /count --> oids, up
 from 74,446 at the 2026-09-08 pull, before the magnitude term). Every count below is
 what **ships**, i.e. post-policy — the file holds no unbibcoded value, so each
 field's value count equals its bibcode count.
