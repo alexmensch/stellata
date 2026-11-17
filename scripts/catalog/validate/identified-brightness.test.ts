@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { CATALOG_MANIFEST_FILENAME } from '../../../src/catalog-format/record/catalog-pure';
 import { distanceModulus } from '../../../src/astro-core/perceptual-magnitude';
+import { ascending } from '../../../src/astro-core/order-pure';
 import { distancePc, loadCatalog, lookupByHip } from '../catalog-lookup';
 import { MEMBERSHIP_IDENTITY, MEMBERSHIP_STAGE_LINES } from '../lineage/stage-lineage-source';
 import { lineageLineCode, lineageLineKey } from '../lineage/lineage-row-pure';
@@ -25,7 +26,7 @@ describe.skipIf(!READY)('identity-bound records', () => {
     const hips = [...MEMBERSHIP_IDENTITY.read()].filter((r) => keys.has(r.key)).map((r) => Number(r.hip));
     const printed = HIP_PHOTOMETRY.read().vmag;
     const catalog = await loadCatalog();
-    rows = hips.sort((a, b) => a - b).map((hip): Row => {
+    rows = hips.sort(ascending).map((hip): Row => {
       const record = lookupByHip(catalog, hip);
       const shipped = record === null ? null : record.absmag + distanceModulus(distancePc(record));
       return [hip, printed.get(hip)!.value.toFixed(2), shipped === null ? null : shipped.toFixed(2)];
