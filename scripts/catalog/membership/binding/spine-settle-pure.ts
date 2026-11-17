@@ -4,7 +4,6 @@ import type { PrimaryTables } from '../../spine/primaries-audit-pure';
 import type { SpineRow } from '../../spine/inherited-spine-pure';
 import {
   BINDING_SOURCES,
-  isUnconfirmed,
   type DerivedBinding,
   type RowGateEvidence,
 } from './binding-derivation-pure';
@@ -174,7 +173,7 @@ function settleRow(
       key,
       outcome: {
         kind: 'disposition', outcome: dispositionOf(disposition),
-        queue: isQueuedOutcome(b.outcome) || isUnconfirmed(d) ? 'queued' : 'settled',
+        queue: isQueuedOutcome(b.outcome) ? 'queued' : 'settled',
         keep: disposition.keep_source_id, basis: disposition.basis,
         review: bindingReviewCells(row, b.derived, b.gate, tables),
       },

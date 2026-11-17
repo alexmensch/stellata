@@ -576,7 +576,7 @@ describe('buildMembership — the spine side', () => {
       });
       expect(hip60(settled).map((r) => r.verdict)).toEqual(['disposed']);
       expect(codes(settled)['binding.unconfirmed']).toBe(0);
-      expect(codes(settled)['disposition.none.queued']).toBe(1);
+      expect(codes(settled)['disposition.none.settled']).toBe(1);
     });
   });
 
