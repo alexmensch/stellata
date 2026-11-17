@@ -10,7 +10,12 @@ import { GLIESE } from '../../gliese-source';
 import { HIP2 } from '../../sources/hip2-source';
 import type { Tycho2Row } from '../../tycho2-parse';
 import { TYCHO2 } from '../../tycho2-source';
-import { MERGE_DIVERGENCE } from '../merge-divergence-tsv';
+import { readArtifact } from '../../../util/sources/source';
+import { INHERITED_SPINE } from '../../spine/inherited-spine-tsv';
+import { linkTablesFrom, partitionRow } from '../../spine/association-audit-pure';
+import { loadPrimaryTables } from '../../spine/primaries-tables';
+import { applySpineCorrections } from '../spine-corrections/spine-corrections-pure';
+import { SPINE_CORRECTIONS } from '../spine-corrections/spine-corrections-source';
 import { PAIR_REVIEW } from '../pair-review-tsv';
 import {
   HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
@@ -18,7 +23,7 @@ import {
 } from './positional-witness-pure';
 
 const readable = [
-  DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1, DATA_FILES.gliese, DATA_FILES.hip2,
+  DATA_FILES.tycho2Main, DATA_FILES.tycho2Suppl1, DATA_FILES.gliese, DATA_FILES.hip2, INHERITED_SPINE.file,
 ].every((f) => lfsContentReadable(resolve(REPO_ROOT, f)));
 
 /** The largest separation at or under the tolerance and the smallest above it: the gap the constant sits in. */
@@ -65,17 +70,18 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     expect(insideV70aTolerance.length).toBe(1024);
   });
 
-  it("tests each unlinked GJ cell's V/70A position against the row's own TYC", () => {
+  it("tests every unlinked GJ cell's V/70A position against the row's own TYC", async () => {
+    const spine = readArtifact(INHERITED_SPINE);
+    const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
+    const links = linkTablesFrom(await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== '')));
+    const rows = kept.filter((row) => row.tyc !== '' && partitionRow(row, links)?.minority.witnessed.includes('gl') === true);
     const gliese = GLIESE.read();
-    const rows = MERGE_DIVERGENCE.parse(readFileSync(resolve(REPO_ROOT, MERGE_DIVERGENCE.file), 'utf-8'))
-      .filter((r) => r.divergence === 'unlinked' && r.gl !== null && r.tyc !== null);
-    const astrometry = rows.map((r) => ({ r, a: lookupGliese(gliese, r.gl)?.astrometryB1950 ?? null }));
-    const witnessed = astrometry.flatMap(({ r, a }) => (a === null ? [] : [witnessV70a(a, candidates([r.tyc!]))]));
-    expect(rows.length).toBe(132);
-    expect(astrometry.length - witnessed.length).toBe(23);
-    const { match, none } = tallyKinds(witnessed);
-    expect({ match, none }).toEqual({ match: 84, none: 25 });
+    const astrometry = rows.map((row) => ({ row, a: lookupGliese(gliese, row.gl)?.astrometryB1950 ?? null }));
+    const witnessed = astrometry.flatMap(({ row, a }) => (a === null ? [] : [witnessV70a(a, candidates([row.tyc]))]));
+    expect(rows.length).toBe(130);
+    expect(astrometry.length - witnessed.length).toBe(1);
+    expect(tallyKinds(witnessed)).toEqual({ match: 100, none: 29, several: 0 });
     const own = witnessed.map((v) => v.separations[0].separationArcsec);
-    expect(gapAround(own, V70A_WITNESS_TOLERANCE_ARCSEC, 1)).toEqual([13.8, 20.7]);
-  });
+    expect(gapAround(own, V70A_WITNESS_TOLERANCE_ARCSEC, 1)).toEqual([13.5, 20.7]);
+  }, 120_000);
 });

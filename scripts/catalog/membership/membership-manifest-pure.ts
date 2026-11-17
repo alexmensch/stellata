@@ -10,7 +10,8 @@ import type { SpineRow } from '../spine/inherited-spine-pure';
 import { indexPrimaries, spineKeys, type PrimaryTables } from '../spine/primaries-audit-pure';
 import { admitAdditions } from './additions/admission-pure';
 import type { BindingEvidence } from './binding/binding-gate-pure';
-import { ownCandidates, rowDeriver } from './binding/binding-outcomes-pure';
+import { ownCandidates, queuedIdentities, rowDeriver } from './binding/binding-outcomes-pure';
+import type { PositionEvidence } from './binding/binding-derivation-pure';
 import { settleSpineBindings } from './binding/spine-settle-pure';
 import type { BindingDispositionRow } from './binding/binding-review-dispositions-pure';
 import { magnitudeTermRows } from './magnitude-term/magnitude-rows-pure';
@@ -18,6 +19,7 @@ import {
   iv25TycHds, mergeDivergences, pairLinksFrom, settlePairRule,
 } from './merge-derivation/merge-derivation-pure';
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
+import { lookupGliese } from '../gliese-parse-pure';
 import { refusalRows, type CatalogueKeys, type FlamsteedRefusalRow } from '../simbad/flamsteed-refusals-pure';
 import type { PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
@@ -55,6 +57,8 @@ export interface MembershipInput {
   /** The binding gates' evidence — G per source, printed V per HIP, WDS
    *  component cross-IDs — for the derivation's candidates. */
   evidence: BindingEvidence;
+  /** HIP2's positions and Gaia's, which the identity witness holds against each other. */
+  positions: PositionEvidence;
   /** The committed dispositions of the binding review queue, by
    *  `bindingReviewKey`. */
   dispositions: ReadonlyMap<string, BindingDispositionRow>;
@@ -87,7 +91,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const correctedSpine = applySpineCorrections(input.spine, corrections);
   const { corrected, keptSpineIndex, folds } = correctedSpine;
   const pairLinks = pairLinksFrom(tables);
-  const derive = rowDeriver(tables, idx, evidence);
+  const derive = rowDeriver(tables, idx, evidence, input.positions);
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
   const tycHds = iv25TycHds(input.simbadTycHd, tables.iv25);
 
@@ -114,6 +118,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
       simbadTycHd: input.simbadTycHd,
       simbadObjectOf: (sourceId: string) => tables.simbadBySourceId.get(sourceId)?.oid,
     },
+    positional: {
+      v70a: (gl: string) => lookupGliese(tables.gliese, gl)?.astrometryB1950 ?? null,
+      tycho2: (tyc: string) => tables.tycho2.get(tyc),
+    },
   };
   const merge: KeyedOutcome[] = kept.flatMap((row, i) => mergeDivergences(
     row, spine.rows[i], mergeLinks, decided.get(i), received.has(i),
@@ -131,6 +139,10 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ownCandidates([...settlement.unshipped, ...additions.unshipped]), keys.gaia,
   );
 
+  const identityQueue = queuedIdentities(
+    [...settlement.identityQueue, ...additions.identityQueue],
+    new Set(magnitude.rows.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
+  );
   const rows = [...primariesRows, ...magnitude.rows];
   const identity = [
     ...folded.identity,
@@ -138,7 +150,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
     ...rows.map((r) => identityRow(r.originKey, MEMBERSHIP_MANIFEST.encode(r), manifestDesignations(r))),
   ];
   const lineage = [
-    ...settlement.outcomes, ...spine.outcomes, ...merge, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes,
+    ...settlement.outcomes, ...spine.outcomes, ...merge, ...folded.outcomes, ...additions.outcomes, ...magnitude.outcomes, ...identityQueue,
   ].map(membershipLineageRow);
   const ledgers = membershipLedgers(lineage, new Map(identity.map((r) => [r.key, r])));
   const sorted = sortManifestRecords(rows);

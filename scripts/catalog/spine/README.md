@@ -312,7 +312,7 @@ them into reach.
 Measured 2026-09-20: 312,280 rows carry two or more of the five cells;
 **316** do not connect under `published`, **136** under `witnessed` — 131 a
 GJ number on a TYC+HIP row with no HD, plus HD 96600 / HIP 54335,
-HD 336196 / HIP 90265, HR 4401 / HD 99103, HIP 55203 on ξ UMa, and
+HD 336196 / HIP 90265, HR 4401 / HD 99104, HIP 55203 on ξ UMa, and
 Gl 863.1A / HIP 111293 with no TYC. [§ 3.2](/docs/catalog-driver.md#32-retiring-the-spines-consumers--per-column-per-consumer-in-order) carries
 the table and what each pattern needs. `--out=<dir>` writes
 `disconnected.tsv`, one row per `witnessed` miss with both partitions, so

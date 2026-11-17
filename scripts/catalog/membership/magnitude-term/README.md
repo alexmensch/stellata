@@ -91,8 +91,8 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Measured 2026-11-15, the union holds 375,141 bound source_ids, 331,476 of them
-in the kept set, so 598,453 rows are the term's own and the union is 973,594
+Measured 2026-11-16, the union holds 375,171 bound source_ids, 331,494 of them
+in the kept set, so 598,435 rows are the term's own and the union is 973,606
 source_ids; the count snapshot holds the term's rows as its
 `admit.magnitude.*` codes. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
@@ -132,13 +132,13 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | term | projected | measured | now |
 |---|---|---|---|
 | `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,141 |
-| in both | 327,701 | 327,701 | 331,476 |
-| source_id union | 973,222 | 973,222 | 973,594 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,779 |
-| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,169<!-- /count --> synthetic |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,171 |
+| in both | 327,701 | 327,701 | 331,494 |
+| source_id union | 973,222 | 973,222 | 973,606 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,749 |
+| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,170<!-- /count --> synthetic |
 | rows parked, so never a record | − 10,429 | **− 10,748** | − 10,415 |
-| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,633<!-- /count -->** |
+| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,616<!-- /count -->** |
 
 The manifest side reproduced exactly: `build:membership` at the floor wrote
 979,160 rows and every primaries-side count held. Both build-side terms

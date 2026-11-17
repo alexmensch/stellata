@@ -34,7 +34,7 @@ export interface AdditionLedgerRow extends RecordIdentifiers {
   reason: AdditionReason | ComponentReason;
 }
 
-export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'disposed'] as const;
+export const BINDING_REVIEW_VERDICTS = ['contested', 'collision', 'unconfirmed', 'disposed'] as const;
 export type BindingReviewVerdict = (typeof BINDING_REVIEW_VERDICTS)[number];
 export const BINDING_REVIEW_KEY_COLUMNS = ['tyc', 'hip', 'hd', 'gl'] as const;
 
@@ -48,7 +48,7 @@ export function bindingReviewKey(
 export const BINDING_REVIEW_COLUMNS = [
   'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'derived_source_id',
   'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
-  'derived_simbad',
+  'derived_simbad', 'identity_source_id', 'identity_g', 'identity_separation_arcsec',
 ] as const;
 export type BindingReviewRow = Record<Exclude<(typeof BINDING_REVIEW_COLUMNS)[number], 'verdict'>, string> & {
   verdict: BindingReviewVerdict;
@@ -64,8 +64,8 @@ export interface LabelDropRow extends RecordIdentifiers {
   reason: LabelDropReason;
 }
 /** The label-parity reasons (/docs/catalog-driver.md#62-label-parity) a spine label leaves the manifest: no primary publishes
- *  that Flamsteed number, or that HD number, for the star. */
-export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested'] as const;
+ *  that Flamsteed number, or that HD number, for the star; or the HD is another HIP's (README.md#the-unattested-labels-leave-the-row). */
+export const LABEL_DROP_REASONS = ['flamsteed_unattested', 'hd_unattested', 'hd_other_hip'] as const;
 export type LabelDropReason = (typeof LABEL_DROP_REASONS)[number];
 
 export const MERGE_DIVERGENCE_COLUMNS = [...RECORD_KEY_COLUMNS, 'divergence', 'cells', 'derived', 'evidence'] as const;

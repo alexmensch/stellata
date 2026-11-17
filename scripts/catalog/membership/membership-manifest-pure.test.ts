@@ -181,6 +181,7 @@ const tables: PrimaryTables = {
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
+  simbadHdsByHip: new Map<number, Set<number>>(),
   glAliases: new Map<string, string[]>(),
   hip2: new Set<number>(),
   wgsn: {
@@ -236,6 +237,7 @@ function gateEvidence(
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: gateEvidence(tables),
+  positions: { hipparcos: () => null, gaia: () => null },
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   simbadTycHd: new Map<string, SimbadTycHdRow>(),
@@ -249,6 +251,10 @@ function withTables(t: PrimaryTables) {
 }
 
 const result = buildMembership(input);
+/** The fixture's one contested addition group, which every build queues. */
+const CONTESTED_ADDITION_TYC = '3-3-1';
+const spineQueue = (r: { bindingReview: readonly { tyc: string }[] }) =>
+  r.bindingReview.filter((row) => row.tyc !== CONTESTED_ADDITION_TYC);
 const byTyc = new Map(result.rows.map((r) => [r.tyc, r]));
 
 describe('buildMembership — the spine side', () => {
@@ -258,7 +264,7 @@ describe('buildMembership — the spine side', () => {
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(derivation(result)).toEqual({
-      bound: 3, rescued: 0, refused: 2, contested: 0, collision: 0, sol: 1,
+      bound: 3, rescued: 0, identified: 0, refused: 2, contested: 0, collision: 0, sol: 1,
     });
     expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
     expect(codes(result)['binding.consensus']).toBe(1);
@@ -270,7 +276,7 @@ describe('buildMembership — the spine side', () => {
     });
     const row = disposed.rows.find((r) => r.tyc === '9-8-1')!;
     expect(row).toMatchObject({ gaiaSourceId: '888', binding: 'reviewed' });
-    expect(disposed.bindingReview).toHaveLength(1);
+    expect(spineQueue(disposed)).toHaveLength(1);
     expect(disposed.rows.filter((r) => r.binding === 'reviewed').length).toBe(1);
     expect(totals(disposed).dispositions).toEqual({ derived: 0, other: 1, none: 0 });
     expect(codes(disposed)['disposition.asserted']).toBe(1);
@@ -353,7 +359,7 @@ describe('buildMembership — the spine side', () => {
     expect(filled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(derivation(filled).bound).toBe(4);
-    expect(filled.bindingReview).toHaveLength(0);
+    expect(spineQueue(filled)).toHaveLength(0);
   });
 
   it('queues a contested row, ships its winner, and honours a disposition', () => {
@@ -401,7 +407,7 @@ describe('buildMembership — the spine side', () => {
     expect(settled.rows.find((r) => r.hip === 70))
       .toMatchObject({ gaiaSourceId: '7070', binding: 'crosswalk_gated' });
     expect(derivation(settled)).toMatchObject({ bound: 4, contested: 0 });
-    expect(settled.bindingReview).toHaveLength(0);
+    expect(spineQueue(settled)).toHaveLength(0);
   });
 
   it('withholds a derived source from every row that reaches it', () => {
@@ -483,6 +489,60 @@ describe('buildMembership — the spine side', () => {
     }));
   });
 
+  describe('an HD I/239 and SIMBAD both give to another spine HIP', () => {
+    const withOther = (t: Partial<PrimaryTables>) => buildMembership({
+      ...withTables({
+        ...tables,
+        hdI239: new Set([70100]),
+        i239HipHd: new Map([[71, 70100]]),
+        simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        ...t,
+      }),
+      spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70100' })],
+    });
+
+    it('leaves the record whose own HIP I/239 prints no HD for', () => {
+      const built = withOther({});
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: null });
+      expect(built.rows.find((r) => r.hip === 71)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops).toContainEqual(expect.objectContaining({
+        hip: 72, cell: 'hd', value: 70100, reason: 'hd_other_hip',
+      }));
+    });
+
+    it.each([
+      ['I/239 prints an HD for the record\'s own HIP', { i239HipHd: new Map([[71, 70100], [72, 70101]]) }],
+      ['SIMBAD gives the other HIP another HD', { simbadHdsByHip: new Map([[71, new Set([70109])]]) }],
+      ['no spine record carries the other HIP', { i239HipHd: new Map([[73, 70100]]), simbadHdsByHip: new Map([[73, new Set([70100])]]) }],
+    ])('keeps the HD where %s', (_, t) => {
+      const built = withOther(t);
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(0);
+    });
+
+    it('keeps the HD, and says so in lineage, where SIMBAD\'s pull holds no object for the other HIP', () => {
+      const built = withOther({ simbadHdsByHip: new Map<number, Set<number>>() });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(1);
+    });
+
+    it('keeps the HD where the other HIP\'s record ships a different HD', () => {
+      const built = buildMembership({
+        ...withTables({
+          ...tables,
+          hdI239: new Set([70100, 70101]),
+          i239HipHd: new Map([[71, 70100]]),
+          simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        }),
+        spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70101' })],
+      });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+    });
+  });
+
   it('drops the spine labels no primary attests onto the label ledger', () => {
     const row = result.rows.find((r) => r.hip === 70)!;
     expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
@@ -490,7 +550,7 @@ describe('buildMembership — the spine side', () => {
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested' },
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
-    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
+    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1, hd_other_hip: 0 });
   });
 
   it('leaves an empty Flamsteed cell empty whatever SIMBAD numbers the star', () => {
@@ -511,9 +571,68 @@ describe('buildMembership — the spine side', () => {
     const row = byTyc.get('9-8-1')!;
     expect(row.gaiaSourceId).toBeNull();
     expect(row.binding).toBe('none');
-    expect(result.bindingReview).toEqual([]);
-    expect(totals(result).reviewRows).toBe(0);
-    expect(totals(result).reviewByVerdict).toEqual({ contested: 0, collision: 0, disposed: 0 });
+    expect(spineQueue(result)).toEqual([]);
+  });
+
+  it('queues a contested addition group as a contested spine row is queued', () => {
+    expect(result.bindingReview.map((r) => [r.tyc, r.verdict])).toEqual([[CONTESTED_ADDITION_TYC, 'contested']]);
+    expect(totals(result).reviewByVerdict).toEqual({ contested: 1, collision: 0, unconfirmed: 0, disposed: 0 });
+    expect(derivation(result).contested).toBe(0);
+  });
+
+  describe('an unconfirmed identity witness', () => {
+    const unconfirmedInput = {
+      ...input,
+      spine: [...spine, spineRow({ hip: '60', hd: '600' })],
+      tables: {
+        ...tables,
+        hipI239: new Set([...tables.hipI239, 60]),
+        hipToSource: new Map([...tables.hipToSource, [60, '6062']]),
+        simbadBySourceId: new Map([...tables.simbadBySourceId, ['6062', { oid: 0, hip: 60, tyc: null, gj: null }]]),
+      },
+      evidence: gateEvidence(tables, new Map([['6062', 8.0]]), printedHipTable([[60, 5.0]]), null),
+      magnitudeTerm: { keptSourceIds: new Set(['6062']), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
+    };
+    const key = bindingReviewKey({ tyc: '', hip: '60', hd: '600', gl: '' });
+    const hip60 = (r: MembershipResult) => r.bindingReview.filter((row) => row.hip === '60');
+
+    it('queues where the magnitude term admits the source SIMBAD names', () => {
+      const queued = buildMembership(unconfirmedInput);
+      expect(hip60(queued)).toEqual([expect.objectContaining({
+        verdict: 'unconfirmed', derived_source_id: '', identity_source_id: '6062', identity_g: '8.000', identity_separation_arcsec: '',
+      })]);
+      expect(codes(queued)['binding.unconfirmed']).toBe(1);
+    });
+
+    it('records the blend the gate refused on beside the witness', () => {
+      const [witness] = buildMembership(unconfirmedInput).lineage.filter((r) => r.code === 'membership.binding.identity-witness');
+      expect(JSON.parse(witness.params)).toEqual({ source_id: '6062', separation_arcsec: '', g_mag: '8.000', v_mag: '5.000' });
+    });
+
+    it("letters the queue row from the named source's WDS cross-ID", () => {
+      const wdsXids = {
+        bySource: new Map([['6062', [{ wdsId: '00001+0001', component: 'A' }]]]),
+        byHip: new Map(), primarySourceLetterByWds: new Map(),
+      };
+      const lettered = buildMembership({
+        ...unconfirmedInput,
+        evidence: bindingEvidence(new Map([['6062', 8.0]]), wdsXids, printedVLookups(printedHipTable([[60, 5.0]]), tables.tycho2, tables.gliese), null),
+      });
+      const [queued] = lettered.lineage.filter((r) => r.code === 'membership.binding.unconfirmed');
+      expect(JSON.parse(queued.params)).toMatchObject({ source_letters: '00001+0001:A' });
+    });
+
+    it('leaves the queue as disposed once a disposition settles it on no source', () => {
+      const settled = buildMembership({
+        ...unconfirmedInput,
+        dispositions: new Map([[key, disposition({
+          tyc: '', hip: '60', hd: '600', keep_source_id: '', basis: 'tycho2_position',
+        })]]),
+      });
+      expect(hip60(settled).map((r) => r.verdict)).toEqual(['disposed']);
+      expect(codes(settled)['binding.unconfirmed']).toBe(0);
+      expect(codes(settled)['disposition.none.settled']).toBe(1);
+    });
   });
 
   it('carries the label merge onto the row and attests the merged cells', () => {
@@ -989,7 +1108,7 @@ describe('codecs', () => {
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
     const closePair = { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined };
-    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair };
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair, positional: { v70a: () => null, tycho2: () => undefined } };
     const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, gaiaSourceId: null };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
@@ -1010,13 +1129,20 @@ describe('codecs', () => {
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', sourceId: '5', onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
-      merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { queued: 'v70a-none' }, separations: [{ tyc: '1-1-1', separationArcsec: 20.71 }],
+      }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { settled: 'v70a-position' }, separations: [{ tyc: '1-1-1', separationArcsec: 5.3 }],
+      }),
     ], identity);
     expect(ledger).toHaveLength(3);
     expect(ledger).toEqual(expect.arrayContaining([
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
-      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
+      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl; v70a-none; v70a 20.7"' },
     ]));
     expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);
@@ -1204,7 +1330,7 @@ describe('membership lineage', () => {
     const summary = membershipSummary(folded(result), result.derived);
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
-    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, refused ${d.refused}`);
+    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, identified ${d.identified}, refused ${d.refused}`);
     const fieldLines = summary.split('\n').filter((l) => /^  \S/.test(l)).map((l) => l.trim().split(' ')[0]);
     expect(fieldLines).toEqual([...LABEL_FIELDS]);
   });

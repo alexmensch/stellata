@@ -215,7 +215,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->400<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->372<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -242,7 +242,8 @@ a code with a winner names the highest-precedence source proposing it
 |---|---|---|
 | `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,287<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
-| `refused` | <!-- count:membership-manifest/membership.binding.refused -->439<!-- /count --> | no source binds — a derived refusal, not an absence |
+| `identified.<lead>` | tyc <!-- count:membership-manifest/membership.binding.identified.tyc -->22<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.identified.hip -->2<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.identified.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.identified.simbad -->4<!-- /count --> | every candidate failed a gate, and SIMBAD's one object for the HIP and the HIP's own position both name one the magnitude gate refused ([Identity outranks a blended magnitude](binding/README.md#identity-outranks-a-blended-magnitude)) |
+| `refused` | <!-- count:membership-manifest/membership.binding.refused -->411<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
 | `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->228<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
@@ -269,6 +270,20 @@ row per cell, keyed on the manifest row as it stands afterwards, under
 `hd_unattested` or `flamsteed_unattested`. Today that is <!-- count:membership-manifest/membership.label-drop.hd-unattested -->1<!-- /count --> HD — HD 336196
 on HIP 90265, where I/239 prints HD 336187 — and <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> Flamsteed numbers the
 rule refuses (`1 Ara`, `11 Sgr`, `18 UMi`, each on `flamsteed-refusals.tsv`).
+
+**An attested HD that is another HIP's leaves the row too** (`hd_other_hip`):
+I/239 prints no HD for the record's own HIP, both I/239's `HD` column and
+SIMBAD's identifier pull give the HD to a different HIP, and the spine record
+carrying that HIP ships the HD after the label merge. The drop therefore only
+ever removes a second copy of a designation another record keeps. Where the
+other record ships a different HD, or I/239 prints another HD for the record's
+own HIP, the two records hold a swapped or split pair, which is the close-pair
+rule's question, not a drop. SIMBAD's identifier pull covers only the objects
+`simbad_sptype` reached, so where it holds no object for the other HIP the HD
+stays and the row says so in lineage
+(`label-drop.not-taken.hd-simbad-silent`, <!-- count:membership-manifest/membership.label-drop.not-taken.hd-simbad-silent -->0<!-- /count --> today) rather than reading
+SIMBAD's silence as dissent. Today <!-- count:membership-manifest/membership.label-drop.hd-other-hip -->1<!-- /count -->: HD 96600 on HIP 54335,
+which I/239 and SIMBAD both give to HIP 54355.
 
 <a id="simbad-attests-it-never-fills"></a>**SIMBAD attests a Flamsteed
 cell; it never supplies one.** IV/27A's own Flamsteed column reaches 212 in
@@ -339,8 +354,8 @@ arithmetic and label-flips replay:
   `component:` row names a manifest designation and is itself no manifest row.
 - **No addition shares a designation with another record**, which is what says
   each mints on a classical key rather than falling through to its Gaia id.
-  The <!-- count:membership-manifest/sharedDesignations -->68<!-- /count --> designations two rows do share are the spine's own — pinned, so a
-  label change that makes a sixty-ninth fails here.
+  The <!-- count:membership-manifest/sharedDesignations -->67<!-- /count --> designations two rows do share are the spine's own — pinned, so a
+  label change that makes another fails here.
 - **The astrometry request covers every binding**: each `term = primaries`
   row's `gaia_source_id` is in the request, which reads no manifest, so this
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).

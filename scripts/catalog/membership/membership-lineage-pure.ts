@@ -27,13 +27,16 @@ import {
 import { BINDING_DISPOSITIONS, type BindingDisposition } from './binding/binding-review-dispositions-pure';
 import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
-  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES,
+  DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES, UNLINKED_SETTLEMENTS_BY_CELL,
   type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
+  type UnlinkedSettlement,
 } from './merge-derivation/merge-derivation-pure';
+import { KEY_CELLS, type KeyCell } from '../spine/association-audit-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
 } from './ledger-rows-pure';
 import { MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
+import { milliCell } from '../../util/tsv/artifact-pure';
 
 export const MEMBERSHIP_LINEAGE_BUDGET = { gzipBytes: 41_000_000, writeMs: 20_000 };
 
@@ -50,6 +53,7 @@ export interface OriginKeys {
 
 const RETIRED_7_1_20 = retired('7.1.20');
 const RETIRED_7_1_31 = retired('7.1.31');
+const RETIRED_7_2_1 = retired('7.2.1');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -94,23 +98,28 @@ function classCodes<P extends string, C extends PrimariesBindingClass>(
   )) as Record<`${P}.${ClassBranch<C>}`, CodeDeclaration<typeof LIVE>>;
 }
 
-export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision'] as const;
+export const QUEUED_BINDING_OUTCOMES = ['contested', 'collision', 'unconfirmed'] as const;
 export type QueuedBindingOutcome = (typeof QUEUED_BINDING_OUTCOMES)[number];
 export const isQueuedOutcome = (o: string): o is QueuedBindingOutcome => (QUEUED_BINDING_OUTCOMES as readonly string[]).includes(o);
-export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'refused', 'sol'] as const;
+export const SETTLED_BINDING_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'sol'] as const;
 export type SettledBindingOutcome = (typeof SETTLED_BINDING_OUTCOMES)[number];
 
 /** The binding outcomes with a winner, whose code names the highest-precedence source proposing it. */
-export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'contested'] as const;
-export const LED_ADDITION_OUTCOMES = ['bound', 'rescued'] as const;
+export const LED_SPINE_OUTCOMES = ['bound', 'rescued', 'identified', 'contested'] as const;
+export const LED_ADDITION_OUTCOMES = ['bound', 'rescued', 'identified'] as const;
 type LedSpineOutcome = (typeof LED_SPINE_OUTCOMES)[number];
 /** A winner SIMBAD alone proposes ranks below every other passing candidate, so it is never contested. */
 export const CONTESTED_LEADS = ['tyc', 'hip', 'cns5'] as const satisfies readonly BindingSource[];
 type ContestedLead = (typeof CONTESTED_LEADS)[number];
-type QueuedBranch = `binding.contested.${ContestedLead}` | 'binding.collision';
+type QueuedBranch =
+  | `binding.contested.${ContestedLead}` | 'binding.collision' | 'binding.unconfirmed'
+  | 'addition-binding.contested' | 'addition-binding.unconfirmed';
 const QUEUED_BRANCHES: readonly (readonly [QueuedBindingOutcome, QueuedBranch])[] = [
   ...CONTESTED_LEADS.map((lead) => ['contested', `binding.contested.${lead}`] as const),
   ['collision', 'binding.collision'],
+  ['unconfirmed', 'binding.unconfirmed'],
+  ['contested', 'addition-binding.contested'],
+  ['unconfirmed', 'addition-binding.unconfirmed'],
 ];
 type LedAdditionOutcome = (typeof LED_ADDITION_OUTCOMES)[number];
 
@@ -131,7 +140,7 @@ export function withLead<O extends string, L extends string, S extends BindingSo
 }
 
 export const ADDITION_BINDING_OUTCOMES = [
-  'bound', 'rescued', 'on-spine', 'shared', 'refused', 'no-candidate',
+  'bound', 'rescued', 'identified', 'on-spine', 'shared', 'refused', 'no-candidate',
 ] as const;
 export type AdditionBindingOutcome = (typeof ADDITION_BINDING_OUTCOMES)[number];
 
@@ -171,6 +180,7 @@ const UNATTESTED_BRANCHES = {
 const LABEL_DROP_BRANCHES = {
   flamsteed_unattested: 'label-drop.flamsteed-unattested',
   hd_unattested: 'label-drop.hd-unattested',
+  hd_other_hip: 'label-drop.hd-other-hip',
 } as const satisfies Record<LabelDropReason, string>;
 
 const DISPOSITION_DESCRIPTIONS = {
@@ -229,9 +239,14 @@ const OWN_CANDIDATE_BRANCHES = {
   component: 'admit.magnitude.component',
 } as const satisfies Record<OwnCandidateReason, string>;
 
+const IDENTIFIED = 'Every candidate failed a gate, and SIMBAD\'s one object for the HIP and the HIP\'s own position both name a refused one, so that one binds.';
+const UNCONFIRMED = 'SIMBAD\'s one object for the HIP names a refused candidate its position does not confirm, and the magnitude term admits that source as a record of its own; the row is queued for review.';
+const IDENTITY_WITNESS = 'The source SIMBAD\'s one object for the HIP carries, a refused candidate, and its distance from the HIP\'s position at J1991.25 (empty where either position is missing).';
+
 const SPINE_LED_DESCRIPTIONS = {
   bound: 'One Gaia source survives both binding gates with no passing rival, and the record binds to it.',
   rescued: 'Every candidate failed a gate, and SIMBAD files the record\'s own TYC under the one the sibling gate refused, so that one binds.',
+  identified: IDENTIFIED,
   contested: 'The binding winner has a runner-up that also passed both gates; precedence chose it and the row is queued for review.',
 } as const satisfies Record<LedSpineOutcome, string>;
 
@@ -239,11 +254,13 @@ const SPINE_LED_DESCRIPTIONS = {
 const ADDITION_GROUP_LED_DESCRIPTIONS = {
   bound: 'The addition group\'s own Gaia source survives both gates and is no other record\'s.',
   rescued: 'The addition group\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+  identified: IDENTIFIED,
 } as const satisfies Record<LedAdditionOutcome, string>;
 
 const ADDITION_LED_DESCRIPTIONS = {
   bound: 'The admitted star\'s own Gaia source survives both gates and is no other record\'s.',
   rescued: 'The admitted star\'s candidates all failed a gate, and SIMBAD\'s witness under its TYC rescued one.',
+  identified: IDENTIFIED,
 } as const satisfies Record<LedAdditionOutcome, string>;
 
 const LEAD_DESCRIPTIONS = {
@@ -298,9 +315,27 @@ const differsPrefix = (l: DiffersLink): string =>
 type DiffersQueuedBranch =`${DiffersBranch}.queued`;
 const differsQueuedBranch = (l: DiffersLink): DiffersQueuedBranch => `${differsBranch(l)}.queued`;
 
+const UNLINKED_DESCRIPTION = 'Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.';
+
+type UnlinkedQueuedBranch = `merge.unlinked.${KeyCell}.queued`;
+type UnlinkedSettledBranch = { [C in KeyCell]: `merge.unlinked.${C}.${UnlinkedSettlement<C>}` }[KeyCell];
+const unlinkedQueuedBranch = (c: KeyCell): UnlinkedQueuedBranch => `merge.unlinked.${c}.queued`;
+const unlinkedSettledBranch = <C extends KeyCell>(c: C, s: UnlinkedSettlement<C>): UnlinkedSettledBranch =>
+  `merge.unlinked.${c}.${s}` as UnlinkedSettledBranch;
+
+const UNLINKED_SETTLEMENT_DESCRIPTIONS = {
+  ...DIFFERS_SETTLEMENT_DESCRIPTIONS,
+  'not-shipped': 'an earlier rule — the pair rule, the label merge or a label drop — already moved the spine\'s value off the record, and that rule\'s row is the decision',
+  'v70a-position': 'V/70A\'s position for the shipped GJ, carried to the record\'s own Tycho-2 entry, lands inside the witness tolerance',
+} as const satisfies Record<UnlinkedSettlement, string>;
+
+const unlinkedPrefix = (c: KeyCell): string =>
+  `Neither the primaries' own cross-references nor the Gaia and SIMBAD witnesses connect the spine row's ${c} to its other identifiers; only AT-HYG associates them`;
+
 type MergeBranch =
-  | 'merge.unlinked' | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
+  | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
+  | UnlinkedQueuedBranch | UnlinkedSettledBranch
   | PairReviewBranch | DerivedOnlyBranch | DiffersQueuedBranch | DiffersSettledBranch;
 
 const PAIR = 'Tycho-2 gives the spine row\'s HIP to two or more entries, and';
@@ -312,10 +347,14 @@ const MERGE_BRANCHES: readonly {
   ledger: MergeDivergenceKind | null;
   description: string;
 }[] = [
-  {
-    branch: 'merge.unlinked', of: 'unlinked', ledger: 'unlinked',
-    description: 'Neither the primaries\' own cross-references nor the Gaia and SIMBAD witnesses connect every identifier the spine row carries; only AT-HYG associates them.',
-  },
+  ...KEY_CELLS.map((c) => ({
+    branch: unlinkedQueuedBranch(c), of: 'unlinked' as const, ledger: 'unlinked' as const,
+    description: `${unlinkedPrefix(c)}, and no rule settles the cell: it is queued for review and the shipped value stands.`,
+  })),
+  ...KEY_CELLS.flatMap((c) => (UNLINKED_SETTLEMENTS_BY_CELL[c] as readonly UnlinkedSettlement[]).map((s) => ({
+    branch: unlinkedSettledBranch(c, s), of: 'unlinked' as const, ledger: null,
+    description: `${unlinkedPrefix(c)}, and ${UNLINKED_SETTLEMENT_DESCRIPTIONS[s]}.`,
+  }))),
   {
     branch: 'merge.pair.confirmed', of: 'pair-confirmed', ledger: null,
     description: `${PAIR} the HIP's Gaia source is the spine entry's own.`,
@@ -399,7 +438,11 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'binding.bound': outcomeCode(SPINE_LED_DESCRIPTIONS.bound, 'none', RETIRED_7_1_20),
   'binding.rescued': outcomeCode(SPINE_LED_DESCRIPTIONS.rescued, 'none', RETIRED_7_1_20),
   'binding.contested': outcomeCode(SPINE_LED_DESCRIPTIONS.contested, 'none', RETIRED_7_1_20),
-  ...ledCodes('binding', { bound: SPINE_LED_DESCRIPTIONS.bound, rescued: SPINE_LED_DESCRIPTIONS.rescued }, BINDING_SOURCES),
+  ...ledCodes('binding', {
+    bound: SPINE_LED_DESCRIPTIONS.bound, rescued: SPINE_LED_DESCRIPTIONS.rescued, identified: SPINE_LED_DESCRIPTIONS.identified,
+  }, BINDING_SOURCES),
+  'binding.unconfirmed': outcomeCode(UNCONFIRMED),
+  'binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
   ...ledCodes('binding', { contested: SPINE_LED_DESCRIPTIONS.contested }, CONTESTED_LEADS),
   'binding.refused': outcomeCode('No Gaia source survives the binding gates; the record ships unbound.'),
   'binding.collision': outcomeCode('Another spine row derives the same Gaia source, so both are withheld and queued for review.'),
@@ -431,6 +474,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'addition-binding.shared': outcomeCode('Two admitted stars reach the same Gaia source, so neither takes it.'),
   'addition-binding.refused': outcomeCode('Every Gaia candidate of the admitted star failed a binding gate.'),
   'addition-binding.no-candidate': outcomeCode('No catalogue proposes a Gaia source for the admitted star.'),
+  'addition-binding.unconfirmed': outcomeCode(UNCONFIRMED),
+  'addition-binding.identity-witness': outcomeCode(IDENTITY_WITNESS),
   'addition-binding.contested': outcomeCode('The addition group binds its winner, and a runner-up also passed both gates; precedence chose it.'),
   'addition-binding.route-disagree': outcomeCode('The addition group\'s TYC route and HIP route propose different Gaia sources.'),
   'addition.blocked-designation': outcomeCode('The admitted star ships without a designation its primaries publish, because another record answers to it.'),
@@ -446,7 +491,10 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'unattested.proper': outcomeCode('The record ships a proper name no primary publishes; its disposition is the IAU-WGSN authority\'s.'),
   'label-drop.flamsteed-unattested': outcomeCode('No primary publishes this Flamsteed number for the star, so it leaves the record.'),
   'label-drop.hd-unattested': outcomeCode('No HD primary publishes this HD number for the star, so it leaves the record.'),
+  'label-drop.hd-other-hip': outcomeCode('I/239 prints no HD for the record\'s HIP, and I/239 and SIMBAD both give this HD to another HIP whose spine record ships it, so it leaves the record.'),
+  'label-drop.not-taken.hd-simbad-silent': outcomeCode('I/239 prints no HD for the record\'s HIP and gives this HD to another HIP whose spine record ships it, but SIMBAD\'s identifier pull holds no object for that HIP, so the HD stays.'),
   ...MERGE_CODES,
+  'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
   ...RETIRED_DIFFERS_CODES,
 });
 
@@ -477,6 +525,21 @@ export type MembershipOutcome =
     readonly sourceLetters: string;
     readonly hipLetters: string;
   } & Led<QueuedBindingOutcome, LedSpineOutcome & QueuedBindingOutcome, ContestedLead>)
+  | {
+    readonly kind: 'identity-queued';
+    readonly subject: RefusalSubject;
+    readonly review: BindingReviewCells;
+    readonly sourceLetters: string;
+    readonly hipLetters: string;
+  }
+  | {
+    readonly kind: 'identity-witness';
+    readonly subject: RefusalSubject;
+    readonly sourceId: string;
+    readonly separationArcsec: number | null;
+    readonly gMag: number | null;
+    readonly vMag: number | null;
+  }
   | {
     readonly kind: 'candidate-refused';
     readonly subject: RefusalSubject;
@@ -510,7 +573,12 @@ export type MembershipOutcome =
   | { readonly kind: 'ships-none' }
   | { readonly kind: 'bright'; readonly overlayEntry: boolean }
   | { readonly kind: 'unattested'; readonly cell: UnattestedCell; readonly value: string }
-  | { readonly kind: 'addition-contested' }
+  | {
+    readonly kind: 'addition-contested';
+    readonly review: BindingReviewCells;
+    readonly sourceLetters: string;
+    readonly hipLetters: string;
+  }
   | { readonly kind: 'route-disagree'; readonly tycSourceId: string; readonly hipSourceId: string }
   | { readonly kind: 'blocked-designation'; readonly designations: readonly string[] }
   | { readonly kind: 'merge'; readonly divergence: MergeDivergence }
@@ -520,7 +588,8 @@ export type MembershipOutcome =
     readonly reason: LabelDropReason;
     readonly cell: LabelDropCell;
     readonly value: string;
-  };
+  }
+  | { readonly kind: 'hd-other-hip-simbad-silent'; readonly value: string };
 
 export interface KeyedOutcome {
   readonly key: string;
@@ -546,12 +615,12 @@ type Candidate = { source_id: string; via: string };
 type ParamsOf<B extends Branch> =
   B extends 'component' ? { designation: string }
   : B extends QueuedBranch ? BindingReviewCells & Letters
-  : B extends `binding.${'bound' | 'rescued'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
+  : B extends 'binding.identity-witness' | 'addition-binding.identity-witness' ? { source_id: string; separation_arcsec: string; g_mag: string; v_mag: string }
+  : B extends `binding.${'bound' | 'rescued' | 'identified'}.${BindingSource}` | `binding.${SettledBindingOutcome}` ? { derived_source_id: string; derived_via: string } & Letters
   : B extends RefusalBranch | 'binding.unweighed-no-pulled-row' | 'binding.weighed-null-g' ? Candidate
   : B extends 'disposition.asserted' ? { keep_source_id: string; basis: string }
   : B extends DispositionBranch ? BindingReviewCells & { keep_source_id: string; basis: string }
   : B extends 'addition-binding.route-disagree' ? { tyc_source_id: string; hip_source_id: string }
-  : B extends 'addition-binding.contested' ? Record<string, never>
   : B extends 'addition.blocked-designation' ? { designations: string }
   : B extends `addition-binding.${string}` ? Candidate
   : B extends `label-drop.${string}` ? { cell: string; value: string }
@@ -606,6 +675,14 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       return row(key, 'lead' in o ? `binding.${o.outcome}.${o.lead}` : `binding.${o.outcome}`, {
         ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
       });
+    case 'identity-queued':
+      return row(key, o.subject === 'spine' ? 'binding.unconfirmed' : 'addition-binding.unconfirmed', {
+        ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters,
+      });
+    case 'identity-witness':
+      return row(key, o.subject === 'spine' ? 'binding.identity-witness' : 'addition-binding.identity-witness', {
+        source_id: o.sourceId, separation_arcsec: milliCell(o.separationArcsec), g_mag: milliCell(o.gMag), v_mag: milliCell(o.vMag),
+      });
     case 'candidate-refused':
       return row(key, REFUSAL_BRANCHES[o.subject][o.refusal], { source_id: o.sourceId, via: o.via });
     case 'candidate-unweighed':
@@ -621,7 +698,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
     case 'ships-none': return row(key, 'binding.ships-none', {});
     case 'bright': return row(key, o.overlayEntry ? 'overlay.bright.entry' : 'overlay.bright.no-entry', {});
     case 'unattested': return row(key, UNATTESTED_BRANCHES[o.cell], { value: o.value });
-    case 'addition-contested': return row(key, 'addition-binding.contested', {});
+    case 'addition-contested':
+      return row(key, 'addition-binding.contested', { ...o.review, source_letters: o.sourceLetters, hip_letters: o.hipLetters });
     case 'route-disagree':
       return row(key, 'addition-binding.route-disagree', { tyc_source_id: o.tycSourceId, hip_source_id: o.hipSourceId });
     case 'blocked-designation':
@@ -633,6 +711,8 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
       });
     case 'label-drop':
       return row(key, LABEL_DROP_BRANCHES[o.reason], { cell: o.cell, value: o.value });
+    case 'hd-other-hip-simbad-silent':
+      return row(key, 'label-drop.not-taken.hd-simbad-silent', { cell: 'hd', value: o.value });
     case 'merge': return mergeRow(key, o.divergence);
     default: {
       const unmapped: never = o;
@@ -643,8 +723,14 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
 
 function mergeRow(key: string, d: MergeDivergence): LineageRow {
   switch (d.kind) {
-    case 'unlinked':
-      return row(key, 'merge.unlinked', { cells: d.cells.join('+'), derived: d.witnessed, evidence: d.published });
+    case 'unlinked': {
+      const witness = d.separations.length === 0 ? '' : `; v70a ${d.separations[0].separationArcsec.toFixed(1)}"`;
+      const params = { cells: d.cell, derived: d.witnessed };
+      if ('settled' in d.verdict) {
+        return row(key, unlinkedSettledBranch(d.cell, d.verdict.settled), { ...params, evidence: `${d.published}${witness}` });
+      }
+      return row(key, unlinkedQueuedBranch(d.cell), { ...params, evidence: `${d.published}; ${d.verdict.queued}${witness}` });
+    }
     case 'pair-confirmed':
       return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
     case 'pair-moves':
@@ -789,7 +875,7 @@ export type MembershipDerivedCounts = Readonly<Record<
 
 type LiveBranch = typeof MEMBERSHIP_CODES extends StageCodes<string, string, infer L> ? L : never;
 
-const DERIVATION_OUTCOMES = ['bound', 'rescued', 'refused', 'contested', 'collision', 'sol'] as const;
+const DERIVATION_OUTCOMES = ['bound', 'rescued', 'identified', 'refused', 'contested', 'collision', 'sol'] as const;
 const STAGE_PREFIX = `${MEMBERSHIP_CODES.stage}.` as const;
 const countOf = (counts: MembershipCounts) => (branch: LiveBranch): number => counts[MEMBERSHIP_CODES.liveCode(branch)];
 const sumOver = (counts: MembershipCounts) => (branches: readonly LiveBranch[]): number => sumOf(counts, STAGE_PREFIX, branches);
@@ -816,25 +902,27 @@ export function membershipTotals(counts: MembershipCounts) {
   };
   const disposed = (q: DispositionQueue) => sum(BINDING_DISPOSITIONS.map((d): LiveBranch => `disposition.${d}.${q}`));
   const reviewByVerdict: Record<BindingReviewVerdict, number> = {
-    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
+    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)) + n('addition-binding.contested'),
     collision: n('binding.collision'),
+    unconfirmed: n('binding.unconfirmed') + n('addition-binding.unconfirmed'),
     disposed: disposed('settled'),
   };
   const isContestedLead = (l: BindingSource): l is ContestedLead => (CONTESTED_LEADS as readonly string[]).includes(l);
-  const led = (o: 'bound' | 'rescued'): number => sum(BINDING_SOURCES.map((l): LiveBranch => `binding.${o}.${l}`));
+  const led = (o: 'bound' | 'rescued' | 'identified'): number => sum(BINDING_SOURCES.map((l): LiveBranch => `binding.${o}.${l}`));
   const derivation = {
     bound: led('bound'),
     rescued: led('rescued'),
+    identified: led('identified'),
     refused: n('binding.refused'),
-    contested: reviewByVerdict.contested,
+    contested: sum(CONTESTED_LEADS.map((l): LiveBranch => `binding.contested.${l}`)),
     collision: n('binding.collision'),
     sol: n('binding.sol'),
   };
   const spineLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
-    n(`binding.bound.${l}`) + n(`binding.rescued.${l}`) + (isContestedLead(l) ? n(`binding.contested.${l}`) : 0),
+    n(`binding.bound.${l}`) + n(`binding.rescued.${l}`) + n(`binding.identified.${l}`) + (isContestedLead(l) ? n(`binding.contested.${l}`) : 0),
   ])) as Record<BindingSource, number>;
   const additionLeads = Object.fromEntries(BINDING_SOURCES.map((l) => [l,
-    n(`addition-binding.bound.${l}`) + n(`addition-binding.rescued.${l}`),
+    n(`addition-binding.bound.${l}`) + n(`addition-binding.rescued.${l}`) + n(`addition-binding.identified.${l}`),
   ])) as Record<BindingSource, number>;
   return {
     manifestRows: spineAdmits + additions + magnitudeRows,
@@ -849,7 +937,7 @@ export function membershipTotals(counts: MembershipCounts) {
     additions,
     magnitudeRows,
     reviewByVerdict,
-    reviewRows: reviewByVerdict.contested + reviewByVerdict.collision + reviewByVerdict.disposed,
+    reviewRows: BINDING_REVIEW_VERDICTS.reduce((total, v) => total + reviewByVerdict[v], 0),
     dispositions: Object.fromEntries(BINDING_DISPOSITIONS.map(
       (d) => [d, sum(DISPOSITION_QUEUES.map((q): LiveBranch => `disposition.${d}.${q}`))],
     )) as Record<BindingDisposition, number>,

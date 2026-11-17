@@ -12,14 +12,17 @@ import {
   derivationCandidateSourceIds,
   deriveBinding,
   indexSimbadSources,
+  isUnconfirmed,
   rankCandidates,
   rowGateEvidence,
   simbadCandidate,
   type BindingCandidates,
+  type PositionEvidence,
 } from './binding-derivation-pure';
 import { printedVOf } from '../../photometry/photometry-fixture';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
+const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null };
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { oid: 0, hip: 10, tyc: '1-1-1', gj: null }],
@@ -154,14 +157,14 @@ describe('deriveBinding', () => {
   );
 
   it('weighs candidates in rank order and falls through on a magnitude rejection', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     const d = deriveBinding(candidates({ tyc: 'a', hip: 'b', simbad: 'c' }), gate);
     expect(d).toMatchObject({ sourceId: 'b', via: ['hip'], binding: 'crosswalk_gated', gateable: true });
     expect(d.rejected).toEqual([{ sourceId: 'a', via: ['tyc'], reason: 'mag' }]);
   });
 
   it('refuses the sibling component\'s source on the WDS letters and falls through', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     const d = deriveBinding(candidates({ hip: '501', simbad: 'c' }), gate);
     expect(d.sourceId).toBe('c');
     expect(d.binding).toBe('simbad_corroborated');
@@ -171,14 +174,14 @@ describe('deriveBinding', () => {
   // 501 is outside the pull as well as sibling-refused: the zero-pinned
   // coverage alarm still has to see it.
   it('counts an unpulled candidate in the coverage alarm even when the sibling arm refuses it', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     const d = deriveBinding(candidates({ hip: '501' }), gate);
     expect(d.rejected.map((r) => r.reason)).toEqual(['sibling']);
     expect(d.unweighedNoPulledRow.map((c) => c.sourceId)).toEqual(['501']);
   });
 
   it('derives a refusal where every candidate is rejected, and where there is none', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
       .toMatchObject({ sourceId: null, via: [], binding: 'none' });
     expect(deriveBinding(candidates({}), gate)).toMatchObject({ sourceId: null, ranked: [], rejected: [] });
@@ -188,7 +191,7 @@ describe('deriveBinding', () => {
   // no pulled row is the request under-covering the derivation, a pulled row
   // with no G is Gaia publishing none.
   it('counts candidates it weighed without a G, by cause, and passes them', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     expect(deriveBinding(candidates({ tyc: 'unpulled' }), gate))
       .toMatchObject({ sourceId: 'unpulled', unweighedNoPulledRow: [{ sourceId: 'unpulled' }], weighedNullGMag: [] });
     expect(deriveBinding(candidates({ tyc: 'nullg' }), gate))
@@ -201,7 +204,7 @@ describe('deriveBinding', () => {
   // reads as a passing runner-up and the row queues a `contested` verdict on a
   // verdict never taken.
   it('weighs the candidates behind the winner too, so a rival it refuses is not a runner-up', () => {
-    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '', hip: '50', gl: '' }, evidence, simbad, NO_POSITIONS);
     const d = deriveBinding(candidates({ hip: 'b', simbad: 'a' }), gate);
     expect(d.sourceId).toBe('b');
     expect(d.rejected).toEqual([{ sourceId: 'a', via: ['simbad'], reason: 'mag' }]);
@@ -226,7 +229,7 @@ describe('deriveBinding', () => {
       ['702', { oid: 0, hip: null, tyc: '8-8-1', gj: null }],
     ]), []);
     const gate = rowGateEvidence(
-      { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, witnessIndex,
+      { tyc: '6-6-1', hip: '60', gl: '' }, witnessed, witnessIndex, NO_POSITIONS,
     );
 
     it('rescues a row whose only candidate SIMBAD indexes its own TYC under (53 Aqr B)', () => {
@@ -242,21 +245,77 @@ describe('deriveBinding', () => {
 
     it('does not rescue on a TYC SIMBAD indexes under another source', () => {
       const other = rowGateEvidence(
-        { tyc: '7-7-1', hip: '60', gl: '' }, witnessed, witnessIndex,
+        { tyc: '7-7-1', hip: '60', gl: '' }, witnessed, witnessIndex, NO_POSITIONS,
       );
       expect(deriveBinding(candidates({ simbad: '601' }), other).sourceId).toBeNull();
     });
 
     it('takes no witness from a TYC two SIMBAD objects claim', () => {
       const contested = rowGateEvidence(
-        { tyc: '8-8-1', hip: '60', gl: '' }, witnessed, witnessIndex,
+        { tyc: '8-8-1', hip: '60', gl: '' }, witnessed, witnessIndex, NO_POSITIONS,
       );
       expect(contested.tycWitness).toBeNull();
     });
   });
 
+  // θ¹ Ori A's figures: README.md#identity-outranks-a-blended-magnitude.
+  describe('the identity witness', () => {
+    const blend = bindingEvidence(new Map([['900', 6.63]]), null, printedVOf({ hip: new Map([[90, 4.98]]) }));
+    const index = indexSimbadSources(new Map([['900', { oid: 0, hip: 90, tyc: null, gj: null }]]), []);
+    const hip90 = { raDeg: 83.81588707, decDeg: -5.38727971 };
+    const at = (raDeg: number, decDeg: number): PositionEvidence => ({
+      hipparcos: (hip) => (hip === 90 ? hip90 : null),
+      gaia: (id) => (id === '900' ? { raDeg, decDeg, pmRaMasyr: 1.3552, pmDecMasyr: 0.2501, refEpoch: 2016 } : null),
+    });
+    const derive = (positions: PositionEvidence) => deriveBinding(
+      candidates({ simbad: '900' }), rowGateEvidence({ tyc: '', hip: '90', gl: '' }, blend, index, positions),
+    );
+
+    it('binds a magnitude-refused source SIMBAD and the HIP\'s position both name', () => {
+      const d = derive(at(83.815945223, -5.387314083));
+      expect(d).toMatchObject({ sourceId: '900', rescue: 'identity', rejected: [] });
+      expect(isUnconfirmed(d)).toBe(false);
+    });
+
+    it('queues it where the position sits past the tolerance', () => {
+      const d = derive(at(83.8165, -5.3873));
+      expect(isUnconfirmed(d)).toBe(true);
+      expect(d.identity?.sourceId).toBe('900');
+      expect(d.identity?.separationArcsec).toBeGreaterThan(1);
+    });
+
+    it('queues it where either position is missing', () => {
+      const d = derive(NO_POSITIONS);
+      expect(d).toMatchObject({ sourceId: null, rescue: null, identity: { sourceId: '900', separationArcsec: null } });
+      expect(isUnconfirmed(d)).toBe(true);
+    });
+
+    it('never outranks a candidate that passes on its own', () => {
+      const gate = rowGateEvidence({ tyc: '', hip: '90', gl: '' }, blend, index, at(83.815945223, -5.387314083));
+      const d = deriveBinding(candidates({ tyc: 'passes', simbad: '900' }), gate);
+      expect(d).toMatchObject({ sourceId: 'passes', rescue: null, identity: null });
+    });
+
+    it('never outranks a sibling-letter refusal, which no blended magnitude explains', () => {
+      const xids = parseSimbadWdsXidsTsv(columnTable(FROM, [
+        'wds_id\tcomponent\tgaia_source_id\thip',
+        '00009+0000\tA\t\t90',
+        '00009+0000\tB\t900\t',
+      ].join('\n')));
+      const sibling = bindingEvidence(new Map([['900', 5.2]]), xids, printedVOf({ hip: new Map([[90, 4.98]]) }));
+      const gate = rowGateEvidence({ tyc: '', hip: '90', gl: '' }, sibling, index, at(83.815945223, -5.387314083));
+      const d = deriveBinding(candidates({ simbad: '900' }), gate);
+      expect(d).toMatchObject({ sourceId: null, rescue: null, identity: null });
+      expect(d.rejected).toEqual([{ sourceId: '900', via: ['simbad'], reason: 'sibling' }]);
+    });
+
+    it('has nothing to say where SIMBAD files the HIP under no source', () => {
+      expect(rowGateEvidence({ tyc: '', hip: '91', gl: '' }, blend, index, at(0, 0)).identity).toBeNull();
+    });
+  });
+
   it('cannot weigh a row with no printed V, and says so', () => {
-    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, simbad);
+    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, evidence, simbad, NO_POSITIONS);
     expect(gate.printedV).toBeNull();
     expect(deriveBinding(candidates({ tyc: 'a' }), gate))
       .toMatchObject({ sourceId: 'a', gateable: false, unweighedNoPulledRow: [] });
@@ -270,13 +329,13 @@ describe('deriveBinding', () => {
     const lower = bindingEvidence(gMag, WDS_XIDS, printedVOf({
       hip: new Map([[50, 5.0]]), tycho2: { '1-1-1': 5.0 }, gliese: { 'GJ 4285': 5.0 },
     }));
-    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, lower, simbad);
+    const gate = rowGateEvidence({ tyc: '1-1-1', hip: '', gl: '' }, lower, simbad, NO_POSITIONS);
     expect(gate.printedV).toMatchObject({ vMag: 5.0, vVia: 'tycho2' });
     expect(deriveBinding(candidates({ tyc: 'a', simbad: 'c' }), gate))
       .toMatchObject({ sourceId: 'c', gateable: true });
-    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, lower, simbad).printedV)
+    expect(rowGateEvidence({ tyc: '', hip: '', gl: 'GJ 4285' }, lower, simbad, NO_POSITIONS).printedV)
       .toMatchObject({ vMag: 5.0, vVia: 'gliese' });
-    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, lower, simbad).printedV)
+    expect(rowGateEvidence({ tyc: '1-1-1', hip: '50', gl: '' }, lower, simbad, NO_POSITIONS).printedV)
       .toMatchObject({ vMag: 5.0, vVia: 'printed_hip' });
   });
 });

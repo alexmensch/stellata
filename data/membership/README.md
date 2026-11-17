@@ -42,16 +42,22 @@ simbad_sourced_distances.tsv
                          (/scripts/catalog/distance/parallax/README.md).
                          It sits beside parked-ledger.tsv because both are
                          views of the record walk's placement. One row per
-                         record, <!-- count:build-catalog/distSimbadPlx -->404<!-- /count -->; a row
-                         carrying neither cell addresses no record
+                         record (build-catalog/distSimbadPlx counts them); a
+                         row carrying neither cell addresses no record
                          (`stellata-hooj.15`).
-binding-review.tsv       Regular git. The 375 spine rows the derivation
-                         cannot settle alone or a review already settled —
-                         contested · collision · disposed — with every
-                         source's candidate, the gate rejections, the printed V
-                         and the derived candidate's G and SIMBAD cross-IDs.
+binding-review.tsv       Regular git. The 353 spine rows and addition
+                         groups the derivation cannot settle alone or a
+                         review already settled — contested · collision ·
+                         unconfirmed · disposed — with every source's
+                         candidate, the gate rejections, the printed V, the
+                         derived candidate's G and SIMBAD cross-IDs, and the
+                         source SIMBAD's HIP object names with its G and its
+                         separation from the HIP's position.
                          A contested row ships its winner while it waits, so
-                         being queued is a flag, not a withhold.
+                         being queued is a flag, not a withhold; an
+                         unconfirmed one ships no source, and its SIMBAD-named
+                         source stays a magnitude-term row
+                         (/scripts/catalog/membership/binding/README.md#identity-outranks-a-blended-magnitude).
                          Pipeline-derived.
 binding-review-dispositions.tsv
                          Regular git. Hand-curated, and AUTHORITATIVE
@@ -83,9 +89,11 @@ flamsteed-refusals.tsv   Regular git. Pipeline-derived. Every SIMBAD
                          (/scripts/catalog/simbad/README.md#the-refused-numbers).
                          37 rows.
 label-drops.tsv          Regular git. The /docs/catalog-driver.md#62-label-parity label ledger: every
-                         spine Flamsteed / HD cell no primary attests, keyed
-                         on the manifest row it left, under
-                         flamsteed_unattested (3) · hd_unattested (1).
+                         spine Flamsteed / HD cell no primary attests, or HD
+                         I/239 and SIMBAD give to another HIP whose record ships it, keyed on
+                         the manifest row it left, under
+                         flamsteed_unattested (3) · hd_unattested (1) ·
+                         hd_other_hip (1).
 merge-divergence.tsv     Regular git. Pipeline-derived. Where each spine
                          row's merge decision departs from what the
                          primaries' own links derive — unlinked ·
@@ -132,7 +140,8 @@ surface for the derived binding), the primaries the audit reads
 (`../classic-ids/`, `../gliese/`, `../hipparcos/` with I/239's `hd` column,
 `../tycho2/`, `../iau-wgsn/`, the two `../gaia/` cross-walks,
 `../simbad/simbad_sptype.tsv`), `../simbad/simbad_tyc_hd.tsv` for the pair
-rule's SIMBAD check, the `gl:` bridges of
+rule's SIMBAD check, `../simbad/simbad_idents.tsv` for the Flamsteed
+attestation and the `hd_other_hip` drop, the `gl:` bridges of
 `../sid/sameas-overrides.tsv`, the binding gates' evidence
 (`../gaia/gaia_dr3_astrometry.tsv` for G,
 `../hipparcos/hip_main_vmag.tsv` for printed V,

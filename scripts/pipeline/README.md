@@ -220,9 +220,9 @@ reads once the step exits 0 and then removes. `release` is the description's.
 
 ## Loops through committed files
 
-Thirteen places where a file feeds, directly or through other files, the step
+Fourteen places where a file feeds, directly or through other files, the step
 that writes it. Measured 2026-10-27; the SIMBAD TYC → HD row 2026-11-15; the
-binaries rows 2026-11-16.
+binaries rows and the identifier pull's 2026-11-16.
 
 | Loop | Disposition |
 |---|---|
@@ -235,6 +235,7 @@ binaries rows 2026-11-16.
 | manifest → binaries Stages 1–2 → astrometry request → astrometry pull → `build:membership` | Broken as the request row above: `build:astrometry-request` runs Stages 1–2 with the manifest withheld, and `../binaries/build-binaries.test.ts` asserts every source binaries binds is in the request or the magnitude pull. |
 | `simbad_sptype` → `build:binaries` → `multiples.tsv` → `build:membership` → manifest → `simbad_sptype` | Broken twice: `build:membership` reads no `multiples.tsv` (the row above), and binaries reads only the WDS-keyed spectral types, which are their own pull and file (`refresh:simbad-wds-sptype`, `simbad_wds_sptype.tsv`) keyed on `simbad_wds_xids.tsv`, which the manifest never moves. |
 | manifest ↔ `simbad_sptype` (the derivation's fourth binding source) | Kept. The request genuinely depends on the binding outcome. The stale-pull stop is its convergence check; re-pulling reopens the review queue, as `refresh/README.md` says. The same file also reaches the astrometry request (its derivation candidates), so manifest → `simbad_sptype` → request → astrometry pull → `build:membership` is a second path through this loop, covered by the same stop. |
+| manifest → `simbad_sptype` → `refresh:simbad-idents` → `simbad_idents.tsv` → `build:membership` | Kept, an extension of the row above. The identifier pull's request is `simbad_sptype.tsv`'s oids ([The request](../refresh/simbad-idents/README.md#the-request)), so its reached-class rows (`**`, `V*`, `X`) move with that file; `build:membership` reads the pull for the Flamsteed attestation and the `hd_other_hip` drop ([The unattested labels leave the row](../catalog/membership/README.md#the-unattested-labels-leave-the-row)). The same stale-pull stop covers it. |
 | `build:astrometry-request` ↔ the astrometry pull | Kept, same check. The request's binaries share is Stages 1–2 run in-process, whose magnitude gate reads the pull ([The binaries' share](../catalog/astrometry-request/README.md#the-binaries-share-closes-a-loop-through-the-pull)). The share keeps rejected candidates, so the request grows rather than oscillates. |
 | `build:catalog` reads the SID ledger and events it appends to | Kept: an append-only file whose committed prefix the step only reads; its stamp records the post-append hash, so the next run rebuilds once and appends nothing. |
 | `build:catalog` ↔ `build:clouds` ↔ `build:local-group` through each other's registry partition (ledger and events) | Kept, the registry loop ([Load-time rules](step-table/README.md#load-time-rules)), which also covers the row before: each reads the union for the next SID and the retired state, and appends only to its own partition. |

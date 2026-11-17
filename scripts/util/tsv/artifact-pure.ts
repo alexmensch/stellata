@@ -11,6 +11,11 @@ export function nullableCell(v: string | number | null): string {
   return v === null ? '' : String(v);
 }
 
+/** A measured value to three decimals; empty where there is none. */
+export function milliCell(value: number | null): string {
+  return value === null ? '' : value.toFixed(3);
+}
+
 export function tsvLine(file: string, columns: readonly string[], cells: readonly string[]): string {
   return columns.map((column, i) => {
     const cell = cells[i];

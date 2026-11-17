@@ -6,7 +6,7 @@ import { TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type ObservedPosition } from '../
 import { tycho2Row } from '../../tycho2-fixture';
 import {
   HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
-  witnessHipparcos, witnessV70a, type WitnessVerdict,
+  hipparcosNamesSource, hipparcosSeparationFromSource, witnessHipparcos, witnessV70a, type WitnessVerdict,
 } from './positional-witness-pure';
 
 const v70a = (raB1950Deg: number, decB1950Deg: number, pmArcsecYr: number, pmPaDeg: number): V70aAstrometry =>
@@ -130,5 +130,38 @@ describe("witnessHipparcos — HIP2 carried to each observed cell's own epochs",
     ]);
     expect(v.kind).toBe('none');
     expect(seps(v)).toEqual([['1-1-1', 3.6]]);
+  });
+});
+
+describe('hipparcosSeparationFromSource — the Gaia source carried back to J1991.25', () => {
+  const gaia = (raDeg: number, decDeg: number, pmRaMasyr: number, pmDecMasyr: number) =>
+    ({ raDeg, decDeg, pmRaMasyr, pmDecMasyr, refEpoch: 2016 });
+
+  it('names θ¹ Ori A, whose HIP2 proper motion is a blend', () => {
+    const sep = hipparcosSeparationFromSource(
+      { raDeg: 83.81588707, decDeg: -5.38727971 }, gaia(83.815945223, -5.387314083, 1.3552, 0.2501),
+    );
+    expect(Number(sep.toFixed(3))).toBe(0.218);
+    expect(hipparcosNamesSource(sep)).toBe(true);
+  });
+
+  it('names HIP 77442 at the milliarcsecond level', () => {
+    const sep = hipparcosSeparationFromSource(
+      { raDeg: 237.14340123, decDeg: 28.15677697 }, gaia(237.143383235, 28.156696835, -2.8981, -11.703),
+    );
+    expect(Number(sep.toFixed(3))).toBe(0.015);
+  });
+
+  it('refuses HIP 83369, whose SIMBAD source sits a minute of arc away', () => {
+    const sep = hipparcosSeparationFromSource(
+      { raDeg: 255.58473826, decDeg: -48.9207986 }, gaia(255.559248582, -48.914482882, -1.5753, -2.7333),
+    );
+    expect(Math.round(sep)).toBe(64);
+    expect(hipparcosNamesSource(sep)).toBe(false);
+  });
+
+  it('names a source exactly at the tolerance and refuses one past it', () => {
+    expect(hipparcosNamesSource(HIPPARCOS_WITNESS_TOLERANCE_ARCSEC)).toBe(true);
+    expect(hipparcosNamesSource(HIPPARCOS_WITNESS_TOLERANCE_ARCSEC + 1e-9)).toBe(false);
   });
 });

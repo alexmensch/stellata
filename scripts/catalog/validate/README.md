@@ -32,6 +32,9 @@ scripts/catalog/validate/
                                   proper name. Loads the catalog
                                   `withSearchIndex`, which is where an HD
                                   resolves; the binary has no HD column.
+  identified-brightness.test.ts   Every identity-bound record's shipped V
+                                  against its printed Hipparcos V, pinned
+                                  (#identity-bound-brightness).
   record-parity-pure.ts (+ test)  Sid-keyed field comparison of two built
                                   catalogues. Pure. README.md#additive-mode-record-parity.
   record-parity.ts                pnpm run validate:record-parity — the CLI
@@ -120,6 +123,18 @@ Three tiers, all snapshot-pinned:
   agreement nothing measured ([§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers), validation
   independence). Counted in the report as an exclusion rather than folded
   into `unmatched`, which means something else.
+
+## Identity-bound brightness
+
+A record the identity witness binds
+([Identity outranks a blended magnitude](../membership/binding/README.md#identity-outranks-a-blended-magnitude))
+takes a source the magnitude gate refused, so its V moves from Hipparcos's
+printed value to Gaia's, as every Gaia-bound record's does. That move is the
+point for a blend whose companions are drawn on their own (θ¹ Ori A), and
+wrong for a variable caught at one phase (R CrB, in its 2007–2018 minimum;
+`stellata-hooj.61`). `identified-brightness.test.ts` pins every such record's
+printed and shipped V, so any move in that set fails by name. It reads the
+membership lineage and `public/catalog.bin`, and skips without them.
 
 ## Additive-mode record parity
 

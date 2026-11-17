@@ -11,7 +11,8 @@ import { CNS5 } from '../classic-ids/cns5-source';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { GLIESE } from '../gliese-source';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
-import { readSimbadFlamsteed } from '../simbad/simbad-flamsteed';
+import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
 import { HIP2 } from '../sources/hip2-source';
 import { HIP_PHOTOMETRY } from '../photometry/hip-photometry-source';
 import { artifactRows } from '../../util/sources/source';
@@ -66,6 +67,9 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
   for (const tyc of keepTycs) keep.add(tyc);
   const i239 = HIP_PHOTOMETRY.read();
   const iv27a = CROSS_INDEX.read();
+  const simbadObjects = SIMBAD_IDENTS.read();
+  const simbadHdsByHip = new Map<number, Set<number>>();
+  for (const o of simbadObjects) for (const hip of o.hips) for (const hd of o.hds) addKeyed(simbadHdsByHip, hip, hd);
   return {
     ...await loadBindingTables(keep),
     iv25,
@@ -75,9 +79,10 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     hipI239: i239.hips,
     hdI239: i239.hds,
     i239HipHd: i239.hdByHip,
+    simbadHdsByHip,
     hip2: HIP2.read().hips,
     wgsn: readWgsn(),
     tycho2: TYCHO2.read(),
-    simbadFlamsteed: readSimbadFlamsteed(iv27a),
+    simbadFlamsteed: classifySimbadFlamsteed(simbadObjects, iv27a),
   };
 }
