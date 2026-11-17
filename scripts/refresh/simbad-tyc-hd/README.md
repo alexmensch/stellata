@@ -65,7 +65,7 @@ Rows are written in `tyc` text order.
 
 - **Band** 300,000–380,000 rows: the requested TYCs SIMBAD resolves and
   holds an HD for, so it tracks that intersection rather than either input.
-  332,320 at the committed pull.
+  336,351 at the committed pull.
 - **Spot rows**: eight close pairs whose two Tycho entries carry adjacent HD
   numbers (f Eri A/B, τ Oph A/B, α Psc A, ε Boo B, κ¹/κ² CrA) — the shape the
   table exists to adjudicate.

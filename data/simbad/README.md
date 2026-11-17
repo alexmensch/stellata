@@ -10,7 +10,7 @@ exactly the gap AT-HYG (system-level spectra) and Gaia DR3
 
 ```
 simbad_sample.tsv          ~5.7 MB, LFS. Stratified random 50k stars.
-simbad_sptype.tsv          ~66 MB, LFS. 966,847 rows. Per-source sp_type /
+simbad_sptype.tsv          ~66 MB, LFS. 966,842 rows. Per-source sp_type /
                            sp_qual / sp_bibcode / otype + HIP / Gaia DR3 /
                            TYC / GJ cross-IDs; the resolver keys all four.
 simbad_values.tsv          ~29 MB, LFS. 115,743 rows. Bibcoded rv,
@@ -26,10 +26,10 @@ simbad_wds_xids.tsv        ~1.2 MB, LFS. Per-WDS-component (Gaia DR3,
 simbad_wds_sptype.tsv      ~0.25 MB, LFS. 23,604 rows. sp_type per WDS
                            component oid, the rows build:binaries reads —
                            see README.md#the-wds-keyed-sp_type-pull.
-simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
+simbad_tyc_hd.tsv          ~11 MB, LFS. 336,351 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
-simbad_idents.tsv          ~4 MB, LFS. 70,157 rows. Designation idents per
+simbad_idents.tsv          ~4 MB, LFS. 70,153 rows. Designation idents per
                            object with its catalogue keys — see
                            README.md#the-identifier-pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
@@ -127,14 +127,16 @@ Columns: `tyc`, `simbad_oid`, `simbad_main_id`, `hd`.
 `hd` is `|`-separated and carries SIMBAD's own ident suffix, component letter
 included (`24071`, `24071B`). **Nothing picks a winner between two HDs on one
 object** — an unresolved pair's entry carries both components' numbers, and
-that ambiguity is what a consumer is asking about. 2,882 rows carry more
+that ambiguity is what a consumer is asking about. 2,896 rows carry more
 than one. They are ordered by HD number, then by the suffix itself, so a bare
 number precedes its lettered forms and the 28 rows whose two numbers differ in
 digit width still read low-to-high; the order ranks nothing.
 
 A Tycho entry SIMBAD holds no HD for is **absent from the file**, so
 `has(tyc) === false` reads as "SIMBAD attributes no HD here" and never as "not
-asked": the request covers every TYC IV/25 or the manifest mentions.
+asked": the request covers every TYC IV/25 or the manifest mentions, and
+every entry of a Tycho-2 pair. The 2026-11-17 pull asked 378,119, resolved
+378,106 and wrote 336,351 rows, 2,896 carrying more than one HD.
 
 Measured at the 2026-09-09 pull (8.6 min):
 
@@ -150,8 +152,8 @@ object: two Tycho entries SIMBAD folds onto one oid each ship their own row.
 
 ### What it adjudicates
 
-The two classes it answers in, the 220 rows no committed table could detect,
-the 10 it vindicates against IV/25, and the four-witness split of the 4 it
+The two classes it answers in, the 219 rows no committed table could detect,
+the 10 it vindicates against IV/25, and the four-witness split of the 3 it
 still contradicts: [What the TYC → HD pull adjudicates](/scripts/catalog/simbad/README.md#what-the-tyc--hd-pull-adjudicates)
 and [Which witness decides a close pair's HD](/scripts/catalog/simbad/README.md#which-witness-decides-a-close-pairs-hd). That folder owns
 what a consumer may conclude from these tables; this one owns what they are.

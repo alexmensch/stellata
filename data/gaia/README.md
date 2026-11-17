@@ -13,7 +13,7 @@ gaia_dr3_hip_xmatch.tsv                ~3.7 MB, LFS. HIP → DR3 source_id.
 gaia_dr3_tyc_xmatch.tsv                ~106 MB, LFS. Tycho-2 → DR3 source_id.
 gaia_dr3_astrometry.tsv        ~58 MB, LFS. 5p astrometry +
                                        radial_velocity{,_error} for every
-                                       requested source_id (388,980
+                                       requested source_id (388,987
                                        rows) — tier 1 of the direction, rv, V
                                        and ci cascades, the G evidence the
                                        overlay gate and the membership
@@ -35,9 +35,9 @@ gaia_dr3_apsis.tsv                     ~70 MB, LFS. gspphot ∪ gspspec
 gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        V synthesised from each source's BP/RP
                                        spectrum, + fluxes, flux errors and the
-                                       per-band validated-range flag. 351,497
+                                       per-band validated-range flag. 351,502
                                        rows, pulled against the astrometry
-                                       request at 388,982 ids — the ci
+                                       request at 388,988 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
@@ -46,7 +46,7 @@ gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
                                        membership derivation's candidates UNION
                                        the binaries' Stage 2 candidates UNION
                                        the binding review dispositions' kept
-                                       ids, 388,982 ids
+                                       ids, 388,988 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
