@@ -441,8 +441,8 @@ export function admitAdditions(input: {
 
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
+    const cells = reviewKeyCells(g);
     if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
-      const cells = reviewKeyCells(g);
       out.outcomes.push({ key: g.origin, outcome: {
         kind: 'addition-contested', review: bindingReviewCells(cells, g.derived, g.gate, tables),
         ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
@@ -466,7 +466,7 @@ export function admitAdditions(input: {
       ...refusedCandidates(g.origin, 'addition', g.derived),
       ...identityWitnessed(g.origin, 'addition', g.derived),
     );
-    out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', reviewKeyCells(g), g.derived, g.gate, tables));
+    out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', cells, g.derived, g.gate, tables));
     if (a.verdict.kind === 'component') {
       out.outcomes.push({
         key: g.origin,

@@ -130,8 +130,12 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   let manifest: ManifestRecord[];
   let recordMoves: { tyc: string | null; derived: string }[];
   let match: SpineMatch;
+  /** SIMBAD's one source per HIP, as the identity witness reads it. */
+  let simbadByHip: Map<number, string | null>;
 
   beforeAll(() => {
+    const sptype = SIMBAD_SPTYPE.read();
+    simbadByHip = indexSimbadSources(sptype.xids, sptype.sourcelessXids).byHip;
     spine = INHERITED_SPINE.parse(readFileSync(SPINE_PATH, 'utf-8'));
     ({ corrected, folds } = applySpineCorrections(
       spine,
@@ -148,12 +152,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
   // see binding/README.md#identity-outranks-a-blended-magnitude
   it('draws no HIP\'s SIMBAD-named star twice outside the review queue', () => {
-    const sptype = SIMBAD_SPTYPE.read();
-    const byHip = indexSimbadSources(sptype.xids, sptype.sourcelessXids).byHip;
     const onBrightness = new Set(manifest.filter((r) => r.term === 'magnitude').map((r) => r.gaiaSourceId));
     const queuedHips = new Set(queue.map((r) => Number(r.hip)));
     const twice = manifest.filter((r) => r.term === 'primaries' && r.hip !== null
-      && onBrightness.has(byHip.get(r.hip) ?? null)).map((r) => r.hip);
+      && onBrightness.has(simbadByHip.get(r.hip) ?? null)).map((r) => r.hip);
     expect(twice.filter((hip) => !queuedHips.has(hip!))).toEqual([]);
     expect(twice).toHaveLength(46);
     expect(queue.filter((r) => r.verdict === 'unconfirmed')).toHaveLength(16);
@@ -166,8 +168,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // binding/README.md#a-hip-on-neither-component-is-the-systems: SIMBAD files
   // HIP 40476 on the system HD 69445, and every witness names A's source.
   it('keeps HIP 40476 on HD 69445 A\'s source, with B its own record', () => {
-    const byHip = indexSimbadSources(SIMBAD_SPTYPE.read().xids, SIMBAD_SPTYPE.read().sourcelessXids).byHip;
-    expect(byHip.has(40476)).toBe(false);
+    expect(simbadByHip.has(40476)).toBe(false);
     const record = manifest.filter((r) => r.hip === 40476);
     expect(record.map((r) => [r.tyc, r.gaiaSourceId])).toEqual([['7122-1231-1', '5548310466041819392']]);
     expect(manifest.filter((r) => r.gaiaSourceId === '5548310466056188416').map((r) => [r.hip, r.term]))

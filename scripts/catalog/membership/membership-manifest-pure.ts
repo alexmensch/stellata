@@ -136,7 +136,7 @@ export function buildMembership(input: MembershipInput): MembershipResult {
 
   const identityQueue = queuedIdentities(
     [...settlement.identityQueue, ...additions.identityQueue],
-    new Set(magnitude.rows.map((r) => r.gaiaSourceId ?? '')),
+    new Set(magnitude.rows.flatMap((r) => (r.gaiaSourceId === null ? [] : [r.gaiaSourceId]))),
   );
   const rows = [...primariesRows, ...magnitude.rows];
   const identity = [
