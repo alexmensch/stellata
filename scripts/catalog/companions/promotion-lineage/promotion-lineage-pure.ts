@@ -1,9 +1,9 @@
 // Companion promotion as a lineage stage: its reason codes, the one serialiser over RowOutcome, its count summary, and the identity rows of the records it mints and the rows it removes. See README.md.
 
 import { MULTIPLES_ROW_KEY } from '../../../binaries/multiples-row-key-pure';
-import { starDesignations } from '../../../sid/sid-pure';
+import { starDesignations, synthDesignation } from '../../../sid/sid-pure';
 import { rowKeyText } from '../../../util/sources/row-ref-pure';
-import type { IdentityRow } from '../../lineage/identity/identity-pure';
+import { identityRow, recordKeyCells, type IdentityRow } from '../../lineage/identity/identity-pure';
 import {
   lineageInvariant, namedExceptionsInvariant, NO_EXCEPTIONS, type LineageInvariant,
 } from '../../lineage/lineage-invariant-pure';
@@ -21,10 +21,11 @@ import type {
 import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 import type { Unsorted } from '../../record/record-phase';
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_670_000, writeMs: 10_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_870_000, writeMs: 10_000 };
 
 const RETIRED_7_1_8 = retired('7.1.8');
 const RETIRED_7_1_20 = retired('7.1.20');
+const RETIRED_7_1_31 = retired('7.1.31');
 
 const BRIGHTNESS_CODES = {
   dmag_imputed: 'dmag-imputed', own: 'own', wds_mag: 'wds-mag', spectral: 'spectral',
@@ -122,7 +123,9 @@ export const PROMOTION_CODES = stageCodes(PROMOTION_LINEAGE.stage, {
   ),
   'parked.primary-unresolved': outcomeCode('A pair\'s primary resolves to no catalogue record and no escape places it, so it ships no record of its own and its pair runs with no anchor.', 'park'),
   'parked.unpaired': outcomeCode('The row is in no pair, so promotion has no geometry to place it with and ships no record for it.', 'park'),
-  'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.'),
+  'not-applicable.pair-anchor': outcomeCode('Promotion decides nothing for the row: it is a pair\'s primary that anchors the pair.', 'none', RETIRED_7_1_31),
+  'pair-anchor.own-star': outcomeCode('The row is a pair\'s primary resolved to the record params.record, which anchors the pair and carries the row\'s own Gaia source, HIP or synthetic key, so it is the row\'s star and a SID keyed on the row\'s identifiers or synthetic key merges into that record\'s.', 'merge'),
+  'pair-anchor.other-record': outcomeCode('The row is a pair\'s primary resolved to the record params.record, which anchors the pair but carries none of the row\'s own Gaia source, HIP or synthetic key, so promotion decides nothing for a SID keyed on the row.'),
   ...FACET_CODES,
   ...SIZE_CODES,
   ...HELD_CODES,
@@ -177,7 +180,7 @@ type Via = { via: PromotedRow['via'] };
 
 /** Each code's params, declared once beside the codes. */
 type ParamsOf<B extends Branch> =
-  B extends 'dropped.anchor-is-component' | 'adopted.earlier-mint' ? Via & { record: string }
+  B extends 'dropped.anchor-is-component' | 'adopted.earlier-mint' | `pair-anchor.${string}` ? Via & { record: string }
   : B extends `adopted.${string}` ? Via & { record: string; recurated?: string }
   : Via;
 
@@ -268,7 +271,8 @@ export function promotionDecision(r: PromotedRow, recordKey: (idx: number) => st
     case 'unpaired':
       return decided(row('parked.unpaired', { via }));
     case 'pair-anchor':
-      return decided(row('not-applicable.pair-anchor', { via }));
+      if (r.anchor === null) throw new Error(`${key}: a pair anchor with no record`);
+      return decided(row(o.ownStar ? 'pair-anchor.own-star' : 'pair-anchor.other-record', { via, record: r.anchor }));
     default: {
       const unmapped: never = o;
       throw new Error(`promotion outcome with no row mapping: ${JSON.stringify(unmapped)}`);
@@ -352,9 +356,10 @@ export function promotionSummary(counts: PromotionCounts, derived: PromotionStat
 export interface PromotionLineage {
   readonly lineage: LineageRow[];
   readonly identity: IdentityRow[];
+  readonly mintSynth: ReadonlyMap<string, string>;
 }
 
-/** Each row's lineage row; and one identity row per record promotion mints, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
+/** Each row's lineage row; and one identity row per record promotion mints, carrying its row's synthetic key even when keyed on its own id, and one per row it removes or merges (a retire, park or merge outcome) keyed on the HIP and Gaia cells it arrived with and the synthetic key a mint from it would carry, less any designation `founded` (membership's records) or a mint of this stage already carries. */
 export function promotionLineage(
   rows: readonly PromotedRow[], stars: Unsorted, founded: ReadonlySet<string>,
   rewrites: ReadonlyMap<NamedStar, Readonly<RecordRewrite>>,
@@ -365,8 +370,9 @@ export function promotionLineage(
     ...decided.flatMap(decisionRows),
     ...[...rewrites].flatMap(([star, rewrite]) => rewriteRows(star.originKey, rewrite, recordKey)),
   ];
+  const synth = mintSynthDesignations(rows, stars);
   const minted = rows.flatMap(({ outcome: o }) => (o.kind === 'minted' ? [stars[o.idx]] : []))
-    .map((s) => identityRow(s.originKey, s.hip, s.gaiaSourceId, starDesignations({ ...s, isSol: false })));
+    .map((s) => promotionIdentityRow(s.originKey, s.hip, s.gaiaSourceId, withDesignation(starDesignations({ ...s, isSol: false }), synth.get(s.originKey))));
   const claimed = new Set([...founded, ...minted.flatMap((m) => m.designations)]);
   const removed = rows.flatMap((r, i): IdentityRow[] => {
     const effect = PROMOTION_EFFECTS.get(decided[i].outcome.code);
@@ -379,17 +385,27 @@ export function promotionLineage(
     const kept = <T>(value: T | null, ns: string): T | null => (
       value !== null && designations.includes(`${ns}:${value}`) ? value : null
     );
-    return [identityRow(
+    return [promotionIdentityRow(
       promotionOriginKey(r.row), kept(r.row.hip, 'hip'), kept(r.row.gaiaSourceId, 'gaia_dr3'), designations,
     )];
   });
-  return { lineage, identity: [...minted, ...removed] };
+  return { lineage, identity: [...minted, ...removed], mintSynth: synth };
 }
 
-function identityRow(
-  key: string, hip: number | null, gaiaSourceId: string | null, designations: string[],
+/** Each minted record's row's `synth:` designation, by the record's origin key: a keyed mint carries it too, the synth↔component same-as edge (/docs/sid.md#41-same-as-equivalence-graph), so a SID keyed on it continues on the record. */
+export function mintSynthDesignations(rows: readonly PromotedRow[], stars: Unsorted): ReadonlyMap<string, string> {
+  return new Map(rows.flatMap(({ outcome: o, synthKey }) => (
+    o.kind === 'minted' ? [[stars[o.idx].originKey, synthDesignation(synthKey)] as const] : []
+  )));
+}
+
+/** `designations` with `extra` appended unless absent or already there. */
+export function withDesignation(designations: string[], extra: string | undefined): string[] {
+  return extra === undefined || designations.includes(extra) ? designations : [...designations, extra];
+}
+
+function promotionIdentityRow(
+  key: string, hip: number | null, gaiaSourceId: string | null, designations: readonly string[],
 ): IdentityRow {
-  return {
-    key, tyc: '', hip: hip === null ? '' : String(hip), hd: '', gl: '', gaia_source_id: gaiaSourceId ?? '', designations,
-  };
+  return identityRow(key, recordKeyCells({ tyc: null, hip, hd: null, gl: null, gaiaSourceId }), designations);
 }

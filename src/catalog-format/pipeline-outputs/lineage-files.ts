@@ -17,9 +17,12 @@ export const LINEAGE_REPO_LAYOUT = lineageLayout('build');
 export interface StageLineageSpec<F extends string, S extends string = string> {
   readonly stage: S;
   readonly files: readonly F[];
-  /** The stem holding identity rows for the records the stage founds. */
+  /** The stem holding identity rows: the records the stage founds, and those its removals name. */
   readonly identity?: F;
 }
+
+/** A stage that writes identity rows. */
+export type IdentityStageSpec<F extends string, S extends string = string> = StageLineageSpec<F, S> & { readonly identity: F };
 
 export const BINDING_LINEAGE: StageLineageSpec<'component-binding', 'component-binding'> = {
   stage: 'component-binding',
@@ -41,9 +44,10 @@ export const ORBITS_LINEAGE: StageLineageSpec<'orbits', 'orbits'> = {
   files: ['orbits'],
 };
 
-export const PAIRS_LINEAGE: StageLineageSpec<'pairs', 'pairs'> = {
+export const PAIRS_LINEAGE: IdentityStageSpec<'pairs' | 'pairs.identity', 'pairs'> = {
   stage: 'pairs',
-  files: ['pairs'],
+  files: ['pairs', 'pairs.identity'],
+  identity: 'pairs.identity',
 };
 
 export const ANCHORS_LINEAGE: StageLineageSpec<'anchors', 'anchors'> = {
@@ -61,7 +65,7 @@ export const CLASSIC_IDS_LINEAGE: StageLineageSpec<'classic-ids', 'classic-ids'>
   files: ['classic-ids'],
 };
 
-export const MEMBERSHIP_LINEAGE: StageLineageSpec<'membership' | 'identity', 'membership'> = {
+export const MEMBERSHIP_LINEAGE: IdentityStageSpec<'membership' | 'identity', 'membership'> = {
   stage: 'membership',
   files: ['membership', 'identity'],
   identity: 'identity',
@@ -87,7 +91,7 @@ export const COHERENCE_LINEAGE: StageLineageSpec<'coherence', 'coherence'> = {
   files: ['coherence'],
 };
 
-export const PROMOTION_LINEAGE: StageLineageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
+export const PROMOTION_LINEAGE: IdentityStageSpec<'promotion' | 'promotion.identity', 'promotion'> = {
   stage: 'promotion',
   files: ['promotion', 'promotion.identity'],
   identity: 'promotion.identity',

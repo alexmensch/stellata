@@ -24,7 +24,8 @@ scripts/catalog/membership/merge-derivation/
                              dispositions over the queue,
                              simbadRefusedMoves and iv25TycHds (SIMBAD's
                              TYC→HD check on the applied moves) and
-                             mergeDivergences, one row's divergences. Pure.
+                             mergeDivergences, one row's divergences with
+                             each differs and unlinked cell's verdict. Pure.
 ```
 
 `../membership-manifest-pure.ts` applies the pair rule to the kept spine rows
@@ -155,13 +156,14 @@ cells like the other ledgers, one row per divergence:
 
 | `divergence` | `cells` | `derived` | `evidence` |
 |---|---|---|---|
-| `unlinked` | the cells outside the row's largest connected group | the witnessed partition | the published partition |
+| `unlinked` | one cell outside the row's largest connected group | the witnessed partition | the published partition, the queue reason, and the positional witness's separation where it ran |
 | `pair_moves` | `hip` | the entry the pair rule moved the HIP onto, another spine record's | the HIP's Gaia source |
 | `derived_only` | the cell | the value a primary's link puts there | `held` if another spine row carries it, else `free` |
 | `differs` | the cell the spine fills | the values a primary's link puts there, none of them one the record ships | the cell the link reads, and the value the record ships (`none` where a label rule emptied it) |
 
 `unlinked` is the association audit's `witnessed` residual over the corrected
-rows. `derived_only` covers a cell the spine leaves empty and a primary fills:
+rows, one row per cell, and only for a cell no rule settles
+([Settling an unlinked cell](#settling-an-unlinked-cell)). `derived_only` covers a cell the spine leaves empty and a primary fills:
 a HIP through Tycho-2's column (only on the entry the pair rule names), an HD
 through IV/25 or the HIP's I/239 and IV/27A links, an HR through V/50, a GJ
 through CNS5's `hip` or V/70A's `HD`, each GJ written in the record's own
@@ -207,3 +209,24 @@ the evidence's last field:
 HD: the rule's move set, which reaches the build through
 `classic_id_overrides.tsv` after review, as the rule's other moves do), or
 `no-rule`.
+
+## Settling an unlinked cell
+
+An `unlinked` cell — one only AT-HYG joins to the rest of its row — is weighed
+the same way, cell by cell: a settled cell writes
+`merge.unlinked.<cell>.<settlement>` in lineage and no ledger row; anything
+else is `merge.unlinked.<cell>.queued`, ledgered with its reason, the shipped
+value standing while it waits.
+
+| Cell | Settles as |
+|---|---|
+| any | `not-shipped`: an earlier rule — the pair rule, the label merge or a label drop — already moved the spine's value off the record, and that rule's row is the decision |
+| `hd`, `hr` | the `differs` rule for the cell, above |
+| `gl` | `cns5-source`, else `v70a-position`: the [positional witness](../positional-witness/README.md) puts V/70A's position for the shipped GJ inside its tolerance of the record's own Tycho-2 entry |
+| `tyc`, `hip` | no rule |
+
+A GJ the witness cannot settle queues as `v70a-none` (the entry is outside the
+tolerance), `no-v70a-astrometry` (V/70A prints no position for it) or
+`no-tycho2-entry`; the separation rides in the
+evidence. The other reasons are the `differs` ones. The counts are the
+`membership.merge.unlinked.*` codes in `../membership-manifest-expected.json`.

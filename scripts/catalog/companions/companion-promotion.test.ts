@@ -1186,6 +1186,7 @@ describe('promoteCompanions rows', () => {
       systemId: '00003+0003-AB', comp: 'A', orbitRole: 'primary', gaiaSourceId: '999',
     });
     const { rows } = promote([primary, secondary, standalone, unresolved], [anchor], inputs());
+    expect(rows[0].outcome).toEqual({ kind: 'pair-anchor', ownStar: true });
     expect(rows.map((r) => [r.row.comp, r.via, r.outcome.kind, r.anchor, r.systemAnchor])).toEqual([
       ['A', 'primary', 'pair-anchor', 'spine:7', 'spine:7'],
       ['B', 'secondary', 'minted', 'spine:7', 'spine:7'],

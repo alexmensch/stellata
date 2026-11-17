@@ -70,6 +70,7 @@ const tables: PrimaryTables = {
   hipI239: new Set([10, 20, 70890]),
   hdI239: new Set([330122]),
   i239HipHd: new Map([[70890, 330122]]),
+  simbadHdsByHip: new Map<number, Set<number>>(),
   glAliases: glAliasesFromEdges([
     { a: 'gl:Gl_157.1', b: 'gl:GJ_9140' },
     { a: 'synth:00047+3416-Db', b: 'gaia_dr3:2875176250406193920' },

@@ -181,6 +181,7 @@ const tables: PrimaryTables = {
   hipI239: new Set([10, 20, 30, 40, 50, 70]),
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
+  simbadHdsByHip: new Map<number, Set<number>>(),
   glAliases: new Map<string, string[]>(),
   hip2: { hips: new Set<number>(), astrometry: new Map() },
   wgsn: {
@@ -483,6 +484,60 @@ describe('buildMembership — the spine side', () => {
     }));
   });
 
+  describe('an HD I/239 and SIMBAD both give to another spine HIP', () => {
+    const withOther = (t: Partial<PrimaryTables>) => buildMembership({
+      ...withTables({
+        ...tables,
+        hdI239: new Set([70100]),
+        i239HipHd: new Map([[71, 70100]]),
+        simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        ...t,
+      }),
+      spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70100' })],
+    });
+
+    it('leaves the record whose own HIP I/239 prints no HD for', () => {
+      const built = withOther({});
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: null });
+      expect(built.rows.find((r) => r.hip === 71)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops).toContainEqual(expect.objectContaining({
+        hip: 72, cell: 'hd', value: 70100, reason: 'hd_other_hip',
+      }));
+    });
+
+    it.each([
+      ['I/239 prints an HD for the record\'s own HIP', { i239HipHd: new Map([[71, 70100], [72, 70101]]) }],
+      ['SIMBAD gives the other HIP another HD', { simbadHdsByHip: new Map([[71, new Set([70109])]]) }],
+      ['no spine record carries the other HIP', { i239HipHd: new Map([[73, 70100]]), simbadHdsByHip: new Map([[73, new Set([70100])]]) }],
+    ])('keeps the HD where %s', (_, t) => {
+      const built = withOther(t);
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(0);
+    });
+
+    it('keeps the HD, and says so in lineage, where SIMBAD\'s pull holds no object for the other HIP', () => {
+      const built = withOther({ simbadHdsByHip: new Map<number, Set<number>>() });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+      expect(codes(built)['label-drop.not-taken.hd-simbad-silent']).toBe(1);
+    });
+
+    it('keeps the HD where the other HIP\'s record ships a different HD', () => {
+      const built = buildMembership({
+        ...withTables({
+          ...tables,
+          hdI239: new Set([70100, 70101]),
+          i239HipHd: new Map([[71, 70100]]),
+          simbadHdsByHip: new Map([[71, new Set([70100])]]),
+        }),
+        spine: [...spine, spineRow({ hip: '72', hd: '70100' }), spineRow({ hip: '71', hd: '70101' })],
+      });
+      expect(built.rows.find((r) => r.hip === 72)).toMatchObject({ hd: 70100 });
+      expect(built.labelDrops.some((d) => d.reason === 'hd_other_hip')).toBe(false);
+    });
+  });
+
   it('drops the spine labels no primary attests onto the label ledger', () => {
     const row = result.rows.find((r) => r.hip === 70)!;
     expect(row).toMatchObject({ hd: null, flam: null, routes: 'hip:i239' });
@@ -490,7 +545,7 @@ describe('buildMembership — the spine side', () => {
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'hd', value: 70000, reason: 'hd_unattested' },
       { tyc: null, hip: 70, hd: null, gl: null, gaiaSourceId: null, cell: 'flam', value: 5, reason: 'flamsteed_unattested' },
     ]);
-    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1 });
+    expect(totals(result).labelDropsByReason).toEqual({ flamsteed_unattested: 1, hd_unattested: 1, hd_other_hip: 0 });
   });
 
   it('leaves an empty Flamsteed cell empty whatever SIMBAD numbers the star', () => {
@@ -989,7 +1044,7 @@ describe('codecs', () => {
       tycho2: new Map([...tables.tycho2, ['4-1-1', tycho2(9, 90)], ['4-2-1', tycho2(9)]]),
     };
     const closePair = { iv25Hds: () => undefined, simbadTycHd: new Map(), simbadObjectOf: () => undefined };
-    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair };
+    const m = { ...pairLinksFrom(t), held: spineKeys(spine), closePair, positional: { v70a: () => null, tycho2: () => undefined } };
     const shipsNothing = { tyc: null, hip: null, hd: null, hdAlt: [], hr: null, hrAlt: [], gl: null, gaiaSourceId: null };
     const derivedOnly = (row: SpineRow) => mergeDivergences(row, shipsNothing, m)
       .flatMap((d) => (d.kind === 'derived-only' ? [`${d.cell}:${d.value}:${d.held}`] : []));
@@ -1014,14 +1069,21 @@ describe('codecs', () => {
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-4', witness: { by: 'position', separations: hip2Near }, onto: 'record' }),
       merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
-      merge({ kind: 'unlinked', cells: ['gl'], witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl' }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { queued: 'v70a-none' }, separations: [{ tyc: '1-1-1', separationArcsec: 20.71 }],
+      }),
+      merge({
+        kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
+        verdict: { settled: 'v70a-position' }, separations: [{ tyc: '1-1-1', separationArcsec: 5.3 }],
+      }),
     ], identity);
     expect(ledger).toHaveLength(4);
     expect(ledger).toEqual(expect.arrayContaining([
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-4', evidence: '1-1-4 0.013"|1-1-1 2.810"' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
-      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl' },
+      { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl; v70a-none; v70a 20.7"' },
     ]));
     expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);
