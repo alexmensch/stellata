@@ -91,7 +91,7 @@ describe('pairOwner', () => {
   });
 
   it('names no owner without a HIP source, a matching entry, or with two', () => {
-    expect(owner(links({ [A]: 'S1' }, null))).toEqual({ reason: 'unwitnessed' });
+    expect(owner(links({ [A]: 'S1' }, null))).toEqual({ reason: 'unwitnessed', position: { kind: 'no-hip2-position' } });
     expect(owner(links({ [A]: 'S0' }))).toEqual({ reason: 'no_entry_matches' });
     expect(owner(links({ [A]: 'S1', [B]: 'S1' }))).toEqual({ reason: 'several_match' });
   });
@@ -102,10 +102,11 @@ describe('pairOwner', () => {
   });
 
   it('names no owner where HIP2\'s position falls on no entry, on both, or HIP2 has none', () => {
-    expect(owner(links({}, null), () => ({ kind: 'none', separations: SEPARATIONS }))).toEqual({ reason: 'unwitnessed' });
-    expect(owner(links({}, null), () => ({ kind: 'several', tycs: [A, B], separations: SEPARATIONS })))
-      .toEqual({ reason: 'unwitnessed' });
-    expect(owner(links({}, null))).toEqual({ reason: 'unwitnessed' });
+    const none = { kind: 'none', separations: SEPARATIONS } as const;
+    const several = { kind: 'several', tycs: [A, B], separations: SEPARATIONS } as const;
+    expect(owner(links({}, null), () => none)).toEqual({ reason: 'unwitnessed', position: none });
+    expect(owner(links({}, null), () => several)).toEqual({ reason: 'unwitnessed', position: several });
+    expect(owner(links({}, null))).toEqual({ reason: 'unwitnessed', position: { kind: 'no-hip2-position' } });
   });
 });
 
@@ -362,7 +363,7 @@ describe('mergeDivergences', () => {
 
   it('queues the pair for review when Gaia names no owner', () => {
     const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({}, null)));
-    expect(d).toEqual([{ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'unwitnessed' }]);
+    expect(d).toEqual([{ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'unwitnessed', position: { kind: 'no-hip2-position' } }]);
   });
 
   it('derives a shared HIP onto a HIP-less spine entry only when the pair rule names it', () => {

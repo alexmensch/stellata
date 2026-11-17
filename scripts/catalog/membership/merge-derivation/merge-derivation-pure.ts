@@ -105,7 +105,7 @@ export type MergeDivergence =
     /** `record` when the owner entry is another spine record's, which takes the HIP. */
     readonly onto: PairMoveTarget;
   }
-  | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
+  | ({ readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[] } & PairQueued)
   | {
     readonly kind: 'pair-disposed';
     readonly hip: number;
@@ -115,6 +115,17 @@ export type MergeDivergence =
   }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
   | Differs;
+
+/** What HIP2's position found where it named no one entry. */
+export type UnwitnessedPosition =
+  | Extract<WitnessVerdict, { kind: 'none' | 'several' }>
+  | { readonly kind: 'no-hip2-position' };
+
+/** Why the pair rule names no owner; where neither witness did, what the position test found. */
+export type PairQueued =
+  | { readonly reason: 'unwitnessed'; readonly position: UnwitnessedPosition }
+  | { readonly reason: Exclude<PairReviewReason, 'unwitnessed'> };
+type PairRefusal = Extract<PairReviewReason, 'gate_refused' | 'simbad_refused'>;
 
 /** What named the pair's owner entry. see README.md#connected-is-not-unique--the-pair-rule */
 export type PairWitness =
@@ -223,11 +234,12 @@ export function hdToHr(hrHd: ReadonlyMap<number, number>): Map<number, number> {
 /** see README.md#connected-is-not-unique--the-pair-rule */
 export function pairOwner(
   hip: number, entries: readonly string[], { links, positionWitness }: Pick<PairLinks, 'links' | 'positionWitness'>,
-): { owner: string; witness: PairWitness } | { reason: PairReviewReason } {
+): { owner: string; witness: PairWitness } | PairQueued {
   const sourceId = links.sourceOf.hip(hip);
   if (sourceId === null) {
     const position = positionWitness(hip, entries);
-    if (position?.kind !== 'match') return { reason: 'unwitnessed' };
+    if (position === null) return { reason: 'unwitnessed', position: { kind: 'no-hip2-position' } };
+    if (position.kind !== 'match') return { reason: 'unwitnessed', position };
     return { owner: position.tyc, witness: { by: 'position', separations: position.separations } };
   }
   const matches = entries.filter((tyc) => links.sourceOf.tyc(tyc) === sourceId);
@@ -255,7 +267,7 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   if (spineHip === null) {
     return { divergence: null, hip: 'owner' in verdict && verdict.owner === row.tyc ? hip : null };
   }
-  if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, reason: verdict.reason }, hip };
+  if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, ...verdict }, hip };
   return {
     divergence: verdict.owner === row.tyc
       ? { kind: 'pair-confirmed', hip, owner: verdict.owner, witness: verdict.witness }
@@ -290,7 +302,7 @@ function applyMoves(
   m: PairLinks,
   dispositions: ReadonlyMap<number, PairDisposition>,
   scope: DispositionScope,
-  refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
+  refusal: (move: PairMove, receiver: SpineRow) => PairRefusal | null,
 ): PairRuleResult {
   const rows = [...kept];
   const byTyc = rowIndexByTyc(kept);
@@ -322,11 +334,9 @@ function applyMoves(
     if (verdict?.kind !== 'pair-moves' && verdict?.kind !== 'pair-review') return;
     const { hip } = verdict;
     const entries = m.hipEntries.get(hip)!;
-    const reason = verdict.kind === 'pair-review'
-      ? verdict.reason
-      : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
+    const refused = verdict.kind === 'pair-review' ? null : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
     const d = dispositions.get(hip);
-    if (d !== undefined && (reason !== null || scope === 'every')) {
+    if (d !== undefined && (verdict.kind === 'pair-review' || refused !== null || scope === 'every')) {
       if ([...d.entries].sort().join('|') !== entries.join('|')) {
         throw new Error(`pair-review disposition for HIP ${hip} restates ${d.entries.join('|')}, but the pair is ${entries.join('|')}: review it again`);
       }
@@ -336,8 +346,8 @@ function applyMoves(
       return;
     }
     if (verdict.kind === 'pair-review') return;
-    if (reason !== null) {
-      decided.set(i, { kind: 'pair-review', hip, entries, reason });
+    if (refused !== null) {
+      decided.set(i, { kind: 'pair-review', hip, entries, reason: refused });
       return;
     }
     const onto = place(i, verdict.owner, receiverOf(row, hip, verdict.owner));

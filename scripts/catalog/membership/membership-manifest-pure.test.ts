@@ -30,7 +30,7 @@ import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import { PAIR_REVIEW } from './pair-review-tsv';
-import { mergeDivergences, pairLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { mergeDivergences, pairLinksFrom, type MergeDivergence, type UnwitnessedPosition } from './merge-derivation/merge-derivation-pure';
 import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
@@ -1118,6 +1118,17 @@ describe('codecs', () => {
     expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
   });
 
+  it('cites what HIP2\'s position found on an unwitnessed queue row', () => {
+    const evidenceOf = (position: UnwitnessedPosition): string => (JSON.parse(membershipLineageRow({
+      key: 'spine:9',
+      outcome: { kind: 'merge', divergence: { kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed', position } },
+    }).params) as { evidence: string }).evidence;
+    const separations = [{ tyc: '1-1-1', separationArcsec: 0.11 }, { tyc: '1-1-2', separationArcsec: 0.12 }];
+    expect(evidenceOf({ kind: 'several', tycs: ['1-1-1', '1-1-2'], separations }))
+      .toBe('unwitnessed; several; 1-1-1 0.110"|1-1-2 0.120"');
+    expect(evidenceOf({ kind: 'no-hip2-position' })).toBe('unwitnessed; no-hip2-position');
+  });
+
   it('ledgers every merge divergence but a confirmed pair and a move onto an entry, queues a review, and round-trips both', () => {
     const key = 'spine:9';
     const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
@@ -1131,7 +1142,10 @@ describe('codecs', () => {
       merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'position', separations: hip2Near } }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'position', separations: hip2Near }, onto: 'entry' }),
       merge({ kind: 'pair-moves', hip: 70, owner: '1-1-4', witness: { by: 'position', separations: hip2Near }, onto: 'record' }),
-      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed' }),
+      merge({
+        kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed',
+        position: { kind: 'several', tycs: ['1-1-1', '1-1-2'], separations: hip2Near },
+      }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({
         kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',

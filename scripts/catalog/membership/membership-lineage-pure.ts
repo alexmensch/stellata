@@ -29,8 +29,9 @@ import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
   DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES, UNLINKED_SETTLEMENTS_BY_CELL,
   type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
-  type PairWitness, type UnlinkedSettlement,
+  type PairQueued, type PairWitness, type UnlinkedSettlement,
 } from './merge-derivation/merge-derivation-pure';
+import type { WitnessSeparation } from './positional-witness/positional-witness-pure';
 import { KEY_CELLS, type KeyCell } from '../spine/association-audit-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
@@ -737,10 +738,19 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
   }
 }
 
+const separationsEvidence = (separations: readonly WitnessSeparation[]): string =>
+  separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(3)}"`).join('|');
+
 /** The HIP's Gaia source, or every entry's separation from HIP2's carried position. */
 function pairWitnessEvidence(w: PairWitness): string {
-  if (w.by === 'gaia') return w.sourceId;
-  return w.separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(3)}"`).join('|');
+  return w.by === 'gaia' ? w.sourceId : separationsEvidence(w.separations);
+}
+
+/** The queue reason, and for an unwitnessed pair what HIP2's position found. */
+function pairQueuedEvidence(q: PairQueued): string {
+  if (q.reason !== 'unwitnessed') return q.reason;
+  if (q.position.kind === 'no-hip2-position') return 'unwitnessed; no-hip2-position';
+  return `unwitnessed; ${q.position.kind}; ${separationsEvidence(q.position.separations)}`;
 }
 
 function mergeRow(key: string, d: MergeDivergence): LineageRow {
@@ -768,7 +778,7 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
         cells: 'hip', derived: d.keep, evidence: d.basis,
       });
     case 'pair-review':
-      return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
+      return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: pairQueuedEvidence(d) });
     case 'derived-only':
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
     case 'differs': {
