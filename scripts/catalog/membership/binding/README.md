@@ -168,7 +168,9 @@ has refused, so it never outranks a candidate that passes on its own.
 
 **Where the position does not confirm SIMBAD, the row ships no source, and
 it is queued** (`unconfirmed`, below) **only where the refused source is a
-magnitude-term row** — the one case that draws a star twice. The source stays
+magnitude-term row** — the one case that draws a star twice. Its queue row's
+derived source is empty, so it carries the named source, that source's G and
+its separation in `identity_*` cells. The source stays
 that row while it waits: a disagreement leans toward a different star —
 HIP 83369's source sits 64″ from the HIP — and withholding it could drop a
 real one. A refused source fainter than the floor draws nothing twice, so its

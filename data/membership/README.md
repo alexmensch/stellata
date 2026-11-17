@@ -49,8 +49,10 @@ binding-review.tsv       Regular git. The 353 spine rows and addition
                          groups the derivation cannot settle alone or a
                          review already settled — contested · collision ·
                          unconfirmed · disposed — with every source's
-                         candidate, the gate rejections, the printed V and
-                         the derived candidate's G and SIMBAD cross-IDs.
+                         candidate, the gate rejections, the printed V, the
+                         derived candidate's G and SIMBAD cross-IDs, and the
+                         source SIMBAD's HIP object names with its G and its
+                         separation from the HIP's position.
                          A contested row ships its winner while it waits, so
                          being queued is a flag, not a withhold; an
                          unconfirmed one ships no source, and its SIMBAD-named

@@ -189,6 +189,9 @@ export function bindingReviewCells(
     v_via: gate.printedV?.vVia ?? '',
     derived_g: gOf(derived.sourceId),
     derived_simbad: xidsOf(derived.sourceId),
+    identity_source_id: derived.identity?.sourceId ?? '',
+    identity_g: milliCell(derived.identity?.gMag ?? null),
+    identity_separation_arcsec: milliCell(derived.identity?.separationArcsec ?? null),
   };
 }
 

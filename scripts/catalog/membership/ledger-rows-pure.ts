@@ -48,7 +48,7 @@ export function bindingReviewKey(
 export const BINDING_REVIEW_COLUMNS = [
   'tyc', 'hip', 'hd', 'hr', 'gl', 'verdict', 'derived_source_id',
   'derived_via', 'candidates', 'rejected', 'v_mag', 'v_via', 'derived_g',
-  'derived_simbad',
+  'derived_simbad', 'identity_source_id', 'identity_g', 'identity_separation_arcsec',
 ] as const;
 export type BindingReviewRow = Record<Exclude<(typeof BINDING_REVIEW_COLUMNS)[number], 'verdict'>, string> & {
   verdict: BindingReviewVerdict;

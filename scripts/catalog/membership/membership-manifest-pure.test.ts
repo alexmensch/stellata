@@ -543,7 +543,9 @@ describe('buildMembership — the spine side', () => {
 
     it('queues where the magnitude term admits the source SIMBAD names', () => {
       const queued = buildMembership(unconfirmedInput);
-      expect(hip60(queued).map((r) => r.verdict)).toEqual(['unconfirmed']);
+      expect(hip60(queued)).toEqual([expect.objectContaining({
+        verdict: 'unconfirmed', derived_source_id: '', identity_source_id: '6062', identity_g: '8.000', identity_separation_arcsec: '',
+      })]);
       expect(codes(queued)['binding.unconfirmed']).toBe(1);
     });
 
