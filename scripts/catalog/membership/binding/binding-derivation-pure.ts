@@ -255,51 +255,47 @@ export function deriveBinding(
   const gateable = gate.printedV !== null;
   const unweighedNoPulledRow: RankedCandidate[] = [];
   const weighedNullGMag: RankedCandidate[] = [];
-  let winner: RankedCandidate | null = null;
-  const { evidence } = gate;
+  let passed: RankedCandidate | null = null;
   for (const candidate of ranked) {
-    const verdict = weighBinding(candidate.sourceId, gate, evidence);
+    const verdict = weighBinding(candidate.sourceId, gate, gate.evidence);
     if (verdict.magnitude === 'null_g') weighedNullGMag.push(candidate);
     if (verdict.magnitude === 'no_pulled_row') unweighedNoPulledRow.push(candidate);
     const reason = rejectionOf(verdict);
-    if (reason !== null) {
-      rejected.push({ ...candidate, reason });
-    } else if (winner === null) {
-      winner = candidate;
-    }
+    if (reason !== null) rejected.push({ ...candidate, reason });
+    else passed ??= candidate;
   }
-  // The component witness rescues a row the sibling gate left unbound; it never
-  // outranks a candidate that passes on its own — see README.md. A sibling
-  // rejection is one the magnitude gate already passed.
-  let rescue: Rescue | null = null;
-  const take = (index: number, by: Rescue): void => {
-    const [witnessed] = rejected.splice(index, 1);
-    winner = { sourceId: witnessed.sourceId, via: witnessed.via };
-    rescue = by;
-  };
-  if (winner === null && gate.tycWitness !== null) {
-    const named = rejected.findIndex((r) => r.reason === 'sibling'
-      && r.sourceId === gate.tycWitness
-      && !isSiblingLetterAttribution(r.sourceId, gate.hip, evidence.wdsXids, true));
-    if (named >= 0) take(named, 'component');
-  }
-  let witnessed: IdentityWitness | null = null;
-  const { identity } = gate;
-  if (winner === null && identity !== null) {
-    const named = rejected.findIndex((r) => r.sourceId === identity.sourceId);
-    if (named >= 0) {
-      witnessed = identity;
-      if (identity.separationArcsec !== null && hipparcosNamesSource(identity.separationArcsec)) take(named, 'identity');
-    }
-  }
-  const won: RankedCandidate | null = winner;
+  const component = passed === null ? componentRescue(rejected, gate) : -1;
+  const named = passed === null && component < 0 ? identityNamed(rejected, gate.identity) : null;
+  const rescue: { index: number; by: Rescue } | null = component >= 0
+    ? { index: component, by: 'component' }
+    : named?.confirmed ? { index: named.index, by: 'identity' } : null;
+  const [taken] = rescue === null ? [] : rejected.splice(rescue.index, 1);
+  const won = passed ?? taken ?? null;
   return {
     sourceId: won?.sourceId ?? null,
     via: won?.via ?? [],
     binding: bindingClassOf(won?.via ?? []),
-    rescue, identity: witnessed,
+    rescue: rescue?.by ?? null, identity: named === null ? null : gate.identity,
     ranked, rejected, gateable, unweighedNoPulledRow, weighedNullGMag,
   };
+}
+
+/** The refusal the component witness names, or -1. It never outranks a passing candidate (README.md); a sibling
+ *  rejection is one the magnitude gate already passed. */
+function componentRescue(rejected: readonly RejectedCandidate[], gate: RowGateEvidence): number {
+  if (gate.tycWitness === null) return -1;
+  return rejected.findIndex((r) => r.reason === 'sibling'
+    && r.sourceId === gate.tycWitness
+    && !isSiblingLetterAttribution(r.sourceId, gate.hip, gate.evidence.wdsXids, true));
+}
+
+/** The refusal the identity witness names, and whether its position confirms it. */
+function identityNamed(
+  rejected: readonly RejectedCandidate[], identity: IdentityWitness | null,
+): { index: number; confirmed: boolean } | null {
+  const index = identity === null ? -1 : rejected.findIndex((r) => r.sourceId === identity.sourceId);
+  if (identity === null || index < 0) return null;
+  return { index, confirmed: identity.separationArcsec !== null && hipparcosNamesSource(identity.separationArcsec) };
 }
 
 /** Every source the derivation could propose for these rows — what the
