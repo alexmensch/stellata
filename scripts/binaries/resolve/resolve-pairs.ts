@@ -18,6 +18,7 @@ import {
 } from './cascade-pure';
 import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
+import { refuseHipsOfDisjointStars } from './sibling-identity-pure';
 
 export interface CascadeInputs {
   readonly pairs: readonly WdsPair[];
@@ -64,9 +65,12 @@ export function resolveStage2(reference: ReferenceCatalogs): Stage2Result {
     cascade.pairs, [...reference.synthesizedOrb6Pairs, ...reference.synthesizedMscPairs],
   );
   const audit = auditBindingIntegrity(seeds.pairs, reference.indices, reference.simbadWdsXids);
+  const disjoint = refuseHipsOfDisjointStars(
+    enforceBindingVerdicts(audit, reference.indices), reference.indices, reference.simbadWdsXids, reference.orb6,
+  );
   return Object.freeze({
-    pairs: freezePairs(enforceBindingVerdicts(audit, reference.indices)),
-    refusals: Object.freeze([...cascade.refusals]),
+    pairs: freezePairs(disjoint.pairs),
+    refusals: Object.freeze([...cascade.refusals, ...disjoint.refused]),
     synthesizedSeeds: Object.freeze([...seeds.seeded]),
     verdicts: Object.freeze([...audit.verdicts]),
     touches: Object.freeze(verdictTouches(audit)),

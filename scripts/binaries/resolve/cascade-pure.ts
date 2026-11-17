@@ -25,7 +25,9 @@ import {
 } from './sibling-identity-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
-export const CASCADE_GATES = ['orb6_hip_off_coord', 'ccdm_sibling_owned', 'position_match_sibling_claimed'] as const;
+export const CASCADE_GATES = [
+  'orb6_hip_off_coord', 'ccdm_sibling_owned', 'position_match_sibling_claimed', 'hip_of_disjoint_star',
+] as const;
 export type CascadeGate = (typeof CASCADE_GATES)[number];
 
 /** A candidate HIP a cascade gate refused for one side of one pair row. */

@@ -38,6 +38,7 @@ const GATE_DESCRIPTIONS: Record<CascadeGate, string> = {
   orb6_hip_off_coord: 'An ORB6 HIP refused before any tier: its position sits over 5′ from the pair\'s WDS coordinate.',
   ccdm_sibling_owned: 'A CCDM sibling HIP refused: another hierarchy-disjoint, non-partner letter of the system owns it, by geometry or by binding.',
   position_match_sibling_claimed: 'A manifest position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.',
+  hip_of_disjoint_star: 'A HIP refused after the audit: the component holds a Gaia source of its own, a hierarchy-disjoint letter of the system holds the HIP\'s source, and neither SIMBAD nor ORB6 names the HIP on the component\'s letter, its parent or a sub-letter.',
 };
 
 const SHAPE_TEXT: Record<BindingShape, string> = {
@@ -154,6 +155,7 @@ export function resolveCounts(lines: readonly LineageLine[]) {
   return {
     ccdm_sibling_owned_rejected: perCode[RESOLVE_CODES.liveCode('refused.ccdm-sibling-owned')],
     position_match_sibling_claimed_rejected: perCode[RESOLVE_CODES.liveCode('refused.position-match-sibling-claimed')],
+    hip_of_disjoint_star_rejected: perCode[RESOLVE_CODES.liveCode('refused.hip-of-disjoint-star')],
     ...bindingIntegrityCounts([...verdicts.values()]),
   };
 }

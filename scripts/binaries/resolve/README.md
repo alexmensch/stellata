@@ -37,7 +37,9 @@ scripts/binaries/resolve/
                                by reading, pairPositionMatches. Stage 2
                                matches manifest stars; Stage 3, AT-HYG.
   sibling-identity-pure.ts     HipClaims and the disjoint-letter test the
-                               CCDM and position tiers both apply.
+    (+ test)                   CCDM and position tiers both apply;
+                               refuseHipsOfDisjointStars, the post-audit
+                               HIP check (#a-hip-follows-its-star).
   propagate-pure.ts            propagateWithinSystem,
                                propagateBlendIdentity,
                                seedSynthesizedComponentBindings,
@@ -72,7 +74,7 @@ scripts/binaries/resolve/
                                the audit's one-system fixtures.
 ```
 
-Each `*-pure.ts` but `sibling-identity-pure.ts` and `stage2-report-pure.ts`,
+Each `*-pure.ts` but `stage2-report-pure.ts`,
 and `resolve-pairs.ts` and `binding-verdicts-tsv.ts`, has a co-located
 `.test.ts` over fixtures. The real-data cases and the spot-check are the
 parent folder's `build-binaries.test.ts`.
@@ -91,6 +93,7 @@ parent folder's `build-binaries.test.ts`.
 5. `auditBindingIntegrity` over the seeded components, then
    `enforceBindingVerdicts`, which re-runs the propagations over the systems
    it touched.
+6. `refuseHipsOfDisjointStars` ([A HIP follows its star](#a-hip-follows-its-star)).
 
 A pass reaches a component through its pair. One that works per component
 iterates `working(pairs).components`, a view of the same drafts in pair
@@ -153,7 +156,7 @@ joins the stage to component-binding and promotion on the key.
 | Code | Written for |
 | --- | --- |
 | `resolve.tier.<tag>` | every component of every decomposing pair row, once: its `resolve_via` ([What each tier decides](#what-each-tier-decides)), underscores as dashes, with its Gaia source and `hip:` in `params`; a rebound component carries its donor's tier |
-| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `position-match-sibling-claimed` |
+| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `position-match-sibling-claimed`, `hip-of-disjoint-star` |
 | `resolve.audit.<shape>.<verdict>.<part>` | each component holding a binding an audit verdict weighed (`verdictTouches`), as `won` (it keeps the source), `refused` (it loses it) or `skipped` (unchanged); `params` carry the verdict's `wds`, `contested` label, `reference` letter and `reference_gaia`, `winner`, and the component's own `gaia` |
 
 A `refused` part and every gate code are in the refusal role. The stage
@@ -200,7 +203,8 @@ cleaner one would move a row; changing one is a correctness item of its own:
 ## Counts
 
 `resolveCounts` returns the count-snapshot keys this stage's code alone
-produces — `ccdm_sibling_owned_rejected` and the seven binding-integrity keys
+produces — `ccdm_sibling_owned_rejected`, `position_match_sibling_claimed_rejected`,
+`hip_of_disjoint_star_rejected` and the seven binding-integrity keys
 — folded from the resolve stage's lines ([Resolve lineage](#resolve-lineage)).
 The snapshot's other
 `resolve` keys also count Stage 3's work, so Stage 3's `stage3Counts` returns
@@ -233,6 +237,23 @@ high-PM star gridded in a neighbouring cell is still a candidate. A
 secondary whose own match misses rides its primary's star, inherited from it
 (`blend` at ρ = 0, else `partner`); Stage 2 binds only `own` matches, Stage 3
 takes both.
+
+## A HIP follows its star
+
+After enforcement, `refuseHipsOfDisjointStars` takes a HIP off every
+component that holds a Gaia source of its own while a hierarchy-disjoint
+letter of the system holds the HIP's source (Gaia's HIP cross-walk, else
+the manifest's), unless SIMBAD's cross-IDs or an ORB6 row's primary name the
+HIP on the component's letter, its parent or a sub-letter. It runs last
+because the audit can unbind the source a HIP arrived with after propagation
+has already copied the HIP up and down the letter's line: HD 69445
+(08159-3056) Bb's position match landed on A's star and took HIP 40476; the
+HIP reached B as `letter` before the audit gave A the source back, and Ba
+and Bb then inherited it from B. A compound holder (`AB` for `B`) shares the
+component's identity and refuses nothing, and a component Gaia does not
+separate from the HIP's star (σ Ori B on A's source) keeps it. Each refusal
+is a `resolve.refused.hip-of-disjoint-star` row, counted
+`hip_of_disjoint_star_rejected`.
 
 ## The binding-integrity audit
 

@@ -596,6 +596,7 @@ resolve.audit.source-letters.skipped-photocentre-blend.skipped	resolve	none	outc
 resolve.audit.source-letters.unbound-ambiguous.refused	resolve	none	refused	live		7.1.30	One Gaia source bound to hierarchy-disjoint letters, with no decisive candidate; this component's binding to the source is refused.
 resolve.refused.athyg-match-sibling-claimed	resolve	none	refused	retired	7.2.3	7.1.30	An AT-HYG position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
 resolve.refused.ccdm-sibling-owned	resolve	none	refused	live		7.1.30	A CCDM sibling HIP refused: another hierarchy-disjoint, non-partner letter of the system owns it, by geometry or by binding.
+resolve.refused.hip-of-disjoint-star	resolve	none	refused	live		7.2.3	A HIP refused after the audit: the component holds a Gaia source of its own, a hierarchy-disjoint letter of the system holds the HIP's source, and neither SIMBAD nor ORB6 names the HIP on the component's letter, its parent or a sub-letter.
 resolve.refused.orb6-hip-off-coord	resolve	none	refused	live		7.1.30	An ORB6 HIP refused before any tier: its position sits over 5′ from the pair's WDS coordinate.
 resolve.refused.position-match-sibling-claimed	resolve	none	refused	live		7.2.3	A manifest position match refused: another hierarchy-disjoint, non-partner letter of the system already binds its HIP.
 resolve.tier.athyg-gaia-native	resolve	none	outcome	retired	7.2.3	7.1.30	The component's Gaia source is an AT-HYG row's own gaia cell, reached through a HIP or a position match.

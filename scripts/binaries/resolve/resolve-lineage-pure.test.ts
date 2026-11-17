@@ -57,12 +57,14 @@ describe('resolveCounts', () => {
       { gate: 'ccdm_sibling_owned', pair: ab, component: 'B', hip: 7 },
       { gate: 'orb6_hip_off_coord', pair: ab, component: 'A', hip: 8 },
       { gate: 'position_match_sibling_claimed', pair: ab, component: 'A', hip: 9 },
+      { gate: 'hip_of_disjoint_star', pair: ab, component: 'B', hip: 10 },
     ]);
     const c = castor();
     expect(c.touches).toHaveLength(3);
     expect(resolveCounts([...resolveLineageLines(r), ...resolveLineageLines(c)])).toEqual({
       ccdm_sibling_owned_rejected: 1,
       position_match_sibling_claimed_rejected: 1,
+      hip_of_disjoint_star_rejected: 1,
       ...bindingIntegrityCounts([...r.verdicts, ...c.verdicts]),
     });
   });
