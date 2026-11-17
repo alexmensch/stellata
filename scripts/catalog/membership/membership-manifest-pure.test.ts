@@ -182,7 +182,7 @@ const tables: PrimaryTables = {
   hdI239: new Set<number>(),
   i239HipHd: new Map<number, number>(),
   glAliases: new Map<string, string[]>(),
-  hip2: new Set<number>(),
+  hip2: { hips: new Set<number>(), astrometry: new Map() },
   wgsn: {
     names: new Set<string>(),
     hd: new Set<number>(),

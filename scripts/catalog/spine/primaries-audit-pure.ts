@@ -15,6 +15,7 @@ import { lookupGliese, type GlieseIndex } from '../gliese-parse-pure';
 import { intCell } from '../../util/tsv/table-pure';
 import { percentOf } from '../../util/counts/tally-pure';
 import type { Tycho2Row } from '../tycho2-parse';
+import type { Hip2Table } from '../sources/hip2-source';
 import type { SimbadXids } from '../spectral/spectral-resolve';
 import type { SpineRow } from './inherited-spine-pure';
 import { ascending, compareCodeUnits } from '../../../src/astro-core/order-pure';
@@ -71,9 +72,9 @@ export interface PrimaryTables extends BindingTables {
   hdI239: ReadonlySet<number>;
   /** I/239's HIP → HD pairing, for the rows publishing both. */
   i239HipHd: ReadonlyMap<number, number>;
-  /** HIP numbers carrying a van Leeuwen 2007
-   *  (/data/papers/index.md#vanleeuwen2007) HIP2 re-reduction solution. */
-  hip2: ReadonlySet<number>;
+  /** The van Leeuwen 2007 (/data/papers/index.md#vanleeuwen2007) HIP2
+   *  re-reduction: every HIP it publishes, and the positions it solves. */
+  hip2: Hip2Table;
   wgsn: WgsnKeys;
   tycho2: ReadonlyMap<string, Tycho2Row>;
   /** SIMBAD's `* NN Con` numbers the Flamsteed rule accepts (../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers). */
@@ -602,7 +603,7 @@ export function findAdditions(
     hip.push({
       hip: h,
       gaiaSourceId: tables.hipToSource.get(h) ?? null,
-      inHip2: tables.hip2.has(h),
+      inHip2: tables.hip2.hips.has(h),
       inTycho2: tycho2Hips.has(h),
     });
   }
