@@ -238,12 +238,12 @@ reaches the system object that does.
 
 `basis` comes from a closed enum: `tycho2_position` (the record's own Tycho-2
 position against the source), `v70a_astrometry` (V/70A's B1950 position and
-proper motion against it), `simbad_dr2_object` (SIMBAD holds the id in the DR2
-namespace), `gaia_photometry` (G against the record's printed V on each
+proper motion against it), `simbad_dr2_object` (SIMBAD's object for the
+record's Gaia DR2 id names the record and carries its DR3 renumbering), `gaia_photometry` (G against the record's printed V on each
 candidate), `pair_component` (a pair's components: which one the record is,
 the HIP and SIMBAD's letters deciding, or none where the record is the system
 Gaia resolves), `shared_source` (one source two records
-reach). Each disposition's code says what it kept and whether the derivation
+reach, held by the one whose light it is). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
 9 keep the derived id, 42 another and 3 none. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
