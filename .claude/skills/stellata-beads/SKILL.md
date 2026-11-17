@@ -3,8 +3,10 @@ name: stellata-beads
 description: >
   How beads works in stellata specifically — Dolt persistence and when a manual
   `bd dolt push` is required, the concurrent-session ownership rule, recovering
-  a field a bad write wiped, the P0–P4 prioritisation framework, and the two
-  things every `bd create` must carry (parent epic, priority). Use when running `bd` in this repo: filing or closing beads, setting
+  a field a bad write wiped, the P0–P4 prioritisation framework, the two
+  things every `bd create` must carry (parent epic, priority), and the search
+  for an already-filed class before filing a defect (by the object's every
+  identifier and by the cause). Use when running `bd` in this repo: filing or closing beads, setting
   a priority, picking up work, or closing out a session — including a bead
   filed mid-task for a bug found in review or smoke, or for follow-up work.
   Load the `beads` skill alongside this one: it carries the never-orphan filing
@@ -94,7 +96,9 @@ So establish whether the root cause is in the build or the runtime, and which
 backend, renderer or vantage a report came from, *before* picking — usually
 one question to the reporter.
 
-### Filing a defect bead — search by the object AND by the cause first
+## Filing a defect bead
+
+### Search by the object AND by the cause first
 
 A catalogue defect is usually one instance of a class already filed under
 another sub-epic, in another stage's vocabulary — a depth split filed as
@@ -115,7 +119,7 @@ instances are often closed. A hit makes the new bead an instance: link it
 `caused-by` the mechanism, or `related` to a first instance, as the
 `code-craft` skill's Bug classes section says.
 
-### Filing a defect bead — check it still reproduces
+### Check it still reproduces
 
 Before implementing one, confirm the defect still reproduces on main. A bug
 filed mid-PR is often fixed by that same PR and the bead never hears about it.
