@@ -18,10 +18,10 @@ scripts/catalog/membership/positional-witness/
     (+ test)                      tolerances, and the WitnessVerdict union.
                                   Pure.
   positional-witness-spread.test.ts
-                                  The Hipparcos verdict counts below, and
-                                  the queued GJ cells' separations,
-                                  recomputed over the committed queues and
-                                  pinned. LFS-gated.
+                                  The verdict counts and gaps below,
+                                  recomputed over the committed pair queue
+                                  and the corrected spine's unlinked GJ
+                                  cells, and pinned. LFS-gated.
 ```
 
 ## The verdict
@@ -78,20 +78,19 @@ do, which is why one tolerance cannot serve both sources.
 dispositions (`data/membership/binding-review-dispositions.tsv`) put V/70A
 0.7–12.1″ from the Gaia source each keeps, apart from two slips in V/70A's
 own coordinates: Gl 629.3 at 99.9″ and GJ 1001 at 117.2″, both kept on proper
-motion rather than position. Against the merge-divergence ledger's unlinked
-GJ cells (measured 2026-11-16, over the 132 GJ cells on unlinked rows with a
-TYC), the cell's own TYC lands a median 5.3″ away. The separations run
-continuously to 13.8″ and then jump to 20.7″, and 15″ sits in that gap,
-above every known match. The seven from 20.7″ to 48.7″ are not known either
-way — Gl 533.1, GJ 421 B, GJ 4327, GJ 1100, GJ 1141 A, GJ 9350, GJ 1141 B,
-three of them members of a close pair — and come back `none` with their
-separations for review; beyond them the separations run 51–652″.
+motion rather than position. Over the 130 unlinked GJ cells of the corrected
+spine — each spine GJ against its row's own TYC — the separations run
+continuously to 13.5″ and then jump to 20.7″, and 15″ sits in that gap,
+above every known match: **100 match, 29 none**, and one GJ has no V/70A
+astrometry. The `none` ones from 20.7″ to about 50″ are not known either way
+and go to review with their separations; beyond them the separations run
+past 600″. `positional-witness-spread.test.ts` rebuilds that population
+and pins all of it.
 
-The merge derivation now runs the witness on every unlinked GJ the record
-still ships ([Settling an unlinked cell](../merge-derivation/README.md#settling-an-unlinked-cell));
-its `membership.merge.unlinked.gl.*` codes carry the verdict counts. What
-it queues is in the ledger, and `positional-witness-spread.test.ts` pins that
-every queued GJ it could test sits at or beyond the gap's 20.7″ edge.
+The merge derivation runs the witness on every unlinked GJ the record still
+ships ([Settling an unlinked cell](../merge-derivation/README.md#settling-an-unlinked-cell)),
+so its `membership.merge.unlinked.gl.*` counts cover fewer cells: the
+label merge has already relabelled some of the 130.
 
 What 15″ cannot separate: a neighbouring Tycho-2 entry inside it. Gl 369's
 V/70A place is 0.7″ from TYC 5483-418-1 and 410″ from the TYC its row carries;
