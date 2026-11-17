@@ -94,6 +94,27 @@ So establish whether the root cause is in the build or the runtime, and which
 backend, renderer or vantage a report came from, *before* picking — usually
 one question to the reporter.
 
+### Filing a defect bead — search by the object AND by the cause first
+
+A catalogue defect is usually one instance of a class already filed under
+another sub-epic, in another stage's vocabulary — a depth split filed as
+distance, the same star filed as naming and as pair resolution. Before
+`bd create`, search both axes, open and closed:
+
+- **The object, under every spelling it has**: HIP, HD, HR, Gaia source,
+  TYC, WDS id and component letters, SID and ledger key, Bayer / Flamsteed
+  in Greek, Latin and SIMBAD forms (`θ¹ Ori`, `theta-1 Ori`, `tet01 Ori`),
+  proper name.
+- **The cause, in plain words**: what is wrong with the output (`depth`,
+  `drawn twice`, `inherited position`, `two WDS ids`), not the stage that
+  showed it.
+
+`bd search` matches titles only. Descriptions and notes need
+`bd list --all --limit 0 --desc-contains <s>` and `--notes-contains <s>`;
+most identifiers live there. A hit makes the new bead an instance: link it
+`caused-by` the mechanism, or `related` to a first instance, as the
+`code-craft` skill's Bug classes section says.
+
 ### Filing a defect bead — check it still reproduces
 
 Before implementing one, confirm the defect still reproduces on main. A bug
