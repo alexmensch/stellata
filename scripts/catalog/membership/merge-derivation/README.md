@@ -65,7 +65,8 @@ star.
 `applyPairRule` runs on the kept spine rows before anything else reads them, so
 the binding derivation, the label merge and the additions all see the moved
 rows. `build:astrometry-request` requests both arrangements — the rows as
-they stand and with every Gaia move applied (`applyEveryPairMove`) — so
+they stand and with every move applied, Gaia's and the position's
+(`applyEveryPairMove`) — so
 whichever entry a record ends on, queued or moved, its candidates were
 pulled. A move changes one of two things:
 
@@ -102,18 +103,21 @@ gates to hold it to.
 entry by the HD the record ships.** After the label merge, a moved record's TYC and its HD must not name
 different components: where SIMBAD's TYC→HD pull
 ([What the TYC → HD pull adjudicates](../../simbad/README.md#what-the-tyc--hd-pull-adjudicates))
-names the owner entry by HDs that leave out the record's shipped HD, Gaia's
-cross-match is contradicted, and the HIP is queued (`simbad_refused`). SIMBAD
+names the owner entry by HDs that leave out the record's shipped HD, the
+witness that named the entry is contradicted, and the HIP is queued
+(`simbad_refused`). SIMBAD
 naming no HD for the entry is silence, not agreement or dissent, and the move
 stands. The shipped HD is an output of the label merge, which runs on the
 moved rows, so `settlePairRule` runs the pair rule, the binding settlement
 and the merge, takes the refused HIPs out of the move set
 (`simbadRefusedMoves`), and runs them again until no move is refused; each
-pass only adds HIPs, so it ends. Measured 2026-11-15: two passes, the first
-refusing all six and the second none, at about 4.7 s each, since every pass
-re-derives the spine's bindings. Each of the six is refused again with the
-other five already refused, and none of them refuses another, so the refused
-set does not depend on the order passes find them in. The check reads only
+pass only adds HIPs, so it ends. Measured 2026-11-17 over the
+<!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->8<!-- /count --> refused today,
+two of them position moves (HIP 83608, HIP 110778): two passes, the first
+refusing all of them and the second none, each pass re-deriving the spine's
+bindings. Each is refused again with every other already refused, and none of
+them refuses another, so the refused set does not depend on the order passes
+find them in. The check reads only
 the entries the pull requests whatever the manifest holds — IV/25's, and every
 entry of a Tycho-2 pair (`pairEntries`), which is where a position move lands
 off IV/25 (`pairRuleTycHdRequest`, the one set the pull also builds its
