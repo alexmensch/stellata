@@ -66,7 +66,10 @@ export function checkedRows(columns: readonly Column[], result: TapResult, label
   }
   const normalise = columns.map((c) => normaliser(c, label));
   if (normalise.every((n) => n === null)) return result.rows;
-  return result.rows.map((row) => row.map((cell, i) => normalise[i]?.(cell) ?? cell));
+  return result.rows.map((row) => row.map((cell, i) => {
+    const n = normalise[i];
+    return n === null ? cell : n(cell);
+  }));
 }
 
 function columnIndex(columns: readonly Column[], label: string): (column: string) => number {
