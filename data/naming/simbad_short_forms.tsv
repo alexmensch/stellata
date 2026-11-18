@@ -1,7 +1,7 @@
 simbad_prefix	long_prefix	reason
-** GRB	Groombridge	WDS discoverer code for Groombridge's catalogue
 ** KR	Kruger	WDS discoverer code for Kruger
 ** STF	Struve	WDS discoverer code for F. G. W. Struve
+Gmb	Groombridge	SIMBAD's acronym for Groombridge's Catalogue of Circumpolar Stars
 LAL	Lalande	SIMBAD's acronym for Lalande's Histoire Celeste Francaise
 NAME		SIMBAD's marker for a name ident, not part of the name
 Ross	Ross	SIMBAD spells the catalogue in full

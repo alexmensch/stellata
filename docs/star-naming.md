@@ -85,7 +85,7 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 | Class | Count | Disposition |
 |---|---|---|
 | IAU-approved | **445** at the spine's retirement as a naming input (2026-11-18) | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
-| discovery / eponymous designation | 21 | designation tier, each citing a SIMBAD ident (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`); Groombridge 1830, which SIMBAD lists only as `LAL 22369`, is alias only |
+| discovery / eponymous designation | 21 | designation tier, each citing a SIMBAD ident (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Groombridge 1830`, `Struve 2398 A`) |
 | IAU name + AT-HYG component letter | 8 | 3 composed, the component borrowing its system's name with its letter (`Revati B`); 5 alias only, where the record displays its own Bayer label (`Cor Caroli B` is α¹ CVn) |
 | Gould designation | 3 | designation tier for `82 G. Eri`, citing the authority's Gould row; alias only for `268 G. Cet` and `96 G. Psc`, which neither the authority nor SIMBAD carries |
 | catalogue designation filed as a name | 2 | designation tier (`Cygnus X-1`, `EZ Aqr`) |
@@ -274,7 +274,7 @@ The dividing line, and the reason the search index does not grow much:
   of a multi-name cell, the full-genitive Latin-Bayer spellings the tier's
   own form does not derive (`p Eridani` against the rendered `p Eri`), and
   a Flamsteed designation displaced when the authority's Bayer names a
-  different constellation (16 Lyn is also ψ¹⁰ Aur). <!-- count:build-catalog/namingAliasRecords -->24<!-- /count --> records today.
+  different constellation (16 Lyn is also ψ¹⁰ Aur). <!-- count:build-catalog/namingAliasRecords -->23<!-- /count --> records today.
   Stellarium's 659 folk names are not ingested.
 
 **An alias must have been published outside this repository.** Its purpose
@@ -322,7 +322,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — <!-- count:build-catalog/nameTableEntries -->723<!-- /count --> records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/nameTableEntries -->724<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 

@@ -171,15 +171,15 @@ A name no WGSN row approves reaches a record only through
 - **`eponyms.tsv`** — the discovery, catalogue and Gould designations the
   ladder displays as strings (`Ross 128`, `Cygnus X-1`, `82 G. Eri`), each
   citing its source: a SIMBAD object and the ident that spells it, or the
-  authority's own Gould row. 22 cite SIMBAD, 1 cites WGSN.
+  authority's own Gould row. 23 cite SIMBAD, 1 cites WGSN.
 - **`name_drops.tsv`** — the names no source attests, each with its
   evidence. They ship as search-only aliases and never display, so a string
   that resolved a star still resolves it
   ([§ 8.1](/docs/star-naming.md#81-searchability-never-regresses)): 10
   unattributed folk names; the 2 `p Eridani` genitives (the Bayer tier
   renders `p Eri`, and the full genitive is not derivable from it);
-  Groombridge 1830, 268 G. Cet and 96 G. Psc, which neither SIMBAD nor the
-  authority carries; and 5 IAU names with a component letter (`Cor Caroli B`)
+  268 G. Cet and 96 G. Psc, Gould numbers neither SIMBAD nor the authority
+  carries; and 5 IAU names with a component letter (`Cor Caroli B`)
   whose record displays its own Bayer label, so nothing composes the string.
   The other 3 such names (`Revati B`) compose: the component borrows its
   system's name.

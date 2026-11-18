@@ -23,10 +23,10 @@ function objectKeys(object: SimbadIdentsObject): Set<string> {
 }
 
 describe('the committed naming tables', () => {
-  it('pins the rows: 23 eponyms (22 SIMBAD, 1 WGSN) and 20 dropped names', () => {
-    expect(eponyms.filter((r) => r.citation.source === 'simbad')).toHaveLength(22);
+  it('pins the rows: 24 eponyms (23 SIMBAD, 1 WGSN) and 19 dropped names', () => {
+    expect(eponyms.filter((r) => r.citation.source === 'simbad')).toHaveLength(23);
     expect(eponyms.filter((r) => r.citation.source === 'wgsn')).toHaveLength(1);
-    expect(NAME_DROPS.read()).toHaveLength(20);
+    expect(NAME_DROPS.read()).toHaveLength(19);
   });
 
   it('cites, for each WGSN eponym, a Gould row of the authority the record\'s key reaches', () => {

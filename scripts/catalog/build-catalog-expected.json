@@ -273,12 +273,12 @@
     "naming": {
       "naming.name.own.override": 3,
       "naming.name.own.iau": 445,
-      "naming.name.own.eponym": 24,
+      "naming.name.own.eponym": 25,
       "naming.name.own.bayer": 1230,
       "naming.name.own.flamsteed": 1802,
       "naming.name.own.bayer-latin": 202,
       "naming.name.own.gould": 935,
-      "naming.name.own.gcvs": 13465,
+      "naming.name.own.gcvs": 13464,
       "naming.name.own.catalogue": 353569,
       "naming.name.borrowed.no-own-designation.override": 0,
       "naming.name.borrowed.no-own-designation.iau": 224,
@@ -307,7 +307,7 @@
       "naming.name.borrowed.outranked-identifier.gould": 9,
       "naming.name.borrowed.outranked-identifier.gcvs": 74,
       "naming.name.unlabelled": 595793,
-      "naming.name.lower-tier": 21364,
+      "naming.name.lower-tier": 21365,
       "naming.name.borrowed-over": 370,
       "naming.letter.stated": 49,
       "naming.letter.sibling-owns": 53,
@@ -323,18 +323,18 @@
       "naming.dc.displaced": 2,
       "namingIauNamed": 447,
       "namingIauUnreached": 64,
-      "namingEponym": 24,
+      "namingEponym": 25,
       "namingBayer": 2044,
       "namingBayerComponent": 70,
       "namingGould": 937,
-      "namingAliases": 24,
-      "namingAliasRecords": 24
+      "namingAliases": 23,
+      "namingAliasRecords": 23
     },
     "naming-derived": {
       "namingDuplicateLabels": 49,
       "namingDuplicateRecords": 98,
       "namingOverrides": 3,
-      "nameTableEntries": 723
+      "nameTableEntries": 724
     },
     "records": {
       "recordCount": 979604,
