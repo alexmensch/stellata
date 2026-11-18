@@ -288,7 +288,7 @@ disagreement). `bayer` is no longer scored: the two catalogues' spellings
 (`alf` vs `Alp`) are the naming ladder's gate, so the merge never touches that
 cell.
 
-**<!-- count:membership-manifest/labelNoOverlayEntry -->14,911<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/membership.binding.ships-none -->363<!-- /count --> bind no source, and the
+**<!-- count:membership-manifest/labelNoOverlayEntry -->14,911<!-- /count --> spine rows get no overlay entry at all** — <!-- count:membership-manifest/membership.binding.ships-none -->365<!-- /count --> bind no source, and the
 rest bind one that neither best-neighbour walk carries. That population is
 concentrated at the bright end exactly as [§ 5](/docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers)'s bright
 tier predicts: **<!-- count:membership-manifest/membership.overlay.bright.no-entry -->114<!-- /count --> rows at V ≤ 3 have no overlay row**, against <!-- count:membership-manifest/membership.overlay.bright.entry -->64<!-- /count --> that do, Vega,

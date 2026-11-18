@@ -70,8 +70,8 @@ binding-review-dispositions.tsv
                          simbad_dr2_object · gaia_photometry · pair_component
                          · shared_source · tycho2_photometry) and the
                          measured evidence. 54 rows:
-                         9 take the derived id, 1 ships none (44 Boo), 44
-                         another — 33 of those an id
+                         9 take the derived id, 3 ship none (44 Boo,
+                         GJ 3775, GJ 3981), 42 another — 31 of those an id
                          only the cited basis stands behind
                          (membership.disposition.asserted). A kept value rides the manifest
                          as binding=reviewed.

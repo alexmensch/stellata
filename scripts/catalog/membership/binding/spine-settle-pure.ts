@@ -138,9 +138,7 @@ function settleBinding(
   const keep = disposition.keep_source_id;
   if (keep === '') return { value: null, binding: 'none', asserted: false };
   const asserted = !derived.ranked.some((c) => c.sourceId === keep);
-  // A `simbad_dr2_object` id is in the DR2 namespace, so no DR3 table can carry
-  // it; dropping the exemption fails the build on the rows that basis exists for.
-  if (asserted && disposition.basis !== 'simbad_dr2_object' && !evidence.hasPulledRow(keep)) {
+  if (asserted && !evidence.hasPulledRow(keep)) {
     throw new Error(
       `binding-review-dispositions.tsv: row ${key} keeps ${keep}, which no source proposes `
         + 'and the Gaia DR3 astrometry catalogue has no row for; re-check the id',

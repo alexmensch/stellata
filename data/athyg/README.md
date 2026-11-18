@@ -86,11 +86,13 @@ manifest derives its own. For the four with a DR3 successor, SIMBAD's object
 carries the record's TYC or GJ under the DR3 id, so the derivation proposes
 the successor and a disposition on `simbad_dr2_object` accepts it
 (`../membership/binding-review-dispositions.tsv`); those four records now
-reach Gaia's own row. The two with no successor (GJ 3775, GJ 3981) keep the
-DR2 id on a disposition of the same basis. Every record keys on a HIP, HD or
-GJ, so no canonical key moves either way ([§ 4.2](/docs/sid.md#42-canonical-key--stability-first)). All six also
+reach Gaia's own row. For the other two (GJ 3775, GJ 3981) DR3 splits the DR2
+source into two components ~0.3″ apart, so the record — the unresolved system
+— ships no Gaia id on a `pair_component` disposition. Every record keys on a
+HIP, HD or GJ, so no canonical key moves either way ([§ 4.2](/docs/sid.md#42-canonical-key--stability-first)). All six also
 reach the SIMBAD values pull: the widening ladder falls through to their own
-TYC / GJ and corroborates the binding across releases, so each carries
+TYC / GJ — corroborating the binding across releases for the four, and serving
+as the lookup key for the two that ship none — so each carries
 bibcoded coordinates, PM and parallax ([The widening ladder, and its corroboration rule](/scripts/refresh/simbad-sptype/README.md#the-widening-ladder-and-its-corroboration-rule)).
 
 ## Consumed by

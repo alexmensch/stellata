@@ -12,13 +12,7 @@ export const BINDING_DISPOSITION_COLUMNS = [
 /** Which value a disposition settled on, for the count snapshot. */
 export const BINDING_DISPOSITIONS = ['derived', 'other', 'none'] as const;
 export type BindingDisposition = (typeof BINDING_DISPOSITIONS)[number];
-/** What a disposition rests on: the record's own Tycho-2 position against the
- *  Gaia source; V/70A's position and proper motion against it; SIMBAD's object
- *  under the id in the Gaia DR2 namespace carrying the record's designation;
- *  Gaia's G against the record's printed V on both candidates; a resolved
- *  pair's components bound crosswise, the WDS component letters deciding;
- *  one Gaia source two records reach, held by the one whose light it is; the
- *  Tycho-2 entry whose VT is nearest the HIP's printed V. */
+/** Meanings: README.md#a-disposition-is-the-authority-wherever-one-keys-a-row. */
 export const BINDING_DISPOSITION_BASES = [
   'tycho2_position', 'v70a_astrometry', 'simbad_dr2_object',
   'gaia_photometry', 'pair_component', 'shared_source', 'tycho2_photometry',

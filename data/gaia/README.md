@@ -37,7 +37,7 @@ gaia_dr3_gspc.tsv                      ~31 MB, LFS. Johnson-Kron-Cousins B and
                                        spectrum, + fluxes, flux errors and the
                                        per-band validated-range flag. 351,502
                                        rows, pulled against the astrometry
-                                       request at 388,988 ids — the ci
+                                       request at 388,987 ids — the ci
                                        cascade's tier below the Table-5.9
                                        relation.
 gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
@@ -46,7 +46,7 @@ gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
                                        membership derivation's candidates UNION
                                        the binaries' Stage 2 candidates UNION
                                        the binding review dispositions' kept
-                                       ids, 388,988 ids
+                                       ids, 388,987 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)

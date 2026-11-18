@@ -340,10 +340,10 @@
     "records": {
       "recordCount": 979604,
       "recordsInFirstChunk": 10412,
-      "apsisSourcesUnpulled": 484,
-      "gspcSourcesUnpulled": 627888,
+      "apsisSourcesUnpulled": 482,
+      "gspcSourcesUnpulled": 627886,
       "variableCount": 4352,
-      "gaiaSourceIdResolved": 967932,
+      "gaiaSourceIdResolved": 967930,
       "apsisMatched": 967448,
       "apsisTeffEither": 865476
     },

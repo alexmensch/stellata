@@ -48,10 +48,10 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   });
 
   it('unions onto the primaries at the record total the floor implies', () => {
-    expect(boundSourceIds.size).toBe(375_184);
+    expect(boundSourceIds.size).toBe(375_182);
     const newcomers = magnitudeTermNewcomers(selection.keptSourceIds, boundSourceIds);
     expect(newcomers.length).toBe(598_421);
-    expect(boundSourceIds.size + newcomers.length).toBe(973_605);
+    expect(boundSourceIds.size + newcomers.length).toBe(973_603);
   });
 
   it('is the union the committed manifest already carries', () => {
