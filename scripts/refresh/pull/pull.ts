@@ -203,13 +203,27 @@ const keysOf = <K extends string>(record: Readonly<Record<K, unknown>>): K[] => 
 
 const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
 
-/** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
-function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
-  const slices = table.scope.kind === 'sliced' ? { slices: sliceConditions(table.scope.key, table.scope.edges) } : {};
-  return { query: queryTemplate(table, quote), ...slices, ...asuOf(table.scope), formats: formatsOf(table), sortBy: table.sortBy };
+const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
+
+/** A query besides its template: a sliced scope's ranges and a whole table's ASU form. */
+function queryExtras(scope: Scope | PhaseScope): object {
+  return {
+    ...(scope.kind === 'sliced' ? { slices: sliceConditions(scope.key, scope.edges) } : {}),
+    ...asuOf(scope),
+  };
 }
 
-const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
+/** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
+function tableDescription(table: PullTable, archive: TapArchive): object {
+  const query = queryTemplate(table, archive.quote);
+  return { query, ...queryExtras(table.scope), formats: formatsOf(table), sortBy: table.sortBy };
+}
+
+function phaseDescription(phase: Phase, archive: TapArchive): object | string {
+  const query = phaseTemplate(phase, archive.quote);
+  const extras = queryExtras(phase.scope);
+  return Object.keys(extras).length > 0 ? { query, ...extras } : query;
+}
 
 const archiveDescription = (archive: TapArchive, release: string | undefined): Pick<PullDescription, 'services' | 'release'> => ({
   services: archive.mirrors.map((m) => m.name),
@@ -217,15 +231,12 @@ const archiveDescription = (archive: TapArchive, release: string | undefined): P
 });
 
 export function describePull<K extends string>(pull: Pull<K>): PullDescription {
-  const queries = Object.fromEntries(keysOf(pull.tables).map((k) => [k, tableDescription(pull.tables[k], pull.archive.quote)]));
+  const queries = Object.fromEntries(keysOf(pull.tables).map((k) => [k, tableDescription(pull.tables[k], pull.archive)]));
   return { query: JSON.stringify(queries), ...archiveDescription(pull.archive, pull.release) };
 }
 
 export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription & Partial<Projection> {
-  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, p.scope.kind === 'sliced'
-    ? { query: phaseTemplate(p, pull.archive.quote), slices: sliceConditions(p.scope.key, p.scope.edges) }
-    : p.scope.kind === 'whole-table' && p.scope.asu ? { query: phaseTemplate(p, pull.archive.quote), ...asuOf(p.scope) }
-      : phaseTemplate(p, pull.archive.quote)]));
+  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, phaseDescription(p, pull.archive)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
   const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };
   return { query: JSON.stringify(query), ...archiveDescription(pull.archive, pull.release), ...pull.request };
