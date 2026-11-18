@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DATA_FILES } from '../../../src/catalog-format/pipeline-outputs/data-files';
 import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import type { Cell } from '../pull/columns-pure';
-import { describePhasedPull, runPhasedPull } from '../pull/pull';
+import { describePhasedPull, phaseQueries, runPhasedPull } from '../pull/pull';
 import { QUIET_DEPS, recordedTableCases } from '../pull/recorded-reply';
 import { GAIA, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { deepPopulationPull, type DeepPopulationTable } from './deep-population-pure';
@@ -120,7 +120,7 @@ describe('the Apsis and Bailer-Jones pulls', () => {
       };
       const pull = { ...bailerJonesPull([1n]), outputs: declareOutputs({ table: join(dir, 'bj.tsv') }) };
       await expect(runPhasedPull(pull, d)).rejects.toThrow(EmissionRefused);
-      expect(asked).toHaveLength(53);
+      expect(asked).toHaveLength(phaseQueries(pull.phases.magnitude, undefined, GAIA.quote).length + 1);
       expect(asked.every((adql) => adql.includes(`FROM ${table}`))).toBe(true);
       expect(new Set(reported)).toEqual(new Set([answering]));
     },
