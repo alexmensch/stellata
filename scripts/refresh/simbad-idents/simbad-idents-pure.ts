@@ -15,14 +15,14 @@ import { GAIA_DR3, GJ, HD, HIP, MAIN_ID, OID, type Namespace } from '../simbad/s
 const designationClass = (prefix: string): Namespace => ({ prefix, name: prefix.trim(), numeric: false });
 
 /** Asked over the whole of SIMBAD: README.md#the-classes. */
-export const WHOLE_SKY_CLASSES = ['* ', 'NAME ', 'LAL ', 'Ross ', 'Wolf '].map(designationClass);
+export const WHOLE_SKY_CLASSES = ['* ', '** ', 'NAME ', 'LAL ', 'Ross ', 'Wolf '].map(designationClass);
 /** Asked only on the objects simbad_sptype.tsv resolved a manifest record to: README.md#the-classes. */
-export const REACHED_CLASSES = ['** ', 'V* ', 'X '].map(designationClass);
+export const REACHED_CLASSES = ['V* ', 'X '].map(designationClass);
 /** The keys a record joins an object on. */
 export const KEY_NAMESPACES = [HIP, HD, GJ, GAIA_DR3] as const;
 
-/** The most rows the whole-sky classes may return: 20,715 at the 2026-11-16 count. */
-export const WHOLE_SKY_MAX_ROWS = 30_000;
+/** The most rows the whole-sky classes may return: 153,219 at the 2026-11-18 count. */
+export const WHOLE_SKY_MAX_ROWS = 200_000;
 
 const CORE = simbadPhases({ basic: [OID, MAIN_ID], idents: KEY_NAMESPACES });
 
@@ -102,11 +102,12 @@ const spot = (oid: string, mainId: string, hip: string | null, hd: string | null
 
 /** README.md#gates. */
 export const IDENTS_GATES: IdentsGates = {
-  band: { min: 65_000, max: 80_000 },
+  band: { min: 140_000, max: 170_000 },
   spotRows: [
     spot('1450042', '*  39 Psc', '1427', '1352', '* 39 Psc|** TOK 646A'),
     spot('2966222', 'HD  33793', '24186', '33793', "NAME Kapteyn Star|NAME Kapteyn's|NAME Kapteyn's star|V* VZ Pic"),
     spot('365467', '* pi.02 UMi', '76695', '141652', '* 18 UMi|* pi.02 UMi|** STF 1989AB'),
+    spot('122759', 'HD 239960', '110893', '239960', '** KR 60AB'),
     spot('794302', '* bet Tau', '25428', '35497', '* 112 Tau|* 23 Aur|* bet Tau|* gam Aur|NAME Elnath'),
   ],
 };

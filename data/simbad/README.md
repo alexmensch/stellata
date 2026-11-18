@@ -29,7 +29,7 @@ simbad_wds_sptype.tsv      ~0.25 MB, LFS. 23,604 rows. sp_type per WDS
 simbad_tyc_hd.tsv          ~11 MB, LFS. 332,320 rows. SIMBAD's own HD
                            attribution per Tycho-2 entry, keyed on TYC —
                            see README.md#the-tyc--hd-pull.
-simbad_idents.tsv          ~4 MB, LFS. 70,157 rows. Designation idents per
+simbad_idents.tsv          ~8 MB, LFS. 150,418 rows. Designation idents per
                            object with its catalogue keys — see
                            README.md#the-identifier-pull.
 wds_xids_overrides.tsv     ~1.5 KB, regular git. Hand-curated SIMBAD oids
@@ -170,11 +170,11 @@ overlap: an oid both requests reach has a row in each file. Pull and gates:
 ## The identifier pull
 
 `simbad_idents.tsv` is SIMBAD's designation idents per object — Bayer and
-numbered `* NN Con` idents, `NAME`, LAL, Ross and Wolf over all of SIMBAD;
-double-star (`**`), variable (`V*`) and `X` idents on the objects
-`simbad_sptype.tsv` resolved the manifest to — beside each object's HIP, HD,
-GJ and Gaia DR3 keys, so a record joins an object on an identifier it
-already owns. 70,157 objects at the 2026-11-16 pull. A `* NN Con` ident is
+numbered `* NN Con` idents, double-star (`**`) discoverer codes, `NAME`, LAL,
+Ross and Wolf over all of SIMBAD; variable (`V*`) and `X` idents on the
+objects `simbad_sptype.tsv` resolved the manifest to — beside each object's
+HIP, HD, GJ and Gaia DR3 keys, so a record joins an object on an identifier
+it already owns. 150,418 objects at the 2026-11-18 pull. A `* NN Con` ident is
 not always a Flamsteed number; which ones are is
 [Which SIMBAD numbers are Flamsteed numbers](/scripts/catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers).
 Pull and gates: [scripts/refresh/simbad-idents/](/scripts/refresh/simbad-idents/README.md).
