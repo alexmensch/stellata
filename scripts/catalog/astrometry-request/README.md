@@ -17,7 +17,9 @@ scripts/catalog/astrometry-request/
                                   candidates (Stages 1–2 run in-process) and
                                   the review dispositions' kept ids, sorts,
                                   and emits the request through
-                                  emitArtifacts. Reads no build:membership or
+                                  emitArtifacts. Streams the ~200 MB magnitude
+                                  pull and reads HIP2 for the floor sources
+                                  near each HIP. Reads no build:membership or
                                   build:binaries output. Runs under the CI
                                   heap cap (../../util/heap-budget/).
   astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
@@ -68,10 +70,13 @@ contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
 The 1,553 primaries rows carrying none are the no-Gaia tier. The
-`term = magnitude` rows are not requested: their astrometry is the magnitude
-pull's own
+`term = magnitude` rows are not requested for their own sake: their astrometry
+is the magnitude pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull 598,233 rows that file already holds.
+and requesting them all would re-pull 598,233 rows that file already holds.
+5,274 are in the request anyway because a contribution names them as a
+candidate — a refused binding, a Stage 2 component, a floor source within 1″
+of a HIP the position witness could bind.
 
 ## The request is a union, and why that is not a compromise
 

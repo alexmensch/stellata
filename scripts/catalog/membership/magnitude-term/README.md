@@ -309,8 +309,10 @@ The pull carries full 5p astrometry and `radial_velocity` for every row, on
 `gaia_dr3_astrometry.tsv` uses. `readMagnitudeTermAstrometry` therefore
 feeds `gaiaAstrometryAccumulator` (`../../sources/gaia-astrometry-source.ts`), the
 fold behind the same parser, so the direction cascade stays single-sourced and
-the overlap between the two files cannot drift. No request-file extension
-reaches these sources, and none is needed.
+the overlap between the two files cannot drift. The term needs no request of
+its own; a term row the request carries anyway — a candidate some other
+contribution names, such as a floor source within 1″ of a HIP — keeps the
+catalogue file's row ([The direction tier's two Gaia files](../../parse/README.md#the-direction-tiers-two-gaia-files)).
 
 It takes a keep-set and streams, for the reason `../../parse/gaia-xmatch.ts`
 does: parsing 1.25 M rows to join a subset holds the whole table in memory for

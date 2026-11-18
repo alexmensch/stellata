@@ -129,7 +129,7 @@ publishes no proper motion for cannot be carried, so it is never named.
 `hipsNear` asks the forward question over many positions at once: **HIP2
 carried forward** to the Gaia position's epoch by its own proper motion, and
 every HIP within `HIPPARCOS_FORWARD_TOLERANCE_ARCSEC = 1` of it, nearest
-first. A grid over unit vectors one tolerance wide answers each position from
+first. A grid over unit vectors four tolerances wide answers each position from
 its own cell and the 26 around it, so the RA wrap and the poles need no case
 of their own. The magnitude term streams its kept rows through it
 ([The position witness](../binding/README.md#the-position-witness)).
