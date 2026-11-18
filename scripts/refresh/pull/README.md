@@ -301,7 +301,10 @@ Python's `f"{x:.ne}"` (`formatExponent`), or `{repr: true}`, Python's
 column written `0`/`1`: ESA prints a BOOLEAN as `true`/`false` and ARI as
 `1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side. It
 maps when the reply is checked (`checkedRows`), so gates, sort and TSV all see
-`0`/`1` whichever mirror answered, and any third value refuses the reply. A column the
+`0`/`1` whichever mirror answered, and any third value refuses the reply.
+`{digits: n}` is a code of `n` decimal digits, mapped there too to its full
+width: ARI writes Bailer-Jones' `00099` flag as `99` (measured 2026-11-18),
+and a code longer than `n` or holding a non-digit refuses the reply. A column the
 archive stores as a REAL adds `float32: true`: its value is the float32
 nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
 the text alone disagrees with it on about 1 cell in 230 (measured on a

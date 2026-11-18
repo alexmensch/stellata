@@ -111,7 +111,7 @@ request's size.
 Formats: Apsis `teff_*` `{fixed: 1, float32: true}`, `logg_*` / `mh_*` /
 `azero_gspphot` `{fixed: 4, float32: true}`, `spectraltype_esphs` passes
 through; Bailer-Jones `r_*` `{fixed: 3, float32: true}`, `flag` (a five-digit
-decision-tree code) passes through. Every spot row is required: a pinned
+decision-tree code) `{digits: 5}`. Every spot row is required: a pinned
 `source_id` missing from a static release means the scope moved.
 
 **Bailer-Jones is asked of ESA alone** (`GAIA_ESA`). ARI hosts the same eight

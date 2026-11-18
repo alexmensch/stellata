@@ -30,6 +30,15 @@ describe('checkedRows', () => {
     }
   });
 
+  it('reads a code at its full width whether or not a mirror kept its leading zeros, and refuses a longer or non-digit one', () => {
+    const code: Column[] = [{ name: 'flag', format: { digits: 5 } }];
+    const reply = (cells: (string | null)[]) => ({ columns: ['flag'], rows: cells.map((cell) => [cell]) });
+    expect(checkedRows(code, reply(['99', '00099', '10033', '000099', null]), 't')).toEqual(['00099', '00099', '10033', '00099', null].map((cell) => [cell]));
+    for (const bad of ['100330', '1e3', '-99', '']) {
+      expect(() => checkedRows(code, reply([bad]), 't')).toThrow(`t: flag="${bad}" is not a code of 5 digits`);
+    }
+  });
+
   it('refuses a missing, extra or reordered column', () => {
     for (const columns of [['source_id', 'plx'], ['source_id', 'RA(ICRS)', 'plx', 'x'], ['RA(ICRS)', 'source_id', 'plx']]) {
       expect(() => checkedRows(COLUMNS, { ...result, columns }, 't')).toThrow(/are not the declared/);

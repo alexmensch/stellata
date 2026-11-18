@@ -10,7 +10,8 @@ export type Format =
   | { readonly fixed: number; readonly float32?: true }
   | { readonly exp: number; readonly float32?: true }
   | { readonly repr: true; readonly float32?: true }
-  | { readonly flag: true };
+  | { readonly flag: true }
+  | { readonly digits: number };
 
 const FLAG_TEXT: Readonly<Record<string, '0' | '1'>> = { 0: '0', 1: '1', false: '0', true: '1' };
 
@@ -41,15 +42,31 @@ function flagCell(label: string, column: string, cell: string | null): string | 
   return FLAG_TEXT[cell];
 }
 
-/** Refuses a reply whose header is not exactly `columns`, in order; a flag column's cells come back `0`/`1`, whichever mirror answered. */
+function digitsCell(label: string, column: string, digits: number, cell: string | null): string | null {
+  if (cell === null) return null;
+  if (!/^\d+$/.test(cell) || cell.replace(/^0+(?=\d)/, '').length > digits) throw new Error(`${label}: ${column}="${cell}" is not a code of ${digits} digits`);
+  return cell.padStart(digits, '0').slice(-digits);
+}
+
+type Normalise = (cell: string | null) => string | null;
+
+function normaliser(column: Column, label: string): Normalise | null {
+  const { format } = column;
+  if (format === undefined) return null;
+  if ('flag' in format) return (cell) => flagCell(label, column.name, cell);
+  if ('digits' in format) return (cell) => digitsCell(label, column.name, format.digits, cell);
+  return null;
+}
+
+/** Refuses a reply whose header is not exactly `columns`, in order; a flag or code column's cells come back in one text, whichever mirror answered. */
 export function checkedRows(columns: readonly Column[], result: TapResult, label: string): readonly Row[] {
   const want = columns.map((c) => c.name);
   if (want.length !== result.columns.length || want.some((name, i) => name !== result.columns[i])) {
     throw new Error(`${label}: the reply's columns [${result.columns.join(', ')}] are not the declared [${want.join(', ')}]`);
   }
-  const flags = columns.flatMap((c, i) => (c.format !== undefined && 'flag' in c.format ? [i] : []));
-  if (flags.length === 0) return result.rows;
-  return result.rows.map((row) => row.map((cell, i) => (flags.includes(i) ? flagCell(label, want[i], cell) : cell)));
+  const normalise = columns.map((c) => normaliser(c, label));
+  if (normalise.every((n) => n === null)) return result.rows;
+  return result.rows.map((row) => row.map((cell, i) => normalise[i]?.(cell) ?? cell));
 }
 
 function columnIndex(columns: readonly Column[], label: string): (column: string) => number {
@@ -95,7 +112,7 @@ export function sortRows(columns: readonly Column[], rows: readonly Row[], keys:
 function formatted(file: string, column: Column, cell: string | null): string {
   if (cell === null || column.format === undefined) return nullableCell(cell);
   const { format } = column;
-  if ('flag' in format) return cell;
+  if ('flag' in format || 'digits' in format) return cell;
   const parsed = Number(cell);
   if (!Number.isFinite(parsed)) throw new Error(`${file}: ${column.name}="${cell}" has a numeric format but is not a number`);
   const value = format.float32 ? Math.fround(parsed) : parsed;
