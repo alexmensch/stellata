@@ -134,9 +134,29 @@ export function buildStringDesignationIndex(
   };
 }
 
+export type StringDesignationRow = EponymRow | NameDropRow;
+export type StringDesignationReach = ReadonlyMap<StringDesignationRow, { readonly records: number; readonly iauNamed: number }>;
+
+export function stringDesignationReach<R extends RecordIdentifiers>(
+  index: StringDesignationIndex,
+  records: Iterable<R>,
+  isIauNamed: (record: R) => boolean,
+): StringDesignationReach {
+  const reach = new Map<StringDesignationRow, { records: number; iauNamed: number }>();
+  for (const record of records) {
+    const { eponym, drops } = index.of(record);
+    const named = isIauNamed(record) ? 1 : 0;
+    for (const row of new Set<StringDesignationRow>([...(eponym === null ? [] : [eponym]), ...drops])) {
+      const seen = reach.get(row) ?? { records: 0, iauNamed: 0 };
+      reach.set(row, { records: seen.records + 1, iauNamed: seen.iauNamed + named });
+    }
+  }
+  return reach;
+}
+
 export function stringDesignationFailures(
-  rows: readonly (EponymRow | NameDropRow)[],
-  reachedBy: ReadonlyMap<EponymRow | NameDropRow, { readonly records: number; readonly iauNamed: number }>,
+  rows: readonly StringDesignationRow[],
+  reachedBy: StringDesignationReach,
 ): string[] {
   const failures: string[] = [];
   for (const row of rows) {

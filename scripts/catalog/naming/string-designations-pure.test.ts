@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildStringDesignationIndex, expandSimbadIdent, identAttests, parseEponyms, parseNameDrops,
-  stringDesignationFailures, type EponymRow, type NameDropRow, type ShortForm,
+  stringDesignationFailures, stringDesignationReach, type EponymRow, type NameDropRow, type ShortForm,
 } from './string-designations-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
@@ -83,5 +83,15 @@ describe('the record join', () => {
       'p Eridani (hd:10360) reaches 2 records, not 1',
       'p Eridani (hd:10361) reaches a record the IAU WGSN names: delete the row',
     ]);
+  });
+
+  it('tallies each row once per record through the build\'s join, an eponym and a drop on one key alike', () => {
+    const cygnus: EponymRow = { ...ross, name: 'Cygnus X-1', key: 'hd:226868' };
+    const alias: NameDropRow = { name: 'Old Name', class: 'unattributed', key: 'hd:226868' };
+    const shared = buildStringDesignationIndex([cygnus], [alias]);
+    const records = [{ hd: 226868, hip: 98298, gaiaSourceId: null, named: false }, { hd: 1, hip: null, gaiaSourceId: null, named: true }];
+    const reach = stringDesignationReach(shared, records, (r) => r.named);
+    expect([reach.get(cygnus), reach.get(alias)]).toEqual([{ records: 1, iauNamed: 0 }, { records: 1, iauNamed: 0 }]);
+    expect(stringDesignationFailures([cygnus, alias], reach)).toEqual([]);
   });
 });

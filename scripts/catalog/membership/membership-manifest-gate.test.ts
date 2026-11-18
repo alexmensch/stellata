@@ -11,7 +11,9 @@ import { readArtifact } from '../../util/sources/source';
 import { BAYER_DROPS } from '../naming/bayer-drops-source';
 import { normaliseIv27aBayer } from '../naming/wgsn-normalise-pure';
 import { EPONYMS, NAME_DROPS } from '../naming/string-designations-source';
-import { recordKeys, stringDesignationFailures, type EponymRow, type NameDropRow } from '../naming/string-designations-pure';
+import {
+  buildStringDesignationIndex, stringDesignationFailures, stringDesignationReach, type StringDesignationRow,
+} from '../naming/string-designations-pure';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
 import { buildWgsnIndex } from '../naming/wgsn-index-pure';
@@ -254,20 +256,13 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   describe('↔ the naming authority', () => {
     const designations = readArtifact(WGSN_DESIGNATIONS);
     const index = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
-    const stringRows: readonly (EponymRow | NameDropRow)[] = [...EPONYMS.read(), ...NAME_DROPS.read()];
-    const failures = (records: readonly ManifestRecord[]) => {
-      const byKey = new Map(stringRows.map((row) => [row.key, row]));
-      const reach = new Map<EponymRow | NameDropRow, { records: number; iauNamed: number }>();
-      for (const r of records) {
-        for (const key of recordKeys(r)) {
-          const row = byKey.get(key);
-          if (row === undefined) continue;
-          const seen = reach.get(row) ?? { records: 0, iauNamed: 0 };
-          reach.set(row, { records: seen.records + 1, iauNamed: seen.iauNamed + (index.namesOf(r).length === 0 ? 0 : 1) });
-        }
-      }
-      return stringDesignationFailures(stringRows, reach);
-    };
+    const eponyms = EPONYMS.read();
+    const drops = NAME_DROPS.read();
+    const stringIndex = buildStringDesignationIndex(eponyms, drops);
+    const stringRows: readonly StringDesignationRow[] = [...eponyms, ...drops];
+    const failures = (records: readonly ManifestRecord[]) => stringDesignationFailures(
+      stringRows, stringDesignationReach(stringIndex, records, (r) => index.namesOf(r).length > 0),
+    );
 
     it('keys every eponym and dropped name on exactly one record the authority does not name', () => {
       expect(failures(manifest)).toEqual([]);
