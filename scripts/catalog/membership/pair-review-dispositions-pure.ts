@@ -66,6 +66,10 @@ export function requireWitnessedKeeps(
         if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
           fail(`${d.keepEntry} is not the one entry whose VT is nearest Hipparcos's V ${hipV}`);
         }
+        const position = witnesses.positionWitness(d.hip, d.entries);
+        if (position?.kind === 'match' && position.tyc !== d.keepEntry) {
+          fail(`HIP2's position falls on ${position.tyc} alone (${separationsOf(position)}), which outranks photometry`);
+        }
         break;
       }
       case 'hip2_position': {

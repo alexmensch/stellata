@@ -188,11 +188,17 @@ entry HIP2's carried position falls on alone, inside the Hipparcos tolerance
 `several`, another entry, or nothing to carry. It settles the queued rows a
 second witness contradicts Gaia on, or Gaia cannot separate: the pair rule
 asks HIP2's position only where Gaia names no source, so on a `gate_refused`
-or `simbad_refused` row the position has not yet voted. Where the position
-and Tycho-2's photometry agree the disposition takes `tycho2_photometry`;
-`hip2_position` is for the pairs whose entries' `VT` cannot be told apart
-(HIP 102396's differ by 0.013) or whose position falls on the other entry's
-own record.
+or `simbad_refused` row the position has not yet voted.
+
+**A position on one entry alone outranks photometry** (the owner's,
+2026-11-18). `requireWitnessedKeeps` asks HIP2's position of every
+`tycho2_photometry` disposition too, and fails one whose position matches the
+other entry alone; a `several`, `none` or uncarried position leaves
+photometry to decide. Where the two agree the disposition takes
+`tycho2_photometry`; where the position names the entry photometry does not
+favour, it takes `hip2_position` — HIP 3885, 36914 and 102396, whose `VT`
+offsets favour the other entry by 0.009, 0.048 and 0.013 mag against a
+Hipparcos V that blends both.
 
 **A disposition places the record; it does not bind it.** The binding
 derivation still gates the moved record's candidates, and a `gate_refused`

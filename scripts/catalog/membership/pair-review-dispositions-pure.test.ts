@@ -61,6 +61,26 @@ describe('requireWitnessedKeeps', () => {
     expect(photometry('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7 })).toThrow(/1-1-2 prints no VT/);
   });
 
+  it('fails a tycho2_photometry keep_entry where HIP2 falls on the other entry alone', () => {
+    const vt = { '1-1-1': 10.7, '1-1-2': 12.1 };
+    const onOther: WitnessVerdict = { kind: 'match', tyc: '1-1-2', separations: seps };
+    expect(check('1-1-1', 'tycho2_photometry', { hip: { 10: 9.4 }, vt, verdict: onOther }))
+      .toThrow(/HIP2's position falls on 1-1-2 alone \(1-1-2 0.02", 1-1-1 0.98"\), which outranks photometry/);
+  });
+
+  it('lets photometry decide where HIP2 matches the kept entry, both, neither, or cannot carry', () => {
+    const vt = { '1-1-1': 10.7, '1-1-2': 12.1 };
+    const flipped = [{ tyc: '1-1-1', separationArcsec: 0.02 }, { tyc: '1-1-2', separationArcsec: 0.98 }];
+    for (const verdict of [
+      { kind: 'match', tyc: '1-1-1', separations: flipped },
+      { kind: 'several', tycs: ['1-1-1', '1-1-2'], separations: flipped },
+      { kind: 'none', separations: flipped },
+      null,
+    ] as (WitnessVerdict | null)[]) {
+      expect(check('1-1-1', 'tycho2_photometry', { hip: { 10: 9.4 }, vt, verdict })).not.toThrow();
+    }
+  });
+
   it('passes a hip2_position keep_entry HIP2 falls on alone', () => {
     expect(position('1-1-2', { kind: 'match', tyc: '1-1-2', separations: seps })).not.toThrow();
   });
