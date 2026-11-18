@@ -49,7 +49,7 @@ export function walkStatsFold(): { add(outcome: RowOutcome): void; result(): Wal
     add(outcome) {
       total++;
       if (outcome.kind === 'shipped') addShipped(outcome);
-      else parked.push(parkedRecord(outcome.placement));
+      else if (outcome.kind === 'parked') parked.push(parkedRecord(outcome.placement));
     },
     result: () => ({
       total, parked, placementDerived: derived.result(),

@@ -182,6 +182,7 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
   'park.no-parallax-published': outcomeCode('No parallax tier reaches the record, so it cannot be placed.', PARK),
   'park.no-v-magnitude': outcomeCode('No V tier lights the record, so it has no brightness.', PARK),
   'park.no-position': outcomeCode('No direction tier states where the record is on the sky.', PARK),
+  'deferred.binary-component': outcomeCode('No parallax tier reaches the record, but a pair row of multiples.tsv carries its Gaia source, so companion promotion places it from its pair.'),
 });
 
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];
@@ -239,6 +240,11 @@ export type Placement =
     readonly direction: DirectionResolution;
   }
   | {
+    readonly kind: 'deferred-to-component';
+    readonly key: string;
+    readonly parallax: Extract<ParallaxResolution, { via: 'none' }>;
+  }
+  | {
     readonly kind: 'placed';
     readonly key: string;
     readonly parallax: Exclude<ParallaxResolution, { via: 'none' }>;
@@ -251,7 +257,8 @@ export type Placement =
     readonly speed: SpeedBand;
   };
 
-export type ParkedPlacement = Exclude<Placement, { kind: 'placed' }>;
+export type ParkedPlacement = Exclude<Placement, { kind: 'placed' | 'deferred-to-component' }>;
+export type DeferredPlacement = Extract<Placement, { kind: 'deferred-to-component' }>;
 export type PlacedPlacement = Extract<Placement, { kind: 'placed' }>;
 
 type DistanceLayers = Pick<PlacedPlacement, 'parallax' | 'bailerJones' | 'lmc'>;
@@ -334,6 +341,10 @@ export function placementLineageRows(p: Placement): LineageRow[] {
       parallax(p.parallax);
       direction(p.direction);
       park(p);
+      return out;
+    case 'deferred-to-component':
+      parallax(p.parallax);
+      row('deferred.binary-component', none, []);
       return out;
     case 'placed': {
       parallax(p.parallax);

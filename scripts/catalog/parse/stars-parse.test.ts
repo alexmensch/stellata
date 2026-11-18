@@ -39,6 +39,7 @@ import {
 import type { PlacementCounts } from '../distance/placement-counts-pure';
 import { foldStageLines, type LineageLine } from '../lineage/lineage-row-pure';
 import { MAX_DIST_PC, readStars, rowResolver } from './stars-parse';
+import { emptyPairMemberParallaxIndex } from '../distance/parallax/pair-member-parallax';
 import { CURATED_RECORDS } from '../record/curated-records';
 import { BAILER_JONES } from '../distance/refinement/bailer-jones-source';
 import { LMC_CENTRE_DEC_DEG, LMC_CENTRE_RA_HOURS } from '../distance/refinement/distance-overrides-pure';
@@ -204,6 +205,32 @@ describe('readStars Gaia source_id', () => {
       },
     );
     expect(stars[0].gaiaSourceId).toBe(sourceId);
+  });
+});
+
+describe('readStars defers a parallax-less pair member to promotion', () => {
+  const sourceId = '1001390591638167296';
+  const walk = (rootByGaia: ReadonlyMap<string, string>) => readStarsDiscarding(
+    manifestRows([{ ...AT_ORIGIN_SIGHTLINE, gl: '', gaia_source_id: sourceId }]),
+    {
+      ...BASE_OPTIONS,
+      directions: AT_ORIGIN_DIRECTIONS(),
+      pairMemberParallax: { ...emptyPairMemberParallaxIndex(), rootByGaia: new Map(rootByGaia) },
+    },
+  );
+
+  it('neither parks nor ships a row whose Gaia source a pair row carries', () => {
+    const { stars, stats, counts } = walk(new Map([[sourceId, '00001+0001']]));
+    expect(stars).toHaveLength(0);
+    expect(stats.parked).toHaveLength(0);
+    expect(counts[placement('deferred.binary-component')]).toBe(1);
+    expect(counts[placement('park.no-parallax-published')]).toBe(0);
+  });
+
+  it('parks the same row when no pair row carries its source', () => {
+    const { stats, counts } = walk(new Map());
+    expect(stats.parked.map((p) => p.reason)).toEqual(['no_parallax_published']);
+    expect(counts[placement('deferred.binary-component')]).toBe(0);
   });
 });
 

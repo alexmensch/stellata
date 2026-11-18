@@ -45,12 +45,12 @@ import {
   shippedDistVia,
   type BailerJonesStep,
   type LmcStep,
-  type ParkedPlacement,
+  type DeferredPlacement, type ParkedPlacement,
   type PlacedPlacement,
 } from '../distance/placement-lineage-pure';
 import {
   emptyPairMemberParallaxIndex,
-  lookupPairMemberParallax,
+  isPairMemberSource, lookupPairMemberParallax,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
 import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
@@ -227,13 +227,19 @@ export interface ShippedFacts {
   readonly speedKmS: number;
 }
 
-/** One manifest row resolved: parked, or a record with the provenance of each
- *  field. No row is dropped — a row past MAX_DIST_PC throws. */
+/** One manifest row resolved: parked, deferred to the companion promotion
+ *  mints for it, or a record with the provenance of each field. No row is
+ *  dropped — a row past MAX_DIST_PC throws. */
 export type RowOutcome =
   | {
     readonly kind: 'parked';
     readonly placement: ParkedPlacement;
     readonly brightness: BrightnessColour | null;
+  }
+  | {
+    readonly kind: 'deferred';
+    readonly placement: DeferredPlacement;
+    readonly brightness: null;
   }
   | {
     readonly kind: 'shipped';
@@ -382,6 +388,10 @@ export function rowResolver({
         curated: curated?.placement ?? null,
       },
     );
+    if (plxRes.via === 'none' && plxRes.refusals.length === 0
+        && gaiaSourceId !== null && isPairMemberSource(pairMemberParallax, gaiaSourceId)) {
+      return { kind: 'deferred', placement: { kind: 'deferred-to-component', key, parallax: plxRes }, brightness: null };
+    }
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).
     if (plxRes.via === 'none') {
       return { kind: 'parked', placement: { kind: 'parked-parallax', key, ids, parallax: plxRes }, brightness: null };

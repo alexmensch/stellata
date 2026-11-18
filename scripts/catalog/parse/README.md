@@ -148,8 +148,14 @@ Each manifest row walks through, inside `readStars`. The row arrives with its
 labels already FINAL, so no label merge runs here (`../classic-ids/README.md`
 label-merge/README.md).
 
-**A row leaves without a record only by parking.** A **park** (steps 0, 1
-and 2) is a membership decision: the row reaches no parallax, no V, or no
+**A row leaves the walk without a record only by parking or deferring.** A
+row step 0 reaches with no parallax published and no refusal, whose Gaia
+source a pair row of `multiples.tsv` carries (`isPairMemberSource`, over the
+bound-sibling index), **defers** under `placement.deferred.binary-component`:
+companion promotion mints that component carrying the source, so the record
+ships as the companion and keeps its SID. A deferred row promotion does not
+mint leaves its SID with no decision, and allocation fails naming it. A
+**park** (steps 0, 1 and 2) is a membership decision: the row reaches no parallax, no V, or no
 position, so the [§ 6.1](/docs/catalog-driver.md#61-record-parity) ledger records it leaving and
 `data/membership/parked-ledger.tsv` names it. Parks are pinned at their
 measured counts, one `placement.park.*` code per reason. A row past
@@ -159,7 +165,8 @@ never a membership decision — so the walk throws, naming the row.
 0. **Parallax resolution** (`resolveParallax` in `../distance/parallax/`).
    Every tier is a catalogue this build pulled itself. A row no tier reaches
    **parks** — `no_parallax_published`, or `refused_no_defensible_parallax`
-   where a parallax existed but no tier would defend it.
+   where a parallax existed but no tier would defend it — unless it defers to
+   the pair component that carries its Gaia source (above).
 1. **Johnson V** (`resolveVMagnitude`). See [The V cascade](../photometry/README.md#the-v-cascade).
    A row no tier lights **parks** as `no_v_magnitude`: a record needs
    both a place and a brightness. The tier that won is kept on the record as

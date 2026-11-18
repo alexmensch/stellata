@@ -154,6 +154,11 @@ export function buildPairMemberParallaxIndex(
   return index;
 }
 
+/** Whether a pair row of multiples.tsv carries this Gaia source. */
+export function isPairMemberSource(index: PairMemberParallaxIndex, sourceId: string): boolean {
+  return index.rootByGaia.has(sourceId);
+}
+
 /** The best anchor-grade parallax a record's own bound siblings measured.
  *
  *  `ownSourceId` is excluded rather than assumed absent: a record reaching this
