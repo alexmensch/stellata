@@ -1,0 +1,21 @@
+name	class	key	evidence
+268 G. Cet	gould-designation	hd:16160	no WGSN Gould row; SIMBAD holds no Gould idents: HD 16160 carries ** GKI 1A, ** PLQ 32A
+96 G. Psc	gould-designation	hd:4628	no WGSN Gould row; SIMBAD holds no Gould idents: HD 4628 carries ** BUP 10A, LAL 1299, Wolf 25
+Acrab B	component-letter	hd:144218	an IAU name with a component letter; the record displays its own Bayer label (beta2 Sco), so nothing composes the string on it
+Alkalurops B	component-letter	hd:137392	an IAU name with a component letter; the record displays its own Bayer label (mu2 Boo), so nothing composes the string
+Alya B	component-letter	hd:175639	an IAU name with a component letter; the record displays its own Bayer label (theta2 Ser), so nothing composes the string
+Bodu	unattributed	hd:164669	no WGSN name; SIMBAD: * 95 Her A, ** STF 2264A
+Cih	unattributed	hd:5394	no WGSN name; SIMBAD: * 27 Cas, * gam Cas, ** BU 1028A, V* gam Cas
+Cor Caroli B	component-letter	hd:112412	an IAU name with a component letter; the record displays its own Bayer label (alpha1 CVn), so nothing composes the string
+Deltoton	unattributed	hd:13974	no WGSN name; SIMBAD: * 8 Tri, * del Tri, ** DOR 66A, ** MKT 5
+Groombridge 1830	discovery-designation	hd:103095	no Groombridge ident in SIMBAD: HD 103095 carries LAL 22369, V* CF UMa
+Honores	unattributed	hd:219080	no WGSN name; SIMBAD: * 7 And
+Marsic B	component-letter	hd:145000	an IAU name with a component letter; the record displays its own Bayer label (kappa Her B), so nothing composes the string
+Onkaria	unattributed	gaia:4393265392168829056	no WGSN name; SIMBAD: ** GJ 1214A
+p Eridani	latin-bayer	hd:10360	full genitive of p Eri A, which the Bayer tier renders from WGSN (NEC); not derivable from it
+p Eridani	latin-bayer	hd:10361	full genitive of p Eri B, which the Bayer tier renders from WGSN (NEC); not derivable from it
+Ramus	unattributed	hd:166182	no WGSN name; SIMBAD: * 102 Her
+Ras Elased Australis	unattributed	hd:84441	no WGSN name; SIMBAD: * 17 Leo, * eps Leo
+Red Rectangle	unattributed	hd:44179	no WGSN name; SIMBAD's NAME Red Rectangle is the nebula's name, on the star's object
+Tusizuo	unattributed	hd:169414	no WGSN name; SIMBAD: * 109 Her, ** STG 7A, ** STT 587A, ** TOK 60
+Udkadua	unattributed	hd:222107	no WGSN name; SIMBAD: * 16 And, * lam And, V* lam And

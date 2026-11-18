@@ -50,7 +50,8 @@ implementation's own statement of all three rules.
 | `IV/25`, CNS5, `I/239` | mechanical | HD / GJ / HIP designations | [§ 2](/docs/catalog-driver.md#2-identifier-sources--frozen-cds-files-not-live-simbad) |
 | WDS / CCDM / MSC | mechanical | component letters | `docs/science-multiple-star-pipeline.md` |
 | GCVS 5.1 | mechanical | variable-star designations | `data/gcvs/README.md` |
-| AT-HYG `proper` | **rejected as authority** | alias candidates only ([§ 5](#5-aliases--ship-what-cannot-be-derived-derive-what-can)) | — |
+| SIMBAD identifier pull | mechanical, frozen | the citation behind each string designation the authority does not carry (`data/naming/eponyms.tsv`) | [Wenger 2000](/data/papers/index.md#wenger2000) |
+| AT-HYG `proper` | **not read** | — | — |
 | Stellarium `common_names` | **rejected as authority** | 659 HIP-keyed folk names, alias candidates only | `data/stellarium/README.md` |
 | SIMBAD live resolution | **rejected** | — | frozen-data policy, `data/README.md` |
 
@@ -83,10 +84,10 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved | **<!-- count:manifest-naming/membershipProperMatched -->445<!-- /count -->** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
-| discovery / eponymous designation | 21 | designation tier (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`) |
-| IAU name + AT-HYG component letter | 8 | alias only (`Acrab B`, `Cor Caroli B`, `Revati B`, …) |
-| Gould designation | 3 | designation tier (`268 G. Cet`) |
+| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
+| discovery / eponymous designation | 21 | designation tier, each citing a SIMBAD ident (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`); Groombridge 1830, which SIMBAD lists only as `LAL 22369`, is alias only |
+| IAU name + AT-HYG component letter | 8 | 3 composed, the component borrowing its system's name with its letter (`Revati B`); 5 alias only, where the record displays its own Bayer label (`Cor Caroli B` is α¹ CVn) |
+| Gould designation | 3 | designation tier for `82 G. Eri`, citing the authority's Gould row; alias only for `268 G. Cet` and `96 G. Psc`, which neither the authority nor SIMBAD carries |
 | catalogue designation filed as a name | 2 | designation tier (`Cygnus X-1`, `EZ Aqr`) |
 | Latin-letter Bayer filed as a name | 1 | Bayer tier (`p Eridani` → `p Eri A` / `p Eri B`, per NEC) |
 | unattributed | **10** | **alias only** — the star displays its designation |
@@ -119,16 +120,16 @@ constellation, asterism and nebula names, plus non-Western names, all
 unattributed. Alias-only disposes of every row without judging any of them.
 
 Any name here that later gains IAU approval must move tiers through a data
-refresh, never a code edit — which is why the list is committed at ingest
-(`stellata-wgp3.2`) rather than expressed as a code exception.
+refresh, never a code edit — which is why the list is committed, in
+`data/naming/name_drops.tsv`, rather than expressed as a code exception.
 
 ## 3. The ladder
 
 Display resolution order, first hit wins:
 
-1. **Curated override** ([§ 7](#7-curation-seam)) — the escape hatch, empty by default.
-2. **IAU WGSN approved name** — `NEC` ∪ `wgsnFaints`, keyed HR → HD → HIP,
-   then the record's own printed name. HIP is LAST, not first: Hipparcos
+1. **Curated override** ([§ 7](#7-curation-seam)) — the escape hatch.
+2. **IAU WGSN approved name** — `NEC` ∪ `wgsnFaints`, keyed HR → HD → HIP.
+   HIP is LAST, not first: Hipparcos
    resolved close pairs as one star, so NEC lists both p Eri rows against
    HIP 7751 and separates them only by HR and HD — a HIP-first join
    collapses p Eri A and B onto one record, the very duplicate [§ 8.4](#84-known-duplicate-display-names)
@@ -180,10 +181,10 @@ beside δ Cep C/D/E even though nothing else displays the bare base.
 specific component, that name attaches to that record alone; siblings
 resolve down the ladder on their own.
 
-AT-HYG's `proper` column appears nowhere in this list. Its 442 confirmed
-names arrive through tier 2 (the authority asserts them); the rest are
-reclassified by [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them)'s table. That is the demotion `stellata-wgp3` asked
-for, expressed as *routing by class* rather than a curated exception list.
+AT-HYG's `proper` column feeds no tier. Its 442 confirmed names arrive
+through tier 2 (the authority asserts them), and the rest through
+`data/naming/`, keyed on the record's identifiers rather than on the
+string ([String designations](/scripts/catalog/naming/README.md#string-designations)).
 
 ## 4. Canonical designation forms
 
@@ -321,7 +322,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — <!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/nameTableEntries -->723<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 
@@ -336,9 +337,11 @@ before the name table is written; every row is a reviewable diff, and a
 applied override that displays nothing.
 
 Expected to stay near-empty. It exists for review findings the authority
-cannot express — not as a home for folk names [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) routes to aliases. A
-growing override file is a signal the ingest is wrong, and its row count is
-pinned in build-counts so growth is visible in review.
+cannot express — today the three approved names whose authority rows key no
+identifier their record holds (Albireo B, Kaewkosin, Maru) — not as a home
+for folk names [§ 2](#2-authority--one-source-approves-names-everything-else-compiles-them) routes to aliases. A growing override file is a
+signal the ingest is wrong, and its row count is pinned in build-counts so
+growth is visible in review.
 
 ## 8. Parity — the gate on any naming change
 

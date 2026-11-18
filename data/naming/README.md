@@ -1,12 +1,27 @@
-# Naming — the curated override table and the Bayer drop ledger
+# Naming — the curated tables the naming ladder reads beside the authority
 
-The naming ladder's escape hatch ([§ 7](/docs/star-naming.md#7-curation-seam)), and the only
-hand-written input to it. Every other tier is compiled from a published
-source: the authority itself is `../iau-wgsn/`, and the build side is
-`scripts/catalog/naming/`.
+The names the IAU WGSN tables (`../iau-wgsn/`) do not supply: cited string
+designations, dropped names kept searchable, and the escape hatch
+([§ 7](/docs/star-naming.md#7-curation-seam)). The build side, and the rules each
+table's rows obey, is `scripts/catalog/naming/`
+([String designations](/scripts/catalog/naming/README.md#string-designations)).
 
 ```
-name_overrides.tsv  Hand-curated, header-only today. Columns: sid,
+eponyms.tsv         Hand-curated, cited. Columns: name, class, key,
+                    source, citation, ident. The discovery, catalogue
+                    and Gould designations the ladder displays as
+                    strings, each keyed on one record identifier
+                    (hd:/hip:/gaia:) and citing a SIMBAD object (oid,
+                    and the ident in ../simbad/simbad_idents.tsv that
+                    spells the name) or the authority's Gould row.
+name_drops.tsv      Hand-curated, frozen. Columns: name, class, key,
+                    evidence. Names no source attests: shipped as
+                    search-only aliases, never displayed.
+simbad_short_forms.tsv  Hand-curated. Columns: simbad_prefix,
+                    long_prefix, reason. How a SIMBAD ident is spelt out
+                    to compare with a name (`LAL` → `Lalande`); a test
+                    fails on a row no eponym cites.
+name_overrides.tsv  Hand-curated, three rows. Columns: sid,
                     display_name, reason, source. Keyed on the frozen
                     Stellata ID (/docs/sid.md#7-storage--sid-in-every-artifact) — a record's identity
                     survives re-indexing, and a no-Gaia record has no
@@ -35,9 +50,8 @@ bayer_drops.tsv     Hand-curated, frozen. Columns: hd, bayer, reason,
 count is pinned in build-counts (`namingOverrides`) and review sees any
 growth. Three shapes have their own home instead:
 
-- a folk name the ladder displaced → an **alias**, routed by class in
-  `../iau-wgsn/athyg_proper_dispositions.tsv`. It keeps resolving a search
-  and never displays.
+- a name no source attests → an **alias** on `name_drops.tsv`. It keeps
+  resolving a search and never displays.
 - a designation the authority spells differently → a **data refresh** of
   `../iau-wgsn/`. A name that moves tier by code edit stops tracking the
   authority.
@@ -47,4 +61,6 @@ growth. Three shapes have their own home instead:
   is upstream, not a qualifier bolted onto the label.
 
 A row here is for the fourth case only: a review finding the authority
-cannot express.
+cannot express. The three today are approved names whose authority rows
+key no identifier the record holds — Albireo B (HD 183913 against the
+record's 183914), and the faints hosts Kaewkosin and Maru.

@@ -136,5 +136,5 @@ centroid from first paint, off the records chunk 0 carries
 later chunk would read an undecoded `(0,0,0)` there. Records are apparent-V
 ordered, so this holds while every figure star is naked-eye bright: measured,
 708 distinct vertices, highest record index 10,289 against a chunk 0 of
-<!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records.
+<!-- count:build-catalog/recordsInFirstChunk -->10,413<!-- /count --> records.
 
