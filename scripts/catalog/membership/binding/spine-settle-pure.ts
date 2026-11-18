@@ -17,8 +17,7 @@ import {
   boundOutcome,
   heldMoreThanOnce,
   identityWitnessed,
-  isPositionDisputed,
-  passingRunnersUp,
+  contestedBy,
   positionWitnessed,
   refusedCandidates,
   reviewLetters,
@@ -76,8 +75,8 @@ export interface SpineSettlement {
 function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutcome {
   if (withheld) return 'collision';
   if (derived.sourceId === null) return 'refused';
-  if (isPositionDisputed(derived)) return 'position-disputed';
-  return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
+  const contested = contestedBy(derived);
+  return contested === null ? 'bound' : contested === 'position' ? 'position-disputed' : 'contested';
 }
 
 /** Withholds any source two rows derive — see README.md. */

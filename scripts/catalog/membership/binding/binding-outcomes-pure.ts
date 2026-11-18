@@ -41,8 +41,11 @@ export function boundOutcome(d: DerivedBinding): 'bound' | (typeof RESCUE_OUTCOM
   return d.rescue === null ? 'bound' : RESCUE_OUTCOMES[d.rescue];
 }
 
-/** README.md#the-position-witness: Gaia's HIP cross-match names another source than the witness bound. */
-export const isPositionDisputed = (d: DerivedBinding): boolean => d.position?.disputedBy != null;
+/** Why a winning derivation queues for review: a disputed position outranks a passing runner-up. */
+export function contestedBy(d: DerivedBinding): 'position' | 'runner-up' | null {
+  if (d.position?.disputedBy != null) return 'position';
+  return passingRunnersUp(d).length > 0 ? 'runner-up' : null;
+}
 
 /** A row whose identity witness went unconfirmed: queued only once the magnitude
  *  term admits its source (README.md#identity-outranks-a-blended-magnitude). */

@@ -26,8 +26,7 @@ import {
   identityQueueCandidate,
   heldMoreThanOnce,
   identityWitnessed,
-  passingRunnersUp,
-  isPositionDisputed,
+  contestedBy,
   positionWitnessed,
   refusedCandidates,
   reviewLetters,
@@ -444,11 +443,10 @@ export function admitAdditions(input: {
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     const cells = reviewKeyCells(g);
-    const contestedBy = g.source === null ? null
-      : isPositionDisputed(g.derived) ? 'position' : passingRunnersUp(g.derived).length > 0 ? 'runner-up' : null;
-    if (contestedBy !== null) {
+    const contested = g.source === null ? null : contestedBy(g.derived);
+    if (contested !== null) {
       out.outcomes.push({ key: g.origin, outcome: {
-        kind: 'addition-contested', by: contestedBy, review: bindingReviewCells(cells, g.derived, g.gate, tables),
+        kind: 'addition-contested', by: contested, review: bindingReviewCells(cells, g.derived, g.gate, tables),
         ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
       } });
     }
