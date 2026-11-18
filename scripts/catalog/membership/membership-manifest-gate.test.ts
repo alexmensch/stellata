@@ -150,7 +150,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const twice = manifest.filter((r) => r.term === 'primaries' && r.hip !== null
       && onBrightness.has(simbadByHip.get(r.hip) ?? null)).map((r) => r.hip);
     expect(twice.filter((hip) => !queuedHips.has(hip!))).toEqual([]);
-    expect(twice).toHaveLength(46);
+    expect(twice).toHaveLength(38);
     expect(queue.filter((r) => r.verdict === 'unconfirmed')).toHaveLength(16);
     const identified = Object.entries(snapshot as Readonly<Record<string, number>>)
       .filter(([code]) => /binding\.identified\./.test(code))

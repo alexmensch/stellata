@@ -260,7 +260,7 @@ records hold. Sol carries `SOL_PROPER_NAME`: no catalogue names it.
 
 The authority states which constellation its own designation is named for,
 so `applyStarNames` writes it as the top tier of the cascade the label
-merge started ([The designation constellation](../classic-ids/README.md#the-designation-constellation)),
+merge started ([The designation constellation](../classic-ids/designation-constellation/README.md#the-designation-constellation)),
 so <!-- count:build-catalog/naming.dc.wgsn-bayer -->2,044<!-- /count --> records render against the constellation of the
 authority's Bayer designation and <!-- count:build-catalog/naming.dc.wgsn-gould -->936<!-- /count --> against its Gould one. One
 `uint8` serves one designation and the tier that COMPOSES the label owns
@@ -329,7 +329,7 @@ override keys on SIDs. `namingLineageRows` serialises each record's
   attribution), `letter.sibling-owns`, or `letter.borrowed`;
 - a record carrying a Bayer, Flamsteed or Gould designation adds the
   constellation it renders against: the cascade tier that wrote it
-  (`desigCon`, [The designation constellation](../classic-ids/README.md#the-designation-constellation)),
+  (`desigCon`, [The designation constellation](../classic-ids/designation-constellation/README.md#the-designation-constellation)),
   `dc.positional` or `dc.none` (pinned at zero rows by `NAMING_INVARIANTS`,
   [Invariants](../lineage/README.md#invariants)), and a `refused` `dc.displaced` row for the
   IV/27A constellation an authority tier overwrote.

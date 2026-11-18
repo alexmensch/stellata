@@ -75,7 +75,7 @@ const tables: PrimaryTables = {
     { a: 'gl:Gl_157.1', b: 'gl:GJ_9140' },
     { a: 'synth:00047+3416-Db', b: 'gaia_dr3:2875176250406193920' },
   ]),
-  hip2: new Set([70890]),
+  hip2: { hips: new Set([70890]), astrometry: new Map() },
   wgsn: {
     names: new Set(['Alpheratz']),
     hd: new Set([900001]),

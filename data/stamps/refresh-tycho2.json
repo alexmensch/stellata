@@ -9,7 +9,7 @@
     "CfA"
   ],
   "release": "VizieR I/259/tyc2, VizieR I/259/suppl_1",
-  "request": "4b5062d95962999b7779fa9ea37cc2bd93107a97",
+  "request": "11e738693733e46cc884d2a6646e4bed3e38e1af",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/classic-ids/tyc2_hd.tsv"

@@ -55,7 +55,7 @@ designation the naming ladder resolves states its own constellation and wins
 label pass fills it from IV/27A keyed on the record's own HD/HIP, else SIMBAD's
 constellation for the record's own Flamsteed number, else a GCVS
 designation's trailing abbreviation. Cascade, coverage and the GCVS precedence:
-[The designation constellation](../../classic-ids/README.md#the-designation-constellation).
+[The designation constellation](../../classic-ids/designation-constellation/README.md#the-designation-constellation).
 `designationConIndex(dc, c)` in `../../../../src/catalog-format/record/catalog-pure.ts` is still the single
 statement of which field a Bayer / Flamsteed / GCVS designation reads, and the
 positional `conIndex` is still the last fallback (`naming.dc.positional`).

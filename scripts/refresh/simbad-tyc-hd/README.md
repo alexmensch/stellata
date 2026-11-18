@@ -1,7 +1,7 @@
 # SIMBAD's HD per Tycho-2 entry
 
 `refresh:simbad-tyc-hd` — SIMBAD's own HD identification for every Tycho
-entry the manifest or IV/25 mentions, written to
+entry the manifest or IV/25 mentions or a Tycho-2 pair holds, written to
 `data/simbad/simbad_tyc_hd.tsv` (`tyc`, `simbad_oid`, `simbad_main_id`,
 `hd`): the witness independent of IV/25 a close pair's crossed HD cells need
 ([The TYC → HD pull](/data/simbad/README.md#the-tyc--hd-pull)). A phased pull
@@ -20,11 +20,18 @@ on the [pull runtime](../pull/README.md#a-phased-pull) over the
 
 ## The request
 
-The TYC part of `refresh:tycho2`'s, read through the same `readTycRequest`
-([The request set](../tycho2/README.md#the-request-set)): the manifest's TYCs
+The TYC part of `refresh:tycho2`'s
+([The request set](../tycho2/README.md#the-request-set)) — the manifest's TYCs
 and IV/25's, one `1-381-1` key each, without the manifest HIPs only the
-Tycho-2 pull keeps rows by. Its describe states every key, off the
-manifest and IV/25, so either moving stales the record.
+Tycho-2 pull keeps rows by — plus every entry of a Tycho-2 pair: each entry
+whose HIP Tycho-2 gives to another entry too (`pairEntries`, read off the
+committed Tycho-2 tables). Those are the entries the pair rule can move a HIP
+onto, and the build's SIMBAD check reads only them and IV/25's
+([Applying the pair rule](/scripts/catalog/membership/merge-derivation/README.md#applying-the-pair-rule)),
+so whichever entry a move lands on was asked. `pairRuleTycHdRequest` is the
+one set both read, so the two cannot drift. `readTycRequest` builds it; its
+describe states every key, off the manifest, IV/25 and Tycho-2, so any of the
+three moving stales the record.
 
 ## The run
 
@@ -59,7 +66,7 @@ Rows are written in `tyc` text order.
 
 - **Band** 300,000–380,000 rows: the requested TYCs SIMBAD resolves and
   holds an HD for, so it tracks that intersection rather than either input.
-  332,320 at the committed pull.
+  336,351 at the committed pull.
 - **Spot rows**: eight close pairs whose two Tycho entries carry adjacent HD
   numbers (f Eri A/B, τ Oph A/B, α Psc A, ε Boo B, κ¹/κ² CrA) — the shape the
   table exists to adjudicate.

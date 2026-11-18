@@ -64,7 +64,8 @@ scripts/catalog/membership/
                                   baseline's identity file only for a key
                                   the build lacks.
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
-    (+ test)                      corrections, then runs each phase in order
+    (+ test)                      corrections, checks the pair dispositions'
+                                  photometry, then runs each phase in order
                                   — the pair rule, binding/spine-settle and
                                   the spine side (repeated until SIMBAD's
                                   check refuses no move), the merge
@@ -88,7 +89,8 @@ scripts/catalog/membership/
                                   withRecordMoves, the spine rows as the
                                   pair rule's HIP moves leave them. Pure.
   pair-review-dispositions-       The pair-review queue's dispositions:
-    pure.ts (+ test)              columns, reader and its checks, and
+    pure.ts (+ test)              columns, reader and its checks, the
+                                  tycho2_photometry recomputation, and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
     source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
@@ -206,7 +208,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->372<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->365<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -231,11 +233,11 @@ a code with a winner names the highest-precedence source proposing it
 
 | Code | Rows | What it is |
 |---|---|---|
-| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,287<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->837<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,664<!-- /count --> | one source survives both gates, with no passing rival |
+| `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,284<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->838<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,685<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
 | `identified.<lead>` | tyc <!-- count:membership-manifest/membership.binding.identified.tyc -->22<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.identified.hip -->2<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.identified.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.identified.simbad -->4<!-- /count --> | every candidate failed a gate, and SIMBAD's one object for the HIP and the HIP's own position both name one the magnitude gate refused ([Identity outranks a blended magnitude](binding/README.md#identity-outranks-a-blended-magnitude)) |
-| `refused` | <!-- count:membership-manifest/membership.binding.refused -->411<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
-| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->228<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->5<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
+| `refused` | <!-- count:membership-manifest/membership.binding.refused -->402<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
+| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->219<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->4<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
 

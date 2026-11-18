@@ -58,8 +58,8 @@ SIMBAD tier:
   over all rows and over the 1,802 `pflag='X'` rows alike — the 1991.67 the
   X rows solve to against another catalogue's rate. The supplement prints none
   and solves to **1991.25** over its 81 measurable rows, its stated epoch.
-- Against HIP2, the per-row epoch is what closes the gap: over the <!-- count:membership-manifest/membership.merge.pair.review.no-hip-source -->1,046<!-- /count -->
-  `no_hip_source` pairs, carrying HIP2 to it takes the right entry's 99th
+- Against HIP2, the per-row epoch is what closes the gap: over the 1,046
+  spine pairs whose HIP Gaia cross-matches to no source, carrying HIP2 to it takes the right entry's 99th
   percentile from 0.39″ to 0.18″
   ([The tolerances](/scripts/catalog/membership/positional-witness/README.md#the-tolerances)).
 
@@ -97,9 +97,11 @@ both entries Tycho-2 gives a HIP are in the table for the pair rule
 2,643 main and 3,197 supplement rows (every supplement one `flag='H'`) that
 no TYC names.
 
-`refresh:simbad-tyc-hd` asks the same TYCs: both pulls read it through
-`readTycRequest`, which parses each side into integer triples, so they cover
-the same entries and a differently-spelled cell cannot drift them apart.
+`refresh:simbad-tyc-hd` asks the same TYCs and every Tycho-2 pair's entries:
+both pulls build the TYC part through one `tycInputs`
+(`scripts/refresh/tycho2/tyc-request.ts`), which parses each side into integer
+triples, so they cover the same entries and a differently-spelled cell cannot
+drift them apart.
 
 Coverage, re-measured 2026-11-16 against the committed tables:
 
