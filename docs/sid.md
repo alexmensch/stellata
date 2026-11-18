@@ -209,11 +209,15 @@ under [§ 6.1](#61-procedure) reconciles Gaia ids across a data release, and its
 survivor is the lowest (oldest) SID — the ids being reconciled are
 interchangeable, so the oldest is the stable choice. A merge under
 [§ 4.3](#43-ledger--datasidledgertsv) joins two same-as classes the pipeline itself found to name one
-star, and there the survivor is the one whose canonical key is a
-**classical designation** — HD, HIP, HR, GJ — regardless of which
-integer is lower. A classical key is stable across Gaia releases
-where a `gaia_dr3:` key is not, so retiring the classical side would
-hand the object's identity to the id most likely to move next. SID
+star, and there the survivor is the one whose canonical key ranks
+highest on the [§ 4.2](#42-canonical-key--stability-first) ladder, regardless of which integer is lower:
+a **classical designation** — HD, HIP, HR, GJ — over a `gaia_*` key,
+and a `gaia_*` key over a `synth:` one. Only between keys of one rank
+(two `gaia_*` keys, two `synth:` keys) does the oldest SID survive. A
+classical key is stable across Gaia releases where a `gaia_dr3:` key is
+not, and a Gaia source outlives the WDS lettering a `synth:` key is
+minted from, so retiring the higher side would hand the object's
+identity to the id most likely to move next. SID
 310477 retiring in favour of the higher 310625 (HD 2880 / HIP 2533)
 is the case to read: eight Gaia-keyed rows AT-HYG carried beside
 their own HIP record merged onto it when the manifest began deriving

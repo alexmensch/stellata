@@ -4,7 +4,7 @@ import type { CodeEffect } from '../catalog/lineage/reason-codes/reason-codes-pu
 import { ALLOCATION_CODES, type AllocationAdmissionCode } from './allocation-lineage-pure';
 import { retiredSids, type EventRow } from './events-pure';
 import {
-  canonicalKeyOf, parseDesignation, sameAsClasses,
+  canonicalKeyOf, namespaceRank, parseDesignation, sameAsClasses,
   type AmbiguousDesignation, type LedgerRow, type SameasEdge, type SidKind,
 } from './sid-pure';
 
@@ -95,12 +95,15 @@ type KeyCarrier =
 /** A same-class merge whose key only a stored edge carries is keyed on that edge, never on a record that lacks the key. */
 const sameasEdgeOrigin =(edge: SameasEdge): string => `sameas:${edge.a}|${edge.b}`;
 
-/** /docs/sid.md#43-ledger--datasidledgertsv: the classical key the merged record keys on survives; with none, the oldest SID. */
+/** /docs/sid.md#43-ledger--datasidledgertsv: the ladder's highest namespace survives; within it, the classical key the merged record keys on, else the oldest SID. */
 export function mergeSurvivor(active: readonly LedgerRow[]): LedgerRow {
   const key = canonicalKeyOf(active.map((r) => r.canonicalKey));
-  const named = active.find((r) => r.canonicalKey === key);
-  if (named !== undefined && CLASSICAL.has(parseDesignation(key).ns)) return named;
-  return active.reduce((a, b) => (b.sid < a.sid ? b : a));
+  const { ns } = parseDesignation(key);
+  if (CLASSICAL.has(ns)) return active.find((r) => r.canonicalKey === key)!;
+  const rank = namespaceRank(ns);
+  return active
+    .filter((r) => namespaceRank(parseDesignation(r.canonicalKey).ns) === rank)
+    .reduce((a, b) => (b.sid < a.sid ? b : a));
 }
 
 type Settled =

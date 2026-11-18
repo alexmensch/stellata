@@ -347,9 +347,19 @@ describe('settleRemoval', () => {
 });
 
 describe('mergeSurvivor', () => {
-  it('keeps the classical key over a lower Gaia SID, else the oldest', () => {
+  it('keeps the classical key over a lower Gaia SID', () => {
     expect(mergeSurvivor([row(5, 'gaia_dr3:1'), row(9, 'hd:2')]).sid).toBe(9);
     expect(mergeSurvivor([row(9, 'hd:2'), row(7, 'hip:3')]).sid).toBe(7);
-    expect(mergeSurvivor([row(9, 'gaia_dr3:1'), row(4, 'synth:x')]).sid).toBe(4);
+  });
+
+  it('keeps the ladder-higher namespace over an older SID', () => {
+    expect(mergeSurvivor([row(9, 'gaia_dr3:1'), row(4, 'synth:x')]).sid).toBe(9);
+    expect(mergeSurvivor([row(4, 'synth:x'), row(9, 'gaia_dr3:1'), row(2, 'synth:y')]).sid).toBe(9);
+  });
+
+  it('keeps the oldest SID within one non-classical rank', () => {
+    expect(mergeSurvivor([row(9, 'gaia_dr3:1'), row(4, 'gaia_dr3:2')]).sid).toBe(4);
+    expect(mergeSurvivor([row(9, 'gaia_dr3:1'), row(4, 'gaia_dr4:2')]).sid).toBe(4);
+    expect(mergeSurvivor([row(9, 'synth:a'), row(4, 'synth:b')]).sid).toBe(4);
   });
 });
