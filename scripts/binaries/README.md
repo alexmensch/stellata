@@ -340,7 +340,10 @@ name the SAME physical link at different granularity (18025+4414 `AB` vs
 two DISTINCT stars collapsed onto one record — each a missing minted slot.
 Those rows are `runtime-pairs.dropped.duplicate-relation`, and the stage's
 invariant allows only the rows it names: θ¹ Ori's `Bb,Bc` / `Bb,Bd`, whose
-Ba/Bb sub-letter blend the inner-pair hierarchy owns
+Ba/Bb sub-letter blend the inner-pair hierarchy owns, and 07096+3828's
+`A,BD`, whose `BD` shares one Gaia source with `BC` and `B` — two compounds
+overlapping on a letter, which the token test cannot call one link
+(stellata-hooj.17.9.6 classifies them by evidence)
 ([Runtime-pairs lineage](#runtime-pairs-lineage)).
 
 ## Pairs lineage
@@ -405,7 +408,7 @@ carry), so trace joins it to promotion and component-binding on the key.
 Every code is an outcome with no removal effect, and the stage writes no
 identity rows. Its counts are the snapshot's `runtime-pairs` stage, beside
 `encode`'s pair flags. `RUNTIME_PAIRS_INVARIANTS` allows a
-`dropped.duplicate-relation` row only for the two θ¹ Ori rows it names
+`dropped.duplicate-relation` row only for the three rows it names
 ([Invariants](/scripts/catalog/lineage/README.md#invariants)): another fails the build
 by key, and a fix that clears one fails until it is struck off the list.
 

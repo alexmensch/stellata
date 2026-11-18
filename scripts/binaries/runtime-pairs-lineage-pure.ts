@@ -21,6 +21,7 @@ export const RUNTIME_PAIRS_CODES = stageCodes(RUNTIME_PAIRS_LINEAGE.stage, {
 const COLLAPSED_ROWS = new Map([
   ['multiples:05353-0523-Bb,Bc/Bc', 'θ¹ Ori Bc, onto Ba,Bc\'s records'],
   ['multiples:05353-0523-Bb,Bd/Bd', 'θ¹ Ori Bd, onto Ba,Bd\'s records'],
+  ['multiples:07096+3828-A,BD/BD', '07096+3828 BD, onto A,BC\'s records: BC, BD and B share one Gaia source'],
 ]);
 
 export const RUNTIME_PAIRS_INVARIANTS: readonly LineageInvariant[] = [
