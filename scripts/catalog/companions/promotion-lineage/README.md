@@ -100,18 +100,18 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-16: 125,287 rows — one outcome row per `multiples.tsv` row,
-59,710 facet rows (two of them, colour and dust, per minted record), 16,611
+Measured 2026-11-18: 134,776 rows over the <!-- count:build-binaries/multiples_rows_emitted -->50,584<!-- /count --> `multiples.tsv` rows —
+among them 31,564 facet rows (two, colour and dust, per minted record), 17,820
 size rows (one per record promotion sized, by its last pass:
-<!-- count:build-catalog/promotion.size.mint -->12,733<!-- /count --> mint,
-<!-- count:build-catalog/promotion.size.anchor-re-split -->1,884<!-- /count --> anchor re-split,
-<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,812<!-- /count --> anchor-dimmed,
-<!-- count:build-catalog/promotion.size.blend-split -->62<!-- /count --> blend-split,
-<!-- count:build-catalog/promotion.size.recurated -->52<!-- /count --> recurated) and 1,945 held-record brightness rows — and 45,795
-identity rows (the 14,676 minted companions and the 31,119 rows promotion
-retires, parks or merges), 1.73 MB gzipped in 0.18 s (header, diff, write and
-invariants; 57 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
-1.87 MB and 10 s. A CI run with a diff took
+<!-- count:build-catalog/promotion.size.mint -->13,610<!-- /count --> mint,
+<!-- count:build-catalog/promotion.size.anchor-re-split -->2,052<!-- /count --> anchor re-split,
+<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,986<!-- /count --> anchor-dimmed,
+<!-- count:build-catalog/promotion.size.blend-split -->120<!-- /count --> blend-split,
+<!-- count:build-catalog/promotion.size.recurated -->52<!-- /count --> recurated) and 2,172 held-record brightness rows — and 49,298
+identity rows (the 15,782 minted companions and the 33,516 rows promotion
+retires, parks or merges), 1.89 MB gzipped in 0.19 s (header, diff, write and
+invariants; 45 ms of it the baseline); `PROMOTION_LINEAGE_BUDGET` pins
+2.04 MB and 10 s. A CI run with a diff took
 6.9 s (2026-11-07), almost all of it the baseline phase.
 
 ## Promotion's invariants

@@ -21,7 +21,7 @@ import type {
 import { PROMOTION_LINEAGE } from '../../../../src/catalog-format/pipeline-outputs/lineage-files';
 import type { Unsorted } from '../../record/record-phase';
 
-export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 1_870_000, writeMs: 10_000 };
+export const PROMOTION_LINEAGE_BUDGET = { gzipBytes: 2_040_000, writeMs: 10_000 };
 
 const RETIRED_7_1_8 = retired('7.1.8');
 const RETIRED_7_1_20 = retired('7.1.20');
