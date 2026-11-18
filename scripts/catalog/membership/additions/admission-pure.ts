@@ -28,6 +28,7 @@ import {
   identityWitnessed,
   contestedBy,
   positionWitnessed,
+  requireNoPositionCollision,
   refusedCandidates,
   reviewLetters,
   unshippedCandidates,
@@ -427,6 +428,7 @@ export function admitAdditions(input: {
     return { items: g, derived, gate };
   });
   const sharedSources = heldMoreThanOnce(derivedGroups.map(({ derived }) => derived.sourceId));
+  requireNoPositionCollision(derivedGroups.map(({ derived }) => derived), sharedSources, 'addition groups');
 
   const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [], identityQueue: [] };
   const groups = derivedGroups.map(({ items: groupItems, derived, gate }) => {

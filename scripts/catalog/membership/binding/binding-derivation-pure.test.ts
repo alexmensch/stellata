@@ -20,6 +20,7 @@ import {
   type PositionEvidence,
 } from './binding-derivation-pure';
 import { printedVOf } from '../../photometry/photometry-fixture';
+import { heldMoreThanOnce, requireNoPositionCollision } from './binding-outcomes-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
 const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null, keptNearHip: new Map() };
@@ -393,6 +394,15 @@ describe('the position witness', () => {
       rowGateEvidence({ tyc: '', hip: '37096', gl: '' }, evidence, index, unconfirmed));
     expect(d).toMatchObject({ sourceId: null, position: null });
     expect(isUnconfirmed(d)).toBe(true);
+  });
+
+  it('fails the build rather than let a position binding withhold another row\'s source', () => {
+    const positioned = derive({}, 37096, near(37096, [fPup]));
+    const crosswalk = derive({ hip: fPup.sourceId }, 37096, NO_POSITIONS);
+    const pair = [positioned, crosswalk];
+    expect(() => requireNoPositionCollision(pair, heldMoreThanOnce(pair.map((d) => d.sourceId)), 'spine bindings'))
+      .toThrow(/position witness binds 5588312348336552576/);
+    expect(() => requireNoPositionCollision([crosswalk, crosswalk], new Set([fPup.sourceId]), 'spine bindings')).not.toThrow();
   });
 
   it('never outranks a candidate that passes on its own', () => {

@@ -223,7 +223,9 @@ either way. A one-off third source is the same rule.
 a floor source SIMBAD letters as another component than the HIP's is the
 companion, already its own record, so binding it would draw the companion
 twice. Like the other witnesses it applies only once nothing passes on its
-own. It does not weigh the magnitude arm: the position is the witness, and G
+own, and a source it binds that another row or group also reaches **fails the
+build** (`requireNoPositionCollision`) rather than letting the collision rule
+withhold the stronger binding beside it — none today. It does not weigh the magnitude arm: the position is the witness, and G
 against a blend's V is exactly what refused the rows whose Gaia HIP
 cross-match already named the source.
 

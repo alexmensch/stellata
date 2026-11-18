@@ -95,6 +95,19 @@ export function positionWitnessed(key: string, subject: RefusalSubject, d: Deriv
   } }];
 }
 
+/** README.md#the-position-witness: the weakest witness never withholds another row's binding by colliding with it. */
+export function requireNoPositionCollision(
+  derivations: readonly (DerivedBinding | null)[], collided: ReadonlySet<string>, where: string,
+): void {
+  const positioned = derivations.filter((d) => d?.rescue === 'position' && collided.has(d.sourceId!));
+  if (positioned.length > 0) {
+    throw new Error(
+      `${where}: the position witness binds ${positioned.map((d) => d!.sourceId).join(', ')}, which another `
+        + 'row also reaches; the collision rule would withhold both — settle it before the witness may bind',
+    );
+  }
+}
+
 /** The sources more than one row or group reaches. */
 export function heldMoreThanOnce(sourceIds: Iterable<string | null>): Set<string> {
   const seen = new Set<string>();

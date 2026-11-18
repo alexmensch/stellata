@@ -19,6 +19,7 @@ import {
   identityWitnessed,
   contestedBy,
   positionWitnessed,
+  requireNoPositionCollision,
   refusedCandidates,
   reviewLetters,
   unshippedCandidates,
@@ -83,6 +84,7 @@ function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutc
 function deriveSpineBindings(spine: readonly SpineRow[], derive: RowDeriver): SpineBinding[] {
   const derivations = spine.map((row) => (isSolProper(row.proper) ? null : derive(row)));
   const collisions = heldMoreThanOnce(derivations.map((d) => d?.derived.sourceId ?? null));
+  requireNoPositionCollision(derivations.map((d) => d?.derived ?? null), collisions, 'spine bindings');
   return derivations.map((d): SpineBinding => {
     if (d === null) return { outcome: 'sol' };
     const id = d.derived.sourceId;
