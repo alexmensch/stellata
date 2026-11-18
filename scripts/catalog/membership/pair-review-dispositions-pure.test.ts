@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePairDispositionsTsv, requirePhotometricKeeps, requirePositionalKeeps } from './pair-review-dispositions-pure';
+import { parsePairDispositionsTsv, requireWitnessedKeeps } from './pair-review-dispositions-pure';
 import type { WitnessVerdict } from './positional-witness/positional-witness-pure';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
 
@@ -32,54 +32,50 @@ describe('parsePairDispositionsTsv', () => {
   });
 });
 
-describe('requirePhotometricKeeps', () => {
+describe('requireWitnessedKeeps', () => {
   const REF = { file: 'f', line: 1 } as never;
-  const check = (keep: string, hip: Record<number, number>, vt: Record<string, number>, basis = 'tycho2_photometry') =>
-    () => requirePhotometricKeeps(
-      parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tVT`),
-      (h) => (h in hip ? { vMag: hip[h], ref: REF } : null),
-      (t) => vt[t] ?? null,
-    );
-
-  it('passes a keep_entry whose VT is nearest the printed V', () => {
-    expect(check('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).not.toThrow();
-  });
-
-  it('fails a keep_entry another entry is nearer to, or an exact tie', () => {
-    expect(check('1-1-2', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/1-1-2 is not the one entry whose VT is nearest/);
-    expect(check('1-1-1', { 10: 10 }, { '1-1-1': 9, '1-1-2': 11 })).toThrow(/not the one entry/);
-  });
-
-  it('fails where either magnitude is missing', () => {
-    expect(check('1-1-1', {}, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/prints no V/);
-    expect(check('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7 })).toThrow(/1-1-2 prints no VT/);
-  });
-
-  it('weighs only tycho2_photometry dispositions', () => {
-    expect(check('1-1-2', {}, {}, 'pair_component')).not.toThrow();
-  });
-});
-
-describe('requirePositionalKeeps', () => {
   const seps = [{ tyc: '1-1-2', separationArcsec: 0.02 }, { tyc: '1-1-1', separationArcsec: 0.98 }];
-  const check = (keep: string, verdict: WitnessVerdict | null, basis = 'hip2_position') =>
-    () => requirePositionalKeeps(parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tHIP2`), () => verdict);
+  const check = (
+    keep: string, basis: string,
+    { hip = {}, vt = {}, verdict = null }: { hip?: Record<number, number>; vt?: Record<string, number>; verdict?: WitnessVerdict | null },
+  ) => () => requireWitnessedKeeps(parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tevidence`), {
+    printedHipV: (h) => (h in hip ? { vMag: hip[h], ref: REF } : null),
+    vtOf: (t) => vt[t] ?? null,
+    positionWitness: () => verdict,
+  });
+  const photometry = (keep: string, hip: Record<number, number>, vt: Record<string, number>) =>
+    check(keep, 'tycho2_photometry', { hip, vt });
+  const position = (keep: string, verdict: WitnessVerdict | null) => check(keep, 'hip2_position', { verdict });
 
-  it('passes a keep_entry HIP2 falls on alone', () => {
-    expect(check('1-1-2', { kind: 'match', tyc: '1-1-2', separations: seps })).not.toThrow();
+  it('passes a tycho2_photometry keep_entry whose VT is nearest the printed V', () => {
+    expect(photometry('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).not.toThrow();
   });
 
-  it('fails a keep_entry HIP2 matches another entry, both, or neither', () => {
-    expect(check('1-1-1', { kind: 'match', tyc: '1-1-2', separations: seps })).toThrow(/does not fall on 1-1-1 alone \(1-1-2 0.02", 1-1-1 0.98"\)/);
-    expect(check('1-1-2', { kind: 'several', tycs: ['1-1-2', '1-1-1'], separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
-    expect(check('1-1-2', { kind: 'none', separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
+  it('fails a tycho2_photometry keep_entry another entry is nearer to, or an exact tie', () => {
+    expect(photometry('1-1-2', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/1-1-2 is not the one entry whose VT is nearest/);
+    expect(photometry('1-1-1', { 10: 10 }, { '1-1-1': 9, '1-1-2': 11 })).toThrow(/not the one entry/);
   });
 
-  it('fails a HIP HIP2 cannot carry', () => {
-    expect(check('1-1-2', null)).toThrow(/gives it no position/);
+  it('fails tycho2_photometry where either magnitude is missing', () => {
+    expect(photometry('1-1-1', {}, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/prints no V/);
+    expect(photometry('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7 })).toThrow(/1-1-2 prints no VT/);
   });
 
-  it('weighs only hip2_position dispositions', () => {
-    expect(check('1-1-1', null, 'pair_component')).not.toThrow();
+  it('passes a hip2_position keep_entry HIP2 falls on alone', () => {
+    expect(position('1-1-2', { kind: 'match', tyc: '1-1-2', separations: seps })).not.toThrow();
+  });
+
+  it('fails a hip2_position keep_entry HIP2 matches another entry, both, or neither', () => {
+    expect(position('1-1-1', { kind: 'match', tyc: '1-1-2', separations: seps })).toThrow(/does not fall on 1-1-1 alone \(1-1-2 0.02", 1-1-1 0.98"\)/);
+    expect(position('1-1-2', { kind: 'several', tycs: ['1-1-2', '1-1-1'], separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
+    expect(position('1-1-2', { kind: 'none', separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
+  });
+
+  it('fails a hip2_position HIP HIP2 cannot carry', () => {
+    expect(position('1-1-2', null)).toThrow(/gives it no position/);
+  });
+
+  it('recomputes nothing for pair_component', () => {
+    expect(check('1-1-1', 'pair_component', { verdict: { kind: 'match', tyc: '1-1-2', separations: seps } })).not.toThrow();
   });
 });

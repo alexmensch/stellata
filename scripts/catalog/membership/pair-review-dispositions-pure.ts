@@ -37,39 +37,51 @@ export function parsePairDispositionsTsv(text: string, from: Declared): Map<numb
   return out;
 }
 
-// see merge-derivation/README.md#disposing-a-queued-pair
-export function requirePhotometricKeeps(
-  dispositions: ReadonlyMap<number, PairDisposition>,
-  printedHipV: PrintedVLookups['printed_hip'],
-  vtOf: (tyc: string) => number | null,
-): void {
-  for (const d of dispositions.values()) {
-    if (d.basis !== 'tycho2_photometry') continue;
-    const hipV = printedHipV(d.hip)?.vMag;
-    if (hipV === undefined) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Hipparcos prints no V for it`);
-    const offsets = d.entries.map((tyc) => {
-      const vt = vtOf(tyc);
-      if (vt === null) throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but Tycho-2 entry ${tyc} prints no VT`);
-      return { tyc, offset: Math.abs(vt - hipV) };
-    }).sort((a, b) => a.offset - b.offset);
-    if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
-      throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but ${d.keepEntry} is not the one entry whose VT is nearest Hipparcos's V ${hipV}`);
-    }
-  }
+/** What the build recomputes a pair disposition's basis from. */
+export interface PairWitnesses {
+  printedHipV: PrintedVLookups['printed_hip'];
+  vtOf: (tyc: string) => number | null;
+  positionWitness: (hip: number, entries: readonly string[]) => WitnessVerdict | null;
 }
 
+const separationsOf = (verdict: WitnessVerdict): string =>
+  verdict.separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(2)}"`).join(', ');
+
 // see merge-derivation/README.md#disposing-a-queued-pair
-export function requirePositionalKeeps(
+export function requireWitnessedKeeps(
   dispositions: ReadonlyMap<number, PairDisposition>,
-  positionWitness: (hip: number, entries: readonly string[]) => WitnessVerdict | null,
+  witnesses: PairWitnesses,
 ): void {
   for (const d of dispositions.values()) {
-    if (d.basis !== 'hip2_position') continue;
-    const verdict = positionWitness(d.hip, d.entries);
-    if (verdict === null) throw new Error(`pair-review disposition for HIP ${d.hip} rests on hip2_position, but HIP2 gives it no position and proper motion to carry`);
-    if (verdict.kind !== 'match' || verdict.tyc !== d.keepEntry) {
-      const seps = verdict.separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(2)}"`).join(', ');
-      throw new Error(`pair-review disposition for HIP ${d.hip} rests on hip2_position, but HIP2's position does not fall on ${d.keepEntry} alone (${seps})`);
+    const fail = (why: string): never => {
+      throw new Error(`pair-review disposition for HIP ${d.hip} rests on ${d.basis}, but ${why}`);
+    };
+    switch (d.basis) {
+      case 'tycho2_photometry': {
+        const hipV = witnesses.printedHipV(d.hip)?.vMag ?? fail('Hipparcos prints no V for it');
+        const offsets = d.entries.map((tyc) => {
+          const vt = witnesses.vtOf(tyc) ?? fail(`Tycho-2 entry ${tyc} prints no VT`);
+          return { tyc, offset: Math.abs(vt - hipV) };
+        }).sort((a, b) => a.offset - b.offset);
+        if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
+          fail(`${d.keepEntry} is not the one entry whose VT is nearest Hipparcos's V ${hipV}`);
+        }
+        break;
+      }
+      case 'hip2_position': {
+        const verdict = witnesses.positionWitness(d.hip, d.entries)
+          ?? fail('HIP2 gives it no position and proper motion to carry');
+        if (verdict.kind !== 'match' || verdict.tyc !== d.keepEntry) {
+          fail(`HIP2's position does not fall on ${d.keepEntry} alone (${separationsOf(verdict)})`);
+        }
+        break;
+      }
+      case 'pair_component':
+        break;
+      default: {
+        const unhandled: never = d.basis;
+        throw new Error(`unhandled pair-disposition basis ${String(unhandled)}`);
+      }
     }
   }
 }

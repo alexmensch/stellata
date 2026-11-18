@@ -65,7 +65,7 @@ scripts/catalog/membership/
                                   the build lacks.
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, checks the pair dispositions'
-                                  photometry, then runs each phase in order
+                                  witnesses, then runs each phase in order
                                   — the pair rule, binding/spine-settle and
                                   the spine side (repeated until SIMBAD's
                                   check refuses no move), the merge
@@ -90,8 +90,8 @@ scripts/catalog/membership/
                                   pair rule's HIP moves leave them. Pure.
   pair-review-dispositions-       The pair-review queue's dispositions:
     pure.ts (+ test)              columns, closed basis set, reader and its checks, the
-                                  tycho2_photometry and hip2_position
-                                  recomputations, and
+                                  requireWitnessedKeeps, which recomputes
+                                  each basis, and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
     source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the

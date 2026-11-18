@@ -172,7 +172,7 @@ later pass queues it.
 
 **`tycho2_photometry` is recomputed, not taken on trust.** A disposition on
 that basis keeps the entry whose `VT` is nearest Hipparcos's printed V for the
-HIP, and `requirePhotometricKeeps` fails the build where it does not, where
+HIP, and `requireWitnessedKeeps` fails the build where it does not, where
 the two nearest tie, or where either magnitude is missing. It reads `VT`, not
 the Johnson V the printed-V cascade reduces from `BT` and `VT`: Tycho-2 prints
 no `BT` for the fainter entry of most close pairs, and a ranking of two
@@ -184,7 +184,7 @@ queue is `stellata-hooj.17.11.5`.
 **`hip2_position` is recomputed too.** A disposition on that basis keeps the
 entry HIP2's carried position falls on alone, inside the Hipparcos tolerance
 ([The two witnesses](../positional-witness/README.md#the-two-witnesses)), and
-`requirePositionalKeeps` fails the build where the witness returns `none`,
+`requireWitnessedKeeps` fails the build where the witness returns `none`,
 `several`, another entry, or nothing to carry. It settles the queued rows a
 second witness contradicts Gaia on, or Gaia cannot separate: the pair rule
 asks HIP2's position only where Gaia names no source, so on a `gate_refused`

@@ -21,7 +21,7 @@ import {
 import type { SimbadTycHdRow } from '../simbad/simbad-tyc-hd-parse';
 import { lookupGliese } from '../gliese-parse-pure';
 import { refusalRows, type CatalogueKeys, type FlamsteedRefusalRow } from '../simbad/flamsteed-refusals-pure';
-import { requirePhotometricKeeps, requirePositionalKeeps, type PairDisposition } from './pair-review-dispositions-pure';
+import { requireWitnessedKeeps, type PairDisposition } from './pair-review-dispositions-pure';
 import type { MagnitudeTermSelection } from './magnitude-term/magnitude-term-pure';
 import {
   membershipLedgers,
@@ -91,8 +91,11 @@ export function buildMembership(input: MembershipInput): MembershipResult {
   const correctedSpine = applySpineCorrections(input.spine, corrections);
   const { corrected, keptSpineIndex, folds } = correctedSpine;
   const pairLinks = pairLinksFrom(tables);
-  requirePhotometricKeeps(input.pairDispositions, evidence.printedV.printed_hip, (tyc) => tables.tycho2.get(tyc)?.vtMag ?? null);
-  requirePositionalKeeps(input.pairDispositions, pairLinks.positionWitness);
+  requireWitnessedKeeps(input.pairDispositions, {
+    printedHipV: evidence.printedV.printed_hip,
+    vtOf: (tyc) => tables.tycho2.get(tyc)?.vtMag ?? null,
+    positionWitness: pairLinks.positionWitness,
+  });
   const derive = rowDeriver(tables, idx, evidence, input.positions);
   const keyOf = (keptRow: number): string => keys.spine(keptSpineIndex[keptRow]);
   const tycHds = requestedTycHds(input.simbadTycHd, pairRuleTycHdRequest(tables.iv25.map((r) => r.tyc), tables.tycho2));
