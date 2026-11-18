@@ -35,6 +35,7 @@ const KNOWN_OVERLAPS = new Map([
   [namedRow('multiples:05355-0516-Aa,Ab/Ab', { other: 'multiples:05355-0516-Aa1,Aa2/Aa2' }), 'WDS 05355-0516: Ab of Aa,Ab and Aa2 of Aa1,Aa2, companions of Aa at two levels'],
   [namedRow('multiples:06035+1941-AB/B', { other: 'multiples:06035+1941-Aa,Ab/Ab' }), 'WDS 06035+1941: B of AB and Ab of Aa,Ab, companions of A at two levels'],
   [namedRow('multiples:06290+2013-Aa,Ab/Ab', { other: 'multiples:06290+2013-Aa1,2/2' }), 'WDS 06290+2013: Ab of Aa,Ab and 2 of Aa1,2, companions of Aa at two levels'],
+  [namedRow('multiples:08480+0308-AB/B', { other: 'multiples:08480+0308-AC/C' }), 'WDS 08480+0308: B and C, siblings of A, listed by WDS at one position'],
   [namedRow('multiples:09124-0707-AB/B', { other: 'multiples:09124-0707-Aa,Ab/Ab' }), 'WDS 09124-0707: B of AB and Ab of Aa,Ab, companions of A at two levels'],
   [namedRow('multiples:09276-3500-AB/B', { other: 'multiples:09276-3500-Aa,Ab/Ab' }), 'WDS 09276-3500: B of AB and Ab of Aa,Ab, companions of A at two levels'],
   [namedRow('multiples:10067+1754-Aa,Ab/Ab', { other: 'multiples:10067+1754-Aa,Ac/Ac' }), 'WDS 10067+1754: Ab and Ac, siblings of Aa'],
