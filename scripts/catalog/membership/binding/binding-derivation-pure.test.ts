@@ -385,6 +385,16 @@ describe('the position witness', () => {
     ])).position?.witness).toMatchObject({ sourceId: '500', others: 0 });
   });
 
+  it('leaves a row SIMBAD names a refused source for to the identity witness, confirmed or not', () => {
+    const index = indexSimbadSources(new Map([['far', { oid: 0, hip: 37096, tyc: null, gj: null }]]), []);
+    const unconfirmed: PositionEvidence = { ...near(37096, [fPup]), hipparcos: () => ({ raDeg: 0, decDeg: 0 }),
+      gaia: () => ({ raDeg: 10, decDeg: 10, pmRaMasyr: 0, pmDecMasyr: 0, refEpoch: 2016 }) };
+    const d = deriveBinding(candidates({ simbad: 'far' }),
+      rowGateEvidence({ tyc: '', hip: '37096', gl: '' }, evidence, index, unconfirmed));
+    expect(d).toMatchObject({ sourceId: null, position: null });
+    expect(isUnconfirmed(d)).toBe(true);
+  });
+
   it('never outranks a candidate that passes on its own', () => {
     expect(derive({ hip: 'other' }, 37096, near(37096, [fPup]))).toMatchObject({ sourceId: 'other', rescue: null, position: null });
   });

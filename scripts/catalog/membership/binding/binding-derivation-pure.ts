@@ -311,7 +311,8 @@ export function deriveBinding(
     ? { index: component, by: 'component' }
     : named?.confirmed ? { index: named.index, by: 'identity' } : null;
   const [taken] = rescue === null ? [] : rejected.splice(rescue.index, 1);
-  const position = passed === null && taken === undefined ? positionRescue(ranked, rejected, gate.position) : null;
+  const position = passed === null && named === null && taken === undefined
+    ? positionRescue(ranked, rejected, gate.position) : null;
   const won = passed ?? taken ?? position?.won ?? null;
   return {
     sourceId: won?.sourceId ?? null,

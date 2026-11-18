@@ -198,7 +198,10 @@ the same star. 211 HIPs sat within 1″ of a floor source while binding none;
 <!-- count:membership-manifest/membership.binding.positioned -->170<!-- /count --> spine rows and <!-- count:membership-manifest/membership.addition-binding.positioned -->3<!-- /count --> additions now bind by position, <!-- count:membership-manifest/membership.binding.position-disputed -->15<!-- /count --> more
 queued as disputed, and the rest's only such source is a companion the
 sibling arm refuses (below). Where every candidate has
-refused, or there was none, and neither witness above binds, HIP2 carried
+refused, or there was none, and neither witness above binds — nor has the
+identity witness named a source its position does not confirm, which keeps
+that rule's outcome (no source, queued where the source is a magnitude-term
+row) — HIP2 carried
 forward to the source's epoch by its own proper motion is held against the
 floor's kept sources (`magnitude-term/`'s `keptNearHip`), and one within
 1″ binds ([A HIP against the floor's sources](../positional-witness/README.md#a-hip-against-the-floors-sources)).
