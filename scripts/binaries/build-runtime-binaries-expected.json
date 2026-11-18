@@ -1,18 +1,18 @@
 {
   "stages": {
     "encode": {
-      "pairs_total": 18670,
-      "pairs_with_orbit": 3391,
-      "pairs_with_inclination": 2891,
-      "pairs_inner_of_hierarchy": 1827
+      "pairs_total": 20385,
+      "pairs_with_orbit": 3423,
+      "pairs_with_inclination": 2885,
+      "pairs_inner_of_hierarchy": 2050
     },
     "runtime-pairs": {
-      "runtime-pairs.emitted": 14452,
-      "runtime-pairs.dropped.primary-unresolved": 3036,
-      "runtime-pairs.dropped.secondary-unresolved": 760,
-      "runtime-pairs.dropped.degenerate-idx": 417,
-      "runtime-pairs.dropped.same-relation-alias": 3,
-      "runtime-pairs.dropped.duplicate-relation": 2
+      "runtime-pairs.emitted": 16650,
+      "runtime-pairs.dropped.primary-unresolved": 2441,
+      "runtime-pairs.dropped.secondary-unresolved": 766,
+      "runtime-pairs.dropped.degenerate-idx": 520,
+      "runtime-pairs.dropped.same-relation-alias": 5,
+      "runtime-pairs.dropped.duplicate-relation": 3
     }
   }
 }

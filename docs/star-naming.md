@@ -322,7 +322,7 @@ Two couplings the composer gets right, both latent bugs before it:
   attribute (hover line, focus-card Constellation row, `highlightCon`,
   chart centroids).
 - **One composer, both sides.** `catalog.bin`'s name table carries the
-  authority tiers — <!-- count:build-catalog/nameTableEntries -->724<!-- /count --> records, so first paint has names — and the
+  authority tiers — <!-- count:build-catalog/nameTableEntries -->718<!-- /count --> records, so first paint has names — and the
   runtime composes every designation below them off `search-index.json`
   through the same pure function, so the two cannot drift.
 

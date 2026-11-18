@@ -277,9 +277,9 @@ which is exactly what `tests/artifact-freshness.test.ts` fails on.
   adds a field per bead.
 
   **The `pm_bibcode` is a gate, not a label.** The PM rescue cascade
-  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/placement.pm-rescue.simbad -->113<!-- /count -->** rows the
+  (`scripts/catalog/distance/pm-rescue/README.md`) reaches **<!-- count:build-catalog/placement.pm-rescue.simbad -->126<!-- /count -->** rows the
   direction cascade states no motion for, and refuses the pull's PM on
-  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->62<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
+  **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->66<!-- /count -->** more because that bibcode names a Gaia release: on a row whose own
   Gaia solution is 2p, serving Gaia's earlier fit back through this index
   would return the motion DR3 declined to state. Same rule the rv tier
   applies to `rvz_bibcode`, same predicate.

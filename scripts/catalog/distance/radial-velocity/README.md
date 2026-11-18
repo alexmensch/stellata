@@ -43,8 +43,8 @@ standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
 Every shipped record's rv outcome is a placement code, pinned the way the
 direction cascade's are: the Gaia tier by its five error bands (below), the
-SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,247<!-- /count -->** and
-`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,481<!-- /count -->**. A parked
+SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,256<!-- /count -->** and
+`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,552<!-- /count -->**. A parked
 row writes no rv step, so none of these counts it. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)
@@ -77,7 +77,7 @@ The gate above refuses a 2p row's spectrum for a physical reason, and SIMBAD
 serves Gaia's own reduction of that same spectrum back under a Gaia catalogue
 bibcode — so on **every** 2p row, the SIMBAD tier **skips** candidates whose
 `rvz_bibcode` names a Gaia release (`isGaiaCatalogueBibcode`), falling to zero
-rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/placement.rv.refused.gaia-release -->436<!-- /count -->** shipped rows
+rather than laundering the distrusted value in. It fires on **<!-- count:build-catalog/placement.rv.refused.gaia-release -->441<!-- /count -->** shipped rows
 (`placement.rv.refused.gaia-release`); the breakdowns below were measured on the build
 before the V ≤ 11 magnitude term, when it fired on 307.
 

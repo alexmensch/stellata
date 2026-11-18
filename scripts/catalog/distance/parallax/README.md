@@ -133,9 +133,9 @@ which moves with every membership change and so cannot be quoted. Over the
 
 | Count | Today | Why it is not a candidate |
 |---|---|---|
-| `pairMemberParallaxEntries` | **<!-- count:build-catalog/pairMemberParallaxEntries -->8,269<!-- /count -->** | kept: anchor-grade, above the floor |
-| `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->6,684<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
-| `pairMemberSiblingNoParallax` | <!-- count:build-catalog/pairMemberSiblingNoParallax -->1,174<!-- /count --> | Gaia has the source and published none |
+| `pairMemberParallaxEntries` | **<!-- count:build-catalog/pairMemberParallaxEntries -->9,119<!-- /count -->** | kept: anchor-grade, above the floor |
+| `pairMemberSiblingNotAnchorGrade` | <!-- count:build-catalog/pairMemberSiblingNotAnchorGrade -->7,819<!-- /count --> | RUWE, a blended image, or a saturated G — `isCoherenceAnchorGrade` |
+| `pairMemberSiblingNoParallax` | <!-- count:build-catalog/pairMemberSiblingNoParallax -->1,697<!-- /count --> | Gaia has the source and published none |
 | `pairMemberSiblingBelowSnFloor` | <!-- count:build-catalog/pairMemberSiblingBelowSnFloor -->1<!-- /count --> | anchor-grade, inversion undefined |
 | `unpulled` | **none**: the build fails, naming each source and its `multiples.tsv` row | the pull carries no row for the source at all |
 
@@ -320,7 +320,7 @@ shape the gate refuses; the bound-sibling tier now places HIP 26549 itself off
 HIP 26551 D's clean fit, so it is no longer a row the gate sees. Promoting such
 a row re-serves a refusal through a courier, the general rule at the head of
 [The skip rules](#the-skip-rules--one-principle-two-publications). The refusal is counted per astrometry route,
-`promotion.dropped.parked-record.other-route` (**<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->8<!-- /count -->**) and
+`promotion.dropped.parked-record.other-route` (**<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->19<!-- /count -->**) and
 `promotion.dropped.parked-record.gaia-5p` (**<!-- count:build-catalog/promotion.dropped.parked-record.gaia-5p -->0<!-- /count -->**), and it matches on the measurement: `refusalStated` compares the
 row's stated distance against every parallax a skip rule refused on that record,
 indexed by the id the pair row names it with.

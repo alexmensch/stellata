@@ -38,7 +38,7 @@ renderable orbits — never from promotion's cursor walk, which records a pair
 before its parent is minted.
 
 Each pair is an `overlap.inside` row
-(<!-- count:build-catalog/overlap.inside -->55<!-- /count -->), and the build log names each pair.
+(<!-- count:build-catalog/overlap.inside -->56<!-- /count -->), and the build log names each pair.
 
 ## Overlap lineage
 

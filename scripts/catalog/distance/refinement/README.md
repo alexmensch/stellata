@@ -197,8 +197,8 @@ Constants in `distance-overrides-pure.ts`:
 
 Every row inside the cone writes its verdict, so the cone's candidates are
 the snap plus its three refusals. At `V ≤ 11` it snaps **<!-- count:build-catalog/placement.distance.lmc-kinematic -->111<!-- /count -->**;
-**<!-- count:build-catalog/placement.distance.lmc-refused-pm-outside-gate -->14,427<!-- /count -->** fail the PM tolerance (MW halo / runaway stars whose PMs sit
-far from the LMC bulk centroid), **<!-- count:build-catalog/placement.distance.lmc-refused-no-pm -->1<!-- /count -->** carries no PM to test, and the
+**<!-- count:build-catalog/placement.distance.lmc-refused-pm-outside-gate -->14,428<!-- /count -->** fail the PM tolerance (MW halo / runaway stars whose PMs sit
+far from the LMC bulk centroid), **<!-- count:build-catalog/placement.distance.lmc-refused-no-pm -->2<!-- /count -->** carries no PM to test, and the
 own-parallax refusals follow.
 
 **The PM gate is not a membership test, and the cone is crowded**, so

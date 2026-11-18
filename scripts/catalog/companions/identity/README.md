@@ -117,7 +117,7 @@ Bb) as well as siblings re-serving the refusal (WDS 01425+5000 comp B). Runs
 **before** the inheritance gates strip the ids, which would leave a synth
 record at whatever the row states. Counted per astrometry route,
 `promotion.dropped.parked-record.other-route`
-(<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->8<!-- /count -->) and `.gaia-5p`; `promotion.fit.owned` (<!-- count:build-catalog/promotion.fit.owned -->0<!-- /count -->)
+(<!-- count:build-catalog/promotion.dropped.parked-record.other-route -->19<!-- /count -->) and `.gaia-5p`; `promotion.fit.owned` (<!-- count:build-catalog/promotion.fit.owned -->0<!-- /count -->)
 counts refused rows carrying an owned id on a per-component route — what a
 non-zero means, the tolerance and the wider-join caveat in
 [Companion promotion](../../distance/parallax/README.md#companion-promotion-may-not-walk-a-refused-measurement-back-in).

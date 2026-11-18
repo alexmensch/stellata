@@ -127,7 +127,7 @@ name:
   list.
 - `brightness.anchor-collocated`: none.
 
-`brightness.inherited-twin` (<!-- count:build-catalog/promotion.brightness.inherited-twin -->534<!-- /count -->)
+`brightness.inherited-twin` (<!-- count:build-catalog/promotion.brightness.inherited-twin -->529<!-- /count -->)
 is a genuine count, pinned exactly in the snapshot and never listed row by
 row: each is a pair with a renderable orbit whose companion has no published
 per-component type yet. Curating types into

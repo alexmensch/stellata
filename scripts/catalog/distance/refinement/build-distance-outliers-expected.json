@@ -367,6 +367,13 @@
       "finalDist": 1133.179,
       "logRatio": -1.494,
       "reason": "Bailer-Jones posterior replacing a catastrophic 1/π inversion — the DR3 parallax is at or below its own error (S/N 0.11, RUWE 13.54), so the naive inversion runs to 35,336 pc. The photogeometric posterior returns 1,133 pc. This is precisely the low-S/N tail Layer 1 exists for; the ratio is large because the input was meaningless, not because the override moved a measured star. A magnitude-term record, admitted by the V <= 11 floor."
+    },
+    {
+      "id": "gaia:83339957728648448",
+      "plxVia": "gaia_dr3_inversion",
+      "plxDist": 7127.584,
+      "finalDist": 174.282,
+      "logRatio": -1.612
     }
   ],
   "simbad": [

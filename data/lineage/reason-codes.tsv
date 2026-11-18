@@ -486,6 +486,7 @@ pairs.rejected.gaia	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair 
 pairs.rejected.mag-heuristic	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair on the magnitude-gap backstop (|Δmag| > 5). A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
 pairs.rejected.sep-limit	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair: its components sit over 1 pc apart in 3D. A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
 pairs.rejected.wds-notes	pairs	retire	outcome	live		7.1.31	Stage 5 rejected the pair on a WDS note flag marking it optical (S, U, X, Y). A component it names that no kept pair names leaves multiples.tsv, so a SID keyed on that component's synthetic key retires.
+placement.deferred.binary-component	placement	none	outcome	live		7.2.6	No parallax tier reaches the record, but a multiples.tsv secondary carries its Gaia source as its own, so companion promotion places it from its pair.
 placement.direction.cns5	placement	none	outcome	live		7.1.6	The record's own GJ in CNS5, which no tier above reaches.
 placement.direction.curated	placement	none	outcome	live		7.1.6	Sol: the direction is arbitrary at distance zero.
 placement.direction.gaia-2p	placement	none	outcome	live		7.1.6	The record's own Gaia DR3 position-only solution, which no Hipparcos-2 row covers.

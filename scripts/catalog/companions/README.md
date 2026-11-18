@@ -97,7 +97,7 @@ and never reach the anchor's record.
 binaries pipeline output and adds first-class catalog records for
 the secondary of every physical pair whose identifier isn't already
 a record the membership manifest admitted: ~<!-- count:build-catalog/promotion.minted.keyed k2 -->3.5k<!-- /count --> companions
-via real Gaia/HIP keys and ~<!-- count:build-catalog/promotion.minted.synthetic k3 -->11.2k<!-- /count --> via synthetic identifiers
+via real Gaia/HIP keys and ~<!-- count:build-catalog/promotion.minted.synthetic k3 -->12.3k<!-- /count --> via synthetic identifiers
 in the current build (Sirius B, Achird B, Porrima B, Fomalhaut C, Algol Ab, …;
 see [Promotion identity](identity/README.md)).
 
@@ -256,7 +256,7 @@ Per-row gates and resolution:
   evolved companions but strictly less wrong than the primary's type;
   curated overrides / SIMBAD per-component types take precedence, and
   no `spectDisplay` is claimed for the estimate. Counted
-  `promotion.spectral.ms-from-own-absmag` (~<!-- count:build-catalog/promotion.spectral.ms-from-own-absmag k3 -->13.4k<!-- /count --> minted records). Rows
+  `promotion.spectral.ms-from-own-absmag` (~<!-- count:build-catalog/promotion.spectral.ms-from-own-absmag k3 -->14.6k<!-- /count --> minted records). Rows
   with neither fall back to `SPECTRAL_UNKNOWN`.
 Promoted records carry `FLAG_BINARY_COMPANION_ONLY = 0x08`, and
 additionally `FLAG_BINARY_COMPANION_SYNTHETIC = 0x20` when the

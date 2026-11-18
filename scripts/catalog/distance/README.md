@@ -94,7 +94,7 @@ same trust cascade the binaries pipeline implements in
 | Route | Gate | Rows |
 | --- | --- | --- |
 | `gaia_5p` | Default: the row resolves to a source_id with a 5p row (`data/gaia/gaia_dr3_astrometry.tsv`, J2016.0) and non-null parallax. | ~<!-- count:build-catalog/placement.direction.gaia-5p k4 -->930.1k<!-- /count --> |
-| `gaia_2p` | The fall-through for a 2p position-only Gaia row with no HIP2 cover: the Gaia position, no proper motion of its own. | <!-- count:build-catalog/placement.direction.gaia-2p -->279<!-- /count --> |
+| `gaia_2p` | The fall-through for a 2p position-only Gaia row with no HIP2 cover: the Gaia position, no proper motion of its own. | <!-- count:build-catalog/placement.direction.gaia-2p -->354<!-- /count --> |
 | `gaia_nss_systemic` | Source has an NSS two-body orbit AND the 5p fit is flagged unreliable (RUWE / ipd). Same Gaia row values — DR3 refits `gaia_source` to the centre of mass for NSS sources — the tag carries provenance parity with Stage 3. | ~<!-- count:build-catalog/placement.direction.gaia-nss-systemic k3 -->32.1k<!-- /count --> |
 | `hip2_saturated` | No usable Gaia parallax (no source_id, no 5p row, or parallax NULL) and HIP2 covers the HIP. The Gaia-saturated bright set: Sirius, Vega, α Cen, Capella, … (J1991.25). | ~<!-- count:build-catalog/placement.direction.hip2-saturated k2 -->2.1k<!-- /count --> |
 | `hip2_pm_discrepant` | Gaia 5p present but Gaia-vs-HIP2 PM disagrees by > 50 mas/yr on either axis — orbit-corrupted 5p PM; HIP2's long baseline is closer to systemic. Unlike Stage 3 there is no ρ ≤ 5″ companion gate (no per-row WDS context at catalog build); the PM discrepancy alone routes. | ~<!-- count:build-catalog/placement.direction.hip2-pm-discrepant -->154<!-- /count --> |
