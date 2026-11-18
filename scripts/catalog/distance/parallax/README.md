@@ -23,8 +23,6 @@ scripts/catalog/distance/parallax/
     (+ test)                    pair rows × the DR3 astrometry table, per WDS
                                 root. Built once before the walk, in
                                 ../../parse/read-stars-inputs.ts.
-                                isPairMemberSource: whether a pair row
-                                carries a source, the walk's defer test.
   simbad-sourced-ledger-tsv.ts  The `simbad_plx` records, by the two keys a
     (+ test)                    SIMBAD-based validator joins on — /docs/catalog-driver.md#5-per-field-cascades-and-rescue-tiers's
                                 validation independence, and the file's codec
@@ -52,8 +50,8 @@ shared cascade shape (`../../cascade-result.ts`): the tier and its parallax, or
 `none`, and on either every parallax the floor or a skip rule refused, with
 the tier and the reason. A `none` with refusals parks as
 `refused_no_defensible_parallax`; one without, `no_parallax_published`,
-unless a pair row of `multiples.tsv` carries the record's Gaia source
-(`isPairMemberSource`), when the walk defers it to the companion promotion
+unless a `multiples.tsv` secondary carries the record's Gaia source as its
+own (`companionOwnGaiaSources`), when the walk defers it to the companion promotion
 mints ([Per-row pipeline](../../parse/README.md#per-row-pipeline)).
 
 | Tier | Key | Rows |

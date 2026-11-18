@@ -150,8 +150,9 @@ label-merge/README.md).
 
 **A row leaves the walk without a record only by parking or deferring.** A
 row step 0 reaches with no parallax published and no refusal, whose Gaia
-source a pair row of `multiples.tsv` carries (`isPairMemberSource`, over the
-bound-sibling index), **defers** under `placement.deferred.binary-component`:
+source a `multiples.tsv` secondary carries as its own — not its pair
+primary's (`companionOwnGaiaSources`) — **defers** under
+`placement.deferred.binary-component`:
 companion promotion mints that component carrying the source, so the record
 ships as the companion and keeps its SID. A deferred row promotion does not
 mint leaves its SID with no decision, and allocation fails naming it. A
@@ -166,7 +167,7 @@ never a membership decision — so the walk throws, naming the row.
    Every tier is a catalogue this build pulled itself. A row no tier reaches
    **parks** — `no_parallax_published`, or `refused_no_defensible_parallax`
    where a parallax existed but no tier would defend it — unless it defers to
-   the pair component that carries its Gaia source (above).
+   the companion that carries its Gaia source as its own (above).
 1. **Johnson V** (`resolveVMagnitude`). See [The V cascade](../photometry/README.md#the-v-cascade).
    A row no tier lights **parks** as `no_v_magnitude`: a record needs
    both a place and a brightness. The tier that won is kept on the record as

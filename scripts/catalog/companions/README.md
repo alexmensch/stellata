@@ -42,7 +42,11 @@ scripts/catalog/companions/
                                   (../../binaries/multiples-tsv.ts) and
                                   hands promotion each row with its anchor
                                   offset already parsed, never the raw
-                                  anchor cells.
+                                  anchor cells. companionOwnGaiaSources:
+                                  the sources secondaries carry as their
+                                  own, which the record walk defers to
+                                  promotion
+                                  (../parse/README.md#per-row-pipeline).
   subfolder-boundary.test.ts      No file under a subfolder imports
                                   companion-promotion.ts: the wiring
                                   imports them, never the reverse.

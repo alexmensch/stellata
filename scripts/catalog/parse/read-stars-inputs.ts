@@ -20,7 +20,7 @@ import { CNS5 } from '../classic-ids/cns5-source';
 import { cns5AstrometryByGj } from '../classic-ids/classic-ids-parse';
 import { createConstellationAssignment, iauEdgeRecords } from './constellations/constellations';
 import { STELLARIUM } from './constellations/stellarium-source';
-import { readMultiplesTsv } from '../companions/multiples-row';
+import { companionOwnGaiaSources, readMultiplesTsv } from '../companions/multiples-row';
 import { buildPairMemberParallaxIndex, unpulledSiblingsMessage } from '../distance/parallax/pair-member-parallax';
 import { addMagnitudeTermAstrometry } from '../membership/magnitude-term/magnitude-term';
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
@@ -146,9 +146,11 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   );
   const gliese = timed('Parsing printed Gliese V/70A values', () => GLIESE.read(), (g) => `${g.rowCount} rows`);
 
+  const multiples = readMultiplesTsv();
+  const companionGaiaSources = companionOwnGaiaSources(multiples);
   const pairMemberParallax = timed(
     'Indexing bound-pair sibling parallaxes',
-    () => buildPairMemberParallaxIndex(readMultiplesTsv(), directions.gaiaAstrometry),
+    () => buildPairMemberParallaxIndex(multiples, directions.gaiaAstrometry),
     ({ entryCount, refused }) => `${entryCount} anchor-grade siblings; refused `
       + `no-parallax ${refused.noParallax}, `
       + `not-anchor-grade ${refused.notAnchorGrade}, `
@@ -191,6 +193,6 @@ export async function loadReadStarsInputs(): Promise<ReadStarsInputs> {
   return {
     curatedRecords: CURATED_RECORDS,
     bailerJones, apsisMap, gspcMap, simbadSpectral, sptypeOverrides, simbadValues, directions,
-    hipVMag, hipBv, gliese, pairMemberParallax, dustGrid, conAssignment, counts,
+    hipVMag, hipBv, gliese, pairMemberParallax, companionGaiaSources, dustGrid, conAssignment, counts,
   };
 }

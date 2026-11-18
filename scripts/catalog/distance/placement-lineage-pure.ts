@@ -182,7 +182,7 @@ export const PLACEMENT_CODES = stageCodes(PLACEMENT_LINEAGE.stage, {
   'park.no-parallax-published': outcomeCode('No parallax tier reaches the record, so it cannot be placed.', PARK),
   'park.no-v-magnitude': outcomeCode('No V tier lights the record, so it has no brightness.', PARK),
   'park.no-position': outcomeCode('No direction tier states where the record is on the sky.', PARK),
-  'deferred.binary-component': outcomeCode('No parallax tier reaches the record, but a pair row of multiples.tsv carries its Gaia source, so companion promotion places it from its pair.'),
+  'deferred.binary-component': outcomeCode('No parallax tier reaches the record, but a multiples.tsv secondary carries its Gaia source as its own, so companion promotion places it from its pair.'),
 });
 
 type Branch = Parameters<typeof PLACEMENT_CODES.code>[0];

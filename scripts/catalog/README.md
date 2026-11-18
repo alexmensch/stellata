@@ -12,7 +12,7 @@ Run via `pnpm run build:catalog`.
 
 Membership is `data/membership/membership-manifest.tsv` less the [§ 6.1](/docs/catalog-driver.md#61-record-parity) parks,
 and nothing else — `data/athyg/` left this build's input set entirely. A row
-the walk defers to a pair component ships as the companion promotion mints
+the walk defers to a companion ships as the companion promotion mints
 ([Per-row pipeline](parse/README.md#per-row-pipeline)). Classic
 designations arrive already merged, so this build applies no label layer of its
 own. Contract: `docs/catalog-driver.md`; term: `membership/README.md`.

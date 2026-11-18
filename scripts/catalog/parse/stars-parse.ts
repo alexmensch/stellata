@@ -50,7 +50,7 @@ import {
 } from '../distance/placement-lineage-pure';
 import {
   emptyPairMemberParallaxIndex,
-  isPairMemberSource, lookupPairMemberParallax,
+  lookupPairMemberParallax,
   type PairMemberParallaxIndex,
 } from '../distance/parallax/pair-member-parallax';
 import { resolvePmRescue } from '../distance/pm-rescue/pm-rescue';
@@ -288,6 +288,8 @@ export interface ReadStarsOptions {
    *  cascade's tier below SIMBAD. Absent parks the rows it would have
    *  rescued. */
   pairMemberParallax?: PairMemberParallaxIndex;
+  /** README.md#per-row-pipeline. */
+  companionGaiaSources?: ReadonlySet<string>;
   dustGrid?: DustGrid | null;
 }
 
@@ -332,6 +334,7 @@ export function rowResolver({
   hipBv = new Map(),
   gliese = emptyGlieseIndex(),
   pairMemberParallax = emptyPairMemberParallaxIndex(),
+  companionGaiaSources = new Set(),
   dustGrid = null,
 }: ReadStarsOptions): (row: ManifestRecord) => RowOutcome {
   const printedVLookup = printedVLookups(hipVMag, directions.tycho2, gliese);
@@ -389,7 +392,7 @@ export function rowResolver({
       },
     );
     if (plxRes.via === 'none' && plxRes.refusals.length === 0
-        && gaiaSourceId !== null && isPairMemberSource(pairMemberParallax, gaiaSourceId)) {
+        && gaiaSourceId !== null && companionGaiaSources.has(gaiaSourceId)) {
       return { kind: 'deferred', placement: { kind: 'deferred-to-component', key, parallax: plxRes }, brightness: null };
     }
     // Not a `dropped` gate: a park is a deliberate record-parity ledger entry (/docs/catalog-driver.md#61-record-parity).

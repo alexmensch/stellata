@@ -21,6 +21,18 @@ export function parseMultiplesTsv(text: string): MultiplesTsvRow[] {
   return MULTIPLES_TSV.parse(text).map(promotionRow);
 }
 
+/** Gaia sources a secondary row carries as its own: not its pair primary's, which a blended photocentre shares. */
+export function companionOwnGaiaSources(rows: readonly MultiplesTsvRow[]): ReadonlySet<string> {
+  const primaryGaia = new Map<string, string | null>();
+  for (const row of rows) if (row.orbitRole === 'primary') primaryGaia.set(row.systemId, row.gaiaSourceId);
+  const own = new Set<string>();
+  for (const row of rows) {
+    if (row.orbitRole === 'secondary' && row.gaiaSourceId !== null
+        && row.gaiaSourceId !== primaryGaia.get(row.systemId)) own.add(row.gaiaSourceId);
+  }
+  return own;
+}
+
 export function readMultiplesTsv(): MultiplesTsvRow[] {
   return readArtifact(MULTIPLES_TSV).map(promotionRow);
 }

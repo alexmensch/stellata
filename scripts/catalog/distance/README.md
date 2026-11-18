@@ -328,7 +328,7 @@ ran, in walk order, up to the park that stopped it or the record it shipped.
 - every step writes its outcome code and its refused candidates, the
   candidate's tier in `params`; a refusal code names the rule, never the tier;
 - parallax always, then `deferred.binary-component` for a row deferred to the
-  pair component carrying its Gaia source
+  companion carrying its Gaia source as its own
   ([Per-row pipeline](../parse/README.md#per-row-pipeline)), effect `none`;
 - otherwise direction too, then the park for a parked row; a placed
   row adds the PM rescue where it ran, Bailer-Jones where it fired, the LMC
