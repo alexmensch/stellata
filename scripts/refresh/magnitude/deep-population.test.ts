@@ -90,10 +90,41 @@ describe('a deep-population pull', () => {
 });
 
 describe('the Apsis and Bailer-Jones pulls', () => {
-  it('ask Bailer-Jones of ESA alone, whose archive names external.gaiaedr3_distance, and Apsis of both mirrors', () => {
-    expect(describePhasedPull(bailerJonesPull([1n])).services).toEqual(['ESA-sync']);
+  it('ask both mirrors, Bailer-Jones stating ARI\'s query under its own table name in every phase', () => {
+    const bailerJones = describePhasedPull(bailerJonesPull([1n]));
+    expect(bailerJones.services).toEqual(['ESA-sync', 'ARI-sync']);
+    const { phases } = JSON.parse(bailerJones.query);
+    for (const phase of [phases.magnitude, phases.request]) {
+      expect(phase.query).toContain('FROM external.gaiaedr3_distance');
+      expect(phase.mirrors['ARI-sync']).toBe(phase.query.replace('external.gaiaedr3_distance', 'gaiaedr3_complements.distances'));
+    }
     expect(describePhasedPull(apsisPull([1n])).services).toEqual(['ESA-sync', 'ARI-sync']);
+    expect(JSON.parse(describePhasedPull(apsisPull([1n])).query).phases.magnitude.mirrors).toBeUndefined();
   });
+
+  it.each([['ESA', 'esac', 'gaiaedr3_complements.distances', 'ARI-sync'], ['ARI', 'heidelberg', 'external.gaiaedr3_distance', 'ESA-sync']])(
+    'Bailer-Jones answers from the other mirror under its own table name when %s is down',
+    async (_, down, table, answering) => {
+      const asked: string[] = [];
+      const reported: string[] = [];
+      const header = 'source_id,r_med_geo,r_lo_geo,r_hi_geo,r_med_photogeo,r_lo_photogeo,r_hi_photogeo,flag\n';
+      const d: TapClientDeps = {
+        ...QUIET_DEPS,
+        report: (service) => reported.push(service),
+        transport: async (url, form) => {
+          if (url.includes(down)) return textReply(503, 'text/html', '<html>Maintenance ongoing!</html>');
+          if (!form) return textReply(200, 'text/xml', '<capabilities/>');
+          asked.push(form.get('QUERY') ?? '');
+          return textReply(200, 'text/csv', header);
+        },
+      };
+      const pull = { ...bailerJonesPull([1n]), outputs: declareOutputs({ table: join(dir, 'bj.tsv') }) };
+      await expect(runPhasedPull(pull, d)).rejects.toThrow(EmissionRefused);
+      expect(asked).toHaveLength(53);
+      expect(asked.every((adql) => adql.includes(`FROM ${table}`))).toBe(true);
+      expect(new Set(reported)).toEqual(new Set([answering]));
+    },
+  );
 });
 
 /** Ten Apsis rows: the first `both` with gspphot Teff and log g, each with spectral type `types[i]` (resolved 'K' past the list). */

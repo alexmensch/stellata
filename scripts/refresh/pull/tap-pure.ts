@@ -11,6 +11,8 @@ export interface TapMirror {
   readonly protocol: 'tap' | 'asu';
   /** False until the live checks in README.md#the-tap-backend pass against it; a committed record it answered fails the suite. */
   readonly verified: boolean;
+  /** Each table this mirror hosts under another name, keyed by its archive's name for it: the name a query is written in. */
+  readonly tables?: Readonly<Record<string, string>>;
 }
 
 export interface TapArchive {
@@ -41,17 +43,34 @@ export const GAIA_DR3_RELEASE = 'Gaia DR3';
 /** The most rows a sliced Gaia pull puts in one slice: at LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
 export const GAIA_SLICE_ROWS = 24_000;
 
-const ESA_SYNC: TapMirror = { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' };
-
+/** Gaia's tables under ESA's names; ARI hosts ESA's `external.*` copies under its own schemas. */
 export const GAIA: TapArchive = {
-  mirrors: [ESA_SYNC, { name: 'ARI-sync', protocol: 'tap', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' }],
+  mirrors: [
+    { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },
+    {
+      name: 'ARI-sync', protocol: 'tap', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap',
+      tables: { 'external.gaiaedr3_distance': 'gaiaedr3_complements.distances' },
+    },
+  ],
   format: 'csv',
   retryDelaysMs: [2_000, 4_000, 8_000, 16_000],
   quote: bare,
 };
 
-/** For a table only ESA publishes under its query's name: ARI hosts `external.*` under other schema names. */
-export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** The ADQL as `mirror` is sent it: every table it hosts under another name renamed, wherever the query names it. */
+export function mirrorAdql(mirror: TapMirror, adql: string): string {
+  return Object.entries(mirror.tables ?? {}).reduce(
+    (text, [archive, own]) => text.replace(new RegExp(`(?<![\\w."])${escapeRegExp(archive)}(?![\\w"])`, 'g'), own),
+    adql,
+  );
+}
+
+/** Each mirror's form of `adql` that differs from the archive's, by mirror name. */
+export function mirrorForms(archive: TapArchive, adql: string): Record<string, string> {
+  return Object.fromEntries(archive.mirrors.map((m) => [m.name, mirrorAdql(m, adql)]).filter(([, text]) => text !== adql));
+}
 
 /** FITS, so a double reaches the TSV as stored: CDS's CSV and CfA's ASU text each round it their own way (README.md#fits-replies). */
 export const VIZIER: TapArchive = {
@@ -298,7 +317,7 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     ({ body: csvText(result.columns, result.rows), result, service: mirror.name });
 
   const askTap = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
-    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(adql, limit, archive.format));
+    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(mirrorAdql(mirror, adql), limit, archive.format));
     if (!answers(reply, archive.format)) throw replyError(reply, mirror.name);
     if (archive.format === 'csv') {
       const body = replyText(reply);

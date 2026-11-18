@@ -11,7 +11,7 @@ import {
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
 import { sliceConditions, type SliceEdges } from './slices-pure';
 import {
-  readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapArchive, type TapClientDeps, type Transport,
+  mirrorForms, readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapArchive, type TapClientDeps, type Transport,
 } from './tap-pure';
 
 /** A whole table in one query; `asu` is that query as an ASU mirror asks it, required where the archive has one. */
@@ -205,23 +205,25 @@ const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.colu
 
 const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
 
-/** A query besides its template: a sliced scope's ranges and a whole table's ASU form. */
-function queryExtras(scope: Scope | PhaseScope): object {
+/** A query besides its template: a sliced scope's ranges, a whole table's ASU form, and each mirror's differing template. */
+function queryExtras(scope: Scope | PhaseScope, template: string, archive: TapArchive): object {
+  const mirrors = mirrorForms(archive, template);
   return {
     ...(scope.kind === 'sliced' ? { slices: sliceConditions(scope.key, scope.edges) } : {}),
     ...asuOf(scope),
+    ...(Object.keys(mirrors).length > 0 ? { mirrors } : {}),
   };
 }
 
 /** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
 function tableDescription(table: PullTable, archive: TapArchive): object {
   const query = queryTemplate(table, archive.quote);
-  return { query, ...queryExtras(table.scope), formats: formatsOf(table), sortBy: table.sortBy };
+  return { query, ...queryExtras(table.scope, query, archive), formats: formatsOf(table), sortBy: table.sortBy };
 }
 
 function phaseDescription(phase: Phase, archive: TapArchive): object | string {
   const query = phaseTemplate(phase, archive.quote);
-  const extras = queryExtras(phase.scope);
+  const extras = queryExtras(phase.scope, query, archive);
   return Object.keys(extras).length > 0 ? { query, ...extras } : query;
 }
 
@@ -330,11 +332,12 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
     const queries = archiveQueries(phase, ids, pull.archive.quote);
     const rows: Row[] = [];
     for (const [i, query] of queries.entries()) {
-      const cached = cache.load(query.adql);
+      const sent = mirrorForms(pull.archive, query.adql);
+      const cached = [query.adql, ...Object.values(sent)].map((text) => cache.load(text)).find((c) => c !== null) ?? null;
       if (cached?.service) report(cached.service);
       const result = cached === null ? await client.query(query, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
       const checked = checkedRows(phase.columns, result.result, name);
-      if (cached === null) cache.save(query.adql, result);
+      if (cached === null) cache.save((result.service === null ? undefined : sent[result.service]) ?? query.adql, result);
       for (const row of checked) rows.push(row);
       deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
       if (phase.scope.kind !== 'request' && rows.length > phase.scope.maxRows) {

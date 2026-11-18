@@ -122,6 +122,31 @@ describe('runPull', () => {
     expect(() => seeded.load('SELECT 1')).toThrow(/no record of the service/);
   });
 
+  it('caches a reply under the text its mirror was sent, and replays it whichever mirror is up', async () => {
+    const renamed = { ...STARS, from: 'external.gaiaedr3_distance' };
+    const asked: string[] = [];
+    const esaDown: TapClientDeps = {
+      ...QUIET_DEPS,
+      transport: async (url, form) => {
+        if (url.includes('esac')) return textReply(503, 'text/html', '<html>Maintenance ongoing!</html>');
+        if (!form) return textReply(200, 'text/xml', '<capabilities/>');
+        const adql = form.get('QUERY') ?? '';
+        asked.push(adql);
+        return textReply(200, 'text/csv', GOOD(adql));
+      },
+    };
+    const drifted = { ...renamed, band: { min: 9, max: 9 } };
+    await expect(runPull(pullOf({ stars: drifted, pairs: PAIRS }), esaDown)).rejects.toThrow(EmissionRefused);
+    const [atAri] = batchQueries(renamed, GAIA.quote).map((adql) => adql.replace('external.gaiaedr3_distance', 'gaiaedr3_complements.distances'));
+    expect(asked[0]).toBe(atAri);
+    expect(checkpoint(ckpt()).load(atAri)?.service).toBe('ARI-sync');
+
+    const replay = deps(GOOD);
+    await runPull(pullOf({ stars: renamed, pairs: PAIRS }), replay.deps);
+    expect(replay.asked).toEqual([]);
+    expect(replay.reported).toContain('ARI-sync');
+  });
+
   it('a changed query invalidates its checkpointed answer', async () => {
     const first = deps(GOOD);
     const drifted = { ...STARS, band: { min: 9, max: 9 } };
