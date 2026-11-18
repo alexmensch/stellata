@@ -4,10 +4,11 @@ import { SPINE_COLUMNS, type SpineRow } from '../../spine/inherited-spine-pure';
 import type { LinkTables } from '../../spine/association-audit-pure';
 import { spineKeys } from '../../spine/primaries-audit-pure';
 import {
-  applyEveryPairMove, applyPairRule, hdToHr, iv25TycHds, mergeDivergences, pairOwner, settlePairRule, simbadRefusedMoves,
+  applyEveryPairMove, applyPairRule, hdToHr, mergeDivergences, pairEntries, pairOwner, pairRuleTycHdRequest, requestedTycHds, settlePairRule, simbadRefusedMoves,
   type MergeDivergence, type MergeLinks, type PairDecision, type ShippedCells,
 } from './merge-derivation-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
+import type { WitnessVerdict } from '../positional-witness/positional-witness-pure';
 import { skyPositionAtEpoch } from '../../../../src/astro-core/equatorial-basis';
 import { TYCHO2_MEAN_EPOCH } from '../../tycho2-parse';
 import { tycho2Row } from '../../tycho2-fixture';
@@ -38,9 +39,14 @@ function links(tycSources: Record<string, string>, hipSource: string | null = 'S
   };
 }
 
-function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = []): MergeLinks {
+const SEPARATIONS = [{ tyc: B, separationArcsec: 0.01 }, { tyc: A, separationArcsec: 2.8 }];
+const ON_B: WitnessVerdict = { kind: 'match', tyc: B, separations: SEPARATIONS };
+const noPosition = (): WitnessVerdict | null => null;
+
+function mergeLinks(l: LinkTables, spine: readonly SpineRow[] = [], position: WitnessVerdict | null = null): MergeLinks {
   return {
     links: l,
+    positionWitness: () => position,
     hipEntries: new Map([[10, [A, B]], [20, ['2-2-2']]]),
     hdHr: new Map([[100, 7], [300, 9]]),
     cns5ByHip: new Map([[20, ['GJ 1234']]]),
@@ -76,14 +82,31 @@ describe('hdToHr', () => {
 });
 
 describe('pairOwner', () => {
+  const owner = (l: LinkTables, position: (hip: number, entries: readonly string[]) => WitnessVerdict | null = noPosition) => (
+    pairOwner(10, [A, B], { links: l, positionWitness: position })
+  );
+
   it('names the entry whose Gaia neighbour is the HIP\'s', () => {
-    expect(pairOwner(10, [A, B], links({ [A]: 'S0', [B]: 'S1' }))).toEqual({ owner: B, sourceId: 'S1' });
+    expect(owner(links({ [A]: 'S0', [B]: 'S1' }))).toEqual({ owner: B, witness: { by: 'gaia', sourceId: 'S1' } });
   });
 
   it('names no owner without a HIP source, a matching entry, or with two', () => {
-    expect(pairOwner(10, [A, B], links({ [A]: 'S1' }, null))).toEqual({ reason: 'no_hip_source' });
-    expect(pairOwner(10, [A, B], links({ [A]: 'S0' }))).toEqual({ reason: 'no_entry_matches' });
-    expect(pairOwner(10, [A, B], links({ [A]: 'S1', [B]: 'S1' }))).toEqual({ reason: 'several_match' });
+    expect(owner(links({ [A]: 'S1' }, null))).toEqual({ reason: 'unwitnessed', position: { kind: 'no-hip2-position' } });
+    expect(owner(links({ [A]: 'S0' }))).toEqual({ reason: 'no_entry_matches' });
+    expect(owner(links({ [A]: 'S1', [B]: 'S1' }))).toEqual({ reason: 'several_match' });
+  });
+
+  it('asks HIP2\'s position only where Gaia gives the HIP no source', () => {
+    expect(owner(links({}, null), () => ON_B)).toEqual({ owner: B, witness: { by: 'position', separations: SEPARATIONS } });
+    expect(owner(links({ [A]: 'S0' }), () => ON_B)).toEqual({ reason: 'no_entry_matches' });
+  });
+
+  it('names no owner where HIP2\'s position falls on no entry, on both, or HIP2 has none', () => {
+    const none = { kind: 'none', separations: SEPARATIONS } as const;
+    const several = { kind: 'several', tycs: [A, B], separations: SEPARATIONS } as const;
+    expect(owner(links({}, null), () => none)).toEqual({ reason: 'unwitnessed', position: none });
+    expect(owner(links({}, null), () => several)).toEqual({ reason: 'unwitnessed', position: several });
+    expect(owner(links({}, null))).toEqual({ reason: 'unwitnessed', position: { kind: 'no-hip2-position' } });
   });
 });
 
@@ -96,7 +119,7 @@ describe('applyPairRule', () => {
     const l = links({ [B]: 'S1' });
     const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), new Map());
     expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100', hr: '7' })]);
-    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' }]]));
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'entry' }]]));
     expect(kept[0].tyc).toBe(A);
   });
 
@@ -105,7 +128,7 @@ describe('applyPairRule', () => {
     const l = links({ [B]: 'S1' });
     const { rows, decided } = applyPairRule(kept, mergeLinks(l), bindsOwn(l), new Set(), new Map());
     expect(rows).toEqual([row({ tyc: A, hd: '100' }), row({ tyc: B, hip: '10', hd: '200' })]);
-    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'record' }]]));
+    expect(decided).toEqual(new Map([[0, { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'record' }]]));
   });
 
   it('reports a moved HIP once, on the row it left, and no verdict on the record it moved onto', () => {
@@ -141,6 +164,24 @@ describe('applyPairRule', () => {
     expect(decided).toEqual(new Map([[0, { kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' }]]));
     expect(divergences(kept[0], mergeLinks(links({ [B]: 'S1' })), decided.get(0)))
       .toContainEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'gate_refused' });
+  });
+
+  it('moves a record onto the entry HIP2\'s position falls on, with no Gaia source for the gates to weigh', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+    const { rows, decided } = applyPairRule(kept, mergeLinks(links({}, null), [], ON_B), () => null, new Set(), new Map());
+    expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100' })]);
+    expect(decided).toEqual(new Map([[0, {
+      kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'position', separations: SEPARATIONS }, onto: 'entry',
+    }]]));
+  });
+
+  it('queues a position move SIMBAD refused', () => {
+    const kept = [row({ tyc: A, hip: '10', hd: '100' })];
+    const m = mergeLinks(links({}, null), [], ON_B);
+    const moved = applyPairRule(kept, m, () => null, new Set(), new Map());
+    expect(simbadRefusedMoves(moved.rows, moved.decided, () => 100, () => [101])).toEqual(new Set([10]));
+    expect(applyPairRule(kept, m, () => null, new Set([10]), new Map()).decided.get(0))
+      .toEqual({ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'simbad_refused' });
   });
 
   it('queues a move SIMBAD refused, leaving the row as it was; the gates are weighed first', () => {
@@ -266,17 +307,31 @@ describe('simbadRefusedMoves', () => {
   });
 });
 
-describe('iv25TycHds', () => {
+describe('requestedTycHds', () => {
   const pull = new Map([[A, { hdIdents: ['100', '100A', '101B'], simbadOid: 1, mainId: null }]]);
-  const read = iv25TycHds(pull, [{ tyc: A }, { tyc: B }]);
+  const read = requestedTycHds(pull, [A, B]);
 
-  it('names an IV/25 entry\'s HDs, and none where SIMBAD names none', () => {
+  it('names a requested entry\'s HDs, and none where SIMBAD names none', () => {
     expect(read(A)).toEqual([100, 101]);
     expect(read(B)).toEqual([]);
   });
 
-  it('refuses an entry outside IV/25, which the pull need not have asked for', () => {
-    expect(() => read('9-9-9')).toThrow(/9-9-9 is no IV\/25 entry/);
+  it('refuses an entry the pull was not asked for', () => {
+    expect(() => read('9-9-9')).toThrow(/9-9-9 is neither an IV\/25 entry nor a pair's/);
+  });
+});
+
+describe('pairEntries', () => {
+  it('lists every entry whose HIP Tycho-2 gives to another entry too', () => {
+    const tycho2 = new Map([[A, { hip: 10 }], [B, { hip: 10 }], ['2-2-2', { hip: 20 }], ['3-3-3', { hip: null }]]);
+    expect(pairEntries(tycho2)).toEqual([A, B]);
+  });
+});
+
+describe('pairRuleTycHdRequest', () => {
+  it('is IV/25 and every pair entry, the set the build and the pull share', () => {
+    const tycho2 = new Map([[A, { hip: 10 }], [B, { hip: 10 }], ['2-2-2', { hip: 20 }]]);
+    expect(pairRuleTycHdRequest(['7-7-7'], tycho2)).toEqual(['7-7-7', A, B]);
   });
 });
 
@@ -292,7 +347,7 @@ describe('applyEveryPairMove', () => {
 describe('mergeDivergences', () => {
   it('confirms a spine entry the HIP\'s Gaia source sits on', () => {
     const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [A]: 'S1' })));
-    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, sourceId: 'S1' }]);
+    expect(d).toEqual([{ kind: 'pair-confirmed', hip: 10, owner: A, witness: { by: 'gaia', sourceId: 'S1' } }]);
   });
 
   it('refuses a row the pair rule would still move', () => {
@@ -301,14 +356,14 @@ describe('mergeDivergences', () => {
   });
 
   it('reports the move applied to the row in place of its confirmation', () => {
-    const move = { kind: 'pair-moves', hip: 10, owner: B, sourceId: 'S1', onto: 'entry' } as const;
+    const move = { kind: 'pair-moves', hip: 10, owner: B, witness: { by: 'gaia', sourceId: 'S1' }, onto: 'entry' } as const;
     const d = divergences(row({ tyc: B, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({ [B]: 'S1' })), move);
     expect(d).toEqual([move]);
   });
 
   it('queues the pair for review when Gaia names no owner', () => {
     const d = divergences(row({ tyc: A, hip: '10', hd: '100', hr: '7' }), mergeLinks(links({}, null)));
-    expect(d).toEqual([{ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'no_hip_source' }]);
+    expect(d).toEqual([{ kind: 'pair-review', hip: 10, entries: [A, B], reason: 'unwitnessed', position: { kind: 'no-hip2-position' } }]);
   });
 
   it('derives a shared HIP onto a HIP-less spine entry only when the pair rule names it', () => {

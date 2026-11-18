@@ -43,8 +43,8 @@ standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
 Every shipped record's rv outcome is a placement code, pinned the way the
 direction cascade's are: the Gaia tier by its five error bands (below), the
-SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,295<!-- /count -->** and
-`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,512<!-- /count -->**. A parked
+SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,287<!-- /count -->** and
+`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,510<!-- /count -->**. A parked
 row writes no rv step, so none of these counts it. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)
@@ -106,7 +106,7 @@ instrument and literature is an independent measurement, which is why the
 rule keys on the bibcode rather than on agreement.
 
 **A row with no 2p blend behind it is a different case**, and a Gaia catalogue
-bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,545<!-- /count -->** shipped
+bibcode there is an ordinary citation rather than laundering: **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,544<!-- /count -->** shipped
 rows carry one (`placement.rv.simbad.gaia-release`) and the skip rule leaves them alone.
 Before the magnitude term they were 363 — 278 DR2 and 85 DR3 — and every one
 of the 85 was a record the spine carried no `gaia_source_id` for, so
@@ -230,8 +230,8 @@ So the uncertainty is **counted rather than obeyed** — the same treatment
 extreme value can be real, and a filter tuned on nine stars would remove real
 ones. `placement.rv.gaia-dr3.error-*` bands the Gaia tier's rows by stated uncertainty and
 `rvGaiaErrorMaxKmS` pins the largest, so a DR4 pull that shifts the
-distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/placement.rv.gaia-dr3.error-le1 -->660,142<!-- /count -->
-rows ≤ 1 km/s, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le5 -->165,341<!-- /count --> ≤ 5, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le10 -->30,901<!-- /count --> ≤ 10, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le20 -->10,184<!-- /count --> ≤ 20, **<!-- count:build-catalog/placement.rv.gaia-dr3.error-gt20 -->2,017<!-- /count -->** above 20, and a
+distribution has to be reviewed rather than absorbed silently. Today: <!-- count:build-catalog/placement.rv.gaia-dr3.error-le1 -->660,139<!-- /count -->
+rows ≤ 1 km/s, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le5 -->165,341<!-- /count --> ≤ 5, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le10 -->30,902<!-- /count --> ≤ 10, <!-- count:build-catalog/placement.rv.gaia-dr3.error-le20 -->10,184<!-- /count --> ≤ 20, **<!-- count:build-catalog/placement.rv.gaia-dr3.error-gt20 -->2,017<!-- /count -->** above 20, and a
 maximum of **<!-- count:build-catalog/rvGaiaErrorMaxKmS -->39.9898<!-- /count -->** — under DR3's own publication ceiling of 40, which no
 pulled row reaches. A Gaia `rv` with no stated error fails the build, naming
 its source: the published catalogue always pairs the two, so one alone is an

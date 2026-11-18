@@ -49,7 +49,7 @@ looks up the period+amp. Two independent gates:
   constellations and IV/27A wins — a GCVS label reads its constellation out of
   the designation string itself and loses only its expanded alias, while a
   Bayer/Flamsteed label is COMPOSED from this field
-  ([The designation constellation](../../classic-ids/README.md#the-designation-constellation)).
+  ([The designation constellation](../../classic-ids/designation-constellation/README.md#the-designation-constellation)).
 - **Rendering** (pulsation) — period / amplitude / varType apply only
   when the GCVS main table gave that name a parseable period+amplitude
   (~<!-- count:build-catalog/gcvsMatched k2 -->4.6k<!-- /count -->, `gcvsMatched`). Aperiodic variables — flare stars

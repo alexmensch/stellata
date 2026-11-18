@@ -12,10 +12,11 @@ What the tables are for and which position a consumer propagates from:
 - `tycho2-pure.ts` — the request set, the TYC1 bands, both tables' columns,
   formats and spot rows, the kept-share band, the cover gate and
   `tycho2Pull`.
-- `tyc-request.ts` — `readTycRequest`: the TYC request read off the manifest
+- `tyc-request.ts` — the TYC request read off the manifest
   (`MEMBERSHIP_MANIFEST`) and IV/25 (`TYC2_HD`), both named in the record's
-  `requestFrom`, which `refresh:simbad-tyc-hd` asks; `readTycho2Inputs`, the
-  same plus the manifest's HIPs, which only this pull reads.
+  `requestFrom`: `readTycho2Inputs`, with the manifest's HIPs, which this pull
+  reads; `readTycRequest`, with every Tycho-2 pair's entries, which
+  `refresh:simbad-tyc-hd` asks.
 - `refresh-tycho2.ts` — the entry. `tycho2-outputs.ts`, its `declareOutputs`.
 - `{main,suppl1}.cfa.{tsv,fits}` — the [replies](#replies) recorded from CfA.
 - `tycho2.test.ts` — the request, bands, gates and run over a faked `ask`,
@@ -26,8 +27,9 @@ What the tables are for and which position a consumer propagates from:
 The manifest's `tyc` cells and IV/25's Tycho ids, each parsed to integers and
 written back as one key (`3694-2544-1`), so two spellings of one entry
 collapse. The manifest's own TYCs are kept apart as the set the cover gate
-holds to. `refresh:simbad-tyc-hd` asks the same TYCs
-([The request set](/data/tycho2/README.md#the-request-set--manifest--iv25)).
+holds to. `refresh:simbad-tyc-hd` asks the same TYCs and every Tycho-2
+pair's entries
+([The request](../simbad-tyc-hd/README.md#the-request)).
 
 A row is also kept when its `hip` names a manifest HIP. Tycho-2 gives one HIP
 to both entries of a resolved pair, and the pair rule

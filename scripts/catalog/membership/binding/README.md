@@ -109,7 +109,7 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->231<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->90<!-- /count --> on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->220<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->81<!-- /count --> on sibling-letter attribution
 (`binding.gate-mag`, `binding.gate-sibling`; an addition's refusals are
 `addition-binding.*`); falling off the end is a derived refusal.
 `binding.ungateable` (<!-- count:membership-manifest/membership.binding.ungateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
@@ -246,7 +246,10 @@ record's Gaia DR2 id names the record and carries its DR3 renumbering), `gaia_ph
 candidate), `pair_component` (a pair's components: which one the record is,
 the HIP and SIMBAD's letters deciding, or none where the record is the system
 Gaia resolves), `shared_source` (one source two records
-reach, held by the one whose light it is). Each disposition's code says what it kept and whether the derivation
+reach, held by the one whose light it is), `tycho2_photometry` (of a Tycho-2
+pair's entries, the one whose `VT` is nearest the HIP's printed V; the
+pair-review dispositions use it, and the build recomputes it,
+[Disposing a queued pair](../merge-derivation/README.md#disposing-a-queued-pair)). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
 9 keep the derived id, 42 another and 3 none. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP

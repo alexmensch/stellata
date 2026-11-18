@@ -30,7 +30,7 @@ import { avSolToStar, type DustGrid } from '../distance/dust/dust-deextinction-p
 import { R_V } from '../../../src/astro-core/extinction/dust-raymarch-pure';
 import type { NamedStar, Star } from '../parse/stars-parse';
 import { makeStar as makeStarWithDefaults } from '../parse/star-fixture';
-import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import { multiplesRow, type MultiplesRowOverrides } from './multiples-fixture';
 import { OWN } from '../../binaries/multiples-record-pure';
 import { MULTIPLES_HEADER, multiplesLine } from '../../binaries/multiples-tsv-fixture';

@@ -86,7 +86,7 @@ import { printedByHip, type PrintedHipValue } from '../photometry/hip-photometry
 import type { ManifestRecord } from '../membership/membership-manifest-tsv';
 import type { CuratedRecords } from '../record/curated-records';
 import { type ConstellationAssignment } from './constellations/constellations';
-import type { DesignationCon } from '../classic-ids/designation-constellation-pure';
+import type { DesignationCon } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import {
   applyBailerJonesOverride,
   applyLmcKinematicOverride,

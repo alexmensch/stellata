@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
-import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
+import { NO_DESIGNATION_CON } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import { assignDisplayNames, type DisplayNameResult, type DisplayNameSource } from './display-names';
 import { allocatedSids, enterPhase } from '../record/record-phase';
 

@@ -9,7 +9,15 @@ import {
   parseCrossIndexCorrectionsTsv,
   parseCrossIndexTsv,
   parseTyc2HdTsv,
+  applyTyc2HdCorrections,
+  parseTyc2HdCorrectionsTsv,
 } from './classic-ids-parse';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { REPO_ROOT, lfsContentReadable } from '../../util/paths';
+import { TYC2_HD as TYC2_HD_SOURCE, TYC2_HD_CORRECTIONS } from './tyc2-hd-source';
+import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
+import { hdNumbers } from '../simbad/simbad-tyc-hd-parse';
 import { cns5Astrometry, cns5Row } from './cns5-fixture';
 import { CNS5 as CNS5_SOURCE } from './cns5-source';
 import { sourceRowRef } from '../../util/sources/row-ref-pure';
@@ -129,6 +137,50 @@ describe('classic-ids-parse / cross-index corrections', () => {
     )).toThrow(/orphan the designation/);
   });
 });
+
+describe('classic-ids-parse / IV/25 corrections', () => {
+  const corrections = (body: string): ReturnType<typeof parseTyc2HdCorrectionsTsv> =>
+    parseTyc2HdCorrectionsTsv(`tyc\tprinted_hd\thd\n${body}`, FROM);
+  const SWAP = '# crossed\n3105-2070-1\t172167\t224700\n1-381-1\t224700\t172167\n';
+
+  it('exchanges the HDs of a crossed pair and leaves every other row', () => {
+    const rows = applyTyc2HdCorrections(parseTyc2HdTsv(TYC2_HD, FROM), corrections(SWAP), FROM);
+    expect(rows.map((r) => [r.tyc, r.hd])).toEqual([
+      ['3105-2070-1', 224700], ['1-381-1', 172167], ['4-5-1', 999],
+    ]);
+  });
+
+  it('throws on a correction to itself or with a cell missing', () => {
+    expect(() => corrections('1-381-1\t224700\t224700\n')).toThrow(/to itself/);
+    expect(() => corrections('1-381-1\t\t224700\n')).toThrow(/no printed_hd/);
+  });
+
+  it('throws on a correction naming no IV/25 row', () => {
+    expect(() => applyTyc2HdCorrections(
+      parseTyc2HdTsv(TYC2_HD, FROM), corrections('1-381-1\t999\t224700\n4-5-1\t224700\t999\n'), FROM,
+    )).toThrow(/TYC 1-381-1 HD 999, which IV\/25 prints 0 times/);
+  });
+
+  it('throws on a set that would mint or drop an HD', () => {
+    expect(() => applyTyc2HdCorrections(
+      parseTyc2HdTsv(TYC2_HD, FROM), corrections('1-381-1\t224700\t172167\n'), FROM,
+    )).toThrow(/cannot mint or drop one/);
+  });
+});
+
+describe.skipIf(![TYC2_HD_SOURCE.file, SIMBAD_TYC_HD.file].every((f) => lfsContentReadable(resolve(REPO_ROOT, f))))(
+  'the committed IV/25 corrections',
+  () => {
+    it('re-point each entry to the HD SIMBAD names for it', () => {
+      const simbad = SIMBAD_TYC_HD.read();
+      const text = readFileSync(resolve(REPO_ROOT, TYC2_HD_CORRECTIONS.file), 'utf-8');
+      for (const c of parseTyc2HdCorrectionsTsv(text, FROM)) {
+        const row = simbad.get(c.tyc);
+        expect(row === undefined ? [] : hdNumbers(row), c.tyc).toContain(c.hd);
+      }
+    });
+  },
+);
 
 describe('classic-ids-parse / crossIndexHipsByHd', () => {
   it('keeps every HIP an HD is linked to and skips HIP-less rows', () => {

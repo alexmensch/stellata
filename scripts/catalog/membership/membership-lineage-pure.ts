@@ -29,8 +29,9 @@ import { percentOf, sumOf } from '../../util/counts/tally-pure';
 import {
   DERIVED_ONLY_CELLS, DIFFERS_LINKS, DIFFERS_SETTLEMENTS_BY_CELL, HELD_STATES, UNLINKED_SETTLEMENTS_BY_CELL,
   type DerivedOnlyCell, type DiffersLink, type DiffersSettlement, type HeldState, type MergeDivergence,
-  type UnlinkedSettlement,
+  type PairQueued, type PairWitness, type UnlinkedSettlement,
 } from './merge-derivation/merge-derivation-pure';
+import type { WitnessSeparation } from './positional-witness/positional-witness-pure';
 import { KEY_CELLS, type KeyCell } from '../spine/association-audit-pure';
 import {
   PAIR_REVIEW_REASONS, type MergeDivergenceKind, type MergeDivergenceRow, type PairReviewReason, type PairReviewRow,
@@ -54,6 +55,7 @@ export interface OriginKeys {
 const RETIRED_7_1_20 = retired('7.1.20');
 const RETIRED_7_1_31 = retired('7.1.31');
 const RETIRED_7_2_1 = retired('7.2.1');
+const RETIRED_7_2_3 = retired('7.2.3');
 
 const ADDITION_BRANCHES = {
   'admitted:hd_link_gap': 'admit.hd-link-gap',
@@ -271,11 +273,11 @@ const LEAD_DESCRIPTIONS = {
 } as const satisfies Record<BindingSource, string>;
 
 const PAIR_REVIEW_DESCRIPTIONS = {
-  no_hip_source: 'the Gaia HIP cross-match names no source for the HIP',
+  unwitnessed: 'the Gaia HIP cross-match names no source for the HIP, and HIP2\'s position falls on no entry or on more than one',
   no_entry_matches: 'no entry\'s Gaia TYC cross-match names the HIP\'s source',
   several_match: 'more than one entry\'s Gaia TYC cross-match names the HIP\'s source',
   gate_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and the binding gates refuse that source for the moved record',
-  simbad_refused: 'one entry\'s Gaia TYC cross-match names the HIP\'s source, and SIMBAD\'s TYC-to-HD cross-identification names that entry by HDs the moved record does not ship',
+  simbad_refused: 'Gaia\'s cross-matches or HIP2\'s position name one entry, and SIMBAD\'s TYC-to-HD cross-identification names that entry by HDs the moved record does not ship',
 } as const satisfies Record<PairReviewReason, string>;
 
 const HELD_DESCRIPTIONS = {
@@ -284,11 +286,11 @@ const HELD_DESCRIPTIONS = {
 } as const satisfies Record<HeldState, string>;
 
 const PAIR_REVIEW_BRANCHES = {
-  no_hip_source: 'merge.pair.review.no-hip-source',
+  unwitnessed: 'merge.pair.review.unwitnessed',
   no_entry_matches: 'merge.pair.review.no-entry-matches',
   several_match: 'merge.pair.review.several-match',
   gate_refused: 'merge.pair.review.gate-refused',
-  simbad_refused: 'merge.pair.review.simbad-refused',
+  simbad_refused: 'merge.pair.review.simbad-refused-move',
 } as const satisfies Record<PairReviewReason, string>;
 type PairReviewBranch = (typeof PAIR_REVIEW_BRANCHES)[PairReviewReason];
 type DerivedOnlyBranch = `merge.derived-only.${DerivedOnlyCell}.${HeldState}`;
@@ -335,6 +337,7 @@ const unlinkedPrefix = (c: KeyCell): string =>
 type MergeBranch =
   | 'merge.pair.confirmed' | 'merge.pair.moves' | 'merge.pair.moves-record'
   | 'merge.pair.disposed' | 'merge.pair.disposed-record'
+  | 'merge.pair.position.confirmed' | 'merge.pair.position.moves' | 'merge.pair.position.moves-record'
   | UnlinkedQueuedBranch | UnlinkedSettledBranch
   | PairReviewBranch | DerivedOnlyBranch | DiffersQueuedBranch | DiffersSettledBranch;
 
@@ -366,6 +369,18 @@ const MERGE_BRANCHES: readonly {
   {
     branch: 'merge.pair.moves-record', of: 'pair-moves', ledger: 'pair_moves',
     description: `${PAIR} the HIP's Gaia source is the entry another spine record sits on, so the pair rule moves the HIP onto that record.`,
+  },
+  {
+    branch: 'merge.pair.position.confirmed', of: 'pair-confirmed', ledger: null,
+    description: `${PAIR} Gaia cross-matches the HIP to no source, and HIP2's position falls on the spine entry alone.`,
+  },
+  {
+    branch: 'merge.pair.position.moves', of: 'pair-moves', ledger: null,
+    description: `${PAIR} Gaia cross-matches the HIP to no source, and HIP2's position falls on another entry alone, so the pair rule moves the record onto that entry.`,
+  },
+  {
+    branch: 'merge.pair.position.moves-record', of: 'pair-moves', ledger: 'pair_moves',
+    description: `${PAIR} Gaia cross-matches the HIP to no source, and HIP2's position falls on the entry another spine record sits on alone, so the pair rule moves the HIP onto that record.`,
   },
   {
     branch: 'merge.pair.disposed', of: 'pair-disposed', ledger: null,
@@ -495,6 +510,8 @@ export const MEMBERSHIP_CODES = stageCodes(MEMBERSHIP_LINEAGE.stage, {
   'label-drop.not-taken.hd-simbad-silent': outcomeCode('I/239 prints no HD for the record\'s HIP and gives this HD to another HIP whose spine record ships it, but SIMBAD\'s identifier pull holds no object for that HIP, so the HD stays.'),
   ...MERGE_CODES,
   'merge.unlinked': outcomeCode(UNLINKED_DESCRIPTION, 'none', RETIRED_7_2_1),
+  'merge.pair.review.no-hip-source': outcomeCode(`${PAIR} the pair rule names no owner: the Gaia HIP cross-match names no source for the HIP.`, 'none', RETIRED_7_2_3),
+  'merge.pair.review.simbad-refused': outcomeCode(`${PAIR} the pair rule names no owner: one entry's Gaia TYC cross-match names the HIP's source, and SIMBAD's TYC-to-HD cross-identification names that entry by HDs the moved record does not ship.`, 'none', RETIRED_7_2_3),
   ...RETIRED_DIFFERS_CODES,
 });
 
@@ -721,6 +738,21 @@ export function membershipLineageRow({ key, outcome: o }: KeyedOutcome): Lineage
   }
 }
 
+const separationsEvidence = (separations: readonly WitnessSeparation[]): string =>
+  separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(3)}"`).join('|');
+
+/** The HIP's Gaia source, or every entry's separation from HIP2's carried position. */
+function pairWitnessEvidence(w: PairWitness): string {
+  return w.by === 'gaia' ? w.sourceId : separationsEvidence(w.separations);
+}
+
+/** The queue reason, and for an unwitnessed pair what HIP2's position found. */
+function pairQueuedEvidence(q: PairQueued): string {
+  if (q.reason !== 'unwitnessed') return q.reason;
+  if (q.position.kind === 'no-hip2-position') return 'unwitnessed; no-hip2-position';
+  return `unwitnessed; ${q.position.kind}; ${separationsEvidence(q.position.separations)}`;
+}
+
 function mergeRow(key: string, d: MergeDivergence): LineageRow {
   switch (d.kind) {
     case 'unlinked': {
@@ -732,17 +764,21 @@ function mergeRow(key: string, d: MergeDivergence): LineageRow {
       return row(key, unlinkedQueuedBranch(d.cell), { ...params, evidence: `${d.published}; ${d.verdict.queued}${witness}` });
     }
     case 'pair-confirmed':
-      return row(key, 'merge.pair.confirmed', { cells: 'hip', derived: d.owner, evidence: d.sourceId });
-    case 'pair-moves':
-      return row(key, d.onto === 'entry' ? 'merge.pair.moves' : 'merge.pair.moves-record', {
-        cells: 'hip', derived: d.owner, evidence: d.sourceId,
+      return row(key, d.witness.by === 'gaia' ? 'merge.pair.confirmed' : 'merge.pair.position.confirmed', {
+        cells: 'hip', derived: d.owner, evidence: pairWitnessEvidence(d.witness),
       });
+    case 'pair-moves': {
+      const prefix = d.witness.by === 'gaia' ? 'merge.pair' : 'merge.pair.position';
+      return row(key, d.onto === 'entry' ? `${prefix}.moves` : `${prefix}.moves-record`, {
+        cells: 'hip', derived: d.owner, evidence: pairWitnessEvidence(d.witness),
+      });
+    }
     case 'pair-disposed':
       return row(key, d.onto === 'record' ? 'merge.pair.disposed-record' : 'merge.pair.disposed', {
         cells: 'hip', derived: d.keep, evidence: d.basis,
       });
     case 'pair-review':
-      return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: d.reason });
+      return row(key, PAIR_REVIEW_BRANCHES[d.reason], { cells: 'hip', derived: d.entries.join('|'), evidence: pairQueuedEvidence(d) });
     case 'derived-only':
       return row(key, derivedOnlyBranch(d.cell, d.held), { cells: d.cell, derived: d.value, evidence: d.held });
     case 'differs': {
