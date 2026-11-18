@@ -129,6 +129,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   let folds: SpineFold[];
   let manifest: ManifestRecord[];
   let recordMoves: { tyc: string | null; derived: string }[];
+  /** `corrected` with the pair rule's HIP moves onto other spine records applied. */
+  let moved: SpineRow[];
   let match: SpineMatch;
   /** SIMBAD's one source per HIP, as the identity witness reads it. */
   let simbadByHip: Map<number, string | null>;
@@ -143,8 +145,9 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     ));
     manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
     recordMoves = readArtifact(MERGE_DIVERGENCE).filter((d) => d.divergence === 'pair_moves');
+    moved = withRecordMoves(corrected, recordMoves);
     match = matchSpineToManifest(
-      withRecordMoves(corrected, recordMoves).map(spineDesignations),
+      moved.map(spineDesignations),
       manifest,
       SAMEAS_OVERRIDES.read(),
     );
@@ -342,16 +345,17 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Every disposed row ships the value its disposition settled on, under
   // `reviewed`, or none — and no `reviewed` binding exists without one.
   it('carries every disposed binding as reviewed, and no other', () => {
-    // Keyed on the CORRECTED cells with the TYC the pair rule left the row on:
-    // a disposition adjudicates the row the generator derived from, and both a
-    // `set` correction and a pair move change that key.
+    // Keyed on the row the generator derived from: the corrected cells with
+    // every pair move applied — the HIP moves `moved` carries, and the TYC the
+    // manifest row ended on.
     const bySpineKey = new Map<string, ManifestRecord>();
-    corrected.forEach((row, i) => {
+    moved.forEach((row, i) => {
       const target = match.manifestIndex[i];
-      if (target !== null) bySpineKey.set(bindingReviewKey({ ...row, tyc: manifest[target].tyc ?? row.tyc }), manifest[target]);
+      if (target !== null) bySpineKey.set(bindingReviewKey({ ...row, tyc: manifest[target].tyc ?? '' }), manifest[target]);
     });
     for (const [key, d] of dispositions) {
-      const row = bySpineKey.get(key)!;
+      const row = bySpineKey.get(key);
+      if (row === undefined) throw new Error(`binding disposition ${key} keys no derived spine row`);
       const value = d.keep_source_id;
       expect([row.gaiaSourceId, row.binding], key)
         .toEqual([value === '' ? null : value, value === '' ? 'none' : 'reviewed']);
