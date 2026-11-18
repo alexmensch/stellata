@@ -121,7 +121,7 @@ copies hold the same data: on 2026-11-18, with ESA down, the whole pull
 answered from ARI wrote all 1,277,736 rows of the committed ESA-answered table
 byte for byte once `flag` is read at its five digits (39 rows of `00099` come
 back from ARI as `99`). ARI answered a magnitude slice in 2 to 12 minutes,
-against ESA's seconds, so a pull ARI answers whole takes about four hours. Why
+against ESA's seconds, and the whole pull took about 3.5 hours there. Why
 the pull is the Gaia archives' rather than VizieR's:
 [Why the pull is Gaia-side](/data/bailer-jones/README.md#why-the-pull-is-gaia-side).
 
