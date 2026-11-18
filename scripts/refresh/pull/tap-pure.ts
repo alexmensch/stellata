@@ -265,6 +265,8 @@ export interface TapAnswer {
   readonly result: TapResult;
   /** The mirror that answered. */
   readonly service: string;
+  /** The query's ADQL as that mirror was sent it: what the checkpoint keys the answer on. */
+  readonly sent: string;
 }
 
 export interface TapClientDeps {
@@ -313,34 +315,35 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     return cap;
   };
 
-  const answered = (mirror: TapMirror, result: TapResult): TapAnswer =>
-    ({ body: csvText(result.columns, result.rows), result, service: mirror.name });
+  const answered = (mirror: TapMirror, sent: string, result: TapResult): TapAnswer =>
+    ({ body: csvText(result.columns, result.rows), result, service: mirror.name, sent });
 
   const askTap = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
-    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(mirrorAdql(mirror, adql), limit, archive.format));
+    const sent = mirrorAdql(mirror, adql);
+    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(sent, limit, archive.format));
     if (!answers(reply, archive.format)) throw replyError(reply, mirror.name);
     if (archive.format === 'csv') {
       const body = replyText(reply);
-      return { body, result: readCsv(body, limit, mirror.name), service: mirror.name };
+      return { body, result: readCsv(body, limit, mirror.name), service: mirror.name, sent };
     }
     const result = readFits(reply, limit, mirror.name);
     if (result === null) throw new TapTransient(`${mirror.name}: a TAP FITS reply with no table`);
-    return answered(mirror, { columns: result.columns, rows: result.rows });
+    return answered(mirror, sent, { columns: result.columns, rows: result.rows });
   };
 
-  const askAsu = async (mirror: TapMirror, query: AsuQuery, limit: number): Promise<TapAnswer> => {
+  const askAsu = async (mirror: TapMirror, adql: string, query: AsuQuery, limit: number): Promise<TapAnswer> => {
     const tsv = await deps.transport(asuUrl(mirror, 'asu-tsv', query, limit));
     if (!answers(tsv, 'text')) throw replyError(tsv, mirror.name);
     const fits = await deps.transport(asuUrl(mirror, 'asu-binfits', query, limit));
     if (!answers(fits, 'fits')) throw replyError(fits, mirror.name);
     const text = readAsuTsv(replyText(tsv), limit, mirror.name);
-    return answered(mirror, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
+    return answered(mirror, adql, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
   };
 
   const ask = (mirror: TapMirror, query: ArchiveQuery, limit: number): Promise<TapAnswer> => {
     if (mirror.protocol === 'tap') return askTap(mirror, query.adql, limit);
     if (query.asu === undefined) throw new TapRefused(`${mirror.name} answers ASU only, and the query has no ASU form: ${query.adql}`);
-    return askAsu(mirror, query.asu, limit);
+    return askAsu(mirror, query.adql, query.asu, limit);
   };
 
   return {

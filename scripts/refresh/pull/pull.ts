@@ -11,7 +11,7 @@ import {
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
 import { sliceConditions, type SliceEdges } from './slices-pure';
 import {
-  mirrorForms, readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapArchive, type TapClientDeps, type Transport,
+  mirrorForms, readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapAnswer, type TapArchive, type TapResult, type TapClientDeps, type Transport,
 } from './tap-pure';
 
 /** A whole table in one query; `asu` is that query as an ASU mirror asks it, required where the archive has one. */
@@ -332,14 +332,21 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
     const queries = archiveQueries(phase, ids, pull.archive.quote);
     const rows: Row[] = [];
     for (const [i, query] of queries.entries()) {
-      const sent = mirrorForms(pull.archive, query.adql);
-      const cached = [query.adql, ...Object.values(sent)].map((text) => cache.load(text)).find((c) => c !== null) ?? null;
-      if (cached?.service) report(cached.service);
-      const result = cached === null ? await client.query(query, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
-      const checked = checkedRows(phase.columns, result.result, name);
-      if (cached === null) cache.save((result.service === null ? undefined : sent[result.service]) ?? query.adql, result);
+      const forms = [query.adql, ...Object.values(mirrorForms(pull.archive, query.adql))];
+      const cached = forms.map((text) => cache.load(text)).find((c) => c !== null) ?? null;
+      let answer: TapAnswer | null = null;
+      let result: TapResult;
+      if (cached === null) {
+        answer = await client.query(query, limit);
+        result = answer.result;
+      } else {
+        if (cached.service) report(cached.service);
+        result = readCsv(cached.body, limit, name);
+      }
+      const checked = checkedRows(phase.columns, result, name);
+      if (answer !== null) cache.save(answer.sent, answer);
       for (const row of checked) rows.push(row);
-      deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
+      deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
       if (phase.scope.kind !== 'request' && rows.length > phase.scope.maxRows) {
         throw new Error(`${name}: ${rows.length} rows after query ${i + 1} of ${queries.length}, past the ${phase.scope.maxRows} it may hold; the upstream table or the query moved`);
       }
