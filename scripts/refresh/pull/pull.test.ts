@@ -12,7 +12,7 @@ import {
 } from './pull';
 import { checkpoint } from './checkpoint';
 import { QUIET_DEPS } from './recorded-reply';
-import { GAIA, SIMBAD, TapOverflow, VIZIER, textReply, type TapArchive, type TapClientDeps } from './tap-pure';
+import { GAIA, SIMBAD, TapOverflow, VIZIER, mirrorAdql, textReply, type TapArchive, type TapClientDeps } from './tap-pure';
 
 let dir: string;
 beforeEach(() => { dir = mkdtempSync(join(tmpdir(), 'pull-')); });
@@ -137,7 +137,8 @@ describe('runPull', () => {
     };
     const drifted = { ...renamed, band: { min: 9, max: 9 } };
     await expect(runPull(pullOf({ stars: drifted, pairs: PAIRS }), esaDown)).rejects.toThrow(EmissionRefused);
-    const [atAri] = batchQueries(renamed, GAIA.quote).map((adql) => adql.replace('external.gaiaedr3_distance', 'gaiaedr3_complements.distances'));
+    const [atAri] = batchQueries(renamed, GAIA.quote).map((adql) => mirrorAdql(GAIA.mirrors[1], adql));
+    expect(atAri).not.toBe(batchQueries(renamed, GAIA.quote)[0]);
     expect(asked[0]).toBe(atAri);
     expect(checkpoint(ckpt()).load(atAri)?.service).toBe('ARI-sync');
 

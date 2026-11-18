@@ -9,9 +9,9 @@ import { EmissionRefused, declareOutputs } from '../../util/emit-artifacts';
 import type { Cell } from '../pull/columns-pure';
 import { describePhasedPull, phaseQueries, runPhasedPull } from '../pull/pull';
 import { QUIET_DEPS, recordedTableCases } from '../pull/recorded-reply';
-import { GAIA, textReply, type TapClientDeps } from '../pull/tap-pure';
+import { GAIA, mirrorAdql, textReply, type TapClientDeps } from '../pull/tap-pure';
 import { deepPopulationPull, type DeepPopulationTable } from './deep-population-pure';
-import { APSIS_TABLE, MIN_APSIS_SPECTRAL_TYPE, MIN_APSIS_TEFF_LOGG } from './deep-population-tables-pure';
+import { APSIS_TABLE, BAILER_JONES_TABLE, MIN_APSIS_SPECTRAL_TYPE, MIN_APSIS_TEFF_LOGG } from './deep-population-tables-pure';
 import { bailerJonesPull } from './refresh-bailer-jones';
 import { apsisPull } from './refresh-gaia-apsis';
 
@@ -95,14 +95,18 @@ describe('the Apsis and Bailer-Jones pulls', () => {
     expect(bailerJones.services).toEqual(['ESA-sync', 'ARI-sync']);
     const { phases } = JSON.parse(bailerJones.query);
     for (const phase of [phases.magnitude, phases.request]) {
-      expect(phase.query).toContain('FROM external.gaiaedr3_distance');
-      expect(phase.mirrors['ARI-sync']).toBe(phase.query.replace('external.gaiaedr3_distance', 'gaiaedr3_complements.distances'));
+      expect(phase.query).toContain(`FROM ${BAILER_JONES_TABLE.from}`);
+      expect(phase.mirrors['ARI-sync']).toBe(mirrorAdql(GAIA.mirrors[1], phase.query));
+      expect(phase.mirrors['ARI-sync']).not.toBe(phase.query);
     }
     expect(describePhasedPull(apsisPull([1n])).services).toEqual(['ESA-sync', 'ARI-sync']);
     expect(JSON.parse(describePhasedPull(apsisPull([1n])).query).phases.magnitude.mirrors).toBeUndefined();
   });
 
-  it.each([['ESA', 'esac', 'gaiaedr3_complements.distances', 'ARI-sync'], ['ARI', 'heidelberg', 'external.gaiaedr3_distance', 'ESA-sync']])(
+  it.each([
+    ['ESA', 'esac', mirrorAdql(GAIA.mirrors[1], BAILER_JONES_TABLE.from), 'ARI-sync'],
+    ['ARI', 'heidelberg', BAILER_JONES_TABLE.from, 'ESA-sync'],
+  ])(
     'Bailer-Jones answers from the other mirror under its own table name when %s is down',
     async (_, down, table, answering) => {
       const asked: string[] = [];
