@@ -8,6 +8,7 @@ export interface SimbadIdentsObject {
   readonly oid: number;
   readonly hips: readonly number[];
   readonly hds: readonly number[];
+  readonly sourceIds: readonly string[];
   readonly idents: readonly string[];
 }
 

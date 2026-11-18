@@ -45,7 +45,7 @@ const IV27A: CrossIndexRow[] = [
 ];
 
 /** HIP 20's object: `5 Cas` sits inside IV/27A's Cas range, `9 Cas` past it. */
-const SIMBAD_OBJECTS: SimbadIdentsObject[] = [{ oid: 1, hips: [20], hds: [], idents: ['* 5 Cas', '* 9 Cas'] }];
+const SIMBAD_OBJECTS: SimbadIdentsObject[] = [{ oid: 1, hips: [20], hds: [], sourceIds: [], idents: ['* 5 Cas', '* 9 Cas'] }];
 
 const tables: PrimaryTables = {
   iv25: [

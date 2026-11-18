@@ -3,11 +3,8 @@
 // See README.md#the-record-side-join.
 
 import { GREEK_GLYPHS } from '../../../src/catalog-format/naming/greek-forms';
-import { foldNameKey } from './wgsn-normalise-pure';
 import type { DesignationRow } from './wgsn-tables-pure';
 import type { WgsnRow } from './wgsn-parse-pure';
-import type { Declared } from '../../util/sources/source';
-import { readTable } from '../../util/tsv/table-pure';
 import { compareCodeUnits } from '../../../src/astro-core/order-pure';
 
 export interface WgsnNameRow {
@@ -23,50 +20,6 @@ export interface WgsnNameRow {
   srcId: string;
 }
 
-/** How each spine `proper` no WGSN name matches is routed
- *  (`data/iau-wgsn/athyg_proper_dispositions.tsv`, /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them).
- *  `gould-designation` joins the string tier rather than the structured one:
- *  the authority carries only one of the three (82 G. Eri), and both render
- *  the identical form. */
-export const PROPER_DISPOSITIONS = [
-  'discovery-designation',
-  'catalogue-designation',
-  'gould-designation',
-  'latin-bayer',
-  'component-letter',
-  'unattributed',
-] as const;
-export type ProperDisposition = (typeof PROPER_DISPOSITIONS)[number];
-
-const STRING_DESIGNATION_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposition>([
-  'discovery-designation', 'catalogue-designation', 'gould-designation',
-]);
-
-/** `latin-bayer` is here as well as in the structured Bayer tier: the tier
- *  renders `p Eri`, and the spelling AT-HYG printed — `p Eridani`, the full
- *  genitive — is not derivable from it. */
-const ALIAS_ONLY_CLASSES: ReadonlySet<ProperDisposition> = new Set<ProperDisposition>([
-  'component-letter', 'unattributed', 'latin-bayer',
-]);
-
-const PROPER_DISPOSITIONS_COLUMNS = ['proper', 'class', 'hip', 'hd'] as const;
-
-export interface ProperDispositionRow {
-  proper: string;
-  disposition: ProperDisposition;
-  hip: number | null;
-  hd: number | null;
-}
-
-export function parseProperDispositions(text: string, from: Declared): ProperDispositionRow[] {
-  return [...readTable({ ...from, columns: PROPER_DISPOSITIONS_COLUMNS }, text)].map((row) => ({
-    proper: row.requiredText('proper'),
-    disposition: row.oneOf('class', PROPER_DISPOSITIONS),
-    hip: row.int('hip'),
-    hd: row.int('hd'),
-  }));
-}
-
 /** Most component-specific first: a HIP-first join collapses p Eri A and B
  *  onto one record. */
 const KEY_ORDER = ['hr', 'hd', 'hip'] as const;
@@ -76,12 +29,6 @@ export interface NamingKeys {
   hip: number | null;
   hd: number | null;
   hr: number | null;
-  /** The record's spine `proper`. The last resort key: where none of the
-   *  identifiers reach a name row, a record whose own printed name folds to
-   *  an approved one is that star (Albireo B, whose spine row is HD 183914
-   *  against the authority's 183913; Kaewkosin and Maru, whose spine rows
-   *  carry no identifier at all). */
-  proper: string | null;
 }
 
 interface RowIndex<T> {
@@ -132,6 +79,16 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
     || compareCodeUnits(a.srcId, b.srcId))[0];
 }
 
+/** README.md#the-record-side-join. */
+export function alternateNames(rows: readonly WgsnNameRow[], picked: WgsnNameRow): string[] {
+  const names = new Set(rows.flatMap((r) => [
+    ...(r === picked || NAME_WITH_COMPONENT.test(r.name) ? [] : [r.name]),
+    ...r.aliases,
+  ]));
+  names.delete(picked.name);
+  return [...names].sort(compareCodeUnits);
+}
+
 /** Several Bayer rows can reach one record, and the choice is not
  *  arbitrary: a Greek glyph outranks the Latin overflow series, then a row
  *  with no component cell names the STAR where a lettered one names a
@@ -159,11 +116,10 @@ export function pickGouldRow(
 }
 
 export interface WgsnIndex {
-  nameOf(keys: NamingKeys): { row: WgsnNameRow; viaProper: boolean } | null;
+  /** Every name row the record's first reaching key holds. */
+  namesOf(keys: NamingKeys): WgsnNameRow[];
   bayerOf(keys: NamingKeys): DesignationRow | null;
   gouldOf(keys: NamingKeys): DesignationRow | null;
-  /** Folded name keys the authority approves — the naming-authority gate's own set (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
-  approvedNameKeys: ReadonlySet<string>;
 }
 
 export function buildWgsnIndex(
@@ -171,29 +127,12 @@ export function buildWgsnIndex(
   designations: readonly DesignationRow[],
 ): WgsnIndex {
   const nameIdx = indexRows(names);
-  const byFoldedName = new Map<string, WgsnNameRow[]>();
-  const approvedNameKeys = new Set<string>();
-  for (const row of names) {
-    for (const spelling of [row.name, ...row.aliases]) {
-      const key = foldNameKey(spelling);
-      approvedNameKeys.add(key);
-      const bucket = byFoldedName.get(key);
-      if (bucket) bucket.push(row);
-      else byFoldedName.set(key, [row]);
-    }
-  }
   const bayerIdx = indexRows(designations.filter((d) => d.kind === 'bayer'));
   const gouldIdx = indexRows(designations.filter((d) => d.kind === 'gould'));
 
   return {
-    approvedNameKeys,
-    nameOf(keys) {
-      const { rows } = lookup(nameIdx, keys);
-      if (rows.length > 0) return { row: pickNameRow(rows), viaProper: false };
-      if (keys.proper === null) return null;
-      const byName = byFoldedName.get(foldNameKey(keys.proper));
-      if (byName === undefined) return null;
-      return { row: pickNameRow(byName), viaProper: true };
+    namesOf(keys) {
+      return lookup(nameIdx, keys).rows;
     },
     bayerOf(keys) {
       const { rows } = lookup(bayerIdx, keys);
@@ -203,90 +142,5 @@ export function buildWgsnIndex(
       const { rows } = lookup(gouldIdx, keys);
       return rows.length > 0 ? pickGouldRow(rows) : null;
     },
-  };
-}
-
-export interface DispositionRouting {
-  /** A published designation string the ladder displays (the naming authority's designation
-   *  classes, /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them). */
-  eponym: string | null;
-  /** A published spelling that resolves a search and never displays. */
-  alias: string | null;
-}
-
-/** A proper the authority approves is not disposed at all and arrives
- *  through the name tier instead. */
-export function routeDisposedProper(
-  proper: string,
-  disposition: ProperDisposition | undefined,
-): DispositionRouting {
-  if (disposition === undefined) return { eponym: null, alias: null };
-  if (STRING_DESIGNATION_CLASSES.has(disposition)) {
-    return { eponym: proper, alias: null };
-  }
-  if (ALIAS_ONLY_CLASSES.has(disposition)) {
-    return { eponym: null, alias: proper };
-  }
-  return { eponym: null, alias: null };
-}
-
-/** Manifest propers and disposition rows meet on this key, so both sides
- *  build it here — a format that drifts turns the naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) into a
- *  comparison of two disjoint sets that both look populated. */
-export function membershipProperKey(
-  proper: string,
-  hip: number | null,
-  hd: number | null,
-): string {
-  return [proper, hip ?? '', hd ?? ''].join('|');
-}
-
-/** The naming-authority gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) is exact set equality in both directions: an unmatched
- *  proper missing from the file, or a disposition the authority now covers,
- *  both fail the build. */
-export function diffDispositions(
-  unmatched: Set<string>,
-  disposed: Set<string>,
-): { missing: string[]; stale: string[] } {
-  return {
-    missing: [...unmatched].filter((k) => !disposed.has(k)),
-    stale: [...disposed].filter((k) => !unmatched.has(k)),
-  };
-}
-
-export interface ManifestNamingRow {
-  proper: string | null;
-  hip: number | null;
-  hd: number | null;
-  isSol: boolean;
-}
-
-export interface ManifestNamingCounts {
-  membershipPropers: number;
-  membershipProperMatched: number;
-  membershipProperResiduals: number;
-}
-
-/** README.md#the-residual-gate. */
-export function manifestNaming(
-  rows: Iterable<ManifestNamingRow>,
-  approvedNameKeys: WgsnIndex['approvedNameKeys'],
-  disposed: readonly Pick<ProperDispositionRow, 'proper' | 'hip' | 'hd'>[],
-): { counts: ManifestNamingCounts; missing: string[]; stale: string[] } {
-  const propers = new Map<string, string>();
-  for (const r of rows) {
-    if (r.proper !== null && !r.isSol) propers.set(membershipProperKey(r.proper, r.hip, r.hd), r.proper);
-  }
-  const unmatched = new Set([...propers].filter(([, p]) => !approvedNameKeys.has(foldNameKey(p))).map(([k]) => k));
-  return {
-    counts: {
-      membershipPropers: propers.size,
-      membershipProperMatched: propers.size - unmatched.size,
-      membershipProperResiduals: unmatched.size,
-    },
-    ...diffDispositions(
-      unmatched,
-      new Set(disposed.map((d) => membershipProperKey(d.proper, d.hip, d.hd))),
-    ),
   };
 }

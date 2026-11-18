@@ -19,6 +19,7 @@ export function parseSimbadIdentsTsv(text: string, from: Declared): SimbadIdents
       oid: row.requiredId(IDENTS_COLUMN.oid),
       hips: row.idList(IDENTS_COLUMN.hip, IDENTS_SEPARATOR),
       hds: row.idList(IDENTS_COLUMN.hd, IDENTS_SEPARATOR),
+      sourceIds: row.raw(IDENTS_COLUMN.sourceId).split(IDENTS_SEPARATOR).filter((id) => id !== ''),
       idents: row.raw(IDENTS_COLUMN.idents).split(IDENTS_SEPARATOR),
     });
   }

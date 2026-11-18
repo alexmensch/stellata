@@ -264,7 +264,7 @@ decision.
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
 and fills behind it ([On-disk transport chunking](../../../../src/catalog-format/record/README.md#on-disk-transport-chunking),
 [Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
-chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records to apparent
+chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,413<!-- /count --> records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
 and the depth streams in. Summed over nine separately-compressed chunks the
 transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob

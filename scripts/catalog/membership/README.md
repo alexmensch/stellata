@@ -189,8 +189,8 @@ gaia_source_id  binding  routes  term  origin_key
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one
-  no primary publishes — <!-- count:membership-manifest/membership.unattested.proper -->46<!-- /count --> today, the proper names
-  `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
+  no primary publishes — <!-- count:membership-manifest/membership.unattested.proper -->46<!-- /count --> today, proper names naming no longer
+  reads ([String designations](../naming/README.md#string-designations)); an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 - `origin_key` is the record's lineage origin key, the same one its lineage
@@ -361,11 +361,11 @@ arithmetic and label-flips replay:
 - **The astrometry request covers every binding**: each `term = primaries`
   row's `gaia_source_id` is in the request, which reads no manifest, so this
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
-- **The naming authority's residual**: the manifest propers no WGSN name
-  matches are exactly the disposed ones, with the counts pinned in
-  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)),
-  and each `data/naming/bayer_drops.tsv` row keys one record the Bayer join
-  leaves bare, while exactly one other record holds its designation.
+- **The naming tables**: each `data/naming/eponyms.tsv` and
+  `name_drops.tsv` row keys exactly one record, and none the authority names
+  ([String designations](../naming/README.md#string-designations)), and each
+  `data/naming/bayer_drops.tsv` row keys one record the Bayer join leaves
+  bare, while exactly one other record holds its designation.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin
