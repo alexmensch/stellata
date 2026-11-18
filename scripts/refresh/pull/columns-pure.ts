@@ -44,8 +44,8 @@ function flagCell(label: string, column: string, cell: string | null): string | 
 
 function digitsCell(label: string, column: string, digits: number, cell: string | null): string | null {
   if (cell === null) return null;
-  if (!/^\d+$/.test(cell) || cell.replace(/^0+(?=\d)/, '').length > digits) throw new Error(`${label}: ${column}="${cell}" is not a code of ${digits} digits`);
-  return cell.padStart(digits, '0').slice(-digits);
+  if (!/^\d+$/.test(cell) || cell.length > digits) throw new Error(`${label}: ${column}="${cell}" is not a code of ${digits} digits`);
+  return cell.padStart(digits, '0');
 }
 
 type Normalise = (cell: string | null) => string | null;
