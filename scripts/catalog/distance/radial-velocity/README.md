@@ -43,8 +43,8 @@ standard and drop unconditionally — EZ Aqr's −60.0 among them.
 
 Every shipped record's rv outcome is a placement code, pinned the way the
 direction cascade's are: the Gaia tier by its five error bands (below), the
-SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,246<!-- /count -->** and
-`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,482<!-- /count -->**. A parked
+SIMBAD tier as `placement.rv.simbad.literature` **<!-- count:build-catalog/placement.rv.simbad.literature -->21,247<!-- /count -->** and
+`placement.rv.simbad.gaia-release`, and `placement.rv.none` **<!-- count:build-catalog/placement.rv.none -->60,481<!-- /count -->**. A parked
 row writes no rv step, so none of these counts it. The SIMBAD tier is not the printed cell renamed:
 against the 7,126 rows that cell used to cover it drops 689 (562 the pull
 does not reach or holds no usable `rvz_radvel`, 127 the skip rule rejects)

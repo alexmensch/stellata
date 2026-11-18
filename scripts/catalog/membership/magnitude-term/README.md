@@ -96,8 +96,8 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Measured 2026-11-18, the union holds 375,370 bound source_ids, 331,696 of them
-in the kept set, so 598,233 rows are the term's own and the union is 973,603
+Measured 2026-11-18, the union holds 375,369 bound source_ids, 331,695 of them
+in the kept set, so 598,234 rows are the term's own and the union is 973,603
 source_ids; the count snapshot holds the term's rows as its
 `admit.magnitude.*` codes. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
@@ -137,12 +137,12 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | term | projected | measured | now |
 |---|---|---|---|
 | `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,370 |
-| in both | 327,701 | 327,701 | 331,696 |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,369 |
+| in both | 327,701 | 327,701 | 331,695 |
 | source_id union | 973,222 | 973,222 | 973,603 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,553 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,554 |
 | companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,172<!-- /count --> synthetic |
-| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,312 |
+| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,313 |
 | **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,523<!-- /count -->** |
 
 The manifest side reproduced exactly: `build:membership` at the floor wrote
@@ -166,7 +166,7 @@ rows reach the record only through a stored same-as edge
 | reason | today | at `V <= 11` | now |
 |---|---|---|---|
 | `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/placement.park.no-parallax-published -->7,390<!-- /count --> |
-| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/placement.park.refused-no-defensible-parallax -->2,284<!-- /count --> |
+| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/placement.park.refused-no-defensible-parallax -->2,285<!-- /count --> |
 | `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/placement.park.no-v-magnitude -->637<!-- /count --> |
 | `no_position` | 1 | 1 | <!-- count:build-catalog/placement.park.no-position -->1<!-- /count --> |
 

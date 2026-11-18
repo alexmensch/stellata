@@ -72,7 +72,8 @@ const SPINE_PATH = resolve(REPO_ROOT, INHERITED_SPINE.file);
 const MANIFEST_PATH = resolve(REPO_ROOT, MEMBERSHIP_MANIFEST.file);
 const LEDGER_PATH = resolve(REPO_ROOT, ADDITIONS_LEDGER.file);
 const REQUEST_PATH = ASTROMETRY_REQUEST_OUTPUTS.files.request;
-const POSITIONED_ROWS = 188;
+const POSITIONED_ROWS = 187;
+const SIBLING_COMPANION_ROWS = 23;
 const POSITION_DISPUTED_ROWS = 15;
 
 const queue = BINDING_REVIEW.parse(readFileSync(resolve(REPO_ROOT, BINDING_REVIEW.file), 'utf-8'));
@@ -176,11 +177,15 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     }, 180_000);
 
     // see binding/README.md#the-position-witness
-    it('draws no unbound HIP\'s floor source as a record of its own', () => {
+    it('draws no unbound HIP\'s floor source as a record of its own, but the companions the sibling arm names', () => {
       const onBrightness = new Set(manifest.filter((r) => r.term === 'magnitude').map((r) => r.gaiaSourceId!));
-      const twice = manifest.filter((r) => r.term === 'primaries' && r.hip !== null && r.gaiaSourceId === null
-        && positionWitness(r.hip, (keptNearHip.get(r.hip) ?? []).filter((s) => onBrightness.has(s.sourceId)), wdsXids, null) !== null);
-      expect(twice.map((r) => r.hip)).toEqual([]);
+      const disposed = new Set([...dispositions.values()].map((d) => Number(d.hip)));
+      const near = manifest.filter((r) => r.term === 'primaries' && r.hip !== null && r.gaiaSourceId === null
+        && !disposed.has(r.hip)).map((r) => ({
+        hip: r.hip!, sources: (keptNearHip.get(r.hip!) ?? []).filter((s) => onBrightness.has(s.sourceId)),
+      })).filter((r) => r.sources.length > 0);
+      expect(near.filter((r) => positionWitness(r.hip, r.sources, wdsXids, null) !== null).map((r) => r.hip)).toEqual([]);
+      expect(near).toHaveLength(SIBLING_COMPANION_ROWS);
     });
 
     it('binds f Pup (HIP 37096) to its one source, drawn once', () => {

@@ -324,8 +324,8 @@ across the model.
 **Brightness and colour index.** A star's visual (Johnson V) magnitude is
 transformed from Gaia's own broadband measurements through a published
 relation ([Riello 2021](/data/papers/index.md#riello2021)), which covers
-<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,614<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
-those fall back to Hipparcos's printed V (<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,020<!-- /count -->), then Tycho-2
+<!-- count:build-catalog/brightness-colour.v.gaia-riello -->963,613<!-- /count --> stars. Gaia's detectors saturate on the brightest stars, so
+those fall back to Hipparcos's printed V (<!-- count:build-catalog/brightness-colour.v.printed-hip -->1,021<!-- /count -->), then Tycho-2
 (<!-- count:build-catalog/brightness-colour.v.tycho2.inside-bt-vt-range -->184<!-- /count --> inside its colour range, <!-- count:build-catalog/brightness-colour.v.tycho2.outside-bt-vt-range -->6<!-- /count --> outside)
 and the Gliese catalogue (<!-- count:build-catalog/brightness-colour.v.gliese -->20<!-- /count -->). The B−V colour index follows a similar
 ladder: a published Gaia colour relation, then Hipparcos's printed B−V,
