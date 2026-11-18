@@ -170,9 +170,10 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
 
   describe('the position witness', () => {
     let keptNearHip: Map<number, NearSource[]>;
-    const wdsXids = parseSimbadWdsXidsTsv(SIMBAD_WDS_XIDS.read());
+    let wdsXids: ReturnType<typeof parseSimbadWdsXidsTsv>;
 
     beforeAll(async () => {
+      wdsXids = parseSimbadWdsXidsTsv(SIMBAD_WDS_XIDS.read());
       keptNearHip = (await readFloorSelection(HIP2.read().astrometry))?.keptNearHip ?? new Map();
     }, 180_000);
 
