@@ -128,22 +128,30 @@ export interface NearSource {
  *  HIPPARCOS_FORWARD_TOLERANCE_ARCSEC of `at`, nearest first. */
 export type HipsNear = (at: SkyPosition, epoch: number) => NearHip[];
 
-const CELL_RAD = (HIPPARCOS_FORWARD_TOLERANCE_ARCSEC / 3600) * (Math.PI / 180);
+/** Cells four tolerances wide keep a packed three-axis key under 2^53. */
+const CELL_RAD = 4 * (HIPPARCOS_FORWARD_TOLERANCE_ARCSEC / 3600) * (Math.PI / 180);
+const CELL_OFFSET = 2 ** 16;
+const AXIS = 2 ** 17;
 
-const cellKey = (x: number, y: number, z: number): string =>
-  `${Math.floor(x / CELL_RAD)},${Math.floor(y / CELL_RAD)},${Math.floor(z / CELL_RAD)}`;
+const cellOf = (c: number): number => Math.floor(c / CELL_RAD) + CELL_OFFSET;
+const cellKey = (cx: number, cy: number, cz: number): number => (cx * AXIS + cy) * AXIS + cz;
 
-/** A grid over unit vectors one tolerance wide, so a query reads its own cell and the 26 around it. */
+interface Placed {
+  hip: number;
+  u: UnitVector;
+}
+
+/** A grid over unit vectors, so a query reads its own cell and the 26 around it. */
 export function hipsNear(hips: ReadonlyMap<number, HipparcosAstrometry>): HipsNear {
-  const byEpoch = new Map<number, Map<string, { hip: number; u: UnitVector }[]>>();
-  const gridAt = (epoch: number) => {
+  const byEpoch = new Map<number, Map<number, Placed[]>>();
+  const gridAt = (epoch: number): Map<number, Placed[]> => {
     const held = byEpoch.get(epoch);
     if (held !== undefined) return held;
-    const grid = new Map<string, { hip: number; u: UnitVector }[]>();
+    const grid = new Map<number, Placed[]>();
     for (const [hip, astrometry] of hips) {
       const { raDeg, decDeg } = hipparcosPositionAt(astrometry, epoch);
       const u = unitVectorFromRaDec(raDeg, decDeg);
-      const key = cellKey(u.x, u.y, u.z);
+      const key = cellKey(cellOf(u.x), cellOf(u.y), cellOf(u.z));
       const cell = grid.get(key);
       if (cell === undefined) grid.set(key, [{ hip, u }]);
       else cell.push({ hip, u });
@@ -154,19 +162,23 @@ export function hipsNear(hips: ReadonlyMap<number, HipparcosAstrometry>): HipsNe
   return (at, epoch) => {
     const grid = gridAt(epoch);
     const u = unitVectorFromRaDec(at.raDeg, at.decDeg);
-    const [cx, cy, cz] = [u.x, u.y, u.z].map((c) => Math.floor(c / CELL_RAD));
+    const cx = cellOf(u.x);
+    const cy = cellOf(u.y);
+    const cz = cellOf(u.z);
     const out: NearHip[] = [];
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (let dz = -1; dz <= 1; dz++) {
-          for (const entry of grid.get(`${cx + dx},${cy + dy},${cz + dz}`) ?? []) {
+          const cell = grid.get(cellKey(cx + dx, cy + dy, cz + dz));
+          if (cell === undefined) continue;
+          for (const entry of cell) {
             const separationArcsec = angularSeparationArcsec(u, entry.u);
             if (separationArcsec <= HIPPARCOS_FORWARD_TOLERANCE_ARCSEC) out.push({ hip: entry.hip, separationArcsec });
           }
         }
       }
     }
-    return out.sort((a, b) => ascending(a.separationArcsec, b.separationArcsec) || a.hip - b.hip);
+    return out.length < 2 ? out : out.sort((a, b) => ascending(a.separationArcsec, b.separationArcsec) || a.hip - b.hip);
   };
 }
 
