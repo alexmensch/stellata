@@ -122,7 +122,7 @@ name:
 
 - `dropped.anchor-is-component` and `adopted.sameas-bridge`: none but the
   `multiples.tsv` rows named, by row key — the three mis-keyed rows and the
-  seven bridged ones. Another row onto the same record still fails. A fix
+  six bridged ones. Another row onto the same record still fails. A fix
   upstream that clears one fails the check until the row is struck off its
   list.
 - `brightness.anchor-collocated`: none.

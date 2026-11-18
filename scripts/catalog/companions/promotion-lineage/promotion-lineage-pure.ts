@@ -144,7 +144,6 @@ const SAMEAS_BRIDGED_ROWS = new Map([
   ['multiples:00047+3416-Da,Db/Db', 'bridged to gaia-dr3:2875176250406193920'],
   ['multiples:01178+4901-Ca,Cb/Cb', 'bridged to gaia-dr3:403123332598347392'],
   ['multiples:12357-1650-Ba,Bb/Bb', 'bridged to gaia-dr3:3523321789291000448'],
-  ['multiples:20450+1244-AB/B', 'bridged to gaia-dr3:1755189379660877312'],
   ['multiples:21221+1948-Ba,Bb/Bb', 'bridged to gaia-dr3:1790202571530814464'],
   ['multiples:21334+3058-Ba,Bb/Bb', 'bridged to gaia-dr3:1850540432473446528'],
   ['multiples:22450+6808-Ca,Cb/Cb', 'bridged to gaia-dr3:2224986268437189888'],
