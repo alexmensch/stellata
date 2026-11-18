@@ -342,12 +342,13 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Every disposed row ships the value its disposition settled on, under
   // `reviewed`, or none — and no `reviewed` binding exists without one.
   it('carries every disposed binding as reviewed, and no other', () => {
-    // Keyed on the CORRECTED cells: a disposition adjudicates the row the
-    // generator derived from, and a `set` correction moves that key.
+    // Keyed on the CORRECTED cells with the TYC the pair rule left the row on:
+    // a disposition adjudicates the row the generator derived from, and both a
+    // `set` correction and a pair move change that key.
     const bySpineKey = new Map<string, ManifestRecord>();
     corrected.forEach((row, i) => {
       const target = match.manifestIndex[i];
-      if (target !== null) bySpineKey.set(bindingReviewKey(row), manifest[target]);
+      if (target !== null) bySpineKey.set(bindingReviewKey({ ...row, tyc: manifest[target].tyc ?? row.tyc }), manifest[target]);
     });
     for (const [key, d] of dispositions) {
       const row = bySpineKey.get(key)!;
