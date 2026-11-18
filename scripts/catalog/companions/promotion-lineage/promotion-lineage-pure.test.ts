@@ -324,8 +324,8 @@ describe('PROMOTION_INVARIANTS', () => {
   const anchorIsComponent: RowOutcome = { kind: 'dropped', reason: 'anchor-is-component', idx: 7 };
   const sameasBridge: RowOutcome = { kind: 'adopted', idx: 3, via: 'sameas-bridge', desigConFromAnchor: false, recurated: null };
 
-  it('excepts the 3 mis-keyed anchor rows and the 7 same-as bridged rows by row key, and no anchor-collocated mint', () => {
-    expect([miskeyed.length, bridged.length]).toEqual([3, 7]);
+  it('excepts the 3 mis-keyed anchor rows and the 6 same-as bridged rows by row key, and no anchor-collocated mint', () => {
+    expect([miskeyed.length, bridged.length]).toEqual([3, 6]);
     expect(PROMOTION_INVARIANTS.map((v) => v.exceptions.kind)).toEqual(['named', 'named', 'rule']);
   });
 
