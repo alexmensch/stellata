@@ -7,7 +7,7 @@ import { designationConstellation, inheritedDesignationCon, NO_DESIGNATION_CON }
 describe('designationConstellation', () => {
   const index = { byHd: new Map([[216956, 5]]), byHip: new Map([[113368, 7]]) };
   const simbad = classifySimbadFlamsteed(
-    [{ oid: 1, hips: [1427], hds: [1352], idents: ['* 39 Psc'] }],
+    [{ oid: 1, hips: [1427], hds: [1352], sourceIds: [], idents: ['* 39 Psc'] }],
     [{ hd: 9, hip: null, bayer: null, flamsteed: 113, cst: 'Psc' }],
   );
   const star = (hd: number | null, hip: number | null, flam: number | null = null) => ({ hd, hip, flam });

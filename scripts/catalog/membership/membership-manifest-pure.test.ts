@@ -129,11 +129,11 @@ const IV27A: CrossIndexRow[] = [
  *  carries one accepted number and no cell; HD 200500 two; HIP 40 one; HIP 10's
  *  `9 Cas` lies past it, and HIP 99's on no catalogue star. */
 const SIMBAD_OBJECTS: SimbadIdentsObject[] = [
-  { oid: 1, hips: [10], hds: [], idents: ['* 9 Cas'] },
-  { oid: 5, hips: [99], hds: [], idents: ['* 8 Cas'] },
-  { oid: 2, hips: [20], hds: [], idents: ['* 3 Cas'] },
-  { oid: 3, hips: [], hds: [200500], idents: ['* 2 Cas', '* 4 Cas'] },
-  { oid: 4, hips: [40], hds: [], idents: ['* 6 Cas'] },
+  { oid: 1, hips: [10], hds: [], sourceIds: [], idents: ['* 9 Cas'] },
+  { oid: 5, hips: [99], hds: [], sourceIds: [], idents: ['* 8 Cas'] },
+  { oid: 2, hips: [20], hds: [], sourceIds: [], idents: ['* 3 Cas'] },
+  { oid: 3, hips: [], hds: [200500], sourceIds: [], idents: ['* 2 Cas', '* 4 Cas'] },
+  { oid: 4, hips: [40], hds: [], sourceIds: [], idents: ['* 6 Cas'] },
 ];
 
 /** Primaries admitting, beyond the spine: TYC 2-1-1 (HD 60, below the link

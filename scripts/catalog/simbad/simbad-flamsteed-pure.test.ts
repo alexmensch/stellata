@@ -9,7 +9,7 @@ const IV27A: CrossIndexRow[] = [
   { hd: 300, hip: 30, bayer: 'alf', flamsteed: 3, cst: 'Lyr' },
 ];
 
-const object = (oid: number, hips: number[], hds: number[], idents: string[]): SimbadIdentsObject => ({ oid, hips, hds, idents });
+const object = (oid: number, hips: number[], hds: number[], idents: string[]): SimbadIdentsObject => ({ oid, hips, hds, sourceIds: [], idents });
 
 describe('numberedDesignation', () => {
   it('reads a `* NN Con` ident and ignores a Bayer letter', () => {
