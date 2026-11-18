@@ -5,6 +5,7 @@ import { readTable } from '../../util/tsv/table-pure';
 import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
 import { BINDING_DISPOSITION_BASES, type BindingDispositionBasis } from './binding/binding-review-dispositions-pure';
 import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
+import type { WitnessVerdict } from './positional-witness/positional-witness-pure';
 
 export const PAIR_DISPOSITION_COLUMNS = ['hip', 'entries', 'keep_entry', 'basis', 'evidence'] as const;
 
@@ -51,6 +52,22 @@ export function requirePhotometricKeeps(
     }).sort((a, b) => a.offset - b.offset);
     if (offsets[0].tyc !== d.keepEntry || offsets[0].offset === offsets[1].offset) {
       throw new Error(`pair-review disposition for HIP ${d.hip} rests on tycho2_photometry, but ${d.keepEntry} is not the one entry whose VT is nearest Hipparcos's V ${hipV}`);
+    }
+  }
+}
+
+// see merge-derivation/README.md#disposing-a-queued-pair
+export function requirePositionalKeeps(
+  dispositions: ReadonlyMap<number, PairDisposition>,
+  positionWitness: (hip: number, entries: readonly string[]) => WitnessVerdict | null,
+): void {
+  for (const d of dispositions.values()) {
+    if (d.basis !== 'hip2_position') continue;
+    const verdict = positionWitness(d.hip, d.entries);
+    if (verdict === null) throw new Error(`pair-review disposition for HIP ${d.hip} rests on hip2_position, but HIP2 gives it no position and proper motion to carry`);
+    if (verdict.kind !== 'match' || verdict.tyc !== d.keepEntry) {
+      const seps = verdict.separations.map((s) => `${s.tyc} ${s.separationArcsec.toFixed(2)}"`).join(', ');
+      throw new Error(`pair-review disposition for HIP ${d.hip} rests on hip2_position, but HIP2's position does not fall on ${d.keepEntry} alone (${seps})`);
     }
   }
 }

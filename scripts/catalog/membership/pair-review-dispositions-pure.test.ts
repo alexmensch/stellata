@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePairDispositionsTsv, requirePhotometricKeeps } from './pair-review-dispositions-pure';
+import { parsePairDispositionsTsv, requirePhotometricKeeps, requirePositionalKeeps } from './pair-review-dispositions-pure';
+import type { WitnessVerdict } from './positional-witness/positional-witness-pure';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
 
 const FROM = { file: 'pair-review-dispositions.tsv', hint: 'h' };
@@ -55,5 +56,29 @@ describe('requirePhotometricKeeps', () => {
 
   it('weighs only tycho2_photometry dispositions', () => {
     expect(check('1-1-2', {}, {}, 'tycho2_position')).not.toThrow();
+  });
+});
+
+describe('requirePositionalKeeps', () => {
+  const seps = [{ tyc: '1-1-2', separationArcsec: 0.02 }, { tyc: '1-1-1', separationArcsec: 0.98 }];
+  const check = (keep: string, verdict: WitnessVerdict | null, basis = 'hip2_position') =>
+    () => requirePositionalKeeps(parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tHIP2`), () => verdict);
+
+  it('passes a keep_entry HIP2 falls on alone', () => {
+    expect(check('1-1-2', { kind: 'match', tyc: '1-1-2', separations: seps })).not.toThrow();
+  });
+
+  it('fails a keep_entry HIP2 matches another entry, both, or neither', () => {
+    expect(check('1-1-1', { kind: 'match', tyc: '1-1-2', separations: seps })).toThrow(/does not fall on 1-1-1 alone \(1-1-2 0.02", 1-1-1 0.98"\)/);
+    expect(check('1-1-2', { kind: 'several', tycs: ['1-1-2', '1-1-1'], separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
+    expect(check('1-1-2', { kind: 'none', separations: seps })).toThrow(/does not fall on 1-1-2 alone/);
+  });
+
+  it('fails a HIP HIP2 cannot carry', () => {
+    expect(check('1-1-2', null)).toThrow(/gives it no position/);
+  });
+
+  it('weighs only hip2_position dispositions', () => {
+    expect(check('1-1-1', null, 'pair_component')).not.toThrow();
   });
 });

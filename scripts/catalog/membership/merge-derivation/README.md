@@ -177,6 +177,19 @@ Tycho-2 entries closer together than Hipparcos's position can separate, or a
 resolved pair Gaia names no source for. Settling the
 queue is `stellata-hooj.17.11.5`.
 
+**`hip2_position` is recomputed too.** A disposition on that basis keeps the
+entry HIP2's carried position falls on alone, inside the Hipparcos tolerance
+([The two witnesses](../positional-witness/README.md#the-two-witnesses)), and
+`requirePositionalKeeps` fails the build where the witness returns `none`,
+`several`, another entry, or nothing to carry. It settles the queued rows a
+second witness contradicts Gaia on, or Gaia cannot separate: the pair rule
+asks HIP2's position only where Gaia names no source, so on a `gate_refused`
+or `simbad_refused` row the position has not yet voted. Where the position
+and Tycho-2's photometry agree the disposition takes `tycho2_photometry`;
+`hip2_position` is for the pairs whose entries' `VT` cannot be told apart
+(HIP 102396's differ by 0.013) or whose position falls on the other entry's
+own record.
+
 ## The divergence ledger
 
 `data/membership/merge-divergence.tsv`, keyed on the record's five identifier

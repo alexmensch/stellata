@@ -90,7 +90,8 @@ scripts/catalog/membership/
                                   pair rule's HIP moves leave them. Pure.
   pair-review-dispositions-       The pair-review queue's dispositions:
     pure.ts (+ test)              columns, reader and its checks, the
-                                  tycho2_photometry recomputation, and
+                                  tycho2_photometry and hip2_position
+                                  recomputations, and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
     source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
