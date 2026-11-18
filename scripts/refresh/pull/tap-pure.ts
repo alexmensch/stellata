@@ -43,7 +43,6 @@ export const GAIA_DR3_RELEASE = 'Gaia DR3';
 /** The most rows a sliced Gaia pull puts in one slice: at LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
 export const GAIA_SLICE_ROWS = 24_000;
 
-/** Gaia's tables under ESA's names; ARI hosts ESA's `external.*` copies under its own schemas. */
 export const GAIA: TapArchive = {
   mirrors: [
     { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },
