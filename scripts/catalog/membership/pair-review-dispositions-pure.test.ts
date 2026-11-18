@@ -10,20 +10,21 @@ const parse = (...rows: string[]) => parsePairDispositionsTsv(HEADER + rows.map(
 
 describe('parsePairDispositionsTsv', () => {
   it('reads a disposition keyed on its HIP', () => {
-    expect(parse('10\t1-1-1|1-1-2\t1-1-2\ttycho2_position\tsep 0.2"').get(10)).toEqual({
-      hip: 10, entries: ['1-1-1', '1-1-2'], keepEntry: '1-1-2', basis: 'tycho2_position', evidence: 'sep 0.2"',
+    expect(parse('10\t1-1-1|1-1-2\t1-1-2\tpair_component\tsep 0.2"').get(10)).toEqual({
+      hip: 10, entries: ['1-1-1', '1-1-2'], keepEntry: '1-1-2', basis: 'pair_component', evidence: 'sep 0.2"',
     });
   });
 
   it('refuses a keep_entry off the pair it restates', () => {
-    expect(() => parse('10\t1-1-1|1-1-2\t1-1-9\ttycho2_position\tsep')).toThrow(/1-1-9 is not on the pair 1-1-1\|1-1-2/);
+    expect(() => parse('10\t1-1-1|1-1-2\t1-1-9\tpair_component\tsep')).toThrow(/1-1-9 is not on the pair 1-1-1\|1-1-2/);
   });
 
   it('refuses a duplicate HIP, an unknown basis or a disposition with no evidence', () => {
-    const ok = '10\t1-1-1|1-1-2\t1-1-2\ttycho2_position\tsep';
+    const ok = '10\t1-1-1|1-1-2\t1-1-2\tpair_component\tsep';
     expect(() => parse(ok, ok)).toThrow(/duplicate HIP 10/);
     expect(() => parse('10\t1-1-1|1-1-2\t1-1-2\thunch\tsep')).toThrow();
-    expect(() => parse('10\t1-1-1|1-1-2\t1-1-2\ttycho2_position\t')).toThrow();
+    expect(() => parse('10\t1-1-1|1-1-2\t1-1-2\ttycho2_position\tsep')).toThrow(/basis/);
+    expect(() => parse('10\t1-1-1|1-1-2\t1-1-2\tpair_component\t')).toThrow();
   });
 
   it('reads the committed file', () => {
@@ -55,7 +56,7 @@ describe('requirePhotometricKeeps', () => {
   });
 
   it('weighs only tycho2_photometry dispositions', () => {
-    expect(check('1-1-2', {}, {}, 'tycho2_position')).not.toThrow();
+    expect(check('1-1-2', {}, {}, 'pair_component')).not.toThrow();
   });
 });
 

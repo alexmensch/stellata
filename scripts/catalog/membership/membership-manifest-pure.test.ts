@@ -1429,7 +1429,7 @@ describe('buildMembership — the pair rule', () => {
       ...pairInput,
       simbadTycHd: simbadNames('502'),
       pairDispositions: new Map([[90, {
-        hip: 90, entries: ['5-5-1', '5-5-2'], keepEntry: '5-5-2', basis: 'tycho2_position' as const, evidence: 'sep 0.2"',
+        hip: 90, entries: ['5-5-1', '5-5-2'], keepEntry: '5-5-2', basis: 'pair_component' as const, evidence: 'sep 0.2"',
       }]]),
     });
     expect(hip90(disposed)?.tyc).toBe('5-5-2');

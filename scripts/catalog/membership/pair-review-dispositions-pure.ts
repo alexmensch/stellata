@@ -3,18 +3,20 @@
 import type { Declared } from '../../util/sources/source';
 import { readTable } from '../../util/tsv/table-pure';
 import { evidenceOf } from '../../util/tsv/cell-corrections-pure';
-import { BINDING_DISPOSITION_BASES, type BindingDispositionBasis } from './binding/binding-review-dispositions-pure';
 import type { PrintedVLookups } from '../photometry/v-magnitude-pure';
 import type { WitnessVerdict } from './positional-witness/positional-witness-pure';
 
 export const PAIR_DISPOSITION_COLUMNS = ['hip', 'entries', 'keep_entry', 'basis', 'evidence'] as const;
+/** Meanings: merge-derivation/README.md#disposing-a-queued-pair. */
+export const PAIR_DISPOSITION_BASES = ['tycho2_photometry', 'hip2_position', 'pair_component'] as const;
+export type PairDispositionBasis = (typeof PAIR_DISPOSITION_BASES)[number];
 
 export interface PairDisposition {
   hip: number;
   /** The queue row's entries, restated: a disposition taken over a different pair is stale. */
   entries: readonly string[];
   keepEntry: string;
-  basis: BindingDispositionBasis;
+  basis: PairDispositionBasis;
   evidence: string;
 }
 
@@ -28,7 +30,7 @@ export function parsePairDispositionsTsv(text: string, from: Declared): Map<numb
     if (!entries.includes(keepEntry)) row.fail(`HIP ${hip}: keep_entry ${keepEntry} is not on the pair ${entries.join('|')}`);
     out.set(hip, {
       hip, entries, keepEntry,
-      basis: row.oneOf('basis', BINDING_DISPOSITION_BASES),
+      basis: row.oneOf('basis', PAIR_DISPOSITION_BASES),
       evidence: evidenceOf(row, 'evidence', `HIP ${hip}`),
     });
   }

@@ -243,12 +243,9 @@ record's Gaia DR2 id names the record and carries its DR3 renumbering), `gaia_ph
 candidate), `pair_component` (a pair's components: which one the record is,
 the HIP and SIMBAD's letters deciding, or none where the record is the system
 Gaia resolves), `shared_source` (one source two records
-reach, held by the one whose light it is), `tycho2_photometry` (of a Tycho-2
-pair's entries, the one whose `VT` is nearest the HIP's printed V; the
-pair-review dispositions use it, and the build recomputes it,
-[Disposing a queued pair](../merge-derivation/README.md#disposing-a-queued-pair)),
-`hip2_position` (of a Tycho-2 pair's entries, the one HIP2's carried position
-falls on alone; pair-review only, recomputed the same way). Each disposition's code says what it kept and whether the derivation
+reach, held by the one whose light it is). The pair-review dispositions keep
+a set of their own
+([Disposing a queued pair](../merge-derivation/README.md#disposing-a-queued-pair)). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
 9 keep the derived id, 45 another and 3 none. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP

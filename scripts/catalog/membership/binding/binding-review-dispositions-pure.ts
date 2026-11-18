@@ -15,8 +15,7 @@ export type BindingDisposition = (typeof BINDING_DISPOSITIONS)[number];
 /** Meanings: README.md#a-disposition-is-the-authority-wherever-one-keys-a-row. */
 export const BINDING_DISPOSITION_BASES = [
   'tycho2_position', 'v70a_astrometry', 'simbad_dr2_object',
-  'gaia_photometry', 'pair_component', 'shared_source', 'tycho2_photometry',
-  'hip2_position',
+  'gaia_photometry', 'pair_component', 'shared_source',
 ] as const;
 export type BindingDispositionBasis = (typeof BINDING_DISPOSITION_BASES)[number];
 export type BindingDispositionRow = Record<(typeof BINDING_DISPOSITION_COLUMNS)[number], string> & {
