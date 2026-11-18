@@ -7,7 +7,7 @@
   "answeredBy": [
     "SIMBAD-Harvard"
   ],
-  "request": "da39c48c9736c61065324defa880c2e24f6e34af",
+  "request": "5a0d5ba7d981fd68109a90fa08d61edce5c40625",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/gaia/gaia_dr3_astrometry.tsv",

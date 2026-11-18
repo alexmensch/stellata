@@ -46,7 +46,7 @@ gaia_astrometry_source_id_request.tsv     ~7.3 MB, LFS. The one astrometry
                                        membership derivation's candidates UNION
                                        the binaries' Stage 2 candidates UNION
                                        the binding review dispositions' kept
-                                       ids, 388,982 ids
+                                       ids, 388,980 ids
                                        (scripts/catalog/astrometry-request/).
 gaia_dr2_neighbourhood_request.tsv     ~100 KB, LFS. DR3 source_ids of the
                                        Gaia-only catalog stars (no HIP/HD/HR/GJ)
