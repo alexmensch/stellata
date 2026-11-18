@@ -11,9 +11,6 @@ import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './
 import { SIMBAD_WDS_XIDS } from './simbad-wds-xids-source';
 import type { Hip2AstrometryRow } from '../../sources/hip2-source';
 import type { PositionEvidence } from './binding-derivation-pure';
-import {
-  hipparcosAstrometry, hipsNear, type HipparcosAstrometry, type HipsNear, type NearSource,
-} from '../positional-witness/positional-witness-pure';
 
 export function loadHipVMag(): Map<number, PrintedHipValue> {
   return HIP_PHOTOMETRY.read().vmag;
@@ -36,25 +33,15 @@ export function loadBindingEvidence(printedV: PrintedVLookups): {
   return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry };
 }
 
-/** Every HIP2 row with a proper motion to carry it by, indexed for the position witness. */
-export function hip2Near(hip2: ReadonlyMap<number, Hip2AstrometryRow>): HipsNear {
-  const carried = new Map<number, HipparcosAstrometry>();
-  for (const [hip, row] of hip2) {
-    const astrometry = hipparcosAstrometry(row);
-    if (astrometry !== null) carried.set(hip, astrometry);
-  }
-  return hipsNear(carried);
-}
-
 /** HIP2's J1991.25 positions and Gaia's, for the identity witness; the floor's sources near each HIP, for the position witness. */
 export function positionEvidence(
   gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>,
   hip2: ReadonlyMap<number, Hip2AstrometryRow>,
-  keptNearHip: ReadonlyMap<number, readonly NearSource[]>,
+  keptNearHip: PositionEvidence['keptNearHip'],
 ): PositionEvidence {
   return {
     hipparcos: (hip) => hip2.get(hip) ?? null,
-    keptNearHip: (hip) => keptNearHip.get(hip) ?? [],
+    keptNearHip,
     gaia: (sourceId) => {
       const row = gaiaAstrometry.get(sourceId);
       if (row === undefined || row.pmraMasyr === null || row.pmdecMasyr === null) return null;

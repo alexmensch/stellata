@@ -19,7 +19,7 @@ import {
   multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { countSnapshotCheck } from '../../util/snapshot-check';
-import { hip2Near, loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
+import { loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
 import { HIP2 } from '../sources/hip2-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
@@ -29,8 +29,8 @@ import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
 import { readMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/multiples-row';
-import { readMagnitudeTerm } from './magnitude-term/magnitude-selection';
-import { MAGNITUDE_FLOOR_V, magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
+import { readFloorSelection } from './magnitude-term/magnitude-selection';
+import { magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { ORIGIN_KEYS } from './origin-keys';
 import { loadPrimaryTables } from '../spine/primaries-tables';
@@ -60,7 +60,7 @@ export async function main(): Promise<void> {
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
   const hip2 = HIP2.read().astrometry;
-  const magnitudeTerm = MAGNITUDE_FLOOR_V === null ? null : await readMagnitudeTerm(MAGNITUDE_FLOOR_V, hip2Near(hip2));
+  const magnitudeTerm = await readFloorSelection(hip2);
   const result = buildMembership({
     spine,
     tables,

@@ -223,7 +223,7 @@ export interface PositionEvidence {
   /** Null where Gaia publishes no proper motion to carry the source by. */
   gaia: (sourceId: string) => SourceAstrometry | null;
   /** The magnitude floor's kept sources within a second of arc of the HIP's position carried to theirs. */
-  keptNearHip: (hip: number) => readonly NearSource[];
+  keptNearHip: ReadonlyMap<number, readonly NearSource[]>;
 }
 
 /** README.md#the-position-witness. */
@@ -269,7 +269,7 @@ export function rowGateEvidence(
   return {
     hip, printedV: printed, tycWitness,
     identity: identityWitness(hip, simbad, positions, evidence.gMagOf, printed),
-    position: positionWitness(hip, hip === null ? [] : positions.keptNearHip(hip), evidence.wdsXids, printed?.vMag ?? null),
+    position: positionWitness(hip, hip === null ? [] : positions.keptNearHip.get(hip) ?? [], evidence.wdsXids, printed?.vMag ?? null),
     evidence,
   };
 }
@@ -373,7 +373,7 @@ export function derivationCandidateSourceIds(
       if (id !== null) ids.add(id);
     }
     const hip = intCell(row.hip);
-    for (const near of hip === null ? [] : keptNearHip(hip)) ids.add(near.sourceId);
+    for (const near of hip === null ? [] : keptNearHip.get(hip) ?? []) ids.add(near.sourceId);
   }
   return ids;
 }

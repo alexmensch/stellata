@@ -237,7 +237,7 @@ function gateEvidence(
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: gateEvidence(tables),
-  positions: { hipparcos: () => null, gaia: () => null, keptNearHip: () => [] },
+  positions: { hipparcos: () => null, gaia: () => null, keptNearHip: new Map() },
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   simbadTycHd: new Map<string, SimbadTycHdRow>(),

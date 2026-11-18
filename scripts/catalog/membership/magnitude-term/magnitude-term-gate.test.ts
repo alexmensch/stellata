@@ -8,8 +8,7 @@ import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
 import { readMagnitudeTermAstrometry } from './magnitude-term';
-import { readMagnitudeTerm } from './magnitude-selection';
-import { hip2Near } from '../binding/binding-evidence';
+import { hip2Near, readMagnitudeTerm } from './magnitude-selection';
 import { HIP2 } from '../../sources/hip2-source';
 import {
   magnitudeTermNewcomers,

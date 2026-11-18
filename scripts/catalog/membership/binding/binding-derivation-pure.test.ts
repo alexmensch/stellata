@@ -22,7 +22,7 @@ import {
 import { printedVOf } from '../../photometry/photometry-fixture';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
-const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null, keptNearHip: () => [] };
+const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null, keptNearHip: new Map() };
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { oid: 0, hip: 10, tyc: '1-1-1', gj: null }],
@@ -266,7 +266,7 @@ describe('deriveBinding', () => {
     const at = (raDeg: number, decDeg: number): PositionEvidence => ({
       hipparcos: (hip) => (hip === 90 ? hip90 : null),
       gaia: (id) => (id === '900' ? { raDeg, decDeg, pmRaMasyr: 1.3552, pmDecMasyr: 0.2501, refEpoch: 2016 } : null),
-      keptNearHip: () => [],
+      keptNearHip: new Map(),
     });
     const derive = (positions: PositionEvidence) => deriveBinding(
       candidates({ simbad: '900' }), rowGateEvidence({ tyc: '', hip: '90', gl: '' }, blend, index, positions),
@@ -345,7 +345,7 @@ describe('deriveBinding', () => {
 describe('the position witness', () => {
   const fPup = { sourceId: '5588312348336552576', gMag: 4.411, separationArcsec: 0.221 };
   const near = (hip: number, sources: { sourceId: string; gMag: number; separationArcsec: number }[]): PositionEvidence =>
-    ({ ...NO_POSITIONS, keptNearHip: (h) => (h === hip ? sources : []) });
+    ({ ...NO_POSITIONS, keptNearHip: new Map([[hip, sources]]) });
   const evidence = bindingEvidence(
     new Map([['5588312348336552576', 4.411], ['far', 9.0], ['500', 9.6], ['501', 10.1], ['other', 4.5]]),
     WDS_XIDS, printedVOf({ hip: new Map([[37096, 4.53], [50, 9.16]]) }),
@@ -396,13 +396,12 @@ describe('derivationCandidateSourceIds', () => {
       { tyc: '1-1-1', hip: '10', gl: '' },
       { tyc: '', hip: '20', gl: 'Gl 820B' },
     ];
-    expect([...derivationCandidateSourceIds(rows, tables, cns5ByOwnKey, simbad, () => [])].sort())
+    expect([...derivationCandidateSourceIds(rows, tables, cns5ByOwnKey, simbad, new Map())].sort())
       .toEqual(['100', '200', '201', '999']);
   });
 
   it('adds every floor source near a row\'s HIP, whichever the position witness would take', () => {
-    const near = (hip: number) => (hip === 20
-      ? [{ sourceId: '7', gMag: 9, separationArcsec: 0.1 }, { sourceId: '8', gMag: 9.5, separationArcsec: 0.6 }] : []);
+    const near = new Map([[20, [{ sourceId: '7', gMag: 9, separationArcsec: 0.1 }, { sourceId: '8', gMag: 9.5, separationArcsec: 0.6 }]]]);
     expect([...derivationCandidateSourceIds([{ tyc: '', hip: '20', gl: '' }], tables, cns5ByOwnKey, simbad, near)].sort())
       .toEqual(['7', '8', '999']);
   });

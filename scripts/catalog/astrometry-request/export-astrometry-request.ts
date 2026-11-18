@@ -6,9 +6,8 @@ import {
   joinOverlayCandidates,
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
-import { hip2Near, loadHipVMag } from '../membership/binding/binding-evidence';
-import { readMagnitudeTerm } from '../membership/magnitude-term/magnitude-selection';
-import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
+import { loadHipVMag } from '../membership/binding/binding-evidence';
+import { readFloorSelection } from '../membership/magnitude-term/magnitude-selection';
 import { HIP2 } from '../sources/hip2-source';
 import { loadReferenceCatalogs } from '../../binaries/load/reference-catalogs';
 import { astrometryRequestIds, resolveStage2 } from '../../binaries/resolve/resolve-pairs';
@@ -51,12 +50,10 @@ async function bindingCandidates(): Promise<{ gate: Set<string>; derivation: Set
     }),
     printedV,
   );
-  const keptNearHip = MAGNITUDE_FLOOR_V === null
-    ? new Map()
-    : (await readMagnitudeTerm(MAGNITUDE_FLOOR_V, hip2Near(HIP2.read().astrometry))).keptNearHip;
+  const keptNearHip = (await readFloorSelection(HIP2.read().astrometry))?.keptNearHip ?? new Map();
   const derivation = derivationCandidateSourceIds(
     [corrected, moved].flatMap((rows) => [...rows, ...additionItemCells(tables, rows)]), tables, indexCns5(tables.cns5).cns5ByOwnKey,
-    indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless), (hip) => keptNearHip.get(hip) ?? [],
+    indexSimbadSources(tables.simbadBySourceId, tables.simbadSourceless), keptNearHip,
   );
   return { gate, derivation };
 }

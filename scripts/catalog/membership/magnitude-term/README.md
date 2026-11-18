@@ -24,7 +24,10 @@ scripts/catalog/membership/magnitude-term/
                                 (../../../util/sources/), keyed for lineage
                                 on its Gaia DR3 source_id.
   magnitude-selection.ts        The floor's selection, streamed over the
-                                ~200 MB pull. Reaches no manifest declaration:
+                                ~200 MB pull, with HIP2 indexed for each HIP's
+                                nearby kept sources (`readFloorSelection`, the
+                                one reader the builds and gate tests share).
+                                Reaches no manifest declaration:
                                 build:astrometry-request reads it, and must not
                                 read build:membership's output.
   magnitude-term.ts             The record build's streaming reads: the 5p

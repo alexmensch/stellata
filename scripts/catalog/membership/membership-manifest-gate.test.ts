@@ -41,10 +41,8 @@ import { BINDING_REVIEW_DISPOSITIONS } from './binding/binding-review-dispositio
 import { indexSimbadSources, positionWitness } from './binding/binding-derivation-pure';
 import { parseSimbadWdsXidsTsv } from './binding/binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './binding/simbad-wds-xids-source';
-import { hip2Near } from './binding/binding-evidence';
 import { HIP2 } from '../sources/hip2-source';
-import { readMagnitudeTerm } from './magnitude-term/magnitude-selection';
-import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
+import { readFloorSelection } from './magnitude-term/magnitude-selection';
 import type { NearSource } from './positional-witness/positional-witness-pure';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';
 import { applySpineCorrections, type SpineFold } from './spine-corrections/spine-corrections-pure';
@@ -174,7 +172,7 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     const wdsXids = parseSimbadWdsXidsTsv(SIMBAD_WDS_XIDS.read());
 
     beforeAll(async () => {
-      keptNearHip = (await readMagnitudeTerm(MAGNITUDE_FLOOR_V!, hip2Near(HIP2.read().astrometry))).keptNearHip;
+      keptNearHip = (await readFloorSelection(HIP2.read().astrometry))?.keptNearHip ?? new Map();
     }, 180_000);
 
     // see binding/README.md#the-position-witness

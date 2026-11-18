@@ -26,7 +26,7 @@ scripts/catalog/membership/binding/
                                 `loadHipVMag`, and the identity and position
                                 witnesses' positions (`positionEvidence`: HIP2,
                                 the Gaia astrometry and the floor's sources
-                                near each HIP; `hip2Near` indexes HIP2). The printed-V lookups come from
+                                near each HIP). The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,
                                 build:classic-ids' `TYCHO2` / `GLIESE` reads.
