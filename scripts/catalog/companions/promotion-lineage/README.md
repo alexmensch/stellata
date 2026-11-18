@@ -103,9 +103,9 @@ membership's.
 Measured 2026-11-18: 134,776 rows over the <!-- count:build-binaries/multiples_rows_emitted -->50,584<!-- /count --> `multiples.tsv` rows —
 among them 31,564 facet rows (two, colour and dust, per minted record), 17,820
 size rows (one per record promotion sized, by its last pass:
-<!-- count:build-catalog/promotion.size.mint -->13,610<!-- /count --> mint,
-<!-- count:build-catalog/promotion.size.anchor-re-split -->2,052<!-- /count --> anchor re-split,
-<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,986<!-- /count --> anchor-dimmed,
+<!-- count:build-catalog/promotion.size.mint -->13,608<!-- /count --> mint,
+<!-- count:build-catalog/promotion.size.anchor-re-split -->2,053<!-- /count --> anchor re-split,
+<!-- count:build-catalog/promotion.size.anchor-dimmed -->1,987<!-- /count --> anchor-dimmed,
 <!-- count:build-catalog/promotion.size.blend-split -->120<!-- /count --> blend-split,
 <!-- count:build-catalog/promotion.size.recurated -->52<!-- /count --> recurated) and 2,172 held-record brightness rows — and 49,298
 identity rows (the 15,782 minted companions and the 33,516 rows promotion

@@ -7206,3 +7206,4 @@ sid	date	event	code	params	successor	build_version
 986354	2026-11-18	mint	promotion.minted.synthetic	{"key":"multiples:13057-2541-AB/B"}		7.2.6
 986355	2026-11-18	mint	promotion.minted.synthetic	{"key":"multiples:07006+3157-AB/B"}		7.2.6
 986356	2026-11-18	mint	promotion.minted.synthetic	{"key":"multiples:22522-1730-AB/B"}		7.2.6
+984228	2026-11-18	merge	promotion.adopted.own-id	{"key":"multiples:22266-1645-AB/B"}	305546	7.2.6

@@ -9,8 +9,8 @@
     "runtime-pairs": {
       "runtime-pairs.emitted": 16650,
       "runtime-pairs.dropped.primary-unresolved": 2441,
-      "runtime-pairs.dropped.secondary-unresolved": 766,
-      "runtime-pairs.dropped.degenerate-idx": 520,
+      "runtime-pairs.dropped.secondary-unresolved": 767,
+      "runtime-pairs.dropped.degenerate-idx": 519,
       "runtime-pairs.dropped.same-relation-alias": 5,
       "runtime-pairs.dropped.duplicate-relation": 3
     }
