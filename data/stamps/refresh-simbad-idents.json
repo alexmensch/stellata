@@ -1,9 +1,9 @@
 {
   "inputs": {},
   "outputs": {
-    "data/simbad/simbad_idents.tsv": "e383cf0b12721ffee7c5d9b4e147b05500b0d183"
+    "data/simbad/simbad_idents.tsv": "00b9cb3f9ea2e67aeda2abbf1c9ef308f8f510be"
   },
-  "query": "3556658a988d2131ba935bbc781cf87745512ae4",
+  "query": "ffe3f2c0dfca7da5141c410afa75b9577f40656b",
   "answeredBy": [
     "SIMBAD-Harvard"
   ],

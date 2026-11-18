@@ -15,13 +15,13 @@ import { GAIA_DR3, GJ, HD, HIP, MAIN_ID, OID, type Namespace } from '../simbad/s
 const designationClass = (prefix: string): Namespace => ({ prefix, name: prefix.trim(), numeric: false });
 
 /** Asked over the whole of SIMBAD: README.md#the-classes. */
-export const WHOLE_SKY_CLASSES = ['* ', '** ', 'NAME ', 'LAL ', 'Ross ', 'Wolf '].map(designationClass);
+export const WHOLE_SKY_CLASSES = ['* ', '** ', 'Gmb ', 'NAME ', 'LAL ', 'Ross ', 'Wolf '].map(designationClass);
 /** Asked only on the objects simbad_sptype.tsv resolved a manifest record to: README.md#the-classes. */
 export const REACHED_CLASSES = ['V* ', 'X '].map(designationClass);
 /** The keys a record joins an object on. */
 export const KEY_NAMESPACES = [HIP, HD, GJ, GAIA_DR3] as const;
 
-/** The most rows the whole-sky classes may return: 153,219 at the 2026-11-18 count. */
+/** The most rows the whole-sky classes may return: 153,260 at the 2026-11-18 count. */
 export const WHOLE_SKY_MAX_ROWS = 200_000;
 
 const CORE = simbadPhases({ basic: [OID, MAIN_ID], idents: KEY_NAMESPACES });

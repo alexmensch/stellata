@@ -25,8 +25,9 @@ on SIMBAD-Harvard):
 
 - **Whole-sky**: `* ` (Bayer and Flamsteed, and every other number SIMBAD
   writes in the `NN Con` form, [Which SIMBAD numbers are Flamsteed numbers](../../catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)),
-  `** ` (double-star discoverer codes), `NAME `, `LAL `, `Ross `, `Wolf ` —
-  153,219 ids in one query (2026-11-18), 132,504 of them `** `.
+  `** ` (double-star discoverer codes), `Gmb ` (Groombridge), `NAME `, `LAL `,
+  `Ross `, `Wolf ` — 153,260 ids in one query (2026-11-18), 132,504 of them
+  `** ` and 41 `Gmb `.
 - **Reached**: `V* ` (53,134 whole-sky), `X ` — asked only on the objects
   the request names.
 
@@ -63,7 +64,7 @@ padding collapsed (`*  39 Psc` → `* 39 Psc`). Rows are in `simbad_oid` order.
 
 ## Gates
 
-- **Band** 140,000–170,000 rows. 150,418 at the committed pull (2026-11-18).
+- **Band** 140,000–170,000 rows. 150,443 at the committed pull (2026-11-18).
 - **Spot rows**: 39 Psc, Kapteyn's Star, π² UMi (`18 UMi` too), Kruger 60's
   system object (`** KR 60AB`, keyed HIP 110893 / HD 239960) and β Tau
   (`112 Tau`, `23 Aur`, `γ Aur` and `Elnath` on one object).
