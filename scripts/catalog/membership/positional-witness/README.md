@@ -10,7 +10,9 @@ HIP to no source
 ([Connected is not unique](../merge-derivation/README.md#connected-is-not-unique--the-pair-rule))
 — and, through the same Hipparcos tolerance, whether a HIP's position names
 one Gaia source: the binding derivation's identity witness
-([A source against its HIP](#a-source-against-its-hip)).
+([A source against its HIP](#a-source-against-its-hip)) — and which HIPs
+lie within an arcsecond of a Gaia position, the binding derivation's position
+witness ([A HIP against the floor's sources](#a-hip-against-the-floors-sources)).
 What a verdict leads to — a move, a queue row, a ledger row, a disposition —
 is each consumer's call; this folder only measures.
 
@@ -21,7 +23,9 @@ scripts/catalog/membership/positional-witness/
   positional-witness-pure.ts      witnessV70a and witnessHipparcos, the two
     (+ test)                      tolerances, the WitnessVerdict union, and
                                   hipparcosSeparationFromSource for one Gaia
-                                  source. Pure.
+                                  source, and hipsNear, the HIPs within
+                                  HIPPARCOS_FORWARD_TOLERANCE_ARCSEC of a
+                                  position. Pure.
   positional-witness-spread.test.ts
                                   The verdict counts and gaps below,
                                   recomputed over the corrected spine's
@@ -119,3 +123,20 @@ source carried back lands within 0.22″ on 18 (median 0.03″); HIP2 carried
 forward misses eight of the same 18 by 0.75–2.8″. The two the tolerance
 refuses sit 1.37″ (HIP 39827) and 64″ (HIP 83369) away. A source Gaia
 publishes no proper motion for cannot be carried, so it is never named.
+
+## A HIP against the floor's sources
+
+`hipsNear` asks the forward question over many positions at once: **HIP2
+carried forward** to the Gaia position's epoch by its own proper motion, and
+every HIP within `HIPPARCOS_FORWARD_TOLERANCE_ARCSEC = 1` of it, nearest
+first. A grid over unit vectors four tolerances wide answers each position from
+its own cell and the 26 around it, so the RA wrap and the poles need no case
+of their own. The magnitude term streams its kept rows through it
+([The position witness](../binding/README.md#the-position-witness)).
+
+The direction is the reverse of the identity witness's, and has to be: the
+sources it serves are mostly saturated 2-parameter solutions with no proper
+motion to carry them back by — 160 of the 284 Gaia-only sources within 1″ of
+an unbound HIP, measured 2026-11-18. Over the 465 primaries HIP rows that bind
+nothing, carried HIP2 lands within 1″ of a magnitude-term source on 211: 202
+under 0.5″, 9 at 0.5–1″, then only 10 more out to 10″. 1″ sits in that gap.

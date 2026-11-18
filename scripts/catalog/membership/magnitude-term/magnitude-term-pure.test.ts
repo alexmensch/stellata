@@ -10,17 +10,19 @@ import {
   magnitudeTermBlock,
   magnitudeTermSummary,
 } from './magnitude-term-pure';
+import { hipsNear } from '../positional-witness/positional-witness-pure';
 
 const FROM = { file: 'pull.tsv', hint: 'h' };
-const select = (text: string, floorV: number) => selectMagnitudeTerm(text, floorV, FROM);
+const NO_HIPS = hipsNear(new Map());
+const select = (text: string, floorV: number) => selectMagnitudeTerm(text, floorV, NO_HIPS, FROM);
 
 const HEADER = [
-  'source_id', 'ra', 'dec', 'parallax', 'pmra', 'pmdec', 'ruwe',
+  'source_id', 'ra', 'dec', 'parallax', 'pmra', 'pmdec', 'ref_epoch', 'ruwe',
   'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
 ].join('\t');
 
-function row(sourceId: string, g: string, bp: string, rp: string): string {
-  return [sourceId, '1.0', '2.0', '5.0', '1.0', '1.0', '1.0', g, bp, rp].join('\t');
+function row(sourceId: string, g: string, bp: string, rp: string, ra = '1.0', dec = '2.0'): string {
+  return [sourceId, ra, dec, '5.0', '1.0', '1.0', '2016.0', '1.0', g, bp, rp].join('\t');
 }
 
 // G 10 at BP−RP 0 transforms to V 10.027; G 10.9 at BP−RP 3 to V 12.44.
@@ -75,6 +77,19 @@ describe('selectMagnitudeTerm', () => {
     expect(String(Number(id))).not.toBe(id);
   });
 
+  it('lists, per HIP, the kept sources near its carried position and none above the floor', () => {
+    const near = hipsNear(new Map([[7, { raDeg: 1, decDeg: 2, pmRaMasyr: 0, pmDeMasyr: 0 }]]));
+    const halfArcsec = String(2 + 0.5 / 3600);
+    const { keptNearHip } = selectMagnitudeTerm([
+      HEADER, row('11', '10.0', '0.5', '0.5'), row('12', '9.5', '0.5', '0.5', '1.0', halfArcsec),
+      row('22', '10.9', '11.9', '8.9'), row('13', '9.0', '0.5', '0.5', '1.0', '2.1'),
+    ].join('\n'), 11, near, FROM);
+    expect([...keptNearHip]).toEqual([[7, [
+      { sourceId: '11', gMag: 10, separationArcsec: expect.closeTo(0, 6) },
+      { sourceId: '12', gMag: 9.5, separationArcsec: expect.closeTo(0.5, 6) },
+    ]]]);
+  });
+
   it('throws on a header missing a band rather than zeroing the term', () => {
     expect(() => select('source_id\tphot_g_mean_mag\n', 11)).toThrow(
       /missing required columns/,
@@ -110,7 +125,7 @@ describe('magnitudeTermBlock', () => {
 
   it('files the selection\'s partition under its magnitudeTerm key paths', () => {
     const counts = { rows: 3, kept: 1, above_floor: 1, no_v: 1 };
-    expect(magnitudeTermBlock({ keptSourceIds: new Set(['1']), counts })).toEqual({
+    expect(magnitudeTermBlock({ keptSourceIds: new Set(['1']), keptNearHip: new Map(), counts })).toEqual({
       kind: 'counted',
       counts: { 'magnitudeTerm.rows': 3, 'magnitudeTerm.kept': 1, 'magnitudeTerm.above_floor': 1, 'magnitudeTerm.no_v': 1 },
     });

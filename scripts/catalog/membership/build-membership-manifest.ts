@@ -20,6 +20,7 @@ import {
 } from './membership-lineage-pure';
 import { countSnapshotCheck } from '../../util/snapshot-check';
 import { loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
+import { HIP2 } from '../sources/hip2-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import { CLASSIC_ID_OVERLAY, overlayMap } from '../classic-ids/classic-id-overlay-tsv';
@@ -28,8 +29,8 @@ import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
 import { readMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/multiples-row';
-import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
-import { MAGNITUDE_FLOOR_V, magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
+import { readFloorSelection } from './magnitude-term/magnitude-selection';
+import { magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { ORIGIN_KEYS } from './origin-keys';
 import { loadPrimaryTables } from '../spine/primaries-tables';
@@ -58,7 +59,8 @@ export async function main(): Promise<void> {
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
-  const magnitudeTerm = MAGNITUDE_FLOOR_V === null ? null : await readMagnitudeTerm(MAGNITUDE_FLOOR_V);
+  const hip2 = HIP2.read().astrometry;
+  const magnitudeTerm = await readFloorSelection(hip2);
   const result = buildMembership({
     spine,
     tables,
@@ -66,7 +68,7 @@ export async function main(): Promise<void> {
     overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(multiples),
     evidence,
-    positions: positionEvidence(gaiaAstrometry),
+    positions: positionEvidence(gaiaAstrometry, hip2, magnitudeTerm?.keptNearHip ?? new Map()),
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
     simbadTycHd: SIMBAD_TYC_HD.read(),

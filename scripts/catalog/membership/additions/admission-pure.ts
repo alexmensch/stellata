@@ -26,7 +26,9 @@ import {
   identityQueueCandidate,
   heldMoreThanOnce,
   identityWitnessed,
-  passingRunnersUp,
+  contestedBy,
+  positionWitnessed,
+  requireNoPositionCollision,
   refusedCandidates,
   reviewLetters,
   unshippedCandidates,
@@ -426,6 +428,7 @@ export function admitAdditions(input: {
     return { items: g, derived, gate };
   });
   const sharedSources = heldMoreThanOnce(derivedGroups.map(({ derived }) => derived.sourceId));
+  requireNoPositionCollision(derivedGroups.map(({ derived }) => derived), sharedSources, 'addition groups');
 
   const out: AdditionsPhase = { rows: [], outcomes: [], identity: [], unshipped: [], identityQueue: [] };
   const groups = derivedGroups.map(({ items: groupItems, derived, gate }) => {
@@ -442,9 +445,10 @@ export function admitAdditions(input: {
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     const cells = reviewKeyCells(g);
-    if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
+    const contested = g.source === null ? null : contestedBy(g.derived);
+    if (contested !== null) {
       out.outcomes.push({ key: g.origin, outcome: {
-        kind: 'addition-contested', review: bindingReviewCells(cells, g.derived, g.gate, tables),
+        kind: 'addition-contested', by: contested, review: bindingReviewCells(cells, g.derived, g.gate, tables),
         ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
       } });
     }
@@ -465,6 +469,7 @@ export function admitAdditions(input: {
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),
       ...identityWitnessed(g.origin, 'addition', g.derived),
+      ...positionWitnessed(g.origin, 'addition', g.derived),
     );
     out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', cells, g.derived, g.gate, tables));
     if (a.verdict.kind === 'component') {

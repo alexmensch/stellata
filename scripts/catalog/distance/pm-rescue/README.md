@@ -53,7 +53,7 @@ candidate is a refusal on the result, not a tier: `pmRescueOutcome` splits the
 | `cns5` | its own GJ, non-Gaia citation only | **<!-- count:build-catalog/placement.pm-rescue.cns5 -->22<!-- /count -->** |
 | `simbad` | bibcoded `pmra`/`pmdec`, non-Gaia citation only | **<!-- count:build-catalog/placement.pm-rescue.simbad -->113<!-- /count -->** |
 | `gaia_bibcode_skipped` | — | **<!-- count:build-catalog/placement.pm-rescue.none.gaia-release-refused -->62<!-- /count -->** |
-| `none` | — | **<!-- count:build-catalog/placement.pm-rescue.none.unreached -->21<!-- /count -->** |
+| `none` | — | **<!-- count:build-catalog/placement.pm-rescue.none.unreached -->19<!-- /count -->** |
 
 The order is the direction cascade's own designation-joined order, so a
 first-order catalogue always outranks the second-order index.
@@ -63,7 +63,7 @@ from Tycho-2 whether the direction tier or this cascade found it, so
 `velocityTycho2Pm` (**<!-- count:build-catalog/velocityTycho2Pm -->144<!-- /count -->**) counts the direction tier's own Tycho-2 motions
 plus this cascade's `tycho2` row above, against a `tycho2` direction tier of
 **<!-- count:build-catalog/placement.direction.tycho2.mean -->68<!-- /count -->** mean, **<!-- count:build-catalog/placement.direction.tycho2.photocentre -->4<!-- /count -->** photocentre and **<!-- count:build-catalog/placement.direction.tycho2.observed -->8<!-- /count -->** observed positions, and the two counts answer different questions. `velocityZero`
-(**<!-- count:build-catalog/velocityZero -->90<!-- /count -->**) is Sol, the **<!-- count:build-catalog/placement.velocity.clamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
+(**<!-- count:build-catalog/velocityZero -->88<!-- /count -->**) is Sol, the **<!-- count:build-catalog/placement.velocity.clamped -->6<!-- /count -->** rows the sanity ceiling clamped, and the
 rows this cascade leaves without a motion.
 
 **Neither join widens, and that is measured rather than argued.** A 2p row is
@@ -174,7 +174,7 @@ Gaia reduction can hide behind its citation.
 there is no Gaia fit at all there is no blend to distrust and a Gaia bibcode is
 an ordinary citation; all 3 Tycho-2-shaped rows route `simbad` on an
 EDR3-cited PM for exactly that reason. This mirrors the rv cascade, which
-keeps **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,544<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/placement.rv.refused.gaia-release -->430<!-- /count -->** on blended rows.
+keeps **<!-- count:build-catalog/placement.rv.simbad.gaia-release -->14,531<!-- /count -->** ordinary Gaia citations while skipping **<!-- count:build-catalog/placement.rv.refused.gaia-release -->436<!-- /count -->** on blended rows.
 
 **The cost is the `gaia_bibcode_skipped` rows, which stay static, concentrated
 where it hurts most** (13 before the magnitude term):

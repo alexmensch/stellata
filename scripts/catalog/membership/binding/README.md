@@ -23,16 +23,17 @@ scripts/catalog/membership/binding/
                                 the binaries load stage each read it.
   binding-evidence.ts           Loads the gate's own evidence — G per source
                                 and SIMBAD's WDS component cross-IDs — and
-                                `loadHipVMag`, and the identity witness's
-                                positions (`positionEvidence`: HIP2 and the
-                                Gaia astrometry). The printed-V lookups come from
+                                `loadHipVMag`, and the identity and position
+                                witnesses' positions (`positionEvidence`: HIP2,
+                                the Gaia astrometry and the floor's sources
+                                near each HIP). The printed-V lookups come from
                                 the calling build, over the tables it already
                                 parsed: build:membership's primaries tables,
                                 build:classic-ids' `TYCHO2` / `GLIESE` reads.
   binding-derivation-pure.ts    The four candidate sources, the consensus
     (+ test)                    ranking, both gates through
-                                weighBinding, the component and identity
-                                witnesses, and the candidate set the
+                                weighBinding, the component, identity and
+                                position witnesses, and the candidate set the
                                 astrometry request has to cover. Pure, and
                                 imports nothing from the manifest —
                                 `../../spine/` and
@@ -106,7 +107,7 @@ The Tycho-2 arm is what reaches
 the HD-only rows: a best-neighbour walk landing on a faint neighbour of a
 Tycho star has no HIP to be caught by, and 32 fills sat more than a magnitude
 below their own star's Tycho-2 V — 14 of them by two to nine magnitudes. The
-gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->220<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->81<!-- /count --> on sibling-letter attribution
+gates refuse <!-- count:membership-manifest/membership.binding.gate-mag -->217<!-- /count --> candidates on G − V and <!-- count:membership-manifest/membership.binding.gate-sibling -->81<!-- /count --> on sibling-letter attribution
 (`binding.gate-mag`, `binding.gate-sibling`; an addition's refusals are
 `addition-binding.*`); falling off the end is a derived refusal.
 `binding.ungateable` (<!-- count:membership-manifest/membership.binding.ungateable -->7<!-- /count -->) is the rows that reached a candidate with no printed V
@@ -186,11 +187,59 @@ verdict never taken and queue a `contested` review the gate settles by itself.
 Gl 864 is the shape: its runner-up was the TYC walk's neighbour at G 13.90
 against the star's printed V 9.98, which the magnitude gate already refuses.
 
+## The position witness
+
+**A HIP no candidate binds takes the floor source its own position lands on.**
+f Pup (HIP 37096) is the shape: a 0.2″ pair both missions measured as one
+light, so SIMBAD's objects carry no Gaia id, Gaia's HIP cross-match has no row
+for it, and the derivation reached nothing. Its Gaia source, G 4.41 against
+V 4.53, came back through the magnitude term as a second, unnamed record of
+the same star. 211 HIPs sat within 1″ of a floor source while binding none;
+<!-- count:membership-manifest/membership.binding.positioned -->170<!-- /count --> spine rows and <!-- count:membership-manifest/membership.addition-binding.positioned -->3<!-- /count --> additions now bind by position, <!-- count:membership-manifest/membership.binding.position-disputed -->15<!-- /count --> more
+queued as disputed, and the rest's only such source is a companion the
+sibling arm refuses (below). Where every candidate has
+refused, or there was none, and neither witness above binds — nor has the
+identity witness named a source its position does not confirm, which keeps
+that rule's outcome (no source, queued where the source is a magnitude-term
+row) — HIP2 carried
+forward to the source's epoch by its own proper motion is held against the
+floor's kept sources (`magnitude-term/`'s `keptNearHip`), and one within
+1″ binds ([A HIP against the floor's sources](../positional-witness/README.md#a-hip-against-the-floors-sources)).
+The class is `position_witnessed`, the code `binding.positioned`, and
+`binding.position-witness` records the source, its separation, its G beside
+the printed V and how many other floor sources sat as close
+(`addition-binding.*` on an addition). A refused candidate the position names
+comes off the refusals and keeps its `via`; otherwise `via` is empty.
+
+**Several within 1″ is a pair Gaia resolved and Hipparcos did not; the brightest
+binds** (lowest G, ties on the source id), and the others stay their own
+records — two records for two stars where there were three. 72 HIPs are that
+shape; their G gap is a median 0.25 mag, so on the near-equal ones which
+component carries the HIP is close to arbitrary while the drawing is right
+either way. A one-off third source is the same rule.
+
+**It never takes a source the sibling arm refuses**
+([A HIP on neither component is the system's](#a-hip-on-neither-component-is-the-systems)):
+a floor source SIMBAD letters as another component than the HIP's is the
+companion, already its own record, so binding it would draw the companion
+twice. Like the other witnesses it applies only once nothing passes on its
+own, and a source it binds that another row or group also reaches **fails the
+build** (`requireNoPositionCollision`) rather than letting the collision rule
+withhold the stronger binding beside it — none today. It does not weigh the magnitude arm: the position is the witness, and G
+against a blend's V is exactly what refused the rows whose Gaia HIP
+cross-match already named the source.
+
+**Where Gaia's HIP cross-match names a different source, the row ships the
+witness's source and queues** as `contested`
+(`binding.position-disputed`), its refused cross-match source among the
+queue row's candidates.
+
 ## What the derivation cannot settle alone
 
-Three outcomes are queued into `data/membership/binding-review.tsv`: the two
-below, and an `unconfirmed` identity witness
-([Identity outranks a blended magnitude](#identity-outranks-a-blended-magnitude)).
+Four outcomes are queued into `data/membership/binding-review.tsv`: the two
+below, an `unconfirmed` identity witness
+([Identity outranks a blended magnitude](#identity-outranks-a-blended-magnitude)),
+and a disputed position ([The position witness](#the-position-witness)).
 An addition group queues on the same terms when it is contested or
 unconfirmed; it cannot collide, since admission leaves a shared source on
 neither group.

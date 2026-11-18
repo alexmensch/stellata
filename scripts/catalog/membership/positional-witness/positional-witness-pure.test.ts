@@ -4,8 +4,9 @@ import { skyPositionAtEpoch } from '../../../../src/astro-core/equatorial-basis'
 import type { V70aAstrometry } from '../../gliese-parse-pure';
 import { TYCHO2_ICRS_EPOCH, TYCHO2_MEAN_EPOCH, type ObservedPosition } from '../../tycho2-parse';
 import { tycho2Row } from '../../tycho2-fixture';
+import { HIPPARCOS_EPOCH_JYEAR } from '../../../../src/astro-core/astronomy-constants';
 import {
-  HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
+  HIPPARCOS_FORWARD_TOLERANCE_ARCSEC, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC, hipsNear, type NearHip,
   hipparcosNamesSource, hipparcosSeparationFromSource, witnessHipparcos, witnessV70a, type WitnessVerdict,
 } from './positional-witness-pure';
 
@@ -163,5 +164,36 @@ describe('hipparcosSeparationFromSource — the Gaia source carried back to J199
   it('names a source exactly at the tolerance and refuses one past it', () => {
     expect(hipparcosNamesSource(HIPPARCOS_WITNESS_TOLERANCE_ARCSEC)).toBe(true);
     expect(hipparcosNamesSource(HIPPARCOS_WITNESS_TOLERANCE_ARCSEC + 1e-9)).toBe(false);
+  });
+});
+
+describe('hipsNear — HIP2 carried forward to a Gaia epoch', () => {
+  const fPup = { raDeg: 114.34216624, decDeg: -34.96857047, pmRaMasyr: -14.21, pmDeMasyr: 16.32 };
+  const near = hipsNear(new Map([[37096, fPup]]));
+  const at = (raDeg: number, decDeg: number) => near({ raDeg, decDeg }, 2016);
+  const rounded = (hits: readonly NearHip[]) => hits.map((h) => [h.hip, Number(h.separationArcsec.toFixed(3))]);
+
+  it('finds f Pup (HIP 37096) 0.221″ from the Gaia-only source the magnitude term admitted', () => {
+    expect(rounded(at(114.342045348, -34.968397005))).toEqual([[37096, 0.221]]);
+  });
+
+  it('carries the HIP by its own proper motion: uncarried, the same source sits 0.719″ off', () => {
+    const at1991 = near({ raDeg: 114.342045348, decDeg: -34.968397005 }, HIPPARCOS_EPOCH_JYEAR);
+    expect(rounded(at1991)).toEqual([[37096, 0.719]]);
+  });
+
+  it('finds nothing past the tolerance', () => {
+    const offset = (HIPPARCOS_FORWARD_TOLERANCE_ARCSEC + 0.05) / 3600;
+    expect(at(114.342045348, -34.968397005 + offset)).toEqual([]);
+  });
+
+  it('crosses cell boundaries, RA zero and the pole, nearest first', () => {
+    const pair = hipsNear(new Map([
+      [1, { raDeg: 359.99999, decDeg: 0, pmRaMasyr: 0, pmDeMasyr: 0 }],
+      [2, { raDeg: 0.0001, decDeg: 0, pmRaMasyr: 0, pmDeMasyr: 0 }],
+      [3, { raDeg: 10, decDeg: 89.99999, pmRaMasyr: 0, pmDeMasyr: 0 }],
+    ]));
+    expect(pair({ raDeg: 0.00005, decDeg: 0 }, 2016).map((h) => h.hip)).toEqual([2, 1]);
+    expect(pair({ raDeg: 190, decDeg: 89.99999 }, 2016).map((h) => h.hip)).toEqual([3]);
   });
 });

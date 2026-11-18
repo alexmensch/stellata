@@ -8,6 +8,7 @@ import { rielloVMagnitude } from '../../photometry/v-magnitude-pure';
 import type { GaiaPhotometry } from '../../photometry/gaia-photometry-pure';
 import type { CountBlock } from '../../../util/counts/count-stages-pure';
 import { prefixed } from '../../../util/counts/tally-pure';
+import type { HipsNear, NearSource } from '../positional-witness/positional-witness-pure';
 
 /** Johnson V the term admits on; `null` is the primaries alone.
  *  README.md#the-floor-is-one-constant. */
@@ -19,7 +20,9 @@ export const MAGNITUDE_PULL_G_BOUND = 11;
 
 export const MAGNITUDE_PULL_HINT = 'run `pnpm run refresh:gaia-magnitude`.';
 
-const MAGNITUDE_PULL_COLUMNS = ['source_id', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag'] as const;
+const MAGNITUDE_PULL_COLUMNS = [
+  'source_id', 'ra', 'dec', 'ref_epoch', 'phot_g_mean_mag', 'phot_bp_mean_mag', 'phot_rp_mean_mag',
+] as const;
 
 type PullRow = TableRow<(typeof MAGNITUDE_PULL_COLUMNS)[number]>;
 
@@ -42,6 +45,9 @@ export type MagnitudeTermCounts = Record<MagnitudeVerdict | 'rows', number>;
 export interface MagnitudeTermSelection {
   /** Every `source_id` the floor keeps, insertion-ordered by the pull. */
   keptSourceIds: Set<string>;
+  /** By HIP, the kept sources within a second of arc of its carried position:
+   *  ../binding/README.md#the-position-witness. */
+  keptNearHip: Map<number, NearSource[]>;
   counts: MagnitudeTermCounts;
 }
 
@@ -59,7 +65,7 @@ export function magnitudeTermSummary(block: CountBlock<MagnitudeTermKey>): strin
     + `above the floor ${c['magnitudeTerm.above_floor']}, no transformed V ${c['magnitudeTerm.no_v']}`;
 }
 
-function magnitudeTermFold(floorV: number): {
+function magnitudeTermFold(floorV: number, near: HipsNear): {
   fold: (row: PullRow) => void;
   result: () => MagnitudeTermSelection;
 } {
@@ -73,6 +79,7 @@ function magnitudeTermFold(floorV: number): {
     );
   }
   const keptSourceIds = new Set<string>();
+  const keptNearHip = new Map<number, NearSource[]>();
   const counts: MagnitudeTermCounts = { rows: 0, kept: 0, above_floor: 0, no_v: 0 };
 
   return {
@@ -89,28 +96,38 @@ function magnitudeTermFold(floorV: number): {
         floorV,
       );
       counts[verdict]++;
-      if (verdict === 'kept') keptSourceIds.add(sourceId);
+      if (verdict !== 'kept') return;
+      keptSourceIds.add(sourceId);
+      const gMag = row.requiredFloat('phot_g_mean_mag');
+      const at = { raDeg: row.requiredFloat('ra'), decDeg: row.requiredFloat('dec') };
+      for (const { hip, separationArcsec } of near(at, row.requiredFloat('ref_epoch'))) {
+        const held = keptNearHip.get(hip);
+        const entry = { sourceId, gMag, separationArcsec };
+        if (held === undefined) keptNearHip.set(hip, [entry]);
+        else held.push(entry);
+      }
     },
-    result: () => ({ keptSourceIds, counts }),
+    result: () => ({ keptSourceIds, keptNearHip, counts }),
   };
 }
 
 /** Line-fed, so the streaming reader over the ~200 MB pull folds rows
  *  exactly as the whole-text filter does. */
-export function magnitudeTermAccumulator(floorV: number, from: Declared): {
+export function magnitudeTermAccumulator(floorV: number, near: HipsNear, from: Declared): {
   line: (raw: string) => void;
   result: () => MagnitudeTermSelection;
 } {
-  const { fold, result } = magnitudeTermFold(floorV);
+  const { fold, result } = magnitudeTermFold(floorV, near);
   return { line: tableLineReader({ ...from, columns: MAGNITUDE_PULL_COLUMNS }, fold), result };
 }
 
 export function selectMagnitudeTerm(
   text: string,
   floorV: number,
+  near: HipsNear,
   from: Declared,
 ): MagnitudeTermSelection {
-  const { fold, result } = magnitudeTermFold(floorV);
+  const { fold, result } = magnitudeTermFold(floorV, near);
   for (const row of readTable({ ...from, columns: MAGNITUDE_PULL_COLUMNS }, text)) fold(row);
   return result();
 }

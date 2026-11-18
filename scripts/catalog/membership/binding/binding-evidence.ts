@@ -9,7 +9,7 @@ import type { PrintedHipValue } from '../../photometry/hip-photometry-parse-pure
 import type { PrintedVLookups } from '../../photometry/v-magnitude-pure';
 import { bindingEvidence, parseSimbadWdsXidsTsv, type BindingEvidence } from './binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './simbad-wds-xids-source';
-import { HIP2 } from '../../sources/hip2-source';
+import type { Hip2AstrometryRow } from '../../sources/hip2-source';
 import type { PositionEvidence } from './binding-derivation-pure';
 
 export function loadHipVMag(): Map<number, PrintedHipValue> {
@@ -33,11 +33,15 @@ export function loadBindingEvidence(printedV: PrintedVLookups): {
   return { evidence: bindingEvidence(sourceGMag, wdsXids, printedV, gaiaAstrometry), gaiaAstrometry };
 }
 
-/** HIP2's J1991.25 positions and Gaia's, for the identity witness. */
-export function positionEvidence(gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>): PositionEvidence {
-  const hip2 = HIP2.read().astrometry;
+/** HIP2's J1991.25 positions and Gaia's, for the identity witness; the floor's sources near each HIP, for the position witness. */
+export function positionEvidence(
+  gaiaAstrometry: ReadonlyMap<string, GaiaAstrometryRow>,
+  hip2: ReadonlyMap<number, Hip2AstrometryRow>,
+  keptNearHip: PositionEvidence['keptNearHip'],
+): PositionEvidence {
   return {
     hipparcos: (hip) => hip2.get(hip) ?? null,
+    keptNearHip,
     gaia: (sourceId) => {
       const row = gaiaAstrometry.get(sourceId);
       if (row === undefined || row.pmraMasyr === null || row.pmdecMasyr === null) return null;

@@ -2,7 +2,7 @@
 
 import {
   angularSeparationArcsec, polarToTangent, skyPositionAtEpoch, unitVectorFromRaDec,
-  type SkyPosition,
+  type SkyPosition, type UnitVector,
 } from '../../../../src/astro-core/equatorial-basis';
 import {
   besselianEpochToJd, julianYearOfJd, precessionRotationFromJ2000, unprecessRaDec,
@@ -100,11 +100,86 @@ export function hipparcosAstrometry(row: Hip2AstrometryRow): HipparcosAstrometry
   return pmRaMasyr === null || pmDeMasyr === null ? null : { raDeg, decDeg, pmRaMasyr, pmDeMasyr };
 }
 
+export function hipparcosPositionAt(hip: HipparcosAstrometry, epoch: number): SkyPosition {
+  return skyPositionAtEpoch(hip, { pmRaMasyr: hip.pmRaMasyr, pmDecMasyr: hip.pmDeMasyr }, HIPPARCOS_EPOCH_JYEAR, epoch);
+}
+
 export function witnessHipparcos(hip: HipparcosAstrometry, candidates: readonly Tycho2Row[]): WitnessVerdict {
-  const at: PositionAt = (epoch) => skyPositionAtEpoch(
-    hip, { pmRaMasyr: hip.pmRaMasyr, pmDecMasyr: hip.pmDeMasyr }, HIPPARCOS_EPOCH_JYEAR, epoch,
-  );
+  const at: PositionAt = (epoch) => hipparcosPositionAt(hip, epoch);
   return verdictOf((entry) => separationFromObserved(at, entry.observed), candidates, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC);
+}
+
+/** See README.md#a-hip-against-the-floors-sources. */
+export const HIPPARCOS_FORWARD_TOLERANCE_ARCSEC = 1;
+
+export interface NearHip {
+  hip: number;
+  separationArcsec: number;
+}
+
+/** A Gaia source within the tolerance of a HIP's carried position, with its G. */
+export interface NearSource {
+  sourceId: string;
+  gMag: number;
+  separationArcsec: number;
+}
+
+/** The HIPs whose HIP2 position, carried to `epoch`, lies within
+ *  HIPPARCOS_FORWARD_TOLERANCE_ARCSEC of `at`, nearest first. */
+export type HipsNear = (at: SkyPosition, epoch: number) => NearHip[];
+
+/** Cells four tolerances wide keep a packed three-axis key under 2^53. */
+const CELL_RAD = 4 * (HIPPARCOS_FORWARD_TOLERANCE_ARCSEC / 3600) * (Math.PI / 180);
+const CELL_OFFSET = 2 ** 16;
+const AXIS = 2 ** 17;
+
+const cellOf = (c: number): number => Math.floor(c / CELL_RAD) + CELL_OFFSET;
+const cellKey = (cx: number, cy: number, cz: number): number => (cx * AXIS + cy) * AXIS + cz;
+
+interface Placed {
+  hip: number;
+  u: UnitVector;
+}
+
+/** A grid over unit vectors, so a query reads its own cell and the 26 around it. */
+export function hipsNear(hips: ReadonlyMap<number, HipparcosAstrometry>): HipsNear {
+  const byEpoch = new Map<number, Map<number, Placed[]>>();
+  const gridAt = (epoch: number): Map<number, Placed[]> => {
+    const held = byEpoch.get(epoch);
+    if (held !== undefined) return held;
+    const grid = new Map<number, Placed[]>();
+    for (const [hip, astrometry] of hips) {
+      const { raDeg, decDeg } = hipparcosPositionAt(astrometry, epoch);
+      const u = unitVectorFromRaDec(raDeg, decDeg);
+      const key = cellKey(cellOf(u.x), cellOf(u.y), cellOf(u.z));
+      const cell = grid.get(key);
+      if (cell === undefined) grid.set(key, [{ hip, u }]);
+      else cell.push({ hip, u });
+    }
+    byEpoch.set(epoch, grid);
+    return grid;
+  };
+  return (at, epoch) => {
+    const grid = gridAt(epoch);
+    const u = unitVectorFromRaDec(at.raDeg, at.decDeg);
+    const cx = cellOf(u.x);
+    const cy = cellOf(u.y);
+    const cz = cellOf(u.z);
+    const out: NearHip[] = [];
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dz = -1; dz <= 1; dz++) {
+          const cell = grid.get(cellKey(cx + dx, cy + dy, cz + dz));
+          if (cell === undefined) continue;
+          for (const entry of cell) {
+            const separationArcsec = angularSeparationArcsec(u, entry.u);
+            if (separationArcsec <= HIPPARCOS_FORWARD_TOLERANCE_ARCSEC) out.push({ hip: entry.hip, separationArcsec });
+          }
+        }
+      }
+    }
+    return out.length < 2 ? out : out.sort((a, b) => ascending(a.separationArcsec, b.separationArcsec) || a.hip - b.hip);
+  };
 }
 
 /** A Gaia source's position at its reference epoch, with the proper motion that carries it. */

@@ -172,7 +172,8 @@ gaia_source_id  binding  routes  term  origin_key
   source SIMBAD's frozen cross-IDs hold under the record's own HIP, TYC or GJ,
   through the same gates), `reviewed` (the value a row of
   `data/membership/binding-review-dispositions.tsv` settles on stated
-  evidence), or `none`. [Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)
+  evidence), `position_witnessed` (the floor source HIP2's carried position
+  lands on, nothing else binding; [The position witness](binding/README.md#the-position-witness)), or `none`. [Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)
   is the rule.
 - `term` is which side of [§ 1](/docs/catalog-driver.md#1-the-driver-model)'s union admitted the
   row — `primaries` or `magnitude`; `magnitude-term/README.md` owns the
@@ -208,7 +209,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->365<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->181<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -236,7 +237,8 @@ a code with a winner names the highest-precedence source proposing it
 | `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,284<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->838<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,685<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
 | `identified.<lead>` | tyc <!-- count:membership-manifest/membership.binding.identified.tyc -->22<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.identified.hip -->2<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.identified.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.identified.simbad -->4<!-- /count --> | every candidate failed a gate, and SIMBAD's one object for the HIP and the HIP's own position both name one the magnitude gate refused ([Identity outranks a blended magnitude](binding/README.md#identity-outranks-a-blended-magnitude)) |
-| `refused` | <!-- count:membership-manifest/membership.binding.refused -->402<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
+| `positioned` | <!-- count:membership-manifest/membership.binding.positioned -->170<!-- /count --> · disputed <!-- count:membership-manifest/membership.binding.position-disputed -->15<!-- /count --> | nothing binds, and HIP2's position carried to Gaia's epoch lands within 1″ of a floor source, which binds ([The position witness](binding/README.md#the-position-witness)); disputed where Gaia's HIP cross-match names another source, and queued |
+| `refused` | <!-- count:membership-manifest/membership.binding.refused -->217<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
 | `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->219<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->4<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |

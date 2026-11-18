@@ -92,13 +92,8 @@ export interface PairReviewRow extends RecordIdentifiers {
   reason: PairReviewReason;
 }
 
-/** How the row's `gaia_source_id` is justified. `crosswalk_gated` is a TYC /
- *  HIP / CNS5 candidate the HD-route gates (/docs/catalog-driver.md#4-how-hd-reaches-gaia) passed; `simbad_corroborated` is the
- *  source SIMBAD's frozen cross-IDs hold under the record's own designation,
- *  through the same gates; `reviewed` is the value a committed disposition row
- *  settles on stated evidence; `gaia_native` is the pull row itself; `none` is
- *  an empty cell. */
+/** How the row's `gaia_source_id` is justified: README.md#columns. */
 export const BINDING_CLASSES = [
-  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'gaia_native', 'none',
+  'crosswalk_gated', 'simbad_corroborated', 'reviewed', 'position_witnessed', 'gaia_native', 'none',
 ] as const;
 export type BindingClass = (typeof BINDING_CLASSES)[number];
