@@ -3,7 +3,7 @@
 import type { PullDescription } from '../../util/emit-artifacts';
 import { ASTROMETRY_REQUEST } from '../gaia-request/astrometry-request-source';
 import { describePhasedPull, runPhasedPull, type PhasedPull } from '../pull/pull';
-import { GAIA_ESA } from '../pull/tap-pure';
+import { GAIA } from '../pull/tap-pure';
 import { deepPopulationPull } from './deep-population-pure';
 import { BAILER_JONES_TABLE } from './deep-population-tables-pure';
 import { BAILER_JONES_OUTPUTS } from './magnitude-outputs';
@@ -11,7 +11,7 @@ import { BAILER_JONES_OUTPUTS } from './magnitude-outputs';
 export const BAILER_JONES_RELEASE = 'Bailer-Jones 2021 (Gaia EDR3)';
 
 export const bailerJonesPull = (request: readonly bigint[]): PhasedPull<'table'> => deepPopulationPull({
-  archive: GAIA_ESA, outputs: BAILER_JONES_OUTPUTS, release: BAILER_JONES_RELEASE, table: BAILER_JONES_TABLE, request,
+  archive: GAIA, outputs: BAILER_JONES_OUTPUTS, release: BAILER_JONES_RELEASE, table: BAILER_JONES_TABLE, request,
 });
 
 export const describe = (): PullDescription => describePhasedPull(bailerJonesPull(ASTROMETRY_REQUEST.read()));

@@ -70,7 +70,8 @@ which reports its count, rather than the overflow, which cannot.
 
 `describePull` states, per table, everything besides the data that decides
 its bytes — its query with the request ids left as `{request}`, its
-column formats and its sort key — plus the mirror list and release: what the record's query
+column formats and its sort key, and each mirror's query where it names a
+table differently — plus the mirror list and release: what the record's query
 hash covers ([Freshness](../../pipeline/README.md#freshness--one-mechanism)),
 so a changed column, `WHERE`, rounding, order or mirror stales the pull and a
 changed id list does not, except through the pull's inputs.
@@ -158,7 +159,8 @@ limit, so a pull sized for ESA's 50,000 keeps `sliceRows` at most 24,999.
 Each answered query is cached as CSV (a FITS answer written as the CSV
 `readCsv` reads back to the same cells, `csvText`) once it passes the column
 check, under
-`<first output>.ckpt/`, named by the hash of the query's text, beside the
+`<first output>.ckpt/`, named by the hash of the query's text as the
+answering mirror was sent it ([The TAP backend](#the-tap-backend)), beside the
 mirror that answered it; a re-run replays a cached reply (re-checked against
 the limit and the columns) and asks only what is missing. **A replay reports
 its cached mirror**, so the record's `answeredBy` names who answered whichever
@@ -172,14 +174,27 @@ gitignored (`data/**/*.tsv.ckpt*/`) and deleting it is always safe.
 
 ## The TAP backend
 
-**One request shape for every TAP service; only the URL differs.** `POST
-<mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`, `FORMAT=<the archive's
-format>`, and `MAXREC = limit + 1`. An archive (`GAIA`, `VIZIER`, `SIMBAD`)
-is its mirrors in fallback order, the format its TAP mirrors answer in (`csv`,
-or `fits` where a text reply would round a stored double:
-[FITS replies](#fits-replies)), its retry delays and how it quotes an
+**One request shape for every TAP service; the URL and the table names
+differ per mirror.** `POST <mirror>/sync` with `REQUEST=doQuery`, `LANG=ADQL`,
+`FORMAT=<the archive's format>`, and `MAXREC = limit + 1`. An archive (`GAIA`,
+`VIZIER`, `SIMBAD`) is its mirrors in fallback order, the format its TAP
+mirrors answer in (`csv`, or `fits` where a text reply would round a stored
+double: [FITS replies](#fits-replies)), its retry delays and how it quotes an
 identifier (VizieR double-quotes every one: table ids carry `/`, columns carry
 case and parentheses).
+
+**A query is written in the archive's first mirror's table names.** A mirror
+hosting a table under another name says so in its `tables` map, and is sent
+the query with each such name rewritten wherever it stands whole — as a
+table, or qualifying a column (`mirrorAdql`). ARI hosts ESA's
+`external.gaiaedr3_distance` as `gaiaedr3_complements.distances`; every other
+table a Gaia pull reads is `gaiadr3.*`, one name on both. A pull's describe
+states each mirror's differing query beside its template (`mirrors`), so a
+changed name on either stales the record; the checkpoint keys a reply on the
+text its mirror was sent and replays it whichever mirror is up. A renamed copy
+is verified to hold the archive's data at the written rounding before its
+mapping lands: Bailer-Jones' in
+[The deep population](../magnitude/README.md#the-deep-population--a-bounded-leg-plus-a-request-leg).
 
 **An ASU mirror is VizieR's own interface, for a mirror that serves no TAP.**
 A mirror's `protocol` is `tap` or `asu`. An ASU mirror is asked each query
@@ -301,7 +316,10 @@ Python's `f"{x:.ne}"` (`formatExponent`), or `{repr: true}`, Python's
 column written `0`/`1`: ESA prints a BOOLEAN as `true`/`false` and ARI as
 `1`/`0`, and ARI rejects a `CAST`, so the mapping cannot be server-side. It
 maps when the reply is checked (`checkedRows`), so gates, sort and TSV all see
-`0`/`1` whichever mirror answered, and any third value refuses the reply. A column the
+`0`/`1` whichever mirror answered, and any third value refuses the reply.
+`{digits: n}` is a code of `n` decimal digits, mapped there too to its full
+width: ARI writes Bailer-Jones' `00099` flag as `99` (measured 2026-11-18),
+and a code longer than `n` or holding a non-digit refuses the reply. A column the
 archive stores as a REAL adds `float32: true`: its value is the float32
 nearest the reply's text, and Python formatted that value, so `{fixed: 6}` on
 the text alone disagrees with it on about 1 cell in 230 (measured on a

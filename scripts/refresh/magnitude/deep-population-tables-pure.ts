@@ -80,7 +80,7 @@ export const BAILER_JONES_TABLE: DeepPopulationTable = {
   from: 'external.gaiaedr3_distance',
   values: [
     ...(['r_med_geo', 'r_lo_geo', 'r_hi_geo', 'r_med_photogeo', 'r_lo_photogeo', 'r_hi_photogeo'] as const).map((name) => ({ name, format: DISTANCE })),
-    { name: 'flag' },
+    { name: 'flag', format: { digits: 5 } },
   ],
   magnitudeBand: { min: 1_210_000, max: 1_262_000 },
   spotRows: [

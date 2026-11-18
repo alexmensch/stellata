@@ -11,6 +11,8 @@ export interface TapMirror {
   readonly protocol: 'tap' | 'asu';
   /** False until the live checks in README.md#the-tap-backend pass against it; a committed record it answered fails the suite. */
   readonly verified: boolean;
+  /** Each table this mirror hosts under another name, keyed by its archive's name for it: the name a query is written in. */
+  readonly tables?: Readonly<Record<string, string>>;
 }
 
 export interface TapArchive {
@@ -41,17 +43,33 @@ export const GAIA_DR3_RELEASE = 'Gaia DR3';
 /** The most rows a sliced Gaia pull puts in one slice: at LIMIT_HEADROOM 2 a slice asks 48,001 rows, inside ESA's hard output limit of 50,000. */
 export const GAIA_SLICE_ROWS = 24_000;
 
-const ESA_SYNC: TapMirror = { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' };
-
 export const GAIA: TapArchive = {
-  mirrors: [ESA_SYNC, { name: 'ARI-sync', protocol: 'tap', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap' }],
+  mirrors: [
+    { name: 'ESA-sync', protocol: 'tap', verified: true, url: 'https://gea.esac.esa.int/tap-server/tap' },
+    {
+      name: 'ARI-sync', protocol: 'tap', verified: true, url: 'https://gaia.ari.uni-heidelberg.de/tap',
+      tables: { 'external.gaiaedr3_distance': 'gaiaedr3_complements.distances' },
+    },
+  ],
   format: 'csv',
   retryDelaysMs: [2_000, 4_000, 8_000, 16_000],
   quote: bare,
 };
 
-/** For a table only ESA publishes under its query's name: ARI hosts `external.*` under other schema names. */
-export const GAIA_ESA: TapArchive = { ...GAIA, mirrors: [ESA_SYNC] };
+const escapeRegExp = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+/** The ADQL as `mirror` is sent it: every table it hosts under another name renamed, wherever the query names it. */
+export function mirrorAdql(mirror: TapMirror, adql: string): string {
+  return Object.entries(mirror.tables ?? {}).reduce(
+    (text, [archive, own]) => text.replace(new RegExp(`(?<![\\w."])${escapeRegExp(archive)}(?![\\w"])`, 'g'), own),
+    adql,
+  );
+}
+
+/** Each mirror's form of `adql` that differs from the archive's, by mirror name. */
+export function mirrorForms(archive: TapArchive, adql: string): Record<string, string> {
+  return Object.fromEntries(archive.mirrors.map((m) => [m.name, mirrorAdql(m, adql)]).filter(([, text]) => text !== adql));
+}
 
 /** FITS, so a double reaches the TSV as stored: CDS's CSV and CfA's ASU text each round it their own way (README.md#fits-replies). */
 export const VIZIER: TapArchive = {
@@ -246,6 +264,8 @@ export interface TapAnswer {
   readonly result: TapResult;
   /** The mirror that answered. */
   readonly service: string;
+  /** The query's ADQL as that mirror was sent it: what the checkpoint keys the answer on. */
+  readonly sent: string;
 }
 
 export interface TapClientDeps {
@@ -294,34 +314,35 @@ export function tapClient(archive: TapArchive, deps: TapClientDeps): TapClient {
     return cap;
   };
 
-  const answered = (mirror: TapMirror, result: TapResult): TapAnswer =>
-    ({ body: csvText(result.columns, result.rows), result, service: mirror.name });
+  const answered = (mirror: TapMirror, sent: string, result: TapResult): TapAnswer =>
+    ({ body: csvText(result.columns, result.rows), result, service: mirror.name, sent });
 
   const askTap = async (mirror: TapMirror, adql: string, limit: number): Promise<TapAnswer> => {
-    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(adql, limit, archive.format));
+    const sent = mirrorAdql(mirror, adql);
+    const reply = await deps.transport(`${mirror.url}/sync`, syncForm(sent, limit, archive.format));
     if (!answers(reply, archive.format)) throw replyError(reply, mirror.name);
     if (archive.format === 'csv') {
       const body = replyText(reply);
-      return { body, result: readCsv(body, limit, mirror.name), service: mirror.name };
+      return { body, result: readCsv(body, limit, mirror.name), service: mirror.name, sent };
     }
     const result = readFits(reply, limit, mirror.name);
     if (result === null) throw new TapTransient(`${mirror.name}: a TAP FITS reply with no table`);
-    return answered(mirror, { columns: result.columns, rows: result.rows });
+    return answered(mirror, sent, { columns: result.columns, rows: result.rows });
   };
 
-  const askAsu = async (mirror: TapMirror, query: AsuQuery, limit: number): Promise<TapAnswer> => {
+  const askAsu = async (mirror: TapMirror, adql: string, query: AsuQuery, limit: number): Promise<TapAnswer> => {
     const tsv = await deps.transport(asuUrl(mirror, 'asu-tsv', query, limit));
     if (!answers(tsv, 'text')) throw replyError(tsv, mirror.name);
     const fits = await deps.transport(asuUrl(mirror, 'asu-binfits', query, limit));
     if (!answers(fits, 'fits')) throw replyError(fits, mirror.name);
     const text = readAsuTsv(replyText(tsv), limit, mirror.name);
-    return answered(mirror, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
+    return answered(mirror, adql, joinAsu(query, text, readFits(fits, limit, mirror.name), mirror.name));
   };
 
   const ask = (mirror: TapMirror, query: ArchiveQuery, limit: number): Promise<TapAnswer> => {
     if (mirror.protocol === 'tap') return askTap(mirror, query.adql, limit);
     if (query.asu === undefined) throw new TapRefused(`${mirror.name} answers ASU only, and the query has no ASU form: ${query.adql}`);
-    return askAsu(mirror, query.asu, limit);
+    return askAsu(mirror, query.adql, query.asu, limit);
   };
 
   return {

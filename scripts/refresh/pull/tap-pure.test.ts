@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { fitsBytes } from './fits-fixture';
 import { QUIET_DEPS } from './recorded-reply';
 import {
-  GAIA, GAIA_ESA, SIMBAD, TapOverflow, TapRefused, TapTransient, VIZIER, csvText, readAsuTsv, hardRowLimit, queryStatus, readCsv, tapClient, textReply,
+  GAIA, SIMBAD, TapOverflow, TapRefused, TapTransient, VIZIER, csvText, readAsuTsv, hardRowLimit, mirrorAdql, mirrorForms, queryStatus, readCsv, tapClient, textReply,
   type AsuQuery, type HttpReply, type TapArchive, type Transport,
 } from './tap-pure';
 
@@ -138,7 +138,7 @@ describe('tapClient', () => {
     const { client } = fake(({ url }) => (
       url.endsWith('/capabilities') ? capabilities(null) : textReply(503, 'text/html', page)
     ));
-    await expect(client(GAIA_ESA).query({ adql: 'Q' }, 10)).rejects.toThrow('ESA-sync: HTTP 503, Message: Server overloaded');
+    await expect(client({ ...GAIA, mirrors: [GAIA.mirrors[0]] }).query({ adql: 'Q' }, 10)).rejects.toThrow('ESA-sync: HTTP 503, Message: Server overloaded');
   });
 
   it('a network failure is transient too', async () => {
@@ -279,5 +279,38 @@ describe('tapClient', () => {
 
   it('states every mirror as its service list', () => {
     expect(fake(() => csv('')).client(SIMBAD).services).toEqual(['SIMBAD-CDS', 'SIMBAD-Harvard']);
+  });
+});
+
+describe('a mirror that names a table differently', () => {
+  const [ESA, ARI] = GAIA.mirrors;
+  const JOINED = 'SELECT t.source_id FROM external.gaiaedr3_distance AS t JOIN gaiadr3.gaia_source AS g ON g.source_id = t.source_id';
+  const AT_ARI = JOINED.replace('external.gaiaedr3_distance', 'gaiaedr3_complements.distances');
+
+  it('is sent the query under its own name wherever the query names the table; the archive\'s mirror, under the archive\'s', () => {
+    expect(mirrorAdql(ARI, JOINED)).toBe(AT_ARI);
+    expect(mirrorAdql(ARI, 'SELECT external.gaiaedr3_distance.flag FROM external.gaiaedr3_distance'))
+      .toBe('SELECT gaiaedr3_complements.distances.flag FROM gaiaedr3_complements.distances');
+    expect(mirrorAdql(ESA, JOINED)).toBe(JOINED);
+  });
+
+  it('renames no longer name the table\'s is part of, and no quoted identifier', () => {
+    for (const adql of ['SELECT a FROM external.gaiaedr3_distance_2', 'SELECT a FROM x.external.gaiaedr3_distance', 'SELECT a FROM "external.gaiaedr3_distance"']) {
+      expect(mirrorAdql(ARI, adql)).toBe(adql);
+    }
+  });
+
+  it('lists only the mirrors whose form differs', () => {
+    expect(mirrorForms(GAIA, JOINED)).toEqual({ 'ARI-sync': AT_ARI });
+    expect(mirrorForms(GAIA, 'SELECT source_id FROM gaiadr3.gaia_source')).toEqual({});
+  });
+
+  it('is fallen back to under its own name', async () => {
+    const { client, syncCalls } = fake(({ url }) => {
+      if (url.endsWith('/capabilities')) return capabilities(null);
+      return url.includes('esac') ? textReply(503, 'text/html', '<html>Maintenance ongoing!</html>') : csv(rowsCsv(1));
+    });
+    await client(GAIA).query({ adql: JOINED }, 10);
+    expect(syncCalls().map((c) => c.form?.get('QUERY'))).toEqual([...Array<string>(GAIA.retryDelaysMs.length + 1).fill(JOINED), AT_ARI]);
   });
 });

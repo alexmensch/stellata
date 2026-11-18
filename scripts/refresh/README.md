@@ -64,7 +64,7 @@ setup ([Python environment](/scripts/dust/README.md#python-environment)).
 | `refresh:gaia-apsis` | `magnitude/refresh-gaia-apsis.ts` | `data/gaia/gaia_dr3_apsis.tsv` | Gaia DR3 `astrophysical_parameters` (gspphot ∪ gspspec) — Teff / log g / [M/H] / A0 + the ESP-ELS `spectraltype_esphs` enum. Scoped to the deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:gaia-gspc` | `gaia-request/refresh-gaia-gspc.ts` | `data/gaia/gaia_dr3_gspc.tsv` | Gaia DR3 `synthetic_photometry_gspc` — Johnson-Kron-Cousins B/V synthesised per source from its BP/RP spectrum, with fluxes and the per-band validated-range flag. Reads `gaia_astrometry_source_id_request.tsv`, so it runs AFTER `build:astrometry-request`. Flag polarity and the S/N > 30 cut this table already applies — [The GSPC validated-range flag](/data/gaia/README.md#the-gspc-validated-range-flag--1-means-in-range). |
 | `refresh:gaia-dr2-neighbourhood` | `gaia-request/refresh-gaia-dr2-neighbourhood.ts` | `data/gaia/gaia_dr2_neighbourhood.tsv` | DR2 ↔ DR3 cross-match candidates (`gaiadr3.dr2_neighbourhood`) for the Gaia-only catalog stars (reads `data/gaia/gaia_dr2_neighbourhood_request.tsv`). Input to the SID DR-reconciliation dry run — [§ 6.2 DR2→DR3 dry run](/docs/sid.md#62-dr2dr3-dry-run-measured-2026-07-07), incl. the request-file derivation recipe. |
-| `refresh:bailer-jones` | `magnitude/refresh-bailer-jones.ts` | `data/bailer-jones/bailer-jones-dr3.tsv` | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) photogeometric + geometric distance posteriors per Gaia DR3 source_id, from `external.gaiaedr3_distance` on ESA rather than VizieR's `I/352` ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
+| `refresh:bailer-jones` | `magnitude/refresh-bailer-jones.ts` | `data/bailer-jones/bailer-jones-dr3.tsv` | [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) photogeometric + geometric distance posteriors per Gaia DR3 source_id, from the Gaia archives' copy (ESA `external.gaiaedr3_distance`, ARI `gaiaedr3_complements.distances`) rather than VizieR's `I/352` ([Why the pull is Gaia-side](/data/bailer-jones/README.md#why-the-pull-is-gaia-side)). Deep population (`magnitude/README.md`), so it runs AFTER `build:astrometry-request`. |
 | `refresh:hip2` | `vizier/refresh-hipparcos2.ts` | `data/hipparcos/hip2_van_leeuwen.tsv` | Hipparcos-2 ([van Leeuwen 2007](/data/papers/index.md#vanleeuwen2007)) reduction. |
 | `refresh:hip-vmag` | `vizier/refresh-hipparcos-vmag.ts` | `data/hipparcos/hip_main_vmag.tsv` | Printed Johnson V and B−V per HIP from `I/239/hip_main` — the printed tiers of the V-magnitude and ci cascades — plus the catalogue's own HD column, the `hd:i239` attestation route. |
 | `refresh:classic-ids` | `vizier/refresh-classic-ids.ts` | `data/classic-ids/{tyc2_hd,cross_index,bsc5,cns5}.tsv` | The four frozen CDS classic-designation cross indexes (`IV/25`, `IV/27A`, `V/50`, CNS5 `J/A+A/670/A19`), written together. |
@@ -243,9 +243,10 @@ Check ESA's
 `external.*` schema before concluding a catalogue is VizieR-only:
 [Bailer-Jones 2021](/data/papers/index.md#bailerjones2021) is on
 both, and `refresh:bailer-jones` takes a Gaia archive's copy rather than
-VizieR's because only the Gaia archives join it to a magnitude, and ESA's
-alone (`GAIA_ESA`) because one query names one of the two archives' table
-names ([Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side)).
+VizieR's because only the Gaia archives join it to a magnitude
+([Why the pull is Gaia-side](/data/bailer-jones/README.md#why-the-pull-is-gaia-side));
+ARI is sent it under its own table name
+([The TAP backend](pull/README.md#the-tap-backend)).
 
 **MAXREC is load-bearing.** A truncated CSV sync reply is HTTP 200 with
 exactly MAXREC rows and no status at all, so the backend asks for one row more
