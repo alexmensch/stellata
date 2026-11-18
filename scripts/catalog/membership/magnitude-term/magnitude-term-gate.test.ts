@@ -7,7 +7,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
-import { readMagnitudeTerm, readMagnitudeTermAstrometry } from './magnitude-term';
+import { readMagnitudeTermAstrometry } from './magnitude-term';
+import { readMagnitudeTerm } from './magnitude-selection';
 import { hip2Near } from '../binding/binding-evidence';
 import { HIP2 } from '../../sources/hip2-source';
 import {
@@ -50,9 +51,9 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   });
 
   it('unions onto the primaries at the record total the floor implies', () => {
-    expect(boundSourceIds.size).toBe(375_182);
+    expect(boundSourceIds.size).toBe(375_370);
     const newcomers = magnitudeTermNewcomers(selection.keptSourceIds, boundSourceIds);
-    expect(newcomers.length).toBe(598_421);
+    expect(newcomers.length).toBe(598_233);
     expect(boundSourceIds.size + newcomers.length).toBe(973_603);
   });
 
@@ -61,12 +62,12 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
     expect(committedTermRows).toBe(newcomers.length);
   });
 
-  it('keeps 331,508 sources the primaries already bind', () => {
+  it('keeps 331,696 sources the primaries already bind', () => {
     let both = 0;
     for (const sourceId of selection.keptSourceIds) {
       if (boundSourceIds.has(sourceId)) both++;
     }
-    expect(both).toBe(331_508);
+    expect(both).toBe(331_696);
   });
 
   it('reads the 5p astrometry of exactly the sources it is handed', async () => {

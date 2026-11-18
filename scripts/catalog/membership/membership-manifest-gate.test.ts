@@ -43,7 +43,7 @@ import { parseSimbadWdsXidsTsv } from './binding/binding-gate-pure';
 import { SIMBAD_WDS_XIDS } from './binding/simbad-wds-xids-source';
 import { hip2Near } from './binding/binding-evidence';
 import { HIP2 } from '../sources/hip2-source';
-import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
+import { readMagnitudeTerm } from './magnitude-term/magnitude-selection';
 import { MAGNITUDE_FLOOR_V } from './magnitude-term/magnitude-term-pure';
 import type { NearSource } from './positional-witness/positional-witness-pure';
 import { SIMBAD_SPTYPE } from '../spectral/simbad-sptype-source';

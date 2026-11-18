@@ -29,7 +29,7 @@ import {
   LABEL_FLIPS,
 } from '../classic-ids/label-merge/label-flips-tsv';
 import { readMultiplesTsv, sourceIdsWithSiblingComponent } from '../companions/multiples-row';
-import { readMagnitudeTerm } from './magnitude-term/magnitude-term';
+import { readMagnitudeTerm } from './magnitude-term/magnitude-selection';
 import { MAGNITUDE_FLOOR_V, magnitudeTermBlock, magnitudeTermSummary } from './magnitude-term/magnitude-term-pure';
 import { INHERITED_SPINE } from '../spine/inherited-spine-tsv';
 import { ORIGIN_KEYS } from './origin-keys';

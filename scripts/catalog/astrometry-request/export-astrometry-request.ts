@@ -7,7 +7,7 @@ import {
   magnitudeWeighableSourceIds,
 } from '../classic-ids/classic-id-overlay-pure';
 import { hip2Near, loadHipVMag } from '../membership/binding/binding-evidence';
-import { readMagnitudeTerm } from '../membership/magnitude-term/magnitude-term';
+import { readMagnitudeTerm } from '../membership/magnitude-term/magnitude-selection';
 import { MAGNITUDE_FLOOR_V } from '../membership/magnitude-term/magnitude-term-pure';
 import { HIP2 } from '../sources/hip2-source';
 import { loadReferenceCatalogs } from '../../binaries/load/reference-catalogs';
