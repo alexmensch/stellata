@@ -10,7 +10,7 @@ built on it. The refresh policy and the per-target table are the parent's
 |---|---|---|
 | `refresh:gaia-magnitude` | `gaiadr3.gaia_source` | `data/gaia/gaia_dr3_magnitude_pull.tsv` |
 | `refresh:gaia-apsis` | `gaiadr3.astrophysical_parameters` | `data/gaia/gaia_dr3_apsis.tsv` |
-| `refresh:bailer-jones` | `external.gaiaedr3_distance` (ESA only) | `data/bailer-jones/bailer-jones-dr3.tsv` |
+| `refresh:bailer-jones` | `external.gaiaedr3_distance` (ARI: `gaiaedr3_complements.distances`) | `data/bailer-jones/bailer-jones-dr3.tsv` |
 
 Output paths are `DATA_FILES`' (`/src/catalog-format/pipeline-outputs/`).
 
@@ -111,14 +111,19 @@ request's size.
 Formats: Apsis `teff_*` `{fixed: 1, float32: true}`, `logg_*` / `mh_*` /
 `azero_gspphot` `{fixed: 4, float32: true}`, `spectraltype_esphs` passes
 through; Bailer-Jones `r_*` `{fixed: 3, float32: true}`, `flag` (a five-digit
-decision-tree code) passes through. Every spot row is required: a pinned
+decision-tree code) `{digits: 5}`. Every spot row is required: a pinned
 `source_id` missing from a static release means the scope moved.
 
-**Bailer-Jones is asked of ESA alone** (`GAIA_ESA`). ARI hosts the same eight
-columns as `gaiaedr3_complements.distances`, under a different name from ESA's
-`external.gaiaedr3_distance`, so one query cannot serve both mirrors; why the
-pull is ESA-side rather than VizieR's:
-[Why the pull is ESA-side](/data/bailer-jones/README.md#why-the-pull-is-esa-side).
+**Bailer-Jones is asked of ESA, falling back to ARI**, which hosts the same
+eight columns as `gaiaedr3_complements.distances` and is sent the query under
+that name ([The TAP backend](../pull/README.md#the-tap-backend)). The two
+copies hold the same data: on 2026-11-18, with ESA down, the whole pull
+answered from ARI wrote all 1,277,736 rows of the committed ESA-answered table
+byte for byte once `flag` is read at its five digits (39 rows of `00099` come
+back from ARI as `99`). ARI answered a magnitude slice in 2 to 12 minutes,
+against ESA's seconds, and the whole pull took about 3.5 hours there. Why
+the pull is the Gaia archives' rather than VizieR's:
+[Why the pull is Gaia-side](/data/bailer-jones/README.md#why-the-pull-is-gaia-side).
 
 Reading the exported union rather than the manifest is what closes the
 asymmetry [The staleness gate](../README.md#the-staleness-gate--pin-the-shortfall-never-the-numerator) names.

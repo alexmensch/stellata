@@ -11,7 +11,7 @@ import {
 import { bandCheck, coverageCheck, spotRowCheck, type Coverage, type RowBand, type SpotRow } from './gates-pure';
 import { sliceConditions, type SliceEdges } from './slices-pure';
 import {
-  readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapArchive, type TapClientDeps, type Transport,
+  mirrorForms, readCsv, tapClient, type ArchiveQuery, type AsuQuery, type TapAnswer, type TapArchive, type TapResult, type TapClientDeps, type Transport,
 } from './tap-pure';
 
 /** A whole table in one query; `asu` is that query as an ASU mirror asks it, required where the archive has one. */
@@ -203,13 +203,29 @@ const keysOf = <K extends string>(record: Readonly<Record<K, unknown>>): K[] => 
 
 const formatsOf = (table: WrittenTable): object => Object.fromEntries(table.columns.flatMap((c) => (c.format ? [[c.name, c.format]] : [])));
 
-/** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
-function tableDescription(table: PullTable, quote: TapArchive['quote']): object {
-  const slices = table.scope.kind === 'sliced' ? { slices: sliceConditions(table.scope.key, table.scope.edges) } : {};
-  return { query: queryTemplate(table, quote), ...slices, ...asuOf(table.scope), formats: formatsOf(table), sortBy: table.sortBy };
+const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
+
+/** A query besides its template: a sliced scope's ranges, a whole table's ASU form, and each mirror's differing template. */
+function queryExtras(scope: Scope | PhaseScope, template: string, archive: TapArchive): object {
+  const mirrors = mirrorForms(archive, template);
+  return {
+    ...(scope.kind === 'sliced' ? { slices: sliceConditions(scope.key, scope.edges) } : {}),
+    ...asuOf(scope),
+    ...(Object.keys(mirrors).length > 0 ? { mirrors } : {}),
+  };
 }
 
-const asuOf = (scope: Scope | PhaseScope): { asu?: AsuQuery } => (scope.kind === 'whole-table' && scope.asu ? { asu: scope.asu } : {});
+/** Everything besides the data that decides a table's bytes, so a change to any of it stales the pull's record. */
+function tableDescription(table: PullTable, archive: TapArchive): object {
+  const query = queryTemplate(table, archive.quote);
+  return { query, ...queryExtras(table.scope, query, archive), formats: formatsOf(table), sortBy: table.sortBy };
+}
+
+function phaseDescription(phase: Phase, archive: TapArchive): object | string {
+  const query = phaseTemplate(phase, archive.quote);
+  const extras = queryExtras(phase.scope, query, archive);
+  return Object.keys(extras).length > 0 ? { query, ...extras } : query;
+}
 
 const archiveDescription = (archive: TapArchive, release: string | undefined): Pick<PullDescription, 'services' | 'release'> => ({
   services: archive.mirrors.map((m) => m.name),
@@ -217,15 +233,12 @@ const archiveDescription = (archive: TapArchive, release: string | undefined): P
 });
 
 export function describePull<K extends string>(pull: Pull<K>): PullDescription {
-  const queries = Object.fromEntries(keysOf(pull.tables).map((k) => [k, tableDescription(pull.tables[k], pull.archive.quote)]));
+  const queries = Object.fromEntries(keysOf(pull.tables).map((k) => [k, tableDescription(pull.tables[k], pull.archive)]));
   return { query: JSON.stringify(queries), ...archiveDescription(pull.archive, pull.release) };
 }
 
 export function describePhasedPull<K extends string>(pull: PhasedPull<K>): PullDescription & Partial<Projection> {
-  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, p.scope.kind === 'sliced'
-    ? { query: phaseTemplate(p, pull.archive.quote), slices: sliceConditions(p.scope.key, p.scope.edges) }
-    : p.scope.kind === 'whole-table' && p.scope.asu ? { query: phaseTemplate(p, pull.archive.quote), ...asuOf(p.scope) }
-      : phaseTemplate(p, pull.archive.quote)]));
+  const phases = Object.fromEntries(Object.entries(pull.phases).map(([name, p]) => [name, phaseDescription(p, pull.archive)]));
   const tables = Object.fromEntries(keysOf(pull.tables).map((k) => [k, { formats: formatsOf(pull.tables[k]), sortBy: pull.tables[k].sortBy }]));
   const query = { phases, tables, ...(pull.parameters === undefined ? {} : { parameters: pull.parameters }) };
   return { query: JSON.stringify(query), ...archiveDescription(pull.archive, pull.release), ...pull.request };
@@ -319,13 +332,21 @@ export async function runPhasedPull<K extends string>(pull: PhasedPull<K>, deps:
     const queries = archiveQueries(phase, ids, pull.archive.quote);
     const rows: Row[] = [];
     for (const [i, query] of queries.entries()) {
-      const cached = cache.load(query.adql);
-      if (cached?.service) report(cached.service);
-      const result = cached === null ? await client.query(query, limit) : { ...cached, result: readCsv(cached.body, limit, name) };
-      const checked = checkedRows(phase.columns, result.result, name);
-      if (cached === null) cache.save(query.adql, result);
+      const forms = [query.adql, ...Object.values(mirrorForms(pull.archive, query.adql))];
+      const cached = forms.map((text) => cache.load(text)).find((c) => c !== null) ?? null;
+      let answer: TapAnswer | null = null;
+      let result: TapResult;
+      if (cached === null) {
+        answer = await client.query(query, limit);
+        result = answer.result;
+      } else {
+        if (cached.service) report(cached.service);
+        result = readCsv(cached.body, limit, name);
+      }
+      const checked = checkedRows(phase.columns, result, name);
+      if (answer !== null) cache.save(answer.sent, answer);
       for (const row of checked) rows.push(row);
-      deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
+      deps.log(`  ${name} batch ${i + 1}/${queries.length}: ${result.rows.length} rows${cached === null ? '' : ' from checkpoint'} (total ${rows.length})`);
       if (phase.scope.kind !== 'request' && rows.length > phase.scope.maxRows) {
         throw new Error(`${name}: ${rows.length} rows after query ${i + 1} of ${queries.length}, past the ${phase.scope.maxRows} it may hold; the upstream table or the query moved`);
       }
