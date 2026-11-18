@@ -27,6 +27,8 @@ import {
   heldMoreThanOnce,
   identityWitnessed,
   passingRunnersUp,
+  isPositionDisputed,
+  positionWitnessed,
   refusedCandidates,
   reviewLetters,
   unshippedCandidates,
@@ -442,9 +444,11 @@ export function admitAdditions(input: {
   for (const g of groups) {
     const a = admitGroup(g, claims, index);
     const cells = reviewKeyCells(g);
-    if (g.source !== null && passingRunnersUp(g.derived).length > 0) {
+    const contestedBy = g.source === null ? null
+      : isPositionDisputed(g.derived) ? 'position' : passingRunnersUp(g.derived).length > 0 ? 'runner-up' : null;
+    if (contestedBy !== null) {
       out.outcomes.push({ key: g.origin, outcome: {
-        kind: 'addition-contested', review: bindingReviewCells(cells, g.derived, g.gate, tables),
+        kind: 'addition-contested', by: contestedBy, review: bindingReviewCells(cells, g.derived, g.gate, tables),
         ...reviewLetters(g.derived.sourceId, cells.hip, g.gate.evidence.wdsXids),
       } });
     }
@@ -465,6 +469,7 @@ export function admitAdditions(input: {
       } },
       ...refusedCandidates(g.origin, 'addition', g.derived),
       ...identityWitnessed(g.origin, 'addition', g.derived),
+      ...positionWitnessed(g.origin, 'addition', g.derived),
     );
     out.identityQueue.push(...identityQueueCandidate(g.origin, 'addition', cells, g.derived, g.gate, tables));
     if (a.verdict.kind === 'component') {

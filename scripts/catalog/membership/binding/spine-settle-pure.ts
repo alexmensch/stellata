@@ -17,7 +17,9 @@ import {
   boundOutcome,
   heldMoreThanOnce,
   identityWitnessed,
+  isPositionDisputed,
   passingRunnersUp,
+  positionWitnessed,
   refusedCandidates,
   reviewLetters,
   unshippedCandidates,
@@ -38,7 +40,7 @@ import {
 } from '../membership-lineage-pure';
 import { isSolProper } from '../membership-manifest-tsv';
 
-type BindingOutcome = 'bound' | 'refused' | 'contested' | 'collision' | 'sol';
+type BindingOutcome = 'bound' | 'refused' | 'contested' | 'position-disputed' | 'collision' | 'sol';
 
 /** What the derivation reached for one spine row. Sol derives nothing. */
 export type SpineBinding =
@@ -74,6 +76,7 @@ export interface SpineSettlement {
 function bindingOutcome(derived: DerivedBinding, withheld: boolean): BindingOutcome {
   if (withheld) return 'collision';
   if (derived.sourceId === null) return 'refused';
+  if (isPositionDisputed(derived)) return 'position-disputed';
   return passingRunnersUp(derived).length > 0 ? 'contested' : 'bound';
 }
 
@@ -122,7 +125,7 @@ function settleBinding(
 ): SettledBinding & { asserted: boolean } {
   const { derived } = b;
   if (disposition === undefined) {
-    const shippable = b.outcome === 'bound' || b.outcome === 'contested';
+    const shippable = b.outcome === 'bound' || b.outcome === 'contested' || b.outcome === 'position-disputed';
     return shippable && derived.sourceId !== null
       ? { value: derived.sourceId, binding: derived.binding, asserted: false }
       : { value: null, binding: 'none', asserted: false };
@@ -156,6 +159,7 @@ function settleRow(
   const outcomes: KeyedOutcome[] = [
     ...refusedCandidates(key, 'spine', d),
     ...identityWitnessed(key, 'spine', d),
+    ...positionWitnessed(key, 'spine', d),
     ...unweighedCandidates(key, [{ d, cites: [] }]),
     ...d.weighedNullGMag.map((c): KeyedOutcome => ({
       key, outcome: { kind: 'weighed-null-g', sourceId: c.sourceId, via: c.via.join('+') },

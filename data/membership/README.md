@@ -45,7 +45,7 @@ simbad_sourced_distances.tsv
                          record (build-catalog/distSimbadPlx counts them); a
                          row carrying neither cell addresses no record
                          (`stellata-hooj.15`).
-binding-review.tsv       Regular git. The 353 spine rows and addition
+binding-review.tsv       Regular git. The 358 spine rows and addition
                          groups the derivation cannot settle alone or a
                          review already settled — contested · collision ·
                          unconfirmed · disposed — with every source's
@@ -53,7 +53,10 @@ binding-review.tsv       Regular git. The 353 spine rows and addition
                          derived candidate's G and SIMBAD cross-IDs, and the
                          source SIMBAD's HIP object names with its G and its
                          separation from the HIP's position.
-                         A contested row ships its winner while it waits, so
+                         A contested row — a passing runner-up, or a position
+                         witness Gaia's HIP cross-match disputes
+                         (/scripts/catalog/membership/binding/README.md#the-position-witness)
+                         — ships its winner while it waits, so
                          being queued is a flag, not a withhold; an
                          unconfirmed one ships no source, and its SIMBAD-named
                          source stays a magnitude-term row

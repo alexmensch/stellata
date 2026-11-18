@@ -34,11 +34,15 @@ export function rowDeriver(
   };
 }
 
+const RESCUE_OUTCOMES = { component: 'rescued', identity: 'identified', position: 'positioned' } as const;
+
 /** A winning derivation's outcome: bound outright, or by the witness that rescued it. */
-export function boundOutcome(d: DerivedBinding): 'bound' | 'rescued' | 'identified' {
-  if (d.rescue === null) return 'bound';
-  return d.rescue === 'component' ? 'rescued' : 'identified';
+export function boundOutcome(d: DerivedBinding): 'bound' | (typeof RESCUE_OUTCOMES)[keyof typeof RESCUE_OUTCOMES] {
+  return d.rescue === null ? 'bound' : RESCUE_OUTCOMES[d.rescue];
 }
+
+/** README.md#the-position-witness: Gaia's HIP cross-match names another source than the witness bound. */
+export const isPositionDisputed = (d: DerivedBinding): boolean => d.position?.disputedBy != null;
 
 /** A row whose identity witness went unconfirmed: queued only once the magnitude
  *  term admits its source (README.md#identity-outranks-a-blended-magnitude). */
@@ -76,6 +80,16 @@ export function queuedIdentities(
 export function identityWitnessed(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
   if (d.identity === null) return [];
   return [{ key, outcome: { kind: 'identity-witness', subject, ...d.identity } }];
+}
+
+/** The position witness's evidence, wherever it bound the row. */
+export function positionWitnessed(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
+  if (d.position === null) return [];
+  const { witness, disputedBy } = d.position;
+  return [{ key, outcome: {
+    kind: 'position-witness', subject, sourceId: witness.sourceId, separationArcsec: witness.separationArcsec,
+    gMag: witness.gMag, vMag: witness.vMag, others: witness.others, disputedBy,
+  } }];
 }
 
 /** The sources more than one row or group reaches. */

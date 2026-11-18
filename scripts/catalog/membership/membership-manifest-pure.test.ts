@@ -237,7 +237,7 @@ function gateEvidence(
 const input = {
   spine, tables, overlay, overrides: new Map(), siblingRenderedSourceIds: new Set<string>(),
   evidence: gateEvidence(tables),
-  positions: { hipparcos: () => null, gaia: () => null },
+  positions: { hipparcos: () => null, gaia: () => null, keptNearHip: () => [] },
   dispositions: new Map<string, BindingDispositionRow>(),
   corrections: [] as SpineCorrectionRow[],
   simbadTycHd: new Map<string, SimbadTycHdRow>(),
@@ -264,7 +264,7 @@ describe('buildMembership — the spine side', () => {
     expect(byTyc.get('1-2-1')?.binding).toBe('simbad_corroborated');
     expect(byTyc.get('1-2-1')?.gaiaSourceId).toBe('222');
     expect(derivation(result)).toEqual({
-      bound: 3, rescued: 0, identified: 0, refused: 2, contested: 0, collision: 0, sol: 1,
+      bound: 3, rescued: 0, identified: 0, positioned: 0, refused: 2, contested: 0, 'position-disputed': 0, collision: 0, sol: 1,
     });
     expect(leads(result)).toEqual({ tyc: 1, hip: 1, cns5: 0, simbad: 1 });
     expect(codes(result)['binding.consensus']).toBe(1);
@@ -582,7 +582,7 @@ describe('buildMembership — the spine side', () => {
         simbadBySourceId: new Map([...tables.simbadBySourceId, ['6062', { oid: 0, hip: 60, tyc: null, gj: null }]]),
       },
       evidence: gateEvidence(tables, new Map([['6062', 8.0]]), printedHipTable([[60, 5.0]]), null),
-      magnitudeTerm: { keptSourceIds: new Set(['6062']), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
+      magnitudeTerm: { keptSourceIds: new Set(['6062']), keptNearHip: new Map(), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
     };
     const key = bindingReviewKey({ tyc: '', hip: '60', hd: '600', gl: '' });
     const hip60 = (r: MembershipResult) => r.bindingReview.filter((row) => row.hip === '60');
@@ -868,6 +868,7 @@ describe('buildMembership — the additions', () => {
       }),
       magnitudeTerm: {
         keptSourceIds: new Set(['5050', '777']),
+        keptNearHip: new Map(),
         counts: { rows: 2, kept: 2, above_floor: 0, no_v: 0 },
       },
     });
@@ -894,7 +895,7 @@ describe('buildMembership — the additions', () => {
       dispositions: new Map([[key, disposition({
         tyc: '1-2-1', hd: '5', derived_source_id: '222', keep_source_id: '', basis,
       })]]),
-      magnitudeTerm: { keptSourceIds: new Set(['222']), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
+      magnitudeTerm: { keptSourceIds: new Set(['222']), keptNearHip: new Map(), counts: { rows: 1, kept: 1, above_floor: 0, no_v: 0 } },
     });
     const component = declined('pair_component');
     expect(component.rows.filter((r) => r.gaiaSourceId === '222')).toHaveLength(1);
@@ -1340,7 +1341,7 @@ describe('membership lineage', () => {
     const summary = membershipSummary(folded(result), result.derived);
     expect(summary).toContain(`manifest: ${result.rows.length} rows`);
     const d = derivation(result);
-    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, identified ${d.identified}, refused ${d.refused}`);
+    expect(summary).toContain(`derivation: bound ${d.bound}, rescued ${d.rescued}, identified ${d.identified}, positioned ${d.positioned}, refused ${d.refused}`);
     const fieldLines = summary.split('\n').filter((l) => /^  \S/.test(l)).map((l) => l.trim().split(' ')[0]);
     expect(fieldLines).toEqual([...LABEL_FIELDS]);
   });

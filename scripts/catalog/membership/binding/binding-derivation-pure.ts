@@ -13,7 +13,7 @@ import {
   type GateRow,
 } from './binding-gate-pure';
 import type { Cns5Row } from '../../classic-ids/classic-ids-parse';
-import { intCell } from '../../../util/tsv/table-pure';
+import { compareSourceIds, intCell } from '../../../util/tsv/table-pure';
 import {
   bareGjKey,
   glKeyForms,
@@ -25,6 +25,7 @@ import type { SkyPosition } from '../../../../src/astro-core/equatorial-basis';
 import {
   hipparcosNamesSource,
   hipparcosSeparationFromSource,
+  type NearSource,
   type SourceAstrometry,
 } from '../positional-witness/positional-witness-pure';
 
@@ -149,15 +150,15 @@ export function rankCandidates(candidates: BindingCandidates): RankedCandidate[]
   return ranked.sort((a, b) => b.via.length - a.via.length);
 }
 
-export type DerivedBindingClass = 'crosswalk_gated' | 'simbad_corroborated' | 'none';
+export type DerivedBindingClass = 'crosswalk_gated' | 'simbad_corroborated' | 'position_witnessed' | 'none';
 
 export interface RejectedCandidate extends RankedCandidate {
   reason: GateReason;
 }
 
-/** Which witness bound a winner every candidate had refused: README.md#both-gates-weigh-every-candidate,
- *  README.md#identity-outranks-a-blended-magnitude. */
-export type Rescue = 'component' | 'identity';
+/** Which witness bound a winner every candidate had refused, or a row with none: README.md#both-gates-weigh-every-candidate,
+ *  README.md#identity-outranks-a-blended-magnitude, README.md#the-position-witness. */
+export type Rescue = 'component' | 'identity' | 'position';
 
 export interface DerivedBinding {
   sourceId: string | null;
@@ -167,6 +168,8 @@ export interface DerivedBinding {
   /** The identity witness, where it named a refused candidate: the winner when its position
    *  confirms it, else the row is queued (`isUnconfirmed`). */
   identity: IdentityWitness | null;
+  /** The position witness, where it bound the row. */
+  position: BoundPosition | null;
   ranked: RankedCandidate[];
   rejected: RejectedCandidate[];
   /** The row carries a printed V, so the magnitude gate could weigh its
@@ -188,6 +191,8 @@ export interface RowGateEvidence extends GateRow {
   tycWitness: string | null;
   /** Null where SIMBAD files the row's HIP under no source or under two. */
   identity: IdentityWitness | null;
+  /** Null where no floor source the sibling arm passes lies within a second of arc of the HIP. */
+  position: PositionWitness | null;
   evidence: BindingEvidence;
 }
 
@@ -200,11 +205,36 @@ export interface IdentityWitness {
   vMag: number | null;
 }
 
-/** What the identity witness reads positions from. */
+/** README.md#the-position-witness: the brightest floor source near the HIP, and how many others were. */
+export interface PositionWitness extends NearSource {
+  others: number;
+  vMag: number | null;
+}
+
+/** A position witness that bound its row, and the source Gaia's HIP cross-match names instead, if any. */
+export interface BoundPosition {
+  witness: PositionWitness;
+  disputedBy: string | null;
+}
+
+/** What the identity and position witnesses read positions from. */
 export interface PositionEvidence {
   hipparcos: (hip: number) => SkyPosition | null;
   /** Null where Gaia publishes no proper motion to carry the source by. */
   gaia: (sourceId: string) => SourceAstrometry | null;
+  /** The magnitude floor's kept sources within a second of arc of the HIP's position carried to theirs. */
+  keptNearHip: (hip: number) => readonly NearSource[];
+}
+
+/** README.md#the-position-witness. */
+export function positionWitness(
+  hip: number | null, near: readonly NearSource[], wdsXids: BindingEvidence['wdsXids'], vMag: number | null,
+): PositionWitness | null {
+  if (hip === null) return null;
+  const passing = near
+    .filter((s) => !isSiblingLetterAttribution(s.sourceId, hip, wdsXids))
+    .sort((a, b) => a.gMag - b.gMag || compareSourceIds(a.sourceId, b.sourceId));
+  return passing.length === 0 ? null : { ...passing[0], others: passing.length - 1, vMag };
 }
 
 function identityWitness(
@@ -236,7 +266,12 @@ export function rowGateEvidence(
     tycho2: row.tyc === '' ? [] : [row.tyc],
     gliese: row.gl === '' ? [] : [row.gl],
   }, evidence.printedV);
-  return { hip, printedV: printed, tycWitness, identity: identityWitness(hip, simbad, positions, evidence.gMagOf, printed), evidence };
+  return {
+    hip, printedV: printed, tycWitness,
+    identity: identityWitness(hip, simbad, positions, evidence.gMagOf, printed),
+    position: positionWitness(hip, hip === null ? [] : positions.keptNearHip(hip), evidence.wdsXids, printed?.vMag ?? null),
+    evidence,
+  };
 }
 
 export function bindingClassOf(via: readonly BindingSource[]): DerivedBindingClass {
@@ -276,13 +311,30 @@ export function deriveBinding(
     ? { index: component, by: 'component' }
     : named?.confirmed ? { index: named.index, by: 'identity' } : null;
   const [taken] = rescue === null ? [] : rejected.splice(rescue.index, 1);
-  const won = passed ?? taken ?? null;
+  const position = passed === null && taken === undefined ? positionRescue(ranked, rejected, gate.position) : null;
+  const won = passed ?? taken ?? position?.won ?? null;
   return {
     sourceId: won?.sourceId ?? null,
     via: won?.via ?? [],
-    binding: bindingClassOf(won?.via ?? []),
-    rescue: rescue?.by ?? null, identity: named === null ? null : gate.identity,
+    binding: position === null ? bindingClassOf(won?.via ?? []) : 'position_witnessed',
+    rescue: position === null ? rescue?.by ?? null : 'position',
+    identity: named === null ? null : gate.identity,
+    position: position?.bound ?? null,
     ranked, rejected, gateable, unweighedNoPulledRow, weighedNullGMag,
+  };
+}
+
+/** README.md#the-position-witness. Takes the witness's source off the refusals where a candidate proposed it. */
+function positionRescue(
+  ranked: readonly RankedCandidate[], rejected: RejectedCandidate[], witness: PositionWitness | null,
+): { won: RankedCandidate; bound: BoundPosition } | null {
+  if (witness === null) return null;
+  const at = rejected.findIndex((r) => r.sourceId === witness.sourceId);
+  const [refused] = at < 0 ? [] : rejected.splice(at, 1);
+  const hipNames = ranked.find((c) => c.via.includes('hip'))?.sourceId ?? null;
+  return {
+    won: refused === undefined ? { sourceId: witness.sourceId, via: [] } : { sourceId: refused.sourceId, via: refused.via },
+    bound: { witness, disputedBy: hipNames !== null && hipNames !== witness.sourceId ? hipNames : null },
   };
 }
 
@@ -304,14 +356,14 @@ function identityNamed(
   return { index, confirmed: identity.separationArcsec !== null && hipparcosNamesSource(identity.separationArcsec) };
 }
 
-/** Every source the derivation could propose for these rows — what the
- *  astrometry pull has to carry a G for, so no candidate reaches the gate
- *  unweighed (`../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`). */
+/** What the astrometry pull has to carry for these rows:
+ *  `../../astrometry-request/README.md#the-request-is-a-union-and-why-that-is-not-a-compromise`. */
 export function derivationCandidateSourceIds(
   rows: Iterable<BindingCells>,
   tables: BindingTables,
   cns5ByOwnKey: ReadonlyMap<string, Cns5Row>,
   simbad: SimbadSourceIndex,
+  keptNearHip: PositionEvidence['keptNearHip'],
 ): Set<string> {
   const ids = new Set<string>();
   for (const row of rows) {
@@ -320,6 +372,8 @@ export function derivationCandidateSourceIds(
       const id = candidates[source];
       if (id !== null) ids.add(id);
     }
+    const hip = intCell(row.hip);
+    for (const near of hip === null ? [] : keptNearHip(hip)) ids.add(near.sourceId);
   }
   return ids;
 }

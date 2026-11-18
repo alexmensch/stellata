@@ -8,6 +8,8 @@ import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
 import { readMagnitudeTerm, readMagnitudeTermAstrometry } from './magnitude-term';
+import { hip2Near } from '../binding/binding-evidence';
+import { HIP2 } from '../../sources/hip2-source';
 import {
   magnitudeTermNewcomers,
   type MagnitudeTermSelection,
@@ -29,7 +31,7 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   // the union — the term is ON. Deduping the kept set against the whole file
   // would measure the term against its own output and report zero newcomers.
   beforeAll(async () => {
-    selection = await readMagnitudeTerm(GATE_FLOOR_V);
+    selection = await readMagnitudeTerm(GATE_FLOOR_V, hip2Near(HIP2.read().astrometry));
     boundSourceIds = new Set<string>();
     committedTermRows = 0;
     for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf8'))) {

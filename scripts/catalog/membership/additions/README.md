@@ -117,7 +117,8 @@ dedupes on bound source_ids only ([The union dedupes on the derived binding](../
 so a source an addition could bind but does not comes back as a second,
 unnamed record. SIMBAD is the route that matters here — its object under the
 row's own TYC names the source where Tycho-2's best-neighbour walk reaches
-nothing. A winner a spine record already holds, or that two groups reach,
+nothing — and an I/239 HIP no route reaches takes its floor source by position
+([The position witness](../binding/README.md#the-position-witness)). A winner a spine record already holds, or that two groups reach,
 leaves the cell empty, as a spine collision does. The `admit.magnitude.*` codes
 count the magnitude rows that are still some primaries row's unshipped
 candidate, by why it was not shipped. Each such row's lineage code is

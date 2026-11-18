@@ -19,7 +19,8 @@ import {
   multiplesComponentJoin,
 } from './membership-lineage-pure';
 import { countSnapshotCheck } from '../../util/snapshot-check';
-import { loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
+import { hip2Near, loadBindingEvidence, loadHipVMag, positionEvidence } from './binding/binding-evidence';
+import { HIP2 } from '../sources/hip2-source';
 import { printedVLookups } from '../photometry/v-magnitude-pure';
 import { gaiaHas5pSolution } from '../distance/gaia-distrust';
 import { CLASSIC_ID_OVERLAY, overlayMap } from '../classic-ids/classic-id-overlay-tsv';
@@ -58,7 +59,8 @@ export async function main(): Promise<void> {
   const { evidence, gaiaAstrometry } = loadBindingEvidence(
     printedVLookups(loadHipVMag(), tables.tycho2, tables.gliese),
   );
-  const magnitudeTerm = MAGNITUDE_FLOOR_V === null ? null : await readMagnitudeTerm(MAGNITUDE_FLOOR_V);
+  const hip2 = HIP2.read().astrometry;
+  const magnitudeTerm = MAGNITUDE_FLOOR_V === null ? null : await readMagnitudeTerm(MAGNITUDE_FLOOR_V, hip2Near(hip2));
   const result = buildMembership({
     spine,
     tables,
@@ -66,7 +68,7 @@ export async function main(): Promise<void> {
     overrides: CLASSIC_ID_OVERRIDES.read(),
     siblingRenderedSourceIds: sourceIdsWithSiblingComponent(multiples),
     evidence,
-    positions: positionEvidence(gaiaAstrometry),
+    positions: positionEvidence(gaiaAstrometry, hip2, magnitudeTerm?.keptNearHip ?? new Map()),
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),
     corrections: SPINE_CORRECTIONS.read(),
     simbadTycHd: SIMBAD_TYC_HD.read(),
