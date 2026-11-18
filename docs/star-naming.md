@@ -84,7 +84,7 @@ Diacritic-folded, over `data/athyg/inherited-spine.tsv`:
 
 | Class | Count | Disposition |
 |---|---|---|
-| IAU-approved | **445** | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
+| IAU-approved | **445** at the spine's retirement as a naming input (2026-11-18) | name tier, unchanged. 442 match a name cell outright; 3 sit inside a multi-name cell (`Nganurganity / Unurgunite`, `Yunü (Yunu)`, `Bake-eo (or Bake Eo)`) and are only found once [§ 4](#4-canonical-designation-forms)'s normaliser splits it |
 | discovery / eponymous designation | 21 | designation tier, each citing a SIMBAD ident (`Ross 128`, `Kapteyn's Star`, `Lacaille 9352`, `Lalande 21185`, `Kruger 60`, `Struve 2398 A`); Groombridge 1830, which SIMBAD lists only as `LAL 22369`, is alias only |
 | IAU name + AT-HYG component letter | 8 | 3 composed, the component borrowing its system's name with its letter (`Revati B`); 5 alias only, where the record displays its own Bayer label (`Cor Caroli B` is α¹ CVn) |
 | Gould designation | 3 | designation tier for `82 G. Eri`, citing the authority's Gould row; alias only for `268 G. Cet` and `96 G. Psc`, which neither the authority nor SIMBAD carries |
