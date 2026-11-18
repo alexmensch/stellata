@@ -253,7 +253,7 @@ through `GAIA_APSIS` (`record/gaia-apsis-source.ts`) into a `Map<source_id, Apsi
 `encodeCatalog` (`record/encode-catalog-pure.ts`) writes
 seven `float32` Apsis fields per record into the v6 binary (offsets
 52–79; see [Binary catalog format](../../src/catalog-format/record/README.md#binary-catalog-format-publiccatalogbini--manifest) above). Coverage: 98.7% of records
-match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,448<!-- /count --> of <!-- count:build-catalog/recordCount -->979,604<!-- /count -->); 88.3% of the catalogue has a
+match an Apsis row (<!-- count:build-catalog/apsisMatched -->967,550<!-- /count --> of <!-- count:build-catalog/recordCount -->979,523<!-- /count -->); 88.3% of the catalogue has a
 non-null Teff in either gspphot or gspspec. The remaining ~12%
 (typically faint Tycho-only stars without high-S/N BP/RP photometry,
 plus hot O/B stars where gspphot doesn't converge) are written as
