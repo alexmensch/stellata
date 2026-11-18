@@ -18,7 +18,7 @@ import {
 } from './cascade-pure';
 import { decompose, freezePairs, type DecomposedPair, type ResolvedComponent } from './components-pure';
 import { propagateIdentities, seedSynthesizedComponentBindings } from './propagate-pure';
-import { refuseHipsOfDisjointStars } from './sibling-identity-pure';
+import { refuseHipsOfDisjointStars, simbadSourceLetters } from './sibling-identity-pure';
 
 export interface CascadeInputs {
   readonly pairs: readonly WdsPair[];
@@ -32,10 +32,12 @@ export function resolveCascade(
   inputs: CascadeInputs,
 ): { pairs: readonly DecomposedPair[]; refusals: readonly CascadeRefusal[] } {
   const orb6ByPair = groupOrb6ByPair(inputs.orb6);
+  const simbadLetters = simbadSourceLetters(inputs.simbadWdsXids);
   const offCoord: CascadeRefusal[] = [];
   const first = decompose(inputs.pairs, (pair, token, isPrimary) => {
     const { component, refused } = resolveComponent(
       pair, token, isPrimary, orb6ByPair.get(pairRowKey(pair.wdsId, pair.components)) ?? [], inputs.indices,
+      simbadLetters,
     );
     offCoord.push(...refused);
     return component;

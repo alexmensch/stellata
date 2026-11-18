@@ -21,12 +21,14 @@ import {
   type DecomposedPair, type Draft, type ResolvedComponent,
 } from './components-pure';
 import {
-  buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, tokensShareIdentity, type HipClaims,
+  buildSystemHipClaims, claimHip, hipClaimedByDisjointLetter, sourceClaimedByDisjointLetter, tokensShareIdentity,
+  type HipClaims, type SimbadSourceLetters,
 } from './sibling-identity-pure';
 import { groupBy } from '../../util/map-buckets-pure';
 
 export const CASCADE_GATES = [
-  'orb6_hip_off_coord', 'ccdm_sibling_owned', 'position_match_sibling_claimed', 'hip_of_disjoint_star',
+  'orb6_hip_off_coord', 'manifest_hip_sibling_claimed', 'ccdm_sibling_owned', 'position_match_sibling_claimed',
+  'hip_of_disjoint_star',
 ] as const;
 export type CascadeGate = (typeof CASCADE_GATES)[number];
 
@@ -81,12 +83,13 @@ function orb6HipMatchesPairCoord(hip: number, pair: WdsPair, indices: Identifier
 }
 
 /** The HIP-anchored prefix: `orb6_hip` (primaries only — ORB6's one HIP per
- *  row is the primary's), then `manifest_hip` through the HIP. A HIP
- *  failing the coordinate check is dropped outright, so it rides no later
- *  tier either. Unresolved keeps the first surviving HIP for Stage 3. */
+ *  row is the primary's), then `manifest_hip` through the HIP, unless SIMBAD
+ *  gives that source to a hierarchy-disjoint letter. A HIP failing the
+ *  coordinate check is dropped outright, so it rides no later tier either.
+ *  Unresolved keeps the first surviving HIP for Stage 3. */
 export function resolveComponent(
   pair: WdsPair, component: string, isPrimary: boolean,
-  orb6ForPair: readonly Orb6Entry[], indices: IdentifierIndices,
+  orb6ForPair: readonly Orb6Entry[], indices: IdentifierIndices, simbadLetters: SimbadSourceLetters,
 ): { component: ResolvedComponent; refused: readonly CascadeRefusal[] } {
   const base = unresolvedComponent(pair, component, isPrimary);
   const candidates: number[] = [];
@@ -108,6 +111,10 @@ export function resolveComponent(
   }
   for (const hip of candidates) {
     const gaia = manifestGaiaViaHip(hip, indices);
+    if (gaia !== null && sourceClaimedByDisjointLetter(simbadLetters, pair.wdsId, gaia, component)) {
+      refused.push({ gate: 'manifest_hip_sibling_claimed', pair, component, hip });
+      continue;
+    }
     if (gaia !== null) return bound({ ...base, gaia: ownGaia(gaia, 'manifest_hip'), hip: own(hip), hd: hdByHip.get(hip)! });
   }
   return bound(candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! });

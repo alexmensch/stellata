@@ -9,7 +9,8 @@ export function stage2Report(result: Stage2Result): string[] {
   const audit = bindingIntegrityCounts(result.verdicts);
   return [
     `ORB6 coordinate check: ${count(rejected.orb6_hip_off_coord)} ORB6 HIPs off the pair's WDS coordinate`,
-    `sibling-identity rejections: ${count(rejected.ccdm_sibling_owned)} CCDM candidates owned by another letter, `
+    `sibling-identity rejections: ${count(rejected.manifest_hip_sibling_claimed)} manifest HIP sources SIMBAD gives another letter, `
+      + `${count(rejected.ccdm_sibling_owned)} CCDM candidates owned by another letter, `
       + `${count(rejected.position_match_sibling_claimed)} manifest position matches onto a star another letter already binds, `
       + `${count(rejected.hip_of_disjoint_star)} HIPs whose star another letter holds`,
     `seeded ${count(result.synthesizedSeeds.length)} synthesized-pair component bindings`,

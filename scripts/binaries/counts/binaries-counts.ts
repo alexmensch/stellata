@@ -51,7 +51,8 @@ export interface LineageCounts {
 export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedCounts<number> {
   const s1 = stage1Counts(r.reference);
   const {
-    ccdm_sibling_owned_rejected, position_match_sibling_claimed_rejected, hip_of_disjoint_star_rejected, ...bindingIntegrity
+    manifest_hip_sibling_claimed_rejected, ccdm_sibling_owned_rejected, position_match_sibling_claimed_rejected,
+    hip_of_disjoint_star_rejected, ...bindingIntegrity
   } = lineage.resolve;
   const s3 = stage3Counts(r.reference, r.astrometry);
   const stages = filed({
@@ -68,6 +69,7 @@ export function binariesCounts(r: StageResults, lineage: LineageCounts): StagedC
     },
     resolve: {
       blank_components_rescued: s1.blank_components_rescued,
+      manifest_hip_sibling_claimed_rejected,
       ccdm_sibling_owned_rejected,
       position_match_sibling_claimed_rejected,
       hip_of_disjoint_star_rejected,

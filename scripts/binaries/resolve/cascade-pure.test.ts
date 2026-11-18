@@ -9,13 +9,16 @@ import {
 import { componentsOf, resolveViaOf } from './components-pure';
 import { alone, decomposed, hip2At, indices, lone, pairAt, ids, resolved, starAt, xid } from './resolve-fixture';
 import { OWN } from '../multiples-record-pure';
+import { simbadSourceLetters, type SimbadSourceLetters } from './sibling-identity-pure';
 
 const orb6 = (wdsId: string, components: string, hip: number | null): Orb6Entry =>
   orb6Entry({ wdsId, components, hip, grade: 5 });
 
 describe('resolveComponent', () => {
-  const resolveA = (pair: WdsPair, entries: Orb6Entry[], idx: ReturnType<typeof indices>, isPrimary = true, comp = 'A') =>
-    resolveComponent(pair, comp, isPrimary, entries, idx).component;
+  const resolveA = (
+    pair: WdsPair, entries: Orb6Entry[], idx: ReturnType<typeof indices>, isPrimary = true, comp = 'A',
+    letters: SimbadSourceLetters = new Map(),
+  ) => resolveComponent(pair, comp, isPrimary, entries, idx, letters).component;
 
   it('binds the primary through ORB6\'s HIP and the Gaia cross-walk', () => {
     const pair = wdsPair({ wdsId: '06451-1643', components: 'AB' });
@@ -39,6 +42,34 @@ describe('resolveComponent', () => {
     expect(r.gaia?.value).toBe('12345');
   });
 
+  describe('the manifest route refuses a source SIMBAD gives a hierarchy-disjoint letter (53 Aqr)', () => {
+    const pair = wdsPair({ wdsId: '22266-1645', components: 'AB' });
+    const idx = indices({ hipToManifestGaia: new Map([[110778, '2595463996992115840']]) });
+    const bOwnsIt = simbadSourceLetters(new Map([
+      [componentKey('22266-1645', 'B'), xid('22266-1645', 'B', '2595463996992115840')],
+    ]));
+
+    it('leaves A unbound, keeps the HIP for later passes, and records the refusal', () => {
+      const r = resolveComponent(pair, 'A', true, [orb6(pair.wdsId, 'AB', 110778)], idx, bOwnsIt);
+      expect(resolveViaOf(r.component)).toBe('unresolved');
+      expect(r.component.hip?.value).toBe(110778);
+      expect(r.refused).toEqual([{ gate: 'manifest_hip_sibling_claimed', pair, component: 'A', hip: 110778 }]);
+    });
+
+    it.each([
+      ['the letter SIMBAD names', 'B', 'B'],
+      ['a sub-letter of it', 'B', 'Ba'],
+      ['a compound holding it', 'B', 'AB'],
+      ['a digit-only token, which carries no lineage', 'B', '2'],
+    ])('binds %s', (_case, simbadLetter, comp) => {
+      const letters = simbadSourceLetters(new Map([
+        [componentKey('22266-1645', simbadLetter), xid('22266-1645', simbadLetter, '2595463996992115840')],
+      ]));
+      const r = resolveA(pair, [orb6(pair.wdsId, 'AB', 110778)], idx, true, comp, letters);
+      expect(resolveViaOf(r)).toBe('manifest_hip');
+    });
+  });
+
   it('is unresolved with no HIP signal', () => {
     const r = resolveA(wdsPair({ components: 'AB' }), [], indices({ hipToGaia: new Map([[1, '1']]) }));
     expect(resolveViaOf(r)).toBe('unresolved');
@@ -56,7 +87,7 @@ describe('resolveComponent', () => {
     expect(r.gaia).toBeNull();
     expect(r.hip).toBeNull();
     const twice = [orb6(pair.wdsId, 'Aa,Ab', 103579), orb6(pair.wdsId, 'Aa,Ab', 103579)];
-    expect(resolveComponent(pair, 'Aa', true, twice, idx).refused)
+    expect(resolveComponent(pair, 'Aa', true, twice, idx, new Map()).refused)
       .toEqual([{ gate: 'orb6_hip_off_coord', pair, component: 'Aa', hip: 103579 }]);
   });
 

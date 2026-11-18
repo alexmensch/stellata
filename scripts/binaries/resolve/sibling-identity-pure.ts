@@ -44,6 +44,29 @@ export function hipClaimedByDisjointLetter(
   return true;
 }
 
+/** wds_id → Gaia source → the letter tokens SIMBAD's WDS cross-IDs give it. */
+export type SimbadSourceLetters = ReadonlyMap<string, ReadonlyMap<string, readonly string[]>>;
+
+export function simbadSourceLetters(xids: ReadonlyMap<ComponentKey, SimbadWdsXid>): SimbadSourceLetters {
+  const out = new Map<string, Map<string, string[]>>();
+  for (const x of xids.values()) {
+    if (x.gaiaSourceId === null) continue;
+    let bySource = out.get(x.wdsId);
+    if (!bySource) out.set(x.wdsId, (bySource = new Map()));
+    bySource.set(x.gaiaSourceId, [...(bySource.get(x.gaiaSourceId) ?? []), x.component]);
+  }
+  return out;
+}
+
+/** SIMBAD gives the source only to letters hierarchy-disjoint from `token`; a token with no capital is never refused. */
+export function sourceClaimedByDisjointLetter(
+  letters: SimbadSourceLetters, wdsId: string, source: string, token: string,
+): boolean {
+  if (tokenLetters(token).size === 0) return false;
+  const claimants = letters.get(wdsId)?.get(source) ?? [];
+  return claimants.length > 0 && !claimants.some((t) => tokensShareIdentity(t, token));
+}
+
 interface HipAttestation {
   readonly wdsId: string;
   readonly token: string;

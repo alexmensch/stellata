@@ -30,7 +30,7 @@ scripts/binaries/resolve/
                                manifest HIP), resolveViaSimbad,
                                resolveViaCcdm, resolveViaPosition; the
                                CascadeRefusal each gate records (the ORB6
-                               HIP's coordinate check, the two
+                               HIP's coordinate check, the three
                                sibling-identity guards).
   position-match-pure.ts       The position match, over any MatchStar
                                list: the 1° grid, the nearest-star search
@@ -38,6 +38,9 @@ scripts/binaries/resolve/
                                matches manifest stars; Stage 3, AT-HYG.
   sibling-identity-pure.ts     HipClaims and the disjoint-letter test the
     (+ test)                   CCDM and position tiers both apply;
+                               simbadSourceLetters and
+                               sourceClaimedByDisjointLetter, the manifest
+                               HIP route's guard;
                                refuseHipsOfDisjointStars, the post-audit
                                HIP check (#a-hip-follows-its-star).
   propagate-pure.ts            propagateWithinSystem,
@@ -156,7 +159,7 @@ joins the stage to component-binding and promotion on the key.
 | Code | Written for |
 | --- | --- |
 | `resolve.tier.<tag>` | every component of every decomposing pair row, once: its `resolve_via` ([What each tier decides](#what-each-tier-decides)), underscores as dashes, with its Gaia source and `hip:` in `params`; a rebound component carries its donor's tier |
-| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `ccdm-sibling-owned`, `position-match-sibling-claimed`, `hip-of-disjoint-star` |
+| `resolve.refused.<gate>` | each candidate HIP a cascade gate refused (`CascadeRefusal`): `orb6-hip-off-coord`, `manifest-hip-sibling-claimed`, `ccdm-sibling-owned`, `position-match-sibling-claimed`, `hip-of-disjoint-star` |
 | `resolve.audit.<shape>.<verdict>.<part>` | each component holding a binding an audit verdict weighed (`verdictTouches`), as `won` (it keeps the source), `refused` (it loses it) or `skipped` (unchanged); `params` carry the verdict's `wds`, `contested` label, `reference` letter and `reference_gaia`, `winner`, and the component's own `gaia` |
 
 A `refused` part and every gate code are in the refusal role. The stage
@@ -203,7 +206,7 @@ cleaner one would move a row; changing one is a correctness item of its own:
 ## Counts
 
 `resolveCounts` returns the count-snapshot keys this stage's code alone
-produces — `ccdm_sibling_owned_rejected`, `position_match_sibling_claimed_rejected`,
+produces — `manifest_hip_sibling_claimed_rejected`, `ccdm_sibling_owned_rejected`, `position_match_sibling_claimed_rejected`,
 `hip_of_disjoint_star_rejected` and the seven binding-integrity keys
 — folded from the resolve stage's lines ([Resolve lineage](#resolve-lineage)).
 The snapshot's other
@@ -280,7 +283,7 @@ component carries a source without a tier, and `gaia_resolve_rate`
 | Tag | When it fires |
 | --- | --- |
 | `orb6_hip` | The pair has an ORB6 entry with a published HIP for the primary, and Gaia DR3's `hipparcos2_best_neighbour` cross-walk covers that HIP. Strongest tier — ORB6's HIP attribution is human-curated — but gated on a WDS-coordinate sanity check (`orb6HipMatchesPairCoord`): ORB6 occasionally carries a typo'd HIP that points at an unrelated star tens of degrees away (ε Equ STF2737 lists HIP 103579 for the true HIP 103569), so a HIP whose known position sits >5′ from the pair's WDS precise coord is dropped entirely and the component falls through to the coordinate-validated tiers below. |
-| `manifest_hip` | ORB6's HIP routes through the membership manifest's `gaia_source_id` for that HIP when Gaia's published HIP→DR3 cross-walk misses. The manifest's binding is derived from four committed sources and has passed both binding gates ([The binding derivation](/scripts/catalog/membership/binding/README.md)). A CCDM sibling's HIP that falls through to the manifest tags `ccdm_hip`. |
+| `manifest_hip` | ORB6's HIP routes through the membership manifest's `gaia_source_id` for that HIP when Gaia's published HIP→DR3 cross-walk misses. The manifest's binding is derived from four committed sources and has passed both binding gates ([The binding derivation](/scripts/catalog/membership/binding/README.md)). Refused when SIMBAD's WDS cross-IDs give that source to a hierarchy-disjoint letter of the system and none of the component's line — no partner exemption, since a source is one star — so the component falls through to the tiers below: 53 Aqr's ORB6 row puts HIP 110778 on A, the manifest binds that HIP to the source SIMBAD names B, and A then takes its own source from `simbad_xid`. Counted `manifest_hip_sibling_claimed_rejected`. A CCDM sibling's HIP that falls through to the manifest tags `ccdm_hip`. |
 | `simbad_xid` | The component is in `data/simbad/simbad_wds_xids.tsv` — SIMBAD's curated `(WDS-J id, component letter) → (Gaia DR3 source_id, HIP)` map. Reaches sub-arcsec components that ORB6 doesn't enumerate (η Cas A/B/C, ξ UMa A/B, ζ Cnc A/B/C, α Cen A/B/Proxima). |
 | `ccdm_hip` | The pair's WDS id matches a Hipparcos CCDM identifier; one of the CCDM-sibling HIPs sits within 10″ of the WDS precise coord, each HIP placed by its Hipparcos-2 row (PM-propagated from J1991.25), else its cross-walked Gaia source. Routes that HIP through Gaia's HIP cross-walk, then the manifest (`sourceForHip`). A candidate another hierarchy-disjoint, non-partner letter of the system owns is skipped — decisively by geometry (the letter-position map from pair rows, 2× decisiveness) or by an existing binding (the system HIP-claims map). The pair partner is exempt (the WDS blend convention: σ Ori B legitimately carries A's HIP at 0.26″); a non-partner letter's HIP is another star's identity (Rigel's BC row sits 9.4″ from HIP 24436 = Rigel A, inside tolerance — binding it dressed B in A's photometry). Counted `ccdm_sibling_owned_rejected`. |
 | `position_pm` / `position_nopm` | The component's WDS position (a primary's precise coord, a secondary's (ρ, θ) prediction) matches a membership manifest star within 2″ ([The position match](#the-position-match)); the star's `gaia_source_id` binds, and its HIP when the component has none. `position_pm` when the source that placed the star states a proper motion, `position_nopm` when it does not. A matched star with no Gaia source binds only its HIP. |
