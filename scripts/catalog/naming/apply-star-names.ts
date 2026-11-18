@@ -8,7 +8,7 @@ import { CON_INDEX } from '../parse/constellations/constellations';
 import { foldNameKey } from './wgsn-normalise-pure';
 import {
   buildDesignationConIndex, designationConstellation, type DesignationConIndex,
-} from '../classic-ids/designation-constellation-pure';
+} from '../classic-ids/designation-constellation/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { classifySimbadFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
@@ -176,7 +176,7 @@ export function applyStarNames<S extends NamingSource>(
 }
 
 /** The top tier of the cascade the label merge started
- *  (`../classic-ids/README.md#the-designation-constellation`). */
+ *  (`../classic-ids/designation-constellation/README.md#the-designation-constellation`). */
 function authorityDesignationConstellation(
   fields: NamingFields,
   flam: number | null,

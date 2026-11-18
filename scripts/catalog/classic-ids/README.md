@@ -15,7 +15,7 @@ Two entry points, and they split cleanly: **this build joins the overlay,
   row, keyed on the binding it derived, and writes
   `data/classic-ids/label_flips.tsv` (`label-merge/README.md`). The record
   build reads the merged cells off the manifest and takes only
-  `designationConstellation` ([The designation constellation](#the-designation-constellation)),
+  `designationConstellation` ([The designation constellation](designation-constellation/README.md#the-designation-constellation)),
   where the naming ladder starts each record's `desigCon`.
 
 ## Subfolders
@@ -24,6 +24,10 @@ Two entry points, and they split cleanly: **this build joins the overlay,
   spine's cells into the manifest's final labels, with the collision guard,
   the curated overrides and the review queue. Imports this folder's overlay
   codec; nothing here imports back.
+- `designation-constellation/` — the constellation a Bayer / Flamsteed
+  designation is named for, by designation through IV/27A, and the cascade
+  the naming ladder runs above it. Imports this folder's `CrossIndexRow` type
+  only.
 
 ## Files in this area
 
@@ -56,10 +60,13 @@ scripts/catalog/classic-ids/
                                   (README.md#the-gates-evidence-has-to-be-pulled).
   cns5-source.ts                  CNS5, IV/25 and V/50, declared
   tyc2-hd-source.ts               (../../util/sources/). The parsers
-  bsc5-source.ts                  stay in classic-ids-parse.ts.
+  bsc5-source.ts                  stay in classic-ids-parse.ts. TYC2_HD is
+                                  IV/25 with tyc2_hd_corrections.tsv
+                                  applied (#crossed-hd-numbers-in-iv25), so
+                                  every reader sees the corrected table.
   classic-ids-parse.ts (+ test)   The four frozen-TSV parsers, plus the
-                                  curated IV/27A corrections and their
-                                  application. The gate's
+                                  curated IV/27A and IV/25 corrections and
+                                  their application. The gate's
                                   HIP → printed-V slice is
                                   ../photometry/hip-photometry-parse-pure.ts, shared
                                   with the V cascade's bright tier. CNS5's row
@@ -115,23 +122,6 @@ scripts/catalog/classic-ids/
                                   naming ladder's IV/27A tier, ../naming/'s
                                   Bayer union and ../spine/primaries-tables.ts
                                   — so no reader can miss a correction.
-  designation-constellation-pure.ts
-    (+ test)                      IV/27A's `cst` keyed by HD/HIP — the
-                                  constellation a Bayer / Flamsteed
-                                  designation is NAMED for — and
-                                  `DesignationCon`, a record's value with
-                                  the cascade tier that wrote it, and
-                                  `designationConstellation`, a record's
-                                  IV/27A value: the tier the naming ladder
-                                  starts from, the record build's one
-                                  classic-ID step. A `cst`
-                                  naming no IAU-88 constellation fails the
-                                  build: the table's abbreviations are the
-                                  IAU set. Pure.
-  designation-constellation.test.ts
-                                  Pins the cascade's output on the WIRE
-                                  (ρ Aql, 15 LMi, Fomalhaut C) against the
-                                  built search index.
   parity-ledger.test.ts           The swap parity ledger's committed gates:
                                   route-disagreement review join, the
                                   canonical-key audit of the label delta
@@ -329,59 +319,24 @@ merely narrow: on ε Boo it fires and picks the wrong star, because IV/27A gives
 HIP 72105 to HD 129988 (ε Boo B) while SIMBAD, V/50 and the record's own
 `proper` cell all put the designation on HD 129989 (Izar).
 
-## The designation constellation
+## Crossed HD numbers in IV/25
 
-`desigCon` (search-index `dc`) is the constellation a Bayer / Flamsteed
-designation is NAMED for. It is fixed by nomenclature and does not migrate when
-proper motion carries a star across a
-[Delporte 1930](/data/papers/index.md#delporte1930) boundary, so it cannot be
-derived from the record's position. The cascade:
+On a Tycho-2 pair IV/25 sometimes gives each entry the other's HD: measured
+2026-11-17 against SIMBAD's TYC → HD pull, 64 pairs swap mutually and 97 more
+entries carry an HD SIMBAD gives elsewhere. `data/classic-ids/tyc2_hd_corrections.tsv`
+re-points the rows review has settled, keyed on the entry and the HD IV/25
+prints for it; `TYC2_HD` applies it, so the overlay join, the primaries tables,
+the Tycho-2 request and the origin keys all read the corrected table.
+`applyTyc2HdCorrections` hard-fails on a correction naming no IV/25 row, and on
+a set that is not a permutation of the HDs it re-points: a correction exchanges
+numbers between IV/25's own rows and never mints or drops one.
+`classic-ids-parse.test.ts` checks every corrected HD is the one SIMBAD names
+for the entry.
 
-```
-IAU WGSN designation -> IV/27A `cst` by HD -> by HIP
-  -> SIMBAD's constellation for the record's own Flamsteed number
-  -> GCVS trailing abbreviation -> positional conIndex
-```
-
-`DesignationCon` holds the index with the tier that wrote it (`wgsn-bayer`,
-`wgsn-gould`, `iv27a`, `simbad`, `gcvs`, or `anchor` for a companion that took its system
-anchor's), and for an authority tier the IV/27A index it overwrote with a
-different one; `{ via: 'none' }` until a tier writes it.
-[Naming lineage](../naming/README.md#naming-lineage) records both.
-
-The authority tops it because it states which constellation its OWN
-designation is named for; this folder's route runs beneath it and is what
-carries the Flamsteed-only records the authority does not reach
-([The designation constellation](../naming/README.md#the-designation-constellation)).
-
-Keyed on the DESIGNATION, deliberately, where the label overlay is keyed on
-`gaia_source_id`:
-
-- A designation → designation cross index carries **no astrometric claim** — it
-  says the star named HD 216956 is also named α PsA, never which Gaia source
-  holds that star's photons — so it needs no binding gate.
-- That is also the only way to reach the bright tier: Gaia saturates near
-  G ≈ 3, so most records at V ≤ 3 have no overlay row at all, Fomalhaut among
-  them ([Coverage](/data/classic-ids/README.md#coverage--the-overlay-is-a-union-term-not-the-label-authority)).
-- Measured over the 3,303 spine rows carrying a Bayer or Flamsteed cell, the
-  HD/HIP route covers 3,180 against the source_id route's 2,474, with zero
-  disagreements and nothing the overlay reaches that it does not. One tier
-  instead of two.
-
-The faint Flamsteed-only records absent from IV/27A take the constellation
-SIMBAD names their number in, where the Flamsteed rule accepts it
-([Which SIMBAD numbers are Flamsteed numbers](../simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)):
-<!-- count:build-catalog/naming.dc.simbad -->121<!-- /count --> records (`naming.dc.simbad`).
-
-**GCVS fills the field only where IV/27A and SIMBAD left it empty**; the records whose
-Bayer, Flamsteed or Gould designation then renders against it are
-`naming.dc.gcvs` (<!-- count:build-catalog/naming.dc.gcvs -->0<!-- /count -->). On the
-8 where the two disagree the star carries a Bayer/Flamsteed designation and a
-variable name in different constellations (HD 104337 is Crater's Flamsteed star
-and Corvus's TY): one `uint8` serves one of them, and IV/27A wins because its
-consumers COMPOSE the label out of this field, while a GCVS label reads the
-constellation out of the designation string and loses only its expanded alias
-(`../parse/gcvs/README.md`).
+One pair today, HD 83231 / HD 83232 (`7167-1508-1` / `7167-716-1`): without
+it the HIP 47108 record that HIP2's position puts on `7167-1508-1` takes over
+the entry IV/25 calls HD 83232, and HD 83232 ships on no star. The coded rule
+for the whole class, which would retire this file, is `stellata-hooj.46.4`.
 
 ## Counts and the parity measurement
 

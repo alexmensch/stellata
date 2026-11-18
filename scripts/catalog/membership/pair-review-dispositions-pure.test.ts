@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parsePairDispositionsTsv } from './pair-review-dispositions-pure';
+import { parsePairDispositionsTsv, requirePhotometricKeeps } from './pair-review-dispositions-pure';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
 
 const FROM = { file: 'pair-review-dispositions.tsv', hint: 'h' };
@@ -27,5 +27,33 @@ describe('parsePairDispositionsTsv', () => {
 
   it('reads the committed file', () => {
     expect(PAIR_REVIEW_DISPOSITIONS.read()).toBeInstanceOf(Map);
+  });
+});
+
+describe('requirePhotometricKeeps', () => {
+  const REF = { file: 'f', line: 1 } as never;
+  const check = (keep: string, hip: Record<number, number>, vt: Record<string, number>, basis = 'tycho2_photometry') =>
+    () => requirePhotometricKeeps(
+      parse(`10\t1-1-1|1-1-2\t${keep}\t${basis}\tVT`),
+      (h) => (h in hip ? { vMag: hip[h], ref: REF } : null),
+      (t) => vt[t] ?? null,
+    );
+
+  it('passes a keep_entry whose VT is nearest the printed V', () => {
+    expect(check('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).not.toThrow();
+  });
+
+  it('fails a keep_entry another entry is nearer to, or an exact tie', () => {
+    expect(check('1-1-2', { 10: 9.4 }, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/1-1-2 is not the one entry whose VT is nearest/);
+    expect(check('1-1-1', { 10: 10 }, { '1-1-1': 9, '1-1-2': 11 })).toThrow(/not the one entry/);
+  });
+
+  it('fails where either magnitude is missing', () => {
+    expect(check('1-1-1', {}, { '1-1-1': 10.7, '1-1-2': 12.1 })).toThrow(/prints no V/);
+    expect(check('1-1-1', { 10: 9.4 }, { '1-1-1': 10.7 })).toThrow(/1-1-2 prints no VT/);
+  });
+
+  it('weighs only tycho2_photometry dispositions', () => {
+    expect(check('1-1-2', {}, {}, 'tycho2_position')).not.toThrow();
   });
 });

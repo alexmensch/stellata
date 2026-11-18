@@ -12,8 +12,8 @@ membership-manifest.tsv  LFS. One row per admitted record: final
                          the primary attesting each cell, `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
                          the row — and `origin_key`, the record's lineage
-                         key. 975,373 rows: 376,909 `primaries` and
-                         598,464 `magnitude` at the V <= 11 floor
+                         key. 975,362 rows: 376,922 `primaries` and
+                         598,440 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
@@ -68,7 +68,8 @@ binding-review-dispositions.tsv
                          empty), a basis from the closed enum
                          (tycho2_position · v70a_astrometry ·
                          simbad_dr2_object · gaia_photometry · pair_component
-                         · shared_source) and the measured evidence. 54 rows:
+                         · shared_source · tycho2_photometry) and the
+                         measured evidence. 54 rows:
                          9 take the derived id, 3 ship none (44 Boo,
                          GJ 3775, GJ 3981), 42 another — 31 of those an id
                          only the cited basis stands behind
@@ -109,8 +110,9 @@ pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
                          the pair's entries and why
                          (/scripts/catalog/membership/merge-derivation/README.md#the-pair-review-queue).
 pair-review-dispositions.tsv
-                         Regular git. Hand-curated; header only today. The
-                         entry each disposed HIP ships on, as the authority
+                         Regular git. Hand-curated. The entry each disposed
+                         HIP ships on, as the authority: 11 rows,
+                         every one on `tycho2_photometry`
                          (/scripts/catalog/membership/merge-derivation/README.md#disposing-a-queued-pair).
 ```
 

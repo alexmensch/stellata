@@ -31,7 +31,7 @@ import { promotionOriginKey } from './promotion-lineage/promotion-lineage-pure';
 import { companionAbsmagIsObserved, companionCiIsObservedVia } from './companion-dust-pure';
 import type { ConstellationAssignment } from '../parse/constellations/constellations';
 import type { NamedStar } from '../parse/stars-parse';
-import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation-pure';
+import { inheritedDesignationCon, NO_DESIGNATION_CON } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import type { GaiaAstrometryRow } from '../sources/gaia-astrometry-source';
 import { isCoherenceAnchorGrade } from '../multiplicity/anchor-grade-pure';
 import { snapPhotometry } from '../multiplicity/system-coherence';

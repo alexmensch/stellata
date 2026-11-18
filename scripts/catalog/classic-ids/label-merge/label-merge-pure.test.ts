@@ -9,7 +9,7 @@ import type {
 import {
   buildDesignationConIndex,
   resolveDesignationConIndex,
-} from '../designation-constellation-pure';
+} from '../designation-constellation/designation-constellation-pure';
 import { fold } from '../../../util/counts/tally-pure';
 import {
   ALIAS_FIELDS,

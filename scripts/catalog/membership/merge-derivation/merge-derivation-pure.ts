@@ -8,7 +8,9 @@ import type { PrimaryTables, SpineKeys } from '../../spine/primaries-audit-pure'
 import { normaliseGjKey } from '../../simbad/simbad-namespace-ladder-pure';
 import type { GlieseRow, V70aAstrometry } from '../../gliese-parse-pure';
 import type { Tycho2Row } from '../../tycho2-parse';
-import { witnessV70a, type WitnessSeparation } from '../positional-witness/positional-witness-pure';
+import {
+  hipparcosAstrometry, witnessHipparcos, witnessV70a, type WitnessSeparation, type WitnessVerdict,
+} from '../positional-witness/positional-witness-pure';
 import { confirmsLabel, formatGlieseDisplay } from '../../classic-ids/label-merge/label-merge-pure';
 import type { ManifestRecord } from '../membership-manifest-tsv';
 import {
@@ -19,7 +21,6 @@ import { hdNumbers, type SimbadTycHdRow } from '../../simbad/simbad-tyc-hd-parse
 import type { PairReviewReason } from '../ledger-rows-pure';
 import type { BindingDispositionBasis } from '../binding/binding-review-dispositions-pure';
 import type { PairDisposition } from '../pair-review-dispositions-pure';
-
 
 /** The cells a spine row can leave empty that a primary's link fills. */
 export const DERIVED_ONLY_CELLS = ['hip', 'hd', 'hr', 'gl'] as const satisfies readonly KeyCell[];
@@ -95,16 +96,16 @@ type Differs = { [K in DiffersLink['key']]: DiffersOf<Extract<DiffersLink, { key
 
 export type MergeDivergence =
   | Unlinked
-  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly sourceId: string }
+  | { readonly kind: 'pair-confirmed'; readonly hip: number; readonly owner: string; readonly witness: PairWitness }
   | {
     readonly kind: 'pair-moves';
     readonly hip: number;
     readonly owner: string;
-    readonly sourceId: string;
+    readonly witness: PairWitness;
     /** `record` when the owner entry is another spine record's, which takes the HIP. */
     readonly onto: PairMoveTarget;
   }
-  | { readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[]; readonly reason: PairReviewReason }
+  | ({ readonly kind: 'pair-review'; readonly hip: number; readonly entries: readonly string[] } & PairQueued)
   | {
     readonly kind: 'pair-disposed';
     readonly hip: number;
@@ -114,6 +115,22 @@ export type MergeDivergence =
   }
   | { readonly kind: 'derived-only'; readonly cell: DerivedOnlyCell; readonly value: string; readonly held: HeldState }
   | Differs;
+
+/** What HIP2's position found where it named no one entry. */
+export type UnwitnessedPosition =
+  | Extract<WitnessVerdict, { kind: 'none' | 'several' }>
+  | { readonly kind: 'no-hip2-position' };
+
+/** Why the pair rule names no owner; where neither witness did, what the position test found. */
+export type PairQueued =
+  | { readonly reason: 'unwitnessed'; readonly position: UnwitnessedPosition }
+  | { readonly reason: Exclude<PairReviewReason, 'unwitnessed'> };
+type PairRefusal = Extract<PairReviewReason, 'gate_refused' | 'simbad_refused'>;
+
+/** What named the pair's owner entry. see README.md#connected-is-not-unique--the-pair-rule */
+export type PairWitness =
+  | { readonly by: 'gaia'; readonly sourceId: string }
+  | { readonly by: 'position'; readonly separations: readonly WitnessSeparation[] };
 
 export const PAIR_MOVE_TARGETS = ['entry', 'record'] as const;
 export type PairMoveTarget = (typeof PAIR_MOVE_TARGETS)[number];
@@ -134,6 +151,8 @@ export interface PairLinks {
   v70aByHd: ReadonlyMap<number, readonly string[]>;
   /** CNS5's rows by their own Gaia source, in the record's GJ form. */
   cns5BySource: ReadonlyMap<string, readonly string[]>;
+  /** HIP2's position held against the entries; null where HIP2 gives the HIP no position and proper motion. */
+  positionWitness: (hip: number, entries: readonly string[]) => WitnessVerdict | null;
 }
 
 export interface MergeLinks extends PairLinks {
@@ -151,11 +170,29 @@ function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
   else list.push(value);
 }
 
+function tycho2HipEntries(tycho2: ReadonlyMap<string, { readonly hip: number | null }>): Map<number, string[]> {
+  const out = new Map<number, string[]>();
+  for (const [tyc, r] of tycho2) if (r.hip !== null) push(out, r.hip, tyc);
+  for (const entries of out.values()) entries.sort();
+  return out;
+}
+
+/** Every entry the pair rule can put a HIP on: each whose HIP Tycho-2 gives to another entry too. */
+export function pairEntries(tycho2: ReadonlyMap<string, { readonly hip: number | null }>): string[] {
+  return [...tycho2HipEntries(tycho2).values()].filter((entries) => entries.length > 1).flat();
+}
+
+/** The TYCs SIMBAD's TYC→HD pull asks whatever the manifest holds: IV/25's, and every pair entry a move can land on.
+ *  see README.md#applying-the-pair-rule */
+export function pairRuleTycHdRequest(
+  iv25Tycs: Iterable<string>, tycho2: ReadonlyMap<string, { readonly hip: number | null }>,
+): string[] {
+  return [...iv25Tycs, ...pairEntries(tycho2)];
+}
+
 export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   const links = linkTablesFrom(tables);
-  const hipEntries = new Map<number, string[]>();
-  for (const [tyc, r] of tables.tycho2) if (r.hip !== null) push(hipEntries, r.hip, tyc);
-  for (const entries of hipEntries.values()) entries.sort();
+  const hipEntries = tycho2HipEntries(tables.tycho2);
   const cns5ByHip = new Map<number, string[]>();
   const cns5BySource = new Map<string, string[]>();
   for (const r of tables.cns5) {
@@ -164,6 +201,11 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
   }
   const v70aByHd = new Map<number, string[]>();
   for (const r of tables.gliese.byKey.values()) if (r.hd !== null) push(v70aByHd, r.hd, v70aGl(r));
+  const entryRow = (tyc: string): Tycho2Row => {
+    const row = tables.tycho2.get(tyc);
+    if (row === undefined) throw new Error(`pair rule: Tycho-2 entry ${tyc} has no row`);
+    return row;
+  };
   return {
     links,
     hipEntries,
@@ -171,6 +213,11 @@ export function pairLinksFrom(tables: PrimaryTables): PairLinks {
     cns5ByHip,
     v70aByHd,
     cns5BySource,
+    positionWitness: (hip, entries) => {
+      const row = tables.hip2.astrometry.get(hip);
+      const astrometry = row === undefined ? null : hipparcosAstrometry(row);
+      return astrometry === null ? null : witnessHipparcos(astrometry, entries.map(entryRow));
+    },
   };
 }
 
@@ -184,16 +231,21 @@ export function hdToHr(hrHd: ReadonlyMap<number, number>): Map<number, number> {
   return out;
 }
 
-/** Of the Tycho-2 entries naming one HIP, the one whose Gaia best neighbour is the HIP's own. */
+/** see README.md#connected-is-not-unique--the-pair-rule */
 export function pairOwner(
-  hip: number, entries: readonly string[], links: LinkTables,
-): { owner: string; sourceId: string } | { reason: PairReviewReason } {
+  hip: number, entries: readonly string[], { links, positionWitness }: Pick<PairLinks, 'links' | 'positionWitness'>,
+): { owner: string; witness: PairWitness } | PairQueued {
   const sourceId = links.sourceOf.hip(hip);
-  if (sourceId === null) return { reason: 'no_hip_source' };
+  if (sourceId === null) {
+    const position = positionWitness(hip, entries);
+    if (position === null) return { reason: 'unwitnessed', position: { kind: 'no-hip2-position' } };
+    if (position.kind !== 'match') return { reason: 'unwitnessed', position };
+    return { owner: position.tyc, witness: { by: 'position', separations: position.separations } };
+  }
   const matches = entries.filter((tyc) => links.sourceOf.tyc(tyc) === sourceId);
   if (matches.length === 0) return { reason: 'no_entry_matches' };
   if (matches.length > 1) return { reason: 'several_match' };
-  return { owner: matches[0], sourceId };
+  return { owner: matches[0], witness: { by: 'gaia', sourceId } };
 }
 
 /** A V/70A entry in the record's GJ form, whichever of the catalogue's four prefixes it prints (../../gliese-parse-pure.ts). */
@@ -211,15 +263,15 @@ function pairVerdict(row: SpineRow, spineHip: number | null, m: PairLinks): {
   const hip = spineHip ?? tycho2Hip;
   const entries = hip === null ? [] : m.hipEntries.get(hip) ?? [];
   if (hip === null || entries.length < 2 || !entries.includes(row.tyc)) return { divergence: null, hip };
-  const verdict = pairOwner(hip, entries, m.links);
+  const verdict = pairOwner(hip, entries, m);
   if (spineHip === null) {
     return { divergence: null, hip: 'owner' in verdict && verdict.owner === row.tyc ? hip : null };
   }
-  if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, reason: verdict.reason }, hip };
+  if ('reason' in verdict) return { divergence: { kind: 'pair-review', hip, entries, ...verdict }, hip };
   return {
     divergence: verdict.owner === row.tyc
-      ? { kind: 'pair-confirmed', hip, owner: verdict.owner, sourceId: verdict.sourceId }
-      : { kind: 'pair-moves', hip, owner: verdict.owner, sourceId: verdict.sourceId, onto: 'entry' },
+      ? { kind: 'pair-confirmed', hip, owner: verdict.owner, witness: verdict.witness }
+      : { kind: 'pair-moves', hip, owner: verdict.owner, witness: verdict.witness, onto: 'entry' },
     hip,
   };
 }
@@ -250,7 +302,7 @@ function applyMoves(
   m: PairLinks,
   dispositions: ReadonlyMap<number, PairDisposition>,
   scope: DispositionScope,
-  refusal: (move: PairMove, receiver: SpineRow) => PairReviewReason | null,
+  refusal: (move: PairMove, receiver: SpineRow) => PairRefusal | null,
 ): PairRuleResult {
   const rows = [...kept];
   const byTyc = rowIndexByTyc(kept);
@@ -282,11 +334,9 @@ function applyMoves(
     if (verdict?.kind !== 'pair-moves' && verdict?.kind !== 'pair-review') return;
     const { hip } = verdict;
     const entries = m.hipEntries.get(hip)!;
-    const reason = verdict.kind === 'pair-review'
-      ? verdict.reason
-      : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
+    const refused = verdict.kind === 'pair-review' ? null : refusal(verdict, receiverOf(row, hip, verdict.owner).receiver);
     const d = dispositions.get(hip);
-    if (d !== undefined && (reason !== null || scope === 'every')) {
+    if (d !== undefined && (verdict.kind === 'pair-review' || refused !== null || scope === 'every')) {
       if ([...d.entries].sort().join('|') !== entries.join('|')) {
         throw new Error(`pair-review disposition for HIP ${hip} restates ${d.entries.join('|')}, but the pair is ${entries.join('|')}: review it again`);
       }
@@ -296,8 +346,8 @@ function applyMoves(
       return;
     }
     if (verdict.kind === 'pair-review') return;
-    if (reason !== null) {
-      decided.set(i, { kind: 'pair-review', hip, entries, reason });
+    if (refused !== null) {
+      decided.set(i, { kind: 'pair-review', hip, entries, reason: refused });
       return;
     }
     const onto = place(i, verdict.owner, receiverOf(row, hip, verdict.owner));
@@ -316,19 +366,19 @@ export function applyPairRule(
   dispositions: ReadonlyMap<number, PairDisposition>,
 ): PairRuleResult {
   return applyMoves(kept, m, dispositions, 'queued', (move, receiver) => {
-    if (binds(receiver) !== move.sourceId) return 'gate_refused';
+    if (move.witness.by === 'gaia' && binds(receiver) !== move.witness.sourceId) return 'gate_refused';
     return refused.has(move.hip) ? 'simbad_refused' : null;
   });
 }
 
-/** see README.md#applying-the-pair-rule */
-export function iv25TycHds(
-  pull: ReadonlyMap<string, SimbadTycHdRow>, iv25: readonly { tyc: string }[],
+/** `requested`: the TYCs SIMBAD's TYC→HD pull asks whatever the manifest holds. see README.md#applying-the-pair-rule */
+export function requestedTycHds(
+  pull: ReadonlyMap<string, SimbadTycHdRow>, requested: Iterable<string>,
 ): (tyc: string) => readonly number[] {
-  const requested = new Set(iv25.map((r) => r.tyc));
+  const asked = new Set(requested);
   return (tyc) => {
-    if (!requested.has(tyc)) {
-      throw new Error(`pair rule: owner entry ${tyc} is no IV/25 entry, so SIMBAD's TYC→HD pull need not have asked for it`);
+    if (!asked.has(tyc)) {
+      throw new Error(`pair rule: owner entry ${tyc} is neither an IV/25 entry nor a pair's, so SIMBAD's TYC→HD pull need not have asked for it`);
     }
     const row = pull.get(tyc);
     return row === undefined ? [] : hdNumbers(row);

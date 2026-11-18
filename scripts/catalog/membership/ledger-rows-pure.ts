@@ -81,7 +81,7 @@ export interface MergeDivergenceRow extends RecordIdentifiers {
 
 /** Why the pair rule names no owner for a HIP two Tycho-2 entries carry. */
 export const PAIR_REVIEW_REASONS = [
-  'no_hip_source', 'no_entry_matches', 'several_match', 'gate_refused', 'simbad_refused',
+  'unwitnessed', 'no_entry_matches', 'several_match', 'gate_refused', 'simbad_refused',
 ] as const;
 export type PairReviewReason = (typeof PAIR_REVIEW_REASONS)[number];
 
