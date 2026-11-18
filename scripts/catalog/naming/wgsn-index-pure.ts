@@ -79,11 +79,6 @@ export function pickNameRow(rows: readonly WgsnNameRow[]): WgsnNameRow {
     || compareCodeUnits(a.srcId, b.srcId))[0];
 }
 
-/** Several Bayer rows can reach one record, and the choice is not
- *  arbitrary: a Greek glyph outranks the Latin overflow series, then a row
- *  with no component cell names the STAR where a lettered one names a
- *  component of it, then a superscripted row is the component's own
- *  designation where the bare one names the pair. */
 /** README.md#the-record-side-join. */
 export function alternateNames(rows: readonly WgsnNameRow[], picked: WgsnNameRow): string[] {
   const names = new Set(rows.flatMap((r) => [
@@ -94,6 +89,11 @@ export function alternateNames(rows: readonly WgsnNameRow[], picked: WgsnNameRow
   return [...names].sort(compareCodeUnits);
 }
 
+/** Several Bayer rows can reach one record, and the choice is not
+ *  arbitrary: a Greek glyph outranks the Latin overflow series, then a row
+ *  with no component cell names the STAR where a lettered one names a
+ *  component of it, then a superscripted row is the component's own
+ *  designation where the bare one names the pair. */
 export function pickBayerRow(
   rows: readonly DesignationRow[],
 ): DesignationRow {
