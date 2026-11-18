@@ -8,8 +8,7 @@ description: Stellata's extension of the user-level `dream` skill — the kaizen
 Load `dream` first if it is not already in context. This skill only points;
 the loop, the digest and the report shape are `dream`'s.
 
-- **Kaizen epic: `stellata-hhaw.75`.** Approved items are filed as its
-  children, and the open ones are what KAIZEN CHECK reads.
+- **Kaizen epic: `stellata-hhaw.75`.**
 - **Verifying a lead: load `stellata-beads`.** It carries every spelling a
   star's identifiers take across beads, and the P0–P4 framework a priority
   item is judged against.
