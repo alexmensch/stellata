@@ -253,7 +253,7 @@ and for stars the cross-indexes miss, AT-HYG's frozen cells remain the
 fallback.
 
 **Names.** The IAU working group on star names is the only authority on
-what a star is called: it supplies the <!-- count:build-catalog/namingIauNamed -->450<!-- /count --> approved proper names the
+what a star is called: it supplies the <!-- count:build-catalog/namingIauNamed -->447<!-- /count --> approved proper names the
 catalogue carries and the Greek-letter Bayer designations for the
 naked-eye sky. The build compiles its lists into lookup tables, and a
 star's displayed name follows a fixed ladder — approved name, then Bayer,

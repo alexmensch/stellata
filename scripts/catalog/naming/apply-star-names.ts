@@ -3,32 +3,28 @@
 // See README.md#the-record-side-join.
 
 import { readArtifact } from '../../util/sources/source';
-import { FLAG_IS_SOL } from '../../../src/catalog-format/record/catalog-pure';
+import { FLAG_IS_SOL, SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
 import { CON_INDEX } from '../parse/constellations/constellations';
-import { foldNameKey } from './wgsn-normalise-pure';
 import {
   buildDesignationConIndex, designationConstellation, type DesignationConIndex,
 } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import { CROSS_INDEX } from '../classic-ids/cross-index-source';
 import { classifySimbadFlamsteed, type SimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
 import { SIMBAD_IDENTS } from '../simbad/simbad-idents-source';
-import {
-  buildWgsnIndex,
-  routeDisposedProper,
-  type ProperDisposition,
-  type WgsnNameRow,
-} from './wgsn-index-pure';
+import { alternateNames, buildWgsnIndex, pickNameRow, type WgsnNameRow } from './wgsn-index-pure';
 import type { DesignationRow } from './wgsn-tables-pure';
 import { WGSN_DESIGNATIONS } from './wgsn-designations-tsv';
 import { WGSN_NAMES } from './wgsn-names-tsv';
-import { PROPER_DISPOSITIONS } from './proper-dispositions-source';
+import { buildStringDesignationIndex, type EponymRow, type NameDropRow } from './string-designations-pure';
+import { EPONYMS, NAME_DROPS } from './string-designations-source';
 import type { NamingFields, WalkedStar } from '../parse/stars-parse';
 import { attach, type Records } from '../record/record-phase';
 
 export interface StarNamingInputs {
   names: WgsnNameRow[];
   designations: DesignationRow[];
-  dispositions: Map<string, ProperDisposition>;
+  eponyms: EponymRow[];
+  nameDrops: NameDropRow[];
   /** IV/27A's designation constellations, the tier below the authority's. */
   designationCons: DesignationConIndex;
   /** SIMBAD's Flamsteed numbers the rule accepts, the tier below IV/27A's. */
@@ -40,21 +36,20 @@ export function loadStarNamingInputs(): StarNamingInputs {
   return {
     names: readArtifact(WGSN_NAMES),
     designations: readArtifact(WGSN_DESIGNATIONS),
-    dispositions: new Map(PROPER_DISPOSITIONS.read().map((d) => [d.proper, d.disposition])),
+    eponyms: EPONYMS.read(),
+    nameDrops: NAME_DROPS.read(),
     designationCons: buildDesignationConIndex(crossIndex),
     simbadFlamsteed: classifySimbadFlamsteed(SIMBAD_IDENTS.read(), crossIndex),
   };
 }
 
 /** The walked fields the ladder reads. */
-export type NamingSource = Pick<WalkedStar, 'flags' | 'printedName' | 'hip' | 'hd' | 'hr' | 'flam'>;
+export type NamingSource = Pick<WalkedStar, 'flags' | 'hip' | 'hd' | 'hr' | 'flam' | 'gaiaSourceId'>;
 
 /** The authority pass's share of naming's count block. */
 export interface StarNamingCounts {
-  /** Records the IAU WGSN names, and how many of those the identifier join
-   *  missed and the record's own printed spelling rescued. */
+  /** Records the IAU WGSN names. */
   namingIauNamed: number;
-  namingIauNamedByProper: number;
   /** Approved names no record carries an identifier or spelling for —
    *  overwhelmingly the wgsnFaints hosts whose only key was a survey id
    *  the normaliser drops, naming stars the catalogue does not hold. */
@@ -74,8 +69,7 @@ export interface StarNamingCounts {
 
 export function starNamingSummary(counts: StarNamingCounts): string {
   return `  ${counts.namingIauNamed} IAU names `
-    + `(${counts.namingIauNamedByProper} via the record's own spelling, `
-    + `${counts.namingIauUnreached} approved names unreached), `
+    + `(${counts.namingIauUnreached} approved names unreached), `
     + `${counts.namingEponym} string designations\n`
     + `  ${counts.namingBayer} Bayer designations, `
     + `${counts.namingGould} Gould, `
@@ -89,9 +83,9 @@ export function applyStarNames<S extends NamingSource>(
   constellations: readonly { code: string }[],
 ): { named: Records<'walked', S & NamingFields>; counts: StarNamingCounts } {
   const index = buildWgsnIndex(inputs.names, inputs.designations);
+  const strings = buildStringDesignationIndex(inputs.eponyms, inputs.nameDrops);
   const counts: StarNamingCounts = {
     namingIauNamed: 0,
-    namingIauNamedByProper: 0,
     namingIauUnreached: 0,
     namingEponym: 0,
     namingBayer: 0,
@@ -100,7 +94,7 @@ export function applyStarNames<S extends NamingSource>(
     namingAliases: 0,
     namingAliasRecords: 0,
   };
-  const reached = new Set<WgsnNameRow>();
+  const approved = new Set<WgsnNameRow>();
 
   const named = attach(stars, (star): NamingFields => {
     const fields: NamingFields = {
@@ -114,33 +108,21 @@ export function applyStarNames<S extends NamingSource>(
       gouldHalf: null,
       aliases: [],
     };
-    const keys = {
-      hip: star.hip, hd: star.hd, hr: star.hr, proper: star.printedName,
-    };
+    const keys = { hip: star.hip, hd: star.hd, hr: star.hr };
 
-    const name = index.nameOf(keys);
-    if (name !== null) {
-      fields.iauName = name.row.name;
-      reached.add(name.row);
+    const nameRows = index.namesOf(keys);
+    if (nameRows.length > 0) {
+      const name = pickNameRow(nameRows);
+      fields.iauName = name.name;
+      approved.add(name);
       counts.namingIauNamed++;
-      if (name.viaProper) counts.namingIauNamedByProper++;
-      // Published alternates the authority split out of a multi-name cell,
-      // plus the spine's own spelling where the IAU superseded it.
-      for (const alias of name.row.aliases) fields.aliases.push(alias);
-      if (star.printedName !== null
-          && foldNameKey(star.printedName) !== foldNameKey(name.row.name)) {
-        fields.aliases.push(star.printedName);
-      }
+      for (const alias of alternateNames(nameRows, name)) fields.aliases.push(alias);
     } else if ((star.flags & FLAG_IS_SOL) !== 0) {
-      // The one hand-emitted record: no catalogue names it, and it is exempt
-      // from the naming-authority disposition gate (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) rather than absent from it.
-      fields.eponym = star.printedName;
-    } else if (star.printedName !== null) {
-      const routed = routeDisposedProper(
-        star.printedName, inputs.dispositions.get(star.printedName),
-      );
-      fields.eponym = routed.eponym;
-      if (routed.alias !== null) fields.aliases.push(routed.alias);
+      fields.eponym = SOL_PROPER_NAME;
+    } else {
+      const reached = strings.of(star);
+      fields.eponym = reached.eponym?.name ?? null;
+      for (const drop of reached.drops) fields.aliases.push(drop.name);
     }
     if (fields.eponym !== null) counts.namingEponym++;
 
@@ -171,7 +153,7 @@ export function applyStarNames<S extends NamingSource>(
     return fields;
   });
 
-  counts.namingIauUnreached = inputs.names.filter((r) => !reached.has(r)).length;
+  counts.namingIauUnreached = inputs.names.filter((r) => !approved.has(r)).length;
   return { named, counts };
 }
 
