@@ -111,8 +111,8 @@ stands. The shipped HD is an output of the label merge, which runs on the
 moved rows, so `settlePairRule` runs the pair rule, the binding settlement
 and the merge, takes the refused HIPs out of the move set
 (`simbadRefusedMoves`), and runs them again until no move is refused; each
-pass only adds HIPs, so it ends. Measured 2026-11-17 over the
-<!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->8<!-- /count --> refused today,
+pass only adds HIPs, so it ends. <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->6<!-- /count --> are refused and
+undisposed today. Measured 2026-11-17 over the 8 refused then,
 two of them position moves (HIP 83608, HIP 110778): two passes, the first
 refusing all of them and the second none, each pass re-deriving the spine's
 bindings. Each is refused again with every other already refused, and none of
@@ -154,8 +154,12 @@ row it lists until a disposition settles it.
 
 `data/membership/pair-review-dispositions.tsv` is hand-written and read by
 `build:membership`, which never writes it: `hip`, `entries` (the queue row's,
-restated), `keep_entry`, `basis` and `evidence`, the shape and closed `basis`
-set of the binding queue's dispositions ([A disposition is the authority](../binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row)).
+restated), `keep_entry`, `basis` and `evidence`, the shape of the binding
+queue's dispositions ([A disposition is the authority](../binding/README.md#a-disposition-is-the-authority-wherever-one-keys-a-row))
+with a closed `basis` set of its own (`PAIR_DISPOSITION_BASES`):
+`tycho2_photometry` and `hip2_position`, both recomputed below, and
+`pair_component` (the HIP names the unresolved system; which entry carries it
+rests on the evidence alone).
 A disposition is the authority: the build puts the HIP on `keep_entry` the way
 a Gaia move would — the record onto that entry, or the HIP onto the spine
 record already there — and no gate weighs it again (`merge.pair.disposed`,
@@ -168,7 +172,7 @@ later pass queues it.
 
 **`tycho2_photometry` is recomputed, not taken on trust.** A disposition on
 that basis keeps the entry whose `VT` is nearest Hipparcos's printed V for the
-HIP, and `requirePhotometricKeeps` fails the build where it does not, where
+HIP, and `requireWitnessedKeeps` fails the build where it does not, where
 the two nearest tie, or where either magnitude is missing. It reads `VT`, not
 the Johnson V the printed-V cascade reduces from `BT` and `VT`: Tycho-2 prints
 no `BT` for the fainter entry of most close pairs, and a ranking of two
@@ -176,6 +180,43 @@ entries against one V needs no colour term. It settles the pairs neither Gaia no
 Tycho-2 entries closer together than Hipparcos's position can separate, or a
 resolved pair Gaia names no source for. Settling the
 queue is `stellata-hooj.17.11.5`.
+
+**`hip2_position` is recomputed too.** A disposition on that basis keeps the
+entry HIP2's carried position falls on alone, inside the Hipparcos tolerance
+([The two witnesses](../positional-witness/README.md#the-two-witnesses)), and
+`requireWitnessedKeeps` fails the build where the witness returns `none`,
+`several`, another entry, or nothing to carry. It settles the queued rows a
+second witness contradicts Gaia on, or Gaia cannot separate: the pair rule
+asks HIP2's position only where Gaia names no source, so on a `gate_refused`
+or `simbad_refused` row the position has not yet voted.
+
+**A position on one entry alone outranks photometry** (the owner's,
+2026-11-18). `requireWitnessedKeeps` asks HIP2's position of every
+`tycho2_photometry` disposition too, and fails one whose position matches the
+other entry alone; a `several`, `none` or uncarried position leaves
+photometry to decide. Where the two agree the disposition takes
+`tycho2_photometry`; where the position names the entry photometry does not
+favour, it takes `hip2_position` — HIP 3885, 36914 and 102396, whose `VT`
+offsets favour the other entry by 0.009, 0.048 and 0.013 mag against a
+Hipparcos V that blends both.
+
+**A disposition places the record; it does not bind it.** The binding
+derivation still gates the moved record's candidates, and a `gate_refused`
+row's new entry carries exactly the source the gates refused, so the record
+would ship no source while that source stays an unnamed magnitude-term row —
+one star drawn twice. Each such move therefore takes a binding disposition
+beside it, keeping the entry's own TYC cross-match on `tycho2_position`
+(HIP 19464, 69894, 102396).
+
+**A disposition onto an addition's entry moves the whole record.** Where the
+kept entry is no spine record's but an addition's, the record and its labels
+move there. The label merge then gives it the entry's own HD and HR only where
+IV/25's HD for the entry wins the overlay, and the vacated entry is admitted
+again under the record's old labels — HIP 3885 and 36914, which therefore end
+as the HIP moving between two records. Where the overlay does not flip, the
+addition folds into the record and its own HD and HR leave the catalogue.
+Moving only the HIP onto an addition is `stellata-hooj.17.11.5.5`; until it
+lands, such a row stays queued (HIP 83608, 84405, 110778).
 
 ## The divergence ledger
 

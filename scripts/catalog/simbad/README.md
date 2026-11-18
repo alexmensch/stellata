@@ -92,7 +92,7 @@ row shows in CI's regenerate-and-diff; its codec is
 ## What the TYC → HD pull adjudicates
 
 Held against the manifest's shipped `hd` and IV/25's HD for the row's own TYC,
-over the 331,761 manifest rows carrying both a TYC and an HD that this file
+over the 331,760 manifest rows carrying both a TYC and an HD that this file
 answers for, IV/25 read with its curated corrections
 ([Crossed HD numbers in IV/25](../classic-ids/README.md#crossed-hd-numbers-in-iv25)) — the two classes, and only the first is reachable without it:
 
@@ -225,7 +225,7 @@ whichever component the blended entry printed; it backs the shipped cell on 18
 of the 23 and agrees with the TYC on 5, and neither reading is component
 evidence.
 
-**Silence is silence.** 21,603 manifest rows carrying both a TYC and an HD get
+**Silence is silence.** 21,604 manifest rows carrying both a TYC and an HD get
 no answer from the pull at all, f Pup among them, and a rule must leave a row
 whose source has no object alone rather than treat absence as agreement. The
 two of these 23 that were silent (TYC 8568-3121-1 / HD 72737, 2604-1777-1 /

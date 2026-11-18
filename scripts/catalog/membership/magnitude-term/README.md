@@ -89,8 +89,8 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Measured 2026-11-17, the union holds 375,182 bound source_ids, 331,508 of them
-in the kept set, so 598,421 rows are the term's own and the union is 973,603
+Measured 2026-11-18, the union holds 375,183 bound source_ids, 331,509 of them
+in the kept set, so 598,420 rows are the term's own and the union is 973,603
 source_ids; the count snapshot holds the term's rows as its
 `admit.magnitude.*` codes. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
@@ -130,10 +130,10 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | term | projected | measured | now |
 |---|---|---|---|
 | `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,182 |
-| in both | 327,701 | 327,701 | 331,508 |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,183 |
+| in both | 327,701 | 327,701 | 331,509 |
 | source_id union | 973,222 | 973,222 | 973,603 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,741 |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,740 |
 | companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,171<!-- /count --> synthetic |
 | rows parked, so never a record | − 10,429 | **− 10,748** | − 10,418 |
 | **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,604<!-- /count -->** |
@@ -262,7 +262,7 @@ decision.
 29.8 → 66.9 MB gz, 2.24×, but the loader paints from the first transport chunk
 and fills behind it ([On-disk transport chunking](../../../../src/catalog-format/record/README.md#on-disk-transport-chunking),
 [Progressive catalog load](../../../../src/client/loaders/README.md#progressive-catalog-load)). That
-chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records to apparent
+chunk is a fixed byte budget, so it holds the same <!-- count:build-catalog/recordsInFirstChunk -->10,413<!-- /count --> records to apparent
 V 6.62 at either depth: the naked-eye sky arrives at the speed it always did
 and the depth streams in. Summed over nine separately-compressed chunks the
 transfer is 65.72 MB gz rather than the 62.4 MB the table's single-blob

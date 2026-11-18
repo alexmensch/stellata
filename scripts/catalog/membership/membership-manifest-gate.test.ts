@@ -8,18 +8,15 @@ import { beforeAll, describe, expect, it } from 'vitest';
 
 import { REPO_ROOT, lfsContentReadable, publicFile } from '../../util/paths';
 import { readArtifact } from '../../util/sources/source';
-import { compareCountSnapshot } from '../../util/counts/compare-counts-pure';
 import { BAYER_DROPS } from '../naming/bayer-drops-source';
 import { normaliseIv27aBayer } from '../naming/wgsn-normalise-pure';
-import { PROPER_DISPOSITIONS } from '../naming/proper-dispositions-source';
+import { EPONYMS, NAME_DROPS } from '../naming/string-designations-source';
+import {
+  buildStringDesignationIndex, stringDesignationFailures, stringDesignationReach, type StringDesignationRow,
+} from '../naming/string-designations-pure';
 import { WGSN_DESIGNATIONS } from '../naming/wgsn-designations-tsv';
 import { WGSN_NAMES } from '../naming/wgsn-names-tsv';
-import {
-  buildWgsnIndex,
-  manifestNaming,
-  type ManifestNamingCounts,
-  type ManifestNamingRow,
-} from '../naming/wgsn-index-pure';
+import { buildWgsnIndex } from '../naming/wgsn-index-pure';
 import { SAMEAS_OVERRIDES } from '../../sid/sameas-source';
 import { catalogRecordDesignations } from '../../sid/catalog-designations';
 import {
@@ -84,8 +81,6 @@ const built = [
 const snapshot = flattenStages(committedSnapshot(MEMBERSHIP_COUNTS)) as MembershipCounts & MembershipDerivedCounts;
 const expected = membershipTotals(snapshot);
 
-const NAMING_EXPECTED_FILE = 'scripts/catalog/naming/manifest-naming-expected.json';
-
 function tally(sets: Iterable<readonly string[]>): Map<string, number> {
   const counts = new Map<string, number>();
   for (const set of sets) {
@@ -129,6 +124,8 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   let folds: SpineFold[];
   let manifest: ManifestRecord[];
   let recordMoves: { tyc: string | null; derived: string }[];
+  /** `corrected` with the pair rule's HIP moves onto other spine records applied. */
+  let moved: SpineRow[];
   let match: SpineMatch;
   /** SIMBAD's one source per HIP, as the identity witness reads it. */
   let simbadByHip: Map<number, string | null>;
@@ -143,8 +140,9 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     ));
     manifest = MEMBERSHIP_MANIFEST.parse(readFileSync(MANIFEST_PATH, 'utf-8'));
     recordMoves = readArtifact(MERGE_DIVERGENCE).filter((d) => d.divergence === 'pair_moves');
+    moved = withRecordMoves(corrected, recordMoves);
     match = matchSpineToManifest(
-      withRecordMoves(corrected, recordMoves).map(spineDesignations),
+      moved.map(spineDesignations),
       manifest,
       SAMEAS_OVERRIDES.read(),
     );
@@ -257,33 +255,31 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
     expect(unrequested).toHaveLength(0);
   });
 
-  // build:wgsn reads no manifest, so the naming authority's residual
-  // (/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)
-  // is held here.
+  // see ../naming/README.md#string-designations
   describe('↔ the naming authority', () => {
     const designations = readArtifact(WGSN_DESIGNATIONS);
     const index = buildWgsnIndex(readArtifact(WGSN_NAMES), designations);
-    const { approvedNameKeys } = index;
-    const naming = (rows: Iterable<ManifestNamingRow>) => manifestNaming(
-      rows, approvedNameKeys, PROPER_DISPOSITIONS.read(),
+    const eponyms = EPONYMS.read();
+    const drops = NAME_DROPS.read();
+    const stringIndex = buildStringDesignationIndex(eponyms, drops);
+    const stringRows: readonly StringDesignationRow[] = [...eponyms, ...drops];
+    const failures = (records: readonly ManifestRecord[]) => stringDesignationFailures(
+      stringRows, stringDesignationReach(stringIndex, records, (r) => index.namesOf(r).length > 0),
     );
 
-    it('disposes exactly the manifest propers no WGSN name matches', () => {
-      const { missing, stale } = naming(manifest);
-      expect({ missing, stale }).toEqual({ missing: [], stale: [] });
+    it('keys every eponym and dropped name on exactly one record the authority does not name', () => {
+      expect(failures(manifest)).toEqual([]);
     });
 
-    it('fails on a manifest proper WGSN does not name and the file does not dispose', () => {
-      const seeded: ManifestNamingRow = {
-        proper: 'Nonesuch', hip: null, hd: 999_999, isSol: false,
-      };
-      expect(naming([...manifest, seeded]).missing).toEqual(['Nonesuch||999999']);
+    it('fails on a row whose record has gone', () => {
+      const withoutRoss128 = manifest.filter((r) => r.hip !== 57548);
+      expect(failures(withoutRoss128)).toEqual(['Ross 128 (hip:57548) reaches 0 records, not 1']);
     });
 
     it('ledgers Bayer drops only on records the build gives no Bayer designation, and a sibling holds each', () => {
       const drops = BAYER_DROPS.read();
       expect(drops).toHaveLength(1);
-      const bayerOf = (r: ManifestRecord) => index.bayerOf({ hip: r.hip, hd: r.hd, hr: r.hr, proper: r.proper });
+      const bayerOf = (r: ManifestRecord) => index.bayerOf(r);
       for (const drop of drops) {
         const rows = manifest.filter((r) => r.hd === drop.hd);
         expect(rows, `hd ${drop.hd}`).toHaveLength(1);
@@ -301,14 +297,6 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
         expect(holders.length, `${drop.bayer} is held by another record`).toBe(1);
         expect(holders[0]).not.toBe(rows[0]);
       }
-    });
-
-    it('matches the pinned naming counts', () => {
-      const pinned = JSON.parse(
-        readFileSync(resolve(REPO_ROOT, NAMING_EXPECTED_FILE), 'utf-8'),
-      ) as ManifestNamingCounts;
-      const { drifted, report } = compareCountSnapshot(pinned, naming(manifest).counts);
-      expect(drifted, report).toBe(false);
     });
   });
 
@@ -342,15 +330,17 @@ describe.skipIf(!inputsReadable)('membership manifest ↔ inherited spine', () =
   // Every disposed row ships the value its disposition settled on, under
   // `reviewed`, or none — and no `reviewed` binding exists without one.
   it('carries every disposed binding as reviewed, and no other', () => {
-    // Keyed on the CORRECTED cells: a disposition adjudicates the row the
-    // generator derived from, and a `set` correction moves that key.
+    // Keyed on the row the generator derived from: the corrected cells with
+    // every pair move applied — the HIP moves `moved` carries, and the TYC the
+    // manifest row ended on.
     const bySpineKey = new Map<string, ManifestRecord>();
-    corrected.forEach((row, i) => {
+    moved.forEach((row, i) => {
       const target = match.manifestIndex[i];
-      if (target !== null) bySpineKey.set(bindingReviewKey(row), manifest[target]);
+      if (target !== null) bySpineKey.set(bindingReviewKey({ ...row, tyc: manifest[target].tyc ?? '' }), manifest[target]);
     });
     for (const [key, d] of dispositions) {
-      const row = bySpineKey.get(key)!;
+      const row = bySpineKey.get(key);
+      if (row === undefined) throw new Error(`binding disposition ${key} keys no derived spine row`);
       const value = d.keep_source_id;
       expect([row.gaiaSourceId, row.binding], key)
         .toEqual([value === '' ? null : value, value === '' ? 'none' : 'reviewed']);

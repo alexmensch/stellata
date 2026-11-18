@@ -65,7 +65,7 @@ scripts/catalog/membership/
                                   the build lacks.
   membership-manifest-pure.ts     buildMembership: wiring only. Applies the
     (+ test)                      corrections, checks the pair dispositions'
-                                  photometry, then runs each phase in order
+                                  witnesses, then runs each phase in order
                                   — the pair rule, binding/spine-settle and
                                   the spine side (repeated until SIMBAD's
                                   check refuses no move), the merge
@@ -89,8 +89,9 @@ scripts/catalog/membership/
                                   withRecordMoves, the spine rows as the
                                   pair rule's HIP moves leave them. Pure.
   pair-review-dispositions-       The pair-review queue's dispositions:
-    pure.ts (+ test)              columns, reader and its checks, the
-                                  tycho2_photometry recomputation, and
+    pure.ts (+ test)              columns, closed basis set, reader,
+                                  requireWitnessedKeeps (every basis
+                                  recomputed), and
   pair-review-dispositions-       PAIR_REVIEW_DISPOSITIONS, declared
     source.ts                     (merge-derivation/README.md#disposing-a-queued-pair).
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
@@ -180,8 +181,8 @@ gaia_source_id  binding  routes  term  origin_key
 - `routes` names the primary attesting each classical cell
   (`hd:iv25|hip:i239|gl:cns5|tyc:tycho2`), computed by the audit's
   `attestSpineRow` over the merged cells. A cell absent from the list is one
-  no primary publishes — <!-- count:membership-manifest/membership.unattested.proper -->46<!-- /count --> today, the proper names
-  `data/iau-wgsn/athyg_proper_dispositions.tsv` disposes; an unattested
+  no primary publishes — <!-- count:membership-manifest/membership.unattested.proper -->46<!-- /count --> today, proper names naming no longer
+  reads ([String designations](../naming/README.md#string-designations)); an unattested
   Flamsteed or HD cell leaves the row for `label-drops.tsv` instead
   ([The unattested labels leave the row](#the-unattested-labels-leave-the-row)).
 - `origin_key` is the record's lineage origin key, the same one its lineage
@@ -208,7 +209,7 @@ cells — the property replayed by [Parity is the manifest's gate now](../spine/
 The record build reads the manifest's cells as final and
 runs no merge of its own.
 
-Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->365<!-- /count --> spine
+Keying on the derivation is what lets a filled binding carry labels: <!-- count:membership-manifest/membership.binding.ships-none -->364<!-- /count --> spine
 rows reach no source against the frozen column's 1,371, and the difference is
 where the overlay can now speak. It moves five cells today — HD 2094 onto
 HIP 1997, whose own addition row folds away as a component (a [§ 7](/docs/catalog-driver.md#7-identity-and-ordering-rules) merge,
@@ -236,8 +237,8 @@ a code with a winner names the highest-precedence source proposing it
 | `bound.<lead>` | tyc <!-- count:membership-manifest/membership.binding.bound.tyc -->298,284<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.bound.hip -->768<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.bound.cns5 -->838<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.bound.simbad -->12,685<!-- /count --> | one source survives both gates, with no passing rival |
 | `rescued.<lead>` | tyc <!-- count:membership-manifest/membership.binding.rescued.tyc -->2<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.rescued.hip -->0<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.rescued.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.rescued.simbad -->1<!-- /count --> | every candidate failed a gate, and the component witness binds ([Both gates weigh every candidate](binding/README.md#both-gates-weigh-every-candidate)) |
 | `identified.<lead>` | tyc <!-- count:membership-manifest/membership.binding.identified.tyc -->22<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.identified.hip -->2<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.identified.cns5 -->0<!-- /count --> · simbad <!-- count:membership-manifest/membership.binding.identified.simbad -->4<!-- /count --> | every candidate failed a gate, and SIMBAD's one object for the HIP and the HIP's own position both name one the magnitude gate refused ([Identity outranks a blended magnitude](binding/README.md#identity-outranks-a-blended-magnitude)) |
-| `refused` | <!-- count:membership-manifest/membership.binding.refused -->402<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
-| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->219<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->4<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
+| `refused` | <!-- count:membership-manifest/membership.binding.refused -->404<!-- /count --> | no source binds — a derived refusal, not an absence. `unconfirmed` (<!-- count:membership-manifest/membership.binding.unconfirmed -->2<!-- /count -->) marks the refusals whose identity witness the HIP's position did not confirm and whose source the magnitude term admits; they are queued |
+| `contested.<lead>` | tyc <!-- count:membership-manifest/membership.binding.contested.tyc -->217<!-- /count --> · hip <!-- count:membership-manifest/membership.binding.contested.hip -->24<!-- /count --> · cns5 <!-- count:membership-manifest/membership.binding.contested.cns5 -->4<!-- /count --> | the winner has a passing runner-up, so precedence chose and not the evidence; a winner SIMBAD alone proposes ranks below every other passing candidate, so none is contested. Ships the winner and queues the row |
 | `collision` | <!-- count:membership-manifest/membership.binding.collision -->0<!-- /count --> | a second row derives the same source; both withheld and queued |
 | `sol` | <!-- count:membership-manifest/membership.binding.sol -->1<!-- /count --> | |
 
@@ -352,11 +353,11 @@ arithmetic and label-flips replay:
 - **The astrometry request covers every binding**: each `term = primaries`
   row's `gaia_source_id` is in the request, which reads no manifest, so this
   test holds the coverage ([covered by measurement](../astrometry-request/README.md#the-record-builds-sources-are-covered-by-measurement)).
-- **The naming authority's residual**: the manifest propers no WGSN name
-  matches are exactly the disposed ones, with the counts pinned in
-  `../naming/manifest-naming-expected.json` ([The residual gate](../naming/README.md#the-residual-gate)),
-  and each `data/naming/bayer_drops.tsv` row keys one record the Bayer join
-  leaves bare, while exactly one other record holds its designation.
+- **The naming tables**: each `data/naming/eponyms.tsv` and
+  `name_drops.tsv` row keys exactly one record, and none the authority names
+  ([String designations](../naming/README.md#string-designations)), and each
+  `data/naming/bayer_drops.tsv` row keys one record the Bayer join leaves
+  bare, while exactly one other record holds its designation.
 - **(iii)** the built catalogue's designation multiset equals the manifest's
   over the records the build produces — **every manifest row less the [§ 6.1](/docs/catalog-driver.md#61-record-parity)
   parks**, with no exclusions. The three the gate used to carry (spine-origin

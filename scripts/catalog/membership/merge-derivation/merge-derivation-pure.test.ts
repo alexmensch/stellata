@@ -201,7 +201,7 @@ describe('applyPairRule', () => {
 
 describe('applyPairRule with dispositions', () => {
   const dispose = (keepEntry: string, entries: string[] = [A, B]): ReadonlyMap<number, PairDisposition> => new Map([
-    [10, { hip: 10, entries, keepEntry, basis: 'tycho2_position' as const, evidence: 'sep 0.2"' }],
+    [10, { hip: 10, entries, keepEntry, basis: 'pair_component' as const, evidence: 'sep 0.2"' }],
   ]);
   const queued = links({}, null);
 
@@ -209,7 +209,7 @@ describe('applyPairRule with dispositions', () => {
     const kept = [row({ tyc: A, hip: '10', hd: '100' })];
     const { rows, decided } = applyPairRule(kept, mergeLinks(queued), () => null, new Set(), dispose(B));
     expect(rows).toEqual([row({ tyc: B, hip: '10', hd: '100' })]);
-    const settled = { kind: 'pair-disposed', hip: 10, keep: B, basis: 'tycho2_position', onto: 'entry' };
+    const settled = { kind: 'pair-disposed', hip: 10, keep: B, basis: 'pair_component', onto: 'entry' };
     expect(decided).toEqual(new Map([[0, settled]]));
     expect(divergences(rows[0], mergeLinks(queued), decided.get(0))).toContainEqual(settled);
   });
@@ -251,7 +251,7 @@ describe('applyPairRule with dispositions', () => {
 
 describe('settlePairRule', () => {
   const dispose = (keepEntry: string): ReadonlyMap<number, PairDisposition> => new Map([
-    [10, { hip: 10, entries: [A, B], keepEntry, basis: 'tycho2_position' as const, evidence: 'sep 0.2"' }],
+    [10, { hip: 10, entries: [A, B], keepEntry, basis: 'pair_component' as const, evidence: 'sep 0.2"' }],
   ]);
   const shipsOwnHd = (rows: readonly SpineRow[]) => ({ value: rows, shippedHd: (i: number) => Number(rows[i].hd) });
   const named = (hds: Record<string, number[]>) => (tyc: string): readonly number[] => hds[tyc] ?? [];
@@ -268,7 +268,7 @@ describe('settlePairRule', () => {
     const l = links({ [B]: 'S1' });
     const settled = settlePairRule(kept, mergeLinks(l), bindsOwn(l), dispose(A), named({ [B]: [101] }), shipsOwnHd);
     expect(settled.rows).toEqual(kept);
-    expect(settled.decided.get(0)).toEqual({ kind: 'pair-disposed', hip: 10, keep: A, basis: 'tycho2_position', onto: 'stays' });
+    expect(settled.decided.get(0)).toEqual({ kind: 'pair-disposed', hip: 10, keep: A, basis: 'pair_component', onto: 'stays' });
   });
 
   it('refuses a disposition on a HIP the settled rule does not queue', () => {

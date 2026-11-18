@@ -9,9 +9,10 @@ describe('identsByOid', () => {
     expect(held).toEqual(new Map([[7, new Set(['* 39 Psc'])], [8, new Set(['NAME Elnath'])]]));
   });
 
-  it('reads a double-star ident as its own class, not the Bayer/Flamsteed one', () => {
-    expect(identsByOid([['9', '** STF 2398A']], WHOLE_SKY_CLASSES)).toEqual(new Map());
-    expect(identsByOid([['9', '** STF 2398A']], REACHED_CLASSES)).toEqual(new Map([[9, new Set(['** STF 2398A'])]]));
+  it('asks double-star idents over the whole sky, and variable idents only on reached objects', () => {
+    expect(identsByOid([['9', '** STF 2398A']], WHOLE_SKY_CLASSES)).toEqual(new Map([[9, new Set(['** STF 2398A'])]]));
+    expect(identsByOid([['9', 'V* GX And']], WHOLE_SKY_CLASSES)).toEqual(new Map());
+    expect(identsByOid([['9', 'V* GX And']], REACHED_CLASSES)).toEqual(new Map([[9, new Set(['V* GX And'])]]));
   });
 });
 
