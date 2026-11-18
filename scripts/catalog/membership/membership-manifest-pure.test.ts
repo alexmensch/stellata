@@ -30,7 +30,7 @@ import { bindingReviewKey, type LabelDropCell } from './ledger-rows-pure';
 import { LABEL_DROPS } from './label-drops-tsv';
 import { MERGE_DIVERGENCE } from './merge-divergence-tsv';
 import { PAIR_REVIEW } from './pair-review-tsv';
-import { mergeDivergences, pairLinksFrom, type MergeDivergence } from './merge-derivation/merge-derivation-pure';
+import { mergeDivergences, pairLinksFrom, type MergeDivergence, type UnwitnessedPosition } from './merge-derivation/merge-derivation-pure';
 import { spineKeys } from '../spine/primaries-audit-pure';
 import {
   MEMBERSHIP_MANIFEST,
@@ -183,7 +183,7 @@ const tables: PrimaryTables = {
   i239HipHd: new Map<number, number>(),
   simbadHdsByHip: new Map<number, Set<number>>(),
   glAliases: new Map<string, string[]>(),
-  hip2: new Set<number>(),
+  hip2: { hips: new Set<number>(), astrometry: new Map() },
   wgsn: {
     names: new Set<string>(),
     hd: new Set<number>(),
@@ -1109,16 +1109,34 @@ describe('codecs', () => {
     expect(derivedOnly(spineRow({ tyc: '7-7-1', hip: '20' }))).toEqual(['gl:GJ 165AB:free']);
   });
 
+  it('cites what HIP2\'s position found on an unwitnessed queue row', () => {
+    const evidenceOf = (position: UnwitnessedPosition): string => (JSON.parse(membershipLineageRow({
+      key: 'spine:9',
+      outcome: { kind: 'merge', divergence: { kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed', position } },
+    }).params) as { evidence: string }).evidence;
+    const separations = [{ tyc: '1-1-1', separationArcsec: 0.11 }, { tyc: '1-1-2', separationArcsec: 0.12 }];
+    expect(evidenceOf({ kind: 'several', tycs: ['1-1-1', '1-1-2'], separations }))
+      .toBe('unwitnessed; several; 1-1-1 0.110"|1-1-2 0.120"');
+    expect(evidenceOf({ kind: 'no-hip2-position' })).toBe('unwitnessed; no-hip2-position');
+  });
+
   it('ledgers every merge divergence but a confirmed pair and a move onto an entry, queues a review, and round-trips both', () => {
     const key = 'spine:9';
     const identity = new Map([[key, identityRow(key, { tyc: '1-1-1', hip: '70', hd: '', gl: '', gaia_source_id: '' }, [])]]);
     const merge = (divergence: MergeDivergence) => membershipLineageRow({ key, outcome: { kind: 'merge', divergence } });
     const ids = { tyc: '1-1-1', hip: 70, hd: null, gl: null, gaiaSourceId: null };
+    const hip2Near = [{ tyc: '1-1-4', separationArcsec: 0.0134 }, { tyc: '1-1-1', separationArcsec: 2.81 }];
     const { mergeDivergence: ledger, pairReview } = membershipLedgers([
-      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', sourceId: '5' }),
-      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', sourceId: '5', onto: 'entry' }),
-      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', sourceId: '5', onto: 'record' }),
-      merge({ kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }),
+      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'gaia', sourceId: '5' } }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'gaia', sourceId: '5' }, onto: 'entry' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-3', witness: { by: 'gaia', sourceId: '5' }, onto: 'record' }),
+      merge({ kind: 'pair-confirmed', hip: 70, owner: '1-1-1', witness: { by: 'position', separations: hip2Near } }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-2', witness: { by: 'position', separations: hip2Near }, onto: 'entry' }),
+      merge({ kind: 'pair-moves', hip: 70, owner: '1-1-4', witness: { by: 'position', separations: hip2Near }, onto: 'record' }),
+      merge({
+        kind: 'pair-review', hip: 70, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed',
+        position: { kind: 'several', tycs: ['1-1-1', '1-1-2'], separations: hip2Near },
+      }),
       merge({ kind: 'derived-only', cell: 'hd', value: '400', held: 'free' }),
       merge({
         kind: 'unlinked', cell: 'gl', witnessed: 'tyc+hip | gl', published: 'tyc | hip | gl',
@@ -1129,13 +1147,14 @@ describe('codecs', () => {
         verdict: { settled: 'v70a-position' }, separations: [{ tyc: '1-1-1', separationArcsec: 5.3 }],
       }),
     ], identity);
-    expect(ledger).toHaveLength(3);
+    expect(ledger).toHaveLength(4);
     expect(ledger).toEqual(expect.arrayContaining([
       { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-3', evidence: '5' },
+      { ...ids, divergence: 'pair_moves', cells: 'hip', derived: '1-1-4', evidence: '1-1-4 0.013"|1-1-1 2.810"' },
       { ...ids, divergence: 'derived_only', cells: 'hd', derived: '400', evidence: 'free' },
       { ...ids, divergence: 'unlinked', cells: 'gl', derived: 'tyc+hip | gl', evidence: 'tyc | hip | gl; v70a-none; v70a 20.7"' },
     ]));
-    expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'no_hip_source' }]);
+    expect(pairReview).toEqual([{ ...ids, entries: ['1-1-1', '1-1-2'], reason: 'unwitnessed' }]);
     const text = MERGE_DIVERGENCE.serialize(ledger);
     expect(MERGE_DIVERGENCE.serialize(MERGE_DIVERGENCE.parse(text))).toBe(text);
     const queue = PAIR_REVIEW.serialize(pairReview);

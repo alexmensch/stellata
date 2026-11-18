@@ -80,7 +80,7 @@ export async function loadPrimaryTables(keepTycs: Iterable<string>): Promise<Pri
     hdI239: i239.hds,
     i239HipHd: i239.hdByHip,
     simbadHdsByHip,
-    hip2: HIP2.read().hips,
+    hip2: HIP2.read(),
     wgsn: readWgsn(),
     tycho2: TYCHO2.read(),
     simbadFlamsteed: classifySimbadFlamsteed(simbadObjects, iv27a),

@@ -3,11 +3,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { committedBuildCounts } from '../build-counts';
-import type { SearchEntry } from '../../../src/catalog-format/record/catalog-pure';
-import { CON_INDEX } from '../parse/constellations/constellations';
-import { publicFile } from '../../util/paths';
-import { PUBLIC_FILES } from '../../../src/catalog-format/public-artifacts/public-artifacts';
+import { committedBuildCounts } from '../../build-counts';
+import type { SearchEntry } from '../../../../src/catalog-format/record/catalog-pure';
+import { CON_INDEX } from '../../parse/constellations/constellations';
+import { publicFile } from '../../../util/paths';
+import { PUBLIC_FILES } from '../../../../src/catalog-format/public-artifacts/public-artifacts';
 
 const built = existsSync(publicFile(PUBLIC_FILES.searchIndex));
 
@@ -56,7 +56,7 @@ describe.skipIf(!built)('designation constellation on the wire', () => {
     expect(entry?.dc).toBe(con('psa'));
   });
 
-  // README.md#one-designation-two-hd-numbers. IV/27A gives both members of
+  // ../README.md#one-designation-two-hd-numbers. IV/27A gives both members of
   // each pair the designation, and neither pair carries a component letter to
   // tell them apart, so without the correction both records composed it.
   it('leaves 23 Ori and 104 Aqr on one HD each', () => {

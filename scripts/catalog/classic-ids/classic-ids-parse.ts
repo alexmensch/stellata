@@ -3,6 +3,7 @@
 import type { Declared } from '../../util/sources/source';
 import { sourceRowRef, type RowKeyed, type OneRowRef } from '../../util/sources/row-ref-pure';
 import { readTable } from '../../util/tsv/table-pure';
+import { ascending } from '../../../src/astro-core/order-pure';
 import { normaliseGjKey } from '../simbad/simbad-namespace-ladder-pure';
 import { citedParallax, type CitedParallax } from '../cited-parallax';
 import { citedProperMotion, type CitedProperMotion } from '../cited-proper-motion';
@@ -36,6 +37,58 @@ export function parseTyc2HdTsv(text: string, from: Declared): Tyc2HdRow[] {
       nHd: row.int('n_hd') ?? 1,
       nTyc: row.int('n_tyc') ?? 1,
     });
+  }
+  return out;
+}
+
+/** One curated IV/25 correction: the row IV/25 prints for `tyc` as `printedHd` names HD `hd`.
+ *  See README.md#crossed-hd-numbers-in-iv25. */
+export interface Tyc2HdCorrection {
+  tyc: string;
+  printedHd: number;
+  hd: number;
+}
+
+export function parseTyc2HdCorrectionsTsv(text: string, from: Declared): Tyc2HdCorrection[] {
+  const out: Tyc2HdCorrection[] = [];
+  for (const row of readTable({ ...from, columns: ['tyc', 'printed_hd', 'hd'] as const, comments: true }, text)) {
+    const printedHd = row.int('printed_hd') ?? row.fail('no printed_hd');
+    const hd = row.int('hd') ?? row.fail('no hd');
+    if (hd === printedHd) row.fail(`corrects ${row.requiredText('tyc')}'s HD ${hd} to itself`);
+    out.push({ tyc: row.requiredText('tyc'), printedHd, hd });
+  }
+  return out;
+}
+
+// see README.md#crossed-hd-numbers-in-iv25
+export function applyTyc2HdCorrections(
+  rows: readonly Tyc2HdRow[],
+  corrections: readonly Tyc2HdCorrection[],
+  from: Declared,
+): Tyc2HdRow[] {
+  const key = (tyc: string, hd: number): string => `${tyc}|${hd}`;
+  const byKey = new Map(corrections.map((c) => [key(c.tyc, c.printedHd), c]));
+  const found = new Map<Tyc2HdCorrection, number>();
+  const out = rows.map((r) => {
+    const c = byKey.get(key(r.tyc, r.hd));
+    if (c === undefined) return r;
+    found.set(c, (found.get(c) ?? 0) + 1);
+    return { ...r, hd: c.hd };
+  });
+  for (const c of corrections) {
+    const times = found.get(c) ?? 0;
+    if (times !== 1) {
+      throw new Error(`${from.file} corrects TYC ${c.tyc} HD ${c.printedHd}, which IV/25 prints ${times} times, not once.`);
+    }
+  }
+  const printed = corrections.map((c) => c.printedHd);
+  const corrected = corrections.map((c) => c.hd);
+  const sorted = (hds: number[]): string => [...hds].sort(ascending).join(',');
+  if (sorted(printed) !== sorted(corrected)) {
+    throw new Error(
+      `${from.file} re-points HDs ${sorted(printed)} to ${sorted(corrected)}: a correction exchanges ` +
+        'HD numbers between IV/25 rows and cannot mint or drop one.',
+    );
   }
   return out;
 }

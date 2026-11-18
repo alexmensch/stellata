@@ -4,7 +4,7 @@
 
 import { NO_CONSTELLATION_INDEX } from '../../../src/catalog-format/record/catalog-pure';
 import type { ComponentDesignation } from '../companions/record-index/record-index';
-import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation-pure';
+import type { DesignationCon, StatedDesignationCon } from '../classic-ids/designation-constellation/designation-constellation-pure';
 import {
   isApprovedName,
   resolveDisplayNames,

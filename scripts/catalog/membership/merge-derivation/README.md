@@ -22,7 +22,7 @@ scripts/catalog/membership/merge-derivation/
                              applyEveryPairMove (every move, none refused),
                              applying ../pair-review-dispositions-pure.ts's
                              dispositions over the queue,
-                             simbadRefusedMoves and iv25TycHds (SIMBAD's
+                             simbadRefusedMoves and requestedTycHds (SIMBAD's
                              TYC→HD check on the applied moves) and
                              mergeDivergences, one row's divergences with
                              each differs and unlinked cell's verdict. Pure.
@@ -45,11 +45,17 @@ says which entry is the HIP's record. The primaries disagree with it on that:
 IV/25 gives the HD to the other entry on most of those rows, while Gaia agrees
 with the spine on more than half.
 
-**The pair rule, the owner's (2026-11-14): Gaia decides, else review.** Of the
-entries naming a HIP, the one whose Gaia TYC cross-match names the same source
-as the HIP's own cross-match takes the HIP and its HD. Where that names no
-entry — no HIP source, no entry on it, or more than one — the row is queued
-with the entries and the reason, and the spine's choice ships while it waits.
+**The pair rule, the owner's (2026-11-14, extended 2026-11-17): Gaia decides,
+else HIP2's position, else review.** Of the entries naming a HIP, the one whose
+Gaia TYC cross-match names the same source as the HIP's own cross-match takes
+the HIP and its HD. Where Gaia cross-matches the HIP to no source at all, the
+entry HIP2's position falls on alone takes it
+([The positional witness](../positional-witness/README.md#the-two-witnesses),
+`positionWitness` in `PairLinks`). Where neither names one entry — a HIP source
+on no entry or on more than one, or HIP2's position on none or on both — the
+row is queued with the entries and the reason, and the spine's choice ships
+while it waits. HIP2's position is asked only where Gaia names no source for
+the HIP.
 IV/25's HD link does not vote: on a pair Tycho-2 resolved, an HD names a
 photographic blend, while the two cross-matches are positional fits to each
 star.
@@ -59,7 +65,8 @@ star.
 `applyPairRule` runs on the kept spine rows before anything else reads them, so
 the binding derivation, the label merge and the additions all see the moved
 rows. `build:astrometry-request` requests both arrangements — the rows as
-they stand and with every Gaia move applied (`applyEveryPairMove`) — so
+they stand and with every move applied, Gaia's and the position's
+(`applyEveryPairMove`) — so
 whichever entry a record ends on, queued or moved, its candidates were
 pulled. A move changes one of two things:
 
@@ -78,34 +85,56 @@ pulled. A move changes one of two things:
   `withRecordMoves`). The receiver must carry no HIP of its own, and no two
   HIPs may move onto one entry; either fails the build.
 
-**A move stands only where the moved record binds the HIP's source.** The
+Each move names its witness (`PairWitness`): a Gaia move's lineage evidence is
+the HIP's source, a position move's every entry's separation from HIP2's
+carried position, under its own codes (`merge.pair.position.*`).
+
+**A Gaia move stands only where the moved record binds the HIP's source.** The
 binding derivation ([Both gates weigh every candidate](../binding/README.md#both-gates-weigh-every-candidate))
 runs on the record as the move would leave it; where it ships anything but the
 source Gaia's two cross-matches named — the magnitude gate finding G more than
 a magnitude below the record's printed V, or SIMBAD giving the source to
 another component — Gaia contradicts itself, so the HIP is queued
 (`gate_refused`) rather than moved. On those pairs Gaia's HIP cross-match
-most likely names the fainter star.
+most likely names the fainter star. A position move has no source for the
+gates to hold it to.
 
-**A move stands only where SIMBAD names the new entry by the HD the record
-ships.** After the label merge, a moved record's TYC and its HD must not name
+**A move — Gaia's or the position's — stands only where SIMBAD names the new
+entry by the HD the record ships.** After the label merge, a moved record's TYC and its HD must not name
 different components: where SIMBAD's TYC→HD pull
 ([What the TYC → HD pull adjudicates](../../simbad/README.md#what-the-tyc--hd-pull-adjudicates))
-names the owner entry by HDs that leave out the record's shipped HD, Gaia's
-cross-match is contradicted, and the HIP is queued (`simbad_refused`). SIMBAD
+names the owner entry by HDs that leave out the record's shipped HD, the
+witness that named the entry is contradicted, and the HIP is queued
+(`simbad_refused`). SIMBAD
 naming no HD for the entry is silence, not agreement or dissent, and the move
 stands. The shipped HD is an output of the label merge, which runs on the
 moved rows, so `settlePairRule` runs the pair rule, the binding settlement
 and the merge, takes the refused HIPs out of the move set
 (`simbadRefusedMoves`), and runs them again until no move is refused; each
-pass only adds HIPs, so it ends. Measured 2026-11-15: two passes, the first
-refusing all six and the second none, at about 4.7 s each, since every pass
-re-derives the spine's bindings. Each of the six is refused again with the
-other five already refused, and none of them refuses another, so the refused
-set does not depend on the order passes find them in. The check reads only IV/25's entries
-(`iv25TycHds`), which the pull requests whatever the manifest holds, and
-fails the build on an owner entry outside IV/25
+pass only adds HIPs, so it ends. Measured 2026-11-17 over the
+<!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->8<!-- /count --> refused today,
+two of them position moves (HIP 83608, HIP 110778): two passes, the first
+refusing all of them and the second none, each pass re-deriving the spine's
+bindings. Each is refused again with every other already refused, and none of
+them refuses another, so the refused set does not depend on the order passes
+find them in. The check reads only
+the entries the pull asks for every pair it knows — IV/25's, and every
+entry of a Tycho-2 pair (`pairEntries`), which is where a position move lands
+off IV/25 (`pairRuleTycHdRequest`, the one set the pull also builds its
+request from) — through `requestedTycHds`, and fails the build on any other.
+The pair entries come off the Tycho-2 slice the manifest selects, so this
+loop runs through the Tycho-2 one
 ([Loops through committed files](../../../pipeline/README.md#loops-through-committed-files)).
+
+**A move can free the HD IV/25 printed for the entry it lands on**, as a
+close-pair correction does
+([What a freed number costs](../../classic-ids/label-merge/README.md#what-a-freed-number-costs)).
+HIP 47108 (HD 83231) moves on its position onto TYC 7167-1508-1, which SIMBAD
+calls HD 83231 and IV/25, crossed, HD 83232. Read uncorrected, the addition
+IV/25 made of 7167-1508-1 as HD 83232 falls away and HD 83232 ships on no
+star; the curated IV/25 correction re-points the pair's two HDs, so HD 83232
+lands on 7167-716-1, its own star
+([Crossed HD numbers in IV/25](../../classic-ids/README.md#crossed-hd-numbers-in-iv25)).
 
 A row the rule queues keeps the spine's entry while it waits.
 `mergeDivergences` refuses a row the rule would still move, so a move cannot
@@ -115,7 +144,7 @@ be reported without being applied.
 
 `data/membership/pair-review.tsv`, keyed on the record's five identifier cells,
 one row per HIP the pair rule names no owner for: `entries`, every Tycho-2
-entry naming the HIP, and `reason` — `no_hip_source`, `no_entry_matches`,
+entry naming the HIP, and `reason` — `unwitnessed`, `no_entry_matches`,
 `several_match`, `gate_refused` or `simbad_refused`, as
 [Applying the pair rule](#applying-the-pair-rule) defines them. It is a view of
 the `merge.pair.review.*` lineage rows, and the spine's entry ships on every
@@ -135,7 +164,17 @@ gate (i) matches it). The build fails on a disposition whose `entries` no
 longer match the pair, so a Tycho-2 or Gaia change reopens the review; on a
 `keep_entry` off the pair; and on a HIP the rule does not queue once the
 SIMBAD passes settle, since a `simbad_refused` HIP is an ordinary move until a
-later pass queues it. Settling the
+later pass queues it.
+
+**`tycho2_photometry` is recomputed, not taken on trust.** A disposition on
+that basis keeps the entry whose `VT` is nearest Hipparcos's printed V for the
+HIP, and `requirePhotometricKeeps` fails the build where it does not, where
+the two nearest tie, or where either magnitude is missing. It reads `VT`, not
+the Johnson V the printed-V cascade reduces from `BT` and `VT`: Tycho-2 prints
+no `BT` for the fainter entry of most close pairs, and a ranking of two
+entries against one V needs no colour term. It settles the pairs neither Gaia nor HIP2's position can: two
+Tycho-2 entries closer together than Hipparcos's position can separate, or a
+resolved pair Gaia names no source for. Settling the
 queue is `stellata-hooj.17.11.5`.
 
 ## The divergence ledger

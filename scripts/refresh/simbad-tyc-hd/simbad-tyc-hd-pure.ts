@@ -71,7 +71,7 @@ export function tycHdPull(outputs: DeclaredOutputs<'tycHd'>, { request, requestF
     tables: { tycHd: TYC_HD_TABLE },
     request: { request: tycs, requestFrom },
     async run(ask, log) {
-      log(`request set: ${tycs.length} Tycho ids (IV/25 union the manifest)`);
+      log(`request set: ${tycs.length} Tycho ids (IV/25, the manifest and every Tycho-2 pair's entries)`);
       const ledger = parseLedger();
       const oidByTyc = await resolveOids(ask, CORE, TYC, tycs, ledger);
       log(`resolved ${oidByTyc.size}/${tycs.length} (${percentOf(oidByTyc.size, tycs.length)}) to a SIMBAD oid`);

@@ -332,7 +332,7 @@ so attaching one another record holds would cost that record its key. The claim
 set is the spine's after the label merge and grows as each group is admitted,
 so an earlier addition blocks a later one exactly as a spine row does. That
 lands its records under four reasons — `hd_link_gap` 54,813 · `hd_omitted` 5,063 ·
-`hip_omitted` 425 · `cns5_census` 3,352 — and ledgers **<!-- count:membership-manifest/membership.component -->302<!-- /count -->** groups as
+`hip_omitted` 425 · `cns5_census` 3,352 — and ledgers **<!-- count:membership-manifest/membership.component -->290<!-- /count -->** groups as
 `component:<anchor>`, not as records. They are not the ~90 bright-double
 secondaries above, which reach the manifest as HD-addition records or as second
 HD numbers on spine TYCs: five are the second of such a pair with neither
@@ -448,12 +448,15 @@ primaries disagree with it there: IV/25 gives the HD to the other entry on 451
 regenerated), while over the
 corrected rows Gaia's two cross-matches put the HIP's source on the spine's
 entry for <!-- count:membership-manifest/membership.merge.pair.confirmed -->4,603<!-- /count -->, on the other entry for the <!-- count:membership-manifest/membership.merge.pair.moves -->163<!-- /count --> the rule moves (plus the
-one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused -->6<!-- /count --> SIMBAD contradict, below), and on no
-single entry for the rest. The rule
-(the owner's, 2026-11-14): **Gaia decides, else review** — the entry the HIP's
-own Gaia source sits on takes the HIP and its HD; with no such entry, or where
-the binding gates or SIMBAD's TYC→HD cross-identification contradict the
-move, the row is queued and the spine's choice ships meanwhile
+one move onto another record, and the <!-- count:membership-manifest/membership.merge.pair.review.gate-refused -->6<!-- /count --> the binding gates and <!-- count:membership-manifest/membership.merge.pair.review.simbad-refused-move -->8<!-- /count --> SIMBAD contradict, below), and on no
+single entry for the rest. Where Gaia cross-matches the HIP to no source at
+all, HIP2's position confirms the spine's entry for <!-- count:membership-manifest/membership.merge.pair.position.confirmed -->988<!-- /count --> and moves
+<!-- count:membership-manifest/membership.merge.pair.position.moves -->44<!-- /count --> records onto the other. The rule (the owner's, 2026-11-14, extended
+2026-11-17): **Gaia decides, else HIP2's position, else review** — the entry
+the HIP's own Gaia source sits on takes the HIP and its HD, or where Gaia
+names no source, the one entry HIP2's position falls on; with no such entry,
+or where the binding gates or SIMBAD's TYC→HD cross-identification contradict
+the move, the row is queued and the spine's choice ships meanwhile
 ([The pair rule](/scripts/catalog/membership/merge-derivation/README.md#connected-is-not-unique--the-pair-rule)).
 The cells a primary fills where the spine row leaves them empty, and the filled
 cells a primary's link fills with other values, are on the same surface. `build:membership` applies the pair rule
@@ -466,7 +469,7 @@ measures the rest in a shadow that moves no row, and writes
 
 | Column | Readers today | Owned replacement | Child |
 |---|---|---|---|
-| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip <!-- count:membership-manifest/labelSpineOnly.hip -->18,503<!-- /count --> · hd <!-- count:membership-manifest/labelSpineOnly.hd -->12,697<!-- /count --> · hr <!-- count:membership-manifest/labelSpineOnly.hr -->1,697<!-- /count --> · gl <!-- count:membership-manifest/labelSpineOnly.gl -->1,222<!-- /count --> rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/additions/README.md#grouping-and-admission)), the pair rule above, and every row of `merge-divergence.tsv` settled by a coded rule in lineage, queued for review, or a ledgered manifest change | `stellata-hooj.17.2` (the shadow and its ledger) → `stellata-hooj.17.11` (the switch) |
+| `tyc` `hip` `hd` `hr` `gl` | `build:membership` — the merge decision, the correction key (`spine-corrections.tsv`), and the label merge's backstop where the overlay asserts nothing (hip <!-- count:membership-manifest/labelSpineOnly.hip -->18,503<!-- /count --> · hd <!-- count:membership-manifest/labelSpineOnly.hd -->12,699<!-- /count --> · hr <!-- count:membership-manifest/labelSpineOnly.hr -->1,698<!-- /count --> · gl <!-- count:membership-manifest/labelSpineOnly.gl -->1,222<!-- /count --> rows, `labelSpineOnly`); gate (i) through `spineDesignations`; `parity-ledger.test.ts` (the <!-- count:classic-id-overlay/classic-ids.route.disagree -->21<!-- /count --> HD/HIP route-disagreement pairs, the HD-less HRs); `build:astrometry-request` (spine TYCs narrow the cross-walk; the derivation's candidates) | the link graph above, seeded one row per Tycho-2 star / I/239 HIP / CNS5 entry the way the additions already are ([The additions](/scripts/catalog/membership/additions/README.md#grouping-and-admission)), the pair rule above, and every row of `merge-divergence.tsv` settled by a coded rule in lineage, queued for review, or a ledgered manifest change | `stellata-hooj.17.2` (the shadow and its ledger) → `stellata-hooj.17.11` (the switch) |
 | `flam` | merge backstop (<!-- count:membership-manifest/labelSpineOnly.flam -->692<!-- /count --> rows); 2,604 attested by IV/27A + WGSN, 116 by SIMBAD's frozen identifier pull, <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> dropped to `label-drops.tsv` | IV/27A + WGSN by HD/HIP, then SIMBAD's accepted numbers ([Which SIMBAD numbers are Flamsteed numbers](/scripts/catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)); the <!-- count:membership-manifest/membership.label-drop.flamsteed-unattested -->3<!-- /count --> refused are ledgered in `data/membership/flamsteed-refusals.tsv`, which `build:membership` derives from SIMBAD and IV/27A without the spine | `stellata-hooj.17.4` (done) |
 | `bayer` | **none — `17.3.1` landed.** The manifest carries no Bayer column; naming takes every Bayer designation from WGSN, then IV/27A, then V/50, by HR/HD/HIP ([The union policy](/scripts/catalog/naming/README.md#the-union-policy)) | the AT-HYG Bayer cells the union reaches no record with are frozen in `data/naming/bayer_drops.tsv` — ξ UMa B alone, whose designation the authority keys on the A record | `stellata-hooj.17.3.1` ✓ |
 | `proper` | the `Sol` sentinel (`isSol` in the spine, manifest and derivation codecs and in `readStars`); copied to the manifest; naming's last join key (<!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count --> records — Albireo B, Kaewkosin, Maru); the spelling alias where the IAU superseded it; the <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> disposed names (26 display, 20 alias); the membership gate test's [§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them) residual gate | Sol → the generator emits its one row. <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> → WGSN by identifier, already. 3 → `data/naming/name_overrides.tsv`, SID-keyed. <!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> by class: 8 component-letter compose by borrowing ([§ 3](/docs/star-naming.md#3-the-ladder)); 21 discovery, 2 catalogue and 3 Gould designations need a cited source — the same SIMBAD identifier pull, or curated rows; 2 Latin-Bayer genitives and 10 unattributed drop to a ledger as aliases | `stellata-hooj.17.3` |
@@ -529,7 +532,15 @@ GJ 66A (TYC 8478-1394-2) and Gaia on TYC 8478-1394-1, the HD 10361 / GJ 66B
 record. The HIP alone moves between the two records, and allocation follows
 [§ 4.3](/docs/sid.md#43-ledger--datasidledgertsv) unchanged: GJ 66B now carries
 SID 317282's key `hip:7751`, so its own SID 317472 merges into 317282, and
-GJ 66A, left with no ledger key, mints. None from `17.6`, `17.5`, `17.7`.
+GJ 66A, left with no ledger key, mints. `17.11.5.1`'s position moves keep
+every moved record's SID; where the moved record binds the source a
+magnitude-term row already drew as a star of its own, that row's Gaia-keyed
+SID merges into it (27 merges, `allocation.merged.same-class`). HD 83232's SID 343235 keeps
+its key `hd:83232` while the curated IV/25 correction moves it off
+TYC 7167-1508-1, where HIP 47108 (HD 83231) now sits, onto 7167-716-1, the star
+SIMBAD calls HD 83232, whose Gaia-keyed SID 119522 merges into it
+([Crossed HD numbers in IV/25](/scripts/catalog/classic-ids/README.md#crossed-hd-numbers-in-iv25)).
+None from `17.6`, `17.5`, `17.7`.
 Bindings: none — `17.6` restated the verdicts and moved no id, confirmed on a
 build. Pins that retired with `17.6`: `derivedVsFrozen`, `derivedContestedMatch`
 and the frozen-relative verdict names. Pins still to retire with the file:

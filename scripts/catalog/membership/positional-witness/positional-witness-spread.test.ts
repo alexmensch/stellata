@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { beforeAll, describe, expect, it } from 'vitest';
@@ -16,7 +15,8 @@ import { linkTablesFrom, partitionRow } from '../../spine/association-audit-pure
 import { loadPrimaryTables } from '../../spine/primaries-tables';
 import { applySpineCorrections } from '../spine-corrections/spine-corrections-pure';
 import { SPINE_CORRECTIONS } from '../spine-corrections/spine-corrections-source';
-import { PAIR_REVIEW } from '../pair-review-tsv';
+import { pairLinksFrom } from '../merge-derivation/merge-derivation-pure';
+import { spineIds } from '../../spine/inherited-spine-pure';
 import {
   HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, V70A_WITNESS_TOLERANCE_ARCSEC,
   hipparcosAstrometry, witnessHipparcos, witnessV70a, type WitnessVerdict,
@@ -41,7 +41,7 @@ function tallyKinds(verdicts: readonly WitnessVerdict[]): Record<WitnessVerdict[
   return out;
 }
 
-describe.skipIf(!readable)('the witness over the committed queues (README.md#the-tolerances)', () => {
+describe.skipIf(!readable)('the witness over the populations it settles (README.md#the-tolerances)', () => {
   let tycho2: ReadonlyMap<string, Tycho2Row>;
   beforeAll(() => { tycho2 = TYCHO2.read(); });
   const candidates = (tycs: readonly string[]): Tycho2Row[] => tycs.map((tyc) => {
@@ -50,17 +50,24 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
     return entry;
   });
 
-  it("settles the pair queue's no_hip_source HIPs on HIP2's position", () => {
+  it("witnesses every spine pair whose HIP Gaia cross-matches to no source on HIP2's position", async () => {
+    const spine = readArtifact(INHERITED_SPINE);
+    const { kept } = applySpineCorrections(spine, SPINE_CORRECTIONS.read());
+    const { links, hipEntries } = pairLinksFrom(await loadPrimaryTables(spine.map((r) => r.tyc).filter((t) => t !== '')));
     const hip2 = HIP2.read().astrometry;
-    const rows = PAIR_REVIEW.parse(readFileSync(resolve(REPO_ROOT, PAIR_REVIEW.file), 'utf-8'))
-      .filter((r) => r.reason === 'no_hip_source');
-    const verdicts = rows.map((r) => {
-      const row = hip2.get(r.hip!);
-      const hip = row === undefined ? null : hipparcosAstrometry(row);
-      if (hip === null) throw new Error(`HIP ${r.hip}: no HIP2 position and proper motion`);
-      return witnessHipparcos(hip, candidates(r.entries));
+    const pairs = kept.flatMap((row) => {
+      const hip = spineIds(row).hip;
+      const entries = hip === null ? [] : hipEntries.get(hip) ?? [];
+      return hip !== null && entries.length > 1 && entries.includes(row.tyc) && links.sourceOf.hip(hip) === null
+        ? [{ hip, entries }] : [];
     });
-    expect(rows.length).toBe(1046);
+    const verdicts = pairs.map(({ hip: hipNumber, entries }) => {
+      const row = hip2.get(hipNumber);
+      const hip = row === undefined ? null : hipparcosAstrometry(row);
+      if (hip === null) throw new Error(`HIP ${hipNumber}: no HIP2 position and proper motion`);
+      return witnessHipparcos(hip, candidates(entries));
+    });
+    expect(pairs.length).toBe(1046);
     expect(tallyKinds(verdicts)).toEqual({ match: 1034, none: 2, several: 10 });
     const nearest = verdicts.map((v) => v.separations[0].separationArcsec);
     expect(gapAround(nearest, HIPPARCOS_WITNESS_TOLERANCE_ARCSEC, 2)).toEqual([0.36, 1.05]);
@@ -68,7 +75,7 @@ describe.skipIf(!readable)('the witness over the committed queues (README.md#the
       (v) => v.separations.filter((s) => s.separationArcsec <= V70A_WITNESS_TOLERANCE_ARCSEC).length > 1,
     );
     expect(insideV70aTolerance.length).toBe(1024);
-  });
+  }, 120_000);
 
   it("tests every unlinked GJ cell's V/70A position against the row's own TYC", async () => {
     const spine = readArtifact(INHERITED_SPINE);
