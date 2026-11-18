@@ -149,8 +149,8 @@ describe.skipIf(!ADJUDICATION_INPUTS.every(lfsContentReadable))(
 
     it('answers for the stated share of the rows carrying both cells', () => {
       expect(counts.bothCells).toBe(353364);
-      expect(counts.answered).toBe(331761);
-      expect(counts.silent).toBe(21603);
+      expect(counts.answered).toBe(331760);
+      expect(counts.silent).toBe(21604);
     });
 
     it('finds 218 dissents, every one on an internally consistent IV/25 entry', () => {

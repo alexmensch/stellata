@@ -70,9 +70,9 @@ binding-review-dispositions.tsv
                          simbad_dr2_object · gaia_photometry · pair_component
                          · shared_source · tycho2_photometry ·
                          hip2_position) and the
-                         measured evidence. 54 rows:
+                         measured evidence. 57 rows:
                          9 take the derived id, 3 ship none (44 Boo,
-                         GJ 3775, GJ 3981), 42 another — 31 of those an id
+                         GJ 3775, GJ 3981), 45 another — 31 of those an id
                          only the cited basis stands behind
                          (membership.disposition.asserted). A kept value rides the manifest
                          as binding=reviewed.
@@ -112,8 +112,9 @@ pair-review.tsv          Regular git. Pipeline-derived. One row per HIP of
                          (/scripts/catalog/membership/merge-derivation/README.md#the-pair-review-queue).
 pair-review-dispositions.tsv
                          Regular git. Hand-curated. The entry each disposed
-                         HIP ships on, as the authority: 11 rows,
-                         every one on `tycho2_photometry`
+                         HIP ships on, as the authority: 21 rows,
+                         17 on `tycho2_photometry`, 3 on `hip2_position`,
+                         1 on `pair_component`
                          (/scripts/catalog/membership/merge-derivation/README.md#disposing-a-queued-pair).
 ```
 

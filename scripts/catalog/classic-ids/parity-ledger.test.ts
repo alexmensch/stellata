@@ -94,7 +94,7 @@ describe.skipIf(!ledgerReadable)('label delta vs the SID ledger', () => {
     // Pinned, not merely allowed: every one of these is a designation two
     // records could answer to, so the set growing is a collision-guard
     // question, not routine drift.
-    expect(reOwned.length).toBe(26);
+    expect(reOwned.length).toBe(25);
     expect(reOwned.filter((d) => bridgeEndpoints.has(d))).toEqual([]);
   });
 });

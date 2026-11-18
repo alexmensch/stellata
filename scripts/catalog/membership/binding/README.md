@@ -250,7 +250,7 @@ pair-review dispositions use it, and the build recomputes it,
 `hip2_position` (of a Tycho-2 pair's entries, the one HIP2's carried position
 falls on alone; pair-review only, recomputed the same way). Each disposition's code says what it kept and whether the derivation
 had queued the row: `disposition.<derived|other|none>.<queued|settled>`. Today
-9 keep the derived id, 42 another and 3 none. The nine
+9 keep the derived id, 45 another and 3 none. The nine
 are the four DR2 ids SIMBAD carries a DR3 successor for, HD 2094 (the HIP
 record follows its canonical key onto the primary), Gl 225.2 A, HD 199461
 (SIMBAD names the brighter of a blended pair whose fainter member the TYC
