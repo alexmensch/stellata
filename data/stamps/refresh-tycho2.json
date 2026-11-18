@@ -1,5 +1,7 @@
 {
-  "inputs": {},
+  "inputs": {
+    "data/classic-ids/tyc2_hd_corrections.tsv": "10c13927d7a4ae11848dd37a7edc6acafe5e4ae5"
+  },
   "outputs": {
     "data/tycho2/tycho2_main.tsv": "7e3b326830215eff59f29ca70f2e2651caf369bf",
     "data/tycho2/tycho2_suppl1.tsv": "bbc669983c0cfabdb73ed013769b5629382974ba"
@@ -9,7 +11,7 @@
     "CfA"
   ],
   "release": "VizieR I/259/tyc2, VizieR I/259/suppl_1",
-  "request": "11e738693733e46cc884d2a6646e4bed3e38e1af",
+  "request": "1612d6df4a27fed22b9c273a11445c2a31ce3e79",
   "requestFrom": [
     "data/membership/membership-manifest.tsv",
     "data/classic-ids/tyc2_hd.tsv"

@@ -7,7 +7,9 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { REPO_ROOT, lfsContentReadable } from '../../../util/paths';
 import { MEMBERSHIP_MANIFEST } from '../membership-manifest-tsv';
 import { MAGNITUDE_PULL } from './magnitude-pull-source';
-import { readMagnitudeTerm, readMagnitudeTermAstrometry } from './magnitude-term';
+import { readMagnitudeTermAstrometry } from './magnitude-term';
+import { hip2Near, readMagnitudeTerm } from './magnitude-selection';
+import { HIP2 } from '../../sources/hip2-source';
 import {
   magnitudeTermNewcomers,
   type MagnitudeTermSelection,
@@ -29,7 +31,7 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   // the union — the term is ON. Deduping the kept set against the whole file
   // would measure the term against its own output and report zero newcomers.
   beforeAll(async () => {
-    selection = await readMagnitudeTerm(GATE_FLOOR_V);
+    selection = await readMagnitudeTerm(GATE_FLOOR_V, hip2Near(HIP2.read().astrometry));
     boundSourceIds = new Set<string>();
     committedTermRows = 0;
     for (const row of MEMBERSHIP_MANIFEST.rows(readFileSync(MANIFEST_PATH, 'utf8'))) {
@@ -48,9 +50,9 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
   });
 
   it('unions onto the primaries at the record total the floor implies', () => {
-    expect(boundSourceIds.size).toBe(375_182);
+    expect(boundSourceIds.size).toBe(375_369);
     const newcomers = magnitudeTermNewcomers(selection.keptSourceIds, boundSourceIds);
-    expect(newcomers.length).toBe(598_421);
+    expect(newcomers.length).toBe(598_234);
     expect(boundSourceIds.size + newcomers.length).toBe(973_603);
   });
 
@@ -59,12 +61,12 @@ describe.skipIf(!readable)('the floor over the committed pull', () => {
     expect(committedTermRows).toBe(newcomers.length);
   });
 
-  it('keeps 331,508 sources the primaries already bind', () => {
+  it('keeps 331,695 sources the primaries already bind', () => {
     let both = 0;
     for (const sourceId of selection.keptSourceIds) {
       if (boundSourceIds.has(sourceId)) both++;
     }
-    expect(both).toBe(331_508);
+    expect(both).toBe(331_695);
   });
 
   it('reads the 5p astrometry of exactly the sources it is handed', async () => {

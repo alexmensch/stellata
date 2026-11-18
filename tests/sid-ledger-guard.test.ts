@@ -51,10 +51,10 @@ describe.skipIf(!available)('sid ledger guard', () => {
     expect(wrong.map((e) => `${e.event} of sid ${e.sid}: ${e.code}`)).toEqual([]);
   });
 
-  it('retired state carries over from the migrated retirement files, plus the pair rule\'s 48 merges, the identity witness\'s 18, the position moves\' 27 and HD 83232\'s 1', () => {
+  it('retired state carries over from the migrated retirement files, plus the pair rule\'s 48 merges, the identity witness\'s 18, the position moves\' 27, HD 83232\'s 1 and the position witness\'s 84', () => {
     const rows = allEvents();
-    expect(retiredSids(rows).size).toBe(3927);
-    expect(sidSuccessorPairs(rows).length).toBe(3685);
+    expect(retiredSids(rows).size).toBe(4011);
+    expect(sidSuccessorPairs(rows).length).toBe(3769);
     expect(new Set(rows.filter((e) => e.event === 'reinstate').map((e) => e.sid)).size).toBe(20);
   });
 

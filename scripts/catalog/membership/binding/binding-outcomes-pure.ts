@@ -34,10 +34,17 @@ export function rowDeriver(
   };
 }
 
+const RESCUE_OUTCOMES = { component: 'rescued', identity: 'identified', position: 'positioned' } as const;
+
 /** A winning derivation's outcome: bound outright, or by the witness that rescued it. */
-export function boundOutcome(d: DerivedBinding): 'bound' | 'rescued' | 'identified' {
-  if (d.rescue === null) return 'bound';
-  return d.rescue === 'component' ? 'rescued' : 'identified';
+export function boundOutcome(d: DerivedBinding): 'bound' | (typeof RESCUE_OUTCOMES)[keyof typeof RESCUE_OUTCOMES] {
+  return d.rescue === null ? 'bound' : RESCUE_OUTCOMES[d.rescue];
+}
+
+/** Why a winning derivation queues for review: a disputed position outranks a passing runner-up. */
+export function contestedBy(d: DerivedBinding): 'position' | 'runner-up' | null {
+  if (d.position?.disputedBy != null) return 'position';
+  return passingRunnersUp(d).length > 0 ? 'runner-up' : null;
 }
 
 /** A row whose identity witness went unconfirmed: queued only once the magnitude
@@ -76,6 +83,29 @@ export function queuedIdentities(
 export function identityWitnessed(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
   if (d.identity === null) return [];
   return [{ key, outcome: { kind: 'identity-witness', subject, ...d.identity } }];
+}
+
+/** The position witness's evidence, wherever it bound the row. */
+export function positionWitnessed(key: string, subject: RefusalSubject, d: DerivedBinding): KeyedOutcome[] {
+  if (d.position === null) return [];
+  const { witness, disputedBy } = d.position;
+  return [{ key, outcome: {
+    kind: 'position-witness', subject, sourceId: witness.sourceId, separationArcsec: witness.separationArcsec,
+    gMag: witness.gMag, vMag: witness.vMag, others: witness.others, disputedBy,
+  } }];
+}
+
+/** README.md#the-position-witness: the weakest witness never withholds another row's binding by colliding with it. */
+export function requireNoPositionCollision(
+  derivations: readonly (DerivedBinding | null)[], collided: ReadonlySet<string>, where: string,
+): void {
+  const positioned = derivations.filter((d) => d?.rescue === 'position' && collided.has(d.sourceId!));
+  if (positioned.length > 0) {
+    throw new Error(
+      `${where}: the position witness binds ${positioned.map((d) => d!.sourceId).join(', ')}, which another `
+        + 'row also reaches; the collision rule would withhold both — settle it before the witness may bind',
+    );
+  }
 }
 
 /** The sources more than one row or group reaches. */

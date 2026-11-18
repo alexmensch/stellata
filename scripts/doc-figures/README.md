@@ -53,7 +53,7 @@ rewrite-doc-figures.ts     pnpm run docs:figures. Rewrites stale figures in
 <!-- count:<stem>/<json.path>[ sigN|kN|dN] -->FIGURE<!-- /count -->
 ```
 
-In prose the marker is invisible: "<!-- count:membership-manifest/membership.component -->290<!-- /count -->
+In prose the marker is invisible: "<!-- count:membership-manifest/membership.component -->289<!-- /count -->
 groups resolve onto an existing record" reads as a plain sentence, its figure
 owned by `membership-manifest/membership.component`.
 

@@ -23,9 +23,16 @@ scripts/catalog/membership/magnitude-term/
   magnitude-pull-source.ts      MAGNITUDE_PULL, the pull's declaration
                                 (../../../util/sources/), keyed for lineage
                                 on its Gaia DR3 source_id.
-  magnitude-term.ts             The streaming reads: the floor's selection and
-                                the 5p astrometry over the ~200 MB pull, and
-                                the term's own source_ids out of the manifest;
+  magnitude-selection.ts        The floor's selection, streamed over the
+                                ~200 MB pull, with HIP2 indexed for each HIP's
+                                nearby kept sources (`readFloorSelection`, the
+                                one reader the builds and gate tests share).
+                                Reaches no manifest declaration:
+                                build:astrometry-request reads it, and must not
+                                read build:membership's output.
+  magnitude-term.ts             The record build's streaming reads: the 5p
+                                astrometry over the pull, and the term's own
+                                source_ids out of the manifest;
                                 addMagnitudeTermAstrometry, the term's rows
                                 into a Gaia astrometry map.
   magnitude-term-gate.test.ts   The floor measured over the COMMITTED pull and
@@ -91,8 +98,8 @@ run's derivation moved.
 and loses precision silently as a float64, so a numeric key merges distinct
 sources without erroring.
 
-Measured 2026-11-17, the union holds 375,182 bound source_ids, 331,508 of them
-in the kept set, so 598,421 rows are the term's own and the union is 973,603
+Measured 2026-11-18, the union holds 375,369 bound source_ids, 331,695 of them
+in the kept set, so 598,234 rows are the term's own and the union is 973,603
 source_ids; the count snapshot holds the term's rows as its
 `admit.magnitude.*` codes. The record total that implies, once promotion and parking
 apply: [The record total the floor implies](#the-record-total-the-floor-implies--measured), below.
@@ -132,13 +139,13 @@ the committed build (`recordCount` in `../../build-catalog-expected.json`):
 | term | projected | measured | now |
 |---|---|---|---|
 | `V <= 11` source_ids from the pull | 929,929 | 929,929 | <!-- count:membership-manifest/magnitudeTerm.kept -->929,929<!-- /count --> |
-| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,182 |
-| in both | 327,701 | 327,701 | 331,508 |
+| distinct `gaia_source_id` in the manifest | 370,994 | 370,994 | 375,369 |
+| in both | 327,701 | 327,701 | 331,695 |
 | source_id union | 973,222 | 973,222 | 973,603 |
-| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,741 |
-| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,171<!-- /count --> synthetic |
-| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,418 |
-| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,604<!-- /count -->** |
+| manifest rows carrying no `gaia_source_id` | + 5,938 | + 5,938 | + 1,554 |
+| companions promoted to their own record | + 16,226 | **+ 14,656** | + <!-- count:build-catalog/promotion.minted.keyed -->3,507<!-- /count --> keyed + <!-- count:build-catalog/promotion.minted.synthetic -->11,172<!-- /count --> synthetic |
+| rows parked, so never a record | − 10,429 | **− 10,748** | − 10,313 |
+| **records** | ~984,957 | **983,068** | **<!-- count:build-catalog/recordCount -->979,523<!-- /count -->** |
 
 The manifest side reproduced exactly: `build:membership` at the floor wrote
 979,160 rows and every primaries-side count held. Both build-side terms
@@ -160,8 +167,8 @@ rows reach the record only through a stored same-as edge
 
 | reason | today | at `V <= 11` | now |
 |---|---|---|---|
-| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/placement.park.no-parallax-published -->7,494<!-- /count --> |
-| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/placement.park.refused-no-defensible-parallax -->2,286<!-- /count --> |
+| `no_parallax_published` | 3,423 | 9,032 | <!-- count:build-catalog/placement.park.no-parallax-published -->7,390<!-- /count --> |
+| `refused_no_defensible_parallax` | 975 | 1,027 | <!-- count:build-catalog/placement.park.refused-no-defensible-parallax -->2,285<!-- /count --> |
 | `no_v_magnitude` | 688 | 688 | <!-- count:build-catalog/placement.park.no-v-magnitude -->637<!-- /count --> |
 | `no_position` | 1 | 1 | <!-- count:build-catalog/placement.park.no-position -->1<!-- /count --> |
 
@@ -304,8 +311,10 @@ The pull carries full 5p astrometry and `radial_velocity` for every row, on
 `gaia_dr3_astrometry.tsv` uses. `readMagnitudeTermAstrometry` therefore
 feeds `gaiaAstrometryAccumulator` (`../../sources/gaia-astrometry-source.ts`), the
 fold behind the same parser, so the direction cascade stays single-sourced and
-the overlap between the two files cannot drift. No request-file extension
-reaches these sources, and none is needed.
+the overlap between the two files cannot drift. The term needs no request of
+its own; a term row the request carries anyway — a candidate some other
+contribution names, such as a floor source within 1″ of a HIP — keeps the
+catalogue file's row ([The direction tier's two Gaia files](../../parse/README.md#the-direction-tiers-two-gaia-files)).
 
 It takes a keep-set and streams, for the reason `../../parse/gaia-xmatch.ts`
 does: parsing 1.25 M rows to join a subset holds the whole table in memory for

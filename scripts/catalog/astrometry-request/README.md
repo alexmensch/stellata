@@ -2,7 +2,7 @@
 
 The source_id list the one Gaia 5p pull is made against. `pnpm run
 build:astrometry-request` emits `data/gaia/gaia_astrometry_source_id_request.tsv`
-— **388,984** ids, the union of four contributions the table's
+— **389,665** ids, the union of four contributions the table's
 consumers need ([The request is a union](#the-request-is-a-union-and-why-that-is-not-a-compromise)). Not a network pull and not on the
 `build:catalog` path: this is **input preparation** for `scripts/refresh/`,
 which is why it sits beside the record build rather than inside it
@@ -17,7 +17,9 @@ scripts/catalog/astrometry-request/
                                   candidates (Stages 1–2 run in-process) and
                                   the review dispositions' kept ids, sorts,
                                   and emits the request through
-                                  emitArtifacts. Reads no build:membership or
+                                  emitArtifacts. Streams the ~200 MB magnitude
+                                  pull and reads HIP2 for the floor sources
+                                  near each HIP. Reads no build:membership or
                                   build:binaries output. Runs under the CI
                                   heap cap (../../util/heap-budget/).
   astrometry-request-outputs.ts   ASTROMETRY_REQUEST_OUTPUTS — the request
@@ -67,11 +69,14 @@ source proposes
 contribution. `membership-manifest-gate.test.ts` asserts the result: every
 `term = primaries` manifest row's `gaia_source_id` is in the request.
 
-The 1,779 primaries rows carrying none are the no-Gaia tier. The
-`term = magnitude` rows are not requested: their astrometry is the magnitude
-pull's own
+The 1,554 primaries rows carrying none are the no-Gaia tier. The
+`term = magnitude` rows are not requested for their own sake: their astrometry
+is the magnitude pull's own
 ([The astrometry comes with it](../membership/magnitude-term/README.md#the-astrometry-comes-with-it)),
-and requesting them would re-pull 598,464 rows that file already holds.
+and requesting them all would re-pull 598,234 rows that file already holds.
+5,274 are in the request anyway because a contribution names them as a
+candidate — a refused binding, a Stage 2 component, a floor source within 1″
+of a HIP the position witness could bind.
 
 ## The request is a union, and why that is not a compromise
 
@@ -81,9 +86,9 @@ different sets, so the request is the union of all four:
 | Contribution | Ids | Consumer |
 |---|---|---|
 | `../classic-ids/`' binding-gate candidates | 354,987 | the gate's `phot_g_mean_mag` evidence |
-| `../membership/`' binding-derivation candidates | 376,306, +21,557 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows both as they stand and with every move the pair rule's Gaia test makes, and every pair-review disposition, applied, so either entry a queued pair can ship on is covered ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)), and every addition item `additionItemCells` enumerates over each arrangement, admitted or not |
-| `../../binaries/`' Stage 2 candidates | 21,737, +12,410 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
-| `binding-review-dispositions.tsv`' `keep_source_id` column | 53, +30 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
+| `../membership/`' binding-derivation candidates | 377,079, +22,327 beyond the gate's | the derivation's `phot_g_mean_mag` evidence — every source any primaries row could be bound to: the corrected spine's rows both as they stand and with every move the pair rule's Gaia test makes, and every pair-review disposition, applied, so either entry a queued pair can ship on is covered ([Applying the pair rule](../membership/merge-derivation/README.md#applying-the-pair-rule)), and every addition item `additionItemCells` enumerates over each arrangement, admitted or not |
+| `../../binaries/`' Stage 2 candidates | 24,512, +12,323 beyond the two above | the binaries' Stages 1–6 — every source a component resolves to and every candidate a Stage 2 gate weighs — and the parallax cascade's `pair_member_parallax` tier, whose pair members are a subset |
+| `binding-review-dispositions.tsv`' `keep_source_id` column | 51, +28 beyond the three above | the record build: a reviewed binding's direction / rv / V / ci cascades |
 
 `build:astrometry-request` prints every figure in this table — each
 contribution's own size and its increment over the ones above it — so all four

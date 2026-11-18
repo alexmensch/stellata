@@ -20,9 +20,10 @@ import {
   type PositionEvidence,
 } from './binding-derivation-pure';
 import { printedVOf } from '../../photometry/photometry-fixture';
+import { heldMoreThanOnce, requireNoPositionCollision } from './binding-outcomes-pure';
 
 const FROM = { file: 'fixture.tsv', hint: 'h' };
-const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null };
+const NO_POSITIONS: PositionEvidence = { hipparcos: () => null, gaia: () => null, keptNearHip: new Map() };
 
 const simbadBySourceId = new Map<string, SimbadXids>([
   ['100', { oid: 0, hip: 10, tyc: '1-1-1', gj: null }],
@@ -266,6 +267,7 @@ describe('deriveBinding', () => {
     const at = (raDeg: number, decDeg: number): PositionEvidence => ({
       hipparcos: (hip) => (hip === 90 ? hip90 : null),
       gaia: (id) => (id === '900' ? { raDeg, decDeg, pmRaMasyr: 1.3552, pmDecMasyr: 0.2501, refEpoch: 2016 } : null),
+      keptNearHip: new Map(),
     });
     const derive = (positions: PositionEvidence) => deriveBinding(
       candidates({ simbad: '900' }), rowGateEvidence({ tyc: '', hip: '90', gl: '' }, blend, index, positions),
@@ -340,13 +342,87 @@ describe('deriveBinding', () => {
   });
 });
 
+// f Pup's figures: README.md#the-position-witness.
+describe('the position witness', () => {
+  const fPup = { sourceId: '5588312348336552576', gMag: 4.411, separationArcsec: 0.221 };
+  const near = (hip: number, sources: { sourceId: string; gMag: number; separationArcsec: number }[]): PositionEvidence =>
+    ({ ...NO_POSITIONS, keptNearHip: new Map([[hip, sources]]) });
+  const evidence = bindingEvidence(
+    new Map([['5588312348336552576', 4.411], ['far', 9.0], ['500', 9.6], ['501', 10.1], ['other', 4.5]]),
+    WDS_XIDS, printedVOf({ hip: new Map([[37096, 4.53], [50, 9.16]]) }),
+  );
+  const derive = (c: Partial<BindingCandidates>, hip: number, positions: PositionEvidence) => deriveBinding(
+    candidates(c), rowGateEvidence({ tyc: '', hip: String(hip), gl: '' }, evidence, simbad, positions),
+  );
+
+  it('binds f Pup (HIP 37096), which no candidate reaches, to the floor source its carried position lands on', () => {
+    const d = derive({}, 37096, near(37096, [fPup]));
+    expect(d).toMatchObject({ sourceId: fPup.sourceId, via: [], binding: 'position_witnessed', rescue: 'position' });
+    expect(d.position).toEqual({ witness: { ...fPup, others: 0, vMag: 4.53 }, disputedBy: null });
+  });
+
+  it('takes the brightest of several, ties on the source id', () => {
+    const pair = [{ sourceId: '9', gMag: 10.08, separationArcsec: 0.64 }, { sourceId: '8', gMag: 9.53, separationArcsec: 0.12 }];
+    expect(derive({}, 1248, near(1248, pair)).position?.witness).toMatchObject({ sourceId: '8', others: 1 });
+    const tied = [{ sourceId: '20', gMag: 9.5, separationArcsec: 0.1 }, { sourceId: '3', gMag: 9.5, separationArcsec: 0.9 }];
+    expect(derive({}, 1248, near(1248, tied)).sourceId).toBe('3');
+  });
+
+  it('takes a refused candidate off the refusals when it is the witness\'s source', () => {
+    const d = derive({ hip: 'far' }, 37096, near(37096, [{ sourceId: 'far', gMag: 9.0, separationArcsec: 0.3 }]));
+    expect(d).toMatchObject({ sourceId: 'far', via: ['hip'], binding: 'position_witnessed', rejected: [] });
+    expect(d.position?.disputedBy).toBeNull();
+  });
+
+  it('records the source Gaia\'s HIP cross-match names instead, so the row queues', () => {
+    expect(derive({ hip: 'far' }, 37096, near(37096, [fPup])).position?.disputedBy).toBe('far');
+  });
+
+  it('never takes a source SIMBAD letters as another component than the HIP\'s', () => {
+    const d = derive({}, 50, near(50, [{ sourceId: '501', gMag: 10.1, separationArcsec: 0.3 }]));
+    expect(d).toMatchObject({ sourceId: null, rescue: null, position: null });
+    expect(derive({}, 50, near(50, [
+      { sourceId: '501', gMag: 10.1, separationArcsec: 0.3 }, { sourceId: '500', gMag: 9.6, separationArcsec: 0.1 },
+    ])).position?.witness).toMatchObject({ sourceId: '500', others: 0 });
+  });
+
+  it('leaves a row SIMBAD names a refused source for to the identity witness, confirmed or not', () => {
+    const index = indexSimbadSources(new Map([['far', { oid: 0, hip: 37096, tyc: null, gj: null }]]), []);
+    const unconfirmed: PositionEvidence = { ...near(37096, [fPup]), hipparcos: () => ({ raDeg: 0, decDeg: 0 }),
+      gaia: () => ({ raDeg: 10, decDeg: 10, pmRaMasyr: 0, pmDecMasyr: 0, refEpoch: 2016 }) };
+    const d = deriveBinding(candidates({ simbad: 'far' }),
+      rowGateEvidence({ tyc: '', hip: '37096', gl: '' }, evidence, index, unconfirmed));
+    expect(d).toMatchObject({ sourceId: null, position: null });
+    expect(isUnconfirmed(d)).toBe(true);
+  });
+
+  it('fails the build rather than let a position binding withhold another row\'s source', () => {
+    const positioned = derive({}, 37096, near(37096, [fPup]));
+    const crosswalk = derive({ hip: fPup.sourceId }, 37096, NO_POSITIONS);
+    const pair = [positioned, crosswalk];
+    expect(() => requireNoPositionCollision(pair, heldMoreThanOnce(pair.map((d) => d.sourceId)), 'spine bindings'))
+      .toThrow(/position witness binds 5588312348336552576/);
+    expect(() => requireNoPositionCollision([crosswalk, crosswalk], new Set([fPup.sourceId]), 'spine bindings')).not.toThrow();
+  });
+
+  it('never outranks a candidate that passes on its own', () => {
+    expect(derive({ hip: 'other' }, 37096, near(37096, [fPup]))).toMatchObject({ sourceId: 'other', rescue: null, position: null });
+  });
+});
+
 describe('derivationCandidateSourceIds', () => {
   it('collects every source any row could be bound to, gateable or not', () => {
     const rows = [
       { tyc: '1-1-1', hip: '10', gl: '' },
       { tyc: '', hip: '20', gl: 'Gl 820B' },
     ];
-    expect([...derivationCandidateSourceIds(rows, tables, cns5ByOwnKey, simbad)].sort())
+    expect([...derivationCandidateSourceIds(rows, tables, cns5ByOwnKey, simbad, new Map())].sort())
       .toEqual(['100', '200', '201', '999']);
+  });
+
+  it('adds every floor source near a row\'s HIP, whichever the position witness would take', () => {
+    const near = new Map([[20, [{ sourceId: '7', gMag: 9, separationArcsec: 0.1 }, { sourceId: '8', gMag: 9.5, separationArcsec: 0.6 }]]]);
+    expect([...derivationCandidateSourceIds([{ tyc: '', hip: '20', gl: '' }], tables, cns5ByOwnKey, simbad, near)].sort())
+      .toEqual(['7', '8', '999']);
   });
 });

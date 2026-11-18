@@ -281,11 +281,12 @@ alias rather than going unsearchable.
   have typed, and `resolves` records whether it still reaches that record.
   A record the catalogue no longer carries reads `resolves = absent` with
   an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
-  displays the runtime's identifier fallback. 3,685 changes: 12 absent
-  records, 76 fallbacks. `absent` is read off the frozen key, so a record
+  displays the runtime's identifier fallback. 3,684 changes: 15 absent
+  records, 71 fallbacks. `absent` is read off the frozen key, so a record
   that gains a Gaia binding after its row was seeded reads `absent` under
   its old `hip:` key while the catalogue still carries it (λ Equ,
-  107 Aqr A, 59 G. Cet, τ Scl A, γ¹ CrA, θ¹ Ori A, L² Pup).
+  107 Aqr A, 59 G. Cet, τ Scl A, γ¹ CrA, θ¹ Ori A, L² Pup, λ Cas, f Pup,
+  NSV 19645).
 - **`naming-duplicates.tsv`** — every display label two or more records
   compose, with its claimants. A RATCHET: each row is a curation finding
   upstream, and `../../../tests/integration/multi-star-regression.test.ts` additionally
