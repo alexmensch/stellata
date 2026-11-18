@@ -21,13 +21,15 @@ pull on the [pull runtime](../pull/README.md#a-phased-pull) over the
 ## The classes
 
 Two scopes, set by what each class costs over the whole of SIMBAD (counted
-2026-11-16 on SIMBAD-Harvard):
+on SIMBAD-Harvard):
 
 - **Whole-sky**: `* ` (Bayer and Flamsteed, and every other number SIMBAD
   writes in the `NN Con` form, [Which SIMBAD numbers are Flamsteed numbers](../../catalog/simbad/README.md#which-simbad-numbers-are-flamsteed-numbers)),
-  `NAME `, `LAL `, `Ross `, `Wolf ` — 20,715 ids in one query.
-- **Reached**: `** ` (double-star discoverer codes, 132,504 whole-sky),
-  `V* ` (53,134), `X ` — asked only on the objects the request names.
+  `** ` (double-star discoverer codes), `Gmb ` (Groombridge), `NAME `, `LAL `,
+  `Ross `, `Wolf ` — 153,260 ids in one query (2026-11-18), 132,504 of them
+  `** ` and 41 `Gmb `.
+- **Reached**: `V* ` (53,134 whole-sky), `X ` — asked only on the objects
+  the request names.
 
 ## The request
 
@@ -39,8 +41,9 @@ asks nothing here.
 
 A double-star ident hangs on the system object, which is often not the one a
 record resolves to: Kruger 60's record resolves to the component object
-`HD 239960A`, while `** KR 60AB` sits on the system object `HD 239960`, so the
-file holds no row carrying it.
+`HD 239960A`, while `** KR 60AB` sits on the system object `HD 239960`. That
+is why `** ` is a whole-sky class: the system object carries the record's
+HIP and HD, so the join reaches it by key.
 
 ## The run
 
@@ -61,9 +64,9 @@ padding collapsed (`*  39 Psc` → `* 39 Psc`). Rows are in `simbad_oid` order.
 
 ## Gates
 
-- **Band** 65,000–80,000 rows. 70,157 at the committed pull: 16,086 objects
-  from the whole-sky classes and 56,348 reached, 2,277 of them both.
-- **Spot rows**: 39 Psc, Kapteyn's Star, π² UMi (`18 UMi` too) and β Tau
+- **Band** 140,000–170,000 rows. 150,443 at the committed pull (2026-11-18).
+- **Spot rows**: 39 Psc, Kapteyn's Star, π² UMi (`18 UMi` too), Kruger 60's
+  system object (`** KR 60AB`, keyed HIP 110893 / HD 239960) and β Tau
   (`112 Tau`, `23 Aur`, `γ Aur` and `Elnath` on one object).
 - **Parse ledger**: a key id with nothing after its prefix fails the pull.
 

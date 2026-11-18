@@ -6,6 +6,8 @@ import { applyStarNames, starNamingSummary } from './apply-star-names';
 import type { DesignationRow } from './wgsn-tables-pure';
 import { enterPhase } from '../record/record-phase';
 import { classifySimbadFlamsteed } from '../simbad/simbad-flamsteed-pure';
+import { FLAG_IS_SOL, SOL_PROPER_NAME } from '../../../src/catalog-format/record/catalog-pure';
+import type { EponymRow, NameDropRow } from './string-designations-pure';
 
 const con = (code: string): number => CON_INDEX.get(code.toLowerCase())!;
 
@@ -16,8 +18,9 @@ const row = (over: Partial<DesignationRow>): DesignationRow => ({
 
 const apply = (
   stars: ReturnType<typeof makeStar>[], designations: DesignationRow[], iv27aByHd: [number, string][] = [],
+  { eponyms = [], nameDrops = [] }: { eponyms?: EponymRow[]; nameDrops?: NameDropRow[] } = {},
 ) => applyStarNames(enterPhase('walked', stars), {
-  names: [], designations, dispositions: new Map(),
+  names: [], designations, eponyms, nameDrops,
   designationCons: { byHd: new Map(iv27aByHd.map(([hd, code]) => [hd, con(code)])), byHip: new Map() },
   simbadFlamsteed: classifySimbadFlamsteed([], []),
 }, CONSTELLATIONS);
@@ -60,14 +63,42 @@ describe('applyStarNames: Bayer designations', () => {
   });
 });
 
+describe('applyStarNames: string designations', () => {
+  const ross128: EponymRow = {
+    name: 'Ross 128', class: 'discovery-designation', key: 'hip:57548',
+    citation: { source: 'simbad', oid: 1847655, ident: 'Ross 128' },
+  };
+  const deltoton: NameDropRow = { name: 'Deltoton', class: 'unattributed', key: 'hd:13974' };
+
+  it('displays a cited eponym on the record its key reaches, and nowhere else', () => {
+    const reached = makeStar({ hip: 57548 });
+    const other = makeStar({ hip: 1 });
+    const { counts } = apply([reached, other], [], [], { eponyms: [ross128] });
+    expect([reached.eponym, other.eponym]).toEqual(['Ross 128', null]);
+    expect(counts.namingEponym).toBe(1);
+  });
+
+  it('ships a dropped name as a search-only alias', () => {
+    const star = makeStar({ hd: 13974 });
+    apply([star], [], [], { nameDrops: [deltoton] });
+    expect([star.eponym, star.aliases]).toEqual([null, ['Deltoton']]);
+  });
+
+  it('names Sol from its curated constant', () => {
+    const sol = makeStar({ flags: FLAG_IS_SOL });
+    apply([sol], []);
+    expect(sol.eponym).toBe(SOL_PROPER_NAME);
+  });
+});
+
 describe('starNamingSummary', () => {
   it('logs the authority pass\'s names, designations and aliases', () => {
     expect(starNamingSummary({
-      namingIauNamed: 450, namingIauNamedByProper: 3, namingIauUnreached: 61, namingEponym: 27,
+      namingIauNamed: 450, namingIauUnreached: 61, namingEponym: 27,
       namingBayer: 2039, namingBayerComponent: 68,
       namingGould: 937, namingAliases: 24, namingAliasRecords: 24,
     })).toBe(
-      '  450 IAU names (3 via the record\'s own spelling, 61 approved names unreached), 27 string designations\n'
+      '  450 IAU names (61 approved names unreached), 27 string designations\n'
         + '  2039 Bayer designations, 937 Gould, 24 aliases on 24 records',
     );
   });

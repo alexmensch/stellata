@@ -1,0 +1,10 @@
+simbad_prefix	long_prefix	reason
+** KR	Kruger	WDS discoverer code for Kruger
+** STF	Struve	WDS discoverer code for F. G. W. Struve
+Gmb	Groombridge	SIMBAD's acronym for Groombridge's Catalogue of Circumpolar Stars
+LAL	Lalande	SIMBAD's acronym for Lalande's Histoire Celeste Francaise
+NAME		SIMBAD's marker for a name ident, not part of the name
+Ross	Ross	SIMBAD spells the catalogue in full
+V*		SIMBAD's marker for a GCVS designation, not part of it
+Wolf	Wolf	SIMBAD spells the catalogue in full
+X Cyg	Cygnus	the X-ray source form, its constellation spelled in full
