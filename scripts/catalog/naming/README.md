@@ -73,28 +73,28 @@ scripts/catalog/naming/
                                 (--update-snapshots refreshes),
   wgsn-expected-json.ts         declared as WGSN_COUNTS
                                 (../../util/sources/README.md#a-snapshot).
-  manifest-naming-expected.json The residual gate's figures, pinned by
-                                ../membership/membership-manifest-gate.test.ts,
-                                which computes them; edit by hand.
-  wgsn-index-pure.ts (+ test)   The record-side join: the disposition
-                                file's reader (readTable — it is
-                                hand-curated), the keyed index, the three
-                                pickers, and the
-                                /docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them class routing (README.md#the-record-side-join).
-                                Also the residual gate over the committed
-                                tables (`manifestNaming`);
-                                `membershipProperKey` is the one place its
-                                join key is built.
+  wgsn-index-pure.ts (+ test)   The record-side join: the keyed index and
+                                the three pickers (#the-record-side-join).
+  string-designations-pure.ts   The names no WGSN row approves
+    (+ test)                    (#string-designations): the cited-eponym,
+                                dropped-name and short-form readers, the
+                                record join by identifier, the ident
+                                match, and the reach check the membership
+                                gate test runs.
+  string-designations.test.ts   Every committed eponym's citation, checked
+                                against simbad_idents.tsv or the WGSN
+                                Gould rows.
   apply-star-names.ts           I/O + the record pass: loads the committed
     (+ test)                    tables and IV/27A's designation
                                 constellations (../classic-ids/), and
                                 attaches each record's authority
-                                tiers, aliases and designation
-                                constellation. Also loads the curated
-                                override table (`data/naming/`).
-  proper-dispositions-source.ts PROPER_DISPOSITIONS, NAME_OVERRIDES and
-  name-overrides-source.ts      BAYER_DROPS, the three curated tables,
-  bayer-drops-source.ts         declared (../../util/sources/).
+                                tiers, eponym, aliases and designation
+                                constellation.
+  string-designations-source.ts EPONYMS, NAME_DROPS, NAME_OVERRIDES,
+  name-overrides-source.ts      BAYER_DROPS and SIMBAD_SHORT_FORMS, the
+  bayer-drops-source.ts         curated tables under data/naming/,
+  simbad-short-forms-source.ts  declared (../../util/sources/); only the
+                                citation test reads the short forms.
   display-names.ts (+ test)     The build's half of the composer: every
                                 record's designation set → its naming
                                 outcome (`NamedRecord`), with the NAME
@@ -162,22 +162,41 @@ Positionally, all but one sit outside the membership manifest entirely, so
 they name stars the catalogue does not carry; the pins are there to catch a
 refresh that changes either fact.
 
-## The residual gate
+## String designations
 
-[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s residual, enforced: every manifest `proper` must either match a WGSN name key
-(diacritic-folded, post multi-name-split — <!-- count:manifest-naming/membershipProperMatched -->445<!-- /count --> of <!-- count:manifest-naming/membershipPropers -->491<!-- /count --> do) or appear in
-the hand-curated `data/iau-wgsn/athyg_proper_dispositions.tsv` (<!-- count:manifest-naming/membershipProperResiduals -->46<!-- /count --> rows).
-The key is `proper|hip|hd` on the manifest's FINAL cells, so a disposition
-keyed on a label the classic-ID merge flipped is a stale disposition.
-`manifestNaming` (`wgsn-index-pure.ts`) fails on exact set inequality in
-either direction — the route-disagreements review-join discipline — so a
-WGSN refresh that approves a disposed name surfaces as a *stale
-disposition* failure, and the fix is a data-row deletion, never a code
-edit. It runs in `../membership/membership-manifest-gate.test.ts` over the
-committed tables, never in `build:wgsn`: a step that read the manifest
-would close a loop through `build:membership`
-([Loops through committed files](../../pipeline/README.md#loops-through-committed-files)).
-The gate's figures are pinned in `manifest-naming-expected.json`.
+A name no WGSN row approves reaches a record only through
+`data/naming/`, keyed on an identifier the record holds (`hd:` / `hip:` /
+`gaia:`), never on a name string:
+
+- **`eponyms.tsv`** — the discovery, catalogue and Gould designations the
+  ladder displays as strings (`Ross 128`, `Cygnus X-1`, `82 G. Eri`), each
+  citing its source: a SIMBAD object and the ident that spells it, or the
+  authority's own Gould row. 23 cite SIMBAD, 1 cites WGSN.
+- **`name_drops.tsv`** — the names no source attests, each with its
+  evidence. They ship as search-only aliases and never display, so a string
+  that resolved a star still resolves it
+  ([§ 8.1](/docs/star-naming.md#81-searchability-never-regresses)): 10
+  unattributed folk names; the 2 `p Eridani` genitives (the Bayer tier
+  renders `p Eri`, and the full genitive is not derivable from it);
+  268 G. Cet and 96 G. Psc, Gould numbers neither SIMBAD nor the authority
+  carries; and 5 IAU names with a component letter (`Cor Caroli B`)
+  whose record displays its own Bayer label, so nothing composes the string.
+  The other 3 such names (`Revati B`) compose: the component borrows its
+  system's name.
+
+**An ident attests a name when, spelt out, it equals the name** up to spacing
+and case. `simbad_short_forms.tsv` spells SIMBAD's catalogue codes out
+(`LAL` → `Lalande`, `** STF` → `Struve`) and drops its class markers (`NAME`,
+`V*`); an ident no short form covers attests nothing. A system ident with a
+component suffix attests a name that carries no letter — `** KR 60AB` is
+`Kruger 60` — and never a different component: `** STF 2398A` does not
+attest `Struve 2398 B`. `string-designations.test.ts` checks every citation
+against the committed `simbad_idents.tsv`, and that every short form is cited.
+
+**Each row reaches exactly one record, and never one the authority names.**
+`membership-manifest-gate.test.ts` holds it over the manifest, so a WGSN
+refresh that approves a name fails there until the row is deleted, and a
+membership change that moves its key fails until the key follows.
 
 ## Measured coverage
 
@@ -198,7 +217,7 @@ and the rest arrive twice. Neither table dedupes; the pickers below do.
 ## The record-side join
 
 `wgsn-index-pure.ts` answers, per record, which approved name and which
-glyph-bearing designations reach it. Four things in it are easy to get
+glyph-bearing designations reach it. Three things in it are easy to get
 wrong, and each cost a wrong name before it was pinned:
 
 **The key order is HR → HD → HIP.** Hipparcos resolved close pairs as ONE
@@ -208,14 +227,6 @@ lists both p Eri rows against HIP 7751 and separates them only by HR
 B onto one record — the very duplicate [§ 8](/docs/star-naming.md#8-parity--the-gate-on-any-naming-change) expects
 the ladder to dissolve. [§ 3](/docs/star-naming.md#3-the-ladder) states HIP first and is
 wrong; the order here is the measured one.
-
-**The record's own printed name is the last key.** Three names the
-authority approves reach no record by identifier: Albireo B, whose spine
-row is HD 183914 against the authority's 183913, and the faints hosts
-Kaewkosin and Maru, whose spine rows carry no identifier at all. A record
-whose own printed `proper` cell (`printedName`) folds to an approved name IS that star, and AT-HYG
-asserting the same string is evidence rather than invention.
-`namingIauNamedByProper` pins it at <!-- count:build-catalog/namingIauNamedByProper -->3<!-- /count -->.
 
 **An ambiguous number is not a key.** The join reads a record's
 single-valued `hd` / `hr` only, never its `hdAlt` / `hrAlt`: an ambiguous
@@ -233,14 +244,17 @@ with no component cell over a lettered one (γ Cen's keys carry all three of
 `γ Cen`, `γ Cen A`, `γ Cen B`), then a superscripted row over the bare one
 (β Sco and β¹ Sco both key HIP 78820 — the star is β¹ Sco).
 
-**[§ 2](/docs/star-naming.md#2-authority--one-source-approves-names-everything-else-compiles-them)'s classes route here, not in code.** `discovery-designation`,
-`catalogue-designation` and `gould-designation` display their string
-(`Ross 128`, `Cygnus X-1`, `268 G. Cet`); `component-letter`,
-`unattributed` and `latin-bayer` keep theirs as a search-only alias.
-`latin-bayer` is in both lists on purpose: the structured tier renders
-`p Eri`, and `p Eridani` — the full genitive AT-HYG printed — is not
-derivable from it. Sol is exempt rather than disposed: no catalogue names
-it, and it carries its own string.
+**The names the NAME picker passes over ship as aliases**, with every
+reaching row's published alternates (`Bake Eo`), less any passed-over name
+carrying a component letter: NEC lists σ CMa as both `Unurgunite` and `Nganurganity`, and the
+picker displays the first while the second stays searchable. `Albireo A`
+names a component, so it does not ride on Albireo.
+
+**Three approved names reach no record by identifier**, so the curated
+override table carries them by SID (`data/naming/name_overrides.tsv`):
+Albireo B, whose record is HD 183914 against the authority's 183913, and the
+faints hosts Kaewkosin and Maru, whose authority rows carry no identifier the
+records hold. Sol carries `SOL_PROPER_NAME`: no catalogue names it.
 
 ## The designation constellation
 
@@ -267,7 +281,7 @@ alias rather than going unsearchable.
   have typed, and `resolves` records whether it still reaches that record.
   A record the catalogue no longer carries reads `resolves = absent` with
   an empty `new`; an empty `new` on a `yes` / `no` row is a record that now
-  displays the runtime's identifier fallback. 3,679 changes: 12 absent
+  displays the runtime's identifier fallback. 3,685 changes: 12 absent
   records, 76 fallbacks. `absent` is read off the frozen key, so a record
   that gains a Gaia binding after its row was seeded reads `absent` under
   its old `hip:` key while the catalogue still carries it (λ Equ,
@@ -280,7 +294,7 @@ alias rather than going unsearchable.
 The gate is stated over strings with EXTERNAL provenance — every name the
 authority approves and every name the manifest carries must reach a record.
 A string the build composed itself has no external existence, so [§ 5](/docs/star-naming.md#5-aliases--ship-what-cannot-be-derived-derive-what-can) lets
-it disappear with the composition that made it; 1,974 do, and the ledger's
+it disappear with the composition that made it; 1,976 do, and the ledger's
 `resolves` column is where each one is reviewable.
 
 `pnpm run build:naming-parity` refreshes `new`, `resolves` and the

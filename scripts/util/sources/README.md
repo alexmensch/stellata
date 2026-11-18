@@ -120,7 +120,7 @@ its step's check (`build:clouds` and `build:local-group` hand theirs to
 `../../site/site-metrics.ts`. Its `use` is `read` wherever the closure's
 other modules name the constant: the leaf exports nothing else, so naming it
 is the only reason to import it. A snapshot only a test reads
-(`inherited-spine-expected.json`, `manifest-naming-expected.json`) is no
+(`inherited-spine-expected.json`) is no
 step's input and needs no declaration.
 
 ## Reached means read

@@ -81,11 +81,11 @@ never something the renderer should qualify away.
 
 **The build calls it over `Star`; the runtime calls it over `SearchEntry`.**
 `/scripts/catalog/naming/display-names.ts` and `designationSetOfEntry` (`star-designations.ts`) are the two adapters, and
-`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records) so
+`catalog.bin`'s name table carries the NAME tiers alone (<!-- count:build-catalog/nameTableEntries -->724<!-- /count --> records) so
 first paint has names while the runtime composes every designation off
 `search-index.json` through the same function. A BORROWED label carries
 its anchor's tier, so `Sirius B` is a name-table entry too — which is why
-the table holds <!-- count:build-catalog/nameTableEntries -->729<!-- /count --> records where the authority names only <!-- count:build-catalog/namingIauNamed -->450<!-- /count -->
+the table holds <!-- count:build-catalog/nameTableEntries -->724<!-- /count --> records where the authority names only <!-- count:build-catalog/namingIauNamed -->447<!-- /count -->
 (the `iau` and `eponym` name codes, own and borrowed, not `namingIauNamed`). That split is why
 `FLAG_HAS_NAME` now means *an authority named this star* — a record
 displaying a designation carries no name-table entry, and

@@ -271,7 +271,7 @@ reconstructs the source buffer byte-for-byte.
 limit). Two things follow from the ramp, and both are the point:
 
 - **Chunk 0 is the first-paint payload.** Measured on today's build:
-  **<!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> records, 717 KB gzipped, ending at apparent V 6.62** — in
+  **<!-- count:build-catalog/recordsInFirstChunk -->10,413<!-- /count --> records, 717 KB gzipped, ending at apparent V 6.62** — in
   apparent-V order ([Record order](#record-order)) that is the naked-eye sky, and it is
   smaller than every other artifact boot fetches, so the star catalogue
   stops being the thing first paint waits on. `recordsInFirstChunk` in
@@ -288,7 +288,7 @@ limit). Two things follow from the ramp, and both are the point:
 
   | chunk | raw | gz | cumulative gz | records | faintest V |
   | --- | --- | --- | --- | --- | --- |
-  | 0 | 1 MiB | 717 KB | 717 KB | <!-- count:build-catalog/recordsInFirstChunk -->10,412<!-- /count --> | 6.62 |
+  | 0 | 1 MiB | 717 KB | 717 KB | <!-- count:build-catalog/recordsInFirstChunk -->10,413<!-- /count --> | 6.62 |
   | 1 | 2 MiB | 1.48 MB | 2.19 MB | 31,384 | 7.63 |
   | 2 | 4 MiB | 2.93 MB | 5.12 MB | 73,327 | 8.43 |
   | 3 | 8 MiB | 5.77 MB | 10.89 MB | 157,213 | 9.17 |
