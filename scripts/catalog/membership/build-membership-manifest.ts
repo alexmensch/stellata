@@ -52,7 +52,7 @@ import { SIMBAD_TYC_HD } from '../simbad/simbad-tyc-hd-source';
 import { PAIR_REVIEW_DISPOSITIONS } from './pair-review-dispositions-source';
 import { stageFile, BINDING_LINEAGE, MEMBERSHIP_LINEAGE } from '../../../src/catalog-format/pipeline-outputs/lineage-files';
 import { sourcesWithSiblingComponent } from './binding/binding-gate-pure';
-import { SIBLING_RENDERED } from './sibling-rendered-source';
+import { SIBLING_RENDERED, SIBLING_UNRENDERED, siblingRenderedSourceIds } from './sibling-rendered-source';
 
 /** The baseline's own binaries stage, never multiples.tsv: a step read would close build:binaries → build:membership. */
 function baselineBindingRows(baselineDir: string): Iterable<LineageRow> {
@@ -74,7 +74,9 @@ export async function main(): Promise<void> {
     tables,
     overlay: overlayMap(artifactRows(CLASSIC_ID_OVERLAY)),
     overrides: CLASSIC_ID_OVERRIDES.read(),
-    siblingRenderedSourceIds: new Set([...sourcesWithSiblingComponent(wdsXids), ...SIBLING_RENDERED.read().map((r) => r.sourceId)]),
+    siblingRenderedSourceIds: siblingRenderedSourceIds(
+      sourcesWithSiblingComponent(wdsXids), SIBLING_RENDERED.read(), SIBLING_UNRENDERED.read(),
+    ),
     evidence,
     positions: positionEvidence(gaiaAstrometry, hip2, magnitudeTerm?.keptNearHip ?? new Map()),
     dispositions: BINDING_REVIEW_DISPOSITIONS.read(),

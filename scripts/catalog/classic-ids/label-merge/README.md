@@ -79,34 +79,40 @@ without saying which component is which. Three outcomes:
 
 | Disposition | Values | When |
 |---|---|---|
-| `extra-alias` | 93 | the pair is unresolved — one record, both components' light |
-| `extra-sibling-rendered` | 37 | the secondary is a record of its own, so the number is its |
+| `extra-alias` | 95 | the pair is unresolved — one record, both components' light |
+| `extra-sibling-rendered` | 35 | the secondary is a record of its own, so the number is its |
 | `extra-dropped` | 0 | the field has no alias list, or the guard withheld the value |
 
 Where the pair is unresolved the single record **is** the granularity the
 catalogue has, and answering to both numbers is accurate rather than sloppy:
-**None of the 93 has a `multiples.tsv` row at all**, so no separation, position
-angle or component magnitude exists to split them with, and the two HD numbers
-are the entire trace of duplicity.
+**None of 93 of the 95 has a `multiples.tsv` row at all**, so no separation,
+position angle or component magnitude exists to split them with, and the two HD
+numbers are the entire trace of duplicity; the other two carry a standalone row
+and no pair (below).
 
 The predicate is a source SIMBAD's WDS cross-IDs
 (`data/simbad/simbad_wds_xids.tsv`) attribute to a WDS system they list
 another component of (`sourcesWithSiblingComponent`,
 `../../membership/binding/binding-gate-pure.ts`), or one
-`data/membership/sibling-rendered.tsv` lists: the 24 SIMBAD does not name,
-which `../../membership/sibling-rendered.test.ts` holds to the committed
-`multiples.tsv` — a listed source with no sibling there, or a shipped alias
-on a source `multiples.tsv` gives a sibling neither names, fails it. It is keyed on the SYSTEM rather than the
+`data/membership/sibling-rendered.tsv` lists: the 24 SIMBAD does not name —
+less the sources `data/membership/sibling-unrendered.tsv` lists, which SIMBAD
+gives a sibling `multiples.tsv` renders no pair for (`siblingRenderedSourceIds`,
+`../../membership/sibling-rendered-source.ts`).
+`../../membership/sibling-rendered.test.ts` holds both lists to the committed
+`multiples.tsv` — a rendered-listed source with no sibling there, an
+unrendered-listed one that gains a sibling or that SIMBAD stops naming, or a
+shipped alias on a source `multiples.tsv` gives a sibling neither names, fails
+it. It is keyed on the SYSTEM rather than the
 source_id — a secondary routinely carries its own source_id or none, so
 grouping by source_id misses the sibling on exactly the resolved pairs this
 asks about. It reads no `multiples.tsv`: `build:binaries` reads the manifest
 this merge writes, so the step table refuses that read as a cycle
 ([Loops through committed files](/scripts/pipeline/README.md#loops-through-committed-files)).
 Promotion can still decline to render a member row, so the set is a
-deliberate **superset** of what ships — 37 withheld
-(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->36<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the 36 records whose system names a sibling, of which
-33 render one today: HD 13729 (on HIP 10382) and HD 122939 (on HIP 68964)
-are withheld on SIMBAD's word for a component binaries keeps no pair for.
+deliberate **superset** of what ships — 35 withheld
+(<!-- count:membership-manifest/membership.label.extra-sibling-rendered.hd -->34<!-- /count --> hd + the <!-- count:membership-manifest/membership.label.extra-sibling-rendered.hr -->1<!-- /count --> hr) across the records whose system names a sibling. HD 13729 (on HIP 10382) and
+HD 122939 (on HIP 68964) ship as aliases: SIMBAD names a sibling binaries
+keeps no pair for, so their one record holds both components' light.
 
 An alias also clears [The collision guard](#the-collision-guard)'s rule, which the guard itself
 cannot apply — aliases are not display cells, so its tally never sees them.

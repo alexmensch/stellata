@@ -3,7 +3,7 @@
 Pipeline-derived, like `../binaries/multiples.tsv`: written by
 `pnpm run build:membership` (`scripts/catalog/membership/`; `parked-ledger.tsv`
 and `simbad_sourced_distances.tsv` by `build:catalog`), regenerated and diffed in CI, never hand-edited — except
-the four files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
+the five files marked hand-curated below, which the build reads as input. Contract: [§ 3.1](/docs/catalog-driver.md#31-retiring-the-spine--the-membership-rule-measured-against-the-primaries).
 
 ```
 membership-manifest.tsv  LFS. One row per admitted record: final
@@ -12,8 +12,8 @@ membership-manifest.tsv  LFS. One row per admitted record: final
                          the primary attesting each cell, `term` — which
                          side of /docs/catalog-driver.md#1-the-driver-model's union admitted
                          the row — and `origin_key`, the record's lineage
-                         key. 975,362 rows: 376,922 `primaries` and
-                         598,440 `magnitude` at the V <= 11 floor
+                         key. 975,157 rows: 376,923 `primaries` and
+                         598,234 `magnitude` at the V <= 11 floor
                          (scripts/catalog/membership/magnitude-term/README.md).
 additions-ledger.tsv     LFS. The /docs/catalog-driver.md#61-record-parity ledger for everything the
                          primaries admit that the spine lacked: one row per
@@ -126,6 +126,14 @@ sibling-rendered.tsv     Regular git. Hand-curated: the Gaia sources whose
                          24 rows, frozen from multiples.tsv 2026-11-16;
                          sibling-rendered.test.ts holds it to the
                          committed multiples.tsv both ways.
+sibling-unrendered.tsv   Regular git. Hand-curated: the Gaia sources SIMBAD's
+                         WDS cross-IDs give a sibling component that
+                         multiples.tsv renders no pair for, with the
+                         system's wds_id. The label merge keeps their alias
+                         HD/HR numbers, since the one record holds both
+                         components' light. 2 rows (HIP 10382, HIP 68964);
+                         sibling-rendered.test.ts fails on a listed source
+                         SIMBAD stops naming or multiples.tsv gives a sibling.
 ```
 
 The five ledgers above that `build:membership` writes, and
@@ -154,10 +162,11 @@ attestation and the `hd_other_hip` drop, the `gl:` bridges of
 overlay `../classic-ids/classic_id_overlay.tsv`,
 `../classic-ids/classic_id_overrides.tsv`,
 `../classic-ids/cross_index_corrections.tsv` (which IV/27A arrives through, so
-an addition's Flamsteed number carries the correction too),
-`../binaries/multiples.tsv`, and
+an addition's Flamsteed number carries the correction too), and
 this folder's own `binding-review-dispositions.tsv`,
-`pair-review-dispositions.tsv` and `spine-corrections.tsv`. Licence follows the inputs: CC-BY-SA-4.0 through the
+`pair-review-dispositions.tsv`, `spine-corrections.tsv`,
+`sibling-rendered.tsv` and `sibling-unrendered.tsv`. It reads no
+`../binaries/multiples.tsv`: `build:binaries` reads the manifest. Licence follows the inputs: CC-BY-SA-4.0 through the
 spine.
 
 ## Consumed by

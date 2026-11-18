@@ -92,9 +92,11 @@ scripts/catalog/membership/
                                   spine ↔ manifest matcher, and
                                   withRecordMoves, the spine rows as the
                                   pair rule's HIP moves leave them. Pure.
-  sibling-rendered-source.ts      SIBLING_RENDERED, the curated
-    (+ sibling-rendered.test.ts)  sibling-rendered sources' declaration; its
-                                  test holds the file to multiples.tsv
+  sibling-rendered-source.ts      SIBLING_RENDERED and SIBLING_UNRENDERED,
+    (+ sibling-rendered.test.ts)  the curated corrections to SIMBAD's
+                                  sibling word, and siblingRenderedSourceIds,
+                                  the set they compose; its test holds both
+                                  files to multiples.tsv
                                   (../classic-ids/label-merge/README.md#an-alias-stops-at-the-blend).
   pair-review-dispositions-       The pair-review queue's dispositions:
     pure.ts (+ test)              columns, reader and its checks, the
@@ -104,7 +106,7 @@ scripts/catalog/membership/
   build-membership-manifest.ts    `pnpm run build:membership` — loads the
                                   spine and its corrections, the primaries, the
                                   overlay, the binding gates' evidence,
-                                  the curated sibling-rendered sources,
+                                  the curated sibling lists,
                                   both queues' dispositions
                                   and SIMBAD's TYC→HD pull, and emits data/membership/ plus the label
                                   merge's queue
