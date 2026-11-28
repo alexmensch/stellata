@@ -7,7 +7,7 @@ import {
   canonicalCompLetter, componentKey, pairComponentTokens, pairRowKey, type ComponentKey, type PairRowKey,
 } from '../component-tokens-pure';
 import { HIP2_REF_EPOCH } from '../../catalog/distance/direction-cascade';
-import { sourceForHip, type IdentifierIndices } from '../load/indices-pure';
+import type { IdentifierIndices } from '../load/indices-pure';
 import type { ManifestStar } from '../load/manifest-stars-pure';
 import type { SimbadWdsXid } from '../load/simbad-pure';
 import { measuredOffset, splitComponents, type Orb6Entry, type WdsPair } from '../../wds/wds-pure';
@@ -61,6 +61,12 @@ function manifestSourceForHip(q: HipSourceQuery, indices: IdentifierIndices, let
   const gaia = indices.hipToManifestGaia.get(q.hip);
   if (gaia === undefined) return { kind: 'none' };
   return sourceClaimedByDisjointLetter(letters, q.wdsId, gaia, q.token) ? { kind: 'sibling_claimed' } : { kind: 'bound', gaia };
+}
+
+/** Gaia's HIP cross-walk, unguarded, then the guarded manifest source. */
+function ccdmSourceForHip(q: HipSourceQuery, indices: IdentifierIndices, letters: SimbadSourceLetters): HipSource {
+  const gaia = indices.hipToGaia.get(q.hip);
+  return gaia === undefined ? manifestSourceForHip(q, indices, letters) : { kind: 'bound', gaia };
 }
 
 /** ε Equ's ORB6 row lists HIP 103579, ~40° away, for its HIP 103569: 5′
@@ -208,17 +214,25 @@ interface CcdmQuery {
   readonly partner: string;
 }
 
+interface CcdmPick {
+  readonly hip: number | null;
+  readonly gaia: string | null;
+  readonly owned: readonly number[];
+  readonly siblingClaimed: readonly number[];
+}
+
 /** The candidate HIP nearest the target, skipping, and listing, each one a
- *  disjoint letter owns by geometry or by an existing binding. */
+ *  disjoint letter owns by geometry or by an existing binding, and each whose
+ *  manifest source SIMBAD gives a disjoint letter. */
 function ccdmCandidateHip(
   q: CcdmQuery, indices: IdentifierIndices, letterPositions: ReadonlyMap<string, SkyPosition> | undefined,
-  claims: HipClaims,
-): { hip: number | null; owned: readonly number[] } {
+  claims: HipClaims, simbadLetters: SimbadSourceLetters,
+): CcdmPick {
   const threshold = chordSqForTolerance(CCDM_POSITION_MATCH_TOLERANCE_ARCSEC);
   const target = unitVectorFromRaDec(q.target.raDeg, q.target.decDeg);
   const ownedHips: number[] = [];
-  let bestHip: number | null = null;
-  let best = Infinity;
+  const claimedHips: number[] = [];
+  let best: { hip: number; gaia: string | null; d: number } | null = null;
   for (const hip of q.candidates) {
     const cand = hipDirection(hip, indices);
     if (cand === null) continue;
@@ -230,21 +244,20 @@ function ccdmCandidateHip(
       ownedHips.push(hip);
       continue;
     }
-    if (d < best) {
-      best = d;
-      bestHip = hip;
+    const source = ccdmSourceForHip({ hip, wdsId: q.wdsId, token: q.token }, indices, simbadLetters);
+    if (source.kind === 'sibling_claimed') {
+      claimedHips.push(hip);
+      continue;
     }
+    if (best === null || d < best.d) best = { hip, gaia: source.kind === 'bound' ? source.gaia : null, d };
   }
-  return { hip: bestHip, owned: ownedHips };
+  return { hip: best?.hip ?? null, gaia: best?.gaia ?? null, owned: ownedHips, siblingClaimed: claimedHips };
 }
 
 /** Binds the HIP if none is bound yet; a Gaia source through it tags `ccdm_hip`. */
-function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
+function bindCcdmHip(c: Draft, hip: number, gaia: string | null): void {
   if (c.hip === null) c.hip = own(hip);
-  const gaia = sourceForHip(hip, indices);
-  if (gaia !== null) {
-    c.gaia = ownGaia(gaia, 'ccdm_hip');
-  }
+  if (gaia !== null) c.gaia = ownGaia(gaia, 'ccdm_hip');
 }
 
 /** The CCDM-sibling tier: the system's CCDM HIPs, nearest the primary's coord
@@ -252,7 +265,7 @@ function bindCcdmHip(c: Draft, hip: number, indices: IdentifierIndices): void {
  *  component already carrying one of them keeps it. ρ = 0 secondaries are
  *  skipped: their prediction sits on the primary. */
 export function resolveViaCcdm(
-  pairs: readonly DecomposedPair[], indices: IdentifierIndices,
+  pairs: readonly DecomposedPair[], indices: IdentifierIndices, simbadLetters: SimbadSourceLetters,
 ): { pairs: readonly DecomposedPair[]; rejected: readonly CascadeRefusal[] } {
   const w = working(pairs);
   const out = w.components;
@@ -264,10 +277,18 @@ export function resolveViaCcdm(
   const letterPositions = buildSystemLetterPositions(rows);
   const claims = buildSystemHipClaims(out);
   const primaryHipByPair = new Map<WdsPair, number>();
-  const ccdmPick = (i: number, q: CcdmQuery): number | null => {
-    const { hip, owned } = ccdmCandidateHip(q, indices, letterPositions.get(q.wdsId), claims);
-    for (const h of owned) rejected.push({ gate: 'ccdm_sibling_owned', pair: sides[i].row, component: out[i].component, hip: h });
-    return hip;
+  const refuse = (i: number, gate: CascadeGate, hip: number) =>
+    rejected.push({ gate, pair: sides[i].row, component: out[i].component, hip });
+  const ccdmPick = (i: number, q: CcdmQuery): CcdmPick => {
+    const pick = ccdmCandidateHip(q, indices, letterPositions.get(q.wdsId), claims, simbadLetters);
+    for (const h of pick.owned) refuse(i, 'ccdm_sibling_owned', h);
+    for (const h of pick.siblingClaimed) refuse(i, 'manifest_hip_sibling_claimed', h);
+    return pick;
+  };
+  const bindCarried = (i: number, hip: number, token: string) => {
+    const source = ccdmSourceForHip({ hip, wdsId: out[i].wdsId, token }, indices, simbadLetters);
+    if (source.kind === 'sibling_claimed') refuse(i, 'manifest_hip_sibling_claimed', hip);
+    else bindCcdmHip(out[i], hip, source.kind === 'bound' ? source.gaia : null);
   };
 
   for (const [i, c] of out.entries()) {
@@ -278,14 +299,14 @@ export function resolveViaCcdm(
     if (!candidates || candidates.length === 0) continue;
     if (c.hip !== null && candidates.includes(c.hip.value)) {
       primaryHipByPair.set(pair, c.hip.value);
-      bindCcdmHip(c, c.hip.value, indices);
+      bindCarried(i, c.hip.value, c.component);
       continue;
     }
     const [, partner] = pairComponentTokens(pair.components)!;
-    const hip = ccdmPick(i, { target: pair.precise, candidates, wdsId: c.wdsId, token: c.component, partner });
+    const { hip, gaia } = ccdmPick(i, { target: pair.precise, candidates, wdsId: c.wdsId, token: c.component, partner });
     if (hip === null) continue;
     primaryHipByPair.set(pair, hip);
-    bindCcdmHip(c, hip, indices);
+    bindCcdmHip(c, hip, gaia);
     claimHip(claims, c.wdsId, hip, c.component);
   }
 
@@ -299,18 +320,18 @@ export function resolveViaCcdm(
     const primaryHip = primaryHipByPair.get(pair);
     const narrowed = candidates.filter((h) => h !== primaryHip);
     if (narrowed.length === 0) continue;
+    const [primaryToken] = splitComponents(pair.components)!;
+    const token = canonicalCompLetter(primaryToken, c.component);
     if (c.hip !== null && narrowed.includes(c.hip.value)) {
-      bindCcdmHip(c, c.hip.value, indices);
+      bindCarried(i, c.hip.value, token);
       continue;
     }
-    const [primaryToken] = splitComponents(pair.components)!;
-    const hip = ccdmPick(i, {
+    const { hip, gaia } = ccdmPick(i, {
       target: predictSecondaryPosition(pair.precise, offset),
-      candidates: narrowed, wdsId: c.wdsId,
-      token: canonicalCompLetter(primaryToken, c.component), partner: primaryToken,
+      candidates: narrowed, wdsId: c.wdsId, token, partner: primaryToken,
     });
     if (hip === null) continue;
-    bindCcdmHip(c, hip, indices);
+    bindCcdmHip(c, hip, gaia);
     claimHip(claims, c.wdsId, hip, c.component);
   }
   return { pairs: w.pairs, rejected };

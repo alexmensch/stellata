@@ -193,7 +193,7 @@ describe('resolveViaCcdm', () => {
       hipToManifestGaia: new Map([[71681, '5877748442128924544']]),
       ccdm: [{ hip: 71683, ccdm: '14396-6050' }, { hip: 71681, ccdm: '14396-6050' }],
     });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 71683 }, secondary: {} })], idx);
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 71683 }, secondary: {} })], idx, new Map());
     expect(ids(r.secondary)).toMatchObject({ hip: 71681, gaiaSourceId: '5877748442128924544', resolveVia: 'ccdm_hip' });
     expect(r.primary.hip?.value).toBe(71683);
     expect(r.primary.gaia).toBeNull();
@@ -206,7 +206,7 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 42, ccdm: '00000+0000' }],
       hipToGaia: new Map([[42, '5000']]),
     });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx);
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx, new Map());
     expect(ids(r.primary)).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
   });
 
@@ -217,7 +217,7 @@ describe('resolveViaCcdm', () => {
       hipToManifestGaia: new Map([[71681, '999']]),
       ccdm: [{ hip: 71683, ccdm: '14396-6050' }, { hip: 71681, ccdm: '14396-6050' }],
     });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx);
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx, new Map());
     expect(ids(r.secondary)).toMatchObject({ gaiaSourceId: null, hip: null });
   });
 
@@ -229,7 +229,7 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 24436, ccdm: '05145-0812' }],
       hipToGaia: new Map([[24436, '7777']]),
     });
-    const r = resolveViaCcdm([decomposed(ab), decomposed(bc, { primary: {}, secondary: {} })], idx);
+    const r = resolveViaCcdm([decomposed(ab), decomposed(bc, { primary: {}, secondary: {} })], idx, new Map());
     expect(ids(r.pairs[1].primary)).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
     expect(ids(r.pairs[1].secondary)).toMatchObject({ hip: null, gaiaSourceId: null });
     expect(r.rejected.map((x) => [x.gate, x.pair, x.component, x.hip])).toEqual([
@@ -240,7 +240,7 @@ describe('resolveViaCcdm', () => {
   it('never refuses for the pair partner (σ Ori blend convention)', () => {
     const pair = pairAt({ wdsId: '00000+0000', components: 'AB', ra: 100, dec: 0, rhoLast: 2, thetaLast: 180 });
     const idx = indices({ hip2: hip2At({ hip: 99, ra: 100, dec: -1.2 / 3600 }), ccdm: [{ hip: 99, ccdm: '00000+0000' }] });
-    const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx);
+    const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx, new Map());
     expect(r.pairs[0].secondary.hip?.value).toBe(99);
     expect(r.rejected).toHaveLength(0);
   });
@@ -249,7 +249,7 @@ describe('resolveViaCcdm', () => {
     const ab = pairAt({ wdsId: '00000+0000', components: 'AB', ra: 100, dec: 0, rhoLast: 2, thetaLast: 180 });
     const ac = pairAt({ wdsId: '00000+0000', components: 'AC', ra: 100, dec: 0, rhoLast: 2.4, thetaLast: 180 });
     const idx = indices({ hip2: hip2At({ hip: 99, ra: 100, dec: -2.2 / 3600 }), ccdm: [{ hip: 99, ccdm: '00000+0000' }] });
-    const r = resolveViaCcdm([decomposed(ab), decomposed(ac, { secondary: {} })], idx);
+    const r = resolveViaCcdm([decomposed(ab), decomposed(ac, { secondary: {} })], idx, new Map());
     expect(r.pairs[1].secondary.hip?.value).toBe(99);
     expect(r.rejected).toHaveLength(0);
   });
@@ -262,14 +262,14 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 24436, ccdm: '05145-0812' }],
       hipToGaia: new Map([[24436, '7777']]),
     });
-    const r = resolveViaCcdm([decomposed(aBc, { primary: { hip: 24436 } }), decomposed(bc, { primary: {} })], idx);
+    const r = resolveViaCcdm([decomposed(aBc, { primary: { hip: 24436 } }), decomposed(bc, { primary: {} })], idx, new Map());
     expect(ids(r.pairs[1].primary)).toMatchObject({ hip: null, gaiaSourceId: null });
     expect(r.rejected).toHaveLength(1);
   });
 
   it('skips a system with no CCDM candidates', () => {
     const pair = pairAt({ wdsId: 'UNKNOWN', components: 'AB', ra: 0, dec: 0 });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], indices());
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], indices(), new Map());
     expect(ids(r.primary)).toMatchObject({ resolveVia: 'unresolved', gaiaSourceId: null });
   });
 
@@ -280,7 +280,7 @@ describe('resolveViaCcdm', () => {
       ccdm: [{ hip: 42, ccdm: '00000+0000' }],
       hipToGaia: new Map([[42, '5000']]),
     });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx);
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: {} })], idx, new Map());
     expect(ids(r.primary)).toMatchObject({ hip: 42, gaiaSourceId: '5000', resolveVia: 'ccdm_hip' });
   });
 
@@ -291,8 +291,45 @@ describe('resolveViaCcdm', () => {
       hipToManifestGaia: new Map([[8, '8000'], [9, '9000']]),
       ccdm: [{ hip: 8, ccdm: '00000+0000' }, { hip: 9, ccdm: '00000+0000' }],
     });
-    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 9 } })], idx);
+    const { pairs: [r] } = resolveViaCcdm([decomposed(pair, { primary: { hip: 9 } })], idx, new Map());
     expect(ids(r.primary)).toMatchObject({ hip: 9, gaiaSourceId: '9000', resolveVia: 'ccdm_hip' });
+  });
+
+  describe('refuses a manifest source SIMBAD gives a hierarchy-disjoint letter (11221-2447 Ba)', () => {
+    const wdsId = '11221-2447';
+    const pair = pairAt({ wdsId, components: 'AB', ra: 100, dec: 0, rhoLast: 10, thetaLast: 0 });
+    const aOwns = simbadSourceLetters(new Map([[componentKey(wdsId, 'A'), xid(wdsId, 'A', '1111')]]));
+    const ccdm = [{ hip: 10, ccdm: wdsId }, { hip: 20, ccdm: wdsId }];
+    const atB = (hip: number, dArcsec = 0) => ({ hip, ra: 100, dec: (10 + dArcsec) / 3600 });
+
+    it('skips the candidate and records the refusal', () => {
+      const idx = indices({ hip2: hip2At(atB(20)), hipToManifestGaia: new Map([[20, '1111']]), ccdm });
+      const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx, aOwns);
+      expect(ids(r.pairs[0].secondary)).toMatchObject({ hip: null, gaiaSourceId: null, resolveVia: 'unresolved' });
+      expect(r.rejected).toEqual([{ gate: 'manifest_hip_sibling_claimed', pair, component: 'B', hip: 20 }]);
+    });
+
+    it('takes the next-nearest candidate instead', () => {
+      const idx = indices({
+        hip2: hip2At(atB(20), atB(10, 3)), hipToManifestGaia: new Map([[20, '1111'], [10, '2222']]), ccdm,
+      });
+      const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx, aOwns);
+      expect(ids(r.pairs[0].secondary)).toMatchObject({ hip: 10, gaiaSourceId: '2222', resolveVia: 'ccdm_hip' });
+    });
+
+    it('keeps a carried HIP but binds no source through it', () => {
+      const idx = indices({ hip2: hip2At(atB(20)), hipToManifestGaia: new Map([[20, '1111']]), ccdm });
+      const r = resolveViaCcdm([decomposed(pair, { secondary: { hip: 20 } })], idx, aOwns);
+      expect(ids(r.pairs[0].secondary)).toMatchObject({ hip: 20, gaiaSourceId: null, resolveVia: 'unresolved' });
+      expect(r.rejected.map((x) => x.gate)).toEqual(['manifest_hip_sibling_claimed']);
+    });
+
+    it('leaves a Gaia cross-walk source to the cross-walk', () => {
+      const idx = indices({ hip2: hip2At(atB(20)), hipToGaia: new Map([[20, '1111']]), ccdm });
+      const r = resolveViaCcdm([decomposed(pair, { secondary: {} })], idx, aOwns);
+      expect(ids(r.pairs[0].secondary)).toMatchObject({ hip: 20, gaiaSourceId: '1111', resolveVia: 'ccdm_hip' });
+      expect(r.rejected).toHaveLength(0);
+    });
   });
 });
 

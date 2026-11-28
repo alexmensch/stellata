@@ -43,7 +43,7 @@ export function resolveCascade(
     return component;
   });
   const simbad = resolveViaSimbad(first, inputs.simbadWdsXids);
-  const ccdm = resolveViaCcdm(simbad, inputs.indices);
+  const ccdm = resolveViaCcdm(simbad, inputs.indices, simbadLetters);
   const position = resolveViaPosition(ccdm.pairs, inputs.manifestStars);
   return {
     pairs: propagateIdentities(position.pairs),
