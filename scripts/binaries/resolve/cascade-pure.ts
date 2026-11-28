@@ -45,8 +45,22 @@ export function groupOrb6ByPair(orb6: readonly Orb6Entry[]): ReadonlyMap<PairRow
   return groupBy(orb6, (e) => pairRowKey(e.wdsId, e.components));
 }
 
-function manifestGaiaViaHip(hip: number, indices: IdentifierIndices): string | null {
-  return indices.hipToManifestGaia.get(hip) ?? null;
+type HipSource =
+  | { readonly kind: 'none' }
+  | { readonly kind: 'bound'; readonly gaia: string }
+  | { readonly kind: 'sibling_claimed' };
+
+interface HipSourceQuery {
+  readonly hip: number;
+  readonly wdsId: string;
+  readonly token: string;
+}
+
+/** The manifest's source for the HIP, refused when SIMBAD gives it only to letters hierarchy-disjoint from the token. */
+function manifestSourceForHip(q: HipSourceQuery, indices: IdentifierIndices, letters: SimbadSourceLetters): HipSource {
+  const gaia = indices.hipToManifestGaia.get(q.hip);
+  if (gaia === undefined) return { kind: 'none' };
+  return sourceClaimedByDisjointLetter(letters, q.wdsId, gaia, q.token) ? { kind: 'sibling_claimed' } : { kind: 'bound', gaia };
 }
 
 /** ε Equ's ORB6 row lists HIP 103579, ~40° away, for its HIP 103569: 5′
@@ -110,12 +124,14 @@ export function resolveComponent(
     }
   }
   for (const hip of candidates) {
-    const gaia = manifestGaiaViaHip(hip, indices);
-    if (gaia !== null && sourceClaimedByDisjointLetter(simbadLetters, pair.wdsId, gaia, component)) {
+    const source = manifestSourceForHip({ hip, wdsId: pair.wdsId, token: component }, indices, simbadLetters);
+    if (source.kind === 'sibling_claimed') {
       refused.push({ gate: 'manifest_hip_sibling_claimed', pair, component, hip });
       continue;
     }
-    if (gaia !== null) return bound({ ...base, gaia: ownGaia(gaia, 'manifest_hip'), hip: own(hip), hd: hdByHip.get(hip)! });
+    if (source.kind === 'bound') {
+      return bound({ ...base, gaia: ownGaia(source.gaia, 'manifest_hip'), hip: own(hip), hd: hdByHip.get(hip)! });
+    }
   }
   return bound(candidates.length === 0 ? base : { ...base, hip: own(candidates[0]), hd: hdByHip.get(candidates[0])! });
 }
