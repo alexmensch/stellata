@@ -100,7 +100,7 @@ row that merely cites another stage's star. A cloud's or Local Group
 object's is its sibling allocation stage's; every other record's is
 membership's.
 
-Measured 2026-11-18: 134,776 rows over the <!-- count:build-binaries/multiples_rows_emitted -->50,584<!-- /count --> `multiples.tsv` rows —
+Measured 2026-11-18: 134,776 rows over the <!-- count:build-binaries/multiples_rows_emitted -->50,579<!-- /count --> `multiples.tsv` rows —
 among them 31,564 facet rows (two, colour and dust, per minted record), 17,820
 size rows (one per record promotion sized, by its last pass:
 <!-- count:build-catalog/promotion.size.mint -->13,608<!-- /count --> mint,
