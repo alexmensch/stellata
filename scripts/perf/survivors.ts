@@ -4,10 +4,7 @@ import { chromium, type Page } from 'playwright';
 import { survivorPct, type SurvivorReport } from '../../src/client/debug/survivor-counts';
 import { ARG_DEFAULTS, parseSurvivorsArgs, type SurvivorsArgs } from './args';
 import { gitMeta } from './checkout';
-import {
-  BOOT_TIMEOUT_MS, DEFAULT_CHROME_ARGS, SETTLE_TIMEOUT_MS,
-  awaitSettle, bootScenario, probeAdapters, seedDismissals, type PerfWindow,
-} from './page-protocol';
+import { DEFAULT_CHROME_ARGS, probeAdapters, visitSettled, type PerfWindow } from './page-protocol';
 import { writeRunFile } from './run-file/run-file';
 import { BROWSER_CHANNEL, runProvenance } from './run-pure';
 import {
@@ -16,7 +13,6 @@ import {
 import { SCENARIOS, SCENARIO_NAMES, scenarioUrl } from './scenarios';
 import { formatTable } from './table-pure';
 
-const QUIET_MS = 1500;
 const TABLE_DECIMALS = 3;
 
 /** The runner's own default, and the one size every vantage is visited at —
@@ -61,31 +57,23 @@ export async function main(): Promise<number> {
   let probe: AdapterProbe | null = null;
   try {
     for (const scenario of SCENARIO_NAMES) {
-      const context = await browser.newContext({
-        viewport: { width: VIEWPORT.width, height: VIEWPORT.height },
-        deviceScaleFactor: VIEWPORT.dpr,
-      });
-      await seedDismissals(context);
-      const page = await context.newPage();
-      try {
-        await bootScenario(page, scenarioUrl(args.url, SCENARIOS[scenario].blob), {
-          backend: 'webgpu', timeoutMs: BOOT_TIMEOUT_MS,
+      const read = await visitSettled(
+        browser, scenarioUrl(args.url, SCENARIOS[scenario].blob), { viewport: VIEWPORT },
+        async ({ page, settleMs }) => {
+          const report = await readSurvivors(page);
+          if (report === null) return null;
+          console.log(
+            `${scenario} — ${SCENARIOS[scenario].label} · settled ${settleMs} ms · `
+            + `${report.records} records`);
+          rows.push({ ...report, scenario, settleMs });
+          // After the read, never before: the WebGL branch of the probe opens a
+          // throwaway context in the page the counts just came off.
+          probe ??= await probeAdapters(page);
+          return report;
         });
-        const settleMs = await awaitSettle(page, { quietMs: QUIET_MS, timeoutMs: SETTLE_TIMEOUT_MS });
-        const report = await readSurvivors(page);
-        if (report === null) {
-          console.error(`${scenario}: debug.survivors() returned null — not a WebGPU boot`);
-          return 1;
-        }
-        console.log(
-          `${scenario} — ${SCENARIOS[scenario].label} · settled ${settleMs} ms · `
-          + `${report.records} records`);
-        rows.push({ ...report, scenario, settleMs });
-        // After the read, never before: the WebGL branch of the probe opens a
-        // throwaway context in the page the counts just came off.
-        probe ??= await probeAdapters(page);
-      } finally {
-        await context.close();
+      if (read === null) {
+        console.error(`${scenario}: debug.survivors() returned null — not a WebGPU boot`);
+        return 1;
       }
     }
   } finally {

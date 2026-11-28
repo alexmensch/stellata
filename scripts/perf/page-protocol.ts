@@ -1,7 +1,7 @@
 // Every page.evaluate the runner makes — boot, settle snapshot, adapter
 // probe, rAF probe, the priceFrame call. Node-side orchestration is run.ts.
 
-import type { BrowserContext, Page } from 'playwright';
+import type { Browser, BrowserContext, Page } from 'playwright';
 import type {
   PriceFrameOptions, PriceFrameRow,
 } from '../../src/client/debug/frame-cost/frame-cost';
@@ -11,7 +11,7 @@ import type { Stellata } from '../../src/client/stellata';
 import { GATE_ELEMENT_ID } from '../../src/client/webgpu/gate/gate-advice-pure';
 import type { PassCounter } from './dwell/dwell-pure';
 import { GATE_BOOT_PREFIX, bootFailure } from './run-pure';
-import type { AdapterProbe, WebGlProbe, WebGpuProbe } from './schema';
+import type { AdapterProbe, Viewport, WebGlProbe, WebGpuProbe } from './schema';
 import type { Backend } from './scenarios';
 import { settleVerdict, type GateSnapshot } from './settle-pure';
 
@@ -99,6 +99,43 @@ export async function awaitSettle(page: Page, { quietMs, timeoutMs, pollMs = 250
       throw new SettleTimeout(`not settled after ${timeoutMs} ms — stuck on ${verdict.stuckOn}: ${verdict.detail}`);
     }
     await page.waitForTimeout(pollMs);
+  }
+}
+
+/** The settle the non-clock instruments wait for; no timing rides on it. */
+export const NON_CLOCK_QUIET_MS = 1500;
+
+export interface SettledVisit {
+  readonly page: Page;
+  readonly settleMs: number;
+}
+
+export interface VisitOptions {
+  readonly viewport: Viewport;
+  /** Runs on the fresh page before it navigates, so a listener sees the boot. */
+  readonly beforeBoot?: (page: Page) => void;
+}
+
+/** One canon vantage in its own context: boot, settle, `read`, close. */
+export async function visitSettled<T>(
+  browser: Browser,
+  url: string,
+  { viewport, beforeBoot }: VisitOptions,
+  read: (visit: SettledVisit) => Promise<T>,
+): Promise<T> {
+  const context = await browser.newContext({
+    viewport: { width: viewport.width, height: viewport.height },
+    deviceScaleFactor: viewport.dpr,
+  });
+  try {
+    await seedDismissals(context);
+    const page = await context.newPage();
+    beforeBoot?.(page);
+    await bootScenario(page, url, { backend: 'webgpu', timeoutMs: BOOT_TIMEOUT_MS });
+    const settleMs = await awaitSettle(page, { quietMs: NON_CLOCK_QUIET_MS, timeoutMs: SETTLE_TIMEOUT_MS });
+    return await read({ page, settleMs });
+  } finally {
+    await context.close();
   }
 }
 
